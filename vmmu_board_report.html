@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Báo Cáo Kiểm Tra CNTT — HVQY 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --navy: #0B1C3A;
+  --navy-mid: #132847;
+  --gold: #C8A45A;
+  --gold-light: #E2C17A;
+  --gold-pale: #F5EDD6;
+  --crimson: #8B1A2A;
+  --cream: #FAF7F2;
+  --white: #FFFFFF;
+  --text: #1A1A2E;
+  --muted: #6B7280;
+  --border: rgba(200,164,90,0.25);
+  --danger-bg: #FEF2F2;
+  --danger: #991B1B;
+  --warning-bg: #FFFBEB;
+  --warning: #92400E;
+  --success-bg: #F0FDF4;
+  --success: #166534;
+  --info-bg: #EFF6FF;
+  --info: #1E40AF;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Be Vietnam Pro', sans-serif;
+  background: var(--cream);
+  color: var(--text);
+  overflow-x: hidden;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* ─── NAV ─── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(11,28,58,0.97);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 48px; height: 64px;
+}
+.nav-brand { display: flex; align-items: center; gap: 14px; }
+.nav-emblem {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 14px; font-weight: 700; color: var(--navy);
+  flex-shrink: 0;
+}
+.nav-title { font-size: 13px; font-weight: 500; color: var(--gold-light); letter-spacing: 0.04em; }
+.nav-sub { font-size: 10px; color: rgba(255,255,255,0.45); letter-spacing: 0.08em; }
+.nav-links { display: flex; gap: 32px; }
+.nav-links a {
+  font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.6);
+  text-decoration: none; letter-spacing: 0.06em;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--gold-light); }
+.nav-date {
+  font-size: 11px; color: rgba(255,255,255,0.4);
+  border: 1px solid var(--border);
+  padding: 4px 12px; border-radius: 99px; letter-spacing: 0.04em;
+}
+
+/* ─── HERO ─── */
+.hero {
+  min-height: 100vh;
+  background: var(--navy);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+  padding: 120px 48px 80px;
+}
+.hero-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(200,164,90,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200,164,90,0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+.hero-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+}
+.hero-orb-1 { width: 500px; height: 500px; background: rgba(139,26,42,0.15); top: -100px; right: -100px; }
+.hero-orb-2 { width: 400px; height: 400px; background: rgba(200,164,90,0.08); bottom: 0; left: -100px; }
+.hero-content { position: relative; z-index: 1; text-align: center; max-width: 860px; }
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  border: 1px solid var(--border);
+  padding: 6px 20px; border-radius: 99px; margin-bottom: 32px;
+  font-size: 11px; font-weight: 500; color: var(--gold);
+  letter-spacing: 0.12em;
+  animation: fadeUp 0.6s ease both;
+}
+.hero-eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(36px,6vw,68px); font-weight: 700;
+  color: var(--white); line-height: 1.1; margin-bottom: 16px;
+  animation: fadeUp 0.6s 0.1s ease both;
+}
+.hero-title span { color: var(--gold); }
+.hero-subtitle {
+  font-size: clamp(14px,2vw,18px); color: rgba(255,255,255,0.55);
+  font-weight: 300; margin-bottom: 48px; letter-spacing: 0.01em;
+  animation: fadeUp 0.6s 0.2s ease both;
+}
+.hero-stats {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 1px;
+  background: var(--border); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+  animation: fadeUp 0.6s 0.3s ease both;
+  max-width: 720px; margin: 0 auto;
+}
+.hero-stat {
+  background: rgba(255,255,255,0.03);
+  padding: 24px 20px; text-align: center;
+  backdrop-filter: blur(4px);
+}
+.hero-stat-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 32px; font-weight: 700; color: var(--gold);
+  line-height: 1; margin-bottom: 6px;
+}
+.hero-stat-label { font-size: 11px; color: rgba(255,255,255,0.45); letter-spacing: 0.06em; }
+.scroll-cue {
+  position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  color: rgba(255,255,255,0.3); font-size: 10px; letter-spacing: 0.1em;
+  animation: fadeUp 1s 0.8s ease both;
+}
+.scroll-line {
+  width: 1px; height: 40px;
+  background: linear-gradient(to bottom, transparent, var(--gold));
+  animation: scrollLine 1.8s ease-in-out infinite;
+}
+@keyframes scrollLine { 0%,100%{opacity:0.3} 50%{opacity:1} }
+
+/* ─── SECTIONS ─── */
+.section {
+  padding: 96px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.section-full { padding: 96px 0; }
+.section-navy { background: var(--navy); padding: 96px 48px; }
+
+.section-label {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.15em;
+  color: var(--gold); text-transform: uppercase; margin-bottom: 12px;
+}
+.section-label::before {
+  content: ''; width: 24px; height: 1px; background: var(--gold);
+}
+.section-heading {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(28px,4vw,42px); font-weight: 700;
+  color: var(--navy); line-height: 1.2; margin-bottom: 16px;
+}
+.section-heading.light { color: var(--white); }
+.section-lead { font-size: 16px; color: var(--muted); max-width: 600px; margin-bottom: 56px; }
+.section-lead.light { color: rgba(255,255,255,0.5); }
+
+/* ─── EXECUTIVE SUMMARY ─── */
+.summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
+.summary-card {
+  border-radius: 12px; padding: 28px;
+  border-left: 3px solid;
+  position: relative; overflow: hidden;
+}
+.summary-card::before {
+  content: attr(data-num);
+  position: absolute; top: -10px; right: 16px;
+  font-family: 'Playfair Display', serif;
+  font-size: 80px; font-weight: 700; opacity: 0.07; line-height: 1;
+}
+.summary-card.danger { background: var(--danger-bg); border-color: var(--danger); }
+.summary-card.warning { background: var(--warning-bg); border-color: #D97706; }
+.summary-card.success { background: var(--success-bg); border-color: #16A34A; }
+.summary-card.info { background: var(--info-bg); border-color: #2563EB; }
+.summary-card-tag {
+  display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+  padding: 3px 10px; border-radius: 99px; margin-bottom: 12px;
+}
+.danger .summary-card-tag { background: var(--danger); color: white; }
+.warning .summary-card-tag { background: #D97706; color: white; }
+.success .summary-card-tag { background: #16A34A; color: white; }
+.info .summary-card-tag { background: #2563EB; color: white; }
+.summary-card-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.danger .summary-card-title { color: var(--danger); }
+.warning .summary-card-title { color: #92400E; }
+.success .summary-card-title { color: #166534; }
+.info .summary-card-title { color: #1E40AF; }
+.summary-card-body { font-size: 13px; line-height: 1.7; color: var(--text); opacity: 0.85; }
+
+/* ─── KPI RIBBON ─── */
+.kpi-ribbon {
+  background: var(--navy);
+  padding: 56px 48px;
+}
+.kpi-inner { max-width: 1200px; margin: 0 auto; }
+.kpi-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.kpi-cell {
+  background: rgba(255,255,255,0.03);
+  padding: 28px 20px; text-align: center;
+}
+.kpi-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 36px; font-weight: 700; color: var(--gold);
+  line-height: 1; margin-bottom: 6px;
+}
+.kpi-lbl { font-size: 11px; color: rgba(255,255,255,0.45); letter-spacing: 0.05em; margin-bottom: 4px; }
+.kpi-sub { font-size: 10px; color: rgba(255,255,255,0.25); }
+
+/* ─── CHARTS ─── */
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+.chart-card {
+  background: white; border-radius: 16px;
+  border: 1px solid rgba(0,0,0,0.07);
+  padding: 28px; box-shadow: 0 2px 20px rgba(0,0,0,0.04);
+}
+.chart-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.chart-card-title { font-size: 14px; font-weight: 600; color: var(--navy); }
+.chart-card-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.chart-wrap { position: relative; width: 100%; }
+.legend-row { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 16px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.legend-sq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.chart-card-full { grid-column: 1 / -1; }
+
+/* ─── RISK TABLE ─── */
+.risk-table-wrap { background: white; border-radius: 16px; border: 1px solid rgba(0,0,0,0.07); overflow: hidden; box-shadow: 0 2px 20px rgba(0,0,0,0.04); }
+.risk-table { width: 100%; border-collapse: collapse; }
+.risk-table thead th {
+  background: var(--navy); color: rgba(255,255,255,0.6);
+  font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 14px 20px; text-align: left;
+}
+.risk-table tbody td { padding: 14px 20px; font-size: 13px; border-bottom: 1px solid rgba(0,0,0,0.05); vertical-align: middle; }
+.risk-table tbody tr:last-child td { border-bottom: none; }
+.risk-table tbody tr:hover { background: rgba(11,28,58,0.02); }
+.risk-val { font-size: 18px; font-weight: 700; font-family: 'Playfair Display', serif; }
+
+/* ─── TOP USERS ─── */
+.top-users-table { background: white; border-radius: 16px; border: 1px solid rgba(0,0,0,0.07); overflow: hidden; box-shadow: 0 2px 20px rgba(0,0,0,0.04); }
+.top-users-table table { width: 100%; border-collapse: collapse; }
+.top-users-table thead th {
+  background: #F9FAFB; color: var(--muted);
+  font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.top-users-table tbody td { padding: 11px 16px; font-size: 12px; border-bottom: 1px solid rgba(0,0,0,0.04); vertical-align: middle; }
+.top-users-table tbody tr:last-child td { border-bottom: none; }
+.top-users-table tbody tr:hover { background: #FAFAFA; }
+.rank-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--navy); color: var(--gold);
+  font-size: 10px; font-weight: 700;
+}
+.rank-badge.top3 { background: var(--gold); color: var(--navy); }
+.badge-sm {
+  display: inline-block; padding: 2px 8px; border-radius: 99px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+}
+.badge-active { background: #DCFCE7; color: #166534; }
+.badge-recent { background: #FEF9C3; color: #854D0E; }
+.badge-inactive { background: #FEE2E2; color: #991B1B; }
+.badge-yes { background: #DCFCE7; color: #166534; }
+.badge-no { background: #FEE2E2; color: #991B1B; }
+.gb-bar-wrap { display: flex; align-items: center; gap: 8px; }
+.gb-bar { height: 6px; border-radius: 99px; background: linear-gradient(90deg, #0B1C3A, #C8A45A); }
+
+/* ─── RECOMMENDATIONS ─── */
+.reco-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; }
+.reco-card {
+  background: white; border-radius: 16px; padding: 32px;
+  border: 1px solid rgba(0,0,0,0.07);
+  box-shadow: 0 2px 20px rgba(0,0,0,0.04);
+  position: relative; overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.reco-card:hover { transform: translateY(-3px); box-shadow: 0 8px 40px rgba(0,0,0,0.1); }
+.reco-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 64px; font-weight: 700; color: rgba(11,28,58,0.06);
+  position: absolute; top: 16px; right: 20px; line-height: 1;
+}
+.reco-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 20px; font-size: 20px;
+}
+.reco-icon.danger { background: #FEE2E2; }
+.reco-icon.warning { background: #FEF9C3; }
+.reco-icon.info { background: #DBEAFE; }
+.reco-timeline {
+  display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  padding: 3px 10px; border-radius: 99px; margin-bottom: 14px;
+}
+.reco-card:nth-child(1) .reco-timeline { background: #FEE2E2; color: #991B1B; }
+.reco-card:nth-child(2) .reco-timeline { background: #FEF9C3; color: #854D0E; }
+.reco-card:nth-child(3) .reco-timeline { background: #DBEAFE; color: #1E40AF; }
+.reco-title { font-size: 16px; font-weight: 600; color: var(--navy); margin-bottom: 10px; }
+.reco-body { font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+/* ─── INSIGHTS ─── */
+.insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.insight-card {
+  background: white; border-radius: 16px; padding: 28px;
+  border: 1px solid rgba(0,0,0,0.07); box-shadow: 0 2px 20px rgba(0,0,0,0.04);
+}
+.insight-title { font-size: 14px; font-weight: 600; color: var(--navy); margin-bottom: 10px; }
+.insight-body { font-size: 13px; color: var(--muted); line-height: 1.7; }
+.insight-body strong { color: var(--navy); font-weight: 600; }
+
+/* ─── FOOTER ─── */
+footer {
+  background: var(--navy);
+  border-top: 1px solid var(--border);
+  padding: 48px;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 20px;
+}
+.footer-brand { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--gold); }
+.footer-sub { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 4px; }
+.footer-meta { font-size: 11px; color: rgba(255,255,255,0.3); text-align: right; line-height: 1.8; }
+.footer-classified {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid rgba(200,164,90,0.3); padding: 4px 14px;
+  border-radius: 99px; font-size: 10px; color: var(--gold);
+  letter-spacing: 0.1em;
+}
+
+/* ─── DIVIDER ─── */
+.gold-divider {
+  width: 100%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  margin: 0;
+}
+.section-divider { max-width: 1200px; margin: 0 auto; padding: 0 48px; }
+.section-divider-line { width: 100%; height: 1px; background: rgba(0,0,0,0.07); }
+
+/* ─── ANIMATIONS ─── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.reveal {
+  opacity: 0; transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 900px) {
+  nav { padding: 0 24px; }
+  .nav-links { display: none; }
+  .hero { padding: 100px 24px 64px; }
+  .hero-stats { grid-template-columns: 1fr 1fr; }
+  .section { padding: 64px 24px; }
+  .kpi-ribbon { padding: 48px 24px; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .kpi-grid .kpi-cell:last-child { grid-column: 1/-1; }
+  .summary-grid { grid-template-columns: 1fr; }
+  .charts-grid { grid-template-columns: 1fr; }
+  .reco-grid { grid-template-columns: 1fr; }
+  .insight-grid { grid-template-columns: 1fr; }
+  footer { flex-direction: column; align-items: flex-start; }
+  .footer-meta { text-align: left; }
+}
+@media (max-width: 600px) {
+  .hero-stats { grid-template-columns: 1fr 1fr; gap: 0; }
+  .hero-stat-num { font-size: 24px; }
+  .kpi-num { font-size: 28px; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <div class="nav-emblem">HV</div>
+    <div>
+      <div class="nav-title">HỌC VIỆN QUÂN Y</div>
+      <div class="nav-sub">VIETNAM MILITARY MEDICAL UNIVERSITY</div>
+    </div>
+  </div>
+  <div class="nav-links">
+    <a href="#summary">Tóm Tắt</a>
+    <a href="#security">Bảo Mật</a>
+    <a href="#storage">Lưu Trữ</a>
+    <a href="#risk">Rủi Ro</a>
+    <a href="#reco">Kiến Nghị</a>
+  </div>
+  <div class="nav-date">08 Tháng 04, 2026</div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-orb hero-orb-1"></div>
+  <div class="hero-orb hero-orb-2"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">
+      <div class="hero-eyebrow-dot"></div>
+      BÁO CÁO MẬT — HỘI ĐỒNG LÃNH ĐẠO
+      <div class="hero-eyebrow-dot"></div>
+    </div>
+    <h1 class="hero-title">
+      Đánh giá <span>Bảo Mật</span><br>Google Workspace
+    </h1>
+    <p class="hero-subtitle">Phân tích toàn diện sau sự kiện tạm ngưng tên miền · Đánh giá rủi ro & Khuyến nghị chiến lược</p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num">6.463</div>
+        <div class="hero-stat-label">Tài Khoản</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">5,4%</div>
+        <div class="hero-stat-label">Bảo Mật 2SV</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">21,5 TB</div>
+        <div class="hero-stat-label">Tổng Lưu Trữ</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">76,9%</div>
+        <div class="hero-stat-label">Không Hoạt Động</div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll-cue">
+    <div class="scroll-line"></div>
+    Ban Công Nghệ Thông Tin 
+  </div>
+</section>
+
+<div class="gold-divider"></div>
+
+<!-- KPI RIBBON -->
+<div class="kpi-ribbon">
+  <div class="kpi-inner">
+    <div class="kpi-grid">
+      <div class="kpi-cell">
+        <div class="kpi-num">6.463</div>
+        <div class="kpi-lbl">Tổng tài khoản</div>
+        <div class="kpi-sub">6.458 hoạt động · 5 bị đình chỉ</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-num">348</div>
+        <div class="kpi-lbl">Đã bật 2SV</div>
+        <div class="kpi-sub">5,4% tổng tài khoản</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-num">6.115</div>
+        <div class="kpi-lbl">Chưa bật 2SV</div>
+        <div class="kpi-sub">94,6% — rủi ro nghiêm trọng</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-num">19,4 TB</div>
+        <div class="kpi-lbl">Dung lượng Drive</div>
+        <div class="kpi-sub">98% tổng dung lượng</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-num">4.805</div>
+        <div class="kpi-lbl">Tài khoản rỗng</div>
+        <div class="kpi-sub">0 GB — chưa sử dụng</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="gold-divider"></div>
+
+<!-- EXECUTIVE SUMMARY -->
+<section class="section reveal" id="summary">
+  <div class="section-label">Tóm Tắt Điều Hành</div>
+  <h2 class="section-heading">Tình Trạng Hệ Thống<br>Google Workspace</h2>
+  <p class="section-lead">Đánh giá toàn diện 6.463 tài khoản sau sự kiện tạm ngưng tên miền, tập trung vào bốn rủi ro cốt lõi cần xử lý ngay.</p>
+  <div class="summary-grid">
+    <div class="summary-card danger" data-num="1">
+      <span class="summary-card-tag">KHẨN CẤP</span>
+      <div class="summary-card-title">Nguy cơ bảo mật nghiêm trọng</div>
+      <div class="summary-card-body">Chỉ 5,4% trong tổng số 6.463 tài khoản đã bật Xác minh 2 Bước (2SV). Có tới <strong>6.115 tài khoản</strong> hoàn toàn dễ bị tấn công chiếm đoạt thông tin, đây chính là nguyên nhân trực tiếp dẫn đến việc tên miền bị tạm ngưng trước đó.</div>
+    </div>
+    <div class="summary-card warning" data-num="2">
+      <span class="summary-card-tag">CAO</span>
+      <div class="summary-card-title">Mức độ tham gia thấp nghiêm trọng</div>
+      <div class="summary-card-body">76,9% người dùng (4.974 tài khoản) chưa đăng nhập trong hơn 90 ngày. Các tài khoản không hoạt động này vừa là rủi ro bảo mật vừa lãng phí chi phí bản quyền phần mềm hàng tháng.</div>
+    </div>
+    <div class="summary-card info" data-num="3">
+      <span class="summary-card-tag">THÔNG TIN</span>
+      <div class="summary-card-title">Nền tảng cộng tác tệp tin</div>
+      <div class="summary-card-body">Google Drive chiếm 98% tổng dung lượng (19.861 GB so với 397 GB email), xác nhận xu hướng sử dụng nền tảng cho cộng tác tệp hơn là email. Tuy nhiên, dữ liệu tập trung ở rất ít tài khoản.</div>
+    </div>
+    <div class="summary-card warning" data-num="4">
+      <span class="summary-card-tag">CAO</span>
+      <div class="summary-card-title">Khoảng trống sử dụng — 74,3% tài khoản rỗng</div>
+      <div class="summary-card-body">4.805 tài khoản có dung lượng 0 GB, cho thấy các tài khoản được cấp phát nhưng chưa được sử dụng, làm gia tăng diện tích tấn công mà không mang lại giá trị cho tổ chức.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CHARTS SECTION -->
+<section class="section reveal" id="security" style="padding-top:0;">
+  <div class="section-label">Phân Tích Bảo Mật & Tương Tác</div>
+  <h2 class="section-heading">Biểu Đồ Tổng Quan</h2>
+  <p class="section-lead">Bốn chỉ số then chốt phản ánh trạng thái bảo mật và mức độ sử dụng của toàn bộ tên miền.</p>
+
+  <div class="charts-grid">
+    <!-- 2SV Donut -->
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <div>
+          <div class="chart-card-title">Tỉ lệ bật Xác minh 2 Bước (2SV)</div>
+          <div class="chart-card-sub">Chỉ số phòng thủ hàng đầu chống tấn công tài khoản</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:220px;"><canvas id="donut2sv" role="img" aria-label="94.6% chưa bật 2SV, 5.4% đã bật.">Chưa bật: 6115 (94.6%). Đã bật: 348 (5.4%).</canvas></div>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-sq" style="background:#8B1A2A;"></div>Chưa bật 2SV — 94,6%</div>
+        <div class="legend-item"><div class="legend-sq" style="background:#16A34A;"></div>Đã bật 2SV — 5,4%</div>
+      </div>
+    </div>
+    <!-- Activity Bar -->
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <div>
+          <div class="chart-card-title">Mức độ hoạt động người dùng</div>
+          <div class="chart-card-sub">Phân loại theo lần đăng nhập gần nhất</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:220px;"><canvas id="barActivity" role="img" aria-label="346 hoạt động, 1143 gần đây, 4974 không hoạt động.">Hoạt động: 346. Gần đây: 1143. Không HĐ: 4974.</canvas></div>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-sq" style="background:#1D4ED8;"></div>Hoạt động (≤30 ngày)</div>
+        <div class="legend-item"><div class="legend-sq" style="background:#D97706;"></div>Gần đây (31–90 ngày)</div>
+        <div class="legend-item"><div class="legend-sq" style="background:#DC2626;"></div>Không HĐ (>90 ngày)</div>
+      </div>
+    </div>
+    <!-- Status Pie -->
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <div>
+          <div class="chart-card-title">Trạng thái tài khoản</div>
+          <div class="chart-card-sub">Tài khoản có dữ liệu vs. tài khoản rỗng</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:220px;"><canvas id="pieStatus" role="img" aria-label="25.7% có dữ liệu, 74.3% rỗng.">Có dữ liệu: 1658 (25.7%). Rỗng: 4805 (74.3%).</canvas></div>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-sq" style="background:#0B1C3A;"></div>Có dữ liệu — 25,7%</div>
+        <div class="legend-item"><div class="legend-sq" style="background:#9CA3AF;"></div>Tài khoản rỗng — 74,3%</div>
+      </div>
+    </div>
+    <!-- Storage Bar -->
+    <div class="chart-card" id="storage">
+      <div class="chart-card-header">
+        <div>
+          <div class="chart-card-title">Phân bổ dung lượng lưu trữ (GB)</div>
+          <div class="chart-card-sub">So sánh Email vs. Google Drive</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:220px;"><canvas id="barStorage" role="img" aria-label="Drive: 19861 GB, Email: 397 GB.">Drive: 19861 GB. Email: 397 GB.</canvas></div>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-sq" style="background:#0B1C3A;"></div>Google Drive — 19.861 GB</div>
+        <div class="legend-item"><div class="legend-sq" style="background:#C8A45A;"></div>Email — 397 GB</div>
+      </div>
+    </div>
+    <!-- 2SV by segment stacked -->
+    <div class="chart-card chart-card-full">
+      <div class="chart-card-header">
+        <div>
+          <div class="chart-card-title">Phân tích 2SV theo mức độ hoạt động</div>
+          <div class="chart-card-sub">276 người dùng đang hoạt động nhưng chưa bật 2SV — rủi ro cao nhất hiện tại</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="barSv2seg" role="img" aria-label="2SV theo phân khúc hoạt động.">Hoạt động: 70 có 2SV, 276 không. Gần đây: 170, 973. Không HĐ: 108, 4866.</canvas></div>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-sq" style="background:#16A34A;"></div>Đã bật 2SV</div>
+        <div class="legend-item"><div class="legend-sq" style="background:#DC2626;"></div>Chưa bật 2SV</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RISK TABLE -->
+<section class="section reveal" id="risk" style="padding-top:0;">
+  <div class="section-label">Đánh Giá Rủi Ro</div>
+  <h2 class="section-heading">Ma Trận Rủi Ro Hệ Thống</h2>
+  <p class="section-lead">Các rủi ro được xếp hạng theo mức độ nghiêm trọng và số tài khoản bị ảnh hưởng.</p>
+  <div class="risk-table-wrap">
+    <table class="risk-table">
+      <thead>
+        <tr>
+          <th>Mức Độ</th>
+          <th>Vấn Đề</th>
+          <th>Số Tài Khoản</th>
+          <th>% Tổng</th>
+          <th>Tác Động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge-sm" style="background:#FEE2E2;color:#991B1B;">NGHIÊM TRỌNG</span></td>
+          <td>Tài khoản chưa bật 2SV</td>
+          <td><span class="risk-val" style="color:#991B1B;">6.115</span></td>
+          <td>94,6%</td>
+          <td>Nguy cơ tấn công chiếm đoạt tài khoản & tái ngưng tên miền</td>
+        </tr>
+        <tr>
+          <td><span class="badge-sm" style="background:#FEE2E2;color:#991B1B;">NGHIÊM TRỌNG</span></td>
+          <td>Người dùng đang hoạt động, chưa bật 2SV</td>
+          <td><span class="risk-val" style="color:#991B1B;">276</span></td>
+          <td>4,3%</td>
+          <td>Rủi ro ngay lập tức — đăng nhập ≤30 ngày, không có bảo vệ</td>
+        </tr>
+        <tr>
+          <td><span class="badge-sm" style="background:#FEF9C3;color:#854D0E;">CAO</span></td>
+          <td>Tài khoản không hoạt động (>90 ngày)</td>
+          <td><span class="risk-val" style="color:#D97706;">4.974</span></td>
+          <td>76,9%</td>
+          <td>Mở rộng diện tấn công & lãng phí chi phí bản quyền</td>
+        </tr>
+        <tr>
+          <td><span class="badge-sm" style="background:#FEF9C3;color:#854D0E;">CAO</span></td>
+          <td>Tài khoản bị đình chỉ còn trong hệ thống</td>
+          <td><span class="risk-val" style="color:#D97706;">5</span></td>
+          <td>0,08%</td>
+          <td>Cần xem xét ngay lập tức & xóa hoặc khôi phục</td>
+        </tr>
+        <tr>
+          <td><span class="badge-sm" style="background:#DBEAFE;color:#1E40AF;">TRUNG BÌNH</span></td>
+          <td>Tài khoản rỗng, chưa sử dụng (0 GB)</td>
+          <td><span class="risk-val" style="color:#1D4ED8;">4.805</span></td>
+          <td>74,3%</td>
+          <td>Diện tích tấn công không cần thiết, không tạo ra giá trị</td>
+        </tr>
+        <tr>
+          <td><span class="badge-sm" style="background:#F0FDF4;color:#166534;">TÍCH CỰC</span></td>
+          <td>Người dùng hoạt động đã bật 2SV</td>
+          <td><span class="risk-val" style="color:#16A34A;">70</span></td>
+          <td>1,1%</td>
+          <td>Nhóm tài khoản được bảo vệ đầy đủ — mô hình cần nhân rộng</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- TOP USERS -->
+<section class="section reveal" style="padding-top:0;">
+  <div class="section-label">Phân Tích Chuyên Sâu</div>
+  <h2 class="section-heading">Top 10 Người Dùng<br>Theo Dung Lượng Lưu Trữ</h2>
+  <p class="section-lead">Ba tài khoản đầu tiên chiếm tới 52,3% tổng dung lượng Drive — dấu hiệu cần chính sách quản trị dữ liệu.</p>
+  <div class="top-users-table">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Tên người dùng</th>
+          <th>Email</th>
+          <th>Tổng GB</th>
+          <th>Drive</th>
+          <th>Email</th>
+          <th>Hoạt động</th>
+          <th>2SV</th>
+        </tr>
+      </thead>
+      <tbody id="topUsersBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ADDITIONAL INSIGHTS -->
+<section class="section reveal" style="padding-top:0;">
+  <div class="section-label">Nhận Định Bổ Sung</div>
+  <h2 class="section-heading">Phân Tích Chuyên Sâu</h2>
+  <div class="insight-grid">
+    <div class="insight-card">
+      <div class="insight-title">Hiệu ứng Pareto — tập trung dữ liệu</div>
+      <div class="insight-body">
+        Ba tài khoản lớn nhất nắm giữ <strong>11.480 GB</strong> — tương đương 52,3% toàn bộ Drive. Tài khoản đứng đầu (LÊ NGỌC THIỆN) dùng <strong>4.978 GB</strong>, gấp 12,5 lần tổng dung lượng email của 6.463 người dùng cộng lại. Đây là dấu hiệu tích lũy dữ liệu cá nhân không kiểm soát hoặc kho lưu trữ chung không có chính sách quản trị.
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-title">Nền tảng cộng tác — không phải email</div>
+      <div class="insight-body">
+        Với 98% dung lượng nằm trên Drive và chỉ 2% là email, HVQY đã hữu cơ chuyển đổi sang dùng Google Workspace như <strong>nền tảng cộng tác tệp tin</strong>, không phải email. Điều này củng cố nhu cầu về chính sách quản trị Drive (Shared Drives, hạn mức dung lượng, chính sách lưu giữ) thay vì giải pháp lưu trữ email.
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-title">Vòng đời tài khoản — lịch sử 17 năm</div>
+      <div class="insight-body">
+        Lần đăng nhập sớm nhất được ghi nhận là <strong>tháng 10 năm 2008</strong>, cho thấy có các tài khoản tồn tại hơn 17 năm. Nhiều tài khoản không hoạt động có thể thuộc về cựu sinh viên, nhân viên cũ, hoặc tài khoản dùng chung bị bỏ quên — tất cả đều là bề mặt tấn công dai dẳng.
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-title">Chỉ 1,1% tài khoản được bảo vệ toàn diện</div>
+      <div class="insight-body">
+        Chỉ 70 tài khoản vừa đang hoạt động tích cực vừa đã bật 2SV — tức là chỉ <strong>1,1%</strong> toàn bộ hệ thống ở trạng thái bảo mật tối ưu. Điều này đặt ra nhu cầu cấp bách về một chiến lược tuyên truyền nội bộ và thực thi kỹ thuật song song.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RECOMMENDATIONS -->
+<section class="section reveal" id="reco" style="padding-top:0;">
+  <div class="section-label">Kiến Nghị Chiến Lược</div>
+  <h2 class="section-heading">Ba Bước Hành Động<br>Ưu Tiên Cao Nhất</h2>
+  <p class="section-lead">Các khuyến nghị được sắp xếp theo mức độ khẩn cấp và tác động để giúp lãnh đạo phân bổ nguồn lực hiệu quả.</p>
+  <div class="reco-grid">
+    <div class="reco-card">
+      <div class="reco-num">1</div>
+      <div class="reco-icon danger">🔐</div>
+      <div class="reco-timeline">NGAY LẬP TỨC — 0–30 NGÀY</div>
+      <div class="reco-title">Bắt buộc bật 2SV toàn tổ chức</div>
+      <div class="reco-body">Kích hoạt bắt buộc 2SV trong Admin Console cho tất cả đơn vị tổ chức. Ưu tiên 276 người dùng đang hoạt động chưa bật 2SV với thời gian ân hạn 2 tuần. Đây là hành động quan trọng nhất để ngăn ngừa tái ngưng tên miền. Mục tiêu: ≥95% tỉ lệ đăng ký trong 30 ngày.</div>
+    </div>
+    <div class="reco-card">
+      <div class="reco-num">2</div>
+      <div class="reco-icon warning">🗂️</div>
+      <div class="reco-timeline">NGẮN HẠN — 30–60 NGÀY</div>
+      <div class="reco-title">Rà soát và vô hiệu hóa tài khoản không hoạt động</div>
+      <div class="reco-body">Tiến hành kiểm tra vòng đời 4.974 tài khoản không hoạt động (>90 ngày). Vô hiệu hóa ngay các tài khoản của cựu sinh viên, nhân viên cũ, và tài khoản không sử dụng quá 2 năm. Lưu trữ dữ liệu theo chính sách trước khi xóa. Có thể giảm 77% bề mặt tấn công và tiết kiệm chi phí bản quyền đáng kể.</div>
+    </div>
+    <div class="reco-card">
+      <div class="reco-num">3</div>
+      <div class="reco-icon info">📊</div>
+      <div class="reco-timeline">TRUNG HẠN — 60–90 NGÀY</div>
+      <div class="reco-title">Quản trị dung lượng Drive và phân quyền dữ liệu</div>
+      <div class="reco-body">Điều tra 10 tài khoản dùng nhiều dung lượng nhất, đặc biệt tài khoản 4,9 TB — xác định dữ liệu là của cơ quan hay cá nhân. Thiết lập hạn mức dung lượng theo người dùng, chuyển dữ liệu của tổ chức sang Shared Drives có kiểm soát quyền truy cập, và ban hành chính sách lưu giữ dữ liệu.</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<div class="gold-divider"></div>
+<footer>
+  <div>
+    <div class="footer-brand">Học Viện Quân Y</div>
+    <div class="footer-sub">Vietnam Military Medical University · Bộ Quốc Phòng</div>
+    <div style="margin-top:12px;"><span class="footer-classified">MẬT — CHỈ LƯU HÀNH NỘI BỘ</span></div>
+  </div>
+  <div class="footer-meta">
+    Báo cáo soạn thảo bởi Ban CNTT<br>
+    Ngày phát hành: 08 Tháng 04, 2026<br>
+    Dữ liệu nguồn: Google Workspace Admin Export<br>
+    Số tài khoản phân tích: 6.463
+  </div>
+</footer>
+
+<script>
+// ─── TOP USERS DATA ───
+const top10 = [
+  ["LÊ NGỌC THIỆN","5353010087@vmmu.edu.vn",4978.26,4977.49,0.08,"Hoạt động",false],
+  ["ĐINH HOÀNG ANH","5353010001@vmmu.edu.vn",3639.54,3639.53,0.00,"Không HĐ",false],
+  ["K54 Bùi Thanh Trúc","5453010334@vmmu.edu.vn",2863.08,2863.05,0.02,"Gần đây",false],
+  ["TRỊNH THỊ QUỲNH ANH","1153200002@vmmu.edu.vn",759.63,759.63,0.00,"Hoạt động",false],
+  ["KEO LEANGKIM","5153010559@vmmu.edu.vn",663.13,663.10,0.00,"Không HĐ",false],
+  ["NGUYỄN THỊ CÚC","1153200003@vmmu.edu.vn",415.58,415.58,0.00,"Hoạt động",false],
+  ["LÂM HOÀI PHƯƠNG","5353010067@vmmu.edu.vn",403.10,403.10,0.00,"Gần đây",false],
+  ["Hà Thu","thuha2405@vmmu.edu.vn",387.76,170.53,2.43,"Hoạt động",true],
+  ["HÀ MINH HIẾU","1653100130@vmmu.edu.vn",301.27,27.10,0.00,"Hoạt động",false],
+  ["PHẠM QUÝ ĐẠT","1753100019@vmmu.edu.vn",260.31,260.31,0.00,"Không HĐ",false],
+];
+const maxGB = top10[0][2];
+const actCls = {"Hoạt động":"badge-active","Gần đây":"badge-recent","Không HĐ":"badge-inactive"};
+const tbody = document.getElementById('topUsersBody');
+top10.forEach((r,i)=>{
+  const pct = (r[2]/maxGB*100).toFixed(0);
+  const rankCls = i < 3 ? 'rank-badge top3' : 'rank-badge';
+  tbody.innerHTML += `<tr>
+    <td><span class="${rankCls}">${i+1}</span></td>
+    <td style="font-weight:600;">${r[0]}</td>
+    <td style="color:#6B7280;font-size:11px;">${r[1]}</td>
+    <td>
+      <div class="gb-bar-wrap">
+        <div class="gb-bar" style="width:${pct}px;max-width:80px;"></div>
+        <strong>${r[2].toFixed(0)}</strong>
+      </div>
+    </td>
+    <td>${r[3].toFixed(0)}</td>
+    <td>${r[4].toFixed(2)}</td>
+    <td><span class="badge-sm ${actCls[r[5]]||'badge-inactive'}">${r[5]}</span></td>
+    <td><span class="badge-sm ${r[6]?'badge-yes':'badge-no'}">${r[6]?'Có':'Không'}</span></td>
+  </tr>`;
+});
+
+// ─── CHARTS ───
+Chart.defaults.font.family = "'Be Vietnam Pro', sans-serif";
+
+new Chart(document.getElementById('donut2sv'),{
+  type:'doughnut',
+  data:{labels:['Chưa bật','Đã bật'],datasets:[{data:[6115,348],backgroundColor:['#8B1A2A','#16A34A'],borderWidth:0}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'70%',
+    plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed.toLocaleString('vi-VN')} (${(ctx.parsed/6463*100).toFixed(1)}%)`}}}}
+});
+
+new Chart(document.getElementById('barActivity'),{
+  type:'bar',
+  data:{labels:['Hoạt động\n(≤30 ngày)','Gần đây\n(31–90 ngày)','Không HĐ\n(>90 ngày)'],
+    datasets:[{data:[346,1143,4974],backgroundColor:['#1D4ED8','#D97706','#DC2626'],borderWidth:0,borderRadius:6}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y.toLocaleString('vi-VN')} tài khoản`}}},
+    scales:{x:{grid:{display:false},ticks:{font:{size:11},color:'#6B7280'}},
+      y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:11},color:'#6B7280',callback:v=>v.toLocaleString('vi-VN')}}}}
+});
+
+new Chart(document.getElementById('pieStatus'),{
+  type:'pie',
+  data:{labels:['Có dữ liệu','Tài khoản rỗng'],datasets:[{data:[1658,4805],backgroundColor:['#0B1C3A','#9CA3AF'],borderWidth:0}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed.toLocaleString('vi-VN')} (${(ctx.parsed/6463*100).toFixed(1)}%)`}}}}
+});
+
+new Chart(document.getElementById('barStorage'),{
+  type:'bar',
+  data:{labels:['Email','Google Drive'],
+    datasets:[{data:[397,19861],backgroundColor:['#C8A45A','#0B1C3A'],borderWidth:0,borderRadius:6}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y.toLocaleString('vi-VN')} GB`}}},
+    scales:{x:{grid:{display:false},ticks:{font:{size:11},color:'#6B7280'}},
+      y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:11},color:'#6B7280',callback:v=>v.toLocaleString('vi-VN')+' GB'}}}}
+});
+
+new Chart(document.getElementById('barSv2seg'),{
+  type:'bar',
+  data:{labels:['Hoạt động','Gần đây','Không hoạt động'],
+    datasets:[
+      {label:'Đã bật 2SV',data:[70,170,108],backgroundColor:'#16A34A',borderWidth:0,borderRadius:4},
+      {label:'Chưa bật 2SV',data:[276,973,4866],backgroundColor:'#DC2626',borderWidth:0,borderRadius:4}
+    ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('vi-VN')}`}}},
+    scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:12},color:'#6B7280'}},
+      y:{stacked:true,grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:11},color:'#6B7280',callback:v=>v.toLocaleString('vi-VN')}}}}
+});
+
+// ─── SCROLL REVEAL ───
+const observer = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('visible'); });
+},{threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+</script>
+</body>
+</html>
