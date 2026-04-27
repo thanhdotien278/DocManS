@@ -1,0 +1,26 @@
+[     540ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[   90295ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[   90422ms] [LOG] [Fast Refresh] done in 128ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   90992ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[ 1796045ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[ 1796113ms] [LOG] [Fast Refresh] done in 67ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[ 1813060ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[ 1813470ms] [LOG] [Fast Refresh] done in 410ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[ 1866001ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[ 1866233ms] [LOG] [Fast Refresh] done in 231ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[ 1886547ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[ 1886582ms] [LOG] [Fast Refresh] done in 34ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[ 1895218ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[ 1895260ms] [LOG] [Fast Refresh] done in 42ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[ 1895427ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[ 1895559ms] [LOG] [Fast Refresh] done in 132ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[ 1926222ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[ 1926305ms] [LOG] [Fast Refresh] done in 83ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[ 1926345ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[ 1926509ms] [LOG] [Fast Refresh] done in 163ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[ 1926601ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[ 1927454ms] [LOG] [Fast Refresh] done in 854ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[ 1931012ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/dashboard?_rsc=nqbh3:0
+[ 1932538ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/dashboard?_rsc=nqbh3:0
+[ 1932744ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/dashboard?_rsc=nqbh3:0
+[ 1933012ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/dashboard:0

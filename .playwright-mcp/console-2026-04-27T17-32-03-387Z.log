@@ -1,0 +1,45 @@
+[    2876ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[  167520ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[  167735ms] [LOG] [Fast Refresh] done in 215ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[  168731ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[  192604ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[  193025ms] [LOG] [Fast Refresh] done in 422ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[  206758ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[  206931ms] [LOG] [Fast Refresh] done in 173ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[  346584ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[  346859ms] [LOG] [Fast Refresh] done in 275ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[  361337ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[  361681ms] [LOG] [Fast Refresh] done in 344ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[  383778ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[  383847ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[  383854ms] [LOG] [Fast Refresh] done in 7ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[  384015ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[  384069ms] [LOG] [Fast Refresh] done in 54ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[  384171ms] [ERROR] ./src/components/proposals/proposals-demo-list.tsx
+Error: 
+
+Caused by:
+    0: Failed to read source code from /Users/Super/DocManS/apps/web/src/components/proposals/proposals-demo-list.tsx
+    1: No such file or directory (os error 2)
+
+Import trace for requested module:
+./src/components/proposals/proposals-demo-list.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  384178ms] [LOG] {file: Object} @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/compiled/next-devtools/index.js:1630
+[  384195ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[  384397ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[  384421ms] [LOG] [Fast Refresh] done in 25ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[  384570ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[  384589ms] [LOG] [Fast Refresh] done in 20ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[  384716ms] [LOG] [Fast Refresh] done in 146ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[  384720ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:183
+[  385438ms] [LOG] [Fast Refresh] done in 717ms @ webpack-internal:///(app-pages-browser)/../../node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[  386089ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/proposals/demo-002?_rsc=fqgb7:0
+[  386162ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/proposals/demo-002?_rsc=fqgb7:0
+[  386180ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/proposals/demo-002?_rsc=fqgb7:0
+[  386193ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/proposals/demo-002?_rsc=fqgb7:0
+[  386205ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/proposals/demo-002?_rsc=fqgb7:0
+[  386220ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/proposals/demo-002?_rsc=fqgb7:0
+[  386231ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/proposals/demo-002?_rsc=fqgb7:0
+[  386418ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/proposals/demo-002:0
+[  386429ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/_next/static/chunks/main-app.js?v=1777311509704:0
+[  386430ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/_next/static/chunks/app-pages-internals.js:0

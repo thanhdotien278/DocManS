@@ -1,0 +1,532 @@
+- generic [active] [ref=e1]:
+  - link "Bỏ qua điều hướng, đến nội dung chính" [ref=e2] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=e3]:
+    - complementary "Điều hướng chính" [ref=e4]:
+      - generic [ref=e5]:
+        - img "Huy hiệu mô phỏng Học viện Quân y" [ref=e6]
+        - generic [ref=e10]:
+          - paragraph [ref=e11]:
+            - text: RTMS
+            - text: Học viện Quân y
+          - paragraph [ref=e12]: Research Topic Management System
+      - navigation "Module RTMS" [ref=e13]:
+        - link "Dashboard điều hành" [ref=e14] [cursor=pointer]:
+          - /url: "#dashboard"
+          - img [ref=e15]
+          - text: Dashboard điều hành
+        - link "Quản lý đề tài" [ref=e17] [cursor=pointer]:
+          - /url: "#topics"
+          - img [ref=e18]
+          - text: Quản lý đề tài
+        - link "Chi tiết hồ sơ" [ref=e20] [cursor=pointer]:
+          - /url: "#detail"
+          - img [ref=e21]
+          - text: Chi tiết hồ sơ
+        - link "Kiểm tra hồ sơ" [ref=e23] [cursor=pointer]:
+          - /url: "#review-form"
+          - img [ref=e24]
+          - text: Kiểm tra hồ sơ
+        - link "Phân quyền" [ref=e26] [cursor=pointer]:
+          - /url: "#permissions"
+          - img [ref=e27]
+          - text: Phân quyền
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - img [ref=e31]
+          - generic [ref=e33]: Lãnh đạo
+        - paragraph [ref=e34]: Demo ưu tiên việc cần xử lý, hồ sơ chờ phê duyệt và cảnh báo tiến độ theo phạm vi quyền.
+    - generic [ref=e35]:
+      - banner [ref=e36]:
+        - generic [ref=e37]:
+          - paragraph [ref=e38]:
+            - generic [ref=e39]: RTMS
+            - img [ref=e40]
+            - generic [ref=e42]: Dashboard điều hành
+            - img [ref=e43]
+            - generic [ref=e45]: Đợt tiếp nhận 2026
+          - heading "Hệ thống quản lý đề tài nghiên cứu khoa học cấp trường" [level=1] [ref=e46]
+        - generic [ref=e47]:
+          - generic [ref=e48]:
+            - generic [ref=e49]: Tìm kiếm nhanh trong RTMS
+            - img [ref=e50]
+            - searchbox "Tìm kiếm nhanh trong RTMS" [ref=e52]
+          - button "Mở thông báo" [ref=e53] [cursor=pointer]:
+            - img [ref=e54]
+          - generic "Thông tin người dùng" [ref=e56]:
+            - generic [ref=e57]: LD
+            - generic [ref=e58]:
+              - strong [ref=e59]: PGS. Trần Minh
+              - generic [ref=e60]: Lãnh đạo
+      - main [ref=e61]:
+        - generic [ref=e62]:
+          - paragraph [ref=e63]: "Bản demo thể hiện luồng nội bộ sau đăng nhập: lãnh đạo xem việc cần phê duyệt, chuyên viên kiểm tra hồ sơ, chủ nhiệm theo dõi yêu cầu bổ sung, reviewer chấm điểm trong phạm vi được phân công."
+          - generic "Chọn vai trò xem demo" [ref=e64]:
+            - button "Lãnh đạo" [pressed] [ref=e65] [cursor=pointer]
+            - button "Chuyên viên" [ref=e66] [cursor=pointer]
+            - button "Reviewer" [ref=e67] [cursor=pointer]
+            - button "Chủ nhiệm" [ref=e68] [cursor=pointer]
+        - region "Dashboard điều hành" [ref=e69]:
+          - generic [ref=e70]:
+            - generic [ref=e71]:
+              - heading "Dashboard điều hành" [level=2] [ref=e72]
+              - paragraph [ref=e73]: Ưu tiên việc cần xử lý ngay, hồ sơ chờ phê duyệt, đề tài sắp đến hạn và việc quá hạn.
+            - button "Xuất báo cáo" [ref=e74] [cursor=pointer]:
+              - img [ref=e75]
+              - text: Xuất báo cáo
+          - generic "Chỉ số tổng hợp" [ref=e77]:
+            - article [ref=e78]:
+              - generic [ref=e79]:
+                - paragraph [ref=e80]: Hồ sơ chờ phê duyệt
+                - img [ref=e81]
+              - paragraph [ref=e83]: "18"
+              - generic [ref=e84]:
+                - generic [ref=e85]: Trong đó 6 hồ sơ đến hạn 48h
+                - generic [ref=e86]: "+4"
+            - article [ref=e87]:
+              - generic [ref=e88]:
+                - paragraph [ref=e89]: Đề tài sắp đến hạn báo cáo
+                - img [ref=e90]
+              - paragraph [ref=e92]: "27"
+              - generic [ref=e93]:
+                - generic [ref=e94]: Cần nhắc trước 7 ngày
+                - generic [ref=e95]: 9 ưu tiên
+            - article [ref=e96]:
+              - generic [ref=e97]:
+                - paragraph [ref=e98]: Công việc quá hạn
+                - img [ref=e99]
+              - paragraph [ref=e101]: "11"
+              - generic [ref=e102]:
+                - generic [ref=e103]: 5 việc thuộc đề tài trọng điểm
+                - generic [ref=e104]: "+2"
+            - article [ref=e105]:
+              - generic [ref=e106]:
+                - paragraph [ref=e107]: Hồ sơ đang đánh giá
+                - img [ref=e108]
+              - paragraph [ref=e110]: "42"
+              - generic [ref=e111]:
+                - generic [ref=e112]: 83% reviewer đã phản hồi
+                - generic [ref=e113]: ổn định
+          - generic [ref=e114]:
+            - region "Việc cần xử lý trong hôm nay" [ref=e115]:
+              - generic [ref=e116]:
+                - generic [ref=e117]:
+                  - heading "Việc cần xử lý trong hôm nay" [level=3] [ref=e118]
+                  - paragraph [ref=e119]: Danh sách thay đổi theo vai trò và phạm vi quyền.
+                - generic [ref=e120]:
+                  - img [ref=e121]
+                  - text: 6 việc gấp
+              - generic [ref=e123]:
+                - article [ref=e124]:
+                  - generic [ref=e125]:
+                    - generic [ref=e126]:
+                      - strong [ref=e127]: Duyệt kết quả đánh giá hồ sơ RTMS-2026-014
+                      - generic [ref=e128]:
+                        - img [ref=e129]
+                        - text: Chờ phê duyệt
+                    - generic [ref=e131]:
+                      - generic [ref=e132]:
+                        - img [ref=e133]
+                        - text: "Chủ nhiệm: TS. Nguyễn Văn An"
+                      - generic [ref=e135]:
+                        - img [ref=e136]
+                        - text: "Hạn: 28/04/2026"
+                  - generic [ref=e138]:
+                    - button "Phê duyệt" [ref=e139] [cursor=pointer]:
+                      - img [ref=e140]
+                      - text: Phê duyệt
+                    - button "Xem" [ref=e142] [cursor=pointer]:
+                      - img [ref=e143]
+                      - text: Xem
+                - article [ref=e145]:
+                  - generic [ref=e146]:
+                    - generic [ref=e147]:
+                      - strong [ref=e148]: Yêu cầu bổ sung dự toán kinh phí RTMS-2026-021
+                      - generic [ref=e149]:
+                        - img [ref=e150]
+                        - text: Cần bổ sung
+                    - generic [ref=e152]:
+                      - generic [ref=e153]:
+                        - img [ref=e154]
+                        - text: "Đơn vị: Khoa Y học cơ sở"
+                      - generic [ref=e156]:
+                        - img [ref=e157]
+                        - text: "Hạn phản hồi: 30/04/2026"
+                  - generic [ref=e159]:
+                    - button "Yêu cầu" [ref=e160] [cursor=pointer]:
+                      - img [ref=e161]
+                      - text: Yêu cầu
+                    - button "Xem" [ref=e163] [cursor=pointer]:
+                      - img [ref=e164]
+                      - text: Xem
+                - article [ref=e166]:
+                  - generic [ref=e167]:
+                    - generic [ref=e168]:
+                      - strong [ref=e169]: Đề tài RT-25-033 chậm báo cáo quý I
+                      - generic [ref=e170]:
+                        - img [ref=e171]
+                        - text: Quá hạn
+                    - generic [ref=e173]:
+                      - generic [ref=e174]:
+                        - img [ref=e175]
+                        - text: "Phụ trách: CN. Lê Thu Hà"
+                      - generic [ref=e177]:
+                        - img [ref=e178]
+                        - text: Quá hạn 5 ngày
+                  - generic [ref=e180]:
+                    - button "Nhắc việc" [ref=e181] [cursor=pointer]:
+                      - img [ref=e182]
+                      - text: Nhắc việc
+                    - button "Xem" [ref=e184] [cursor=pointer]:
+                      - img [ref=e185]
+                      - text: Xem
+            - region "Phân bố trạng thái đề tài" [ref=e187]:
+              - generic [ref=e189]:
+                - heading "Phân bố trạng thái đề tài" [level=3] [ref=e190]
+                - paragraph [ref=e191]: Biểu đồ dùng màu trạng thái có nhãn rõ ràng.
+              - generic [ref=e192]:
+                - img "Được duyệt 64, đang đánh giá 42, chờ bổ sung 19, quá hạn 11" [ref=e193]:
+                  - generic [ref=e194]:
+                    - generic [ref=e195]: Được duyệt
+                    - strong [ref=e198]: "64"
+                  - generic [ref=e199]:
+                    - generic [ref=e200]: Đang đánh giá
+                    - strong [ref=e203]: "42"
+                  - generic [ref=e204]:
+                    - generic [ref=e205]: Chờ bổ sung
+                    - strong [ref=e208]: "19"
+                  - generic [ref=e209]:
+                    - generic [ref=e210]: Quá hạn
+                    - strong [ref=e213]: "11"
+                - generic [ref=e214]:
+                  - img [ref=e215]
+                  - generic [ref=e217]:
+                    - strong [ref=e218]: Cảnh báo điều hành
+                    - text: 3 đơn vị có tỷ lệ nộp báo cáo đúng hạn dưới 80%, cần kiểm tra tải công việc.
+        - region "Danh sách hồ sơ đề tài" [ref=e219]:
+          - generic [ref=e220]:
+            - generic [ref=e221]:
+              - heading "Danh sách hồ sơ đề tài" [level=2] [ref=e222]
+              - paragraph [ref=e223]: Desktop dùng bảng đầy đủ; mobile chuyển thành card list để không tạo cuộn ngang toàn trang.
+            - generic [ref=e224]:
+              - img [ref=e225]
+              - text: 4 hồ sơ
+          - generic "Bộ lọc danh sách đề tài" [ref=e227]:
+            - generic [ref=e228]:
+              - generic [ref=e229]: Từ khóa
+              - generic [ref=e230]:
+                - img [ref=e231]
+                - searchbox "Từ khóa" [ref=e233]
+            - generic [ref=e234]:
+              - generic [ref=e235]: Trạng thái
+              - combobox "Trạng thái" [ref=e236]:
+                - option "Tất cả" [selected]
+                - option "Chờ phê duyệt"
+                - option "Cần bổ sung"
+                - option "Đang đánh giá"
+                - option "Được duyệt"
+            - generic [ref=e237]:
+              - generic [ref=e238]: Đơn vị
+              - combobox "Đơn vị" [ref=e239]:
+                - option "Tất cả đơn vị" [selected]
+                - option "Khoa Y học cơ sở"
+                - option "Bộ môn Nội"
+                - option "Viện Mô phôi lâm sàng"
+            - generic [ref=e240]:
+              - generic [ref=e241]: Năm học
+              - combobox "Năm học" [ref=e242]:
+                - option "2026" [selected]
+                - option "2025"
+            - button "Lọc" [ref=e243] [cursor=pointer]:
+              - img [ref=e244]
+              - text: Lọc
+          - region "Bảng hồ sơ đề tài" [ref=e246]:
+            - table [ref=e247]:
+              - rowgroup [ref=e248]:
+                - row "Mã hồ sơ Tên đề tài Đơn vị Chủ nhiệm Trạng thái Hạn xử lý Hành động" [ref=e249]:
+                  - columnheader "Mã hồ sơ" [ref=e250]
+                  - columnheader "Tên đề tài" [ref=e251]
+                  - columnheader "Đơn vị" [ref=e252]
+                  - columnheader "Chủ nhiệm" [ref=e253]
+                  - columnheader "Trạng thái" [ref=e254]
+                  - columnheader "Hạn xử lý" [ref=e255]
+                  - columnheader "Hành động" [ref=e256]
+              - rowgroup [ref=e257]:
+                - 'row "RTMS-2026-014 Ứng dụng AI hỗ trợ phát hiện nguy cơ nhiễm khuẩn bệnh viện Loại đề tài: Cấp trường trọng điểm Khoa Y học cơ sở TS. Nguyễn Văn An Chờ phê duyệt 28/04/2026 Xem PDF" [ref=e258]':
+                  - cell "RTMS-2026-014" [ref=e259]:
+                    - strong [ref=e260]: RTMS-2026-014
+                  - 'cell "Ứng dụng AI hỗ trợ phát hiện nguy cơ nhiễm khuẩn bệnh viện Loại đề tài: Cấp trường trọng điểm" [ref=e261]':
+                    - generic [ref=e262]:
+                      - strong [ref=e263]: Ứng dụng AI hỗ trợ phát hiện nguy cơ nhiễm khuẩn bệnh viện
+                      - generic [ref=e264]: "Loại đề tài: Cấp trường trọng điểm"
+                  - cell "Khoa Y học cơ sở" [ref=e265]
+                  - cell "TS. Nguyễn Văn An" [ref=e266]
+                  - cell "Chờ phê duyệt" [ref=e267]:
+                    - generic [ref=e268]:
+                      - img [ref=e269]
+                      - text: Chờ phê duyệt
+                  - cell "28/04/2026" [ref=e271]
+                  - cell "Xem PDF" [ref=e272]:
+                    - generic [ref=e273]:
+                      - button "Xem" [ref=e274] [cursor=pointer]:
+                        - img [ref=e275]
+                        - text: Xem
+                      - button "PDF" [ref=e277] [cursor=pointer]:
+                        - img [ref=e278]
+                        - text: PDF
+                - row "RTMS-2026-021 Nghiên cứu mô hình dự báo biến chứng trong hồi sức cấp cứu Thiếu phụ lục dự toán kinh phí Bộ môn Nội ThS. Phạm Thu Hương Cần bổ sung 30/04/2026 Xem Nhắc" [ref=e280]:
+                  - cell "RTMS-2026-021" [ref=e281]:
+                    - strong [ref=e282]: RTMS-2026-021
+                  - cell "Nghiên cứu mô hình dự báo biến chứng trong hồi sức cấp cứu Thiếu phụ lục dự toán kinh phí" [ref=e283]:
+                    - generic [ref=e284]:
+                      - strong [ref=e285]: Nghiên cứu mô hình dự báo biến chứng trong hồi sức cấp cứu
+                      - generic [ref=e286]: Thiếu phụ lục dự toán kinh phí
+                  - cell "Bộ môn Nội" [ref=e287]
+                  - cell "ThS. Phạm Thu Hương" [ref=e288]
+                  - cell "Cần bổ sung" [ref=e289]:
+                    - generic [ref=e290]:
+                      - img [ref=e291]
+                      - text: Cần bổ sung
+                  - cell "30/04/2026" [ref=e293]
+                  - cell "Xem Nhắc" [ref=e294]:
+                    - generic [ref=e295]:
+                      - button "Xem" [ref=e296] [cursor=pointer]:
+                        - img [ref=e297]
+                        - text: Xem
+                      - button "Nhắc" [ref=e299] [cursor=pointer]:
+                        - img [ref=e300]
+                        - text: Nhắc
+                - row "RTMS-2026-028 Đánh giá hiệu quả sản phẩm tế bào gốc trong phục hồi mô 3/4 reviewer đã gửi nhận xét Viện Mô phôi lâm sàng TS. Trần Quốc Minh Đang đánh giá 02/05/2026 Xem Nhắc" [ref=e302]:
+                  - cell "RTMS-2026-028" [ref=e303]:
+                    - strong [ref=e304]: RTMS-2026-028
+                  - cell "Đánh giá hiệu quả sản phẩm tế bào gốc trong phục hồi mô 3/4 reviewer đã gửi nhận xét" [ref=e305]:
+                    - generic [ref=e306]:
+                      - strong [ref=e307]: Đánh giá hiệu quả sản phẩm tế bào gốc trong phục hồi mô
+                      - generic [ref=e308]: 3/4 reviewer đã gửi nhận xét
+                  - cell "Viện Mô phôi lâm sàng" [ref=e309]
+                  - cell "TS. Trần Quốc Minh" [ref=e310]
+                  - cell "Đang đánh giá" [ref=e311]:
+                    - generic [ref=e312]:
+                      - img [ref=e313]
+                      - text: Đang đánh giá
+                  - cell "02/05/2026" [ref=e315]
+                  - cell "Xem Nhắc" [ref=e316]:
+                    - generic [ref=e317]:
+                      - button "Xem" [ref=e318] [cursor=pointer]:
+                        - img [ref=e319]
+                        - text: Xem
+                      - button "Nhắc" [ref=e321] [cursor=pointer]:
+                        - img [ref=e322]
+                        - text: Nhắc
+                - row "RTMS-2026-032 Tối ưu hóa quy trình theo dõi sau ghép thận Đã tạo hồ sơ theo dõi đề tài Bộ môn Nội PGS. Lê Đức Khải Được duyệt Đã xử lý Xem Theo dõi" [ref=e324]:
+                  - cell "RTMS-2026-032" [ref=e325]:
+                    - strong [ref=e326]: RTMS-2026-032
+                  - cell "Tối ưu hóa quy trình theo dõi sau ghép thận Đã tạo hồ sơ theo dõi đề tài" [ref=e327]:
+                    - generic [ref=e328]:
+                      - strong [ref=e329]: Tối ưu hóa quy trình theo dõi sau ghép thận
+                      - generic [ref=e330]: Đã tạo hồ sơ theo dõi đề tài
+                  - cell "Bộ môn Nội" [ref=e331]
+                  - cell "PGS. Lê Đức Khải" [ref=e332]
+                  - cell "Được duyệt" [ref=e333]:
+                    - generic [ref=e334]:
+                      - img [ref=e335]
+                      - text: Được duyệt
+                  - cell "Đã xử lý" [ref=e337]
+                  - cell "Xem Theo dõi" [ref=e338]:
+                    - generic [ref=e339]:
+                      - button "Xem" [ref=e340] [cursor=pointer]:
+                        - img [ref=e341]
+                        - text: Xem
+                      - button "Theo dõi" [ref=e343] [cursor=pointer]:
+                        - img [ref=e344]
+                        - text: Theo dõi
+        - region "Chi tiết hồ sơ và lịch sử xử lý" [ref=e346]:
+          - generic [ref=e348]:
+            - heading "Chi tiết hồ sơ và lịch sử xử lý" [level=2] [ref=e349]
+            - paragraph [ref=e350]: Timeline, file, điểm đánh giá và quyết định nằm trực tiếp trên màn hình, không ẩn trong tooltip khó tìm.
+          - generic [ref=e351]:
+            - article [ref=e352]:
+              - generic [ref=e353]:
+                - generic [ref=e354]:
+                  - heading "RTMS-2026-014 - Ứng dụng AI hỗ trợ phát hiện nguy cơ nhiễm khuẩn bệnh viện" [level=3] [ref=e355]
+                  - paragraph [ref=e356]: "Khoa Y học cơ sở · Chủ nhiệm: TS. Nguyễn Văn An · Kinh phí đề xuất: 420.000.000đ"
+                - generic [ref=e357]:
+                  - img [ref=e358]
+                  - text: Chờ phê duyệt
+              - generic "Tiến trình xử lý hồ sơ" [ref=e360]:
+                - generic [ref=e361]:
+                  - generic [ref=e362]: Bước 1
+                  - strong [ref=e363]: Đã nộp
+                - generic [ref=e364]:
+                  - generic [ref=e365]: Bước 2
+                  - strong [ref=e366]: Đủ điều kiện
+                - generic [ref=e367]:
+                  - generic [ref=e368]: Bước 3
+                  - strong [ref=e369]: Đã đánh giá
+                - generic [ref=e370]:
+                  - generic [ref=e371]: Bước 4
+                  - strong [ref=e372]: Chờ phê duyệt
+                - generic [ref=e373]:
+                  - generic [ref=e374]: Bước 5
+                  - strong [ref=e375]: Tạo theo dõi
+              - heading "Lịch sử xử lý" [level=3] [ref=e376]
+              - generic [ref=e377]:
+                - generic [ref=e380]:
+                  - strong [ref=e381]: 27/04/2026 09:20 - Tổng hợp kết quả đánh giá
+                  - paragraph [ref=e382]: Điểm trung bình 86/100, kiến nghị phê duyệt có chỉnh sửa nhỏ phần kế hoạch triển khai.
+                - generic [ref=e385]:
+                  - strong [ref=e386]: 24/04/2026 16:40 - Reviewer hoàn tất nhận xét
+                  - paragraph [ref=e387]: 4/4 phiếu chấm đã gửi. Một reviewer đề nghị bổ sung tiêu chí an toàn dữ liệu.
+                - generic [ref=e390]:
+                  - strong [ref=e391]: 18/04/2026 10:15 - Xác nhận đủ điều kiện
+                  - paragraph [ref=e392]: Chuyên viên kiểm tra hồ sơ, đầy đủ thuyết minh, dự toán, lý lịch khoa học và cam kết dữ liệu.
+            - complementary "Tài liệu và reviewer" [ref=e393]:
+              - generic [ref=e394]:
+                - heading "Tệp đính kèm" [level=3] [ref=e395]
+                - list [ref=e396]:
+                  - listitem [ref=e397]:
+                    - generic [ref=e398]:
+                      - strong [ref=e399]: Thuyết minh đề tài.pdf
+                      - text: PDF · 4.2 MB · v3 · TS. An
+                    - button "Tải" [ref=e400] [cursor=pointer]:
+                      - img [ref=e401]
+                      - text: Tải
+                  - listitem [ref=e403]:
+                    - generic [ref=e404]:
+                      - strong [ref=e405]: Dự toán kinh phí.xlsx
+                      - text: Excel · 820 KB · v2 · Chuyên viên
+                    - button "Xem" [ref=e406] [cursor=pointer]:
+                      - img [ref=e407]
+                      - text: Xem
+                  - listitem [ref=e409]:
+                    - generic [ref=e410]:
+                      - strong [ref=e411]: Biên bản hội đồng.pdf
+                      - text: PDF · 1.1 MB · đã khóa
+                    - button "Tải" [ref=e412] [cursor=pointer]:
+                      - img [ref=e413]
+                      - text: Tải
+              - generic [ref=e415]:
+                - heading "Reviewer" [level=3] [ref=e416]
+                - list [ref=e417]:
+                  - listitem [ref=e418]:
+                    - generic [ref=e419]:
+                      - strong [ref=e420]: PGS. Hoàng Minh
+                      - text: 92 điểm · Đạt
+                    - generic [ref=e421]:
+                      - img [ref=e422]
+                      - text: Đã gửi
+                  - listitem [ref=e424]:
+                    - generic [ref=e425]:
+                      - strong [ref=e426]: TS. Lê Bích Ngọc
+                      - text: 84 điểm · Cần chỉnh sửa nhỏ
+                    - generic [ref=e427]:
+                      - img [ref=e428]
+                      - text: Đã gửi
+                  - listitem [ref=e430]:
+                    - generic [ref=e431]:
+                      - strong [ref=e432]: TS. Phạm Quang
+                      - text: 82 điểm · Bổ sung an toàn dữ liệu
+                    - generic [ref=e433]:
+                      - img [ref=e434]
+                      - text: Đã gửi
+        - region "Form kiểm tra hồ sơ" [ref=e436]:
+          - generic [ref=e438]:
+            - heading "Form kiểm tra hồ sơ" [level=2] [ref=e439]
+            - paragraph [ref=e440]: Trường bắt buộc, lỗi inline, checklist tệp, hành động chính rõ nghĩa và có xác nhận.
+          - generic [ref=e441]:
+            - paragraph [ref=e442]:
+              - img [ref=e443]
+              - generic [ref=e445]: Đây là bản demo giao diện. Khi triển khai thật, thao tác phê duyệt/từ chối cần ghi audit log và cập nhật trạng thái nghiệp vụ.
+            - generic [ref=e446]:
+              - generic [ref=e447]:
+                - generic [ref=e448]: Mã hồ sơ *
+                - textbox "Mã hồ sơ *" [ref=e449]: RTMS-2026-014
+              - generic [ref=e450]:
+                - generic [ref=e451]: Đợt tiếp nhận *
+                - combobox "Đợt tiếp nhận *" [ref=e452]:
+                  - option "Đợt cấp trường 2026" [selected]
+                  - option "Đợt bổ sung 2026"
+              - generic [ref=e453]:
+                - generic [ref=e454]: Hạn xử lý *
+                - textbox "Hạn xử lý *" [ref=e455]: 2026-04-28
+              - generic [ref=e456]:
+                - generic [ref=e457]: Tên đề tài *
+                - textbox "Tên đề tài *" [ref=e458]: Ứng dụng AI hỗ trợ phát hiện nguy cơ nhiễm khuẩn bệnh viện
+              - generic [ref=e459]:
+                - generic [ref=e460]: Kinh phí đề xuất *
+                - textbox "Kinh phí đề xuất *" [ref=e461]: 420.000.000đ
+                - generic [ref=e462]:
+                  - img [ref=e463]
+                  - text: Cần đối chiếu lại phụ lục dự toán trước khi trình.
+              - generic [ref=e465]:
+                - generic [ref=e466]: Nhận xét kiểm tra
+                - textbox "Nhận xét kiểm tra" [ref=e467]: Hồ sơ đủ điều kiện trình phê duyệt. Đề nghị cập nhật thêm phụ lục an toàn dữ liệu theo ý kiến reviewer.
+              - group "Checklist hồ sơ bắt buộc" [ref=e468]:
+                - generic [ref=e469]: Checklist hồ sơ bắt buộc
+                - generic [ref=e470]:
+                  - generic [ref=e471]:
+                    - checkbox "Thuyết minh đề tài đã ký" [checked] [ref=e472]
+                    - text: Thuyết minh đề tài đã ký
+                  - generic [ref=e473]:
+                    - checkbox "Dự toán kinh phí" [checked] [ref=e474]
+                    - text: Dự toán kinh phí
+                  - generic [ref=e475]:
+                    - checkbox "Lý lịch khoa học chủ nhiệm" [checked] [ref=e476]
+                    - text: Lý lịch khoa học chủ nhiệm
+                  - generic [ref=e477]:
+                    - checkbox "Cam kết an toàn dữ liệu bản cập nhật" [ref=e478]
+                    - text: Cam kết an toàn dữ liệu bản cập nhật
+            - generic "Hành động xử lý hồ sơ" [ref=e479]:
+              - button "Lưu nháp" [ref=e480] [cursor=pointer]:
+                - img [ref=e481]
+                - text: Lưu nháp
+              - button "Yêu cầu bổ sung" [ref=e483] [cursor=pointer]:
+                - img [ref=e484]
+                - text: Yêu cầu bổ sung
+              - button "Từ chối" [ref=e486] [cursor=pointer]:
+                - img [ref=e487]
+                - text: Từ chối
+              - button "Trình phê duyệt" [ref=e489] [cursor=pointer]:
+                - img [ref=e490]
+                - text: Trình phê duyệt
+        - region "Gợi ý hiển thị theo phân quyền" [ref=e492]:
+          - generic [ref=e494]:
+            - heading "Gợi ý hiển thị theo phân quyền" [level=2] [ref=e495]
+            - paragraph [ref=e496]: "Demo phản ánh nguyên tắc RBAC: vai trò quyết định nút hành động và phạm vi dữ liệu."
+          - generic [ref=e498]:
+            - article [ref=e499]:
+              - generic [ref=e500]:
+                - img [ref=e501]
+                - text: ADM
+              - heading "Quản trị hệ thống" [level=3] [ref=e503]
+              - paragraph [ref=e504]: Quản lý người dùng, vai trò, danh mục, audit log và cấu hình thông báo.
+            - article [ref=e505]:
+              - generic [ref=e506]:
+                - img [ref=e507]
+                - text: LD
+              - heading "Lãnh đạo" [level=3] [ref=e509]
+              - paragraph [ref=e510]: Xem dashboard tổng hợp, phê duyệt kết quả OMS, điều chỉnh, gia hạn và nghiệm thu.
+            - article [ref=e511]:
+              - generic [ref=e512]:
+                - img [ref=e513]
+                - text: CB
+              - heading "Cán bộ chuyên môn" [level=3] [ref=e515]
+              - paragraph [ref=e516]: Tiếp nhận, kiểm tra, phân công đánh giá, tổng hợp kết quả theo phạm vi phụ trách.
+            - article [ref=e517]:
+              - generic [ref=e518]:
+                - img [ref=e519]
+                - text: HD
+              - heading "Thành viên hội đồng" [level=3] [ref=e521]
+              - paragraph [ref=e522]: Chỉ xem và chấm điểm hồ sơ được phân công, không thấy dữ liệu ngoài phạm vi.
+            - article [ref=e523]:
+              - generic [ref=e524]:
+                - img [ref=e525]
+                - text: Chủ nhiệm
+              - heading "Nộp và bổ sung hồ sơ" [level=3] [ref=e527]
+              - paragraph [ref=e528]: Tạo hồ sơ, nộp chính thức, bổ sung tài liệu, cập nhật báo cáo và theo dõi trạng thái.
+            - article [ref=e529]:
+              - generic [ref=e530]:
+                - img [ref=e531]
+                - text: BC
+              - heading "Người xem báo cáo" [level=3] [ref=e533]
+              - paragraph [ref=e534]: Chỉ xem dashboard, báo cáo và dữ liệu đã mở quyền đọc; xuất dữ liệu theo thẩm quyền.

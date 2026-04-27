@@ -1,5 +1,10 @@
+node_modules/
 .DS_Store
-**/.DS_Store
-.agent/
-.agents/
-.claude/
+.next/
+dist/
+.nx/
+coverage/
+.env
+.env.local
+*.tsbuildinfo
+apps/web/.next/
