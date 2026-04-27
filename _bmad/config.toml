@@ -12,7 +12,7 @@
 
 [core]
 document_output_language = "Vietnamese"
-output_folder = "{project-root}/_bmad-output"
+output_folder = "_bmad-output"
 
 [modules.bmm]
 project_name = "DocManSystem"
