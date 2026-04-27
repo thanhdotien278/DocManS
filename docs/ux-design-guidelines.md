@@ -95,7 +95,54 @@ Khoảng cách và kích thước:
 - Bóng đổ dùng nhẹ hoặc không dùng; ưu tiên border rõ ràng.
 - Layout phải hoạt động tốt ở các kích thước `375px`, `768px`, `1024px`, `1440px`.
 
-## 6. Dashboard Điều Hành
+## 6. Responsive UI Cho Điện Thoại Và Máy Tính Bảng
+
+RTMS phải được thiết kế theo hướng responsive từ đầu, vì người dùng có thể truy cập bằng điện thoại và máy tính bảng để xem việc cần xử lý, kiểm tra trạng thái, phê duyệt nhanh, đọc thông báo hoặc cập nhật tiến độ.
+
+Các breakpoint tối thiểu phải được kiểm tra:
+
+- Điện thoại nhỏ: `360px` đến `390px`.
+- Điện thoại phổ biến: `390px` đến `430px`.
+- Máy tính bảng dọc: khoảng `768px`.
+- Máy tính bảng ngang hoặc laptop nhỏ: `1024px`.
+- Desktop chuẩn: `1440px`.
+
+Nguyên tắc layout:
+
+- Mobile dùng bố cục một cột, ưu tiên nội dung và hành động quan trọng nhất.
+- Tablet có thể dùng hai cột nếu đủ không gian, nhưng không ép bảng dữ liệu quá hẹp.
+- Sidebar desktop phải chuyển thành drawer, bottom navigation hoặc menu thu gọn trên mobile/tablet.
+- Topbar trên mobile chỉ giữ các hành động chính: menu, tìm kiếm, thông báo, tài khoản.
+- Breadcrumb dài phải được rút gọn nhưng vẫn cho phép quay lại danh sách hoặc dashboard.
+- Không để nội dung bị che bởi header, bottom bar, drawer hoặc action bar cố định.
+
+Nguyên tắc bảng và danh sách:
+
+- Trên desktop, ưu tiên bảng đầy đủ với nhiều cột.
+- Trên tablet, ẩn bớt cột phụ và giữ các cột quan trọng như mã, tên, trạng thái, hạn xử lý, hành động.
+- Trên mobile, dùng card list hoặc bảng scroll ngang trong container riêng; không tạo horizontal scroll toàn trang.
+- Mỗi item mobile phải hiển thị tối thiểu: tên/mã, trạng thái, hạn xử lý, người phụ trách hoặc đơn vị, hành động chính.
+- Bộ lọc nâng cao trên mobile nên đặt trong bottom sheet hoặc drawer, có nút áp dụng và xóa lọc rõ ràng.
+
+Nguyên tắc form:
+
+- Form mobile dùng một cột, input rộng toàn hàng.
+- Các section dài cần có tiêu đề rõ và có thể thu gọn nếu phù hợp.
+- Action chính như Lưu nháp, Nộp chính thức, Phê duyệt nên nằm trong sticky action bar khi form dài.
+- Không đặt quá nhiều nút ngang hàng trên mobile; dùng menu phụ cho hành động ít dùng.
+- Vùng bấm của nút, tab, checkbox, radio, menu tối thiểu gần `44px`.
+
+Nguyên tắc nội dung và tương tác:
+
+- Text trong badge, nút, card không được tràn hoặc chồng lên nhau ở mobile.
+- Biểu đồ trên mobile phải có chiều cao cố định hợp lý và tooltip dễ đọc bằng chạm.
+- Modal trên mobile nên hiển thị như full-screen dialog hoặc bottom sheet nếu nội dung dài.
+- File upload phải hỗ trợ thao tác chạm rõ ràng, hiển thị tiến trình và lỗi upload dễ thấy.
+- Các trạng thái loading, empty, error phải có phiên bản mobile gọn, không chiếm quá nhiều chiều cao.
+
+Không được coi mobile/tablet là bản phụ sau desktop. Mọi màn hình quan trọng như dashboard, danh sách hồ sơ, chi tiết đề tài, form nộp hồ sơ, phê duyệt và giao việc đều phải có thiết kế responsive rõ ràng trước khi triển khai.
+
+## 7. Dashboard Điều Hành
 
 Dashboard phải hiển thị theo vai trò và đúng phạm vi quyền của người dùng.
 
@@ -114,7 +161,7 @@ Yêu cầu thiết kế:
 - Các cảnh báo quan trọng phải có mức độ ưu tiên rõ ràng.
 - Không để dashboard trở thành màn hình trang trí; mọi thành phần phải hỗ trợ ra quyết định hoặc hành động.
 
-## 7. Bảng Dữ Liệu Và Danh Sách
+## 8. Bảng Dữ Liệu Và Danh Sách
 
 Bảng dữ liệu là thành phần trung tâm của RTMS.
 
@@ -133,7 +180,7 @@ Yêu cầu responsive:
 - Mobile có thể dùng scroll ngang hoặc card list rút gọn.
 - Không để bảng tràn viewport hoặc tạo horizontal scroll toàn trang.
 
-## 8. Form Và Quy Trình Nghiệp Vụ
+## 9. Form Và Quy Trình Nghiệp Vụ
 
 Form trong RTMS thường dài và có ý nghĩa pháp lý/nghiệp vụ, vì vậy cần thiết kế theo section rõ ràng:
 
@@ -153,7 +200,7 @@ Yêu cầu bắt buộc:
 - Các hành động quan trọng phải có xác nhận và nêu rõ hậu quả.
 - Sau mỗi thao tác phải có loading, thành công hoặc lỗi rõ ràng.
 
-## 9. Trạng Thái, Timeline Và Lịch Sử Xử Lý
+## 10. Trạng Thái, Timeline Và Lịch Sử Xử Lý
 
 Với các quy trình như nộp hồ sơ, kiểm tra, đánh giá, tổng hợp, phê duyệt, theo dõi tiến độ và nghiệm thu, giao diện cần có:
 
@@ -164,7 +211,7 @@ Với các quy trình như nộp hồ sơ, kiểm tra, đánh giá, tổng hợp
 
 Không ẩn các thông tin truy vết quan trọng sau modal hoặc tooltip khó tìm.
 
-## 10. Tệp Đính Kèm
+## 11. Tệp Đính Kèm
 
 Quản lý tệp cần rõ ràng và có khả năng truy vết:
 
@@ -174,7 +221,7 @@ Quản lý tệp cần rõ ràng và có khả năng truy vết:
 - Tài liệu quan trọng cần có version hoặc lịch sử thay thế.
 - Nút tải xuống/xóa/thay thế chỉ hiện khi người dùng có quyền.
 
-## 11. Điều Hướng Và Tìm Kiếm
+## 12. Điều Hướng Và Tìm Kiếm
 
 Điều hướng phải giúp người dùng quay lại nhanh từ chi tiết về danh sách:
 
@@ -183,7 +230,7 @@ Quản lý tệp cần rõ ràng và có khả năng truy vết:
 - Tìm kiếm nhanh nên hỗ trợ mã hồ sơ, mã đề tài, tên đề tài, chủ nhiệm, đơn vị.
 - Bộ lọc đang áp dụng phải hiện rõ và có thể xóa nhanh.
 
-## 12. Accessibility
+## 13. Accessibility
 
 RTMS phải đạt tối thiểu mục tiêu WCAG AA cho các luồng chính.
 
@@ -198,7 +245,7 @@ Yêu cầu bắt buộc:
 - Kích thước vùng bấm trên mobile tối thiểu gần `44px`.
 - Tôn trọng `prefers-reduced-motion`.
 
-## 13. Icon Và Hình Ảnh
+## 14. Icon Và Hình Ảnh
 
 Yêu cầu:
 
@@ -208,7 +255,7 @@ Yêu cầu:
 - Không lặp lại logo trong từng card/panel.
 - Ảnh lễ nghi, ảnh sự kiện, carousel chỉ phù hợp với website công khai, không phù hợp màn hình quản trị nội bộ.
 
-## 14. Checklist Tuân Thủ Khi Thiết Kế
+## 15. Checklist Tuân Thủ Khi Thiết Kế
 
 Trước khi chốt một màn hình UX/UI, cần kiểm tra:
 
@@ -219,10 +266,13 @@ Trước khi chốt một màn hình UX/UI, cần kiểm tra:
 - Màu trạng thái có kèm text/icon để tránh phụ thuộc chỉ vào màu không.
 - Các thao tác quan trọng có loading, xác nhận, thành công và lỗi không.
 - Màn hình có đọc được và thao tác được trên mobile/tablet/desktop không.
+- Mobile có bố cục một cột hợp lý, không tràn ngang toàn trang và không bị che bởi thanh cố định không.
+- Tablet có bố cục tận dụng đủ không gian mà vẫn giữ được khả năng đọc bảng, form và dashboard không.
+- Các breakpoint `360px`, `390px`, `430px`, `768px`, `1024px`, `1440px` đã được kiểm tra chưa.
 - Có focus state, label, inline error và keyboard navigation cơ bản không.
 - Có tránh hero, carousel, gradient mạnh, emoji icon và decoration không cần thiết không.
 
-## 15. Nguyên Tắc Khi Có Thiết Kế Mới
+## 16. Nguyên Tắc Khi Có Thiết Kế Mới
 
 Khi thiết kế thêm màn hình hoặc tính năng mới:
 
