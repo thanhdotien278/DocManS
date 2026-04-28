@@ -24,7 +24,31 @@ describe("workspace smoke checks", () => {
     assert.equal(existsSync("apps/web/src/app/login/page.tsx"), true);
     assert.equal(existsSync("apps/web/src/middleware.ts"), true);
     assert.equal(existsSync("apps/api/src/main.ts"), true);
+    assert.equal(existsSync("packages/permissions/src/index.ts"), true);
     assert.equal(existsSync("packages/ui-tokens/src/index.ts"), true);
+  });
+
+  it("keeps temporary UI data isolated from production lib paths", () => {
+    assert.equal(existsSync("apps/web/src/fixtures/showcase-data.ts"), true);
+    assert.equal(existsSync("apps/web/src/fixtures/shell-context.ts"), true);
+    assert.equal(existsSync("apps/web/src/lib/app-data.ts"), false);
+    assert.equal(existsSync("apps/web/src/lib/accounts.ts"), false);
+  });
+
+  it("keeps permissions fail closed by default", () => {
+    const permissionsSource = readFileSync("packages/permissions/src/index.ts", "utf8");
+
+    assert.equal(/demoRoleContext|visual-demo/.test(permissionsSource), false);
+    assert.match(permissionsSource, /allowed:\s*false/);
+    assert.match(permissionsSource, /function evaluatePermission/);
+  });
+
+  it("does not keep browser-backed auth placeholders in the app shell boundary", () => {
+    const sessionSource = readFileSync("apps/web/src/lib/session.ts", "utf8");
+    const middlewareSource = readFileSync("apps/web/src/middleware.ts", "utf8");
+
+    assert.equal(/localStorage|document\.cookie|NextResponse\.redirect|rtms_session/.test(sessionSource), false);
+    assert.equal(/localStorage|document\.cookie|NextResponse\.redirect|rtms_session/.test(middlewareSource), false);
   });
 
   it("keeps prohibited presentation labels out of frontend source", () => {

@@ -6,8 +6,8 @@ class HealthController {
   health() {
     return {
       status: "ok",
-      service: "rtms-api-placeholder",
-      scope: "Story 1.1A visual MVP only"
+      service: "DocManSystem API",
+      timestamp: new Date().toISOString()
     };
   }
 }

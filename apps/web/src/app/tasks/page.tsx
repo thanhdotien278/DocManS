@@ -4,7 +4,7 @@ import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
 import { PriorityBadge, StatusBadge } from "@/components/ui/status-badge";
-import { tasks } from "@/lib/app-data";
+import { tasks } from "@/fixtures/showcase-data";
 
 export default function TasksPage() {
   return (

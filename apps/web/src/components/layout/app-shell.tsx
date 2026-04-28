@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { Bell, ChevronDown, LogOut, Search } from "lucide-react";
+import Link from "next/link";
+import { Bell, ChevronDown, Search, UserRound } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/components/auth/session-provider";
 import { MobileNav } from "@/components/layout/mobile-nav";
@@ -9,7 +10,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { account, logout } = useSession();
+  const { account } = useSession();
 
   if (pathname === "/login") {
     return <>{children}</>;
@@ -56,10 +57,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <p className="user-menu-meta">
                   {account.roleLabel} - {account.unit}
                 </p>
-                <button className="button" onClick={logout} type="button">
-                  <LogOut size={16} aria-hidden="true" />
-                  Đăng xuất
-                </button>
+                <Link className="button" href="/login">
+                  <UserRound size={16} aria-hidden="true" />
+                  Màn truy cập
+                </Link>
               </div>
             </details>
           </div>

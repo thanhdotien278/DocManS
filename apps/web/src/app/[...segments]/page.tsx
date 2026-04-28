@@ -1,10 +1,9 @@
-import { cookies } from "next/headers";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
-import { getAccountById, getRouteDefinition } from "@/lib/accounts";
-import { SESSION_COOKIE_NAME } from "@/lib/session";
+import { getAccountById, getRouteDefinition } from "@/fixtures/shell-context";
+import { DEFAULT_SHELL_PROFILE_ID } from "@/lib/session";
 
 function formatSegment(segment: string) {
   return segment
@@ -21,7 +20,7 @@ export default async function CatchAllPage({
   const { segments } = await params;
   const pathname = `/${segments.join("/")}`;
   const routeDefinition = getRouteDefinition(pathname);
-  const account = getAccountById((await cookies()).get(SESSION_COOKIE_NAME)?.value);
+  const account = getAccountById(DEFAULT_SHELL_PROFILE_ID);
   const title = routeDefinition?.title ?? formatSegment(segments[segments.length - 1] ?? "Phan he");
 
   return (
