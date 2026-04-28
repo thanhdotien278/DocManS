@@ -6,10 +6,19 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Timeline } from "@/components/ui/timeline";
-import { proposals, submittedFiles, timeline } from "@/lib/mock-data";
+import { getProposalById, submittedFiles, timeline } from "@/lib/app-data";
 
-export default function ProposalDetailPage() {
-  const proposal = proposals[0];
+export default async function ProposalDetailPage({
+  params
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const proposal = getProposalById(id) ?? getProposalById("hvqy-2026-001");
+
+  if (!proposal) {
+    return null;
+  }
 
   return (
     <>
@@ -23,13 +32,13 @@ export default function ProposalDetailPage() {
       <PageHeader
         eyebrow="Chi tiết hồ sơ"
         title={proposal.title}
-        description="Màn hình demo thể hiện trạng thái hiện tại, metadata, timeline xử lý, tệp nộp và các hành động workflow chính."
+        description="Tổng hợp thông tin hồ sơ, lịch sử xử lý, tệp đính kèm và các hành động nghiệp vụ liên quan."
         actions={<StatusBadge status={proposal.status} />}
       />
 
       <div className="grid two-column">
         <div className="grid">
-          <SectionCard title="Thông tin chung" subtitle="Dữ liệu mô phỏng từ hồ sơ đề xuất">
+          <SectionCard title="Thông tin chung" subtitle="Thông tin đăng ký và lịch sử tiếp nhận hồ sơ">
             <div className="meta-grid">
               <div className="meta-item">
                 <span className="meta-label">Mã hồ sơ</span>
@@ -62,7 +71,7 @@ export default function ProposalDetailPage() {
             <Timeline items={timeline} />
           </SectionCard>
 
-          <SectionCard title="Tệp đã nộp" subtitle="Mock file metadata, chưa kết nối MinIO">
+          <SectionCard title="Tệp đã nộp" subtitle="Danh mục tài liệu kèm theo hồ sơ">
             <div className="file-list">
               {submittedFiles.map((file) => (
                 <article className="file-item" key={file.name}>
@@ -83,7 +92,7 @@ export default function ProposalDetailPage() {
         </div>
 
         <div className="grid">
-          <SectionCard title="Hành động workflow" subtitle="Nút demo, chưa gọi backend">
+          <SectionCard title="Hành động workflow" subtitle="Xử lý theo thẩm quyền của người dùng hiện hành">
             <div className="button-row">
               <button className="button" type="button">
                 <Send size={16} aria-hidden="true" />
@@ -104,14 +113,14 @@ export default function ProposalDetailPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Đánh giá và phê duyệt" subtitle="Vùng placeholder cho Story 3.x">
+          <SectionCard title="Đánh giá và phê duyệt" subtitle="Tổng hợp nhận xét, điểm số và kết luận xử lý">
             <EmptyState
-              title="Chưa kết nối luồng đánh giá thật"
-              message="Khu vực này thể hiện vị trí hiển thị điểm đánh giá, nhận xét hội đồng và quyết định phê duyệt trong các story sau."
+              title="Thông tin đánh giá đang được cập nhật"
+              message="Khu vực này sử dụng để hiển thị nhận xét hội đồng, điểm chấm và quyết định xử lý theo hồ sơ."
             />
           </SectionCard>
 
-          <SectionCard title="Điều hướng nhanh" subtitle="Quay lại các màn hình demo chính">
+          <SectionCard title="Điều hướng nhanh" subtitle="Quay lại các màn hình nghiệp vụ liên quan">
             <div className="button-row">
               <Link className="button" href="/dashboard">
                 Dashboard

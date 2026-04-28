@@ -4,7 +4,7 @@ import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
 import { PriorityBadge, StatusBadge } from "@/components/ui/status-badge";
-import { tasks } from "@/lib/mock-data";
+import { tasks } from "@/lib/app-data";
 
 export default function TasksPage() {
   return (
@@ -13,11 +13,11 @@ export default function TasksPage() {
       <PageHeader
         eyebrow="Theo dõi công việc"
         title="Danh sách nhiệm vụ"
-        description="Màn hình demo cho việc giao nhiệm vụ, theo dõi ưu tiên, người phụ trách, hạn xử lý và trạng thái quá hạn/sắp hạn."
+        description="Theo dõi nhiệm vụ theo mức ưu tiên, người phụ trách, hạn xử lý và trạng thái thực hiện."
         actions={
           <button className="button primary" type="button">
             <ClipboardCheck size={17} aria-hidden="true" />
-            Tạo nhiệm vụ demo
+            Tạo nhiệm vụ mới
           </button>
         }
       />

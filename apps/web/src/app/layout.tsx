@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import "./globals.css";
+import { SessionProvider } from "@/components/auth/session-provider";
 import { AppShell } from "@/components/layout/app-shell";
+import { SESSION_COOKIE_NAME } from "@/lib/session";
 
 export const metadata: Metadata = {
-  title: "RTMS | Học viện Quân y",
-  description: "Research Topic Management System của Học viện Quân y",
+  title: "Hệ thống quản lý NCKH | Học viện Quân y",
+  description: "Hệ thống quản lý nghiên cứu khoa học của Học viện Quân y",
   icons: {
     icon: "/logo.png",
     shortcut: "/logo.png",
@@ -12,15 +15,19 @@ export const metadata: Metadata = {
   }
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialAccountId = (await cookies()).get(SESSION_COOKIE_NAME)?.value ?? null;
+
   return (
     <html lang="vi">
       <body>
-        <AppShell>{children}</AppShell>
+        <SessionProvider initialAccountId={initialAccountId}>
+          <AppShell>{children}</AppShell>
+        </SessionProvider>
       </body>
     </html>
   );

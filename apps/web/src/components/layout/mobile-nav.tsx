@@ -2,10 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { navigationItems } from "@/lib/navigation";
+import { useSession } from "@/components/auth/session-provider";
+import { getNavigationItems } from "@/lib/navigation";
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { account } = useSession();
+
+  if (!account) {
+    return null;
+  }
+
+  const navigationItems = getNavigationItems(account.role);
 
   return (
     <details className="mobile-menu">

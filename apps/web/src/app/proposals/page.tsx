@@ -5,7 +5,7 @@ import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { proposals } from "@/lib/mock-data";
+import { proposals } from "@/lib/app-data";
 
 export default function ProposalsPage() {
   return (
@@ -14,16 +14,16 @@ export default function ProposalsPage() {
       <PageHeader
         eyebrow="OMS"
         title="Danh sách hồ sơ đề tài"
-        description="Trải nghiệm danh sách hồ sơ có tìm kiếm, bộ lọc, trạng thái nghiệp vụ và hành động nhanh theo vai trò."
+        description="Theo dõi hồ sơ theo mã, chủ nhiệm, đơn vị, đợt tiếp nhận và trạng thái nghiệp vụ."
         actions={
           <button className="button primary" type="button">
             <Plus size={17} aria-hidden="true" />
-            Tạo hồ sơ demo
+            Tạo hồ sơ mới
           </button>
         }
       />
 
-      <SectionCard title="Bộ lọc hồ sơ" subtitle="Dữ liệu mô phỏng phục vụ duyệt giao diện">
+      <SectionCard title="Bộ lọc hồ sơ" subtitle="Tập trung các hồ sơ cần xử lý theo trạng thái và đợt tiếp nhận">
         <FilterBar
           searchPlaceholder="Nhập mã hồ sơ, tên đề tài, chủ nhiệm..."
           filters={[
