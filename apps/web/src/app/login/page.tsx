@@ -1,11 +1,8 @@
 import Image from "next/image";
-import Link from "next/link";
-import { ArrowRight, Building2, ShieldCheck } from "lucide-react";
-import { accountProfiles } from "@/fixtures/shell-context";
+import { Building2, ShieldCheck } from "lucide-react";
+import { LoginForm } from "@/components/auth/login-form";
 
 export default function LoginPage() {
-  const primaryProfile = accountProfiles[0];
-
   return (
     <div className="login-shell">
       <section className="login-panel" aria-labelledby="login-title">
@@ -22,52 +19,43 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="login-form">
-          <div className="access-banner">
-            <ShieldCheck size={20} aria-hidden="true" />
-            <div>
-              <strong>Sẵn sàng kết nối xác thực nội bộ</strong>
-              <span>Luồng đăng nhập chính thức sẽ được triển khai trong giai đoạn tiếp theo.</span>
-            </div>
-          </div>
-
-          <Link className="button primary login-submit" href="/dashboard">
-            Mở giao diện nền tảng
-            <ArrowRight size={17} aria-hidden="true" />
-          </Link>
-        </div>
+        <LoginForm />
       </section>
 
       <aside className="login-context">
         <section className="login-summary-card" aria-live="polite">
-          <p className="login-summary-label">Ngữ cảnh hiển thị</p>
-          <h2>{primaryProfile?.name}</h2>
+          <p className="login-summary-label">Xác thực nội bộ</p>
+          <h2>Truy cập hệ thống</h2>
           <dl className="summary-grid">
             <div>
-              <dt>Vai trò</dt>
-              <dd>{primaryProfile?.roleLabel}</dd>
+              <dt>Phạm vi</dt>
+              <dd>Người dùng nội bộ được cấp tài khoản</dd>
             </div>
             <div>
-              <dt>Đơn vị</dt>
-              <dd>{primaryProfile?.unit}</dd>
+              <dt>Bảo vệ</dt>
+              <dd>Phiên đăng nhập được kiểm tra trước khi vào khu vực nghiệp vụ</dd>
             </div>
           </dl>
         </section>
 
         <section className="login-note-card">
-          <h2>Phạm vi nền tảng</h2>
+          <h2>Nguyên tắc truy cập</h2>
           <ul className="login-note-list">
-            <li>Bố cục quản trị gồm sidebar, topbar, tìm kiếm nhanh và thông báo.</li>
-            <li>Các trang điều hành giữ hướng thiết kế chính thống, rõ dữ liệu và phù hợp nghiệp vụ nội bộ.</li>
-            <li>Ranh giới xác thực, phiên làm việc và quyền truy cập được chuẩn bị để thay thế bằng backend thật.</li>
+            <li>Sử dụng tài khoản được cấp đúng vai trò và đơn vị công tác.</li>
+            <li>Thông tin điều hướng và ngữ cảnh người dùng được nạp từ phiên đăng nhập hiện hành.</li>
+            <li>Kết thúc phiên làm việc bằng chức năng đăng xuất trong menu người dùng.</li>
           </ul>
         </section>
 
         <section className="login-note-card">
-          <h2>Trạng thái tích hợp</h2>
+          <h2>Trạng thái bảo vệ</h2>
           <div className="access-status-row">
+            <ShieldCheck size={18} aria-hidden="true" />
+            <span>Các trang nội bộ yêu cầu phiên đăng nhập hợp lệ</span>
+          </div>
+          <div className="access-status-row" style={{ marginTop: 10 }}>
             <Building2 size={18} aria-hidden="true" />
-            <span>Chưa kết nối dịch vụ xác thực</span>
+            <span>Thông tin vai trò và đơn vị hiển thị trong giao diện sau khi đăng nhập</span>
           </div>
         </section>
       </aside>

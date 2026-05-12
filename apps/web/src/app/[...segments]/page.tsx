@@ -2,8 +2,7 @@ import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
-import { getAccountById, getRouteDefinition } from "@/fixtures/shell-context";
-import { DEFAULT_SHELL_PROFILE_ID } from "@/lib/session";
+import { getRouteDefinition } from "@/fixtures/shell-context";
 
 function formatSegment(segment: string) {
   return segment
@@ -20,7 +19,6 @@ export default async function CatchAllPage({
   const { segments } = await params;
   const pathname = `/${segments.join("/")}`;
   const routeDefinition = getRouteDefinition(pathname);
-  const account = getAccountById(DEFAULT_SHELL_PROFILE_ID);
   const title = routeDefinition?.title ?? formatSegment(segments[segments.length - 1] ?? "Phan he");
 
   return (
@@ -38,7 +36,7 @@ export default async function CatchAllPage({
       <div className="grid two-column">
         <SectionCard
           title={routeDefinition?.summaryTitle ?? "Tổng quan phân hệ"}
-          subtitle={`Người dùng hiện hành: ${account?.name ?? "Tài khoản hệ thống"}`}
+          subtitle="Thông tin trang theo ngữ cảnh phiên đăng nhập hiện hành"
         >
           <p className="section-copy">
             {routeDefinition?.summaryBody ??

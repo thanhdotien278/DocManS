@@ -9,11 +9,14 @@
   "scripts": {
     "dev": "next dev apps/web",
     "dev:web": "next dev apps/web",
-    "dev:api": "tsc -p apps/api/tsconfig.app.json --outDir dist/apps/api && node dist/apps/api/main.js",
+    "dev:api": "npm run prisma:generate && tsc -p apps/api/tsconfig.app.json --outDir dist/apps/api && node dist/apps/api/main.js",
     "build": "npm run build:web && npm run build:api",
     "build:web": "next build apps/web",
-    "build:api": "tsc -p apps/api/tsconfig.app.json --outDir dist/apps/api",
+    "build:api": "npm run prisma:generate && tsc -p apps/api/tsconfig.app.json --outDir dist/apps/api",
     "lint": "npm run typecheck",
+    "prisma:generate": "prisma generate --schema apps/api/prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema apps/api/prisma/schema.prisma",
+    "prisma:seed": "node apps/api/prisma/seed.mjs",
     "test": "node --test tests/smoke.test.mjs",
     "typecheck": "tsc -p apps/web/tsconfig.json --noEmit && tsc -p apps/api/tsconfig.app.json --noEmit"
   },
@@ -21,8 +24,14 @@
     "@nestjs/common": "^11.1.0",
     "@nestjs/core": "^11.1.0",
     "@nestjs/platform-express": "^11.1.0",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@types/pg": "^8.20.0",
+    "dotenv": "^17.4.2",
     "lucide-react": "^0.475.0",
     "next": "^15.2.0",
+    "pg": "^8.20.0",
+    "prisma": "^7.8.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "reflect-metadata": "^0.2.2",
@@ -34,5 +43,8 @@
     "@types/react-dom": "^19.0.3",
     "nx": "^20.4.0",
     "typescript": "^5.7.3"
+  },
+  "prisma": {
+    "seed": "node apps/api/prisma/seed.mjs"
   }
 }

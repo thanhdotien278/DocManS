@@ -5,9 +5,7 @@ import { KpiCard } from "@/components/ui/kpi-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { getAccountById } from "@/fixtures/shell-context";
 import { getDashboardSnapshot, type DashboardPanel } from "@/fixtures/showcase-data";
-import { DEFAULT_SHELL_PROFILE_ID } from "@/lib/session";
 
 function renderPanel(panel: DashboardPanel) {
   if (panel.variant === "chart") {
@@ -113,8 +111,7 @@ function renderPanel(panel: DashboardPanel) {
 }
 
 export default function DashboardPage() {
-  const account = getAccountById(DEFAULT_SHELL_PROFILE_ID);
-  const snapshot = getDashboardSnapshot(account?.role ?? "leadership");
+  const snapshot = getDashboardSnapshot("leadership");
 
   return (
     <>

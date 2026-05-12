@@ -1,7 +1,36 @@
-import { getAccountById } from "@/fixtures/shell-context";
+export const AUTH_SESSION_COOKIE = "rtms_session";
 
-export const DEFAULT_SHELL_PROFILE_ID = "leadership-nguyen-van-minh";
+export type CurrentUser = {
+  id: string;
+  username: string;
+  displayName: string;
+  role: "system-admin" | "leadership" | "scientific-management" | "principal-investigator" | "reviewer";
+  roleLabel: string;
+  unit: string;
+};
 
-export function resolveShellProfileId(profileId?: string | null) {
-  return getAccountById(profileId)?.id ?? DEFAULT_SHELL_PROFILE_ID;
+export type ShellAccount = {
+  id: string;
+  username: string;
+  name: string;
+  role: CurrentUser["role"];
+  roleLabel: string;
+  unit: string;
+  initials: string;
+};
+
+export function getApiBaseUrl() {
+  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
+}
+
+export function toShellAccount(user: CurrentUser): ShellAccount {
+  return {
+    id: user.id,
+    username: user.username,
+    name: user.displayName,
+    role: user.role,
+    roleLabel: user.roleLabel,
+    unit: user.unit,
+    initials: user.displayName.trim().charAt(0).toUpperCase() || "U"
+  };
 }
