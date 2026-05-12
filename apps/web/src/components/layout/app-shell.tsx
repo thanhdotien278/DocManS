@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="topbar-brand" aria-label="Hệ thống quản lý nghiên cứu khoa học">
             <BrandMark />
             <div>
-              <strong>Hệ thống quản lý NCKH</strong>
+              <strong>Hệ thống quản lý NCKH, CN và đổi mới sáng tạo</strong>
               <span>Học viện Quân y</span>
             </div>
           </div>

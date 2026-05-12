@@ -6,7 +6,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { SESSION_COOKIE_NAME } from "@/lib/session";
 
 export const metadata: Metadata = {
-  title: "Hệ thống quản lý NCKH | Học viện Quân y",
+  title: "Hệ thống quản lý NCKH, CN và đổi mới sáng tạo | Học viện Quân y",
   description: "Hệ thống quản lý nghiên cứu khoa học của Học viện Quân y",
   icons: {
     icon: "/logo.png",
