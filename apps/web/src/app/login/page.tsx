@@ -73,7 +73,7 @@ export default function LoginPage() {
           <div>
             <p className="login-kicker">Cổng thông tin nội bộ</p>
             <h1 className="login-title" id="login-title">
-              Hệ thống quản lý NCKH
+              Hệ thống quản lý NCKH, CN và đổi mới sáng tạo
             </h1>
             <p className="login-subtitle">Học viện Quân y</p>
           </div>

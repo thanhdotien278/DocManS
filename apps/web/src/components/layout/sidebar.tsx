@@ -20,7 +20,7 @@ export function Sidebar() {
       <Link className="brand" href="/dashboard">
         <BrandMark />
         <div>
-          <p className="brand-title">Hệ thống quản lý NCKH</p>
+          <p className="brand-title">Hệ thống quản lý NCKH, CN và đổi mới sáng tạo</p>
           <p className="brand-subtitle">Học viện Quân y</p>
         </div>
       </Link>
