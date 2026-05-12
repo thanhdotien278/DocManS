@@ -24,7 +24,7 @@ export default async function ProposalDetailPage({
     <>
       <Breadcrumb
         items={[
-          { label: "Dashboard", href: "/dashboard" },
+          { label: "Bảng điều hành", href: "/dashboard" },
           { label: "Quản lý đề tài", href: "/proposals" },
           { label: proposal.code }
         ]}
@@ -92,7 +92,7 @@ export default async function ProposalDetailPage({
         </div>
 
         <div className="grid">
-          <SectionCard title="Hành động workflow" subtitle="Xử lý theo thẩm quyền của người dùng hiện hành">
+          <SectionCard title="Hành động quy trình" subtitle="Xử lý theo thẩm quyền của người dùng hiện hành">
             <div className="button-row">
               <button className="button" type="button">
                 <Send size={16} aria-hidden="true" />
@@ -123,13 +123,13 @@ export default async function ProposalDetailPage({
           <SectionCard title="Điều hướng nhanh" subtitle="Quay lại các màn hình nghiệp vụ liên quan">
             <div className="button-row">
               <Link className="button" href="/dashboard">
-                Dashboard
+                Bảng điều hành
               </Link>
               <Link className="button" href="/proposals">
                 Danh sách hồ sơ
               </Link>
-              <Link className="button" href="/tasks">
-                Giao việc
+              <Link className="button" href="/nhiem-vu">
+                Quản lý nhiệm vụ
               </Link>
             </div>
           </SectionCard>

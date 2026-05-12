@@ -1,0 +1,11 @@
+[     456ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/login:0
+[     542ms] Error: Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at rD (http://localhost:3000/_next/static/chunks/framework-bedcc38a5b4692ac.js:1:42735)
+    at oK (http://localhost:3000/_next/static/chunks/framework-bedcc38a5b4692ac.js:1:92781)
+    at uS (http://localhost:3000/_next/static/chunks/framework-bedcc38a5b4692ac.js:1:123868)
+    at http://localhost:3000/_next/static/chunks/framework-bedcc38a5b4692ac.js:1:123713
+    at uw (http://localhost:3000/_next/static/chunks/framework-bedcc38a5b4692ac.js:1:123721)
+    at uc (http://localhost:3000/_next/static/chunks/framework-bedcc38a5b4692ac.js:1:119096)
+    at uZ (http://localhost:3000/_next/static/chunks/framework-bedcc38a5b4692ac.js:1:142234)
+    at MessagePort.N (http://localhost:3000/_next/static/chunks/framework-bedcc38a5b4692ac.js:1:183990)
+[    1546ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/favicon.ico:0

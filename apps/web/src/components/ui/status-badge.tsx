@@ -12,10 +12,15 @@ export function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export function PriorityBadge({ priority }: { priority: "high" | "medium" | "low" }) {
+export function PriorityBadge({
+  priority
+}: {
+  priority: "critical" | "high" | "medium" | "low";
+}) {
   const labels = {
+    critical: "Khẩn cấp",
     high: "Ưu tiên cao",
-    medium: "Ưu tiên vừa",
+    medium: "Trung bình",
     low: "Ưu tiên thấp"
   };
 

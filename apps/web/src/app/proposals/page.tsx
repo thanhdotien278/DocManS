@@ -10,9 +10,9 @@ import { proposals } from "@/lib/app-data";
 export default function ProposalsPage() {
   return (
     <>
-      <Breadcrumb items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Quản lý đề tài" }]} />
+      <Breadcrumb items={[{ label: "Bảng điều hành", href: "/dashboard" }, { label: "Quản lý đề tài" }]} />
       <PageHeader
-        eyebrow="OMS"
+        eyebrow="Quản lý đề tài"
         title="Danh sách hồ sơ đề tài"
         description="Theo dõi hồ sơ theo mã, chủ nhiệm, đơn vị, đợt tiếp nhận và trạng thái nghiệp vụ."
         actions={

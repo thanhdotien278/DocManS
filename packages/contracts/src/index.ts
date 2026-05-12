@@ -9,8 +9,17 @@ export type WorkflowStatus =
   | "submitted"
   | "needs-supplement"
   | "in-review"
+  | "processing"
+  | "assigned"
+  | "accepted"
+  | "in-progress"
+  | "waiting-response"
+  | "pending-result-approval"
   | "pending-approval"
   | "approved"
+  | "passed"
+  | "not-passed"
   | "rejected"
   | "overdue"
-  | "completed";
+  | "completed"
+  | "paused";

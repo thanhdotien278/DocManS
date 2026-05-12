@@ -22,11 +22,11 @@ export default async function CatchAllPage({
   const pathname = `/${segments.join("/")}`;
   const routeDefinition = getRouteDefinition(pathname);
   const account = getAccountById((await cookies()).get(SESSION_COOKIE_NAME)?.value);
-  const title = routeDefinition?.title ?? formatSegment(segments[segments.length - 1] ?? "Phan he");
+  const title = routeDefinition?.title ?? formatSegment(segments[segments.length - 1] ?? "Phân hệ");
 
   return (
     <>
-      <Breadcrumb items={[{ label: "Dashboard", href: "/dashboard" }, { label: title }]} />
+      <Breadcrumb items={[{ label: "Bảng điều hành", href: "/dashboard" }, { label: title }]} />
       <PageHeader
         eyebrow={routeDefinition?.eyebrow ?? "Nghiệp vụ"}
         title={title}

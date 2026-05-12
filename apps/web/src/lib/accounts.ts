@@ -6,16 +6,20 @@ import {
   CalendarDays,
   CalendarRange,
   ClipboardCheck,
+  ClipboardList,
   FileCheck2,
   FileClock,
   FileSearch,
   FileText,
   Files,
   FolderKanban,
+  GraduationCap,
+  HeartPulse,
   History,
   LayoutDashboard,
   ListTodo,
   NotebookPen,
+  Presentation,
   Settings2,
   ShieldCheck,
   Users
@@ -104,7 +108,7 @@ export const accountProfiles: AccountProfile[] = [
 export const routeDefinitions: Record<string, RouteDefinition> = {
   "/dashboard": {
     eyebrow: "Điều hành",
-    title: "Dashboard",
+    title: "Bảng điều hành",
     description: "Tổng hợp các chỉ số, danh sách và tín hiệu cần xử lý theo vai trò đang đăng nhập.",
     summaryTitle: "Tổng hợp điều hành",
     summaryBody: "Chỉ số và danh sách trong phân hệ này được điều chỉnh theo vai trò, đơn vị và phạm vi nghiệp vụ hiện hành."
@@ -131,11 +135,39 @@ export const routeDefinitions: Record<string, RouteDefinition> = {
     summaryBody: "Báo cáo được cấu hình theo phạm vi dữ liệu hiện hành và sẵn sàng cho xuất biểu mẫu văn phòng."
   },
   "/proposals": {
-    eyebrow: "OMS",
+    eyebrow: "Quản lý đề tài",
     title: "Quản lý đề tài",
     description: "Tra cứu, lọc và xử lý hồ sơ đề tài theo đợt tiếp nhận và trạng thái nghiệp vụ.",
     summaryTitle: "Danh mục hồ sơ",
     summaryBody: "Thông tin được sắp xếp theo mã hồ sơ, đơn vị, chủ nhiệm, trạng thái và hạn xử lý để hỗ trợ xử lý nhanh."
+  },
+  "/nhiem-vu": {
+    eyebrow: "Nhiệm vụ",
+    title: "Quản lý nhiệm vụ",
+    description: "Theo dõi nhiệm vụ phát sinh từ hồ sơ, đề tài, hội đồng, hội thảo và các yêu cầu điều hành nội bộ.",
+    summaryTitle: "Tổng quan nhiệm vụ",
+    summaryBody: "Phân hệ này tập trung danh sách nhiệm vụ, mức độ ưu tiên, người phụ trách, hạn xử lý và lịch sử cập nhật theo quy trình vận hành."
+  },
+  "/de-tai-sinh-vien": {
+    eyebrow: "Sinh viên NCKH",
+    title: "Đề tài sinh viên NCKH",
+    description: "Quản lý hồ sơ đăng ký, xét duyệt, triển khai và nghiệm thu đề tài nghiên cứu khoa học của sinh viên.",
+    summaryTitle: "Tổng quan đề tài sinh viên",
+    summaryBody: "Phân hệ này sẽ trình bày hồ sơ đề tài sinh viên theo năm học, khoa/bộ môn, giảng viên hướng dẫn, nhóm sinh viên và trạng thái nghiệm thu."
+  },
+  "/hoi-thao-khoa-hoc": {
+    eyebrow: "Hội thảo",
+    title: "Hội thảo khoa học",
+    description: "Quản lý kế hoạch tổ chức, báo cáo viên, đại biểu, chương trình, tài liệu và báo cáo sau hội thảo khoa học.",
+    summaryTitle: "Tổng quan hội thảo khoa học",
+    summaryBody: "Phân hệ này sẽ hỗ trợ theo dõi đề xuất tổ chức, thẩm định nội dung, phê duyệt kế hoạch, lịch tổ chức và biên bản tổng kết."
+  },
+  "/hoi-dong-y-duc": {
+    eyebrow: "Y đức",
+    title: "Hội đồng y đức",
+    description: "Theo dõi hồ sơ thẩm định y đức, phiên họp hội đồng, nhận xét chuyên môn, kết luận và điều kiện kèm theo.",
+    summaryTitle: "Tổng quan hội đồng y đức",
+    summaryBody: "Phân hệ này sẽ tập trung các hồ sơ nghiên cứu cần thẩm định y đức, mức độ rủi ro, tài liệu bắt buộc, lịch họp và kết luận hội đồng."
   },
   "/intakes": {
     eyebrow: "Tiếp nhận",
@@ -253,42 +285,52 @@ export const routeDefinitions: Record<string, RouteDefinition> = {
 
 export const navigationByRole: Record<UserRole, NavigationItem[]> = {
   leadership: [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/dashboard", label: "Bảng điều hành", icon: LayoutDashboard },
     { href: "/approvals", label: "Hồ sơ chờ phê duyệt", icon: FileClock },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
-    { href: "/tasks", label: "Giao việc", icon: ClipboardCheck },
+    { href: "/nhiem-vu", label: "Quản lý nhiệm vụ", icon: ClipboardList },
+    { href: "/hoi-thao-khoa-hoc", label: "Hội thảo khoa học", icon: Presentation },
+    { href: "/hoi-dong-y-duc", label: "Hội đồng y đức", icon: HeartPulse },
     { href: "/reports", label: "Báo cáo", icon: BarChart3 }
   ],
   "scientific-management": [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/dashboard", label: "Bảng điều hành", icon: LayoutDashboard },
     { href: "/proposals", label: "Quản lý đề tài", icon: Files },
+    { href: "/de-tai-sinh-vien", label: "Đề tài sinh viên NCKH", icon: GraduationCap },
     { href: "/intakes", label: "Đợt tiếp nhận", icon: CalendarRange },
     { href: "/reviews", label: "Đánh giá hồ sơ", icon: FileSearch },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
-    { href: "/tasks", label: "Giao việc", icon: ClipboardCheck },
+    { href: "/nhiem-vu", label: "Quản lý nhiệm vụ", icon: ClipboardList },
+    { href: "/hoi-thao-khoa-hoc", label: "Hội thảo khoa học", icon: Presentation },
+    { href: "/hoi-dong-y-duc", label: "Hội đồng y đức", icon: HeartPulse },
     { href: "/reports", label: "Báo cáo", icon: BarChart3 }
   ],
   "principal-investigator": [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/dashboard", label: "Bảng điều hành", icon: LayoutDashboard },
     { href: "/my-proposals", label: "Hồ sơ của tôi", icon: FileText },
+    { href: "/de-tai-sinh-vien", label: "Đề tài sinh viên NCKH", icon: GraduationCap },
     { href: "/my-projects", label: "Đề tài đang thực hiện", icon: FolderKanban },
     { href: "/periodic-reports", label: "Báo cáo định kỳ", icon: NotebookPen },
     { href: "/my-tasks", label: "Công việc của tôi", icon: ListTodo },
+    { href: "/hoi-dong-y-duc", label: "Hội đồng y đức", icon: HeartPulse },
     { href: "/notifications", label: "Thông báo", icon: Bell }
   ],
   reviewer: [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/dashboard", label: "Bảng điều hành", icon: LayoutDashboard },
     { href: "/assigned-proposals", label: "Hồ sơ được phân công", icon: FileCheck2 },
     { href: "/my-reviews", label: "Đánh giá của tôi", icon: Files },
     { href: "/council-schedule", label: "Lịch họp hội đồng", icon: CalendarDays },
+    { href: "/hoi-thao-khoa-hoc", label: "Hội thảo khoa học", icon: Presentation },
+    { href: "/hoi-dong-y-duc", label: "Hội đồng y đức", icon: HeartPulse },
     { href: "/notifications", label: "Thông báo", icon: Bell }
   ],
   "system-admin": [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/dashboard", label: "Bảng điều hành", icon: LayoutDashboard },
     { href: "/users", label: "Người dùng", icon: Users },
     { href: "/roles", label: "Vai trò", icon: ShieldCheck },
     { href: "/units", label: "Đơn vị", icon: Building2 },
     { href: "/catalogs", label: "Danh mục", icon: BookCopy },
+    { href: "/nhiem-vu", label: "Quản lý nhiệm vụ", icon: ClipboardCheck },
     { href: "/system-settings", label: "Cấu hình hệ thống", icon: Settings2 },
     { href: "/system-logs", label: "Nhật ký hệ thống", icon: History }
   ]

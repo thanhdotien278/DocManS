@@ -1,0 +1,205 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e55]
+  - generic [ref=e56]:
+    - complementary "Điều hướng chính" [ref=e57]:
+      - link "Học viện Quân y Hệ thống quản lý NCKH, CN và đổi mới sáng tạo Học viện Quân y" [ref=e58] [cursor=pointer]:
+        - /url: /dashboard
+        - img "Học viện Quân y" [ref=e60]
+        - generic [ref=e61]:
+          - paragraph [ref=e62]: Hệ thống quản lý NCKH, CN và đổi mới sáng tạo
+          - paragraph [ref=e63]: Học viện Quân y
+      - navigation [ref=e64]:
+        - link "Bảng điều hành" [ref=e65] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e66]
+          - generic [ref=e71]: Bảng điều hành
+        - link "Hồ sơ chờ phê duyệt" [ref=e72] [cursor=pointer]:
+          - /url: /approvals
+          - img [ref=e73]
+          - generic [ref=e78]: Hồ sơ chờ phê duyệt
+        - link "Theo dõi đề tài" [ref=e79] [cursor=pointer]:
+          - /url: /projects
+          - img [ref=e80]
+          - generic [ref=e82]: Theo dõi đề tài
+        - link "Quản lý nhiệm vụ" [ref=e83] [cursor=pointer]:
+          - /url: /nhiem-vu
+          - img [ref=e84]
+          - generic [ref=e87]: Quản lý nhiệm vụ
+        - link "Hội thảo khoa học" [ref=e88] [cursor=pointer]:
+          - /url: /hoi-thao-khoa-hoc
+          - img [ref=e89]
+          - generic [ref=e92]: Hội thảo khoa học
+        - link "Hội đồng y đức" [ref=e93] [cursor=pointer]:
+          - /url: /hoi-dong-y-duc
+          - img [ref=e94]
+          - generic [ref=e97]: Hội đồng y đức
+        - link "Báo cáo" [ref=e98] [cursor=pointer]:
+          - /url: /reports
+          - img [ref=e99]
+          - generic [ref=e101]: Báo cáo
+      - generic [ref=e102]:
+        - strong [ref=e103]: Phạm vi truy cập hiện hành
+        - generic [ref=e104]: Giám Đốc - Ban Giám Đốc
+    - generic [ref=e105]:
+      - banner [ref=e106]:
+        - generic [ref=e107]:
+          - img [ref=e108]
+          - textbox "Tìm kiếm nhanh" [ref=e111]:
+            - /placeholder: Tìm mã hồ sơ, đề tài, chủ nhiệm...
+        - generic [ref=e112]:
+          - button "Mở thông báo" [ref=e113] [cursor=pointer]:
+            - img [ref=e114]
+          - group [ref=e117]:
+            - generic "Người dùng hiện tại" [ref=e118]:
+              - generic [ref=e119]: T
+              - generic [ref=e120]:
+                - generic [ref=e121]: GS. TS. Trần Viết Tiến
+                - generic [ref=e122]: Giám Đốc - Ban Giám Đốc
+              - img [ref=e123]
+      - main [ref=e125]:
+        - navigation "Đường dẫn" [ref=e126]:
+          - generic [ref=e127]: Bảng điều hành
+        - generic [ref=e128]:
+          - generic [ref=e129]:
+            - paragraph [ref=e130]: Điều hành
+            - heading "Bảng điều hành lãnh đạo" [level=1] [ref=e131]
+            - paragraph [ref=e132]: Tổng hợp hồ sơ chờ phê duyệt, đề tài chậm tiến độ, việc quá hạn và báo cáo tổng hợp trong phạm vi Học viện Quân y.
+          - link "Mở hồ sơ chờ phê duyệt" [ref=e134] [cursor=pointer]:
+            - /url: /approvals
+        - generic [ref=e135]:
+          - article [ref=e136]:
+            - paragraph [ref=e137]: Hồ sơ chờ phê duyệt
+            - paragraph [ref=e138]: "08"
+            - paragraph [ref=e139]: 3 hồ sơ cần xử lý trong hôm nay
+          - article [ref=e140]:
+            - paragraph [ref=e141]: Đề tài chậm tiến độ
+            - paragraph [ref=e142]: "03"
+            - paragraph [ref=e143]: 01 đề tài cần can thiệp trực tiếp
+          - article [ref=e144]:
+            - paragraph [ref=e145]: Việc quá hạn
+            - paragraph [ref=e146]: "05"
+            - paragraph [ref=e147]: 2 nhiệm vụ thuộc Phòng Quản lý khoa học
+          - article [ref=e148]:
+            - paragraph [ref=e149]: Báo cáo tổng hợp
+            - paragraph [ref=e150]: "12"
+            - paragraph [ref=e151]: 7 ngày tới có 12 đầu mục cần theo dõi
+        - generic [ref=e152]:
+          - generic [ref=e153]:
+            - generic [ref=e154]:
+              - generic [ref=e155]:
+                - heading "Hồ sơ chờ phê duyệt" [level=2] [ref=e156]
+                - paragraph [ref=e157]: Ưu tiên theo hạn xử lý và kết quả thẩm định hiện có
+              - link "Xem toàn bộ" [ref=e158] [cursor=pointer]:
+                - /url: /approvals
+            - table [ref=e160]:
+              - rowgroup [ref=e161]:
+                - row "Mã hồ sơ Tên đề tài Đơn vị Trạng thái Hạn xử lý" [ref=e162]:
+                  - columnheader "Mã hồ sơ" [ref=e163]
+                  - columnheader "Tên đề tài" [ref=e164]
+                  - columnheader "Đơn vị" [ref=e165]
+                  - columnheader "Trạng thái" [ref=e166]
+                  - columnheader "Hạn xử lý" [ref=e167]
+              - rowgroup [ref=e168]:
+                - row "HVQY-2026-001 Đánh giá hiệu quả can thiệp phục hồi chức năng sau chấn thương chi dưới TS. Nguyễn Minh Đức Khoa Chấn thương chỉnh hình Chờ phê duyệt 30/04/2026" [ref=e169]:
+                  - cell "HVQY-2026-001" [ref=e170]:
+                    - link "HVQY-2026-001" [ref=e171] [cursor=pointer]:
+                      - /url: /proposals/hvqy-2026-001
+                  - cell "Đánh giá hiệu quả can thiệp phục hồi chức năng sau chấn thương chi dưới TS. Nguyễn Minh Đức" [ref=e172]:
+                    - generic [ref=e173]: Đánh giá hiệu quả can thiệp phục hồi chức năng sau chấn thương chi dưới
+                    - generic [ref=e174]: TS. Nguyễn Minh Đức
+                  - cell "Khoa Chấn thương chỉnh hình" [ref=e175]
+                  - cell "Chờ phê duyệt" [ref=e176]:
+                    - generic [ref=e177]:
+                      - img [ref=e178]
+                      - text: Chờ phê duyệt
+                  - cell "30/04/2026" [ref=e181]
+                - row "HVQY-2026-014 Ứng dụng mô hình dự báo nguy cơ nhiễm khuẩn bệnh viện PGS. Trần Thu Hà Khoa Kiểm soát nhiễm khuẩn Đang đánh giá 28/04/2026" [ref=e182]:
+                  - cell "HVQY-2026-014" [ref=e183]:
+                    - link "HVQY-2026-014" [ref=e184] [cursor=pointer]:
+                      - /url: /proposals/hvqy-2026-014
+                  - cell "Ứng dụng mô hình dự báo nguy cơ nhiễm khuẩn bệnh viện PGS. Trần Thu Hà" [ref=e185]:
+                    - generic [ref=e186]: Ứng dụng mô hình dự báo nguy cơ nhiễm khuẩn bệnh viện
+                    - generic [ref=e187]: PGS. Trần Thu Hà
+                  - cell "Khoa Kiểm soát nhiễm khuẩn" [ref=e188]
+                  - cell "Đang đánh giá" [ref=e189]:
+                    - generic [ref=e190]:
+                      - img [ref=e191]
+                      - text: Đang đánh giá
+                  - cell "28/04/2026" [ref=e194]
+                - row "HVQY-2026-021 Nghiên cứu chỉ số sinh học trong chẩn đoán sớm tổn thương thận cấp ThS. Lê Quốc Huy Bộ môn Sinh lý bệnh Cần bổ sung 27/04/2026" [ref=e195]:
+                  - cell "HVQY-2026-021" [ref=e196]:
+                    - link "HVQY-2026-021" [ref=e197] [cursor=pointer]:
+                      - /url: /proposals/hvqy-2026-021
+                  - cell "Nghiên cứu chỉ số sinh học trong chẩn đoán sớm tổn thương thận cấp ThS. Lê Quốc Huy" [ref=e198]:
+                    - generic [ref=e199]: Nghiên cứu chỉ số sinh học trong chẩn đoán sớm tổn thương thận cấp
+                    - generic [ref=e200]: ThS. Lê Quốc Huy
+                  - cell "Bộ môn Sinh lý bệnh" [ref=e201]
+                  - cell "Cần bổ sung" [ref=e202]:
+                    - generic [ref=e203]:
+                      - img [ref=e204]
+                      - text: Cần bổ sung
+                  - cell "27/04/2026" [ref=e207]
+          - generic [ref=e208]:
+            - generic [ref=e210]:
+              - heading "Cảnh báo ưu tiên" [level=2] [ref=e211]
+              - paragraph [ref=e212]: Các tín hiệu cần xử lý hoặc cần theo dõi sát
+            - generic [ref=e213]:
+              - article [ref=e214]:
+                - img [ref=e216]
+                - generic [ref=e218]:
+                  - paragraph [ref=e219]: Reviewer quá hạn đánh giá hồ sơ HVQY-2026-014
+                  - paragraph [ref=e220]: Quá hạn 1 ngày - cần nhắc xử lý
+              - article [ref=e221]:
+                - img [ref=e223]
+                - generic [ref=e225]:
+                  - paragraph [ref=e226]: Hồ sơ HVQY-2026-001 đang chờ quyết định phê duyệt
+                  - paragraph [ref=e227]: Hạn xử lý 30/04/2026
+              - article [ref=e228]:
+                - img [ref=e230]
+                - generic [ref=e232]:
+                  - paragraph [ref=e233]: Báo cáo tiến độ quý II sắp đến hạn
+                  - paragraph [ref=e234]: 12 báo cáo cần theo dõi trong 7 ngày tới
+        - generic [ref=e235]:
+          - generic [ref=e236]:
+            - generic [ref=e238]:
+              - heading "Tình hình theo đơn vị" [level=2] [ref=e239]
+              - paragraph [ref=e240]: Tổng hợp hồ sơ và đầu mục cần xử lý theo đơn vị
+            - generic "Tình hình theo đơn vị" [ref=e241]:
+              - generic [ref=e242]:
+                - emphasis [ref=e243]: "06"
+                - strong [ref=e245]: Ngoại khoa
+              - generic [ref=e246]:
+                - emphasis [ref=e247]: "04"
+                - strong [ref=e249]: Nội khoa
+              - generic [ref=e250]:
+                - emphasis [ref=e251]: "05"
+                - strong [ref=e253]: Cận lâm sàng
+              - generic [ref=e254]:
+                - emphasis [ref=e255]: "02"
+                - strong [ref=e257]: Sinh học
+              - generic [ref=e258]:
+                - emphasis [ref=e259]: "07"
+                - strong [ref=e261]: QLKH
+          - generic [ref=e262]:
+            - generic [ref=e263]:
+              - generic [ref=e264]:
+                - heading "Nhiệm vụ quá hạn" [level=2] [ref=e265]
+                - paragraph [ref=e266]: Nhiệm vụ cần can thiệp trong phạm vi điều hành
+              - link "Mở quản lý nhiệm vụ" [ref=e267] [cursor=pointer]:
+                - /url: /nhiem-vu
+            - generic [ref=e268]:
+              - article [ref=e269]:
+                - img [ref=e271]
+                - generic [ref=e273]:
+                  - paragraph [ref=e274]: Rà soát hồ sơ đề tài HVQY-2026-001 trước khi trình phê duyệt
+                  - paragraph [ref=e275]: TS. Nguyễn Minh Phương - Hạn xử lý 14/05/2026
+              - article [ref=e276]:
+                - img [ref=e278]
+                - generic [ref=e280]:
+                  - paragraph [ref=e281]: Nhắc đơn vị chủ trì nộp báo cáo tiến độ quý II/2026
+                  - paragraph [ref=e282]: CN. Vũ Lan - Quá hạn 2 ngày
+              - article [ref=e283]:
+                - img [ref=e285]
+                - generic [ref=e287]:
+                  - paragraph [ref=e288]: Kiểm tra minh chứng bổ sung hồ sơ HVQY-2026-021
+                  - paragraph [ref=e289]: ThS. Hoàng Mai - Chờ đơn vị bổ sung trước 16/05/2026

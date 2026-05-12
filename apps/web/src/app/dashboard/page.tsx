@@ -16,7 +16,8 @@ function renderPanel(panel: DashboardPanel) {
       <SectionCard key={panel.title} title={panel.title} subtitle={panel.subtitle}>
         <div className="chart-placeholder" aria-label={panel.title}>
           {panel.bars.map((bar) => (
-            <div className="chart-bar" key={bar.label}>
+            <div className={`chart-bar ${bar.tone ?? "emerald"}`} key={bar.label}>
+              {bar.value ? <em className="chart-bar-value">{bar.value}</em> : null}
               <span style={{ height: bar.height }} />
               <strong>{bar.label}</strong>
             </div>
@@ -119,7 +120,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <Breadcrumb items={[{ label: "Dashboard" }]} />
+      <Breadcrumb items={[{ label: "Bảng điều hành" }]} />
       <PageHeader
         eyebrow={snapshot.eyebrow}
         title={snapshot.title}

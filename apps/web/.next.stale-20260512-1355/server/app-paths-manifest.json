@@ -1,0 +1,8 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/nhiem-vu/page": "app/nhiem-vu/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/[...segments]/page": "app/[...segments]/page.js",
+  "/login/page": "app/login/page.js",
+  "/nhiem-vu/[id]/page": "app/nhiem-vu/[id]/page.js"
+}

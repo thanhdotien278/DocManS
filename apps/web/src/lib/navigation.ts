@@ -9,5 +9,5 @@ export function getNavigationItems(role: UserRole) {
 }
 
 export function getPageTitle(pathname: string) {
-  return getRouteDefinition(pathname)?.title ?? "Dashboard";
+  return getRouteDefinition(pathname)?.title ?? "Bảng điều hành";
 }

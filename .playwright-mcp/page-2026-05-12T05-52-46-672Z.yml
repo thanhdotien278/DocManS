@@ -1,0 +1,11 @@
+- generic [active]:
+  - generic [ref=e6] [cursor=pointer]:
+    - button "Open issues overlay" [ref=e7]:
+      - img [ref=e9]
+      - generic [ref=e11]:
+        - generic [ref=e12]: "0"
+        - generic [ref=e13]: "1"
+      - generic [ref=e14]: Issue
+    - button "Collapse issues badge" [ref=e15]:
+      - img [ref=e16]
+  - alert [ref=e18]

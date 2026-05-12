@@ -1,5 +1,6 @@
 import type { WorkflowStatus } from "@rtms/contracts";
 import type { UserRole } from "@/lib/accounts";
+import { taskRecords } from "@/lib/task-data";
 
 export type Proposal = {
   id: string;
@@ -10,16 +11,6 @@ export type Proposal = {
   intakePeriod: string;
   status: WorkflowStatus;
   submittedAt: string;
-  dueDate: string;
-};
-
-export type Task = {
-  id: string;
-  title: string;
-  linkedRecord: string;
-  assignee: string;
-  priority: "high" | "medium" | "low";
-  status: WorkflowStatus;
   dueDate: string;
 };
 
@@ -48,6 +39,8 @@ export type DashboardListItem = {
 export type DashboardBar = {
   label: string;
   height: string;
+  value?: string;
+  tone?: "emerald" | "amber" | "blue" | "teal" | "maroon";
 };
 
 export type DashboardPanel =
@@ -131,45 +124,6 @@ export const proposals: Proposal[] = [
   }
 ];
 
-export const tasks: Task[] = [
-  {
-    id: "T-1024",
-    title: "Rà soát hồ sơ chờ phê duyệt HVQY-2026-001",
-    linkedRecord: "HVQY-2026-001",
-    assignee: "Phòng Quản lý khoa học",
-    priority: "high",
-    status: "pending-approval",
-    dueDate: "Hôm nay"
-  },
-  {
-    id: "T-1025",
-    title: "Nhắc reviewer hoàn tất đánh giá đề tài nhiễm khuẩn",
-    linkedRecord: "HVQY-2026-014",
-    assignee: "CN. Vũ Lan",
-    priority: "medium",
-    status: "overdue",
-    dueDate: "Quá hạn 1 ngày"
-  },
-  {
-    id: "T-1026",
-    title: "Kiểm tra minh chứng bổ sung của đề tài thận cấp",
-    linkedRecord: "HVQY-2026-021",
-    assignee: "ThS. Hoàng Mai",
-    priority: "medium",
-    status: "needs-supplement",
-    dueDate: "27/04/2026"
-  },
-  {
-    id: "T-1027",
-    title: "Chuẩn bị báo cáo tổng hợp đợt 1/2026",
-    linkedRecord: "Báo cáo điều hành",
-    assignee: "Phòng Quản lý khoa học",
-    priority: "low",
-    status: "draft",
-    dueDate: "03/05/2026"
-  }
-];
-
 export const timeline = [
   {
     title: "Hồ sơ được nộp chính thức",
@@ -217,7 +171,7 @@ export function getDashboardSnapshot(role: UserRole): DashboardSnapshot {
     case "scientific-management":
       return {
         eyebrow: "Điều hành nghiệp vụ",
-        title: "Dashboard chuyên viên quản lý khoa học",
+        title: "Bảng điều hành chuyên viên quản lý khoa học",
         description: "Tổng hợp các hồ sơ mới nộp, hồ sơ cần kiểm tra và tiến độ thẩm định trong phạm vi đơn vị quản lý.",
         primaryActionLabel: "Mở danh sách hồ sơ",
         primaryActionHref: "/proposals",
@@ -259,11 +213,11 @@ export function getDashboardSnapshot(role: UserRole): DashboardSnapshot {
             title: "Tình hình theo đơn vị",
             subtitle: "Số lượng hồ sơ đang xử lý theo đơn vị chuyên môn",
             bars: [
-              { label: "Chấn thương", height: "148px" },
-              { label: "Nội khoa", height: "112px" },
-              { label: "Cận lâm sàng", height: "136px" },
-              { label: "Sinh học", height: "94px" },
-              { label: "QLKH", height: "168px" }
+              { label: "Chấn thương", height: "148px", value: "06", tone: "emerald" },
+              { label: "Nội khoa", height: "112px", value: "04", tone: "amber" },
+              { label: "Cận lâm sàng", height: "136px", value: "05", tone: "blue" },
+              { label: "Sinh học", height: "94px", value: "03", tone: "teal" },
+              { label: "QLKH", height: "168px", value: "07", tone: "maroon" }
             ]
           },
           {
@@ -283,7 +237,7 @@ export function getDashboardSnapshot(role: UserRole): DashboardSnapshot {
     case "principal-investigator":
       return {
         eyebrow: "Công việc cá nhân",
-        title: "Dashboard chủ nhiệm đề tài",
+        title: "Bảng điều hành chủ nhiệm đề tài",
         description: "Tổng hợp hồ sơ, đề tài đang thực hiện, báo cáo định kỳ và công việc được giao cho chủ nhiệm.",
         primaryActionLabel: "Mở hồ sơ của tôi",
         primaryActionHref: "/my-proposals",
@@ -351,7 +305,7 @@ export function getDashboardSnapshot(role: UserRole): DashboardSnapshot {
     case "reviewer":
       return {
         eyebrow: "Thẩm định cá nhân",
-        title: "Dashboard thành viên hội đồng",
+        title: "Bảng điều hành thành viên hội đồng",
         description: "Tổng hợp hồ sơ được phân công, đánh giá chưa hoàn thành và lịch họp hội đồng sắp tới.",
         primaryActionLabel: "Mở hồ sơ được phân công",
         primaryActionHref: "/assigned-proposals",
@@ -419,7 +373,7 @@ export function getDashboardSnapshot(role: UserRole): DashboardSnapshot {
     case "system-admin":
       return {
         eyebrow: "Quản trị hệ thống",
-        title: "Dashboard quản trị hệ thống",
+        title: "Bảng điều hành quản trị hệ thống",
         description: "Tổng hợp tài khoản, vai trò, đơn vị và các điểm cần cấu hình trong hệ thống vận hành nội bộ.",
         primaryActionLabel: "Mở quản lý người dùng",
         primaryActionHref: "/users",
@@ -484,7 +438,7 @@ export function getDashboardSnapshot(role: UserRole): DashboardSnapshot {
     default:
       return {
         eyebrow: "Điều hành",
-        title: "Dashboard lãnh đạo",
+        title: "Bảng điều hành lãnh đạo",
         description: "Tổng hợp hồ sơ chờ phê duyệt, đề tài chậm tiến độ, việc quá hạn và báo cáo tổng hợp trong phạm vi Học viện Quân y.",
         primaryActionLabel: "Mở hồ sơ chờ phê duyệt",
         primaryActionHref: "/approvals",
@@ -526,22 +480,22 @@ export function getDashboardSnapshot(role: UserRole): DashboardSnapshot {
             title: "Tình hình theo đơn vị",
             subtitle: "Tổng hợp hồ sơ và đầu mục cần xử lý theo đơn vị",
             bars: [
-              { label: "Ngoại khoa", height: "150px" },
-              { label: "Nội khoa", height: "112px" },
-              { label: "Cận lâm sàng", height: "136px" },
-              { label: "Sinh học", height: "84px" },
-              { label: "QLKH", height: "168px" }
+              { label: "Ngoại khoa", height: "150px", value: "06", tone: "emerald" },
+              { label: "Nội khoa", height: "112px", value: "04", tone: "amber" },
+              { label: "Cận lâm sàng", height: "136px", value: "05", tone: "blue" },
+              { label: "Sinh học", height: "84px", value: "02", tone: "teal" },
+              { label: "QLKH", height: "168px", value: "07", tone: "maroon" }
             ]
           },
           {
             variant: "list",
-            title: "Công việc quá hạn",
+            title: "Nhiệm vụ quá hạn",
             subtitle: "Nhiệm vụ cần can thiệp trong phạm vi điều hành",
-            actionLabel: "Mở giao việc",
-            actionHref: "/tasks",
-            items: tasks.slice(0, 3).map((task) => ({
+            actionLabel: "Mở quản lý nhiệm vụ",
+            actionHref: "/nhiem-vu",
+            items: taskRecords.slice(0, 3).map((task) => ({
               title: task.title,
-              meta: `${task.assignee} - ${task.dueDate}`
+              meta: `${task.assignee} - ${task.dueLabel}`
             }))
           }
         ]

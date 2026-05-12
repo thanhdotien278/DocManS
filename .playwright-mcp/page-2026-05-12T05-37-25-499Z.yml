@@ -1,0 +1,53 @@
+- generic [ref=e2]:
+  - region "Hệ thống quản lý NCKH, CN và đổi mới sáng tạo" [ref=e3]:
+    - generic [ref=e4]:
+      - img "Học viện Quân y" [ref=e6]
+      - generic [ref=e7]:
+        - paragraph [ref=e8]: Cổng thông tin nội bộ
+        - heading "Hệ thống quản lý NCKH, CN và đổi mới sáng tạo" [level=1] [ref=e9]
+        - paragraph [ref=e10]: Học viện Quân y
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]: Hồ sơ truy cập
+        - generic [ref=e14]:
+          - img [ref=e15]
+          - combobox "Hồ sơ truy cập" [ref=e18]:
+            - option "GS. TS. Trần Viết Tiến - Giám Đốc" [selected]
+            - option "TS. Nguyễn Minh Phương - Trưởng phòng"
+            - option "TS. Phạm Anh Tuấn - Chủ nhiệm đề tài"
+            - option "TS. Đỗ Minh Trung - Thành viên Hội đồng"
+            - option "TS. Đỗ Tiến Thành - Quản trị hệ thống"
+      - generic [ref=e19]:
+        - generic [ref=e20]: Tên đăng nhập
+        - generic [ref=e21]:
+          - img [ref=e22]
+          - textbox "Tên đăng nhập" [ref=e25]:
+            - /placeholder: Nhập tên đăng nhập
+            - text: nvm_bgh
+      - generic [ref=e26]:
+        - generic [ref=e27]: Mật khẩu
+        - generic [ref=e28]:
+          - img [ref=e29]
+          - textbox "Mật khẩu" [ref=e33]:
+            - /placeholder: Nhập mật khẩu
+      - button "Đăng nhập hệ thống" [ref=e34] [cursor=pointer]
+  - complementary [ref=e35]:
+    - generic [ref=e36]:
+      - paragraph [ref=e37]: Thông tin truy cập
+      - heading "GS. TS. Trần Viết Tiến" [level=2] [ref=e38]
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - term [ref=e41]: Vai trò
+          - definition [ref=e42]: Giám Đốc
+        - generic [ref=e43]:
+          - term [ref=e44]: Đơn vị
+          - definition [ref=e45]: Ban Giám Đốc
+        - generic [ref=e46]:
+          - term [ref=e47]: Tên đăng nhập
+          - definition [ref=e48]: nvm_bgh
+    - generic [ref=e49]:
+      - heading "Quy định truy cập" [level=2] [ref=e50]
+      - list [ref=e51]:
+        - listitem [ref=e52]: Sử dụng tài khoản được cấp đúng vai trò và đơn vị công tác.
+        - listitem [ref=e53]: Thông tin điều hướng, dashboard và thông báo được điều chỉnh theo phạm vi truy cập hiện hành.
+        - listitem [ref=e54]: Mỗi phiên đăng nhập cần kết thúc bằng chức năng đăng xuất sau khi hoàn thành công việc.
