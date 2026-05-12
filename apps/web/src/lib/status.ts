@@ -41,5 +41,14 @@ export const statusMeta: Record<
   "conference-in-session": { label: "Đang tổ chức", tone: "info", Icon: RotateCw },
   "conference-awaiting-report": { label: "Chờ báo cáo sau hội thảo", tone: "warning", Icon: Clock3 },
   "conference-completed": { label: "Hoàn tất", tone: "success", Icon: CheckCircle2 },
-  "conference-postponed": { label: "Tạm hoãn", tone: "neutral", Icon: PauseCircle }
+  "conference-postponed": { label: "Tạm hoãn", tone: "neutral", Icon: PauseCircle },
+  "student-registering": { label: "Đang đăng ký", tone: "info", Icon: RotateCw },
+  "student-awaiting-check": { label: "Chờ kiểm tra", tone: "warning", Icon: Clock3 },
+  "student-needs-supplement": { label: "Cần bổ sung", tone: "warning", Icon: HelpCircle },
+  "student-eligible": { label: "Đã đủ điều kiện", tone: "success", Icon: CheckCircle2 },
+  "student-in-progress": { label: "Đang thực hiện", tone: "info", Icon: RotateCw },
+  "student-awaiting-acceptance": { label: "Chờ nghiệm thu", tone: "warning", Icon: Clock3 },
+  "student-accepted": { label: "Đã nghiệm thu", tone: "success", Icon: CheckCircle2 },
+  "student-not-passed": { label: "Không đạt", tone: "danger", Icon: XCircle },
+  "student-awarded": { label: "Đạt giải", tone: "success", Icon: CheckCircle2 }
 };
