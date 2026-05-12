@@ -1,5 +1,7 @@
 node_modules/
 .DS_Store
+.agents/
+.playwright-mcp/
 .next/
 dist/
 .nx/
