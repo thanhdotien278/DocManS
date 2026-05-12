@@ -1,0 +1,132 @@
+- generic [active] [ref=e1]:
+  - navigation "Breadcrumb" [ref=e2]:
+    - generic [ref=e3]:
+      - link "Dashboard" [ref=e4] [cursor=pointer]:
+        - /url: /dashboard
+      - text: /
+    - generic [ref=e5]:
+      - link "Quản lý đề tài" [ref=e6] [cursor=pointer]:
+        - /url: /proposals
+      - text: /
+    - generic [ref=e7]: HVQY-2026-001
+  - generic [ref=e8]:
+    - generic [ref=e9]:
+      - paragraph [ref=e10]: Chi tiết hồ sơ
+      - heading "Đánh giá hiệu quả can thiệp phục hồi chức năng sau chấn thương chi dưới" [level=1] [ref=e11]
+      - paragraph [ref=e12]: Tổng hợp thông tin hồ sơ, lịch sử xử lý, tệp đính kèm và các hành động nghiệp vụ liên quan.
+    - generic [ref=e14]:
+      - img [ref=e15]
+      - text: Chờ phê duyệt
+  - generic [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e22]:
+          - heading "Thông tin chung" [level=2] [ref=e23]
+          - paragraph [ref=e24]: Thông tin đăng ký và lịch sử tiếp nhận hồ sơ
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - generic [ref=e27]: Mã hồ sơ
+            - generic [ref=e28]: HVQY-2026-001
+          - generic [ref=e29]:
+            - generic [ref=e30]: Chủ nhiệm
+            - generic [ref=e31]: TS. Nguyễn Minh Đức
+          - generic [ref=e32]:
+            - generic [ref=e33]: Đơn vị chủ trì
+            - generic [ref=e34]: Khoa Chấn thương chỉnh hình
+          - generic [ref=e35]:
+            - generic [ref=e36]: Đợt tiếp nhận
+            - generic [ref=e37]: Đợt 1/2026
+          - generic [ref=e38]:
+            - generic [ref=e39]: Ngày nộp
+            - generic [ref=e40]: 22/04/2026
+          - generic [ref=e41]:
+            - generic [ref=e42]: Hạn xử lý
+            - generic [ref=e43]: 30/04/2026
+      - generic [ref=e44]:
+        - generic [ref=e46]:
+          - heading "Timeline xử lý" [level=2] [ref=e47]
+          - paragraph [ref=e48]: Truy vết trạng thái và người thực hiện
+        - generic [ref=e49]:
+          - generic [ref=e52]:
+            - paragraph [ref=e53]: Hồ sơ được nộp chính thức
+            - paragraph [ref=e54]: TS. Nguyễn Minh Đức - 22/04/2026 09:12
+            - generic [ref=e56]:
+              - img [ref=e57]
+              - text: Đã nộp
+          - generic [ref=e62]:
+            - paragraph [ref=e63]: Chuyên viên kiểm tra tính đầy đủ
+            - paragraph [ref=e64]: CN. Vũ Lan - 23/04/2026 14:30
+            - generic [ref=e66]:
+              - img [ref=e67]
+              - text: Hoàn thành
+          - generic [ref=e72]:
+            - paragraph [ref=e73]: Hoàn tất tổng hợp ý kiến đánh giá
+            - paragraph [ref=e74]: Phòng Quản lý khoa học - 25/04/2026 16:10
+            - generic [ref=e76]:
+              - img [ref=e77]
+              - text: Hoàn thành
+          - generic [ref=e82]:
+            - paragraph [ref=e83]: Chờ lãnh đạo phê duyệt
+            - paragraph [ref=e84]: Trạng thái hiện tại - hạn xử lý 30/04/2026
+            - generic [ref=e86]:
+              - img [ref=e87]
+              - text: Chờ phê duyệt
+      - generic [ref=e90]:
+        - generic [ref=e92]:
+          - heading "Tệp đã nộp" [level=2] [ref=e93]
+          - paragraph [ref=e94]: Danh mục tài liệu kèm theo hồ sơ
+        - generic [ref=e95]:
+          - article [ref=e96]:
+            - img [ref=e98]
+            - generic [ref=e101]:
+              - generic [ref=e102]: Thuyet-minh-de-cuong-HVQY-2026-001.pdf
+              - generic [ref=e103]: PDF - 2.4 MB - TS. Nguyễn Minh Đức - 22/04/2026
+            - button "Xem trước" [ref=e104] [cursor=pointer]
+          - article [ref=e105]:
+            - img [ref=e107]
+            - generic [ref=e110]:
+              - generic [ref=e111]: Du-toan-kinh-phi.xlsx
+              - generic [ref=e112]: Excel - 418 KB - TS. Nguyễn Minh Đức - 22/04/2026
+            - button "Xem trước" [ref=e113] [cursor=pointer]
+          - article [ref=e114]:
+            - img [ref=e116]
+            - generic [ref=e119]:
+              - generic [ref=e120]: Ly-lich-khoa-hoc-chu-nhiem.pdf
+              - generic [ref=e121]: PDF - 860 KB - TS. Nguyễn Minh Đức - 22/04/2026
+            - button "Xem trước" [ref=e122] [cursor=pointer]
+    - generic [ref=e123]:
+      - generic [ref=e124]:
+        - generic [ref=e126]:
+          - heading "Hành động workflow" [level=2] [ref=e127]
+          - paragraph [ref=e128]: Xử lý theo thẩm quyền của người dùng hiện hành
+        - generic [ref=e129]:
+          - button "Yêu cầu bổ sung" [ref=e130] [cursor=pointer]:
+            - img [ref=e131]
+            - text: Yêu cầu bổ sung
+          - button "Chuyển đánh giá" [ref=e134] [cursor=pointer]:
+            - img [ref=e135]
+            - text: Chuyển đánh giá
+          - button "Phê duyệt" [ref=e138] [cursor=pointer]:
+            - img [ref=e139]
+            - text: Phê duyệt
+          - button "Từ chối" [ref=e142] [cursor=pointer]:
+            - img [ref=e143]
+            - text: Từ chối
+      - generic [ref=e147]:
+        - generic [ref=e149]:
+          - heading "Đánh giá và phê duyệt" [level=2] [ref=e150]
+          - paragraph [ref=e151]: Tổng hợp nhận xét, điểm số và kết luận xử lý
+        - generic [ref=e153]:
+          - heading "Thông tin đánh giá đang được cập nhật" [level=3] [ref=e154]
+          - paragraph [ref=e155]: Khu vực này sử dụng để hiển thị nhận xét hội đồng, điểm chấm và quyết định xử lý theo hồ sơ.
+      - generic [ref=e156]:
+        - generic [ref=e158]:
+          - heading "Điều hướng nhanh" [level=2] [ref=e159]
+          - paragraph [ref=e160]: Quay lại các màn hình nghiệp vụ liên quan
+        - generic [ref=e161]:
+          - link "Dashboard" [ref=e162] [cursor=pointer]:
+            - /url: /dashboard
+          - link "Danh sách hồ sơ" [ref=e163] [cursor=pointer]:
+            - /url: /proposals
+          - link "Giao việc" [ref=e164] [cursor=pointer]:
+            - /url: /tasks
