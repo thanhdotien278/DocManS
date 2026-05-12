@@ -23,5 +23,14 @@ export const statusMeta: Record<
   "not-passed": { label: "Không thông qua", tone: "danger", Icon: XCircle },
   rejected: { label: "Từ chối", tone: "danger", Icon: XCircle },
   paused: { label: "Tạm dừng", tone: "neutral", Icon: PauseCircle },
-  draft: { label: "Nháp", tone: "neutral", Icon: PauseCircle }
+  draft: { label: "Nháp", tone: "neutral", Icon: PauseCircle },
+  "ethics-new": { label: "Mới tiếp nhận", tone: "info", Icon: RotateCw },
+  "ethics-awaiting-check": { label: "Chờ kiểm tra", tone: "warning", Icon: Clock3 },
+  "ethics-needs-evidence": { label: "Cần bổ sung minh chứng", tone: "warning", Icon: HelpCircle },
+  "ethics-in-review": { label: "Đang thẩm định", tone: "warning", Icon: Clock3 },
+  "ethics-awaiting-meeting": { label: "Chờ họp hội đồng", tone: "info", Icon: Clock3 },
+  "ethics-approved": { label: "Đã thông qua", tone: "success", Icon: CheckCircle2 },
+  "ethics-conditional-approved": { label: "Thông qua có điều kiện", tone: "warning", Icon: CheckCircle2 },
+  "ethics-not-approved": { label: "Không thông qua", tone: "danger", Icon: XCircle },
+  "ethics-paused": { label: "Tạm dừng", tone: "neutral", Icon: PauseCircle }
 };

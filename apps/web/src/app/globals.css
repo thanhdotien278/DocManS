@@ -589,7 +589,8 @@ summary:focus-visible {
 }
 
 .status-badge,
-.priority-badge {
+.priority-badge,
+.risk-badge {
   display: inline-flex;
   min-height: 26px;
   align-items: center;
@@ -650,6 +651,24 @@ summary:focus-visible {
 .priority-badge.low {
   background: var(--institutional-green-soft);
   color: var(--institutional-green);
+}
+
+.risk-badge.low {
+  border-color: #b8dcc8;
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.risk-badge.medium {
+  border-color: #ead48c;
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.risk-badge.high {
+  border-color: #efc0bd;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .filter-bar {
