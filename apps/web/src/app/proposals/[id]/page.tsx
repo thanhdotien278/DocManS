@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Timeline } from "@/components/ui/timeline";
-import { getProposalById, submittedFiles, timeline } from "@/lib/app-data";
+import { getProposalById, submittedFiles, timeline } from "@/fixtures/showcase-data";
 
 export default async function ProposalDetailPage({
   params

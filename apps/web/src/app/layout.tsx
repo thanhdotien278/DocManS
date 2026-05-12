@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import "./globals.css";
 import { SessionProvider } from "@/components/auth/session-provider";
 import { AppShell } from "@/components/layout/app-shell";
-import { SESSION_COOKIE_NAME } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Hệ thống quản lý NCKH, CN và đổi mới sáng tạo | Học viện Quân y",
@@ -20,12 +18,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const initialAccountId = (await cookies()).get(SESSION_COOKIE_NAME)?.value ?? null;
-
   return (
     <html lang="vi">
       <body>
-        <SessionProvider initialAccountId={initialAccountId}>
+        <SessionProvider>
           <AppShell>{children}</AppShell>
         </SessionProvider>
       </body>

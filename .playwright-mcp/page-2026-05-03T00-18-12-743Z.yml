@@ -1,0 +1,137 @@
+- generic [active] [ref=e1]:
+  - navigation "Breadcrumb" [ref=e2]:
+    - generic [ref=e3]: Dashboard
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - paragraph [ref=e6]: Điều hành
+      - heading "Dashboard lãnh đạo" [level=1] [ref=e7]
+      - paragraph [ref=e8]: Tổng hợp hồ sơ chờ phê duyệt, đề tài chậm tiến độ, việc quá hạn và báo cáo tổng hợp trong phạm vi Học viện Quân y.
+    - link "Mở hồ sơ chờ phê duyệt" [ref=e10] [cursor=pointer]:
+      - /url: /approvals
+  - generic [ref=e11]:
+    - article [ref=e12]:
+      - paragraph [ref=e13]: Hồ sơ chờ phê duyệt
+      - paragraph [ref=e14]: "08"
+      - paragraph [ref=e15]: 3 hồ sơ cần xử lý trong hôm nay
+    - article [ref=e16]:
+      - paragraph [ref=e17]: Đề tài chậm tiến độ
+      - paragraph [ref=e18]: "03"
+      - paragraph [ref=e19]: 01 đề tài cần can thiệp trực tiếp
+    - article [ref=e20]:
+      - paragraph [ref=e21]: Việc quá hạn
+      - paragraph [ref=e22]: "05"
+      - paragraph [ref=e23]: 2 nhiệm vụ thuộc Phòng Quản lý khoa học
+    - article [ref=e24]:
+      - paragraph [ref=e25]: Báo cáo tổng hợp
+      - paragraph [ref=e26]: "12"
+      - paragraph [ref=e27]: 7 ngày tới có 12 đầu mục cần theo dõi
+  - generic [ref=e28]:
+    - generic [ref=e29]:
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - heading "Hồ sơ chờ phê duyệt" [level=2] [ref=e32]
+          - paragraph [ref=e33]: Ưu tiên theo hạn xử lý và kết quả thẩm định hiện có
+        - link "Xem toàn bộ" [ref=e34] [cursor=pointer]:
+          - /url: /approvals
+      - table [ref=e36]:
+        - rowgroup [ref=e37]:
+          - row "Mã hồ sơ Tên đề tài Đơn vị Trạng thái Hạn xử lý" [ref=e38]:
+            - columnheader "Mã hồ sơ" [ref=e39]
+            - columnheader "Tên đề tài" [ref=e40]
+            - columnheader "Đơn vị" [ref=e41]
+            - columnheader "Trạng thái" [ref=e42]
+            - columnheader "Hạn xử lý" [ref=e43]
+        - rowgroup [ref=e44]:
+          - row "HVQY-2026-001 Đánh giá hiệu quả can thiệp phục hồi chức năng sau chấn thương chi dưới TS. Nguyễn Minh Đức Khoa Chấn thương chỉnh hình Chờ phê duyệt 30/04/2026" [ref=e45]:
+            - cell "HVQY-2026-001" [ref=e46]:
+              - link "HVQY-2026-001" [ref=e47] [cursor=pointer]:
+                - /url: /proposals/hvqy-2026-001
+            - cell "Đánh giá hiệu quả can thiệp phục hồi chức năng sau chấn thương chi dưới TS. Nguyễn Minh Đức" [ref=e48]:
+              - generic [ref=e49]: Đánh giá hiệu quả can thiệp phục hồi chức năng sau chấn thương chi dưới
+              - generic [ref=e50]: TS. Nguyễn Minh Đức
+            - cell "Khoa Chấn thương chỉnh hình" [ref=e51]
+            - cell "Chờ phê duyệt" [ref=e52]:
+              - generic [ref=e53]:
+                - img [ref=e54]
+                - text: Chờ phê duyệt
+            - cell "30/04/2026" [ref=e57]
+          - row "HVQY-2026-014 Ứng dụng mô hình dự báo nguy cơ nhiễm khuẩn bệnh viện PGS. Trần Thu Hà Khoa Kiểm soát nhiễm khuẩn Đang đánh giá 28/04/2026" [ref=e58]:
+            - cell "HVQY-2026-014" [ref=e59]:
+              - link "HVQY-2026-014" [ref=e60] [cursor=pointer]:
+                - /url: /proposals/hvqy-2026-014
+            - cell "Ứng dụng mô hình dự báo nguy cơ nhiễm khuẩn bệnh viện PGS. Trần Thu Hà" [ref=e61]:
+              - generic [ref=e62]: Ứng dụng mô hình dự báo nguy cơ nhiễm khuẩn bệnh viện
+              - generic [ref=e63]: PGS. Trần Thu Hà
+            - cell "Khoa Kiểm soát nhiễm khuẩn" [ref=e64]
+            - cell "Đang đánh giá" [ref=e65]:
+              - generic [ref=e66]:
+                - img [ref=e67]
+                - text: Đang đánh giá
+            - cell "28/04/2026" [ref=e70]
+          - row "HVQY-2026-021 Nghiên cứu chỉ số sinh học trong chẩn đoán sớm tổn thương thận cấp ThS. Lê Quốc Huy Bộ môn Sinh lý bệnh Cần bổ sung 27/04/2026" [ref=e71]:
+            - cell "HVQY-2026-021" [ref=e72]:
+              - link "HVQY-2026-021" [ref=e73] [cursor=pointer]:
+                - /url: /proposals/hvqy-2026-021
+            - cell "Nghiên cứu chỉ số sinh học trong chẩn đoán sớm tổn thương thận cấp ThS. Lê Quốc Huy" [ref=e74]:
+              - generic [ref=e75]: Nghiên cứu chỉ số sinh học trong chẩn đoán sớm tổn thương thận cấp
+              - generic [ref=e76]: ThS. Lê Quốc Huy
+            - cell "Bộ môn Sinh lý bệnh" [ref=e77]
+            - cell "Cần bổ sung" [ref=e78]:
+              - generic [ref=e79]:
+                - img [ref=e80]
+                - text: Cần bổ sung
+            - cell "27/04/2026" [ref=e83]
+    - generic [ref=e84]:
+      - generic [ref=e86]:
+        - heading "Cảnh báo ưu tiên" [level=2] [ref=e87]
+        - paragraph [ref=e88]: Các tín hiệu cần xử lý hoặc cần theo dõi sát
+      - generic [ref=e89]:
+        - article [ref=e90]:
+          - img [ref=e92]
+          - generic [ref=e94]:
+            - paragraph [ref=e95]: Reviewer quá hạn đánh giá hồ sơ HVQY-2026-014
+            - paragraph [ref=e96]: Quá hạn 1 ngày - cần nhắc xử lý
+        - article [ref=e97]:
+          - img [ref=e99]
+          - generic [ref=e101]:
+            - paragraph [ref=e102]: Hồ sơ HVQY-2026-001 đang chờ quyết định phê duyệt
+            - paragraph [ref=e103]: Hạn xử lý 30/04/2026
+        - article [ref=e104]:
+          - img [ref=e106]
+          - generic [ref=e108]:
+            - paragraph [ref=e109]: Báo cáo tiến độ quý II sắp đến hạn
+            - paragraph [ref=e110]: 12 báo cáo cần theo dõi trong 7 ngày tới
+  - generic [ref=e111]:
+    - generic [ref=e112]:
+      - generic [ref=e114]:
+        - heading "Tình hình theo đơn vị" [level=2] [ref=e115]
+        - paragraph [ref=e116]: Tổng hợp hồ sơ và đầu mục cần xử lý theo đơn vị
+      - generic "Tình hình theo đơn vị" [ref=e117]:
+        - strong [ref=e120]: Ngoại khoa
+        - strong [ref=e123]: Nội khoa
+        - strong [ref=e126]: Cận lâm sàng
+        - strong [ref=e129]: Sinh học
+        - strong [ref=e132]: QLKH
+    - generic [ref=e133]:
+      - generic [ref=e134]:
+        - generic [ref=e135]:
+          - heading "Công việc quá hạn" [level=2] [ref=e136]
+          - paragraph [ref=e137]: Nhiệm vụ cần can thiệp trong phạm vi điều hành
+        - link "Mở giao việc" [ref=e138] [cursor=pointer]:
+          - /url: /tasks
+      - generic [ref=e139]:
+        - article [ref=e140]:
+          - img [ref=e142]
+          - generic [ref=e144]:
+            - paragraph [ref=e145]: Rà soát hồ sơ chờ phê duyệt HVQY-2026-001
+            - paragraph [ref=e146]: Phòng Quản lý khoa học - Hôm nay
+        - article [ref=e147]:
+          - img [ref=e149]
+          - generic [ref=e151]:
+            - paragraph [ref=e152]: Nhắc reviewer hoàn tất đánh giá đề tài nhiễm khuẩn
+            - paragraph [ref=e153]: CN. Vũ Lan - Quá hạn 1 ngày
+        - article [ref=e154]:
+          - img [ref=e156]
+          - generic [ref=e158]:
+            - paragraph [ref=e159]: Kiểm tra minh chứng bổ sung của đề tài thận cấp
+            - paragraph [ref=e160]: ThS. Hoàng Mai - 27/04/2026

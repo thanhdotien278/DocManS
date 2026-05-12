@@ -1,76 +1,57 @@
 "use client";
 
-import {
-  createContext,
-  startTransition,
-  useContext,
-  useEffect,
-  useMemo,
-  useState
-} from "react";
+import { createContext, useContext, useEffect, useMemo, useState, startTransition } from "react";
 import { useRouter } from "next/navigation";
-import { getAccountById, type AccountProfile } from "@/lib/accounts";
-import {
-  clearBrowserSession,
-  getBrowserSessionAccountId,
-  persistBrowserSession
-} from "@/lib/session";
+import { getCurrentUser, logoutSession } from "@/lib/auth-api";
+import { toShellAccount, type ShellAccount } from "@/lib/session";
 
 type SessionContextValue = {
-  account: AccountProfile | null;
-  isAuthenticated: boolean;
-  login: (accountId: string) => void;
-  logout: () => void;
+  account: ShellAccount | null;
+  isLoading: boolean;
+  refreshCurrentUser: () => Promise<void>;
+  logout: () => Promise<void>;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
-export function SessionProvider({
-  children,
-  initialAccountId
-}: {
-  children: React.ReactNode;
-  initialAccountId?: string | null;
-}) {
+export function SessionProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [accountId, setAccountId] = useState<string | null>(() => {
-    const account = getAccountById(initialAccountId);
-    return account?.id ?? null;
-  });
+  const [account, setAccount] = useState<ShellAccount | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  async function refreshCurrentUser() {
+    const user = await getCurrentUser();
+    setAccount(user ? toShellAccount(user) : null);
+    setIsLoading(false);
+
+    if (!user && window.location.pathname !== "/login") {
+      startTransition(() => {
+        router.replace("/login");
+        router.refresh();
+      });
+    }
+  }
 
   useEffect(() => {
-    const browserAccountId = getBrowserSessionAccountId();
+    void refreshCurrentUser();
+  }, []);
 
-    if (browserAccountId && browserAccountId !== accountId) {
-      setAccountId(browserAccountId);
-      return;
-    }
-
-    if (!browserAccountId && accountId) {
-      persistBrowserSession(accountId);
-    }
-  }, [accountId]);
-
-  const value = useMemo<SessionContextValue>(() => {
-    const account = getAccountById(accountId);
-
-    return {
+  const value = useMemo<SessionContextValue>(
+    () => ({
       account,
-      isAuthenticated: Boolean(account),
-      login(nextAccountId: string) {
-        persistBrowserSession(nextAccountId);
-        setAccountId(nextAccountId);
-      },
-      logout() {
-        clearBrowserSession();
-        setAccountId(null);
+      isLoading,
+      refreshCurrentUser,
+      async logout() {
+        await logoutSession();
+        setAccount(null);
         startTransition(() => {
           router.replace("/login");
           router.refresh();
         });
       }
-    };
-  }, [accountId, router]);
+    }),
+    [account, isLoading, router]
+  );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
@@ -84,4 +65,3 @@ export function useSession() {
 
   return context;
 }
-

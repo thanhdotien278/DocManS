@@ -1,0 +1,135 @@
+- generic [active] [ref=e1]:
+  - navigation "Breadcrumb" [ref=e2]:
+    - generic [ref=e3]:
+      - link "Dashboard" [ref=e4] [cursor=pointer]:
+        - /url: /dashboard
+      - text: /
+    - generic [ref=e5]: Quản lý đề tài
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - paragraph [ref=e8]: OMS
+      - heading "Danh sách hồ sơ đề tài" [level=1] [ref=e9]
+      - paragraph [ref=e10]: Theo dõi hồ sơ theo mã, chủ nhiệm, đơn vị, đợt tiếp nhận và trạng thái nghiệp vụ.
+    - button "Tạo hồ sơ mới" [ref=e12] [cursor=pointer]:
+      - img [ref=e13]
+      - text: Tạo hồ sơ mới
+  - generic [ref=e14]:
+    - generic [ref=e16]:
+      - heading "Bộ lọc hồ sơ" [level=2] [ref=e17]
+      - paragraph [ref=e18]: Tập trung các hồ sơ cần xử lý theo trạng thái và đợt tiếp nhận
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]: Từ khóa
+        - searchbox "Từ khóa" [ref=e22]
+      - generic [ref=e23]:
+        - generic [ref=e24]: Trạng thái
+        - combobox "Trạng thái" [ref=e25]:
+          - option "Tất cả" [selected]
+          - option "Chờ phê duyệt"
+          - option "Đang đánh giá"
+          - option "Cần bổ sung"
+          - option "Đã nộp"
+      - generic [ref=e26]:
+        - generic [ref=e27]: Đơn vị
+        - combobox "Đơn vị" [ref=e28]:
+          - option "Tất cả" [selected]
+          - option "Khoa Chấn thương chỉnh hình"
+          - option "Bộ môn Sinh lý bệnh"
+          - option "Phòng QLKH"
+      - generic [ref=e29]:
+        - generic [ref=e30]: Đợt tiếp nhận
+        - combobox "Đợt tiếp nhận" [ref=e31]:
+          - option "Tất cả" [selected]
+          - option "Đợt 1/2026"
+          - option "Đợt 2/2026"
+    - table [ref=e33]:
+      - rowgroup [ref=e34]:
+        - row "Mã hồ sơ Tên đề tài Chủ nhiệm Đơn vị Đợt Trạng thái Hành động" [ref=e35]:
+          - columnheader "Mã hồ sơ" [ref=e36]
+          - columnheader "Tên đề tài" [ref=e37]
+          - columnheader "Chủ nhiệm" [ref=e38]
+          - columnheader "Đơn vị" [ref=e39]
+          - columnheader "Đợt" [ref=e40]
+          - columnheader "Trạng thái" [ref=e41]
+          - columnheader "Hành động" [ref=e42]
+      - rowgroup [ref=e43]:
+        - row "HVQY-2026-001 Nộp 22/04/2026 Đánh giá hiệu quả can thiệp phục hồi chức năng sau chấn thương chi dưới Hạn xử lý 30/04/2026 TS. Nguyễn Minh Đức Khoa Chấn thương chỉnh hình Đợt 1/2026 Chờ phê duyệt Xem" [ref=e44]:
+          - cell "HVQY-2026-001 Nộp 22/04/2026" [ref=e45]:
+            - link "HVQY-2026-001" [ref=e46] [cursor=pointer]:
+              - /url: /proposals/hvqy-2026-001
+            - generic [ref=e47]: Nộp 22/04/2026
+          - cell "Đánh giá hiệu quả can thiệp phục hồi chức năng sau chấn thương chi dưới Hạn xử lý 30/04/2026" [ref=e48]:
+            - generic [ref=e49]: Đánh giá hiệu quả can thiệp phục hồi chức năng sau chấn thương chi dưới
+            - generic [ref=e50]: Hạn xử lý 30/04/2026
+          - cell "TS. Nguyễn Minh Đức" [ref=e51]
+          - cell "Khoa Chấn thương chỉnh hình" [ref=e52]
+          - cell "Đợt 1/2026" [ref=e53]
+          - cell "Chờ phê duyệt" [ref=e54]:
+            - generic [ref=e55]:
+              - img [ref=e56]
+              - text: Chờ phê duyệt
+          - cell "Xem" [ref=e59]:
+            - link "Xem" [ref=e60] [cursor=pointer]:
+              - /url: /proposals/hvqy-2026-001
+              - img [ref=e61]
+              - text: Xem
+        - row "HVQY-2026-014 Nộp 20/04/2026 Ứng dụng mô hình dự báo nguy cơ nhiễm khuẩn bệnh viện Hạn xử lý 28/04/2026 PGS. Trần Thu Hà Khoa Kiểm soát nhiễm khuẩn Đợt 1/2026 Đang đánh giá Xem" [ref=e64]:
+          - cell "HVQY-2026-014 Nộp 20/04/2026" [ref=e65]:
+            - link "HVQY-2026-014" [ref=e66] [cursor=pointer]:
+              - /url: /proposals/hvqy-2026-014
+            - generic [ref=e67]: Nộp 20/04/2026
+          - cell "Ứng dụng mô hình dự báo nguy cơ nhiễm khuẩn bệnh viện Hạn xử lý 28/04/2026" [ref=e68]:
+            - generic [ref=e69]: Ứng dụng mô hình dự báo nguy cơ nhiễm khuẩn bệnh viện
+            - generic [ref=e70]: Hạn xử lý 28/04/2026
+          - cell "PGS. Trần Thu Hà" [ref=e71]
+          - cell "Khoa Kiểm soát nhiễm khuẩn" [ref=e72]
+          - cell "Đợt 1/2026" [ref=e73]
+          - cell "Đang đánh giá" [ref=e74]:
+            - generic [ref=e75]:
+              - img [ref=e76]
+              - text: Đang đánh giá
+          - cell "Xem" [ref=e79]:
+            - link "Xem" [ref=e80] [cursor=pointer]:
+              - /url: /proposals/hvqy-2026-014
+              - img [ref=e81]
+              - text: Xem
+        - row "HVQY-2026-021 Nộp 18/04/2026 Nghiên cứu chỉ số sinh học trong chẩn đoán sớm tổn thương thận cấp Hạn xử lý 27/04/2026 ThS. Lê Quốc Huy Bộ môn Sinh lý bệnh Đợt 1/2026 Cần bổ sung Xem" [ref=e84]:
+          - cell "HVQY-2026-021 Nộp 18/04/2026" [ref=e85]:
+            - link "HVQY-2026-021" [ref=e86] [cursor=pointer]:
+              - /url: /proposals/hvqy-2026-021
+            - generic [ref=e87]: Nộp 18/04/2026
+          - cell "Nghiên cứu chỉ số sinh học trong chẩn đoán sớm tổn thương thận cấp Hạn xử lý 27/04/2026" [ref=e88]:
+            - generic [ref=e89]: Nghiên cứu chỉ số sinh học trong chẩn đoán sớm tổn thương thận cấp
+            - generic [ref=e90]: Hạn xử lý 27/04/2026
+          - cell "ThS. Lê Quốc Huy" [ref=e91]
+          - cell "Bộ môn Sinh lý bệnh" [ref=e92]
+          - cell "Đợt 1/2026" [ref=e93]
+          - cell "Cần bổ sung" [ref=e94]:
+            - generic [ref=e95]:
+              - img [ref=e96]
+              - text: Cần bổ sung
+          - cell "Xem" [ref=e99]:
+            - link "Xem" [ref=e100] [cursor=pointer]:
+              - /url: /proposals/hvqy-2026-021
+              - img [ref=e101]
+              - text: Xem
+        - row "HVQY-2026-032 Nộp 25/04/2026 Tối ưu quy trình huấn luyện cấp cứu chiến thuật Hạn xử lý 05/05/2026 Đại tá, TS. Phạm Anh Tuấn Trung tâm Huấn luyện kỹ năng y khoa Đợt 2/2026 Đã nộp Xem" [ref=e104]:
+          - cell "HVQY-2026-032 Nộp 25/04/2026" [ref=e105]:
+            - link "HVQY-2026-032" [ref=e106] [cursor=pointer]:
+              - /url: /proposals/hvqy-2026-032
+            - generic [ref=e107]: Nộp 25/04/2026
+          - cell "Tối ưu quy trình huấn luyện cấp cứu chiến thuật Hạn xử lý 05/05/2026" [ref=e108]:
+            - generic [ref=e109]: Tối ưu quy trình huấn luyện cấp cứu chiến thuật
+            - generic [ref=e110]: Hạn xử lý 05/05/2026
+          - cell "Đại tá, TS. Phạm Anh Tuấn" [ref=e111]
+          - cell "Trung tâm Huấn luyện kỹ năng y khoa" [ref=e112]
+          - cell "Đợt 2/2026" [ref=e113]
+          - cell "Đã nộp" [ref=e114]:
+            - generic [ref=e115]:
+              - img [ref=e116]
+              - text: Đã nộp
+          - cell "Xem" [ref=e119]:
+            - link "Xem" [ref=e120] [cursor=pointer]:
+              - /url: /proposals/hvqy-2026-032
+              - img [ref=e121]
+              - text: Xem
