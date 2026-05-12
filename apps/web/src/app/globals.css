@@ -673,9 +673,13 @@ summary:focus-visible {
 
 .filter-bar {
   display: grid;
-  grid-template-columns: minmax(240px, 1.25fr) repeat(4, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   margin-bottom: 16px;
+}
+
+.filter-bar > :first-child {
+  grid-column: span 2;
 }
 
 .filter-field {
@@ -1326,6 +1330,10 @@ summary:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .filter-bar > :first-child {
+    grid-column: span 2;
+  }
+
   .kanban-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1443,6 +1451,10 @@ summary:focus-visible {
   .meta-grid,
   .filter-bar {
     grid-template-columns: 1fr;
+  }
+
+  .filter-bar > :first-child {
+    grid-column: span 1;
   }
 
   .kanban-grid {

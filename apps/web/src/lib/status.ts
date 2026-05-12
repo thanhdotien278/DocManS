@@ -32,5 +32,14 @@ export const statusMeta: Record<
   "ethics-approved": { label: "Đã thông qua", tone: "success", Icon: CheckCircle2 },
   "ethics-conditional-approved": { label: "Thông qua có điều kiện", tone: "warning", Icon: CheckCircle2 },
   "ethics-not-approved": { label: "Không thông qua", tone: "danger", Icon: XCircle },
-  "ethics-paused": { label: "Tạm dừng", tone: "neutral", Icon: PauseCircle }
+  "ethics-paused": { label: "Tạm dừng", tone: "neutral", Icon: PauseCircle },
+  "conference-draft": { label: "Dự thảo kế hoạch", tone: "neutral", Icon: PauseCircle },
+  "conference-awaiting-appraisal": { label: "Chờ thẩm định", tone: "warning", Icon: Clock3 },
+  "conference-pending-approval": { label: "Chờ phê duyệt", tone: "warning", Icon: Clock3 },
+  "conference-approved": { label: "Đã phê duyệt", tone: "success", Icon: CheckCircle2 },
+  "conference-preparing": { label: "Đang chuẩn bị", tone: "info", Icon: RotateCw },
+  "conference-in-session": { label: "Đang tổ chức", tone: "info", Icon: RotateCw },
+  "conference-awaiting-report": { label: "Chờ báo cáo sau hội thảo", tone: "warning", Icon: Clock3 },
+  "conference-completed": { label: "Hoàn tất", tone: "success", Icon: CheckCircle2 },
+  "conference-postponed": { label: "Tạm hoãn", tone: "neutral", Icon: PauseCircle }
 };
