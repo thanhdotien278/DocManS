@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String    @id @default(uuid())
+  username     String    @unique
+  usernameKey  String    @unique @map("username_key")
+  displayName  String    @map("display_name")
+  passwordHash String    @map("password_hash")
+  status       String
+  role         String
+  roleLabel    String    @map("role_label")
+  unit         String
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  sessions     Session[]
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  actorId   String?  @map("actor_id")
+  actor     User?    @relation(fields: [actorId], references: [id])
+  username  String?
+  timestamp DateTime @default(now())
+  result    String
+  ip        String?
+  userAgent String?  @map("user_agent")
+  reason    String?
+
+  @@index([action])
+  @@index([actorId])
+  @@index([timestamp])
+  @@map("audit_logs")
+}

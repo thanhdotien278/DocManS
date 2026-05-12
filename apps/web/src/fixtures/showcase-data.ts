@@ -1,5 +1,5 @@
 import type { WorkflowStatus } from "@rtms/contracts";
-import type { UserRole } from "@/lib/accounts";
+import type { UserRole } from "@/fixtures/shell-context";
 
 export type Proposal = {
   id: string;

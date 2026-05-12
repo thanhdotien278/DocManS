@@ -2,7 +2,7 @@ import {
   getNavigationItems as getRoleNavigationItems,
   getRouteDefinition,
   type UserRole
-} from "@/lib/accounts";
+} from "@/fixtures/shell-context";
 
 export function getNavigationItems(role: UserRole) {
   return getRoleNavigationItems(role);

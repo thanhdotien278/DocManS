@@ -1,61 +1,36 @@
-import { getAccountById } from "@/lib/accounts";
+export const AUTH_SESSION_COOKIE = "rtms_session";
 
-export const SESSION_COOKIE_NAME = "rtms_session";
-export const SESSION_STORAGE_KEY = "rtms_session_account";
-const SESSION_MAX_AGE = 60 * 60 * 12;
+export type CurrentUser = {
+  id: string;
+  username: string;
+  displayName: string;
+  role: "system-admin" | "leadership" | "scientific-management" | "principal-investigator" | "reviewer";
+  roleLabel: string;
+  unit: string;
+};
 
-function isValidAccountId(accountId?: string | null) {
-  return Boolean(accountId && getAccountById(accountId));
+export type ShellAccount = {
+  id: string;
+  username: string;
+  name: string;
+  role: CurrentUser["role"];
+  roleLabel: string;
+  unit: string;
+  initials: string;
+};
+
+export function getApiBaseUrl() {
+  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 }
 
-function readCookie(name: string) {
-  if (typeof document === "undefined") {
-    return null;
-  }
-
-  const cookie = document.cookie
-    .split("; ")
-    .find((entry) => entry.startsWith(`${name}=`));
-
-  return cookie ? decodeURIComponent(cookie.split("=")[1] ?? "") : null;
+export function toShellAccount(user: CurrentUser): ShellAccount {
+  return {
+    id: user.id,
+    username: user.username,
+    name: user.displayName,
+    role: user.role,
+    roleLabel: user.roleLabel,
+    unit: user.unit,
+    initials: user.displayName.trim().charAt(0).toUpperCase() || "U"
+  };
 }
-
-export function persistBrowserSession(accountId: string) {
-  if (typeof window === "undefined" || !isValidAccountId(accountId)) {
-    return;
-  }
-
-  window.localStorage.setItem(SESSION_STORAGE_KEY, accountId);
-  document.cookie = `${SESSION_COOKIE_NAME}=${encodeURIComponent(
-    accountId
-  )}; path=/; max-age=${SESSION_MAX_AGE}; samesite=lax`;
-}
-
-export function clearBrowserSession() {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.removeItem(SESSION_STORAGE_KEY);
-  document.cookie = `${SESSION_COOKIE_NAME}=; path=/; max-age=0; samesite=lax`;
-}
-
-export function getBrowserSessionAccountId() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const localValue = window.localStorage.getItem(SESSION_STORAGE_KEY);
-  if (isValidAccountId(localValue)) {
-    return localValue;
-  }
-
-  const cookieValue = readCookie(SESSION_COOKIE_NAME);
-  if (isValidAccountId(cookieValue)) {
-    window.localStorage.setItem(SESSION_STORAGE_KEY, cookieValue!);
-    return cookieValue;
-  }
-
-  return null;
-}
-

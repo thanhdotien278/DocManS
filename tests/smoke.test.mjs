@@ -24,7 +24,59 @@ describe("workspace smoke checks", () => {
     assert.equal(existsSync("apps/web/src/app/login/page.tsx"), true);
     assert.equal(existsSync("apps/web/src/middleware.ts"), true);
     assert.equal(existsSync("apps/api/src/main.ts"), true);
+    assert.equal(existsSync("packages/permissions/src/index.ts"), true);
     assert.equal(existsSync("packages/ui-tokens/src/index.ts"), true);
+  });
+
+  it("keeps temporary UI data isolated from production lib paths", () => {
+    assert.equal(existsSync("apps/web/src/fixtures/showcase-data.ts"), true);
+    assert.equal(existsSync("apps/web/src/fixtures/shell-context.ts"), true);
+    assert.equal(existsSync("apps/web/src/lib/app-data.ts"), false);
+    assert.equal(existsSync("apps/web/src/lib/accounts.ts"), false);
+  });
+
+  it("keeps permissions fail closed by default", () => {
+    const permissionsSource = readFileSync("packages/permissions/src/index.ts", "utf8");
+
+    assert.equal(/demoRoleContext|visual-demo/.test(permissionsSource), false);
+    assert.match(permissionsSource, /allowed:\s*false/);
+    assert.match(permissionsSource, /function evaluatePermission/);
+  });
+
+  it("uses server-backed auth boundaries instead of browser storage placeholders", () => {
+    const sessionSource = readFileSync("apps/web/src/lib/session.ts", "utf8");
+    const middlewareSource = readFileSync("apps/web/src/middleware.ts", "utf8");
+    const loginPageSource = readFileSync("apps/web/src/app/login/page.tsx", "utf8");
+    const authControllerExists = existsSync("apps/api/src/auth/auth.controller.ts");
+    const authGuardExists = existsSync("apps/api/src/auth/session-auth.guard.ts");
+    const prismaSchemaExists = existsSync("apps/api/prisma/schema.prisma");
+    const prismaServiceExists = existsSync("apps/api/src/infrastructure/prisma/prisma.service.ts");
+    const authStoreSource = readFileSync("apps/api/src/auth/auth.store.ts", "utf8");
+    const seedSource = readFileSync("apps/api/prisma/seed.mjs", "utf8");
+    const passwordServiceSource = readFileSync("apps/api/src/auth/password.service.ts", "utf8");
+
+    assert.equal(/localStorage|document\.cookie|resolveShellProfile|DEFAULT_SHELL/.test(sessionSource), false);
+    assert.match(middlewareSource, /AUTH_SESSION_COOKIE/);
+    assert.match(middlewareSource, /NextResponse\.redirect/);
+    assert.equal(/accountProfiles|fixtures\/shell-context/.test(loginPageSource), false);
+    assert.equal(authControllerExists, true);
+    assert.equal(authGuardExists, true);
+    assert.equal(prismaSchemaExists, true);
+    assert.equal(prismaServiceExists, true);
+    assert.match(authStoreSource, /PrismaService/);
+    assert.equal(/Admin@12345|Leadership@12345|Staff@12345|Pi@12345|Reviewer@12345/.test(authStoreSource), false);
+    assert.equal(/Admin@12345|Leadership@12345|Staff@12345|Pi@12345|Reviewer@12345/.test(seedSource), false);
+    assert.match(passwordServiceSource, /scrypt/);
+  });
+
+  it("keeps Story 1.2 database scope limited to auth, session, and audit models", () => {
+    const schemaSource = readFileSync("apps/api/prisma/schema.prisma", "utf8");
+    const models = [...schemaSource.matchAll(/^model\s+(\w+)/gm)].map((match) => match[1]);
+
+    assert.deepEqual(models, ["User", "Session", "AuditLog"]);
+    assert.match(schemaSource, /@@map\("users"\)/);
+    assert.match(schemaSource, /@@map\("sessions"\)/);
+    assert.match(schemaSource, /@@map\("audit_logs"\)/);
   });
 
   it("keeps prohibited presentation labels out of frontend source", () => {

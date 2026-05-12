@@ -1,18 +1,16 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getAccountById } from "@/lib/accounts";
-import { SESSION_COOKIE_NAME } from "@/lib/session";
+import { AUTH_SESSION_COOKIE } from "@/lib/session";
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const accountId = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  const hasSession = Boolean(getAccountById(accountId));
+  const hasSessionCookie = Boolean(request.cookies.get(AUTH_SESSION_COOKIE)?.value);
 
-  if (!hasSession && pathname !== "/login") {
+  if (!hasSessionCookie && pathname !== "/login") {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (hasSession && pathname === "/login") {
+  if (hasSessionCookie && pathname === "/login") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
@@ -22,4 +20,3 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|logo.png).*)"]
 };
-

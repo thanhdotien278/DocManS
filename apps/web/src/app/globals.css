@@ -1007,6 +1007,40 @@ summary:focus-visible {
   gap: 16px;
 }
 
+.access-banner,
+.access-status-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  padding: 14px;
+}
+
+.access-banner svg,
+.access-status-row svg {
+  flex: 0 0 auto;
+  color: var(--primary);
+}
+
+.access-banner strong,
+.access-banner span,
+.access-status-row span {
+  display: block;
+}
+
+.access-banner strong {
+  color: var(--text-primary);
+}
+
+.access-banner span,
+.access-status-row span {
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
 .field {
   min-width: 0;
 }

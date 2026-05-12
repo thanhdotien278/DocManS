@@ -1,14 +1,11 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { AlertList } from "@/components/ui/alert-list";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { getAccountById } from "@/lib/accounts";
-import { getDashboardSnapshot, type DashboardPanel } from "@/lib/app-data";
-import { SESSION_COOKIE_NAME } from "@/lib/session";
+import { getDashboardSnapshot, type DashboardPanel } from "@/fixtures/showcase-data";
 
 function renderPanel(panel: DashboardPanel) {
   if (panel.variant === "chart") {
@@ -113,9 +110,8 @@ function renderPanel(panel: DashboardPanel) {
   );
 }
 
-export default async function DashboardPage() {
-  const account = getAccountById((await cookies()).get(SESSION_COOKIE_NAME)?.value);
-  const snapshot = getDashboardSnapshot(account?.role ?? "leadership");
+export default function DashboardPage() {
+  const snapshot = getDashboardSnapshot("leadership");
 
   return (
     <>
