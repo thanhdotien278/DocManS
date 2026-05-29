@@ -14,10 +14,12 @@
     "build:web": "next build apps/web",
     "build:api": "npm run prisma:generate && tsc -p apps/api/tsconfig.app.json --outDir dist/apps/api",
     "lint": "npm run typecheck",
+    "db:setup": "npm run prisma:generate && npm run prisma:deploy && npm run prisma:seed",
+    "prisma:deploy": "prisma migrate deploy --schema apps/api/prisma/schema.prisma",
     "prisma:generate": "prisma generate --schema apps/api/prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema apps/api/prisma/schema.prisma",
     "prisma:seed": "node apps/api/prisma/seed.mjs",
-    "test": "node --test tests/smoke.test.mjs",
+    "test": "npm run build:api && node --test tests/*.test.mjs",
     "typecheck": "tsc -p apps/web/tsconfig.json --noEmit && tsc -p apps/api/tsconfig.app.json --noEmit"
   },
   "dependencies": {

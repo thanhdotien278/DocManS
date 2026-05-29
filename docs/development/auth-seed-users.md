@@ -18,6 +18,12 @@ Local database setup:
 
 ```bash
 docker compose up -d postgres
-npm run prisma:migrate
-npm run prisma:seed
+npm run db:setup
 ```
+
+`docker compose up api` runs the same setup path before starting the NestJS API, so a fresh local database receives the Epic 1 auth/session/audit migration and seed users automatically.
+
+Troubleshooting:
+
+- If the browser reports `Failed to fetch` while calling `http://localhost:4000/api/v1/auth/me`, confirm the API container is running with `docker compose ps` and start it with `docker compose up -d api`.
+- A healthy unauthenticated API should return `200` from `http://localhost:4000/api/v1/health` and `401` from `http://localhost:4000/api/v1/auth/me`.
