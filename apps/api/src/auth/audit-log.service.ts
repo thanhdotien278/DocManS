@@ -6,6 +6,8 @@ type AuditLogInput = {
   action: AuditAction;
   result: AuditResult;
   actorId?: string;
+  targetEntity?: string;
+  targetEntityId?: string;
   username?: string;
   ip?: string;
   userAgent?: string;
@@ -21,6 +23,8 @@ export class AuditLogService {
       data: {
         action: input.action,
         actorId: input.actorId,
+        targetEntity: input.targetEntity,
+        targetEntityId: input.targetEntityId,
         username: input.username,
         result: input.result,
         ip: input.ip,
@@ -33,6 +37,8 @@ export class AuditLogService {
       id: record.id,
       action: record.action as AuditAction,
       actorId: record.actorId ?? undefined,
+      targetEntity: record.targetEntity ?? undefined,
+      targetEntityId: record.targetEntityId ?? undefined,
       username: record.username ?? undefined,
       timestamp: record.timestamp.toISOString(),
       result: record.result as AuditResult,
@@ -54,6 +60,8 @@ export class AuditLogService {
       id: record.id,
       action: record.action as AuditAction,
       actorId: record.actorId ?? undefined,
+      targetEntity: record.targetEntity ?? undefined,
+      targetEntityId: record.targetEntityId ?? undefined,
       username: record.username ?? undefined,
       timestamp: record.timestamp.toISOString(),
       result: record.result as AuditResult,

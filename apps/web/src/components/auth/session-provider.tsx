@@ -8,8 +8,8 @@ import { toShellAccount, type ShellAccount } from "@/lib/session";
 type SessionContextValue = {
   account: ShellAccount | null;
   isLoading: boolean;
-  refreshCurrentUser: () => Promise<void>;
-  logout: () => Promise<void>;
+  refreshCurrentUser: () => Promise<ShellAccount | null>;
+  logout: () => Promise<boolean>;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -21,7 +21,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   async function refreshCurrentUser() {
     const user = await getCurrentUser();
-    setAccount(user ? toShellAccount(user) : null);
+    const shellAccount = user ? toShellAccount(user) : null;
+    setAccount(shellAccount);
     setIsLoading(false);
 
     if (!user && window.location.pathname !== "/login") {
@@ -30,6 +31,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         router.refresh();
       });
     }
+
+    return shellAccount;
   }
 
   useEffect(() => {
@@ -42,12 +45,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       refreshCurrentUser,
       async logout() {
-        await logoutSession();
+        const didLogout = await logoutSession();
+        if (!didLogout) {
+          return false;
+        }
+
         setAccount(null);
         startTransition(() => {
           router.replace("/login");
           router.refresh();
         });
+        return true;
       }
     }),
     [account, isLoading, router]

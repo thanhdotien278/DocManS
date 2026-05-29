@@ -45,6 +45,8 @@ export type AuditLogRecord = {
   id: string;
   action: AuditAction;
   actorId?: string;
+  targetEntity?: string;
+  targetEntityId?: string;
   username?: string;
   timestamp: string;
   result: AuditResult;

@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 
 const scrypt = promisify(scryptCallback);
 const KEY_LENGTH = 64;
+const SCRYPT_HEX_LENGTH = KEY_LENGTH * 2;
 
 @Injectable()
 export class PasswordService {
@@ -15,7 +16,7 @@ export class PasswordService {
   async verifyPassword(password: string, storedHash: string) {
     const [algorithm, salt, key] = storedHash.split(":");
 
-    if (algorithm !== "scrypt" || !salt || !key) {
+    if (algorithm !== "scrypt" || !salt || !key || !/^[0-9a-f]+$/i.test(key) || key.length !== SCRYPT_HEX_LENGTH) {
       return false;
     }
 

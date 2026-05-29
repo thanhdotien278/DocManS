@@ -102,7 +102,7 @@ export class AuthStore {
       username: user.username,
       displayName: user.displayName,
       passwordHash: user.passwordHash,
-      status: user.status === "disabled" ? "disabled" : "active",
+      status: user.status === "active" ? "active" : "disabled",
       role,
       roleLabel: user.roleLabel,
       unit: user.unit

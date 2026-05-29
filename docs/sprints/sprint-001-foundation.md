@@ -26,6 +26,7 @@ Establish a clean technical foundation, real authentication, user/role/scope bas
 - [x] Login/logout UI tích hợp với backend
 - [x] Audit log cho login/logout
 - [x] Story 1.2-F1: Prisma/PostgreSQL persistence cho auth/session/audit
+- [x] Story 1.2 review fixes: current-user refresh, login DTO validation, login rate protection, forbidden audit-log authorization, API auth tests
 - [x] Test và manual verification
 
 ## Not Started
@@ -36,7 +37,7 @@ Establish a clean technical foundation, real authentication, user/role/scope bas
 ## Risks / Blockers
 
 - [ ] Chưa có tracking file BMAD story chính thức trong `_bmad-output/implementation-artifacts`
-- [ ] Story 1.2-F1 cần được apply migration/seed trên máy dev có Docker/PostgreSQL; môi trường Codex hiện tại không có Docker CLI
+- [ ] Story 1.2 migration/seed cần được apply trên máy dev có Docker/PostgreSQL; môi trường Codex hiện tại không kết nối được Docker daemon và không có `psql`
 
 ## Verification Checklist
 
@@ -48,9 +49,12 @@ Establish a clean technical foundation, real authentication, user/role/scope bas
 - [x] API health endpoint trả response sạch
 - [x] Login thành công với auth thật
 - [x] Login sai bị từ chối an toàn
+- [x] DTO validation từ chối payload login không hợp lệ
+- [x] Rate protection từ chối quá nhiều lần login sai
 - [x] Logout vô hiệu hóa session
 - [x] Protected routes chặn truy cập chưa xác thực
 - [x] Audit log `login` và `logout` được tạo
+- [x] Non-admin bị forbidden khi gọi audit-log API
 - [x] `User`, `Session`, `AuditLog` được giới hạn đúng scope Story 1.2
 - [x] Prisma client generation pass
 
@@ -58,8 +62,8 @@ Establish a clean technical foundation, real authentication, user/role/scope bas
 
 - [x] Story 1.1: Passed
 - [x] Story 1.1-F2: Passed
-- [x] Story 1.2: Ready for BMAD code-review after F1 fixes
-- [ ] Story 1.2 BMAD code-review: Pending
+- [x] Story 1.2: Ready for review after BMAD code-review fixes
+- [ ] Story 1.2 BMAD re-review: Pending
 - [ ] Sprint review: Pending
 
 ## Notes For Next Story
