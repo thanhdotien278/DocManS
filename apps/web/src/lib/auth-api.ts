@@ -12,41 +12,75 @@ export type LoginResult =
 
 const safeAuthError = "Tên đăng nhập hoặc mật khẩu không hợp lệ.";
 
-export async function loginWithPassword(username: string, password: string): Promise<LoginResult> {
-  const response = await fetch(`${getApiBaseUrl()}/auth/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    credentials: "include",
-    body: JSON.stringify({ username, password })
-  });
-
-  if (!response.ok) {
-    return { ok: false, message: safeAuthError };
+function isCurrentUser(value: unknown): value is CurrentUser {
+  if (!value || typeof value !== "object") {
+    return false;
   }
 
-  const body = (await response.json()) as { user: CurrentUser };
-  return { ok: true, user: body.user };
+  const user = value as Record<string, unknown>;
+  return (
+    typeof user.id === "string" &&
+    typeof user.username === "string" &&
+    typeof user.displayName === "string" &&
+    typeof user.role === "string" &&
+    typeof user.roleLabel === "string" &&
+    typeof user.unit === "string"
+  );
+}
+
+export async function loginWithPassword(username: string, password: string): Promise<LoginResult> {
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      credentials: "include",
+      body: JSON.stringify({ username, password })
+    });
+
+    if (!response.ok) {
+      return { ok: false, message: safeAuthError };
+    }
+
+    const body = (await response.json()) as { user?: unknown };
+    if (!isCurrentUser(body.user)) {
+      return { ok: false, message: safeAuthError };
+    }
+
+    return { ok: true, user: body.user };
+  } catch {
+    return { ok: false, message: safeAuthError };
+  }
 }
 
 export async function logoutSession() {
-  await fetch(`${getApiBaseUrl()}/auth/logout`, {
-    method: "POST",
-    credentials: "include"
-  });
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/auth/logout`, {
+      method: "POST",
+      credentials: "include"
+    });
+
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 export async function getCurrentUser() {
-  const response = await fetch(`${getApiBaseUrl()}/auth/me`, {
-    credentials: "include",
-    cache: "no-store"
-  });
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/auth/me`, {
+      credentials: "include",
+      cache: "no-store"
+    });
 
-  if (!response.ok) {
+    if (!response.ok) {
+      return null;
+    }
+
+    const body = (await response.json()) as { user?: unknown };
+    return isCurrentUser(body.user) ? body.user : null;
+  } catch {
     return null;
   }
-
-  const body = (await response.json()) as { user: CurrentUser };
-  return body.user;
 }

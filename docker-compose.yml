@@ -25,12 +25,13 @@ services:
       - .:/workspace
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://localhost:4000/api/v1
+      API_INTERNAL_BASE_URL: http://api:4000/api/v1
       WEB_ORIGIN: http://localhost:3000
 
   api:
     image: node:22-alpine
     working_dir: /workspace
-    command: sh -c "npm install && npm run dev:api"
+    command: sh -c "npm install && npm run db:setup && npm run dev:api"
     ports:
       - "4000:4000"
     volumes:
@@ -38,6 +39,7 @@ services:
     environment:
       API_PORT: 4000
       DATABASE_URL: postgresql://docmansystem:docmansystem@postgres:5432/docmansystem?schema=public
+      TRUST_PROXY: loopback, linklocal, uniquelocal
       WEB_ORIGIN: http://localhost:3000
     depends_on:
       postgres:
