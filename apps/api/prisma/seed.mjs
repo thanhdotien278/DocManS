@@ -1,8 +1,13 @@
+import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-const databaseUrl =
-  process.env.DATABASE_URL ?? "postgresql://docmansystem:docmansystem@localhost:5432/docmansystem?schema=public";
+const databaseUrl = process.env.DATABASE_URL?.trim();
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is required for prisma seed. Set it explicitly before running npm run prisma:seed.");
+}
+
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: databaseUrl })
 });

@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Post, Req, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, ForbiddenException, Get, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { AuthService } from "./auth.service.js";
-import { AUTH_FAILURE_MESSAGE, type LoginRequest } from "./auth.types.js";
+import type { LoginRequest } from "./auth.types.js";
+import { LoginRequestPipe } from "./login-request.pipe.js";
 import { SessionAuthGuard } from "./session-auth.guard.js";
 import {
   createExpiredSessionCookie,
@@ -20,7 +21,11 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post("login")
-  async login(@Body() body: LoginRequest, @Req() request: any, @Res({ passthrough: true }) response: any) {
+  async login(
+    @Body(LoginRequestPipe) body: LoginRequest,
+    @Req() request: any,
+    @Res({ passthrough: true }) response: any
+  ) {
     const result = await this.authService.login(body, requestContext(request));
     response.setHeader("Set-Cookie", createSessionCookie(result.session.id, process.env.NODE_ENV === "production"));
 
@@ -55,7 +60,7 @@ export class AuthController {
   @UseGuards(SessionAuthGuard)
   async auditLogs(@Req() request: any) {
     if (request.currentUser?.role !== "system-admin") {
-      return { message: AUTH_FAILURE_MESSAGE, records: [] };
+      throw new ForbiddenException({ message: "Không có quyền truy cập nhật ký kiểm toán." });
     }
 
     return { records: await this.authService.listAuditLogs() };

@@ -3,10 +3,12 @@
 import { ArrowRight, LockKeyhole, UserRound } from "lucide-react";
 import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "@/components/auth/session-provider";
 import { loginWithPassword } from "@/lib/auth-api";
 
 export function LoginForm() {
   const router = useRouter();
+  const { refreshCurrentUser } = useSession();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -27,6 +29,12 @@ export function LoginForm() {
 
     if (!result.ok) {
       setError(result.message);
+      return;
+    }
+
+    const refreshedAccount = await refreshCurrentUser();
+    if (!refreshedAccount) {
+      setError("Không thể xác nhận phiên đăng nhập. Vui lòng thử lại.");
       return;
     }
 

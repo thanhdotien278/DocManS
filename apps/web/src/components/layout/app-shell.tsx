@@ -17,7 +17,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   if (isLoading || !account) {
-    return <>{children}</>;
+    return (
+      <main className="content auth-loading" id="main-content" aria-live="polite">
+        Đang kiểm tra phiên đăng nhập...
+      </main>
+    );
   }
 
   return (

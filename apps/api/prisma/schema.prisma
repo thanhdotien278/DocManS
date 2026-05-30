@@ -42,6 +42,8 @@ model AuditLog {
   action    String
   actorId   String?  @map("actor_id")
   actor     User?    @relation(fields: [actorId], references: [id])
+  targetEntity String? @map("target_entity")
+  targetEntityId String? @map("target_entity_id")
   username  String?
   timestamp DateTime @default(now())
   result    String
@@ -51,6 +53,7 @@ model AuditLog {
 
   @@index([action])
   @@index([actorId])
+  @@index([targetEntity, targetEntityId])
   @@index([timestamp])
   @@map("audit_logs")
 }

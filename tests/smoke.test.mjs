@@ -79,6 +79,18 @@ describe("workspace smoke checks", () => {
     assert.match(schemaSource, /@@map\("audit_logs"\)/);
   });
 
+  it("defines a local database setup path for Epic 1", () => {
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+    const composeSource = readFileSync("docker-compose.yml", "utf8");
+
+    assert.match(packageJson.scripts["prisma:deploy"], /prisma migrate deploy --schema apps\/api\/prisma\/schema\.prisma/);
+    assert.match(packageJson.scripts["db:setup"], /prisma:generate/);
+    assert.match(packageJson.scripts["db:setup"], /prisma:deploy/);
+    assert.match(packageJson.scripts["db:setup"], /prisma:seed/);
+    assert.match(composeSource, /npm run db:setup/);
+    assert.match(composeSource, /DATABASE_URL: postgresql:\/\/docmansystem:docmansystem@postgres:5432\/docmansystem\?schema=public/);
+  });
+
   it("keeps prohibited presentation labels out of frontend source", () => {
     const prohibitedPattern = /\b(demo|mock|mô phỏng|giả lập|test data)\b/i;
     const sourceFiles = collectSourceFiles("apps/web/src");

@@ -10,7 +10,15 @@ export function readSessionCookie(cookieHeader: string | undefined) {
   const cookies = cookieHeader.split(";").map((entry) => entry.trim());
   const sessionCookie = cookies.find((entry) => entry.startsWith(`${AUTH_SESSION_COOKIE}=`));
 
-  return sessionCookie ? decodeURIComponent(sessionCookie.split("=").slice(1).join("=")) : null;
+  if (!sessionCookie) {
+    return null;
+  }
+
+  try {
+    return decodeURIComponent(sessionCookie.split("=").slice(1).join("="));
+  } catch {
+    return null;
+  }
 }
 
 export function createSessionCookie(sessionId: string, isProduction: boolean) {
