@@ -8,3 +8,5 @@ coverage/
 .env.local
 *.tsbuildinfo
 apps/web/.next/
+.playwright-mcp/
+.agents/skills/
