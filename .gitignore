@@ -6,7 +6,8 @@ dist/
 coverage/
 .env
 .env.local
+__pycache__/
+*.pyc
 *.tsbuildinfo
 apps/web/.next/
-.playwright-mcp/
-.agents/skills/
+.agents/
