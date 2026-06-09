@@ -1,23 +1,5 @@
-export type UserRole =
-  | "system-admin"
-  | "scientific-management"
-  | "leadership"
-  | "principal-investigator"
-  | "reviewer"
-  | "council-member";
-
-export type PermissionAction =
-  | "read"
-  | "create"
-  | "update"
-  | "delete"
-  | "submit"
-  | "approve"
-  | "reject"
-  | "assign"
-  | "export";
-
-export type PermissionResource =
+type PermissionAction = "read" | "create" | "update" | "delete" | "submit" | "approve" | "reject" | "assign" | "export";
+type PermissionResource =
   | "workspace"
   | "user"
   | "role"
@@ -29,20 +11,21 @@ export type PermissionResource =
   | "file"
   | "dashboard"
   | "report";
-
-export type PermissionContext = {
+type PermissionContext = {
   userId?: string;
-  roles?: UserRole[];
+  roles?: Array<"system-admin" | "scientific-management" | "leadership" | "principal-investigator" | "reviewer" | "council-member">;
   organizationUnitIds?: string[];
   resourceOwnerId?: string;
   resourceOrganizationUnitId?: string;
   workflowState?: string;
 };
-
-export type PermissionDecision = {
+type PermissionDecision = {
   allowed: boolean;
   reason: string;
 };
+
+const FOUNDATION_RESOURCES: PermissionResource[] = ["user", "role", "organization", "catalog"];
+const MANAGEMENT_ACTIONS: PermissionAction[] = ["read", "create", "update", "delete"];
 
 export function evaluatePermission(
   context: PermissionContext,
@@ -56,10 +39,7 @@ export function evaluatePermission(
     };
   }
 
-  const isFoundationResource = resource === "user" || resource === "role" || resource === "organization" || resource === "catalog";
-  const isManagementAction = action === "read" || action === "create" || action === "update" || action === "delete";
-
-  if (context.roles.includes("system-admin") && isFoundationResource && isManagementAction) {
+  if (context.roles.includes("system-admin") && FOUNDATION_RESOURCES.includes(resource) && MANAGEMENT_ACTIONS.includes(action)) {
     return {
       allowed: true,
       reason: "System administrator can manage platform foundation resources."

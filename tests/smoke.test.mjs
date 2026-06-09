@@ -69,14 +69,32 @@ describe("workspace smoke checks", () => {
     assert.match(passwordServiceSource, /scrypt/);
   });
 
-  it("keeps Story 1.2 database scope limited to auth, session, and audit models", () => {
+  it("keeps Epic 1 database scope focused on auth, access, catalogs, config, and audit models", () => {
     const schemaSource = readFileSync("apps/api/prisma/schema.prisma", "utf8");
     const models = [...schemaSource.matchAll(/^model\s+(\w+)/gm)].map((match) => match[1]);
 
-    assert.deepEqual(models, ["User", "Session", "AuditLog"]);
+    assert.deepEqual(models, [
+      "User",
+      "Role",
+      "OrganizationUnit",
+      "UserRoleAssignment",
+      "UserOrganizationScope",
+      "Session",
+      "AuditLog",
+      "CatalogItem",
+      "SystemParameter",
+      "NotificationTemplate"
+    ]);
     assert.match(schemaSource, /@@map\("users"\)/);
+    assert.match(schemaSource, /@@map\("roles"\)/);
+    assert.match(schemaSource, /@@map\("organization_units"\)/);
+    assert.match(schemaSource, /@@map\("user_role_assignments"\)/);
+    assert.match(schemaSource, /@@map\("user_organization_scopes"\)/);
     assert.match(schemaSource, /@@map\("sessions"\)/);
     assert.match(schemaSource, /@@map\("audit_logs"\)/);
+    assert.match(schemaSource, /@@map\("catalog_items"\)/);
+    assert.match(schemaSource, /@@map\("system_parameters"\)/);
+    assert.match(schemaSource, /@@map\("notification_templates"\)/);
   });
 
   it("defines a local database setup path for Epic 1", () => {

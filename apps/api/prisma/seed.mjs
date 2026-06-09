@@ -70,6 +70,38 @@ const users = [
   }
 ];
 
+const roles = [
+  ["role-system-admin", "system-admin", "Quản trị hệ thống", "Toàn quyền quản trị nền tảng"],
+  ["role-leadership", "leadership", "Lãnh đạo", "Phê duyệt và theo dõi điều hành"],
+  ["role-scientific-management", "scientific-management", "Chuyên viên quản lý khoa học", "Vận hành nghiệp vụ quản lý khoa học"],
+  ["role-principal-investigator", "principal-investigator", "Chủ nhiệm đề tài", "Tạo và theo dõi hồ sơ đề tài"],
+  ["role-reviewer", "reviewer", "Reviewer/Hội đồng", "Đánh giá hồ sơ được phân công"]
+];
+
+const organizationUnits = [
+  ["org-hvqy", "HVQY", "Học viện Quân y"],
+  ["org-bgq", "BGD", "Ban Giám Đốc"],
+  ["org-khti", "KHTI", "Khoa Toán - Tin học"],
+  ["org-khqs", "KHQS", "Phòng KHQS"],
+  ["org-bqlkhqs", "BQLKHQS", "Ban Quản lý KHQS"]
+];
+
+for (const [id, code, label, description] of roles) {
+  await prisma.role.upsert({
+    where: { code },
+    update: { label, description, status: "active" },
+    create: { id, code, label, description, status: "active" }
+  });
+}
+
+for (const [id, code, name] of organizationUnits) {
+  await prisma.organizationUnit.upsert({
+    where: { code },
+    update: { name, status: "active" },
+    create: { id, code, name, status: "active" }
+  });
+}
+
 for (const user of users) {
   await prisma.user.upsert({
     where: { id: user.id },
@@ -88,6 +120,75 @@ for (const user of users) {
       usernameKey: user.username.toLowerCase()
     }
   });
+
+  const role = await prisma.role.findUnique({ where: { code: user.role } });
+  const organizationUnit = await prisma.organizationUnit.findFirst({ where: { name: user.unit } });
+
+  if (role) {
+    await prisma.userRoleAssignment.upsert({
+      where: {
+        userId_roleId: {
+          userId: user.id,
+          roleId: role.id
+        }
+      },
+      update: { isPrimary: true },
+      create: { userId: user.id, roleId: role.id, isPrimary: true }
+    });
+  }
+
+  if (organizationUnit) {
+    await prisma.userOrganizationScope.upsert({
+      where: {
+        userId_organizationUnitId: {
+          userId: user.id,
+          organizationUnitId: organizationUnit.id
+        }
+      },
+      update: { isPrimary: true },
+      create: { userId: user.id, organizationUnitId: organizationUnit.id, isPrimary: true }
+    });
+  }
 }
+
+const catalogs = [
+  ["research-field", "military-medicine", "Y học quân sự"],
+  ["research-field", "biomedical-tech", "Công nghệ y sinh"],
+  ["proposal-type", "academy-level", "Đề tài cấp Học viện"],
+  ["priority", "high", "Ưu tiên cao"],
+  ["report-type", "periodic", "Báo cáo định kỳ"],
+  ["scoring-criterion", "scientific-value", "Giá trị khoa học"]
+];
+
+for (const [type, code, name] of catalogs) {
+  await prisma.catalogItem.upsert({
+    where: {
+      type_code: { type, code }
+    },
+    update: { name, status: "active", deletedAt: null },
+    create: { type, code, name, status: "active" }
+  });
+}
+
+await prisma.systemParameter.upsert({
+  where: { key: "session_timeout_minutes" },
+  update: { value: "720", label: "Thời gian phiên đăng nhập" },
+  create: { key: "session_timeout_minutes", value: "720", label: "Thời gian phiên đăng nhập" }
+});
+
+await prisma.notificationTemplate.upsert({
+  where: { key: "user_created" },
+  update: {
+    subject: "Tài khoản RTMS đã được tạo",
+    body: "Tài khoản của đồng chí đã được tạo trên hệ thống RTMS.",
+    status: "active"
+  },
+  create: {
+    key: "user_created",
+    subject: "Tài khoản RTMS đã được tạo",
+    body: "Tài khoản của đồng chí đã được tạo trên hệ thống RTMS.",
+    status: "active"
+  }
+});
 
 await prisma.$disconnect();

@@ -219,6 +219,10 @@ summary:focus-visible {
   min-width: 0;
 }
 
+.topbar-brand > div {
+  min-width: 0;
+}
+
 .topbar-brand .brand-mark {
   width: 42px;
   height: 42px;
@@ -654,6 +658,10 @@ summary:focus-visible {
   margin-bottom: 16px;
 }
 
+.filter-bar.compact {
+  grid-template-columns: minmax(220px, 320px);
+}
+
 .filter-field {
   min-width: 0;
 }
@@ -1074,6 +1082,85 @@ summary:focus-visible {
   background: var(--surface);
   color: var(--text-primary);
   padding: 10px 12px 10px 44px;
+}
+
+.admin-form {
+  display: grid;
+  gap: 13px;
+}
+
+.field input,
+.field select,
+.field textarea,
+.filter-field select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-primary);
+  padding: 10px 12px;
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.state-message {
+  margin: 0 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  padding: 10px 12px;
+  font-weight: 700;
+}
+
+.state-message.success {
+  border-color: #b8dcc8;
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.state-message.error {
+  border-color: #efc0bd;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.settings-list,
+.reference-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.setting-row,
+.reference-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  padding: 12px;
+}
+
+.reference-item {
+  justify-content: flex-start;
+}
+
+.reference-item svg {
+  color: var(--primary);
+}
+
+.reference-item .status-badge {
+  margin-left: auto;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
 }
 
 .form-error {
