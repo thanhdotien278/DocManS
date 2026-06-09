@@ -26,6 +26,19 @@ This document provides the complete epic and story breakdown for DocManSystem, d
 
 This document contains the approved implementation epics and detailed, testable stories for phased delivery.
 
+## Traceability ID Convention
+
+This document uses stable IDs for SDD-style traceability:
+- `EP-XX` for epics
+- `ST-X.Y` for stories
+- `UC-XYZ` for use cases
+- `AC-ST-X.Y-ZZ` for acceptance criteria
+- `AUTH-ST-X.Y-ZZ` for authorization requirements
+- `AUD-ST-X.Y-ZZ` for audit-log requirements
+- `VER-ST-X.Y-ZZ` for verification checks
+
+These IDs should be used in implementation plans, test names, manual QA notes, review findings, commits, and PR descriptions.
+
 ## Requirements Inventory
 
 ### Functional Requirements
@@ -301,39 +314,42 @@ FR49: Epic 7 - Reporting theo phạm vi được phép
 
 ## Epic List
 
-### Epic 1: Nền Tảng Truy Cập, Phân Quyền, Danh Mục Và Khung Ứng Dụng
+### EP-01: Nền Tảng Truy Cập, Phân Quyền, Danh Mục Và Khung Ứng Dụng
 Thiết lập nền tảng vận hành nội bộ để người dùng có thể đăng nhập, được áp quyền đúng vai trò và phạm vi dữ liệu, quản trị được dữ liệu nền, và sử dụng khung giao diện quản trị nhất quán cho các nghiệp vụ phía sau.
 **FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8
 
-### Epic 2: Tiếp Nhận Và Nộp Hồ Sơ Đề Tài
+### EP-02: Tiếp Nhận Và Nộp Hồ Sơ Đề Tài
 Cho phép chuyên viên mở đợt tiếp nhận và chủ nhiệm đề tài tạo, hoàn thiện, đính kèm, kiểm tra và nộp hồ sơ đề xuất trong một quy trình đầy đủ và có thể truy vết.
 **FRs covered:** FR9, FR10, FR11, FR12, FR13, FR14
 
-### Epic 3: Bổ Sung, Đánh Giá Và Phê Duyệt Đề Tài
+### EP-03: Bổ Sung, Đánh Giá Và Phê Duyệt Đề Tài
 Cho phép các bên liên quan xử lý đầy đủ vòng đời thẩm định đề xuất từ yêu cầu bổ sung đến phân công đánh giá, chấm điểm, tổng hợp và phê duyệt/từ chối theo trạng thái được kiểm soát.
 **FRs covered:** FR15, FR16, FR17, FR18, FR19, FR20, FR21, FR22
 
-### Epic 4: Theo Dõi Đề Tài Được Duyệt Và Tiến Độ Thực Hiện
+### EP-04: Theo Dõi Đề Tài Được Duyệt Và Tiến Độ Thực Hiện
 Biến đề tài được duyệt thành hồ sơ triển khai thực tế với milestone, báo cáo định kỳ, điều chỉnh/gia hạn, nghiệm thu và giám sát tiến độ theo workflow rõ ràng.
 **FRs covered:** FR23, FR24, FR25, FR26, FR27, FR28, FR29, FR30, FR30a, FR30b
 
-### Epic 5: Giao Việc, Tệp Tin, Lịch Sử Và Audit
+### EP-05: Giao Việc, Tệp Tin, Lịch Sử Và Audit
 Hỗ trợ vận hành xuyên suốt bằng giao việc, cập nhật trạng thái, quản lý file, truy vết lịch sử và audit log để tăng trách nhiệm giải trình ở tất cả các module chính.
 **FRs covered:** FR31, FR32, FR33, FR34, FR35, FR36, FR37, FR38, FR39, FR40
 
-### Epic 6: Thông Báo, Nhắc Việc Và Hàng Đợi Công Việc
+### EP-06: Thông Báo, Nhắc Việc Và Hàng Đợi Công Việc
 Đảm bảo người dùng luôn biết việc gì cần xử lý qua thông báo trong ứng dụng, email, nhắc hạn và hàng đợi công việc theo đúng vai trò và phạm vi dữ liệu.
 **FRs covered:** FR41, FR42, FR43, FR44
 
-### Epic 7: Dashboard Điều Hành, Tìm Kiếm, Báo Cáo Và Xuất Dữ Liệu
+### EP-07: Dashboard Điều Hành, Tìm Kiếm, Báo Cáo Và Xuất Dữ Liệu
 Cung cấp lớp điều hành và ra quyết định cho lãnh đạo và chuyên viên thông qua dashboard theo vai trò, tìm kiếm/lọc, báo cáo tổng hợp và export có kiểm soát.
 **FRs covered:** FR45, FR46, FR47, FR48, FR49
 
-## Epic 1: Nền Tảng Truy Cập, Phân Quyền, Danh Mục Và Khung Ứng Dụng
+## EP-01: Nền Tảng Truy Cập, Phân Quyền, Danh Mục Và Khung Ứng Dụng
 
 Thiết lập nền tảng kỹ thuật và nghiệp vụ tối thiểu để các epic sau có thể triển khai an toàn trên cùng một workspace, cùng mô hình phân quyền và cùng khung UX quản trị.
 
-### Story 1.1: Khởi tạo workspace và ứng dụng nền tảng
+### ST-1.1: Khởi tạo workspace và ứng dụng nền tảng
+**Use Case ID:** `UC-110` Platform bootstrap
+**Traceability:** Additional Requirements: Nx workspace, Next.js frontend, NestJS backend, shared TypeScript packages, modular monolith; NFR13, NFR17, NFR19, NFR20; UX-DR1, UX-DR2, UX-DR4, UX-DR5, UX-DR6
+
 
 As a implementation team,
 I want a standardized Nx workspace with web, api, and shared packages,
@@ -347,34 +363,39 @@ So that future stories can be delivered consistently within the approved archite
 
 **Acceptance Criteria:**
 
-**Given** repository rỗng hoặc chưa có cấu trúc triển khai
+**AC-ST-1.1-01:** Given repository rỗng hoặc chưa có cấu trúc triển khai
 **When** story hoàn thành
 **Then** repository có Nx workspace với `apps/web`, `apps/api`, và shared packages theo architecture
 **And** web và api có thể chạy ở chế độ development với health check hoặc trang placeholder
 
-**Given** workspace đã được khởi tạo
+**AC-ST-1.1-02:** Given workspace đã được khởi tạo
 **When** developer chạy build và test nền tảng
 **Then** các lệnh build/lint/test cơ bản chạy được
 **And** TypeScript strict mode được bật cho các app và package mới
 
-**Given** UX guideline và project context
+**AC-ST-1.1-03:** Given UX guideline và project context
 **When** app shell nền tảng được tạo
 **Then** shell sử dụng hướng dashboard hành chính với sidebar, topbar, breadcrumb placeholder
 **And** responsive shell hoạt động ở các breakpoint chính
 
-**Technical Notes:** Đây là story đầu tiên theo yêu cầu architecture; chỉ tạo entity/config khi cần cho nền tảng; chuẩn hóa naming, route conventions, environment strategy, CI-friendly scripts.
+**Technical Notes:**
+**TN-ST-1.1-01:** Đây là story đầu tiên theo yêu cầu architecture; chỉ tạo entity/config khi cần cho nền tảng; chuẩn hóa naming, route conventions, environment strategy, CI-friendly scripts.
 
-**Authorization Requirements:** Chưa có nghiệp vụ phân quyền chi tiết nhưng phải chuẩn bị sẵn hook/boundary cho backend auth, permission, current-user context.
+**Authorization Requirements:**
+**AUTH-ST-1.1-01:** Chưa có nghiệp vụ phân quyền chi tiết nhưng phải chuẩn bị sẵn hook/boundary cho backend auth, permission, current-user context.
 
-**Audit-Log Requirements:** Không yêu cầu audit log nghiệp vụ; có thể có structured app logging cho startup/health diagnostics.
+**Audit-Log Requirements:** None for this story. Có thể có structured app logging cho startup/health diagnostics.
 
 **Test or Manual Verification Checklist:**
-- Xác nhận cấu trúc thư mục phù hợp architecture
-- Chạy được web app và api app ở local
-- Xác nhận shell responsive ở `360px`, `768px`, `1440px`
-- Xác nhận strict TypeScript và lệnh build cơ bản hoạt động
+**VER-ST-1.1-01:** Xác nhận cấu trúc thư mục phù hợp architecture
+**VER-ST-1.1-02:** Chạy được web app và api app ở local
+**VER-ST-1.1-03:** Xác nhận shell responsive ở `360px`, `768px`, `1440px`
+**VER-ST-1.1-04:** Xác nhận strict TypeScript và lệnh build cơ bản hoạt động
 
-### Story 1.2: Đăng nhập, đăng xuất và quản lý phiên nội bộ
+### ST-1.2: Đăng nhập, đăng xuất và quản lý phiên nội bộ
+**Use Case IDs:** `UC-120-A` Login, `UC-120-B` Logout, `UC-120-C` Protected route access
+**Traceability:** FR1, FR2, FR6, FR39; NFR5, NFR6, NFR7, NFR8
+
 
 As a internal user,
 I want to log in and log out securely,
@@ -388,34 +409,40 @@ So that I can access only protected internal functions assigned to me.
 
 **Acceptance Criteria:**
 
-**Given** người dùng nội bộ hợp lệ
+**AC-ST-1.2-01:** Given người dùng nội bộ hợp lệ
 **When** họ nhập đúng thông tin đăng nhập
 **Then** hệ thống tạo phiên xác thực hợp lệ
 **And** người dùng được chuyển vào khu vực nội bộ phù hợp
 
-**Given** người dùng nhập sai thông tin
+**AC-ST-1.2-02:** Given người dùng nhập sai thông tin
 **When** gửi yêu cầu đăng nhập
 **Then** hệ thống từ chối truy cập với thông báo lỗi an toàn
 **And** không tiết lộ chi tiết nhạy cảm về tài khoản
 
-**Given** người dùng đã đăng nhập
+**AC-ST-1.2-03:** Given người dùng đã đăng nhập
 **When** họ đăng xuất
 **Then** phiên truy cập bị vô hiệu hóa
 **And** các route được bảo vệ không còn truy cập được nếu không đăng nhập lại
 
-**Technical Notes:** Ưu tiên local auth cho phase 1; fail closed; bảo vệ secret; chuẩn bị extensibility cho future SSO nhưng không triển khai ở story này.
+**Technical Notes:**
+**TN-ST-1.2-01:** Ưu tiên local auth cho phase 1; fail closed; bảo vệ secret; chuẩn bị extensibility cho future SSO nhưng không triển khai ở story này.
 
-**Authorization Requirements:** Chỉ người dùng đã xác thực mới truy cập khu vực nội bộ; route protection phải được enforce ở backend và web middleware phù hợp.
+**Authorization Requirements:**
+**AUTH-ST-1.2-01:** Chỉ người dùng đã xác thực mới truy cập khu vực nội bộ; route protection phải được enforce ở backend và web middleware phù hợp.
 
-**Audit-Log Requirements:** Ghi audit log cho `login` và `logout` với actor, timestamp, kết quả và context tối thiểu.
+**Audit-Log Requirements:**
+**AUD-ST-1.2-01:** Ghi audit log cho `login` và `logout` với actor, timestamp, kết quả và context tối thiểu.
 
 **Test or Manual Verification Checklist:**
-- Kiểm tra login thành công và logout thành công
-- Kiểm tra login sai bị từ chối
-- Kiểm tra route protected không truy cập được khi chưa đăng nhập
-- Kiểm tra audit log login/logout được tạo
+**VER-ST-1.2-01:** Kiểm tra login thành công và logout thành công
+**VER-ST-1.2-02:** Kiểm tra login sai bị từ chối
+**VER-ST-1.2-03:** Kiểm tra route protected không truy cập được khi chưa đăng nhập
+**VER-ST-1.2-04:** Kiểm tra audit log login/logout được tạo
 
-### Story 1.3: Quản lý người dùng, vai trò và phạm vi đơn vị
+### ST-1.3: Quản lý người dùng, vai trò và phạm vi đơn vị
+**Use Case IDs:** `UC-130-A` User administration, `UC-130-B` Role and organization scope assignment
+**Traceability:** FR3, FR4, FR5, FR6, FR39; NFR7, NFR8, NFR9
+
 
 As a system administrator,
 I want to manage users, roles, and organization scope assignments,
@@ -429,34 +456,40 @@ So that access can be granted correctly across all business modules.
 
 **Acceptance Criteria:**
 
-**Given** quản trị viên đã đăng nhập
+**AC-ST-1.3-01:** Given quản trị viên đã đăng nhập
 **When** tạo tài khoản mới và gán role cùng đơn vị
 **Then** người dùng mới xuất hiện trong danh sách quản trị
 **And** các gán role/scope được lưu đầy đủ
 
-**Given** tài khoản đang hoạt động
+**AC-ST-1.3-02:** Given tài khoản đang hoạt động
 **When** quản trị viên vô hiệu hóa tài khoản
 **Then** tài khoản không thể tiếp tục truy cập protected flows
 **And** trạng thái tài khoản được hiển thị rõ trong UI quản trị
 
-**Given** một người dùng có role và organization scope cụ thể
+**AC-ST-1.3-03:** Given một người dùng có role và organization scope cụ thể
 **When** user context được nạp
 **Then** hệ thống có thể xác định role và data scope hiện hành của người dùng
 **And** context đó sẵn sàng cho enforcement ở các story sau
 
-**Technical Notes:** Tạo entity nền tối thiểu: users, roles, organizations, assignment tables; tránh tạo trước các bảng không cần; chuẩn hóa seed/dev data tối thiểu nếu cần.
+**Technical Notes:**
+**TN-ST-1.3-01:** Tạo entity nền tối thiểu: users, roles, organizations, assignment tables; tránh tạo trước các bảng không cần; chuẩn hóa seed/dev data tối thiểu nếu cần.
 
-**Authorization Requirements:** Chỉ system administrator mới được quản trị user/role/scope; backend phải chặn mọi truy cập trái phép vào admin endpoints.
+**Authorization Requirements:**
+**AUTH-ST-1.3-01:** Chỉ system administrator mới được quản trị user/role/scope; backend phải chặn mọi truy cập trái phép vào admin endpoints.
 
-**Audit-Log Requirements:** Ghi audit log cho create/update/activate/deactivate user, role assignment, scope assignment.
+**Audit-Log Requirements:**
+**AUD-ST-1.3-01:** Ghi audit log cho create/update/activate/deactivate user, role assignment, scope assignment.
 
 **Test or Manual Verification Checklist:**
-- Tạo, sửa, vô hiệu hóa người dùng
-- Gán role và organization scope
-- Kiểm tra user bị disable không đăng nhập được
-- Kiểm tra audit log cho thay đổi quản trị
+**VER-ST-1.3-01:** Tạo, sửa, vô hiệu hóa người dùng
+**VER-ST-1.3-02:** Gán role và organization scope
+**VER-ST-1.3-03:** Kiểm tra user bị disable không đăng nhập được
+**VER-ST-1.3-04:** Kiểm tra audit log cho thay đổi quản trị
 
-### Story 1.4: Permission primitives, danh mục dùng chung và cấu hình nền
+### ST-1.4: Permission primitives, danh mục dùng chung và cấu hình nền
+**Use Case IDs:** `UC-140-A` Catalog management, `UC-140-B` Base configuration, `UC-140-C` Permission primitive evaluation
+**Traceability:** FR6, FR7, FR8, FR39; NFR7, NFR8, NFR9
+
 
 As a system administrator,
 I want shared catalogs and base configuration managed inside the system,
@@ -470,38 +503,44 @@ So that downstream workflows can use controlled reference data and notification 
 
 **Acceptance Criteria:**
 
-**Given** quản trị viên cần dữ liệu tham chiếu
+**AC-ST-1.4-01:** Given quản trị viên cần dữ liệu tham chiếu
 **When** thêm hoặc cập nhật bản ghi catalog được hỗ trợ
 **Then** hệ thống lưu được dữ liệu tham chiếu hợp lệ
 **And** dữ liệu này sẵn sàng để được dùng ở các module nghiệp vụ sau
 
-**Given** quản trị viên cần cấu hình mẫu thông báo hoặc tham số nền
+**AC-ST-1.4-02:** Given quản trị viên cần cấu hình mẫu thông báo hoặc tham số nền
 **When** cập nhật cấu hình được hỗ trợ
 **Then** cấu hình được lưu và tra cứu được từ backend
 **And** việc cập nhật không yêu cầu sửa mã nguồn
 
-**Given** backend cần kiểm tra quyền hành động
+**AC-ST-1.4-03:** Given backend cần kiểm tra quyền hành động
 **When** permission primitives được gọi
 **Then** chúng có thể kết hợp role, scope, và state context theo quy ước thống nhất
 **And** trả về kết quả fail closed khi context không đủ
 
-**Technical Notes:** Gắn chặt với FR6, FR7, FR8 và các NFR bảo mật; chuẩn bị reusable admin UI theo UX guideline.
+**Technical Notes:**
+**TN-ST-1.4-01:** Gắn chặt với FR6, FR7, FR8 và các NFR bảo mật; chuẩn bị reusable admin UI theo UX guideline.
 
-**Authorization Requirements:** Chỉ system administrator truy cập catalog/config management; permission primitives phải là cơ chế dùng chung cho các epic sau.
+**Authorization Requirements:**
+**AUTH-ST-1.4-01:** Chỉ system administrator truy cập catalog/config management; permission primitives phải là cơ chế dùng chung cho các epic sau.
 
-**Audit-Log Requirements:** Ghi audit log cho create/update/soft delete catalog records và cập nhật system parameters/templates.
+**Audit-Log Requirements:**
+**AUD-ST-1.4-01:** Ghi audit log cho create/update/soft delete catalog records và cập nhật system parameters/templates.
 
 **Test or Manual Verification Checklist:**
-- Tạo và cập nhật ít nhất một loại catalog
-- Cập nhật ít nhất một system parameter hoặc notification template
-- Kiểm tra permission primitives xử lý trường hợp context thiếu
-- Kiểm tra audit log cho thay đổi catalog/config
+**VER-ST-1.4-01:** Tạo và cập nhật ít nhất một loại catalog
+**VER-ST-1.4-02:** Cập nhật ít nhất một system parameter hoặc notification template
+**VER-ST-1.4-03:** Kiểm tra permission primitives xử lý trường hợp context thiếu
+**VER-ST-1.4-04:** Kiểm tra audit log cho thay đổi catalog/config
 
-## Epic 2: Tiếp Nhận Và Nộp Hồ Sơ Đề Tài
+## EP-02: Tiếp Nhận Và Nộp Hồ Sơ Đề Tài
 
 Cho phép vận hành trọn vẹn bước đầu của quy trình: mở đợt tiếp nhận, tạo hồ sơ đề xuất, nhập nội dung, đính kèm file, kiểm tra điều kiện và nộp chính thức.
 
-### Story 2.1: Tạo và quản lý đợt tiếp nhận đề tài
+### ST-2.1: Tạo và quản lý đợt tiếp nhận đề tài
+**Use Case ID:** `UC-210` Intake period management
+**Traceability:** FR9, FR39; NFR7, NFR8, NFR9; UX-DR8, UX-DR10
+
 
 As a scientific management staff member,
 I want to create and manage proposal intake periods,
@@ -515,29 +554,35 @@ So that proposal submissions are controlled by time window and required package 
 
 **Acceptance Criteria:**
 
-**Given** chuyên viên quản lý khoa học có quyền phù hợp
+**AC-ST-2.1-01:** Given chuyên viên quản lý khoa học có quyền phù hợp
 **When** tạo đợt tiếp nhận với ngày bắt đầu, ngày kết thúc và yêu cầu hồ sơ
 **Then** đợt tiếp nhận được lưu với trạng thái hợp lệ
 **And** có thể được dùng để nhận proposal sau đó
 
-**Given** một đợt tiếp nhận đang mở
+**AC-ST-2.1-02:** Given một đợt tiếp nhận đang mở
 **When** đến sau ngày kết thúc hoặc bị đóng thủ công
 **Then** hệ thống không cho nộp mới vào đợt đó
 **And** trạng thái đợt tiếp nhận hiển thị rõ ràng
 
-**Technical Notes:** Tạo entity intake period và cấu trúc requirement package chỉ ở mức cần cho submission flow; tránh over-design.
+**Technical Notes:**
+**TN-ST-2.1-01:** Tạo entity intake period và cấu trúc requirement package chỉ ở mức cần cho submission flow; tránh over-design.
 
-**Authorization Requirements:** Chỉ staff được ủy quyền hoặc admin mới quản lý intake periods; PI chỉ được xem các đợt tiếp nhận áp dụng cho họ.
+**Authorization Requirements:**
+**AUTH-ST-2.1-01:** Chỉ staff được ủy quyền hoặc admin mới quản lý intake periods; PI chỉ được xem các đợt tiếp nhận áp dụng cho họ.
 
-**Audit-Log Requirements:** Ghi audit log cho create/update/open/close intake period.
+**Audit-Log Requirements:**
+**AUD-ST-2.1-01:** Ghi audit log cho create/update/open/close intake period.
 
 **Test or Manual Verification Checklist:**
-- Tạo đợt tiếp nhận mới
-- Đóng/mở đợt tiếp nhận
-- Kiểm tra không nộp được vào đợt đã đóng
-- Kiểm tra audit log tương ứng
+**VER-ST-2.1-01:** Tạo đợt tiếp nhận mới
+**VER-ST-2.1-02:** Đóng/mở đợt tiếp nhận
+**VER-ST-2.1-03:** Kiểm tra không nộp được vào đợt đã đóng
+**VER-ST-2.1-04:** Kiểm tra audit log tương ứng
 
-### Story 2.2: Tạo nháp hồ sơ đề xuất và nhập thông tin có cấu trúc
+### ST-2.2: Tạo nháp hồ sơ đề xuất và nhập thông tin có cấu trúc
+**Use Case ID:** `UC-220` Proposal draft and structured data entry
+**Traceability:** FR10, FR11, FR39; UX-DR9, UX-DR10, UX-DR12
+
 
 As a principal investigator,
 I want to create and save a proposal draft with structured data,
@@ -551,34 +596,40 @@ So that I can prepare a complete submission over multiple sessions.
 
 **Acceptance Criteria:**
 
-**Given** một PI có quyền nộp hồ sơ trong đợt hợp lệ
+**AC-ST-2.2-01:** Given một PI có quyền nộp hồ sơ trong đợt hợp lệ
 **When** họ tạo hồ sơ nháp và nhập dữ liệu bắt buộc
 **Then** proposal draft được lưu
 **And** có thể mở lại để chỉnh sửa tiếp
 
-**Given** form hồ sơ dài
+**AC-ST-2.2-02:** Given form hồ sơ dài
 **When** người dùng thao tác trên desktop hoặc mobile
 **Then** form được chia section rõ ràng
 **And** vẫn sử dụng được ở các breakpoint yêu cầu mà không tràn ngang toàn trang
 
-**Given** dữ liệu không hợp lệ ở một trường
+**AC-ST-2.2-03:** Given dữ liệu không hợp lệ ở một trường
 **When** người dùng rời trường hoặc gửi lưu
 **Then** lỗi hiển thị inline gần trường sai
 **And** không làm mất dữ liệu hợp lệ đã nhập
 
-**Technical Notes:** Bao phủ mạnh UX-DR9, UX-DR10, UX-DR12; ưu tiên section clarity và save draft.
+**Technical Notes:**
+**TN-ST-2.2-01:** Bao phủ mạnh UX-DR9, UX-DR10, UX-DR12; ưu tiên section clarity và save draft.
 
-**Authorization Requirements:** Chỉ PI hoặc người được cấp quyền thay mặt mới tạo/sửa draft của proposal thuộc scope hợp lệ; staff chỉ đọc khi workflow cho phép.
+**Authorization Requirements:**
+**AUTH-ST-2.2-01:** Chỉ PI hoặc người được cấp quyền thay mặt mới tạo/sửa draft của proposal thuộc scope hợp lệ; staff chỉ đọc khi workflow cho phép.
 
-**Audit-Log Requirements:** Ghi audit log cho create proposal draft và các cập nhật quan trọng nếu đã lưu business-significant changes.
+**Audit-Log Requirements:**
+**AUD-ST-2.2-01:** Ghi audit log cho create proposal draft và các cập nhật quan trọng nếu đã lưu business-significant changes.
 
 **Test or Manual Verification Checklist:**
-- Tạo proposal draft mới
-- Lưu nháp nhiều lần
-- Kiểm tra validation inline
-- Kiểm tra responsive form ở `390px`, `768px`, `1440px`
+**VER-ST-2.2-01:** Tạo proposal draft mới
+**VER-ST-2.2-02:** Lưu nháp nhiều lần
+**VER-ST-2.2-03:** Kiểm tra validation inline
+**VER-ST-2.2-04:** Kiểm tra responsive form ở `390px`, `768px`, `1440px`
 
-### Story 2.3: Đính kèm hồ sơ đề xuất và kiểm tra điều kiện trước khi nộp
+### ST-2.3: Đính kèm hồ sơ đề xuất và kiểm tra điều kiện trước khi nộp
+**Use Case IDs:** `UC-230-A` Proposal attachment management, `UC-230-B` Pre-submission validation
+**Traceability:** FR12, FR13, FR36, FR37, FR39; NFR7, NFR8; UX-DR15, UX-DR16
+
 
 As a principal investigator,
 I want to upload required attachments and see submission readiness,
@@ -592,34 +643,40 @@ So that I can know whether my proposal can be submitted formally.
 
 **Acceptance Criteria:**
 
-**Given** proposal draft yêu cầu tệp bắt buộc
+**AC-ST-2.3-01:** Given proposal draft yêu cầu tệp bắt buộc
 **When** PI tải tệp hợp lệ lên
 **Then** tệp được liên kết đúng với proposal
 **And** UI hiển thị tên tệp, loại, dung lượng, uploader, thời điểm tải
 
-**Given** tệp không hợp lệ về loại hoặc dung lượng
+**AC-ST-2.3-02:** Given tệp không hợp lệ về loại hoặc dung lượng
 **When** người dùng tải lên
 **Then** hệ thống từ chối tệp
 **And** hiển thị lỗi rõ ràng, không mơ hồ
 
-**Given** proposal draft chưa đủ dữ liệu hoặc tệp bắt buộc
+**AC-ST-2.3-03:** Given proposal draft chưa đủ dữ liệu hoặc tệp bắt buộc
 **When** hệ thống đánh giá readiness
 **Then** người dùng nhìn thấy rõ các mục còn thiếu
 **And** chưa thể nộp chính thức khi điều kiện chưa đạt
 
-**Technical Notes:** Bắt đầu dùng files module theo chiều dọc proposal; enforcement permission cho upload/view file là bắt buộc.
+**Technical Notes:**
+**TN-ST-2.3-01:** Bắt đầu dùng files module theo chiều dọc proposal; enforcement permission cho upload/view file là bắt buộc.
 
-**Authorization Requirements:** Chỉ PI hoặc người được ủy quyền mới upload file vào draft của họ; backend luôn kiểm tra record association và quyền truy cập.
+**Authorization Requirements:**
+**AUTH-ST-2.3-01:** Chỉ PI hoặc người được ủy quyền mới upload file vào draft của họ; backend luôn kiểm tra record association và quyền truy cập.
 
-**Audit-Log Requirements:** Ghi audit log cho upload important file.
+**Audit-Log Requirements:**
+**AUD-ST-2.3-01:** Ghi audit log cho upload important file.
 
 **Test or Manual Verification Checklist:**
-- Upload tệp hợp lệ
-- Từ chối tệp sai loại/sai dung lượng
-- Kiểm tra metadata file hiển thị
-- Kiểm tra readiness panel phản ánh đúng thiếu sót
+**VER-ST-2.3-01:** Upload tệp hợp lệ
+**VER-ST-2.3-02:** Từ chối tệp sai loại/sai dung lượng
+**VER-ST-2.3-03:** Kiểm tra metadata file hiển thị
+**VER-ST-2.3-04:** Kiểm tra readiness panel phản ánh đúng thiếu sót
 
-### Story 2.4: Nộp hồ sơ chính thức và xem lịch sử nộp
+### ST-2.4: Nộp hồ sơ chính thức và xem lịch sử nộp
+**Use Case IDs:** `UC-240-A` Formal proposal submission, `UC-240-B` Submission history view
+**Traceability:** FR14, FR22, FR38, FR39; NFR10; UX-DR11, UX-DR13, UX-DR14
+
 
 As a principal investigator,
 I want to submit my prepared proposal formally and view submission history,
@@ -633,38 +690,44 @@ So that the proposal enters the controlled intake workflow with traceable status
 
 **Acceptance Criteria:**
 
-**Given** proposal draft đã đạt điều kiện readiness
+**AC-ST-2.4-01:** Given proposal draft đã đạt điều kiện readiness
 **When** PI xác nhận nộp chính thức
 **Then** proposal chuyển sang trạng thái submitted
 **And** hệ thống ghi nhận timestamp cùng actor của lần nộp
 
-**Given** proposal chưa đủ điều kiện nộp
+**AC-ST-2.4-02:** Given proposal chưa đủ điều kiện nộp
 **When** PI cố nộp chính thức
 **Then** hệ thống từ chối chuyển trạng thái
 **And** chỉ ra các điều kiện còn thiếu
 
-**Given** proposal đã được nộp
+**AC-ST-2.4-03:** Given proposal đã được nộp
 **When** người dùng xem chi tiết proposal
 **Then** họ thấy timeline hoặc history của trạng thái nộp
 **And** các hành động chỉnh sửa trái phép bị chặn theo rule trạng thái
 
-**Technical Notes:** State transition phải là explicit domain operation; timeline UX cần rõ ràng theo UX-DR13/14.
+**Technical Notes:**
+**TN-ST-2.4-01:** State transition phải là explicit domain operation; timeline UX cần rõ ràng theo UX-DR13/14.
 
-**Authorization Requirements:** Chỉ PI/chủ sở hữu proposal được submit; các actor khác chỉ xem hoặc thao tác tùy theo role/state.
+**Authorization Requirements:**
+**AUTH-ST-2.4-01:** Chỉ PI/chủ sở hữu proposal được submit; các actor khác chỉ xem hoặc thao tác tùy theo role/state.
 
-**Audit-Log Requirements:** Ghi audit log cho `submit proposal` và trạng thái liên quan.
+**Audit-Log Requirements:**
+**AUD-ST-2.4-01:** Ghi audit log cho `submit proposal` và trạng thái liên quan.
 
 **Test or Manual Verification Checklist:**
-- Nộp hồ sơ đủ điều kiện thành công
-- Chặn nộp khi thiếu dữ liệu hoặc thiếu file
-- Kiểm tra history/timeline hiển thị lần nộp
-- Kiểm tra audit log cho hành động submit
+**VER-ST-2.4-01:** Nộp hồ sơ đủ điều kiện thành công
+**VER-ST-2.4-02:** Chặn nộp khi thiếu dữ liệu hoặc thiếu file
+**VER-ST-2.4-03:** Kiểm tra history/timeline hiển thị lần nộp
+**VER-ST-2.4-04:** Kiểm tra audit log cho hành động submit
 
-## Epic 3: Bổ Sung, Đánh Giá Và Phê Duyệt Đề Tài
+## EP-03: Bổ Sung, Đánh Giá Và Phê Duyệt Đề Tài
 
 Cho phép xử lý toàn bộ giai đoạn thẩm định đề xuất sau khi nộp chính thức, từ bổ sung đến quyết định phê duyệt.
 
-### Story 3.1: Yêu cầu bổ sung và nộp lại hồ sơ
+### ST-3.1: Yêu cầu bổ sung và nộp lại hồ sơ
+**Use Case IDs:** `UC-310-A` Supplement request, `UC-310-B` Proposal resubmission
+**Traceability:** FR15, FR16, FR22, FR38, FR39; NFR10; UX-DR10, UX-DR13, UX-DR14
+
 
 As a scientific management staff member and principal investigator,
 I want to issue, receive, and resolve supplement requests,
@@ -678,34 +741,40 @@ So that incomplete proposals can be corrected within a traceable workflow.
 
 **Acceptance Criteria:**
 
-**Given** proposal ở trạng thái phù hợp để kiểm tra tính đầy đủ
+**AC-ST-3.1-01:** Given proposal ở trạng thái phù hợp để kiểm tra tính đầy đủ
 **When** staff gửi yêu cầu bổ sung với reason và due date
 **Then** proposal chuyển sang trạng thái chờ bổ sung
 **And** PI nhìn thấy nội dung yêu cầu cùng hạn phản hồi
 
-**Given** proposal đang chờ bổ sung
+**AC-ST-3.1-02:** Given proposal đang chờ bổ sung
 **When** PI cập nhật dữ liệu/tệp và nộp lại
 **Then** proposal chuyển sang trạng thái resubmitted hoặc tương đương
 **And** hệ thống giữ lại lịch sử yêu cầu bổ sung và lần nộp lại
 
-**Given** proposal không ở trạng thái cho phép bổ sung
+**AC-ST-3.1-03:** Given proposal không ở trạng thái cho phép bổ sung
 **When** staff hoặc PI cố thao tác
 **Then** hệ thống từ chối thao tác
 **And** trạng thái không bị thay đổi sai
 
-**Technical Notes:** Bao phủ FR15, FR16, FR22; phải hỗ trợ lịch sử đa vòng nếu business cho phép, nhưng story có thể bắt đầu với một vòng chuẩn hóa tốt.
+**Technical Notes:**
+**TN-ST-3.1-01:** Bao phủ FR15, FR16, FR22; phải hỗ trợ lịch sử đa vòng nếu business cho phép, nhưng story có thể bắt đầu với một vòng chuẩn hóa tốt.
 
-**Authorization Requirements:** Staff được quyền yêu cầu bổ sung trong scope của mình; PI chỉ phản hồi proposal của chính mình; reviewer/lãnh đạo không có quyền sửa nội dung proposal ở bước này.
+**Authorization Requirements:**
+**AUTH-ST-3.1-01:** Staff được quyền yêu cầu bổ sung trong scope của mình; PI chỉ phản hồi proposal của chính mình; reviewer/lãnh đạo không có quyền sửa nội dung proposal ở bước này.
 
-**Audit-Log Requirements:** Ghi audit log cho `request supplement`, `update proposal`, `resubmit proposal`.
+**Audit-Log Requirements:**
+**AUD-ST-3.1-01:** Ghi audit log cho `request supplement`, `update proposal`, `resubmit proposal`.
 
 **Test or Manual Verification Checklist:**
-- Gửi yêu cầu bổ sung
-- PI xem yêu cầu và nộp lại
-- Kiểm tra state transitions hợp lệ
-- Kiểm tra audit log và timeline
+**VER-ST-3.1-01:** Gửi yêu cầu bổ sung
+**VER-ST-3.1-02:** PI xem yêu cầu và nộp lại
+**VER-ST-3.1-03:** Kiểm tra state transitions hợp lệ
+**VER-ST-3.1-04:** Kiểm tra audit log và timeline
 
-### Story 3.2: Phân công reviewer và truy cập proposal theo assignment
+### ST-3.2: Phân công reviewer và truy cập proposal theo assignment
+**Use Case IDs:** `UC-320-A` Reviewer assignment, `UC-320-B` Assigned proposal access
+**Traceability:** FR17, FR38, FR39; NFR7, NFR8
+
 
 As a scientific management staff member,
 I want to assign reviewers or council members to proposals,
@@ -719,34 +788,40 @@ So that evaluation work is routed securely to the right people.
 
 **Acceptance Criteria:**
 
-**Given** proposal sẵn sàng cho đánh giá
+**AC-ST-3.2-01:** Given proposal sẵn sàng cho đánh giá
 **When** staff gán một hoặc nhiều reviewer/hội đồng
 **Then** assignment được lưu
 **And** chỉ những người được gán mới thấy proposal trong khu vực đánh giá của họ
 
-**Given** một reviewer không được phân công
+**AC-ST-3.2-02:** Given một reviewer không được phân công
 **When** họ cố truy cập proposal không thuộc assignment
 **Then** hệ thống từ chối truy cập
 **And** không rò rỉ metadata nhạy cảm của proposal đó
 
-**Given** staff cần điều chỉnh phân công
+**AC-ST-3.2-03:** Given staff cần điều chỉnh phân công
 **When** thay đổi assignment trong trạng thái hợp lệ
 **Then** assignment mới có hiệu lực
 **And** lịch sử phân công được lưu vết
 
-**Technical Notes:** Data-scope + assignment-scope enforcement là trọng tâm; tránh cho reviewer thấy proposal ngoài assignment.
+**Technical Notes:**
+**TN-ST-3.2-01:** Data-scope + assignment-scope enforcement là trọng tâm; tránh cho reviewer thấy proposal ngoài assignment.
 
-**Authorization Requirements:** Chỉ staff hoặc role được phép mới assign/reassign; reviewer chỉ xem assigned items.
+**Authorization Requirements:**
+**AUTH-ST-3.2-01:** Chỉ staff hoặc role được phép mới assign/reassign; reviewer chỉ xem assigned items.
 
-**Audit-Log Requirements:** Ghi audit log cho `assign reviewer` và thay đổi assignment liên quan.
+**Audit-Log Requirements:**
+**AUD-ST-3.2-01:** Ghi audit log cho `assign reviewer` và thay đổi assignment liên quan.
 
 **Test or Manual Verification Checklist:**
-- Gán reviewer thành công
-- Reviewer được gán truy cập được
-- Reviewer không được gán bị chặn
-- Kiểm tra lịch sử và audit log assignment
+**VER-ST-3.2-01:** Gán reviewer thành công
+**VER-ST-3.2-02:** Reviewer được gán truy cập được
+**VER-ST-3.2-03:** Reviewer không được gán bị chặn
+**VER-ST-3.2-04:** Kiểm tra lịch sử và audit log assignment
 
-### Story 3.3: Reviewer chấm điểm và gửi nhận xét
+### ST-3.3: Reviewer chấm điểm và gửi nhận xét
+**Use Case ID:** `UC-330` Reviewer scoring and comments
+**Traceability:** FR18, FR38, FR39; UX-DR10, UX-DR20, UX-DR21
+
 
 As a reviewer or council member,
 I want to submit scores, comments, and recommendations for assigned proposals,
@@ -760,34 +835,40 @@ So that the evaluation outcome can be consolidated in a controlled manner.
 
 **Acceptance Criteria:**
 
-**Given** reviewer được phân công proposal
+**AC-ST-3.3-01:** Given reviewer được phân công proposal
 **When** reviewer nhập score, comment, recommendation và gửi
 **Then** kết quả đánh giá được lưu gắn với proposal và reviewer đó
 **And** reviewer không thể ghi đè trái phép lên review của người khác
 
-**Given** score criteria hoặc trường bắt buộc còn thiếu
+**AC-ST-3.3-02:** Given score criteria hoặc trường bắt buộc còn thiếu
 **When** reviewer cố submit
 **Then** hệ thống chặn submit
 **And** hiển thị lỗi rõ ràng gần trường liên quan
 
-**Given** reviewer đã submit review
+**AC-ST-3.3-03:** Given reviewer đã submit review
 **When** staff xem proposal
 **Then** staff thấy trạng thái hoàn thành đánh giá tương ứng
 **And** lịch sử xử lý thể hiện thời điểm gửi đánh giá
 
-**Technical Notes:** Bao phủ UX form validation, accessibility, status visibility; entity review chỉ tạo phần cần cho scoring/comments.
+**Technical Notes:**
+**TN-ST-3.3-01:** Bao phủ UX form validation, accessibility, status visibility; entity review chỉ tạo phần cần cho scoring/comments.
 
-**Authorization Requirements:** Chỉ reviewer được gán mới tạo/sửa review của mình trong trạng thái cho phép; staff được đọc để tổng hợp; PI không được thấy nội dung review nếu policy chưa cho phép.
+**Authorization Requirements:**
+**AUTH-ST-3.3-01:** Chỉ reviewer được gán mới tạo/sửa review của mình trong trạng thái cho phép; staff được đọc để tổng hợp; PI không được thấy nội dung review nếu policy chưa cho phép.
 
-**Audit-Log Requirements:** Ghi audit log cho `submit score and review comment`.
+**Audit-Log Requirements:**
+**AUD-ST-3.3-01:** Ghi audit log cho `submit score and review comment`.
 
 **Test or Manual Verification Checklist:**
-- Reviewer submit review hợp lệ
-- Chặn submit khi thiếu score/comment bắt buộc
-- Chặn reviewer truy cập/sửa review không thuộc họ
-- Kiểm tra audit log và trạng thái completion
+**VER-ST-3.3-01:** Reviewer submit review hợp lệ
+**VER-ST-3.3-02:** Chặn submit khi thiếu score/comment bắt buộc
+**VER-ST-3.3-03:** Chặn reviewer truy cập/sửa review không thuộc họ
+**VER-ST-3.3-04:** Kiểm tra audit log và trạng thái completion
 
-### Story 3.4: Theo dõi tiến độ đánh giá và tổng hợp kết quả
+### ST-3.4: Theo dõi tiến độ đánh giá và tổng hợp kết quả
+**Use Case ID:** `UC-340` Review progress monitoring and consolidation
+**Traceability:** FR19, FR38, FR39, FR47; UX-DR7, UX-DR8, UX-DR13
+
 
 As a scientific management staff member,
 I want to monitor review completion and consolidate evaluation outcomes,
@@ -801,29 +882,35 @@ So that proposals can move efficiently toward an approval decision.
 
 **Acceptance Criteria:**
 
-**Given** proposal có nhiều reviewer assignments
+**AC-ST-3.4-01:** Given proposal có nhiều reviewer assignments
 **When** staff mở màn hình theo dõi đánh giá
 **Then** staff thấy reviewer nào đã hoàn thành/chưa hoàn thành
 **And** có thể nhận biết proposal nào đã sẵn sàng để tổng hợp
 
-**Given** đủ thông tin đánh giá
+**AC-ST-3.4-02:** Given đủ thông tin đánh giá
 **When** staff nhập summary/consolidated outcome
 **Then** proposal được đánh dấu sẵn sàng cho bước phê duyệt
 **And** summary được lưu có truy vết người nhập
 
-**Technical Notes:** UX tập trung bảng/list + status badges + quick actions; tối thiểu drilldown tới reviews.
+**Technical Notes:**
+**TN-ST-3.4-01:** UX tập trung bảng/list + status badges + quick actions; tối thiểu drilldown tới reviews.
 
-**Authorization Requirements:** Chỉ staff trong scope phù hợp xem/tổng hợp; reviewer không được sửa consolidated outcome.
+**Authorization Requirements:**
+**AUTH-ST-3.4-01:** Chỉ staff trong scope phù hợp xem/tổng hợp; reviewer không được sửa consolidated outcome.
 
-**Audit-Log Requirements:** Ghi audit log cho cập nhật tổng hợp đánh giá quan trọng.
+**Audit-Log Requirements:**
+**AUD-ST-3.4-01:** Ghi audit log cho cập nhật tổng hợp đánh giá quan trọng.
 
 **Test or Manual Verification Checklist:**
-- Xem được tiến độ hoàn thành review
-- Tạo consolidated outcome
-- Kiểm tra readiness marker cho proposal
-- Kiểm tra history/audit cho summary action
+**VER-ST-3.4-01:** Xem được tiến độ hoàn thành review
+**VER-ST-3.4-02:** Tạo consolidated outcome
+**VER-ST-3.4-03:** Kiểm tra readiness marker cho proposal
+**VER-ST-3.4-04:** Kiểm tra history/audit cho summary action
 
-### Story 3.5: Phê duyệt hoặc từ chối proposal
+### ST-3.5: Phê duyệt hoặc từ chối proposal
+**Use Case ID:** `UC-350` Proposal approval decision
+**Traceability:** FR20, FR21, FR22, FR23, FR38, FR39; NFR8, NFR10; UX-DR11, UX-DR13, UX-DR14
+
 
 As a leadership or approval authority user,
 I want to review the complete proposal record and make a formal approval decision,
@@ -837,38 +924,44 @@ So that accepted proposals can advance into project execution while rejected one
 
 **Acceptance Criteria:**
 
-**Given** proposal ở trạng thái sẵn sàng phê duyệt
+**AC-ST-3.5-01:** Given proposal ở trạng thái sẵn sàng phê duyệt
 **When** lãnh đạo mở hồ sơ
 **Then** họ thấy đủ thông tin cần quyết định gồm history, reviews, files, summary
 **And** dữ liệu hiển thị vẫn tuân thủ permission rules
 
-**Given** lãnh đạo xác nhận approve hoặc reject
+**AC-ST-3.5-02:** Given lãnh đạo xác nhận approve hoặc reject
 **When** gửi quyết định
 **Then** proposal chuyển sang trạng thái đích hợp lệ
 **And** quyết định được lưu cùng actor, timestamp, và ghi chú nếu có
 
-**Given** proposal chưa ở trạng thái cho phép quyết định
+**AC-ST-3.5-03:** Given proposal chưa ở trạng thái cho phép quyết định
 **When** người dùng cố approve/reject
 **Then** hệ thống từ chối thao tác
 **And** không cho phép bypass workflow state
 
-**Technical Notes:** Đây là story đóng vòng proposal; confirmation UX bắt buộc; fail closed nếu thiếu authority context.
+**Technical Notes:**
+**TN-ST-3.5-01:** Đây là story đóng vòng proposal; confirmation UX bắt buộc; fail closed nếu thiếu authority context.
 
-**Authorization Requirements:** Chỉ approval authority được quyết định; staff/reviewer/PI không được gọi action này ngoài permission rules.
+**Authorization Requirements:**
+**AUTH-ST-3.5-01:** Chỉ approval authority được quyết định; staff/reviewer/PI không được gọi action này ngoài permission rules.
 
-**Audit-Log Requirements:** Ghi audit log cho `approve` và `reject`.
+**Audit-Log Requirements:**
+**AUD-ST-3.5-01:** Ghi audit log cho `approve` và `reject`.
 
 **Test or Manual Verification Checklist:**
-- Approve proposal hợp lệ
-- Reject proposal hợp lệ
-- Chặn quyết định khi proposal chưa ở state đúng
-- Kiểm tra history và audit log cho decision
+**VER-ST-3.5-01:** Approve proposal hợp lệ
+**VER-ST-3.5-02:** Reject proposal hợp lệ
+**VER-ST-3.5-03:** Chặn quyết định khi proposal chưa ở state đúng
+**VER-ST-3.5-04:** Kiểm tra history và audit log cho decision
 
-## Epic 4: Theo Dõi Đề Tài Được Duyệt Và Tiến Độ Thực Hiện
+## EP-04: Theo Dõi Đề Tài Được Duyệt Và Tiến Độ Thực Hiện
 
 Chuyển từ decision stage sang execution stage của đề tài đã được duyệt và quản lý các vòng đời tiếp theo.
 
-### Story 4.1: Khởi tạo hồ sơ đề tài thực hiện từ proposal đã duyệt
+### ST-4.1: Khởi tạo hồ sơ đề tài thực hiện từ proposal đã duyệt
+**Use Case ID:** `UC-410` Approved project creation from approved proposal
+**Traceability:** FR23, FR30, FR30a, FR38, FR39; NFR10
+
 
 As a scientific management staff member,
 I want an approved proposal to become an approved-project record,
@@ -882,29 +975,35 @@ So that project execution can be tracked without re-entering core source data.
 
 **Acceptance Criteria:**
 
-**Given** proposal đã được phê duyệt
+**AC-ST-4.1-01:** Given proposal đã được phê duyệt
 **When** hệ thống hoặc staff tạo approved project
 **Then** approved-project record được khởi tạo với dữ liệu nguồn liên quan
 **And** proposal và project liên kết truy vết được với nhau
 
-**Given** project đã được tạo
+**AC-ST-4.1-02:** Given project đã được tạo
 **When** PI hoặc project member có quyền xem
 **Then** họ thấy thông tin cơ bản của project cùng liên kết nguồn gốc từ proposal
 **And** chỉ thấy trong phạm vi được phép
 
-**Technical Notes:** Tránh duplicate không cần thiết; ưu tiên link + snapshot chọn lọc.
+**Technical Notes:**
+**TN-ST-4.1-01:** Tránh duplicate không cần thiết; ưu tiên link + snapshot chọn lọc.
 
-**Authorization Requirements:** Chỉ staff hoặc backend workflow tự động được tạo approved project; project members chỉ xem nếu được gán.
+**Authorization Requirements:**
+**AUTH-ST-4.1-01:** Chỉ staff hoặc backend workflow tự động được tạo approved project; project members chỉ xem nếu được gán.
 
-**Audit-Log Requirements:** Ghi audit log cho create approved project.
+**Audit-Log Requirements:**
+**AUD-ST-4.1-01:** Ghi audit log cho create approved project.
 
 **Test or Manual Verification Checklist:**
-- Tạo approved project từ proposal đã duyệt
-- Kiểm tra dữ liệu nguồn được mang sang đúng
-- Kiểm tra project link ngược về proposal
-- Kiểm tra audit log tạo project
+**VER-ST-4.1-01:** Tạo approved project từ proposal đã duyệt
+**VER-ST-4.1-02:** Kiểm tra dữ liệu nguồn được mang sang đúng
+**VER-ST-4.1-03:** Kiểm tra project link ngược về proposal
+**VER-ST-4.1-04:** Kiểm tra audit log tạo project
 
-### Story 4.2: Quản lý milestone, checkpoint và thành viên đề tài
+### ST-4.2: Quản lý milestone, checkpoint và thành viên đề tài
+**Use Case ID:** `UC-420` Project milestone, checkpoint, and member management
+**Traceability:** FR24, FR30, FR30a, FR38, FR39; UX-DR7, UX-DR13
+
 
 As a scientific management staff member,
 I want to define milestones, reporting checkpoints, and participant visibility,
@@ -918,29 +1017,35 @@ So that project execution has a clear schedule and accountability structure.
 
 **Acceptance Criteria:**
 
-**Given** approved project đã tồn tại
+**AC-ST-4.2-01:** Given approved project đã tồn tại
 **When** staff cấu hình milestone và reporting checkpoints
 **Then** project lưu được các mốc theo thời gian
 **And** các mốc hiển thị rõ trong project detail
 
-**Given** project member thuộc project
+**AC-ST-4.2-02:** Given project member thuộc project
 **When** họ xem project trong phạm vi được cấp
 **Then** họ thấy các milestone liên quan và trách nhiệm cơ bản của mình
 **And** không thấy project ngoài phạm vi tham gia
 
-**Technical Notes:** Bao phủ FR24 và FR30a; milestone/status UX cần dễ quét trên desktop lẫn mobile.
+**Technical Notes:**
+**TN-ST-4.2-01:** Bao phủ FR24 và FR30a; milestone/status UX cần dễ quét trên desktop lẫn mobile.
 
-**Authorization Requirements:** Staff quản lý milestone; member chỉ xem thông tin họ được cấp; leadership xem tùy scope.
+**Authorization Requirements:**
+**AUTH-ST-4.2-01:** Staff quản lý milestone; member chỉ xem thông tin họ được cấp; leadership xem tùy scope.
 
-**Audit-Log Requirements:** Ghi audit log cho create/update milestone và thay đổi thành viên dự án quan trọng.
+**Audit-Log Requirements:**
+**AUD-ST-4.2-01:** Ghi audit log cho create/update milestone và thay đổi thành viên dự án quan trọng.
 
 **Test or Manual Verification Checklist:**
-- Tạo milestone/checkpoint
-- Kiểm tra project member thấy đúng project của mình
-- Chặn member xem project không liên quan
-- Kiểm tra audit log thay đổi mốc/kế hoạch
+**VER-ST-4.2-01:** Tạo milestone/checkpoint
+**VER-ST-4.2-02:** Kiểm tra project member thấy đúng project của mình
+**VER-ST-4.2-03:** Chặn member xem project không liên quan
+**VER-ST-4.2-04:** Kiểm tra audit log thay đổi mốc/kế hoạch
 
-### Story 4.3: Nộp báo cáo tiến độ và evidence thực hiện
+### ST-4.3: Nộp báo cáo tiến độ và evidence thực hiện
+**Use Case IDs:** `UC-430-A` Progress report submission, `UC-430-B` Project evidence upload
+**Traceability:** FR25, FR30b, FR36, FR37, FR38, FR39; UX-DR9, UX-DR12, UX-DR15
+
 
 As a principal investigator or permitted project member,
 I want to submit progress reports and supporting evidence,
@@ -954,34 +1059,40 @@ So that project progress can be reviewed on schedule.
 
 **Acceptance Criteria:**
 
-**Given** project có checkpoint đến hạn
+**AC-ST-4.3-01:** Given project có checkpoint đến hạn
 **When** PI nộp progress report với evidence cần thiết
 **Then** report được lưu gắn với project và checkpoint
 **And** trạng thái báo cáo phản ánh đã nộp/chờ rà soát
 
-**Given** project member được cấp quyền nộp evidence trong phạm vi giới hạn
+**AC-ST-4.3-02:** Given project member được cấp quyền nộp evidence trong phạm vi giới hạn
 **When** member upload contribution file
 **Then** evidence được chấp nhận và gắn đúng project/report context
 **And** member không thể nộp ra ngoài scope được cấp
 
-**Given** dữ liệu báo cáo hoặc file còn thiếu
+**AC-ST-4.3-03:** Given dữ liệu báo cáo hoặc file còn thiếu
 **When** người dùng cố submit
 **Then** hệ thống chặn submit
 **And** chỉ ra rõ các thiếu sót
 
-**Technical Notes:** Bao phủ FR25 và FR30b; tái sử dụng patterns file/history; mobile-friendly report form là bắt buộc.
+**Technical Notes:**
+**TN-ST-4.3-01:** Bao phủ FR25 và FR30b; tái sử dụng patterns file/history; mobile-friendly report form là bắt buộc.
 
-**Authorization Requirements:** PI submit full report; member chỉ upload contribution/evidence theo grant; staff đọc/soát trong scope.
+**Authorization Requirements:**
+**AUTH-ST-4.3-01:** PI submit full report; member chỉ upload contribution/evidence theo grant; staff đọc/soát trong scope.
 
-**Audit-Log Requirements:** Ghi audit log cho create/update progress report và upload important file.
+**Audit-Log Requirements:**
+**AUD-ST-4.3-01:** Ghi audit log cho create/update progress report và upload important file.
 
 **Test or Manual Verification Checklist:**
-- PI nộp báo cáo tiến độ
-- Member upload evidence hợp lệ trong scope
-- Chặn upload ngoài scope
-- Kiểm tra audit log và timeline report
+**VER-ST-4.3-01:** PI nộp báo cáo tiến độ
+**VER-ST-4.3-02:** Member upload evidence hợp lệ trong scope
+**VER-ST-4.3-03:** Chặn upload ngoài scope
+**VER-ST-4.3-04:** Kiểm tra audit log và timeline report
 
-### Story 4.4: Rà soát báo cáo tiến độ và theo dõi chậm hạn
+### ST-4.4: Rà soát báo cáo tiến độ và theo dõi chậm hạn
+**Use Case IDs:** `UC-440-A` Progress report review, `UC-440-B` Delay monitoring
+**Traceability:** FR26, FR29, FR38, FR39, FR45; UX-DR7, UX-DR13, UX-DR17
+
 
 As a scientific management staff member,
 I want to review submitted progress reports and detect delayed projects,
@@ -995,29 +1106,35 @@ So that unresolved issues and overdue execution are visible early.
 
 **Acceptance Criteria:**
 
-**Given** progress reports đã được nộp
+**AC-ST-4.4-01:** Given progress reports đã được nộp
 **When** staff rà soát
 **Then** staff có thể đánh dấu cần follow-up hoặc chấp nhận ở mức quy trình phù hợp
 **And** issue/unresolved state được hiển thị rõ trong project context
 
-**Given** project hoặc checkpoint quá hạn
+**AC-ST-4.4-02:** Given project hoặc checkpoint quá hạn
 **When** staff xem danh sách project
 **Then** hệ thống hiển thị trạng thái delayed/upcoming/waiting action rõ ràng
 **And** các indicator dựa trên deadline và trạng thái hiện hành
 
-**Technical Notes:** Chuẩn bị dữ liệu cho Epic 6/7 nhưng tự bản thân story vẫn hoàn chỉnh về giá trị giám sát.
+**Technical Notes:**
+**TN-ST-4.4-01:** Chuẩn bị dữ liệu cho Epic 6/7 nhưng tự bản thân story vẫn hoàn chỉnh về giá trị giám sát.
 
-**Authorization Requirements:** Chỉ staff/leadership phù hợp mới xem và đánh dấu follow-up trong scope của mình.
+**Authorization Requirements:**
+**AUTH-ST-4.4-01:** Chỉ staff/leadership phù hợp mới xem và đánh dấu follow-up trong scope của mình.
 
-**Audit-Log Requirements:** Ghi audit log cho review/follow-up actions quan trọng trên progress report.
+**Audit-Log Requirements:**
+**AUD-ST-4.4-01:** Ghi audit log cho review/follow-up actions quan trọng trên progress report.
 
 **Test or Manual Verification Checklist:**
-- Rà soát report và ghi follow-up
-- Hiển thị project delayed/upcoming
-- Kiểm tra indicator theo đúng deadline
-- Kiểm tra audit log follow-up/review
+**VER-ST-4.4-01:** Rà soát report và ghi follow-up
+**VER-ST-4.4-02:** Hiển thị project delayed/upcoming
+**VER-ST-4.4-03:** Kiểm tra indicator theo đúng deadline
+**VER-ST-4.4-04:** Kiểm tra audit log follow-up/review
 
-### Story 4.5: Điều chỉnh, gia hạn, nghiệm thu và final review
+### ST-4.5: Điều chỉnh, gia hạn, nghiệm thu và final review
+**Use Case IDs:** `UC-450-A` Adjustment or extension request, `UC-450-B` Acceptance and final review decision
+**Traceability:** FR27, FR28, FR30, FR38, FR39; NFR10; UX-DR11, UX-DR13, UX-DR14
+
 
 As a principal investigator and approval authority,
 I want to request and decide key project lifecycle changes,
@@ -1031,38 +1148,44 @@ So that project execution can adapt and close through controlled workflows.
 
 **Acceptance Criteria:**
 
-**Given** approved project ở trạng thái phù hợp
+**AC-ST-4.5-01:** Given approved project ở trạng thái phù hợp
 **When** PI gửi adjustment hoặc extension request
 **Then** request được lưu với lý do và context cần thiết
 **And** project chuyển vào trạng thái chờ xử lý phù hợp
 
-**Given** request hoặc project ở bước cần quyết định
+**AC-ST-4.5-02:** Given request hoặc project ở bước cần quyết định
 **When** authority phê duyệt hoặc từ chối adjustment/extension/acceptance/final review
 **Then** trạng thái project chuyển hợp lệ theo state machine
 **And** quyết định được lưu với history đầy đủ
 
-**Given** thao tác không hợp lệ theo current project state
+**AC-ST-4.5-03:** Given thao tác không hợp lệ theo current project state
 **When** user cố thực hiện action
 **Then** hệ thống chặn thao tác
 **And** không cho phép cập nhật tùy ý trạng thái project
 
-**Technical Notes:** Đây là story state-heavy; nên chia code theo explicit domain operations, không cập nhật status tự do.
+**Technical Notes:**
+**TN-ST-4.5-01:** Đây là story state-heavy; nên chia code theo explicit domain operations, không cập nhật status tự do.
 
-**Authorization Requirements:** PI tạo request; staff/leadership/authority quyết định tùy loại action; members khác không được thao tác ngoài scope.
+**Authorization Requirements:**
+**AUTH-ST-4.5-01:** PI tạo request; staff/leadership/authority quyết định tùy loại action; members khác không được thao tác ngoài scope.
 
-**Audit-Log Requirements:** Ghi audit log cho create adjustment request, approve/reject request, acceptance actions, final review decisions.
+**Audit-Log Requirements:**
+**AUD-ST-4.5-01:** Ghi audit log cho create adjustment request, approve/reject request, acceptance actions, final review decisions.
 
 **Test or Manual Verification Checklist:**
-- Tạo adjustment/extension request
-- Approve/reject request
-- Thực hiện acceptance/final review hợp lệ
-- Kiểm tra state transition và audit log
+**VER-ST-4.5-01:** Tạo adjustment/extension request
+**VER-ST-4.5-02:** Approve/reject request
+**VER-ST-4.5-03:** Thực hiện acceptance/final review hợp lệ
+**VER-ST-4.5-04:** Kiểm tra state transition và audit log
 
-## Epic 5: Giao Việc, Tệp Tin, Lịch Sử Và Audit
+## EP-05: Giao Việc, Tệp Tin, Lịch Sử Và Audit
 
 Tăng khả năng vận hành hàng ngày và trách nhiệm giải trình trên toàn hệ thống.
 
-### Story 5.1: Tạo và phân công công việc liên kết nghiệp vụ
+### ST-5.1: Tạo và phân công công việc liên kết nghiệp vụ
+**Use Case ID:** `UC-510` Linked business task creation and assignment
+**Traceability:** FR31, FR32, FR38, FR39; NFR7, NFR8
+
 
 As a authorized user,
 I want to create tasks linked to business records and assign responsibility,
@@ -1076,29 +1199,35 @@ So that follow-up work is explicit and trackable.
 
 **Acceptance Criteria:**
 
-**Given** user có quyền tạo task
+**AC-ST-5.1-01:** Given user có quyền tạo task
 **When** họ tạo task gắn với proposal, project, report hoặc độc lập
 **Then** task được lưu cùng relation business context
 **And** assignee, due date, priority hiển thị rõ trong task detail
 
-**Given** task được gắn với business record
+**AC-ST-5.1-02:** Given task được gắn với business record
 **When** người dùng xem record hoặc task liên quan
 **Then** có thể điều hướng qua lại giữa task và bản ghi nguồn
 **And** traceability được giữ nguyên
 
-**Technical Notes:** Tạo đúng bảng/task fields cần dùng; không làm task engine phức tạp.
+**Technical Notes:**
+**TN-ST-5.1-01:** Tạo đúng bảng/task fields cần dùng; không làm task engine phức tạp.
 
-**Authorization Requirements:** Chỉ role được phép mới tạo/assign task; visibility theo scope và linked record permissions.
+**Authorization Requirements:**
+**AUTH-ST-5.1-01:** Chỉ role được phép mới tạo/assign task; visibility theo scope và linked record permissions.
 
-**Audit-Log Requirements:** Ghi audit log cho `create task` và `assign task`.
+**Audit-Log Requirements:**
+**AUD-ST-5.1-01:** Ghi audit log cho `create task` và `assign task`.
 
 **Test or Manual Verification Checklist:**
-- Tạo task standalone
-- Tạo task linked với proposal/project
-- Gán assignee/collaborator
-- Kiểm tra audit log tạo/gán task
+**VER-ST-5.1-01:** Tạo task standalone
+**VER-ST-5.1-02:** Tạo task linked với proposal/project
+**VER-ST-5.1-03:** Gán assignee/collaborator
+**VER-ST-5.1-04:** Kiểm tra audit log tạo/gán task
 
-### Story 5.2: Cập nhật trạng thái task và evidence hoàn thành
+### ST-5.2: Cập nhật trạng thái task và evidence hoàn thành
+**Use Case ID:** `UC-520` Task status and completion evidence update
+**Traceability:** FR33, FR34, FR35, FR36, FR37, FR38, FR39; UX-DR10, UX-DR15
+
 
 As a task assignee,
 I want to update task status, notes, and completion evidence,
@@ -1112,34 +1241,40 @@ So that work progress is visible and verifiable.
 
 **Acceptance Criteria:**
 
-**Given** assignee có quyền với task
+**AC-ST-5.2-01:** Given assignee có quyền với task
 **When** cập nhật status hoặc ghi chú tiến độ
 **Then** task lưu được thay đổi
 **And** history hiển thị ai cập nhật, lúc nào, thay đổi gì
 
-**Given** task yêu cầu bằng chứng hoàn thành
+**AC-ST-5.2-02:** Given task yêu cầu bằng chứng hoàn thành
 **When** assignee tải evidence lên
 **Then** evidence gắn đúng với task
 **And** metadata file được lưu đầy đủ
 
-**Given** task ở trạng thái hoặc scope không cho phép sửa
+**AC-ST-5.2-03:** Given task ở trạng thái hoặc scope không cho phép sửa
 **When** user cố cập nhật
 **Then** hệ thống từ chối
 **And** trạng thái task không bị thay đổi sai
 
-**Technical Notes:** Bao phủ FR33, FR34, FR35 ở mức task workflow cơ bản; UX cần status + notes + file evidence rõ ràng.
+**Technical Notes:**
+**TN-ST-5.2-01:** Bao phủ FR33, FR34, FR35 ở mức task workflow cơ bản; UX cần status + notes + file evidence rõ ràng.
 
-**Authorization Requirements:** Assignee và authorized collaborators cập nhật theo rule; người ngoài scope không truy cập/sửa task.
+**Authorization Requirements:**
+**AUTH-ST-5.2-01:** Assignee và authorized collaborators cập nhật theo rule; người ngoài scope không truy cập/sửa task.
 
-**Audit-Log Requirements:** Ghi audit log cho `update task status`, upload important file, completion evidence updates.
+**Audit-Log Requirements:**
+**AUD-ST-5.2-01:** Ghi audit log cho `update task status`, upload important file, completion evidence updates.
 
 **Test or Manual Verification Checklist:**
-- Cập nhật status task hợp lệ
-- Thêm progress notes
-- Upload evidence hoàn thành
-- Kiểm tra history và audit log
+**VER-ST-5.2-01:** Cập nhật status task hợp lệ
+**VER-ST-5.2-02:** Thêm progress notes
+**VER-ST-5.2-03:** Upload evidence hoàn thành
+**VER-ST-5.2-04:** Kiểm tra history và audit log
 
-### Story 5.3: Dịch vụ file dùng chung với metadata, quyền truy cập và lịch sử thay thế
+### ST-5.3: Dịch vụ file dùng chung với metadata, quyền truy cập và lịch sử thay thế
+**Use Case ID:** `UC-530` Shared file service access and replacement history
+**Traceability:** FR36, FR37, FR38, FR39; NFR7, NFR8; UX-DR15, UX-DR16
+
 
 As a authorized user,
 I want a consistent file-management capability across business records,
@@ -1153,34 +1288,40 @@ So that important documents remain permission-controlled and traceable.
 
 **Acceptance Criteria:**
 
-**Given** file gắn với business record quan trọng
+**AC-ST-5.3-01:** Given file gắn với business record quan trọng
 **When** user có quyền xem hoặc tải xuống
 **Then** hệ thống cho phép truy cập qua service được kiểm soát
 **And** không cho phép truy cập trực tiếp chỉ bằng object key
 
-**Given** user không có quyền với record liên quan
+**AC-ST-5.3-02:** Given user không có quyền với record liên quan
 **When** họ cố xem hoặc tải file
 **Then** hệ thống từ chối
 **And** không rò rỉ metadata nhạy cảm của file
 
-**Given** file được thay thế trong workflow cho phép
+**AC-ST-5.3-03:** Given file được thay thế trong workflow cho phép
 **When** replace action thành công
 **Then** hệ thống giữ metadata và version/replacement history tối thiểu
 **And** vẫn truy vết được uploader và timestamp
 
-**Technical Notes:** Bao phủ FR36, FR37 và rules từ project context; phải qua files module.
+**Technical Notes:**
+**TN-ST-5.3-01:** Bao phủ FR36, FR37 và rules từ project context; phải qua files module.
 
-**Authorization Requirements:** Permission check mọi lần upload/view/download/replace; record-level access bắt buộc.
+**Authorization Requirements:**
+**AUTH-ST-5.3-01:** Permission check mọi lần upload/view/download/replace; record-level access bắt buộc.
 
-**Audit-Log Requirements:** Ghi audit log cho upload important file, download important file, replace file nếu là action quan trọng.
+**Audit-Log Requirements:**
+**AUD-ST-5.3-01:** Ghi audit log cho upload important file, download important file, replace file nếu là action quan trọng.
 
 **Test or Manual Verification Checklist:**
-- Upload/view/download file hợp lệ
-- Chặn truy cập file trái phép
-- Replace file và kiểm tra replacement history
-- Kiểm tra audit log download/upload/replace
+**VER-ST-5.3-01:** Upload/view/download file hợp lệ
+**VER-ST-5.3-02:** Chặn truy cập file trái phép
+**VER-ST-5.3-03:** Replace file và kiểm tra replacement history
+**VER-ST-5.3-04:** Kiểm tra audit log download/upload/replace
 
-### Story 5.4: Lịch sử xử lý và tra cứu audit log theo thẩm quyền
+### ST-5.4: Lịch sử xử lý và tra cứu audit log theo thẩm quyền
+**Use Case ID:** `UC-540` Business history and audit-log lookup
+**Traceability:** FR38, FR39, FR40; NFR7, NFR9; UX-DR13, UX-DR14
+
 
 As a authorized administrator or business user,
 I want to inspect workflow history and audit logs,
@@ -1194,33 +1335,39 @@ So that decisions and changes can be investigated and defended.
 
 **Acceptance Criteria:**
 
-**Given** một proposal, project hoặc task có nhiều thay đổi
+**AC-ST-5.4-01:** Given một proposal, project hoặc task có nhiều thay đổi
 **When** user có thẩm quyền mở history
 **Then** họ thấy timeline xử lý rõ actor, action, timestamp, context
 **And** các mốc liên quan tới comment/decision/file được liên kết trực tiếp
 
-**Given** admin hoặc business authority cần tra cứu audit
+**AC-ST-5.4-02:** Given admin hoặc business authority cần tra cứu audit
 **When** lọc theo actor/action/entity/time
 **Then** hệ thống trả về các bản ghi audit phù hợp
 **And** chỉ hiển thị các bản ghi mà người dùng được phép xem
 
-**Technical Notes:** Gắn chặt UX-DR13/14 và FR38/39/40; cần distinction giữa business history và raw audit events.
+**Technical Notes:**
+**TN-ST-5.4-01:** Gắn chặt UX-DR13/14 và FR38/39/40; cần distinction giữa business history và raw audit events.
 
-**Authorization Requirements:** Chỉ authorized users xem history/audit; visibility vẫn phải respect role và data scope.
+**Authorization Requirements:**
+**AUTH-ST-5.4-01:** Chỉ authorized users xem history/audit; visibility vẫn phải respect role và data scope.
 
-**Audit-Log Requirements:** Story này là lớp tra cứu; không thêm loại action mới ngoài các truy vấn hệ thống nếu cần logging vận hành.
+**Audit-Log Requirements:**
+**AUD-ST-5.4-01:** Story này là lớp tra cứu; không thêm loại action mới ngoài các truy vấn hệ thống nếu cần logging vận hành.
 
 **Test or Manual Verification Checklist:**
-- Xem history của proposal/project/task
-- Lọc audit logs
-- Chặn user không có quyền xem audit/history
-- Kiểm tra liên kết giữa timeline và các mốc file/decision
+**VER-ST-5.4-01:** Xem history của proposal/project/task
+**VER-ST-5.4-02:** Lọc audit logs
+**VER-ST-5.4-03:** Chặn user không có quyền xem audit/history
+**VER-ST-5.4-04:** Kiểm tra liên kết giữa timeline và các mốc file/decision
 
-## Epic 6: Thông Báo, Nhắc Việc Và Hàng Đợi Công Việc
+## EP-06: Thông Báo, Nhắc Việc Và Hàng Đợi Công Việc
 
 Biến trạng thái và deadline thành hành động cụ thể mà người dùng thấy đúng lúc.
 
-### Story 6.1: Thông báo trong ứng dụng cho sự kiện nghiệp vụ quan trọng
+### ST-6.1: Thông báo trong ứng dụng cho sự kiện nghiệp vụ quan trọng
+**Use Case ID:** `UC-610` In-app notification delivery
+**Traceability:** FR41, FR44; NFR11
+
 
 As a internal user,
 I want to receive in-app notifications for assignments, supplements, approvals, and state changes,
@@ -1234,29 +1381,35 @@ So that I know what needs my attention without external follow-up.
 
 **Acceptance Criteria:**
 
-**Given** một action nghiệp vụ quan trọng xảy ra
+**AC-ST-6.1-01:** Given một action nghiệp vụ quan trọng xảy ra
 **When** action đó thuộc tập trigger được hỗ trợ
 **Then** notification in-app được tạo cho đúng recipient
 **And** recipient có thể điều hướng tới record liên quan
 
-**Given** user mở trung tâm thông báo
+**AC-ST-6.1-02:** Given user mở trung tâm thông báo
 **When** họ xem danh sách
 **Then** notification hiển thị trạng thái read/unread và thông tin ngắn gọn
 **And** chỉ hiển thị notification thuộc phạm vi quyền của họ
 
-**Technical Notes:** Trigger ít nhưng đúng trước; không làm notification center quá nặng ở story đầu.
+**Technical Notes:**
+**TN-ST-6.1-01:** Trigger ít nhưng đúng trước; không làm notification center quá nặng ở story đầu.
 
-**Authorization Requirements:** Notification delivery phải respect role/scope/assignment; user không thấy notification của người khác.
+**Authorization Requirements:**
+**AUTH-ST-6.1-01:** Notification delivery phải respect role/scope/assignment; user không thấy notification của người khác.
 
-**Audit-Log Requirements:** Có thể ghi operational log cho notification creation nếu cần truy vết trigger, nhưng không thay thế business audit hiện có.
+**Audit-Log Requirements:**
+**AUD-ST-6.1-01:** Có thể ghi operational log cho notification creation nếu cần truy vết trigger, nhưng không thay thế business audit hiện có.
 
 **Test or Manual Verification Checklist:**
-- Tạo notification khi assign reviewer/task
-- Tạo notification khi request supplement/approval event
-- Kiểm tra user chỉ thấy notification của mình
-- Kiểm tra link từ notification tới record nguồn
+**VER-ST-6.1-01:** Tạo notification khi assign reviewer/task
+**VER-ST-6.1-02:** Tạo notification khi request supplement/approval event
+**VER-ST-6.1-03:** Kiểm tra user chỉ thấy notification của mình
+**VER-ST-6.1-04:** Kiểm tra link từ notification tới record nguồn
 
-### Story 6.2: Email notifications cho sự kiện và quyết định trọng yếu
+### ST-6.2: Email notifications cho sự kiện và quyết định trọng yếu
+**Use Case ID:** `UC-620` Email notification delivery
+**Traceability:** FR8, FR42; NFR11
+
 
 As a internal user,
 I want to receive email notifications for important workflow events,
@@ -1270,29 +1423,34 @@ So that I do not miss required actions when away from the application.
 
 **Acceptance Criteria:**
 
-**Given** một event được cấu hình gửi email
+**AC-ST-6.2-01:** Given một event được cấu hình gửi email
 **When** event đó xảy ra
 **Then** email notification được đưa vào queue và gửi tới recipient hợp lệ
 **And** nội dung email dùng template phù hợp
 
-**Given** job gửi email thất bại tạm thời
+**AC-ST-6.2-02:** Given job gửi email thất bại tạm thời
 **When** hệ thống retry theo quy tắc idempotent
 **Then** không tạo duplicate business outcome
 **And** có thể quan sát được trạng thái gửi ở mức vận hành tối thiểu
 
-**Technical Notes:** Phù hợp NFR11; reuse notification template config từ Epic 1.
+**Technical Notes:**
+**TN-ST-6.2-01:** Phù hợp NFR11; reuse notification template config từ Epic 1.
 
-**Authorization Requirements:** Recipient selection luôn theo permission/business context; không gửi nội dung nhạy cảm cho người ngoài scope.
+**Authorization Requirements:**
+**AUTH-ST-6.2-01:** Recipient selection luôn theo permission/business context; không gửi nội dung nhạy cảm cho người ngoài scope.
 
-**Audit-Log Requirements:** Không bắt buộc audit log business riêng cho mỗi email; nên có operational log/queue trace cho troubleshooting.
+**Audit-Log Requirements:** None for this story. Nên có operational log/queue trace cho troubleshooting.
 
 **Test or Manual Verification Checklist:**
-- Gửi email cho event quan trọng
-- Kiểm tra template đúng
-- Mô phỏng retry an toàn
-- Xác nhận không gửi cho recipient ngoài scope
+**VER-ST-6.2-01:** Gửi email cho event quan trọng
+**VER-ST-6.2-02:** Kiểm tra template đúng
+**VER-ST-6.2-03:** Mô phỏng retry an toàn
+**VER-ST-6.2-04:** Xác nhận không gửi cho recipient ngoài scope
 
-### Story 6.3: Reminder jobs và hàng đợi việc chờ xử lý
+### ST-6.3: Reminder jobs và hàng đợi việc chờ xử lý
+**Use Case IDs:** `UC-630-A` Reminder job processing, `UC-630-B` User work queue
+**Traceability:** FR43, FR44; NFR11
+
 
 As a internal user,
 I want deadline reminders and a personalized work queue,
@@ -1306,33 +1464,38 @@ So that I can prioritize overdue and upcoming actions in one place.
 
 **Acceptance Criteria:**
 
-**Given** một record có deadline sắp tới hoặc đã quá hạn
+**AC-ST-6.3-01:** Given một record có deadline sắp tới hoặc đã quá hạn
 **When** reminder job chạy
 **Then** hệ thống tạo reminder/notification phù hợp
 **And** tránh gửi trùng lặp không cần thiết cho cùng một trigger
 
-**Given** user mở hàng đợi công việc cá nhân
+**AC-ST-6.3-02:** Given user mở hàng đợi công việc cá nhân
 **When** hệ thống tải dữ liệu
 **Then** user thấy items đang chờ xử lý theo vai trò của mình
 **And** mỗi item có trạng thái, hạn xử lý và đường dẫn tới bản ghi nguồn
 
-**Technical Notes:** Bao phủ FR43/44; queue design phải idempotent; work queue là view nghiệp vụ chứ không chỉ là danh sách notification.
+**Technical Notes:**
+**TN-ST-6.3-01:** Bao phủ FR43/44; queue design phải idempotent; work queue là view nghiệp vụ chứ không chỉ là danh sách notification.
 
-**Authorization Requirements:** Queue chỉ chứa item thuộc role/scope/assignment của current user.
+**Authorization Requirements:**
+**AUTH-ST-6.3-01:** Queue chỉ chứa item thuộc role/scope/assignment của current user.
 
-**Audit-Log Requirements:** Không bắt buộc audit log business cho mỗi reminder; nhưng các action người dùng thực hiện từ queue vẫn đi qua audit của module nguồn.
+**Audit-Log Requirements:** None for this story. Các action người dùng thực hiện từ queue vẫn đi qua audit của module nguồn.
 
 **Test or Manual Verification Checklist:**
-- Sinh reminder cho deadline sắp đến
-- Sinh reminder cho item quá hạn
-- Kiểm tra queue cá nhân hiển thị đúng items
-- Kiểm tra tránh duplicate reminder khi retry
+**VER-ST-6.3-01:** Sinh reminder cho deadline sắp đến
+**VER-ST-6.3-02:** Sinh reminder cho item quá hạn
+**VER-ST-6.3-03:** Kiểm tra queue cá nhân hiển thị đúng items
+**VER-ST-6.3-04:** Kiểm tra tránh duplicate reminder khi retry
 
-## Epic 7: Dashboard Điều Hành, Tìm Kiếm, Báo Cáo Và Xuất Dữ Liệu
+## EP-07: Dashboard Điều Hành, Tìm Kiếm, Báo Cáo Và Xuất Dữ Liệu
 
 Tạo lớp hiển thị và điều hành cho chuyên viên và lãnh đạo trên dữ liệu đã tích lũy từ các epic trước.
 
-### Story 7.1: Tìm kiếm, lọc và danh sách điều hướng xuyên module
+### ST-7.1: Tìm kiếm, lọc và danh sách điều hướng xuyên module
+**Use Case ID:** `UC-710` Cross-module search, filter, and navigation
+**Traceability:** FR46, FR47; NFR1, NFR3, NFR7; UX-DR7, UX-DR8, UX-DR19
+
 
 As a scientific management staff member or leadership user,
 I want to search and filter proposals, projects, tasks, and reports,
@@ -1346,29 +1509,34 @@ So that I can quickly locate records that need action.
 
 **Acceptance Criteria:**
 
-**Given** user có quyền với tập bản ghi lớn
+**AC-ST-7.1-01:** Given user có quyền với tập bản ghi lớn
 **When** tìm kiếm hoặc lọc theo code, title, unit, field, status, assignee, due date, intake period
 **Then** danh sách trả về đúng bản ghi trong phạm vi quyền của user
 **And** các bộ lọc đang áp dụng hiển thị rõ và có thể xóa nhanh
 
-**Given** user dùng mobile hoặc tablet
+**AC-ST-7.1-02:** Given user dùng mobile hoặc tablet
 **When** thao tác lọc danh sách
 **Then** bộ lọc được trình bày qua drawer, bottom sheet hoặc pattern tương đương phù hợp
 **And** không gây tràn ngang toàn trang
 
-**Technical Notes:** Bao phủ UX-DR7, UX-DR8, UX-DR19; performance lists/search là NFR trọng yếu.
+**Technical Notes:**
+**TN-ST-7.1-01:** Bao phủ UX-DR7, UX-DR8, UX-DR19; performance lists/search là NFR trọng yếu.
 
-**Authorization Requirements:** Search/filter phải enforce backend scope filtering; không lộ count hoặc record ngoài quyền.
+**Authorization Requirements:**
+**AUTH-ST-7.1-01:** Search/filter phải enforce backend scope filtering; không lộ count hoặc record ngoài quyền.
 
-**Audit-Log Requirements:** Không yêu cầu audit log cho thao tác tìm kiếm/list thông thường.
+**Audit-Log Requirements:** None for this story.
 
 **Test or Manual Verification Checklist:**
-- Tìm kiếm theo mã/tên
-- Lọc theo trạng thái/đơn vị/hạn xử lý
-- Kiểm tra responsive list/filter trên mobile
-- Kiểm tra không lộ record ngoài scope
+**VER-ST-7.1-01:** Tìm kiếm theo mã/tên
+**VER-ST-7.1-02:** Lọc theo trạng thái/đơn vị/hạn xử lý
+**VER-ST-7.1-03:** Kiểm tra responsive list/filter trên mobile
+**VER-ST-7.1-04:** Kiểm tra không lộ record ngoài scope
 
-### Story 7.2: Dashboard theo vai trò với drill-down hành động
+### ST-7.2: Dashboard theo vai trò với drill-down hành động
+**Use Case ID:** `UC-720` Role-scoped dashboard and drill-down
+**Traceability:** FR45, FR47; NFR2, NFR7, NFR8; UX-DR17, UX-DR18, UX-DR20, UX-DR22
+
 
 As a leadership or scientific management user,
 I want a role-based dashboard showing waiting approvals, delayed projects, overdue tasks, and upcoming reports,
@@ -1382,34 +1550,39 @@ So that I can move directly from signals to action.
 
 **Acceptance Criteria:**
 
-**Given** user thuộc role leadership hoặc staff
+**AC-ST-7.2-01:** Given user thuộc role leadership hoặc staff
 **When** mở dashboard
 **Then** họ thấy các widget phù hợp vai trò và scope của mình
 **And** các widget ưu tiên waiting approvals, delayed projects, overdue tasks, upcoming reports
 
-**Given** user click vào một chỉ báo dashboard
+**AC-ST-7.2-02:** Given user click vào một chỉ báo dashboard
 **When** hệ thống điều hướng
 **Then** user tới danh sách đã lọc hoặc bản ghi nguồn phù hợp
 **And** dữ liệu drill-down nhất quán với số liệu summary ban đầu
 
-**Given** dashboard hiển thị trên desktop và mobile
+**AC-ST-7.2-03:** Given dashboard hiển thị trên desktop và mobile
 **When** render ở breakpoint yêu cầu
 **Then** layout vẫn rõ ràng, không nặng trang trí, và không làm mất hành động chính
 **And** status không chỉ dựa vào màu
 
-**Technical Notes:** Bao phủ UX-DR17, UX-DR18, UX-DR20, UX-DR22; aggregates phải scope-aware.
+**Technical Notes:**
+**TN-ST-7.2-01:** Bao phủ UX-DR17, UX-DR18, UX-DR20, UX-DR22; aggregates phải scope-aware.
 
-**Authorization Requirements:** Dashboard totals và widget items luôn theo current-user scope; fail closed khi scope không xác định.
+**Authorization Requirements:**
+**AUTH-ST-7.2-01:** Dashboard totals và widget items luôn theo current-user scope; fail closed khi scope không xác định.
 
-**Audit-Log Requirements:** Không yêu cầu audit log cho xem dashboard; các action downstream tiếp tục dùng audit của module nguồn.
+**Audit-Log Requirements:** None for this story. Các action downstream tiếp tục dùng audit của module nguồn.
 
 **Test or Manual Verification Checklist:**
-- Kiểm tra dashboard cho staff
-- Kiểm tra dashboard cho leadership
-- Drill-down từ widget tới list/detail
-- Kiểm tra không lộ số liệu ngoài scope
+**VER-ST-7.2-01:** Kiểm tra dashboard cho staff
+**VER-ST-7.2-02:** Kiểm tra dashboard cho leadership
+**VER-ST-7.2-03:** Drill-down từ widget tới list/detail
+**VER-ST-7.2-04:** Kiểm tra không lộ số liệu ngoài scope
 
-### Story 7.3: Báo cáo tổng hợp và xuất Excel/PDF
+### ST-7.3: Báo cáo tổng hợp và xuất Excel/PDF
+**Use Case ID:** `UC-730` Scoped reporting and Excel/PDF export
+**Traceability:** FR48, FR49; NFR4, NFR7; UX-DR8
+
 
 As a authorized staff or leadership user,
 I want to generate scoped reports and export them to Excel or PDF,
@@ -1423,29 +1596,32 @@ So that I can support executive reporting and operational review without manual 
 
 **Acceptance Criteria:**
 
-**Given** user có quyền với một tập báo cáo được hỗ trợ
+**AC-ST-7.3-01:** Given user có quyền với một tập báo cáo được hỗ trợ
 **When** họ chọn bộ lọc và yêu cầu xem báo cáo
 **Then** hệ thống trả về reporting view phù hợp với phạm vi quyền
 **And** các số liệu khớp với dữ liệu nguồn hiện hành
 
-**Given** user yêu cầu export Excel hoặc PDF
+**AC-ST-7.3-02:** Given user yêu cầu export Excel hoặc PDF
 **When** export được thực thi
 **Then** hệ thống tạo file đầu ra đúng định dạng
 **And** vẫn giữ nguyên rule filter và permission của báo cáo gốc
 
-**Given** export là tác vụ nặng
+**AC-ST-7.3-03:** Given export là tác vụ nặng
 **When** xử lý mất thời gian
 **Then** user thấy queued/progress/completion feedback phù hợp
 **And** interactive requests thông thường không bị chặn
 
-**Technical Notes:** Gắn với NFR4, FR48, FR49; export nên dùng queue cho trường hợp nặng; quyền xuất luôn đồng nhất quyền xem.
+**Technical Notes:**
+**TN-ST-7.3-01:** Gắn với NFR4, FR48, FR49; export nên dùng queue cho trường hợp nặng; quyền xuất luôn đồng nhất quyền xem.
 
-**Authorization Requirements:** Chỉ authorized users được xem/export report; mọi aggregate và file export đều phải respect data scope.
+**Authorization Requirements:**
+**AUTH-ST-7.3-01:** Chỉ authorized users được xem/export report; mọi aggregate và file export đều phải respect data scope.
 
-**Audit-Log Requirements:** Ghi audit log cho export báo cáo nếu được coi là hành động quan trọng; tối thiểu phải có operational trace cho export jobs.
+**Audit-Log Requirements:**
+**AUD-ST-7.3-01:** Ghi audit log cho export báo cáo nếu được coi là hành động quan trọng; tối thiểu phải có operational trace cho export jobs.
 
 **Test or Manual Verification Checklist:**
-- Xem reporting view với bộ lọc
-- Export Excel
-- Export PDF
-- Kiểm tra file export không chứa dữ liệu ngoài scope
+**VER-ST-7.3-01:** Xem reporting view với bộ lọc
+**VER-ST-7.3-02:** Export Excel
+**VER-ST-7.3-03:** Export PDF
+**VER-ST-7.3-04:** Kiểm tra file export không chứa dữ liệu ngoài scope
