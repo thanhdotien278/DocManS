@@ -1,5 +1,5 @@
 # generated: 2026-06-03T13:46:11+0700
-# last_updated: 2026-06-03T13:46:11+0700
+# last_updated: 2026-06-10T06:17:00+0700
 # project: DocManS
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,18 +35,18 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-03T13:46:11+0700
-last_updated: 2026-06-03T13:46:11+0700
+last_updated: 2026-06-10T06:17:00+0700
 project: DocManS
 project_key: NOKEY
 tracking_system: file-system
 story_location: /Users/Super/DocManS/_bmad-output/implementation-artifacts
 
 development_status:
-  epic-1: in-progress
+  epic-1: done
   1-1-khoi-tao-workspace-va-ung-dung-nen-tang: done
   1-2-dang-nhap-dang-xuat-va-quan-ly-phien-noi-bo: done
-  1-3-quan-ly-nguoi-dung-vai-tro-va-pham-vi-don-vi: backlog
-  1-4-permission-primitives-danh-muc-dung-chung-va-cau-hinh-nen: backlog
+  1-3-quan-ly-nguoi-dung-vai-tro-va-pham-vi-don-vi: done
+  1-4-permission-primitives-danh-muc-dung-chung-va-cau-hinh-nen: done
   epic-1-retrospective: optional
   epic-2: backlog
   2-1-tao-va-quan-ly-dot-tiep-nhan-de-tai: backlog

@@ -4,9 +4,15 @@ export type CurrentUser = {
   id: string;
   username: string;
   displayName: string;
-  role: "system-admin" | "leadership" | "scientific-management" | "principal-investigator" | "reviewer";
+  role: "system-admin" | "leadership" | "scientific-management" | "principal-investigator" | "reviewer" | "council-member";
   roleLabel: string;
   unit: string;
+  roles?: CurrentUser["role"][];
+  organizationScopes?: Array<{
+    id: string;
+    code: string;
+    name: string;
+  }>;
 };
 
 export type ShellAccount = {

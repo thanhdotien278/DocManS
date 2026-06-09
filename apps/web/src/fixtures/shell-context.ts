@@ -27,6 +27,7 @@ export type UserRole =
   | "scientific-management"
   | "principal-investigator"
   | "reviewer"
+  | "council-member"
   | "system-admin";
 
 export type AccountProfile = {
@@ -277,6 +278,13 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/notifications", label: "Thông báo", icon: Bell }
   ],
   reviewer: [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/assigned-proposals", label: "Hồ sơ được phân công", icon: FileCheck2 },
+    { href: "/my-reviews", label: "Đánh giá của tôi", icon: Files },
+    { href: "/council-schedule", label: "Lịch họp hội đồng", icon: CalendarDays },
+    { href: "/notifications", label: "Thông báo", icon: Bell }
+  ],
+  "council-member": [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/assigned-proposals", label: "Hồ sơ được phân công", icon: FileCheck2 },
     { href: "/my-reviews", label: "Đánh giá của tôi", icon: Files },

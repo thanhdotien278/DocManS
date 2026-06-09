@@ -1,4 +1,5 @@
 import { Controller, Get, Module } from "@nestjs/common";
+import { AdminModule } from "./admin/admin.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 
 @Controller("api/v1/health")
@@ -14,7 +15,7 @@ class HealthController {
 }
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, AdminModule],
   controllers: [HealthController]
 })
 export class AppModule {}
