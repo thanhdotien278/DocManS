@@ -22,6 +22,10 @@ model User {
   auditLogs          AuditLog[]
   roleAssignments    UserRoleAssignment[]
   organizationScopes UserOrganizationScope[]
+  ownedResearchProposals ResearchProposal[] @relation("ProposalOwner")
+  submittedResearchProposals ResearchProposal[] @relation("ProposalSubmitter")
+  uploadedProposalAttachments ProposalAttachment[] @relation("AttachmentUploader")
+  proposalSubmissionEvents ProposalSubmissionEvent[] @relation("SubmissionActor")
 
   @@map("users")
 }
@@ -50,6 +54,8 @@ model OrganizationUnit {
   createdAt  DateTime                @default(now()) @map("created_at")
   updatedAt  DateTime                @updatedAt @map("updated_at")
   userScopes UserOrganizationScope[]
+  proposalIntakePeriods ProposalIntakePeriod[]
+  hostedResearchProposals ResearchProposal[]
 
   @@index([parentId])
   @@map("organization_units")
@@ -155,4 +161,108 @@ model NotificationTemplate {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("notification_templates")
+}
+
+model ProposalIntakePeriod {
+  id                           String            @id @default(uuid())
+  code                         String            @unique
+  title                        String
+  description                  String?
+  startsAt                     DateTime          @map("starts_at")
+  endsAt                       DateTime          @map("ends_at")
+  status                       String            @default("draft")
+  applicableOrganizationUnitId String?           @map("applicable_organization_unit_id")
+  applicableOrganizationUnit   OrganizationUnit? @relation(fields: [applicableOrganizationUnitId], references: [id])
+  requiredPackage              Json              @map("required_package")
+  createdAt                    DateTime          @default(now()) @map("created_at")
+  updatedAt                    DateTime          @updatedAt @map("updated_at")
+  proposals                    ResearchProposal[]
+
+  @@index([status])
+  @@index([applicableOrganizationUnitId])
+  @@map("proposal_intake_periods")
+}
+
+model ResearchProposal {
+  id                     String                    @id @default(uuid())
+  code                   String?                   @unique
+  intakePeriodId         String                    @map("intake_period_id")
+  intakePeriod           ProposalIntakePeriod      @relation(fields: [intakePeriodId], references: [id])
+  ownerId                String                    @map("owner_id")
+  owner                  User                      @relation("ProposalOwner", fields: [ownerId], references: [id])
+  hostOrganizationUnitId String                    @map("host_organization_unit_id")
+  hostOrganizationUnit   OrganizationUnit          @relation(fields: [hostOrganizationUnitId], references: [id])
+  researchFieldCode      String?                   @map("research_field_code")
+  proposalTypeCode       String?                   @map("proposal_type_code")
+  title                  String
+  objectives             String?
+  summary                String?
+  startDate              DateTime?                 @map("start_date")
+  endDate                DateTime?                 @map("end_date")
+  budgetMetadata         Json?                     @map("budget_metadata")
+  status                 String                    @default("draft")
+  submittedAt            DateTime?                 @map("submitted_at")
+  submittedById          String?                   @map("submitted_by_id")
+  submittedBy            User?                     @relation("ProposalSubmitter", fields: [submittedById], references: [id])
+  createdAt              DateTime                  @default(now()) @map("created_at")
+  updatedAt              DateTime                  @updatedAt @map("updated_at")
+  members                ProposalMember[]
+  attachments            ProposalAttachment[]
+  submissionEvents       ProposalSubmissionEvent[]
+
+  @@index([intakePeriodId])
+  @@index([ownerId])
+  @@index([hostOrganizationUnitId])
+  @@index([status])
+  @@map("research_proposals")
+}
+
+model ProposalMember {
+  id           String           @id @default(uuid())
+  proposalId   String           @map("proposal_id")
+  proposal     ResearchProposal @relation(fields: [proposalId], references: [id])
+  name         String
+  role         String
+  organization String
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  @@index([proposalId])
+  @@map("proposal_members")
+}
+
+model ProposalAttachment {
+  id              String           @id @default(uuid())
+  proposalId      String           @map("proposal_id")
+  proposal        ResearchProposal @relation(fields: [proposalId], references: [id])
+  requirementCode String           @map("requirement_code")
+  fileName        String           @map("file_name")
+  mimeType        String           @map("mime_type")
+  sizeBytes       Int              @map("size_bytes")
+  storageKey      String           @map("storage_key")
+  uploadedById    String           @map("uploaded_by_id")
+  uploadedBy      User             @relation("AttachmentUploader", fields: [uploadedById], references: [id])
+  status          String           @default("active")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  @@index([proposalId])
+  @@index([uploadedById])
+  @@index([requirementCode])
+  @@map("proposal_attachments")
+}
+
+model ProposalSubmissionEvent {
+  id          String           @id @default(uuid())
+  proposalId  String           @map("proposal_id")
+  proposal    ResearchProposal @relation(fields: [proposalId], references: [id])
+  actorId     String           @map("actor_id")
+  actor       User             @relation("SubmissionActor", fields: [actorId], references: [id])
+  fromStatus  String           @map("from_status")
+  toStatus    String           @map("to_status")
+  submittedAt DateTime         @default(now()) @map("submitted_at")
+  note        String?
+
+  @@index([proposalId])
+  @@index([actorId])
+  @@map("proposal_submission_events")
 }

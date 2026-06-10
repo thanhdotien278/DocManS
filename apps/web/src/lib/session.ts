@@ -23,6 +23,7 @@ export type ShellAccount = {
   roleLabel: string;
   unit: string;
   initials: string;
+  organizationScopes?: CurrentUser["organizationScopes"];
 };
 
 export function getApiBaseUrl() {
@@ -37,6 +38,7 @@ export function toShellAccount(user: CurrentUser): ShellAccount {
     role: user.role,
     roleLabel: user.roleLabel,
     unit: user.unit,
-    initials: user.displayName.trim().charAt(0).toUpperCase() || "U"
+    initials: user.displayName.trim().charAt(0).toUpperCase() || "U",
+    organizationScopes: user.organizationScopes
   };
 }

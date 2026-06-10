@@ -119,7 +119,12 @@ export class AuthStore {
     }>;
   }): InternalUser | null {
     const activeRoleAssignments = user.roleAssignments?.filter((assignment) => assignment.role.status === "active") ?? [];
-    const primaryRole = activeRoleAssignments.find((assignment) => assignment.isPrimary)?.role.code ?? user.role;
+    if (activeRoleAssignments.length === 0) {
+      return null;
+    }
+
+    const primaryRoleAssignment = activeRoleAssignments.find((assignment) => assignment.isPrimary) ?? activeRoleAssignments[0];
+    const primaryRole = primaryRoleAssignment.role.code;
     const role = this.toRole(primaryRole);
 
     if (!role) {
@@ -138,6 +143,10 @@ export class AuthStore {
           name: scope.organizationUnit.name
         })) ?? [];
 
+    if (organizationScopes.length === 0) {
+      return null;
+    }
+
     return {
       id: user.id,
       username: user.username,
@@ -145,18 +154,10 @@ export class AuthStore {
       passwordHash: user.passwordHash,
       status: user.status === "active" ? "active" : "disabled",
       role,
-      roleLabel: user.roleLabel,
-      unit: user.unit,
+      roleLabel: primaryRoleAssignment.role.label,
+      unit: organizationScopes[0].name,
       roles: roles.length ? roles : [role],
-      organizationScopes: organizationScopes.length
-        ? organizationScopes
-        : [
-            {
-              id: user.unit,
-              code: user.unit,
-              name: user.unit
-            }
-          ]
+      organizationScopes
     };
   }
 

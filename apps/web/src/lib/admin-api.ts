@@ -7,7 +7,10 @@ export type AdminUser = {
   status: string;
   role: string;
   roleLabel: string;
+  roleCode?: string;
+  roleId?: string;
   unit: string;
+  organizationUnitId?: string;
 };
 
 export type AdminRole = {
@@ -65,15 +68,40 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function loadAdminAccessData() {
+export type UserFilterInput = {
+  keyword?: string;
+  search?: string;
+  roleCode?: string;
+  roleId?: string;
+  role?: string;
+  organizationId?: string;
+  organization?: string;
+  status?: string;
+};
+
+function userFilterQuery(filters?: UserFilterInput) {
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(filters ?? {})) {
+    if (value) {
+      params.set(key, value);
+    }
+  }
+
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+export async function loadAdminAccessData(filters?: UserFilterInput) {
   const [users, roles, organizationUnits] = await Promise.all([
-    requestJson<{ users: AdminUser[] }>("/users"),
+    requestJson<{ users: AdminUser[]; total?: number }>(`/users${userFilterQuery(filters)}`),
     requestJson<{ roles: AdminRole[] }>("/roles"),
     requestJson<{ organizationUnits: OrganizationUnit[] }>("/organization-units")
   ]);
 
   return {
     users: users.users,
+    total: users.total ?? users.users.length,
     roles: roles.roles,
     organizationUnits: organizationUnits.organizationUnits
   };
@@ -96,6 +124,20 @@ export async function updateAdminUserStatus(userId: string, status: string) {
   return requestJson<{ user: AdminUser }>(`/users/${userId}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status })
+  });
+}
+
+export async function updateAdminUser(
+  userId: string,
+  input: {
+    displayName: string;
+    roleCode: string;
+    organizationUnitId: string;
+  }
+) {
+  return requestJson<{ user: AdminUser }>(`/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
   });
 }
 
