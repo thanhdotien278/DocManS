@@ -1,0 +1,147 @@
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { AuditLogService } from "../auth/audit-log.service.js";
+import type { SafeUserContext } from "../auth/auth.types.js";
+import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
+import { readCode, readOptionalText, readText } from "./admin-access.js";
+
+const CATALOG_TYPES = ["research-field", "proposal-type", "priority", "report-type", "scoring-criterion"] as const;
+
+type CatalogInput = {
+  type?: unknown;
+  code?: unknown;
+  name?: unknown;
+  description?: unknown;
+  status?: unknown;
+};
+
+@Injectable()
+export class AdminCatalogsService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService
+  ) {}
+
+  async listCatalogItems(type?: unknown) {
+    const normalizedType = type === undefined ? undefined : this.readCatalogType(type);
+
+    return this.prisma.catalogItem.findMany({
+      where: {
+        deletedAt: null,
+        ...(normalizedType ? { type: normalizedType } : {})
+      },
+      orderBy: [{ type: "asc" }, { name: "asc" }]
+    });
+  }
+
+  async createCatalogItem(actor: SafeUserContext, input: CatalogInput) {
+    const data = this.readCatalogInput(input);
+    const item = await this.prisma.catalogItem.create({ data });
+
+    await this.auditLog.record({
+      action: "create-catalog",
+      result: "success",
+      actorId: actor.id,
+      targetEntity: "catalog",
+      targetEntityId: item.id,
+      username: actor.username
+    });
+
+    return item;
+  }
+
+  async updateCatalogItem(actor: SafeUserContext, itemId: string, input: CatalogInput) {
+    const existing = await this.prisma.catalogItem.findUnique({ where: { id: itemId } });
+    if (!existing || existing.deletedAt) {
+      throw new NotFoundException({ message: "Không tìm thấy catalog." });
+    }
+
+    const data: {
+      type?: string;
+      code?: string;
+      name?: string;
+      description?: string;
+      status?: string;
+    } = {};
+
+    if (input.type !== undefined) {
+      data.type = this.readCatalogType(input.type);
+    }
+    if (input.code !== undefined) {
+      data.code = readCode(input.code, "code");
+    }
+    if (input.name !== undefined) {
+      data.name = readText(input.name, "name");
+    }
+    if (input.description !== undefined) {
+      data.description = readOptionalText(input.description, "description");
+    }
+    if (input.status !== undefined) {
+      data.status = this.readStatus(input.status);
+    }
+
+    const item = await this.prisma.catalogItem.update({
+      where: { id: itemId },
+      data
+    });
+
+    await this.auditLog.record({
+      action: "update-catalog",
+      result: "success",
+      actorId: actor.id,
+      targetEntity: "catalog",
+      targetEntityId: item.id,
+      username: actor.username
+    });
+
+    return item;
+  }
+
+  async softDeleteCatalogItem(actor: SafeUserContext, itemId: string) {
+    const item = await this.prisma.catalogItem.update({
+      where: { id: itemId },
+      data: {
+        deletedAt: new Date(),
+        status: "archived"
+      }
+    });
+
+    await this.auditLog.record({
+      action: "soft-delete-catalog",
+      result: "success",
+      actorId: actor.id,
+      targetEntity: "catalog",
+      targetEntityId: item.id,
+      username: actor.username
+    });
+
+    return item;
+  }
+
+  private readCatalogInput(input: CatalogInput) {
+    return {
+      type: this.readCatalogType(input.type),
+      code: readCode(input.code, "code"),
+      name: readText(input.name, "name"),
+      description: readOptionalText(input.description, "description"),
+      status: input.status === undefined ? "active" : this.readStatus(input.status)
+    };
+  }
+
+  private readCatalogType(value: unknown) {
+    const type = readCode(value, "type");
+    if (!CATALOG_TYPES.includes(type as (typeof CATALOG_TYPES)[number])) {
+      throw new BadRequestException({ message: "Loại catalog không hợp lệ." });
+    }
+
+    return type;
+  }
+
+  private readStatus(value: unknown) {
+    const status = readText(value, "status", 40);
+    if (status !== "active" && status !== "inactive" && status !== "archived") {
+      throw new BadRequestException({ message: "Trạng thái catalog không hợp lệ." });
+    }
+
+    return status;
+  }
+}

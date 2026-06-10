@@ -10,7 +10,11 @@ export class AuthStore {
 
   async findUserByUsername(username: string) {
     const user = await this.prisma.user.findUnique({
-      where: { usernameKey: username.trim().toLowerCase() }
+      where: { usernameKey: username.trim().toLowerCase() },
+      include: {
+        roleAssignments: { include: { role: true } },
+        organizationScopes: { include: { organizationUnit: true } }
+      }
     });
 
     return user ? this.toInternalUser(user) : null;
@@ -18,7 +22,11 @@ export class AuthStore {
 
   async findUserById(userId: string) {
     const user = await this.prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
+      include: {
+        roleAssignments: { include: { role: true } },
+        organizationScopes: { include: { organizationUnit: true } }
+      }
     });
 
     return user ? this.toInternalUser(user) : null;
@@ -31,7 +39,9 @@ export class AuthStore {
       displayName: user.displayName,
       role: user.role,
       roleLabel: user.roleLabel,
-      unit: user.unit
+      unit: user.unit,
+      roles: user.roles,
+      organizationScopes: user.organizationScopes
     };
   }
 
@@ -90,10 +100,50 @@ export class AuthStore {
     role: string;
     roleLabel: string;
     unit: string;
+    roleAssignments?: Array<{
+      isPrimary: boolean;
+      role: {
+        code: string;
+        label: string;
+        status: string;
+      };
+    }>;
+    organizationScopes?: Array<{
+      isPrimary: boolean;
+      organizationUnit: {
+        id: string;
+        code: string;
+        name: string;
+        status: string;
+      };
+    }>;
   }): InternalUser | null {
-    const role = this.toRole(user.role);
+    const activeRoleAssignments = user.roleAssignments?.filter((assignment) => assignment.role.status === "active") ?? [];
+    if (activeRoleAssignments.length === 0) {
+      return null;
+    }
+
+    const primaryRoleAssignment = activeRoleAssignments.find((assignment) => assignment.isPrimary) ?? activeRoleAssignments[0];
+    const primaryRole = primaryRoleAssignment.role.code;
+    const role = this.toRole(primaryRole);
 
     if (!role) {
+      return null;
+    }
+
+    const roles = activeRoleAssignments
+      .map((assignment) => this.toRole(assignment.role.code))
+      .filter((item): item is InternalUser["role"] => Boolean(item));
+    const organizationScopes =
+      user.organizationScopes
+        ?.filter((scope) => scope.organizationUnit.status === "active")
+        .map((scope) => ({
+          id: scope.organizationUnit.id,
+          code: scope.organizationUnit.code,
+          name: scope.organizationUnit.name
+        })) ?? [];
+
+    if (organizationScopes.length === 0) {
       return null;
     }
 
@@ -104,8 +154,10 @@ export class AuthStore {
       passwordHash: user.passwordHash,
       status: user.status === "active" ? "active" : "disabled",
       role,
-      roleLabel: user.roleLabel,
-      unit: user.unit
+      roleLabel: primaryRoleAssignment.role.label,
+      unit: organizationScopes[0].name,
+      roles: roles.length ? roles : [role],
+      organizationScopes
     };
   }
 
@@ -115,7 +167,8 @@ export class AuthStore {
       role === "leadership" ||
       role === "scientific-management" ||
       role === "principal-investigator" ||
-      role === "reviewer"
+      role === "reviewer" ||
+      role === "council-member"
     ) {
       return role;
     }

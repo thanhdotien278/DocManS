@@ -5,6 +5,7 @@ import { ForbiddenException, HttpException, UnauthorizedException } from "@nestj
 import { AuthRateLimitService } from "../dist/apps/api/auth/auth-rate-limit.service.js";
 import { AuthController } from "../dist/apps/api/auth/auth.controller.js";
 import { AuthService } from "../dist/apps/api/auth/auth.service.js";
+import { AuthStore } from "../dist/apps/api/auth/auth.store.js";
 import { LoginRequestPipe } from "../dist/apps/api/auth/login-request.pipe.js";
 import { PasswordService } from "../dist/apps/api/auth/password.service.js";
 import { SessionAuthGuard } from "../dist/apps/api/auth/session-auth.guard.js";
@@ -238,6 +239,77 @@ describe("auth API behavior", () => {
       auditLog.records.map((record) => record.targetEntity),
       ["auth-session", "auth-session"]
     );
+  });
+
+  it("current-user context includes role and organization scope assignments", async () => {
+    const authStore = new AuthStore({
+      user: {
+        async findUnique() {
+          return {
+            ...activeUser,
+            roleAssignments: [
+              {
+                isPrimary: true,
+                role: {
+                  code: "system-admin",
+                  label: "Quản trị hệ thống",
+                  status: "active"
+                }
+              }
+            ],
+            organizationScopes: [
+              {
+                isPrimary: true,
+                organizationUnit: {
+                  id: "org-root",
+                  code: "HVQY",
+                  name: "Học viện Quân y",
+                  status: "active"
+                }
+              }
+            ]
+          };
+        }
+      }
+    });
+
+    const user = await authStore.findUserById("user-1");
+
+    assert.deepEqual(user.roles, ["system-admin"]);
+    assert.deepEqual(user.organizationScopes, [{ id: "org-root", code: "HVQY", name: "Học viện Quân y" }]);
+    assert.deepEqual(authStore.toSafeUser(user).organizationScopes, [
+      { id: "org-root", code: "HVQY", name: "Học viện Quân y" }
+    ]);
+  });
+
+  it("TEST-ST-1.3-AUTH-04 current-user context fails closed without role or scope assignments", async () => {
+    for (const incompleteUser of [
+      { ...activeUser, roleAssignments: [], organizationScopes: [] },
+      {
+        ...activeUser,
+        roleAssignments: [
+          {
+            isPrimary: true,
+            role: {
+              code: "system-admin",
+              label: "Quản trị hệ thống",
+              status: "active"
+            }
+          }
+        ],
+        organizationScopes: []
+      }
+    ]) {
+      const authStore = new AuthStore({
+        user: {
+          async findUnique() {
+            return incompleteUser;
+          }
+        }
+      });
+
+      assert.equal(await authStore.findUserById("user-1"), null);
+    }
   });
 
   it("DTO validation rejects invalid login payloads", () => {

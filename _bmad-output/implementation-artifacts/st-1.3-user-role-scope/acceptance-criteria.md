@@ -1,0 +1,215 @@
+# ST-1.3 Acceptance Criteria
+
+## Status
+
+Draft for owner review
+
+## UC-ST-1.3-01: List, search, and filter users
+
+### AC-ST-1.3-01-01: Admin views user list
+
+Given a system administrator is authenticated and active,
+When they open user management or call the user list API,
+Then the system returns user records with username, display name, role, organization scope and status,
+And the response does not include password hashes, secrets or session tokens.
+
+### AC-ST-1.3-01-02: Admin searches by username
+
+Given a system administrator is on the user list,
+When they enter a keyword matching a username and click "Lọc",
+Then the system returns only user records whose username matches the trimmed keyword,
+And the match is case-insensitive when the backend/database pattern supports it.
+
+### AC-ST-1.3-01-03: Admin searches by display name
+
+Given a system administrator is on the user list,
+When they enter a keyword matching a display name and click "Lọc",
+Then the system returns only user records whose display name matches the trimmed keyword,
+And the response does not include password hashes, secrets or session tokens.
+
+### AC-ST-1.3-01-04: Keyword is trimmed and empty keyword is safe
+
+Given a system administrator enters keyword text with leading or trailing spaces,
+When they click "Lọc",
+Then the system applies search using the trimmed keyword,
+And an empty keyword after trim is treated as no keyword filter rather than an error.
+
+### AC-ST-1.3-01-05: Admin filters by role
+
+Given a system administrator is on the user list,
+When they select a role filter and click "Lọc",
+Then the system returns only user records assigned to the selected role,
+And selecting "Tất cả" is equivalent to not applying a role filter.
+
+### AC-ST-1.3-01-06: Admin filters by organization
+
+Given a system administrator is on the user list,
+When they select an organization filter and click "Lọc",
+Then the system returns only user records in the selected organization scope,
+And selecting "Tất cả" is equivalent to not applying an organization filter.
+
+### AC-ST-1.3-01-07: Admin filters by status
+
+Given a system administrator is on the user list,
+When they select a status filter and click "Lọc",
+Then the system returns only user records with the selected status,
+And selecting "Tất cả" is equivalent to not applying a status filter.
+
+### AC-ST-1.3-01-08: Admin combines keyword, role, organization and status filters
+
+Given a system administrator has entered keyword, role, organization and status filters,
+When they click "Lọc",
+Then the system returns only user records that match all applied conditions,
+And backend filtering is the source of truth, not frontend-only state.
+
+### AC-ST-1.3-01-09: Clear filter resets all filter fields
+
+Given a system administrator has applied keyword, role, organization or status filters,
+When they click "Xóa lọc",
+Then keyword is cleared and role, organization and status return to "Tất cả",
+And the system reloads the default user list.
+
+### AC-ST-1.3-01-10: Empty state is shown for no results
+
+Given a system administrator applies a keyword or filter combination with no matching user,
+When the list response succeeds with zero records,
+Then the UI shows an empty state,
+And the result count reflects `0`.
+
+### AC-ST-1.3-01-11: Filter does not expose unauthorized users
+
+Given a user list/search/filter request is made,
+When backend resolves the actor and applies query filters,
+Then the response includes only users the actor is authorized to see,
+And no filter value can bypass admin-only or future actor-scope enforcement.
+
+### AC-ST-1.3-01-12: Error state is shown when filter request fails
+
+Given a system administrator applies search or filter conditions,
+When the backend/API request fails,
+Then the UI shows an error state,
+And stale data is not presented as confirmed filtered results.
+
+### AC-ST-1.3-01-13: UI keeps applied filter values visible
+
+Given a system administrator applies keyword, role, organization or status filters,
+When the filtered list is displayed,
+Then the UI keeps the applied filter values visible,
+And those values remain until the admin changes them or clicks "Xóa lọc".
+
+### AC-ST-1.3-01-14: Result count reflects filtered results
+
+Given a system administrator applies search or filters,
+When the system displays the user list,
+Then the result count reflects the current filtered result set,
+And it does not show the unfiltered total as the filtered count.
+
+## UC-ST-1.3-02: Create user with role and organization scope
+
+### AC-ST-1.3-02-01: Admin creates user with valid role and scope
+
+Given a system administrator provides username, display name, initial password, valid role and valid organization scope,
+When they submit create user,
+Then the system creates the user,
+And stores the role assignment and organization scope assignment,
+And records audit log `AUD-ST-1.3-01`.
+
+### AC-ST-1.3-02-02: Duplicate username is blocked
+
+Given a user already exists with username `X`,
+When a system administrator tries to create another user with username `X`,
+Then the system rejects the request,
+And no second user is created.
+
+### AC-ST-1.3-02-03: Missing mandatory role or scope is blocked
+
+Given role and organization scope are confirmed mandatory for ST-1.3,
+When a system administrator submits create user without role or without organization scope,
+Then the system rejects the request,
+And no user is created.
+
+## UC-ST-1.3-03: Update user profile fields
+
+### AC-ST-1.3-03-01: Admin updates display name
+
+Given a target user exists,
+When a system administrator updates the target user's display name,
+Then the new display name is saved,
+And audit log `AUD-ST-1.3-02` is recorded.
+
+## UC-ST-1.3-04: Update user role assignment
+
+### AC-ST-1.3-04-01: Admin updates role assignment
+
+Given a target user exists and a target role is valid,
+When a system administrator changes the target user's role assignment,
+Then the role assignment is saved,
+And current-user context reflects the new role on the next context resolution,
+And audit log `AUD-ST-1.3-03` is recorded.
+
+## UC-ST-1.3-05: Update user organization scope
+
+### AC-ST-1.3-05-01: Admin updates organization scope
+
+Given a target user exists and a target organization scope is valid,
+When a system administrator changes the target user's organization scope,
+Then the organization scope assignment is saved,
+And current-user context reflects the new scope on the next context resolution,
+And audit log `AUD-ST-1.3-04` is recorded.
+
+## UC-ST-1.3-06: Lock or deactivate user
+
+### AC-ST-1.3-06-01: Admin locks or deactivates user
+
+Given a target user is active,
+When a system administrator locks or deactivates the target user,
+Then the target user's status changes to the disabled state selected by the admin,
+And the status is visible in user management,
+And audit log `AUD-ST-1.3-05` is recorded.
+
+### AC-ST-1.3-06-02: Locked or deactivated user cannot login or continue protected flow
+
+Given a user is locked or deactivated,
+When they attempt to login or access a protected flow with an existing session,
+Then the system denies access safely,
+And protected business data is not returned.
+
+## UC-ST-1.3-07: Unlock or reactivate user
+
+### AC-ST-1.3-07-01: Admin unlocks or reactivates user
+
+Given a target user is locked or deactivated,
+When a system administrator unlocks or reactivates the target user,
+Then the target user's status becomes active or otherwise login-eligible,
+And audit log `AUD-ST-1.3-06` is recorded.
+
+### AC-ST-1.3-07-02: Unlocked or reactivated user can login with valid credential
+
+Given a user has been unlocked or reactivated,
+When they login with correct credentials,
+Then the system authenticates them if no other policy blocks access,
+And current-user context can be resolved.
+
+## UC-ST-1.3-08: Load current-user context with role and scope
+
+### AC-ST-1.3-08-01: Current-user context reflects active role and scope
+
+Given an authenticated active user has role and organization scope assignments,
+When current-user context is loaded,
+Then the response includes the active role and organization scope needed for downstream enforcement,
+And no sensitive credential/session secret is returned.
+
+## Cross-cutting authorization and audit criteria
+
+### AC-ST-1.3-09-01: Non-admin is blocked from user management
+
+Given an authenticated user is not a system administrator,
+When they access user admin page or user admin API,
+Then the system denies access,
+And the backend does not perform the requested user management action.
+
+### AC-ST-1.3-09-02: Audit log is expected for all mutating admin actions
+
+Given a system administrator successfully performs create user, update profile, change role, change scope, lock/deactivate or unlock/reactivate,
+When the action completes,
+Then the corresponding `AUD-ST-1.3-*` audit record is expected for later implementation verification.

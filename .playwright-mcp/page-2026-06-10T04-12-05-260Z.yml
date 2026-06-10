@@ -1,0 +1,112 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic "Hệ thống quản lý nghiên cứu khoa học" [ref=e6]:
+        - img "Học viện Quân y" [ref=e8]
+        - generic [ref=e9]:
+          - strong [ref=e10]: Hệ thống quản lý NCKH, CN và đổi mới sáng tạo
+          - generic [ref=e11]: Học viện Quân y
+      - group [ref=e12]:
+        - generic "Menu điều hướng" [ref=e13]
+      - generic [ref=e14]:
+        - img [ref=e15]
+        - textbox "Tìm kiếm nhanh" [ref=e18]:
+          - /placeholder: Tìm mã hồ sơ, đề tài, chủ nhiệm...
+      - generic [ref=e19]:
+        - button "Mở thông báo" [ref=e20] [cursor=pointer]:
+          - img [ref=e21]
+        - group [ref=e24]:
+          - generic "Người dùng hiện tại" [ref=e25]:
+            - generic [ref=e26]: T
+    - main [ref=e27]:
+      - navigation "Breadcrumb" [ref=e28]:
+        - generic [ref=e29]:
+          - link "Dashboard" [ref=e30] [cursor=pointer]:
+            - /url: /dashboard
+          - text: /
+        - generic [ref=e31]: Đợt tiếp nhận
+      - generic [ref=e33]:
+        - paragraph [ref=e34]: Tiếp nhận
+        - heading "Đợt tiếp nhận hồ sơ" [level=1] [ref=e35]
+        - paragraph [ref=e36]: Quản lý khung thời gian, phạm vi áp dụng và danh sách tài liệu bắt buộc cho quy trình nộp hồ sơ đề tài.
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e40]:
+            - heading "Danh sách đợt tiếp nhận" [level=2] [ref=e41]
+            - paragraph [ref=e42]: Tìm, lọc và điều phối trạng thái nhận hồ sơ
+          - generic [ref=e43]:
+            - generic [ref=e44]:
+              - text: Từ khóa
+              - generic [ref=e45]:
+                - img [ref=e46]
+                - textbox "Từ khóa" [ref=e49]:
+                  - /placeholder: Mã hoặc tên đợt
+            - generic [ref=e50]:
+              - text: Trạng thái
+              - combobox "Trạng thái" [ref=e51]:
+                - option "Tất cả" [selected]
+                - option "Nháp"
+                - option "Đang mở"
+                - option "Đã đóng"
+                - option "Quá hạn"
+          - paragraph [ref=e52]: Đang tải đợt tiếp nhận...
+        - generic [ref=e53]:
+          - generic [ref=e55]:
+            - heading "Tạo đợt tiếp nhận" [level=2] [ref=e56]
+            - paragraph [ref=e57]: Thiết lập thời gian, phạm vi áp dụng và danh sách tệp bắt buộc
+          - generic [ref=e58]:
+            - generic [ref=e59]:
+              - generic [ref=e60]: Mã đợt
+              - textbox "Mã đợt" [ref=e61]:
+                - /placeholder: INTAKE-2026
+            - generic [ref=e62]:
+              - generic [ref=e63]: Tên đợt
+              - textbox "Tên đợt" [ref=e64]
+            - generic [ref=e65]:
+              - generic [ref=e66]: Mô tả
+              - textbox "Mô tả" [ref=e67]
+            - generic [ref=e68]:
+              - generic [ref=e69]:
+                - generic [ref=e70]: Ngày bắt đầu
+                - textbox "Ngày bắt đầu" [ref=e71]
+              - generic [ref=e72]:
+                - generic [ref=e73]: Ngày kết thúc
+                - textbox "Ngày kết thúc" [ref=e74]
+            - generic [ref=e75]:
+              - generic [ref=e76]: Phạm vi đơn vị áp dụng
+              - textbox "Phạm vi đơn vị áp dụng" [ref=e77]:
+                - /placeholder: Để trống nếu áp dụng toàn hệ thống
+            - generic [ref=e78]:
+              - generic [ref=e79]:
+                - img [ref=e80]
+                - text: Tệp bắt buộc
+              - generic [ref=e84]:
+                - generic [ref=e85]:
+                  - generic [ref=e86]: Mã tệp
+                  - textbox "Mã tệp" [ref=e87]: proposal-form
+                - generic [ref=e88]:
+                  - generic [ref=e89]: Tên tệp
+                  - textbox "Tên tệp" [ref=e90]: Thuyết minh đề tài
+                - generic [ref=e91]:
+                  - generic [ref=e92]: MIME
+                  - textbox "MIME" [ref=e93]: application/pdf
+                - generic [ref=e94]:
+                  - generic [ref=e95]: MB
+                  - spinbutton "MB" [ref=e96]: "5"
+              - generic [ref=e97]:
+                - generic [ref=e98]:
+                  - generic [ref=e99]: Mã tệp
+                  - textbox "Mã tệp" [ref=e100]: budget-form
+                - generic [ref=e101]:
+                  - generic [ref=e102]: Tên tệp
+                  - textbox "Tên tệp" [ref=e103]: Dự toán kinh phí
+                - generic [ref=e104]:
+                  - generic [ref=e105]: MIME
+                  - textbox "MIME" [ref=e106]: application/pdf
+                - generic [ref=e107]:
+                  - generic [ref=e108]: MB
+                  - spinbutton "MB" [ref=e109]: "5"
+            - button "Tạo đợt" [ref=e111] [cursor=pointer]:
+              - img [ref=e112]
+              - text: Tạo đợt
