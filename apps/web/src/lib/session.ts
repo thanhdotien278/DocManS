@@ -4,9 +4,15 @@ export type CurrentUser = {
   id: string;
   username: string;
   displayName: string;
-  role: "system-admin" | "leadership" | "scientific-management" | "principal-investigator" | "reviewer";
+  role: "system-admin" | "leadership" | "scientific-management" | "principal-investigator" | "reviewer" | "council-member";
   roleLabel: string;
   unit: string;
+  roles?: CurrentUser["role"][];
+  organizationScopes?: Array<{
+    id: string;
+    code: string;
+    name: string;
+  }>;
 };
 
 export type ShellAccount = {
@@ -17,6 +23,7 @@ export type ShellAccount = {
   roleLabel: string;
   unit: string;
   initials: string;
+  organizationScopes?: CurrentUser["organizationScopes"];
 };
 
 export function getApiBaseUrl() {
@@ -31,6 +38,7 @@ export function toShellAccount(user: CurrentUser): ShellAccount {
     role: user.role,
     roleLabel: user.roleLabel,
     unit: user.unit,
-    initials: user.displayName.trim().charAt(0).toUpperCase() || "U"
+    initials: user.displayName.trim().charAt(0).toUpperCase() || "U",
+    organizationScopes: user.organizationScopes
   };
 }

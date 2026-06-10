@@ -6,7 +6,8 @@ export type InternalUserRole =
   | "leadership"
   | "scientific-management"
   | "principal-investigator"
-  | "reviewer";
+  | "reviewer"
+  | "council-member";
 
 export type InternalUserStatus = "active" | "disabled";
 
@@ -19,6 +20,14 @@ export type InternalUser = {
   role: InternalUserRole;
   roleLabel: string;
   unit: string;
+  roles: InternalUserRole[];
+  organizationScopes: OrganizationScope[];
+};
+
+export type OrganizationScope = {
+  id: string;
+  code: string;
+  name: string;
 };
 
 export type SafeUserContext = {
@@ -28,6 +37,8 @@ export type SafeUserContext = {
   role: InternalUserRole;
   roleLabel: string;
   unit: string;
+  roles: InternalUserRole[];
+  organizationScopes: OrganizationScope[];
 };
 
 export type AuthSession = {
@@ -38,7 +49,7 @@ export type AuthSession = {
   revokedAt?: string;
 };
 
-export type AuditAction = "login" | "logout";
+export type AuditAction = string;
 export type AuditResult = "success" | "failure";
 
 export type AuditLogRecord = {
