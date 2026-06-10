@@ -1,0 +1,53 @@
+[    7750ms] [LOG] tads_region 0 @ https://cdn.dtadnetwork.com/tag/25ba47353c0daa82a9ce151a4e3633d8.js:234
+[    8372ms] [WARNING] Failed to execute 'write' on 'Document': It isn't possible to write into a document from an asynchronously-loaded external script unless it is explicitly opened. @ https://securepubads.g.doubleclick.net/tag/js/gpt.js:10
+[    9013ms] [WARNING] [GPT] PubAdsService.setTargeting is deprecated, use googletag.setConfig({targeting: ...}) instead.
+https://goo.gle/gpt-message#170 @ https://securepubads.g.doubleclick.net/pagead/managed/js/gpt/m202606040101/pubads_impl.js:18
+[    9760ms] [LOG] Ads Position [Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object] @ https://cdn.dtadnetwork.com/tag/25ba47353c0daa82a9ce151a4e3633d8.js:239
+[    9862ms] [WARNING] [GPT] Using deprecated googletag.encryptedSignalProviders. Please use googletag.secureSignalProviders instead.
+https://goo.gle/gpt-message#155 @ https://securepubads.g.doubleclick.net/pagead/managed/js/gpt/m202606040101/pubads_impl.js:18
+[   10458ms] [WARNING] [GPT] Using deprecated googletag.encryptedSignalProviders. Please use googletag.secureSignalProviders instead.
+https://goo.gle/gpt-message#155 @ https://securepubads.g.doubleclick.net/pagead/managed/js/gpt/m202606040101/pubads_impl.js:18
+[   10667ms] [WARNING] Google Deploy of the SharedId library has been deprecated. Please select another option in the GAM UI. If you use Prebid, we suggest the Prebid.js UserId option. If you do not, you may configure GAM to allow Google to share a first party user identifier with OB and AB participants, which is either the publisherProvidedId or the __gads value when that is missing. @ https://cdn.jsdelivr.net/gh/prebid/shared-id/pubcid.js/docs/pubcid.min.js:0
+[   13072ms] [LOG]  [  0.000s] [studio.sdk]   @ https://cdn.dtadnetwork.com/js/Enabler.js:215
+[   13076ms] [LOG]  [  0.000s] [studio.sdk]   @ https://cdn.dtadnetwork.com/js/Enabler.js:215
+[   13079ms] [LOG]  [  0.013s] [studio.sdk] Using default ad parameters in test environment. Simulating local events.  @ https://cdn.dtadnetwork.com/js/Enabler.js:215
+[   13081ms] [LOG]  [  0.005s] [studio.sdk] Using default ad parameters in test environment. Simulating local events.  @ https://cdn.dtadnetwork.com/js/Enabler.js:215
+[   19449ms] [LOG] mini-game @ https://cdnweb.dantri.com.vn/dist/common-1-0-1.c104fa0ccd648dc8fb75.js:1
+[   19836ms] [LOG] mini-game @ https://cdnweb.dantri.com.vn/dist/common-1-0-1.c104fa0ccd648dc8fb75.js:1
+[   19850ms] [LOG] mini-game @ https://cdnweb.dantri.com.vn/dist/common-1-0-1.c104fa0ccd648dc8fb75.js:1
+[   20190ms] [LOG] mini-game @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[   21556ms] [LOG] version 2021-07-13 @ https://cdnlogin.dantri.com.vn/bundle/static/comment-d8760acd.min.js?_=d8760acd:0
+[   21582ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ https://dantri.com.vn/:0
+[   21682ms] [LOG] send {event: 1, user: Object} @ https://cdnlogin.dantri.com.vn/bundle/static/comment-d8760acd.min.js?_=d8760acd:0
+[   21683ms] [LOG] Disable embed script @ https://cdnlogin.dantri.com.vn/bundle/static/comment-d8760acd.min.js?_=d8760acd:0
+[   21687ms] [LOG] SW registered:  ServiceWorkerRegistration @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[   21690ms] [LOG] mini-game @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[   21693ms] [LOG] mini-game @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[   21732ms] [LOG] mini-game @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[   22011ms] [WARNING] The type is not support  @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[   22447ms] [WARNING] The type is not support  @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[   22476ms] [ERROR] Not signed in with the identity provider. @ https://dantri.com.vn/:0
+[   22931ms] [ERROR] [GSI_LOGGER]: FedCM get() rejects with NetworkError: Error retrieving a token. @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[  619459ms] [LOG] Reload page... @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[  620403ms] [WARNING] Failed to execute 'write' on 'Document': It isn't possible to write into a document from an asynchronously-loaded external script unless it is explicitly opened. @ https://securepubads.g.doubleclick.net/tag/js/gpt.js:10
+[  620546ms] [LOG] mini-game @ https://cdnweb.dantri.com.vn/dist/common-1-0-1.c104fa0ccd648dc8fb75.js:1
+[  620651ms] [LOG] mini-game @ https://cdnweb.dantri.com.vn/dist/common-1-0-1.c104fa0ccd648dc8fb75.js:1
+[  620655ms] [LOG] mini-game @ https://cdnweb.dantri.com.vn/dist/common-1-0-1.c104fa0ccd648dc8fb75.js:1
+[  620962ms] [WARNING] [GPT] PubAdsService.setTargeting is deprecated, use googletag.setConfig({targeting: ...}) instead.
+https://goo.gle/gpt-message#170 @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[  621397ms] [LOG] mini-game @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[  621611ms] [LOG] version 2021-07-13 @ https://cdnlogin.dantri.com.vn/bundle/static/comment-d8760acd.min.js?_=d8760acd:0
+[  621628ms] [LOG]  [  0.000s] [studio.sdk]   @ https://cdn.dtadnetwork.com/js/Enabler.js:215
+[  621632ms] [LOG] send {event: 1, user: Object} @ https://cdnlogin.dantri.com.vn/bundle/static/comment-d8760acd.min.js?_=d8760acd:0
+[  621633ms] [LOG] Disable embed script @ https://cdnlogin.dantri.com.vn/bundle/static/comment-d8760acd.min.js?_=d8760acd:0
+[  621634ms] [LOG]  [  0.011s] [studio.sdk] Using default ad parameters in test environment. Simulating local events.  @ https://cdn.dtadnetwork.com/js/Enabler.js:215
+[  621638ms] [LOG] mini-game @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[  621642ms] [LOG] mini-game @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[  621669ms] [LOG] mini-game @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[  622458ms] [LOG] Ads Position [Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object] @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[  622680ms] [WARNING] The type is not support  @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[  623444ms] [WARNING] The type is not support  @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[  623636ms] [LOG] SW registered:  ServiceWorkerRegistration @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
+[  623638ms] [ERROR] Not signed in with the identity provider. @ https://dantri.com.vn/:0
+[  623638ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ https://dantri.com.vn/:0
+[  630085ms] [ERROR] [GSI_LOGGER]: FedCM get() rejects with NetworkError: Error retrieving a token. @ https://cdnweb.dantri.com.vn/dist/9138-1-0-1.335a2f26f8a212450164.chunk.js:1
