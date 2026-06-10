@@ -1,0 +1,196 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e3]:
+    - complementary "Điều hướng chính" [ref=e4]:
+      - link "Học viện Quân y Hệ thống quản lý NCKH, CN và đổi mới sáng tạo Học viện Quân y" [ref=e5] [cursor=pointer]:
+        - /url: /dashboard
+        - img "Học viện Quân y" [ref=e7]
+        - generic [ref=e8]:
+          - paragraph [ref=e9]: Hệ thống quản lý NCKH, CN và đổi mới sáng tạo
+          - paragraph [ref=e10]: Học viện Quân y
+      - navigation [ref=e11]:
+        - link "Dashboard" [ref=e12] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e13]
+          - generic [ref=e18]: Dashboard
+        - link "Người dùng" [ref=e19] [cursor=pointer]:
+          - /url: /users
+          - img [ref=e20]
+          - generic [ref=e25]: Người dùng
+        - link "Vai trò" [ref=e26] [cursor=pointer]:
+          - /url: /roles
+          - img [ref=e27]
+          - generic [ref=e30]: Vai trò
+        - link "Đơn vị" [ref=e31] [cursor=pointer]:
+          - /url: /units
+          - img [ref=e32]
+          - generic [ref=e36]: Đơn vị
+        - link "Danh mục" [ref=e37] [cursor=pointer]:
+          - /url: /catalogs
+          - img [ref=e38]
+          - generic [ref=e42]: Danh mục
+        - link "Cấu hình hệ thống" [ref=e43] [cursor=pointer]:
+          - /url: /system-settings
+          - img [ref=e44]
+          - generic [ref=e47]: Cấu hình hệ thống
+        - link "Nhật ký hệ thống" [ref=e48] [cursor=pointer]:
+          - /url: /system-logs
+          - img [ref=e49]
+          - generic [ref=e53]: Nhật ký hệ thống
+      - generic [ref=e54]:
+        - strong [ref=e55]: Phạm vi truy cập hiện hành
+        - generic [ref=e56]: Quản trị hệ thống - Khoa Toán - Tin học
+    - generic [ref=e57]:
+      - banner [ref=e58]:
+        - generic [ref=e59]:
+          - img [ref=e60]
+          - textbox "Tìm kiếm nhanh" [ref=e63]:
+            - /placeholder: Tìm mã hồ sơ, đề tài, chủ nhiệm...
+        - generic [ref=e64]:
+          - button "Mở thông báo" [ref=e65] [cursor=pointer]:
+            - img [ref=e66]
+          - group [ref=e69]:
+            - generic "Người dùng hiện tại" [ref=e70]:
+              - generic [ref=e71]: T
+              - generic [ref=e72]:
+                - generic [ref=e73]: TS. Đỗ Tiến Thành
+                - generic [ref=e74]: Quản trị hệ thống - Khoa Toán - Tin học
+              - img [ref=e75]
+      - main [ref=e77]:
+        - navigation "Breadcrumb" [ref=e78]:
+          - generic [ref=e79]:
+            - link "Dashboard" [ref=e80] [cursor=pointer]:
+              - /url: /dashboard
+            - text: /
+          - generic [ref=e81]: Đợt tiếp nhận
+        - generic [ref=e83]:
+          - paragraph [ref=e84]: Tiếp nhận
+          - heading "Đợt tiếp nhận hồ sơ" [level=1] [ref=e85]
+          - paragraph [ref=e86]: Quản lý khung thời gian, phạm vi áp dụng và danh sách tài liệu bắt buộc cho quy trình nộp hồ sơ đề tài.
+        - generic [ref=e87]:
+          - generic [ref=e88]:
+            - generic [ref=e90]:
+              - heading "Danh sách đợt tiếp nhận" [level=2] [ref=e91]
+              - paragraph [ref=e92]: Tìm, lọc và điều phối trạng thái nhận hồ sơ
+            - generic [ref=e93]:
+              - generic [ref=e94]:
+                - text: Từ khóa
+                - generic [ref=e95]:
+                  - img [ref=e96]
+                  - textbox "Từ khóa" [ref=e99]:
+                    - /placeholder: Mã hoặc tên đợt
+              - generic [ref=e100]:
+                - text: Trạng thái
+                - combobox "Trạng thái" [ref=e101]:
+                  - option "Tất cả" [selected]
+                  - option "Nháp"
+                  - option "Đang mở"
+                  - option "Đã đóng"
+                  - option "Quá hạn"
+            - table [ref=e103]:
+              - rowgroup [ref=e104]:
+                - row "Đợt tiếp nhận Hiệu lực Phạm vi Tệp bắt buộc Trạng thái Thao tác" [ref=e105]:
+                  - columnheader "Đợt tiếp nhận" [ref=e106]
+                  - columnheader "Hiệu lực" [ref=e107]
+                  - columnheader "Phạm vi" [ref=e108]
+                  - columnheader "Tệp bắt buộc" [ref=e109]
+                  - columnheader "Trạng thái" [ref=e110]
+                  - columnheader "Thao tác" [ref=e111]
+              - rowgroup [ref=e112]:
+                - row "new 2026 new 17/6/2026 - 30/6/2026 Toàn hệ thống Thuyết minh đề tài, Dự toán kinh phí Nháp Sửa Mở" [ref=e113]:
+                  - cell "new 2026 new" [ref=e114]:
+                    - generic [ref=e115]: new 2026
+                    - generic [ref=e116]: new
+                  - cell "17/6/2026 - 30/6/2026" [ref=e117]
+                  - cell "Toàn hệ thống" [ref=e118]
+                  - cell "Thuyết minh đề tài, Dự toán kinh phí" [ref=e119]
+                  - cell "Nháp" [ref=e120]:
+                    - generic [ref=e121]:
+                      - img [ref=e122]
+                      - text: Nháp
+                  - cell "Sửa Mở" [ref=e124]:
+                    - generic [ref=e125]:
+                      - button "Sửa" [ref=e126] [cursor=pointer]:
+                        - img [ref=e127]
+                        - text: Sửa
+                      - button "Mở" [ref=e129] [cursor=pointer]:
+                        - img [ref=e130]
+                        - text: Mở
+                - row "Đợt tiếp nhận hồ sơ nghiên cứu 2026 INTAKE-2026-SEED 9/6/2026 - 10/7/2026 org-khti Thuyết minh đề tài, Dự toán kinh phí Đang mở Sửa Đóng" [ref=e133]:
+                  - cell "Đợt tiếp nhận hồ sơ nghiên cứu 2026 INTAKE-2026-SEED" [ref=e134]:
+                    - generic [ref=e135]: Đợt tiếp nhận hồ sơ nghiên cứu 2026
+                    - generic [ref=e136]: INTAKE-2026-SEED
+                  - cell "9/6/2026 - 10/7/2026" [ref=e137]
+                  - cell "org-khti" [ref=e138]
+                  - cell "Thuyết minh đề tài, Dự toán kinh phí" [ref=e139]
+                  - cell "Đang mở" [ref=e140]:
+                    - generic [ref=e141]:
+                      - img [ref=e142]
+                      - text: Đang mở
+                  - cell "Sửa Đóng" [ref=e145]:
+                    - generic [ref=e146]:
+                      - button "Sửa" [ref=e147] [cursor=pointer]:
+                        - img [ref=e148]
+                        - text: Sửa
+                      - button "Đóng" [ref=e150] [cursor=pointer]:
+                        - img [ref=e151]
+                        - text: Đóng
+          - generic [ref=e154]:
+            - generic [ref=e156]:
+              - heading "Tạo đợt tiếp nhận" [level=2] [ref=e157]
+              - paragraph [ref=e158]: Thiết lập thời gian, phạm vi áp dụng và danh sách tệp bắt buộc
+            - generic [ref=e159]:
+              - generic [ref=e160]:
+                - generic [ref=e161]: Mã đợt
+                - textbox "Mã đợt" [ref=e162]:
+                  - /placeholder: INTAKE-2026
+              - generic [ref=e163]:
+                - generic [ref=e164]: Tên đợt
+                - textbox "Tên đợt" [ref=e165]
+              - generic [ref=e166]:
+                - generic [ref=e167]: Mô tả
+                - textbox "Mô tả" [ref=e168]
+              - generic [ref=e169]:
+                - generic [ref=e170]:
+                  - generic [ref=e171]: Ngày bắt đầu
+                  - textbox "Ngày bắt đầu" [ref=e172]
+                - generic [ref=e173]:
+                  - generic [ref=e174]: Ngày kết thúc
+                  - textbox "Ngày kết thúc" [ref=e175]
+              - generic [ref=e176]:
+                - generic [ref=e177]: Phạm vi đơn vị áp dụng
+                - textbox "Phạm vi đơn vị áp dụng" [ref=e178]:
+                  - /placeholder: Để trống nếu áp dụng toàn hệ thống
+              - generic [ref=e179]:
+                - generic [ref=e180]:
+                  - img [ref=e181]
+                  - text: Tệp bắt buộc
+                - generic [ref=e185]:
+                  - generic [ref=e186]:
+                    - generic [ref=e187]: Mã tệp
+                    - textbox "Mã tệp" [ref=e188]: proposal-form
+                  - generic [ref=e189]:
+                    - generic [ref=e190]: Tên tệp
+                    - textbox "Tên tệp" [ref=e191]: Thuyết minh đề tài
+                  - generic [ref=e192]:
+                    - generic [ref=e193]: MIME
+                    - textbox "MIME" [ref=e194]: application/pdf
+                  - generic [ref=e195]:
+                    - generic [ref=e196]: MB
+                    - spinbutton "MB" [ref=e197]: "5"
+                - generic [ref=e198]:
+                  - generic [ref=e199]:
+                    - generic [ref=e200]: Mã tệp
+                    - textbox "Mã tệp" [ref=e201]: budget-form
+                  - generic [ref=e202]:
+                    - generic [ref=e203]: Tên tệp
+                    - textbox "Tên tệp" [ref=e204]: Dự toán kinh phí
+                  - generic [ref=e205]:
+                    - generic [ref=e206]: MIME
+                    - textbox "MIME" [ref=e207]: application/pdf
+                  - generic [ref=e208]:
+                    - generic [ref=e209]: MB
+                    - spinbutton "MB" [ref=e210]: "5"
+              - button "Tạo đợt" [ref=e212] [cursor=pointer]:
+                - img [ref=e213]
+                - text: Tạo đợt

@@ -1,0 +1,143 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e3]:
+    - complementary "Điều hướng chính" [ref=e4]:
+      - link "Học viện Quân y Hệ thống quản lý NCKH, CN và đổi mới sáng tạo Học viện Quân y" [ref=e5] [cursor=pointer]:
+        - /url: /dashboard
+        - img "Học viện Quân y" [ref=e7]
+        - generic [ref=e8]:
+          - paragraph [ref=e9]: Hệ thống quản lý NCKH, CN và đổi mới sáng tạo
+          - paragraph [ref=e10]: Học viện Quân y
+      - navigation [ref=e11]:
+        - link "Dashboard" [ref=e12] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e13]
+          - generic [ref=e18]: Dashboard
+        - link "Hồ sơ của tôi" [ref=e19] [cursor=pointer]:
+          - /url: /my-proposals
+          - img [ref=e20]
+          - generic [ref=e23]: Hồ sơ của tôi
+        - link "Đề tài đang thực hiện" [ref=e24] [cursor=pointer]:
+          - /url: /my-projects
+          - img [ref=e25]
+          - generic [ref=e27]: Đề tài đang thực hiện
+        - link "Báo cáo định kỳ" [ref=e28] [cursor=pointer]:
+          - /url: /periodic-reports
+          - img [ref=e29]
+          - generic [ref=e32]: Báo cáo định kỳ
+        - link "Công việc của tôi" [ref=e33] [cursor=pointer]:
+          - /url: /my-tasks
+          - img [ref=e34]
+          - generic [ref=e37]: Công việc của tôi
+        - link "Thông báo" [ref=e38] [cursor=pointer]:
+          - /url: /notifications
+          - img [ref=e39]
+          - generic [ref=e42]: Thông báo
+      - generic [ref=e43]:
+        - strong [ref=e44]: Phạm vi truy cập hiện hành
+        - generic [ref=e45]: Chủ nhiệm đề tài - Khoa Toán - Tin học
+    - generic [ref=e46]:
+      - banner [ref=e47]:
+        - generic [ref=e48]:
+          - img [ref=e49]
+          - textbox "Tìm kiếm nhanh" [ref=e52]:
+            - /placeholder: Tìm mã hồ sơ, đề tài, chủ nhiệm...
+        - generic [ref=e53]:
+          - button "Mở thông báo" [ref=e54] [cursor=pointer]:
+            - img [ref=e55]
+          - group [ref=e58]:
+            - generic "Người dùng hiện tại" [ref=e59]:
+              - generic [ref=e60]: T
+              - generic [ref=e61]:
+                - generic [ref=e62]: TS. Phạm Anh Tuấn
+                - generic [ref=e63]: Chủ nhiệm đề tài - Khoa Toán - Tin học
+              - img [ref=e64]
+      - main [ref=e66]:
+        - navigation "Breadcrumb" [ref=e67]:
+          - generic [ref=e68]:
+            - link "Dashboard" [ref=e69] [cursor=pointer]:
+              - /url: /dashboard
+            - text: /
+          - generic [ref=e70]: Hồ sơ của tôi
+        - generic [ref=e72]:
+          - paragraph [ref=e73]: Hồ sơ cá nhân
+          - heading "Hồ sơ đề xuất của tôi" [level=1] [ref=e74]
+          - paragraph [ref=e75]: Tạo hồ sơ nháp, lưu thông tin có cấu trúc và theo dõi trạng thái nộp chính thức.
+        - generic [ref=e76]:
+          - generic [ref=e77]:
+            - generic [ref=e79]:
+              - heading "Danh sách hồ sơ" [level=2] [ref=e80]
+              - paragraph [ref=e81]: Theo dõi hồ sơ theo đợt tiếp nhận và trạng thái
+            - generic [ref=e82]:
+              - generic [ref=e83]:
+                - text: Từ khóa
+                - generic [ref=e84]:
+                  - img [ref=e85]
+                  - textbox "Từ khóa" [ref=e88]:
+                    - /placeholder: Tên đề tài hoặc mã hồ sơ
+              - generic [ref=e89]:
+                - text: Trạng thái
+                - combobox "Trạng thái" [ref=e90]:
+                  - option "Tất cả" [selected]
+                  - option "Nháp"
+                  - option "Đã nộp"
+            - paragraph [ref=e91]: Đang tải hồ sơ...
+          - generic [ref=e92]:
+            - generic [ref=e94]:
+              - heading "Tạo hồ sơ nháp" [level=2] [ref=e95]
+              - paragraph [ref=e96]: Lưu nhiều lần, sau đó hoàn thiện tài liệu và readiness ở màn hình chi tiết
+            - generic [ref=e97]:
+              - generic [ref=e98]:
+                - generic [ref=e99]:
+                  - img [ref=e100]
+                  - text: Thông tin chung
+                - generic [ref=e103]:
+                  - generic [ref=e104]: Đợt tiếp nhận
+                  - combobox "Đợt tiếp nhận" [ref=e105]:
+                    - option "Chọn đợt đang mở" [selected]
+                - generic [ref=e106]:
+                  - generic [ref=e107]: Tên đề tài
+                  - textbox "Tên đề tài" [ref=e108]
+              - generic [ref=e109]:
+                - generic [ref=e110]: Lĩnh vực và đơn vị
+                - generic [ref=e111]:
+                  - generic [ref=e112]:
+                    - generic [ref=e113]: Lĩnh vực
+                    - textbox "Lĩnh vực" [ref=e114]: biomedical-tech
+                  - generic [ref=e115]:
+                    - generic [ref=e116]: Loại đề tài
+                    - textbox "Loại đề tài" [ref=e117]: academy-level
+                - generic [ref=e118]:
+                  - generic [ref=e119]: Mã đơn vị chủ trì
+                  - textbox "Mã đơn vị chủ trì" [ref=e120]:
+                    - /placeholder: org-khti
+                    - text: org-khti
+              - generic [ref=e121]:
+                - generic [ref=e122]: Chủ nhiệm và thời gian
+                - generic [ref=e123]:
+                  - generic [ref=e124]:
+                    - generic [ref=e125]: Chủ nhiệm/thành viên
+                    - textbox "Chủ nhiệm/thành viên" [ref=e126]
+                  - generic [ref=e127]:
+                    - generic [ref=e128]: Đơn vị thành viên
+                    - textbox "Đơn vị thành viên" [ref=e129]
+                  - generic [ref=e130]:
+                    - generic [ref=e131]: Bắt đầu
+                    - textbox "Bắt đầu" [ref=e132]: 2026-07-10
+                  - generic [ref=e133]:
+                    - generic [ref=e134]: Kết thúc
+                    - textbox "Kết thúc" [ref=e135]: 2027-01-06
+              - generic [ref=e136]:
+                - generic [ref=e137]: Mục tiêu, tóm tắt và kinh phí
+                - generic [ref=e138]:
+                  - generic [ref=e139]: Mục tiêu
+                  - textbox "Mục tiêu" [ref=e140]
+                - generic [ref=e141]:
+                  - generic [ref=e142]: Tóm tắt
+                  - textbox "Tóm tắt" [ref=e143]
+                - generic [ref=e144]:
+                  - generic [ref=e145]: Kinh phí dự kiến
+                  - spinbutton "Kinh phí dự kiến" [ref=e146]: "0"
+              - button "Lưu hồ sơ nháp" [ref=e147] [cursor=pointer]:
+                - img [ref=e148]
+                - text: Lưu hồ sơ nháp
