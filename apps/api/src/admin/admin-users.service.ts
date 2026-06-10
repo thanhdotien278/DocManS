@@ -20,6 +20,17 @@ type UpdateUserInput = {
   status?: unknown;
 };
 
+type ListUsersInput = {
+  keyword?: unknown;
+  search?: unknown;
+  roleId?: unknown;
+  roleCode?: unknown;
+  role?: unknown;
+  organizationId?: unknown;
+  organization?: unknown;
+  status?: unknown;
+};
+
 type RoleInput = {
   code?: unknown;
   label?: unknown;
@@ -42,8 +53,50 @@ export class AdminUsersService {
     private readonly passwordService: PasswordService
   ) {}
 
-  async listUsers() {
+  async listUsers(input: ListUsersInput = {}) {
+    const keyword = readOptionalDescription(input.keyword ?? input.search, 120);
+    const roleCode = readOptionalDescription(input.roleCode ?? input.role, 80);
+    const roleId = readOptionalDescription(input.roleId, 80);
+    const organizationId = readOptionalDescription(input.organizationId, 80);
+    const organization = readOptionalDescription(input.organization, 160);
+    const status = readOptionalDescription(input.status, 40);
+    const where: {
+      OR?: Array<{ username: { contains: string; mode: "insensitive" } } | { displayName: { contains: string; mode: "insensitive" } }>;
+      role?: string;
+      roleAssignments?: { some: { roleId: string } };
+      unit?: string;
+      organizationScopes?: { some: { organizationUnitId: string } };
+      status?: string;
+    } = {};
+
+    if (keyword) {
+      where.OR = [
+        { username: { contains: keyword, mode: "insensitive" } },
+        { displayName: { contains: keyword, mode: "insensitive" } }
+      ];
+    }
+    if (roleCode) {
+      where.role = roleCode;
+    }
+    if (roleId) {
+      where.roleAssignments = { some: { roleId } };
+    }
+    if (organization) {
+      where.unit = organization;
+    }
+    if (organizationId) {
+      where.organizationScopes = { some: { organizationUnitId: organizationId } };
+    }
+    if (status) {
+      where.status = this.readUserStatus(status);
+    }
+
     const users = await this.prisma.user.findMany({
+      where,
+      include: {
+        roleAssignments: { include: { role: true } },
+        organizationScopes: { include: { organizationUnit: true } }
+      },
       orderBy: { displayName: "asc" }
     });
 
@@ -229,12 +282,18 @@ export class AdminUsersService {
     });
 
     await this.auditLog.record({
-      action: "create-user",
+      action: "AUD-ST-1.3-01",
       result: "success",
       actorId: actor.id,
       targetEntity: "user",
       targetEntityId: user.id,
-      username: actor.username
+      username: actor.username,
+      reason: safeAuditContext({
+        username: user.username,
+        roleCode: role.code,
+        organizationUnitId: organizationUnit.id,
+        organizationUnitName: organizationUnit.name
+      })
     });
 
     return this.toUserResponse(user);
@@ -258,12 +317,16 @@ export class AdminUsersService {
       data.displayName = readText(input.displayName, "displayName");
     }
 
+    const auditEvents: Array<{ action: string; before: unknown; after: unknown }> = [];
+
     if (input.status !== undefined) {
-      const status = readText(input.status, "status", 40);
-      if (status !== "active" && status !== "disabled" && status !== "locked") {
-        throw new BadRequestException({ message: "Trạng thái người dùng không hợp lệ." });
-      }
+      const status = this.readUserStatus(input.status);
       data.status = status;
+      auditEvents.push({
+        action: status === "active" ? "AUD-ST-1.3-06" : "AUD-ST-1.3-05",
+        before: { status: existing.status },
+        after: { status }
+      });
     }
 
     if (input.roleCode !== undefined) {
@@ -272,6 +335,11 @@ export class AdminUsersService {
       data.roleLabel = role.label;
       await this.prisma.userRoleAssignment.deleteMany({ where: { userId } });
       await this.prisma.userRoleAssignment.create({ data: { userId, roleId: role.id, isPrimary: true } });
+      auditEvents.push({
+        action: "AUD-ST-1.3-03",
+        before: { role: existing.role, roleLabel: existing.roleLabel },
+        after: { role: role.code, roleLabel: role.label }
+      });
     }
 
     if (input.organizationUnitId !== undefined) {
@@ -281,6 +349,19 @@ export class AdminUsersService {
       await this.prisma.userOrganizationScope.create({
         data: { userId, organizationUnitId: organizationUnit.id, isPrimary: true }
       });
+      auditEvents.push({
+        action: "AUD-ST-1.3-04",
+        before: { unit: existing.unit },
+        after: { organizationUnitId: organizationUnit.id, unit: organizationUnit.name }
+      });
+    }
+
+    if (input.displayName !== undefined) {
+      auditEvents.unshift({
+        action: "AUD-ST-1.3-02",
+        before: { displayName: existing.displayName },
+        after: { displayName: data.displayName }
+      });
     }
 
     const user = await this.prisma.user.update({
@@ -288,14 +369,17 @@ export class AdminUsersService {
       data
     });
 
-    await this.auditLog.record({
-      action: "update-user",
-      result: "success",
-      actorId: actor.id,
-      targetEntity: "user",
-      targetEntityId: user.id,
-      username: actor.username
-    });
+    for (const event of auditEvents) {
+      await this.auditLog.record({
+        action: event.action,
+        result: "success",
+        actorId: actor.id,
+        targetEntity: "user",
+        targetEntityId: user.id,
+        username: actor.username,
+        reason: safeAuditContext({ before: event.before, after: event.after })
+      });
+    }
 
     return this.toUserResponse(user);
   }
@@ -331,6 +415,15 @@ export class AdminUsersService {
     return status;
   }
 
+  private readUserStatus(value: unknown) {
+    const status = readText(value, "status", 40);
+    if (status !== "active" && status !== "disabled" && status !== "locked") {
+      throw new BadRequestException({ message: "Trạng thái người dùng không hợp lệ." });
+    }
+
+    return status;
+  }
+
   private toUserResponse(user: {
     id: string;
     username: string;
@@ -339,7 +432,25 @@ export class AdminUsersService {
     role: string;
     roleLabel: string;
     unit: string;
+    roleAssignments?: Array<{
+      isPrimary: boolean;
+      role: {
+        id: string;
+        code: string;
+        label: string;
+      };
+    }>;
+    organizationScopes?: Array<{
+      isPrimary: boolean;
+      organizationUnit: {
+        id: string;
+        name: string;
+      };
+    }>;
   }) {
+    const roleAssignment = user.roleAssignments?.find((assignment) => assignment.isPrimary) ?? user.roleAssignments?.[0];
+    const organizationScope = user.organizationScopes?.find((scope) => scope.isPrimary) ?? user.organizationScopes?.[0];
+
     return {
       id: user.id,
       username: user.username,
@@ -347,7 +458,10 @@ export class AdminUsersService {
       status: user.status,
       role: user.role,
       roleLabel: user.roleLabel,
-      unit: user.unit
+      roleCode: roleAssignment?.role.code ?? user.role,
+      roleId: roleAssignment?.role.id,
+      unit: user.unit,
+      organizationUnitId: organizationScope?.organizationUnit.id
     };
   }
 }
@@ -358,4 +472,8 @@ function readOptionalDescription(value: unknown, maxLength = 500) {
   }
 
   return readText(value, "description", maxLength);
+}
+
+function safeAuditContext(value: unknown) {
+  return JSON.stringify(value);
 }

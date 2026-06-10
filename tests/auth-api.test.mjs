@@ -282,6 +282,36 @@ describe("auth API behavior", () => {
     ]);
   });
 
+  it("TEST-ST-1.3-AUTH-04 current-user context fails closed without role or scope assignments", async () => {
+    for (const incompleteUser of [
+      { ...activeUser, roleAssignments: [], organizationScopes: [] },
+      {
+        ...activeUser,
+        roleAssignments: [
+          {
+            isPrimary: true,
+            role: {
+              code: "system-admin",
+              label: "Quản trị hệ thống",
+              status: "active"
+            }
+          }
+        ],
+        organizationScopes: []
+      }
+    ]) {
+      const authStore = new AuthStore({
+        user: {
+          async findUnique() {
+            return incompleteUser;
+          }
+        }
+      });
+
+      assert.equal(await authStore.findUserById("user-1"), null);
+    }
+  });
+
   it("DTO validation rejects invalid login payloads", () => {
     const pipe = new LoginRequestPipe();
 

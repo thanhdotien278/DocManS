@@ -7,10 +7,10 @@ These credentials are for local development only.
 | Username | Password | Role | Unit |
 | --- | --- | --- | --- |
 | `admin` | `Admin@12345` | Quản trị hệ thống | Khoa Toán - Tin học |
-| `leadership` | `Leadership@12345` | Giám Đốc | Ban Giám Đốc |
-| `staff` | `Staff@12345` | Trưởng phòng | Phòng KHQS |
-| `pi` | `Pi@12345` | Chủ nhiệm đề tài | Khoa Toán - Tin học |
-| `reviewer` | `Reviewer@12345` | Thành viên Hội đồng | Ban Quản lý KHQS |
+| `tvtien` | `Tvtien@12345` | Giám Đốc | Ban Giám Đốc |
+| `nmphuong` | `Nmphuong@12345` | Trưởng phòng | Phòng KHQS |
+| `patuan` | `Patuan@12345` | Chủ nhiệm đề tài | Khoa Toán - Tin học |
+| `nmtrung` | `Nmtrung@12345` | Thành viên Hội đồng | Ban Quản lý KHQS |
 
 The seed file stores precomputed `scrypt` password hashes only. Plaintext credentials are documented here for local development and are not returned through auth endpoints.
 

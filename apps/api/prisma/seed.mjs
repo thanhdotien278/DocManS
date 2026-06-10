@@ -26,9 +26,9 @@ const users = [
   },
   {
     id: "user-leadership",
-    username: "leadership",
+    username: "tvtien",
     passwordHash:
-      "scrypt:user-leadership:879846cceef41010301d9571992fbafaf8ae00c43d79901b5cba573b2ffd68fe3cec2c2c3c21fa7b96fce89df5c77adfca220aaab3f9dd79a280af49cbfa2d89",
+      "scrypt:user-leadership:c52b02ae6aac82353472c53850ab0412925b90f6f907f994c57901aef4d3c11323904a8ec6b2db58f6c70573084e1bba15d044f9bb5571b388e3b6942d02b563",
     displayName: "GS. TS. Trần Viết Tiến",
     status: "active",
     role: "leadership",
@@ -37,9 +37,9 @@ const users = [
   },
   {
     id: "user-staff",
-    username: "staff",
+    username: "nmphuong",
     passwordHash:
-      "scrypt:user-staff:83fe95cfd3d861883035495bca93fa438f252045fb3acb9c0526a534014ed32b4060b6a075524581f631479f96842dd836267a45a4b67a8b50c79d9e9cb65300",
+      "scrypt:user-staff:21e0f40659a682a8424cd382598d61ea7496422a6ba948c34f797f1ab4fb8ebf14a7eaaec584b01664235365c3ada4fec689509141ab54419041e4b4bf92be41",
     displayName: "TS. Nguyễn Minh Phương",
     status: "active",
     role: "scientific-management",
@@ -48,9 +48,9 @@ const users = [
   },
   {
     id: "user-pi",
-    username: "pi",
+    username: "patuan",
     passwordHash:
-      "scrypt:user-pi:6ee77a4aa59f216b3e03ecd2deac77fd389c9f203a0fd4477a577f512d5ac7ba59785d5f452be4d055b324377853a234ffb2b9a87f691c19650e2fd5b501e929",
+      "scrypt:user-pi:673213cfbafd5eaafdea44928251a6c15053da9e1b623e286fbea163e313bd210030b3d33d7d1c25106c4e3a73386dee074ef956c64926d12a518b7167ddfcf8",
     displayName: "TS. Phạm Anh Tuấn",
     status: "active",
     role: "principal-investigator",
@@ -59,9 +59,9 @@ const users = [
   },
   {
     id: "user-reviewer",
-    username: "reviewer",
+    username: "nmtrung",
     passwordHash:
-      "scrypt:user-reviewer:ca1c923eb4ae818ae69b1b2c5d75873d6e882348685382165b94ef3c050f675d70ce6a8d672e8f80612ebf2b42685eaa1833885587bab921488e706b1d427363",
+      "scrypt:user-reviewer:13749652ddde4378a437b85696b6de3892467ce0515b242bdbba8870094e3e6397705a73560f724ceaee5f9ee5750b8bb218de88ae5b5eb9839f437e27dc4e90",
     displayName: "TS. Đỗ Minh Trung",
     status: "active",
     role: "reviewer",
@@ -169,6 +169,60 @@ for (const [type, code, name] of catalogs) {
     create: { type, code, name, status: "active" }
   });
 }
+
+const intakeStartsAt = new Date();
+intakeStartsAt.setDate(intakeStartsAt.getDate() - 1);
+const intakeEndsAt = new Date();
+intakeEndsAt.setDate(intakeEndsAt.getDate() + 30);
+
+await prisma.proposalIntakePeriod.upsert({
+  where: { code: "INTAKE-2026-SEED" },
+  update: {
+    title: "Đợt tiếp nhận hồ sơ nghiên cứu 2026",
+    description: "Đợt tiếp nhận mẫu phục vụ kiểm thử EP-02.",
+    startsAt: intakeStartsAt,
+    endsAt: intakeEndsAt,
+    status: "open",
+    applicableOrganizationUnitId: "org-khti",
+    requiredPackage: [
+      {
+        code: "proposal-form",
+        label: "Thuyết minh đề tài",
+        allowedMimeTypes: ["application/pdf"],
+        maxSizeMb: 5
+      },
+      {
+        code: "budget-form",
+        label: "Dự toán kinh phí",
+        allowedMimeTypes: ["application/pdf"],
+        maxSizeMb: 5
+      }
+    ]
+  },
+  create: {
+    code: "INTAKE-2026-SEED",
+    title: "Đợt tiếp nhận hồ sơ nghiên cứu 2026",
+    description: "Đợt tiếp nhận mẫu phục vụ kiểm thử EP-02.",
+    startsAt: intakeStartsAt,
+    endsAt: intakeEndsAt,
+    status: "open",
+    applicableOrganizationUnitId: "org-khti",
+    requiredPackage: [
+      {
+        code: "proposal-form",
+        label: "Thuyết minh đề tài",
+        allowedMimeTypes: ["application/pdf"],
+        maxSizeMb: 5
+      },
+      {
+        code: "budget-form",
+        label: "Dự toán kinh phí",
+        allowedMimeTypes: ["application/pdf"],
+        maxSizeMb: 5
+      }
+    ]
+  }
+});
 
 await prisma.systemParameter.upsert({
   where: { key: "session_timeout_minutes" },

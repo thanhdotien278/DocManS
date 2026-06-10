@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import { assertSystemAdmin, type RequestWithCurrentUser } from "./admin-access.js";
 import { adminRequestPipe } from "./admin-request.pipe.js";
@@ -49,9 +49,10 @@ export class AdminUsersController {
   constructor(private readonly usersService: AdminUsersService) {}
 
   @Get()
-  async listUsers(@Req() request: RequestWithCurrentUser) {
+  async listUsers(@Req() request: RequestWithCurrentUser, @Query() query: Record<string, unknown>) {
     assertSystemAdmin(request.currentUser);
-    return { users: await this.usersService.listUsers() };
+    const users = await this.usersService.listUsers(query);
+    return { users, total: users.length };
   }
 
   @Post()

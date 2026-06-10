@@ -666,7 +666,8 @@ summary:focus-visible {
   min-width: 0;
 }
 
-.filter-field label {
+.filter-field label,
+.filter-field > span {
   display: block;
   margin-bottom: 5px;
   color: var(--text-secondary);
@@ -1050,12 +1051,14 @@ summary:focus-visible {
 }
 
 .field {
+  display: grid;
+  gap: 6px;
   min-width: 0;
 }
 
-.field label {
+.field label,
+.field > span {
   display: block;
-  margin-bottom: 6px;
   color: var(--text-primary);
   font-size: 13px;
   font-weight: 800;
@@ -1073,8 +1076,8 @@ summary:focus-visible {
   transform: translateY(-50%);
 }
 
-.field-input input,
-.field-input select {
+.field .field-input input,
+.field .field-input select {
   width: 100%;
   min-height: 46px;
   border: 1px solid var(--border);
@@ -1084,8 +1087,23 @@ summary:focus-visible {
   padding: 10px 12px 10px 44px;
 }
 
+.field-input.plain {
+  display: block;
+}
+
+.field-input.plain input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-primary);
+  padding: 9px 12px 9px 40px;
+}
+
 .admin-form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 13px;
 }
 
@@ -1094,12 +1112,21 @@ summary:focus-visible {
 .field textarea,
 .filter-field select {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 44px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--text-primary);
   padding: 10px 12px;
+}
+
+.field input:disabled,
+.field select:disabled,
+.field textarea:disabled {
+  background: var(--surface-muted);
+  color: var(--text-secondary);
 }
 
 .field textarea {
@@ -1170,6 +1197,101 @@ summary:focus-visible {
   font-weight: 700;
 }
 
+.field-error,
+.field-hint {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+}
+
+.field-error {
+  color: var(--danger);
+  font-weight: 800;
+}
+
+.field-hint {
+  color: var(--text-secondary);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+}
+
+.form-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.detail-grid {
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+}
+
+.form-section-inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.section-mini-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary-dark);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.package-row,
+.upload-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-items: end;
+  min-width: 0;
+}
+
+.package-row {
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+}
+
+.upload-row {
+  grid-template-columns: minmax(180px, 0.8fr) minmax(220px, 1fr) auto;
+  margin-bottom: 14px;
+}
+
+.compact-actions {
+  justify-content: flex-start;
+}
+
+.submit-button {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.readiness-list {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  padding: 12px;
+}
+
+.readiness-list strong {
+  color: var(--text-primary);
+}
+
+.readiness-list span {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
 .login-submit {
   width: 100%;
 }
@@ -1235,7 +1357,16 @@ summary:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
   .filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .package-row,
+  .upload-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1349,7 +1480,10 @@ summary:focus-visible {
   .kpi-grid,
   .three-column,
   .meta-grid,
-  .filter-bar {
+  .filter-bar,
+  .form-grid.two,
+  .package-row,
+  .upload-row {
     grid-template-columns: 1fr;
   }
 
@@ -1366,7 +1500,8 @@ summary:focus-visible {
     grid-template-columns: 34px minmax(0, 1fr);
   }
 
-  .file-item .button {
+  .file-item .button,
+  .file-item .status-badge {
     grid-column: 1 / -1;
     width: 100%;
   }
