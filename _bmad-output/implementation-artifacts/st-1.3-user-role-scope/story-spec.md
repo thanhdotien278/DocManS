@@ -46,6 +46,7 @@ ST-1.3 tạo nền tảng vận hành thật cho phase 1: biết ai được đ�
 - Username là định danh đăng nhập ổn định và không được trùng.
 - Display name có thể cập nhật.
 - Initial password chỉ dùng khi tạo user; xử lý lưu trữ/hash là trách nhiệm implement sau này.
+- Create user phải lưu user, role assignment và organization scope assignment nhất quán; không được tạo partial user record nếu role/scope assignment thất bại.
 - User admin page và API chỉ dành cho system administrator.
 - Không trả về dữ liệu nhạy cảm như password hash, session token hoặc secret trong user list/detail.
 - Search/list/filter phải không rò rỉ dữ liệu ngoài phạm vi quyền của actor.
@@ -123,9 +124,21 @@ Normal list/search/filter read operations do not require business audit logs in 
 - Role, organization and status dropdown default value must mean "Tất cả".
 - List result count and empty/error states must update according to the current applied filters.
 - Create form must collect username, display name, initial password, role and organization scope.
+- Create form fields visible in the current admin dashboard are: "Tên đăng nhập", "Họ tên hiển thị", "Mật khẩu khởi tạo", "Vai trò", and "Phạm vi đơn vị".
+- Successful create must show success feedback, refresh or update the user list, and reset or close the form only when the form instance/state is available.
+- Validation/API failure must preserve entered form data where appropriate, show inline or form-level Vietnamese error feedback, and never expose raw JavaScript/runtime error text.
+- Raw error text such as `Cannot read properties of null (reading 'reset')` must never be displayed to the admin user.
 - Edit flow must support display name, role assignment, organization scope and status operations.
 - Lock/deactivate and unlock/reactivate actions must be explicit and show clear status feedback.
 - Non-admin users must not be able to use the admin UI; backend still enforces even if UI hides it.
+
+## Known defect coverage
+
+- `DEF-ST13-USER-CREATE-RESET-NULL`: Create user form throws `Cannot read properties of null (reading 'reset')`.
+- Observed behavior: Admin fills the create-user form, submits it, and the UI shows raw JavaScript error text instead of success feedback or a user-friendly validation/API error.
+- Expected behavior: Successful creation persists user, role and organization scope assignments, shows success feedback, refreshes or updates the user list, and resets/closes form state only after the form instance is available.
+- Expected failure behavior: Validation, duplicate username, invalid role, invalid organization scope, weak/empty initial password, unauthorized actor, network error and server error are handled explicitly with safe user-facing messages and no partial persistence.
+- Implementation-risk hypothesis: unsafe form reference or reset call after modal/state unmount; this must be verified during implementation and must not be treated as a confirmed root cause in the spec.
 
 ## API behavior expectations for later implementation
 
