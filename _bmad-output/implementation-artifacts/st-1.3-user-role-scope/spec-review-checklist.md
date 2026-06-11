@@ -41,3 +41,16 @@ Use this checklist before approving implementation.
 - [ ] Decide whether role filter uses `roleId`, `roleCode`, or both.
 - [ ] Decide exact status filter enum after status model decision.
 - [ ] Decide whether invalid filter values are rejected or ignored; recommended default is reject.
+
+## Create-user defect review checklist
+
+- [ ] Có ghi nhận defect `DEF-ST13-USER-CREATE-RESET-NULL` chưa? Required: observed raw error `Cannot read properties of null (reading 'reset')` is documented in `defects.md`.
+- [ ] Có đủ UC refinement IDs chưa? Required: `UC-ST13-01` through `UC-ST13-08`.
+- [ ] Có đủ AC refinement IDs chưa? Required: `AC-ST13-CREATE-01` through `AC-ST13-CREATE-12`.
+- [ ] Có đủ test IDs chưa? Required: `T-ST13-CREATE-001` through `T-ST13-CREATE-014`.
+- [ ] Có map defect vào traceability chưa? Required: `traceability-matrix.md` includes `DEF-ST13-USER-CREATE-RESET-NULL`.
+- [ ] Có cover duplicate username, missing required fields, invalid role, invalid organization scope, weak/empty password, unauthorized actor, API failure, network/server failure chưa?
+- [ ] Có yêu cầu no partial persistence chưa? Required: create user cannot leave inconsistent user/role/scope records.
+- [ ] Có yêu cầu no raw JS/runtime error chưa? Required: UI never shows `Cannot read properties of null (reading 'reset')`.
+- [ ] Có yêu cầu password/secret không leak chưa? Required: no UI/log/audit/API leakage after submit.
+- [ ] Có ghi risk dưới dạng giả thuyết chưa? Required: unsafe form reference/reset after unmount is marked `to be verified during implementation`, not a confirmed root cause.

@@ -76,24 +76,46 @@ export function AdminUsersPanel() {
     event.preventDefault();
     setFormError("");
     setMessage("");
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const input = {
       username: String(form.get("username") ?? "").trim(),
       displayName: String(form.get("displayName") ?? "").trim(),
       password: String(form.get("password") ?? ""),
+      confirmPassword: String(form.get("confirmPassword") ?? ""),
       roleCode: String(form.get("roleCode") ?? ""),
       organizationUnitId: String(form.get("organizationUnitId") ?? "")
     };
 
-    if (!input.username || !input.displayName || !input.password || !input.roleCode || !input.organizationUnitId) {
+    if (
+      !input.username ||
+      !input.displayName ||
+      !input.password ||
+      !input.confirmPassword ||
+      !input.roleCode ||
+      !input.organizationUnitId
+    ) {
       setFormError("Vui lòng nhập đủ thông tin tài khoản, vai trò và đơn vị.");
+      return;
+    }
+
+    if (input.password !== input.confirmPassword) {
+      setFormError("Mật khẩu xác nhận không khớp.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await createAdminUser(input);
-      event.currentTarget.reset();
+      await createAdminUser({
+        username: input.username,
+        displayName: input.displayName,
+        password: input.password,
+        roleCode: input.roleCode,
+        organizationUnitId: input.organizationUnitId
+      });
+      if (formElement.isConnected) {
+        formElement.reset();
+      }
       setMessage("Đã tạo tài khoản và gán phạm vi truy cập.");
       await refresh();
     } catch (error) {
@@ -355,51 +377,55 @@ export function AdminUsersPanel() {
           </form>
         ) : (
           <form className="admin-form" onSubmit={(event) => void handleCreateUser(event)}>
-          <label className="field">
-            <span>Tên đăng nhập</span>
-            <input name="username" autoComplete="username" />
-          </label>
-          <label className="field">
-            <span>Họ tên hiển thị</span>
-            <input name="displayName" autoComplete="name" />
-          </label>
-          <label className="field">
-            <span>Mật khẩu khởi tạo</span>
-            <input name="password" type="password" autoComplete="new-password" />
-          </label>
-          <label className="field">
-            <span>Vai trò</span>
-            <select name="roleCode" defaultValue="">
-              <option value="" disabled>
-                Chọn vai trò
-              </option>
-              {roles.map((role) => (
-                <option value={role.code} key={role.id}>
-                  {role.label}
+            <label className="field">
+              <span>Tên đăng nhập</span>
+              <input name="username" autoComplete="username" />
+            </label>
+            <label className="field">
+              <span>Họ tên hiển thị</span>
+              <input name="displayName" autoComplete="name" />
+            </label>
+            <label className="field">
+              <span>Mật khẩu khởi tạo</span>
+              <input name="password" type="password" autoComplete="new-password" />
+            </label>
+            <label className="field">
+              <span>Xác nhận mật khẩu</span>
+              <input name="confirmPassword" type="password" autoComplete="new-password" />
+            </label>
+            <label className="field">
+              <span>Vai trò</span>
+              <select name="roleCode" defaultValue="">
+                <option value="" disabled>
+                  Chọn vai trò
                 </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>Phạm vi đơn vị</span>
-            <select name="organizationUnitId" defaultValue="">
-              <option value="" disabled>
-                Chọn đơn vị
-              </option>
-              {organizationUnits.map((unit) => (
-                <option value={unit.id} key={unit.id}>
-                  {unit.name}
+                {roles.map((role) => (
+                  <option value={role.code} key={role.id}>
+                    {role.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Phạm vi đơn vị</span>
+              <select name="organizationUnitId" defaultValue="">
+                <option value="" disabled>
+                  Chọn đơn vị
                 </option>
-              ))}
-            </select>
-          </label>
-          {formError ? <p className="form-error">{formError}</p> : null}
-          {message ? <p className="state-message success">{message}</p> : null}
-          <button className="button primary" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? <Save size={16} aria-hidden="true" /> : <UserPlus size={16} aria-hidden="true" />}
-            {isSubmitting ? "Đang lưu" : "Tạo tài khoản"}
-          </button>
-        </form>
+                {organizationUnits.map((unit) => (
+                  <option value={unit.id} key={unit.id}>
+                    {unit.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {formError ? <p className="form-error">{formError}</p> : null}
+            {message ? <p className="state-message success">{message}</p> : null}
+            <button className="button primary" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? <Save size={16} aria-hidden="true" /> : <UserPlus size={16} aria-hidden="true" />}
+              {isSubmitting ? "Đang lưu" : "Tạo tài khoản"}
+            </button>
+          </form>
         )}
       </SectionCard>
     </div>
