@@ -18,6 +18,17 @@ import { StatusBadge } from "@/components/ui/status-badge";
 
 type LoadState = "loading" | "ready" | "error";
 
+function readUserFilters(formElement: HTMLFormElement): UserFilterInput {
+  const form = new FormData(formElement);
+
+  return {
+    keyword: String(form.get("keyword") ?? "").trim(),
+    roleCode: String(form.get("roleCode") ?? ""),
+    organizationId: String(form.get("organizationId") ?? ""),
+    status: String(form.get("status") ?? "")
+  };
+}
+
 export function AdminUsersPanel() {
   const [state, setState] = useState<LoadState>("loading");
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -53,13 +64,19 @@ export function AdminUsersPanel() {
 
   async function handleFilterSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const nextFilters = {
-      keyword: String(form.get("keyword") ?? "").trim(),
-      roleCode: String(form.get("roleCode") ?? ""),
-      organizationId: String(form.get("organizationId") ?? ""),
-      status: String(form.get("status") ?? "")
-    };
+    const nextFilters = readUserFilters(event.currentTarget);
+
+    setFilters(nextFilters);
+    await refresh(nextFilters);
+  }
+
+  async function handleFilterChange(event: React.ChangeEvent<HTMLSelectElement>) {
+    const form = event.currentTarget.form;
+    if (!form) {
+      return;
+    }
+
+    const nextFilters = readUserFilters(form);
 
     setFilters(nextFilters);
     await refresh(nextFilters);
@@ -194,7 +211,11 @@ export function AdminUsersPanel() {
           </label>
           <label className="filter-field">
             <span>Vai trò</span>
-            <select name="roleCode" defaultValue={filters.roleCode ?? ""}>
+            <select
+              name="roleCode"
+              defaultValue={filters.roleCode ?? ""}
+              onChange={(event) => void handleFilterChange(event)}
+            >
               <option value="">Tất cả vai trò</option>
               {roles.map((role) => (
                 <option value={role.code} key={role.id}>
@@ -205,7 +226,11 @@ export function AdminUsersPanel() {
           </label>
           <label className="filter-field">
             <span>Đơn vị</span>
-            <select name="organizationId" defaultValue={filters.organizationId ?? ""}>
+            <select
+              name="organizationId"
+              defaultValue={filters.organizationId ?? ""}
+              onChange={(event) => void handleFilterChange(event)}
+            >
               <option value="">Tất cả đơn vị</option>
               {organizationUnits.map((unit) => (
                 <option value={unit.id} key={unit.id}>
@@ -216,7 +241,11 @@ export function AdminUsersPanel() {
           </label>
           <label className="filter-field">
             <span>Trạng thái</span>
-            <select name="status" defaultValue={filters.status ?? ""}>
+            <select
+              name="status"
+              defaultValue={filters.status ?? ""}
+              onChange={(event) => void handleFilterChange(event)}
+            >
               <option value="">Tất cả</option>
               <option value="active">Đang hoạt động</option>
               <option value="locked">Bị khóa</option>
@@ -330,7 +359,7 @@ export function AdminUsersPanel() {
         subtitle={editingUser ? editingUser.username : "Gán vai trò chính và phạm vi đơn vị ngay khi tạo"}
       >
         {editingUser ? (
-          <form className="admin-form" onSubmit={(event) => void handleEditUser(event)}>
+          <form className="admin-form" key={editingUser.id} onSubmit={(event) => void handleEditUser(event)}>
             <label className="field">
               <span>Tên đăng nhập</span>
               <input value={editingUser.username} disabled />
@@ -376,7 +405,7 @@ export function AdminUsersPanel() {
             </div>
           </form>
         ) : (
-          <form className="admin-form" onSubmit={(event) => void handleCreateUser(event)}>
+          <form className="admin-form" key="create-user" onSubmit={(event) => void handleCreateUser(event)}>
             <label className="field">
               <span>Tên đăng nhập</span>
               <input name="username" autoComplete="username" />
