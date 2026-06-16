@@ -15,6 +15,7 @@ type FileRecord = {
   relatedEntityId: string;
   filePurpose: string;
   originalFileName: string;
+  description: string | null;
   mimeType: string;
   sizeBytes: number;
   storageBucket: string;
@@ -52,6 +53,8 @@ export type FileUploadInput = {
   relatedEntityId: string;
   filePurpose: string;
   fileName: string;
+  originalFileName?: string;
+  description?: string | null;
   mimeType: string;
   sizeBytes: number;
   content: Buffer;
@@ -81,10 +84,13 @@ export class FilesService {
 
   async uploadFile(actor: SafeUserContext, input: FileUploadInput) {
     this.assertSupportedEntity(input.relatedEntityType);
-    this.assertUploadInput(input);
+    const originalFileName = this.readFileName(input.originalFileName ?? input.fileName);
+    const description = this.readDescription(input.description);
+    this.assertUploadInput({ ...input, fileName: originalFileName });
     await this.assertCanUpload(actor, input.relatedEntityType, input.relatedEntityId);
 
-    const objectKey = this.createObjectKey(input);
+    const fileId = randomUUID();
+    const objectKey = this.createObjectKey({ ...input, fileName: originalFileName }, fileId);
     await this.objectStorage.putObject({
       objectKey,
       content: input.content,
@@ -96,10 +102,12 @@ export class FilesService {
     try {
       record = (await this.prisma.fileRecord.create({
         data: {
+          id: fileId,
           relatedEntityType: input.relatedEntityType,
           relatedEntityId: input.relatedEntityId,
           filePurpose: input.filePurpose,
-          originalFileName: input.fileName,
+          originalFileName,
+          description,
           mimeType: input.mimeType,
           sizeBytes: input.sizeBytes,
           storageBucket: this.config.bucketName ?? "rtms-files",
@@ -123,12 +131,13 @@ export class FilesService {
       reason: `${record.relatedEntityType}:${record.relatedEntityId}`
     });
 
-    return this.toFileResponse(record);
+    return this.toFileResponse(record, { canMutate: true });
   }
 
   async listFiles(actor: SafeUserContext, input: { relatedEntityType: string; relatedEntityId: string }) {
     this.assertSupportedEntity(input.relatedEntityType);
     await this.assertCanRead(actor, input.relatedEntityType, input.relatedEntityId);
+    const canMutate = await this.canMutateEntity(actor, input.relatedEntityType, input.relatedEntityId);
     const records = (await this.prisma.fileRecord.findMany({
       where: {
         relatedEntityType: input.relatedEntityType,
@@ -138,13 +147,19 @@ export class FilesService {
       },
       orderBy: { createdAt: "asc" }
     })) as FileRecord[];
-    return records.map((record) => this.toFileResponse(record));
+    return records.map((record) => this.toFileResponse(record, { canMutate }));
   }
 
   async downloadFile(actor: SafeUserContext, fileId: string) {
     const record = await this.findActiveFile(fileId);
     await this.assertCanRead(actor, record.relatedEntityType, record.relatedEntityId);
-    const content = await this.objectStorage.getObject(record.storageObjectKey);
+    const canMutate = await this.canMutateEntity(actor, record.relatedEntityType, record.relatedEntityId);
+    let content: Awaited<ReturnType<ObjectStorage["getObject"]>>;
+    try {
+      content = await this.objectStorage.getObject(record.storageObjectKey);
+    } catch {
+      throw new NotFoundException({ message: "Không tìm thấy nội dung tệp." });
+    }
 
     await this.auditLog.record({
       action: "download-file",
@@ -157,9 +172,56 @@ export class FilesService {
     });
 
     return {
-      ...this.toFileResponse(record),
+      ...this.toFileResponse(record, { canMutate }),
       content
     };
+  }
+
+  async updateFile(actor: SafeUserContext, fileId: string, input: { description: string | null }) {
+    const record = await this.findActiveFile(fileId);
+    await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId);
+    const updated = (await this.prisma.fileRecord.update({
+      where: { id: fileId },
+      data: {
+        description: this.readDescription(input.description)
+      } as never
+    })) as FileRecord;
+
+    await this.auditLog.record({
+      action: "update-file-description",
+      result: "success",
+      actorId: actor.id,
+      targetEntity: "file-record",
+      targetEntityId: updated.id,
+      username: actor.username,
+      reason: `${updated.relatedEntityType}:${updated.relatedEntityId}`
+    });
+
+    return this.toFileResponse(updated, { canMutate: true });
+  }
+
+  async deleteFile(actor: SafeUserContext, fileId: string) {
+    const record = await this.findActiveFile(fileId);
+    await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId);
+    const deleted = (await this.prisma.fileRecord.update({
+      where: { id: fileId },
+      data: {
+        status: "deleted",
+        deletedAt: new Date()
+      } as never
+    })) as FileRecord;
+
+    await this.auditLog.record({
+      action: "delete-file",
+      result: "success",
+      actorId: actor.id,
+      targetEntity: "file-record",
+      targetEntityId: deleted.id,
+      username: actor.username,
+      reason: `${deleted.relatedEntityType}:${deleted.relatedEntityId}`
+    });
+
+    return this.toFileResponse(deleted, { canMutate: false });
   }
 
   private assertUploadInput(input: FileUploadInput) {
@@ -185,6 +247,34 @@ export class FilesService {
     }
   }
 
+  private readFileName(value: string) {
+    if (typeof value !== "string") {
+      throw new BadRequestException({ message: "Tên tệp không hợp lệ." });
+    }
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.length > 255) {
+      throw new BadRequestException({ message: "Tên tệp không hợp lệ." });
+    }
+    return trimmed.normalize("NFC");
+  }
+
+  private readDescription(value: string | null | undefined) {
+    if (value === undefined || value === null) {
+      return null;
+    }
+    if (typeof value !== "string") {
+      throw new BadRequestException({ message: "Mô tả tệp không hợp lệ." });
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    if (trimmed.length > 500) {
+      throw new BadRequestException({ message: "Mô tả tệp không được vượt quá 500 ký tự." });
+    }
+    return trimmed;
+  }
+
   private async assertCanUpload(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {
     const proposal = await this.findRelatedProposal(relatedEntityType, relatedEntityId);
     assertCanEditProposalDraft(actor, proposal);
@@ -197,6 +287,15 @@ export class FilesService {
   private async assertCanRead(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {
     const proposal = await this.findRelatedProposal(relatedEntityType, relatedEntityId);
     assertCanReadProposal(actor, proposal);
+  }
+
+  private async canMutateEntity(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {
+    try {
+      await this.assertCanUpload(actor, relatedEntityType, relatedEntityId);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private async findRelatedProposal(relatedEntityType: string, relatedEntityId: string) {
@@ -222,12 +321,13 @@ export class FilesService {
     return record;
   }
 
-  private createObjectKey(input: FileUploadInput) {
-    const sanitizedName = input.fileName.replace(/[^a-z0-9._-]/gi, "-");
-    return `${input.relatedEntityType}/${input.relatedEntityId}/${randomUUID()}-${sanitizedName}`;
+  private createObjectKey(input: FileUploadInput, fileId: string) {
+    const extension = path.extname(input.fileName).toLowerCase();
+    const entityPath = input.relatedEntityType === RESEARCH_PROPOSAL_ENTITY_TYPE ? "research-proposals" : input.relatedEntityType;
+    return `${entityPath}/${input.relatedEntityId}/${fileId}/${randomUUID()}${extension}`;
   }
 
-  private toFileResponse(record: FileRecord) {
+  private toFileResponse(record: FileRecord, options: { canMutate: boolean }) {
     return {
       id: record.id,
       relatedEntityType: record.relatedEntityType,
@@ -236,12 +336,15 @@ export class FilesService {
       filePurpose: record.filePurpose,
       requirementCode: record.filePurpose,
       fileName: record.originalFileName,
+      description: record.description ?? null,
       mimeType: record.mimeType,
       sizeBytes: record.sizeBytes,
       uploadedById: record.uploadedById,
       status: record.status,
       createdAt: record.createdAt.toISOString(),
-      updatedAt: record.updatedAt.toISOString()
+      updatedAt: record.updatedAt.toISOString(),
+      canEdit: options.canMutate,
+      canDelete: options.canMutate
     };
   }
 }

@@ -466,7 +466,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
       relatedEntityId: draft.id,
       filePurpose: "proposal-form",
       fileName: "Chá»‰ sá»‘ Glucose.docx",
-      originalFileName: "Chỉ số Glucose.docx",
+      originalFileName: "Chỉ số Glucose.docx",
       description: "  Bản chỉ số xét nghiệm  ",
       mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       sizeBytes: 256000,
@@ -483,7 +483,15 @@ describe("EP-02 proposal intake and submission behavior", () => {
     assert.equal(prisma.store.fileRecords.length, 1);
     assert.equal(prisma.store.fileRecords[0].originalFileName, "Chỉ số Glucose.docx");
     assert.equal(objectStorage.objects.size, 1);
-    assert.equal((await proposalService.listAttachments(piUser, draft.id)).length, 1);
+    const storedObjectKey = [...objectStorage.objects.keys()][0];
+    assert.match(storedObjectKey, new RegExp(`^research-proposals/${draft.id}/${attachment.id}/[a-f0-9-]+\\.docx$`));
+    assert.equal(storedObjectKey.includes("Glucose"), false);
+    assert.equal(storedObjectKey.includes("Chỉ"), false);
+    const proposalAttachments = await proposalService.listAttachments(piUser, draft.id);
+    assert.equal(proposalAttachments.length, 1);
+    assert.equal(proposalAttachments[0].description, "Bản chỉ số xét nghiệm");
+    assert.equal(proposalAttachments[0].canEdit, true);
+    assert.equal(proposalAttachments[0].canDelete, true);
 
     const metadata = await filesService.listFiles(piUser, {
       relatedEntityType: "research_proposal",
@@ -498,6 +506,10 @@ describe("EP-02 proposal intake and submission behavior", () => {
     assert.equal(download.fileName, "Chỉ số Glucose.docx");
     assert.deepEqual(download.content, Buffer.alloc(256000, "p"));
     assertNoRawStorageFields(download);
+
+    objectStorage.objects.delete(storedObjectKey);
+    await assert.rejects(() => filesService.downloadFile(piUser, attachment.id), NotFoundException);
+    objectStorage.objects.set(storedObjectKey, Buffer.alloc(256000, "p"));
 
     for (const fileName of ["Đơn đề nghị hoàn thiện.docx", "Báo cáo tổng hợp.pdf"]) {
       const mimeType = fileName.endsWith(".pdf") ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -635,6 +647,9 @@ describe("EP-02 proposal intake and submission behavior", () => {
     );
     await assert.rejects(() => filesService.listFiles(otherPiUser, { relatedEntityType: "research_proposal", relatedEntityId: draft.id }), ForbiddenException);
     await assert.rejects(() => filesService.downloadFile(otherPiUser, attachment.id), ForbiddenException);
+    const staffProposalAttachments = await proposalService.listAttachments(staffUser, draft.id);
+    assert.equal(staffProposalAttachments[0].canEdit, false);
+    assert.equal(staffProposalAttachments[0].canDelete, false);
     const staffMetadata = await filesService.listFiles(staffUser, { relatedEntityType: "research_proposal", relatedEntityId: draft.id });
     assert.equal(staffMetadata.length, 7);
     assert.equal(staffMetadata[0].canEdit, false);

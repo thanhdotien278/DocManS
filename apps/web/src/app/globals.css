@@ -903,7 +903,7 @@ summary:focus-visible {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr) auto;
   gap: 10px;
-  align-items: center;
+  align-items: start;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-muted);
@@ -918,6 +918,26 @@ summary:focus-visible {
   border-radius: var(--radius);
   background: var(--primary-soft);
   color: var(--primary);
+}
+
+.file-description {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.file-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.attachment-edit-row {
+  display: grid;
+  grid-column: 2 / -1;
+  gap: 10px;
 }
 
 .empty-state {
@@ -1261,7 +1281,7 @@ summary:focus-visible {
 }
 
 .upload-row {
-  grid-template-columns: minmax(180px, 0.8fr) minmax(220px, 1fr) auto;
+  grid-template-columns: minmax(170px, 0.7fr) minmax(200px, 0.9fr) minmax(220px, 1fr) auto;
   margin-bottom: 14px;
 }
 
@@ -1500,9 +1520,17 @@ summary:focus-visible {
     grid-template-columns: 34px minmax(0, 1fr);
   }
 
+  .file-actions,
+  .attachment-edit-row {
+    grid-column: 1 / -1;
+  }
+
+  .file-actions {
+    justify-content: flex-start;
+  }
+
   .file-item .button,
   .file-item .status-badge {
-    grid-column: 1 / -1;
     width: 100%;
   }
 }

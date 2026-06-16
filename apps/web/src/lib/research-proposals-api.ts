@@ -15,12 +15,15 @@ export type ProposalAttachment = {
   filePurpose: string;
   requirementCode: string;
   fileName: string;
+  description?: string | null;
   mimeType: string;
   sizeBytes: number;
   uploadedById: string;
   status: string;
   createdAt: string;
   updatedAt: string;
+  canEdit: boolean;
+  canDelete: boolean;
 };
 
 export type ProposalHistoryEvent = {
@@ -152,6 +155,7 @@ export async function uploadProposalAttachment(
   proposalId: string,
   input: {
     requirementCode: string;
+    description: string;
     file: File;
   }
 ) {
@@ -159,6 +163,8 @@ export async function uploadProposalAttachment(
   formData.set("relatedEntityType", "research_proposal");
   formData.set("relatedEntityId", proposalId);
   formData.set("filePurpose", input.requirementCode);
+  formData.set("originalFileName", input.file.name);
+  formData.set("description", input.description);
   formData.set("file", input.file);
 
   const response = await fetch(`${getApiBaseUrl()}/files`, {
@@ -173,6 +179,36 @@ export async function uploadProposalAttachment(
   }
 
   return { attachment: body.file };
+}
+
+export async function updateProposalAttachmentMetadata(attachmentId: string, input: { description: string | null }) {
+  const response = await fetch(`${getApiBaseUrl()}/files/${attachmentId}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input)
+  });
+
+  const body = (await response.json().catch(() => ({}))) as { message?: string; file?: ProposalAttachment };
+  if (!response.ok || !body.file) {
+    throw new Error(body.message ?? "Không thể cập nhật metadata tệp.");
+  }
+
+  return body;
+}
+
+export async function deleteProposalAttachment(attachmentId: string) {
+  const response = await fetch(`${getApiBaseUrl()}/files/${attachmentId}`, {
+    method: "DELETE",
+    credentials: "include"
+  });
+
+  const body = (await response.json().catch(() => ({}))) as { message?: string; file?: ProposalAttachment };
+  if (!response.ok || !body.file) {
+    throw new Error(body.message ?? "Không thể xóa metadata tệp.");
+  }
+
+  return body;
 }
 
 export function getProposalAttachmentDownloadUrl(attachmentId: string) {

@@ -74,6 +74,7 @@ type ProposalAttachmentRecord = {
   requirementCode?: string;
   originalFileName?: string;
   fileName?: string;
+  description?: string | null;
   mimeType: string;
   sizeBytes: number;
   uploadedById: string;
@@ -229,7 +230,7 @@ export class ResearchProposalsService {
   async listAttachments(actor: SafeUserContext, proposalId: string) {
     const proposal = await this.findProposal(proposalId);
     assertCanReadProposal(actor, proposal);
-    return this.findAttachments(proposalId);
+    return this.findAttachments(proposalId, { canMutate: this.canMutateProposalFiles(actor, proposal) });
   }
 
   async getReadiness(actor: SafeUserContext, proposalId: string) {
@@ -357,12 +358,12 @@ export class ResearchProposalsService {
     })) as ProposalMemberRecord[];
   }
 
-  private async findAttachments(proposalId: string) {
+  private async findAttachments(proposalId: string, options: { canMutate: boolean } = { canMutate: false }) {
     const records = (await this.prisma.fileRecord.findMany({
       where: { relatedEntityType: "research_proposal", relatedEntityId: proposalId, status: "active", deletedAt: null },
       orderBy: { createdAt: "asc" }
     })) as ProposalAttachmentRecord[];
-    return records.map((attachment) => this.toAttachmentResponse(attachment));
+    return records.map((attachment) => this.toAttachmentResponse(attachment, options));
   }
 
   private async getRequiredPackageForProposal(proposal: ResearchProposalRecord) {
@@ -372,7 +373,11 @@ export class ResearchProposalsService {
 
   private async computeReadiness(proposal: ResearchProposalRecord) {
     const requiredPackage = await this.getRequiredPackageForProposal(proposal);
-    const attachments = await this.findAttachments(proposal.id);
+    const attachments = (await this.findAttachments(proposal.id)).map((attachment) => ({
+      ...attachment,
+      canEdit: false,
+      canDelete: false
+    }));
     const members = await this.findMembers(proposal.id);
     const missingFields = this.getMissingFields(proposal, members);
     const missingFiles = requiredPackage
@@ -423,7 +428,7 @@ export class ResearchProposalsService {
 
   private async toProposalDetailResponse(proposal: ResearchProposalRecord, providedMembers?: ProposalMemberInput[], actor?: SafeUserContext) {
     const members = providedMembers ?? (await this.findMembers(proposal.id));
-    const attachments = await this.findAttachments(proposal.id);
+    const attachments = await this.findAttachments(proposal.id, { canMutate: this.canMutateProposalFiles(actor, proposal) });
     const history = await this.listHistoryForProposal(proposal.id);
     const requiredPackage = await this.getRequiredPackageForProposal(proposal);
 
@@ -434,6 +439,19 @@ export class ResearchProposalsService {
       history,
       requiredPackage
     };
+  }
+
+  private canMutateProposalFiles(actor: SafeUserContext | undefined, proposal: ResearchProposalRecord) {
+    if (!actor || proposal.status !== "draft" || !isPrincipalInvestigator(actor) || proposal.ownerId !== actor.id) {
+      return false;
+    }
+
+    try {
+      assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private toProposalResponse(proposal: ResearchProposalRecord, actor?: SafeUserContext) {
@@ -463,7 +481,7 @@ export class ResearchProposalsService {
     };
   }
 
-  private toAttachmentResponse(attachment: ProposalAttachmentRecord) {
+  private toAttachmentResponse(attachment: ProposalAttachmentRecord, options: { canMutate: boolean }) {
     return {
       id: attachment.id,
       proposalId: attachment.proposalId ?? attachment.relatedEntityId ?? "",
@@ -472,12 +490,15 @@ export class ResearchProposalsService {
       filePurpose: attachment.filePurpose ?? attachment.requirementCode ?? "",
       requirementCode: attachment.requirementCode ?? attachment.filePurpose ?? "",
       fileName: attachment.fileName ?? attachment.originalFileName ?? "",
+      description: attachment.description ?? null,
       mimeType: attachment.mimeType,
       sizeBytes: attachment.sizeBytes,
       uploadedById: attachment.uploadedById,
       status: attachment.status,
       createdAt: attachment.createdAt.toISOString(),
-      updatedAt: attachment.updatedAt.toISOString()
+      updatedAt: attachment.updatedAt.toISOString(),
+      canEdit: options.canMutate,
+      canDelete: options.canMutate
     };
   }
 

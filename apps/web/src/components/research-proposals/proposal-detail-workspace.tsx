@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Download, FileText, Save, Send, UploadCloud } from "lucide-react";
+import { CheckCircle2, Download, FileText, Pencil, Save, Send, Trash2, UploadCloud, X } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
+  deleteProposalAttachment,
   loadProposalReadiness,
   loadResearchProposal,
   getProposalAttachmentDownloadUrl,
   submitResearchProposal,
+  updateProposalAttachmentMetadata,
   updateResearchProposalDraft,
   uploadProposalAttachment,
   type ApiErrorWithReadiness,
@@ -66,7 +68,15 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadRequirementCode, setUploadRequirementCode] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadDescription, setUploadDescription] = useState("");
+  const [fileInputKey, setFileInputKey] = useState(0);
   const [uploadError, setUploadError] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [editingAttachmentId, setEditingAttachmentId] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [updatingAttachmentId, setUpdatingAttachmentId] = useState("");
+  const [deletingAttachmentId, setDeletingAttachmentId] = useState("");
+  const [attachmentError, setAttachmentError] = useState("");
 
   async function refresh() {
     setState("loading");
@@ -152,22 +162,76 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   async function handleUpload(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setUploadError("");
+    setAttachmentError("");
     setMessage("");
     if (!proposal || !uploadRequirementCode || !uploadFile) {
       setUploadError("Chọn loại tài liệu và tệp cần tải lên.");
       return;
     }
 
+    setIsUploading(true);
     try {
       await uploadProposalAttachment(proposal.id, {
         requirementCode: uploadRequirementCode,
+        description: uploadDescription,
         file: uploadFile
       });
       setUploadFile(null);
+      setUploadDescription("");
+      setFileInputKey((current) => current + 1);
       setMessage("Đã tải tệp và cập nhật readiness.");
       await refresh();
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "Không thể tải tệp.");
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  function startEditingAttachment(attachmentId: string, description: string | null | undefined) {
+    setAttachmentError("");
+    setEditingAttachmentId(attachmentId);
+    setEditDescription(description ?? "");
+  }
+
+  async function handleUpdateAttachmentDescription(event: React.FormEvent<HTMLFormElement>, attachmentId: string) {
+    event.preventDefault();
+    setAttachmentError("");
+    setMessage("");
+
+    setUpdatingAttachmentId(attachmentId);
+    try {
+      await updateProposalAttachmentMetadata(attachmentId, {
+        description: editDescription
+      });
+      setEditingAttachmentId("");
+      setEditDescription("");
+      setMessage("Đã cập nhật mô tả tệp.");
+      await refresh();
+    } catch (error) {
+      setAttachmentError(error instanceof Error ? error.message : "Không thể cập nhật mô tả tệp.");
+    } finally {
+      setUpdatingAttachmentId("");
+    }
+  }
+
+  async function handleDeleteAttachment(attachmentId: string, fileName: string) {
+    setAttachmentError("");
+    setMessage("");
+    const confirmed = window.confirm(`Xóa tệp "${fileName}" khỏi danh sách hồ sơ?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingAttachmentId(attachmentId);
+    try {
+      await deleteProposalAttachment(attachmentId);
+      setMessage("Đã xóa tệp khỏi danh sách hồ sơ.");
+      await refresh();
+    } catch (error) {
+      setAttachmentError(error instanceof Error ? error.message : "Không thể xóa tệp.");
+    } finally {
+      setDeletingAttachmentId("");
     }
   }
 
@@ -351,14 +415,31 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
             </label>
             <label className="field">
               <span>Chọn tệp</span>
-              <input disabled={!canEdit} type="file" accept={ST23A_FILE_ACCEPT} onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)} />
+              <input
+                key={fileInputKey}
+                disabled={!canEdit}
+                type="file"
+                accept={ST23A_FILE_ACCEPT}
+                onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)}
+              />
             </label>
-            <button className="button" type="submit" disabled={!canEdit}>
+            <label className="field">
+              <span>Mô tả tài liệu</span>
+              <input
+                disabled={!canEdit}
+                maxLength={500}
+                value={uploadDescription}
+                onChange={(event) => setUploadDescription(event.target.value)}
+                placeholder="Mô tả ngắn cho tệp"
+              />
+            </label>
+            <button className="button" type="submit" disabled={!canEdit || isUploading}>
               <UploadCloud size={16} aria-hidden="true" />
-              Tải tệp
+              {isUploading ? "Đang tải" : "Tải tệp"}
             </button>
           </form>
           {uploadError ? <p className="form-error">{uploadError}</p> : null}
+          {attachmentError ? <p className="form-error">{attachmentError}</p> : null}
 
           {proposal.attachments?.length ? (
             <div className="file-list">
@@ -369,15 +450,71 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                   </span>
                   <div>
                     <span className="record-title">{attachment.fileName}</span>
+                    <span className="file-description">{attachment.description || "Chưa có mô tả"}</span>
                     <span className="record-meta">
                       {attachment.requirementCode} · {attachment.mimeType} · {formatBytes(attachment.sizeBytes)} · người tải {attachment.uploadedById} ·{" "}
                       {formatDate(attachment.createdAt)}
                     </span>
                   </div>
-                  <a className="button icon-button" href={getProposalAttachmentDownloadUrl(attachment.id)} title="Tải xuống">
-                    <Download size={16} aria-hidden="true" />
-                  </a>
-                  <StatusBadge status={attachment.status === "active" ? "active" : "closed"} />
+                  <div className="file-actions">
+                    <a
+                      className="button icon-button"
+                      href={getProposalAttachmentDownloadUrl(attachment.id)}
+                      title="Tải xuống"
+                      aria-label={`Tải xuống ${attachment.fileName}`}
+                    >
+                      <Download size={16} aria-hidden="true" />
+                    </a>
+                    {attachment.canEdit ? (
+                      <button
+                        className="button icon-button"
+                        type="button"
+                        title="Sửa mô tả"
+                        aria-label={`Sửa mô tả ${attachment.fileName}`}
+                        onClick={() => startEditingAttachment(attachment.id, attachment.description)}
+                      >
+                        <Pencil size={16} aria-hidden="true" />
+                      </button>
+                    ) : null}
+                    {attachment.canDelete ? (
+                      <button
+                        className="button icon-button danger"
+                        type="button"
+                        title="Xóa tệp"
+                        aria-label={`Xóa tệp ${attachment.fileName}`}
+                        disabled={deletingAttachmentId === attachment.id}
+                        onClick={() => void handleDeleteAttachment(attachment.id, attachment.fileName)}
+                      >
+                        <Trash2 size={16} aria-hidden="true" />
+                      </button>
+                    ) : null}
+                    <StatusBadge status={attachment.status === "active" ? "active" : "closed"} />
+                  </div>
+                  {editingAttachmentId === attachment.id ? (
+                    <form className="attachment-edit-row" onSubmit={(event) => void handleUpdateAttachmentDescription(event, attachment.id)}>
+                      <label className="field">
+                        <span>Mô tả tài liệu</span>
+                        <textarea rows={3} maxLength={500} value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
+                      </label>
+                      <div className="button-row compact-actions">
+                        <button className="button primary" type="submit" disabled={updatingAttachmentId === attachment.id}>
+                          <Save size={16} aria-hidden="true" />
+                          {updatingAttachmentId === attachment.id ? "Đang lưu" : "Lưu mô tả"}
+                        </button>
+                        <button
+                          className="button"
+                          type="button"
+                          onClick={() => {
+                            setEditingAttachmentId("");
+                            setEditDescription("");
+                          }}
+                        >
+                          <X size={16} aria-hidden="true" />
+                          Hủy
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
                 </article>
               ))}
             </div>

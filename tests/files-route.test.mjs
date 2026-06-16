@@ -1,6 +1,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import filesControllerModule from "../dist/apps/api/modules/files/files.controller.js";
+
+const { buildContentDisposition } = filesControllerModule;
 
 describe("ST-2.3A files route registration source checks", () => {
   it("registers POST /api/v1/files through FilesModule without relying on a missing global prefix", () => {
@@ -28,11 +31,23 @@ describe("ST-2.3A files route registration source checks", () => {
     assert.match(apiClientSource, /`\$\{getApiBaseUrl\(\)\}\/files\/\$\{attachmentId\}\/download`/);
   });
 
+  it("download content disposition uses ASCII fallback and UTF-8 filename encoding", () => {
+    const header = buildContentDisposition("Chỉ số Glucose.docx");
+
+    assert.equal(header, "attachment; filename=\"Chi so Glucose.docx\"; filename*=UTF-8''Ch%E1%BB%89%20s%E1%BB%91%20Glucose.docx");
+    assert.doesNotThrow(() => {
+      for (const char of header) {
+        assert.equal(char.charCodeAt(0) <= 255, true);
+      }
+    });
+  });
+
   it("upload sends a Unicode-safe originalFileName field instead of trusting multipart filename decoding", () => {
     const controllerSource = readFileSync("apps/api/src/modules/files/files.controller.ts", "utf8");
     const apiClientSource = readFileSync("apps/web/src/lib/research-proposals-api.ts", "utf8");
 
     assert.match(apiClientSource, /formData\.set\("originalFileName", input\.file\.name\)/);
+    assert.match(apiClientSource, /formData\.set\("description", input\.description\)/);
     assert.match(controllerSource, /originalFileName: body\.originalFileName \?\? file\.originalname/);
   });
 
@@ -52,5 +67,17 @@ describe("ST-2.3A files route registration source checks", () => {
     assert.match(componentSource, /ST23A_ALLOWED_FILE_TYPES = "\.doc, \.docx, \.pdf, \.xls, \.xlsx"/);
     assert.match(componentSource, /accept=\{ST23A_FILE_ACCEPT\}/);
     assert.equal(/selectedRequirement\.allowedMimeTypes\.join/.test(componentSource), false);
+  });
+
+  it("proposal file list UI supports description metadata and edit/delete actions", () => {
+    const componentSource = readFileSync("apps/web/src/components/research-proposals/proposal-detail-workspace.tsx", "utf8");
+
+    assert.match(componentSource, /uploadDescription/);
+    assert.match(componentSource, /description: uploadDescription/);
+    assert.match(componentSource, /handleUpdateAttachmentDescription/);
+    assert.match(componentSource, /handleDeleteAttachment/);
+    assert.match(componentSource, /aria-label=\{`Sửa mô tả/);
+    assert.match(componentSource, /aria-label=\{`Xóa tệp/);
+    assert.match(componentSource, /attachment\.description/);
   });
 });
