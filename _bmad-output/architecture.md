@@ -11,13 +11,15 @@ stepsCompleted:
 inputDocuments:
   - "/Users/Super/DocManS/_bmad-output/prd.md"
   - "/Users/Super/DocManS/_bmad-output/project-context.md"
+  - "/Users/Super/DocManS/_bmad-output/epics-and-stories.md"
+  - "/Users/Super/DocManS/_bmad-output/detaiHVQY.md"
   - "/Users/Super/DocManS/docs/ux-design-guidelines.md"
 workflowType: "architecture"
 project_name: "DocManSystem"
 user_name: "ThanhDaika"
 date: "2026-04-27"
 created: "2026-04-27T22:51:34+0700"
-updated: "2026-04-27T23:48:41+0700"
+updated: "2026-06-16T00:00:00+0700"
 lastStep: 8
 status: "complete"
 completedAt: "2026-04-27"
@@ -32,7 +34,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 ### Requirements Overview
 
 **Functional Requirements:**
-RTMS requires a full internal workflow platform rather than isolated CRUD modules. Architecturally, the functional scope clusters into identity and organization management, shared catalogs and configuration, proposal intake and approval, approved-project tracking, task management, files/history/auditability, notifications/reminders/work queues, and dashboard/reporting. These requirements imply a modular backend with explicit domain boundaries and a frontend organized around workflow-heavy admin experiences.
+RTMS requires a full internal workflow platform rather than isolated CRUD modules. Architecturally, the functional scope clusters into identity and organization management, shared catalogs and configuration, proposal intake and approval, approved-project tracking, seminar and student research tracking, task management, related-document management, council and ethics management, researcher profile management, files/history/auditability, notifications/reminders/work queues, and dashboard/reporting. These requirements imply a modular backend with explicit domain boundaries and a frontend organized around workflow-heavy admin experiences.
 
 **Non-Functional Requirements:**
 Architecture must satisfy backend-enforced authorization, controlled workflow state transitions, auditability of critical actions, file traceability, responsive list/detail/form experiences, WCAG AA baseline accessibility, transactional integrity for key workflow actions, and maintainability of a modular monolith. Performance expectations are strongest on authenticated list views, dashboard widgets, search/filter flows, and common workflow actions.
@@ -42,7 +44,7 @@ The project is a high-complexity internal web platform because it combines multi
 
 - Primary domain: internal research administration web platform
 - Complexity level: high
-- Estimated architectural components: 12-18 major application modules plus shared platform capabilities
+- Estimated architectural components: 24-30 major application modules plus shared platform capabilities
 
 ### Technical Constraints & Dependencies
 
@@ -160,7 +162,7 @@ nx add @nx/nest
 - Use Redis for cache, queue, reminder jobs, and notification orchestration
 - Use MinIO as the file object store
 - Enforce role-based, data-scope, and state-based authorization in backend services
-- Model proposal and approved-project workflows as explicit state machines
+- Model proposal, approved-project, task, seminar/student research, related-document, council, and ethics workflows as explicit state machines
 - Use Docker Compose and Nginx for phase 1 deployment
 - Exclude microservices, Kubernetes, SSO, LDAP, OIDC, MFA, and Elasticsearch or OpenSearch from phase 1
 
@@ -225,8 +227,31 @@ nx add @nx/nest
 - **Reverse proxy:** Nginx for routing, TLS termination, static asset serving policy, and upstream forwarding
 - **Deployable units:** one frontend container, one backend container, one PostgreSQL service, one Redis service, one MinIO service, and one Nginx service
 - **Environment strategy:** environment-variable driven configuration with separate settings for local, test, staging, and production-like deployments
-- **Monitoring baseline:** structured app logs, error tracking, health checks, queue and job visibility, and storage/database service monitoring
+- **Monitoring baseline:** structured app logs, error tracking, health checks, queue/job visibility, backup job visibility, and storage/database service monitoring
 - **Scaling posture:** vertical-first and service-instance scaling within modular-monolith boundaries before any service decomposition
+
+### Backup And Recovery
+
+**Backup Ownership:**
+
+- PostgreSQL is the source of truth for business state and must have scheduled logical backups plus tested restore procedures.
+- MinIO stores business files and must have bucket/object backup or replication aligned with database backup windows.
+- Redis is disposable supporting infrastructure for queues/cache; it does not replace PostgreSQL or MinIO backups.
+- Application configuration and secrets must be recoverable from deployment-managed secret/config storage, not from source control.
+
+**Minimum Phase 1 Policy:**
+
+- PostgreSQL: nightly full logical backup for normal environments, with additional pre-deployment backup before risky migration windows.
+- MinIO: nightly object backup or replication for buckets that contain business files, preserving object metadata needed by the files module.
+- Prisma migrations: migration files are the recoverable schema history; every production-like restore must apply migrations and then validate application health checks.
+- Backup retention: keep at least 7 daily restore points for phase 1 unless institutional policy requires longer retention.
+- Restore testing: perform at least one restore rehearsal before pilot/UAT sign-off and repeat after major schema/storage changes.
+
+**Recovery Targets:**
+
+- Initial target RPO: 24 hours for phase 1 environments unless the academy defines a stricter operational policy.
+- Initial target RTO: one business day for phase 1 recovery from backup, excluding infrastructure replacement lead time.
+- Recovery verification must include database integrity checks, MinIO file access checks through the files module, login/auth checks, and smoke checks for proposal/project/task/dashboard workflows.
 
 ### Decision Impact Analysis
 
@@ -238,7 +263,8 @@ nx add @nx/nest
 4. Define Prisma schema foundations and migration workflow
 5. Implement audit-log, file, notification, and job infrastructure
 6. Implement proposal and approved-project domain modules with state machines
-7. Implement dashboards, reporting, and UX shells on top of stable domain APIs
+7. Implement seminar/student research, related-document, council/ethics, and researcher-profile modules
+8. Implement task workflows, dashboards, reporting, and UX shells on top of stable domain APIs
 
 **Cross-Component Dependencies:**
 
@@ -247,6 +273,8 @@ nx add @nx/nest
 - notifications and reminders depend on workflow events, deadlines, and Redis-backed jobs
 - file management depends on permission checks, domain ownership, and audit logging
 - audit logging depends on consistent application service boundaries across all modules
+- related documents depend on the files module for object storage and on domain modules for link validation
+- council and ethics workflows depend on researcher profiles, user accounts, related documents, files, notifications, and audit logs
 
 ## Implementation Patterns & Consistency Rules
 
@@ -399,9 +427,117 @@ nx add @nx/nest
 
 **Workflow Transition Pattern:**
 
-- Proposal, project, and task state transitions must be executed through named application actions
+- Proposal, approved-project, task, seminar/student research, related-document, council, and ethics-dossier state transitions must be executed through named application actions
 - Direct arbitrary state mutation is forbidden
 - Transition guards must be centralized and testable
+- Each workflow-owning module must expose transition functions that perform authorization, validation, persistence, audit logging, and notification hooks in one application flow where applicable
+
+## Workflow State Machine Diagrams
+
+These diagrams define the target architecture-level state boundaries. Story implementations may introduce only the subset required by the active story, but must not bypass these controlled transition shapes.
+
+### Proposal Intake And Approval State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> Draft
+    Draft --> Submitted: submit
+    Submitted --> SupplementRequested: requestSupplement
+    SupplementRequested --> Resubmitted: resubmit
+    Resubmitted --> UnderCompletenessReview: staffReview
+    Submitted --> UnderCompletenessReview: staffReview
+    UnderCompletenessReview --> UnderEvaluation: assignReviewers
+    UnderEvaluation --> EvaluationConsolidated: consolidateReviews
+    EvaluationConsolidated --> PendingApproval: submitForApproval
+    PendingApproval --> Approved: approve
+    PendingApproval --> Rejected: reject
+    Approved --> [*]
+    Rejected --> [*]
+```
+
+### Approved Project State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> Active: createFromApprovedProposal
+    Active --> ReportingDue: checkpointDue
+    ReportingDue --> ReportSubmitted: submitProgressReport
+    ReportSubmitted --> UnderProgressReview: staffReview
+    UnderProgressReview --> Active: acceptReportOrFollowUpResolved
+    Active --> ChangeRequested: requestAdjustmentOrExtension
+    ReportingDue --> ChangeRequested: requestAdjustmentOrExtension
+    ChangeRequested --> Active: approveOrRejectChange
+    Active --> AcceptancePending: submitForAcceptance
+    AcceptancePending --> Accepted: acceptProject
+    Accepted --> FinalReviewPending: submitFinalReview
+    FinalReviewPending --> Closed: finalReviewDecision
+    Closed --> [*]
+```
+
+### Seminar And Student Research State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> ApprovedRecord: createOrImportApprovedActivity
+    ApprovedRecord --> Planned: definePlan
+    Planned --> InProgress: startTracking
+    InProgress --> AdjustmentPending: requestOrRecordAdjustment
+    AdjustmentPending --> InProgress: resolveAdjustment
+    InProgress --> ProductSubmitted: submitProductsOrOutcomes
+    ProductSubmitted --> Completed: confirmOutcome
+    InProgress --> Cancelled: cancelActivity
+    Completed --> [*]
+    Cancelled --> [*]
+```
+
+### Related Document Lifecycle State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> DraftRegistered: registerMetadata
+    DraftRegistered --> Current: attachFileAndPublish
+    Current --> Superseded: replaceOrSupersede
+    Current --> Expired: markExpired
+    Superseded --> Archived: archive
+    Expired --> Archived: archive
+    Archived --> [*]
+```
+
+### Council And Ethics State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> DossierDraft
+    DossierDraft --> DossierSubmitted: submitEthicsDossier
+    DossierSubmitted --> SupplementRequested: requestSupplement
+    SupplementRequested --> Resubmitted: resubmit
+    Resubmitted --> CouncilAssigned: assignCouncil
+    DossierSubmitted --> CouncilAssigned: assignCouncil
+    CouncilAssigned --> UnderCouncilReview: openReview
+    UnderCouncilReview --> ReviewsCompleted: submitScoresAndComments
+    ReviewsCompleted --> Consolidated: consolidateOutcome
+    Consolidated --> PendingDecision: submitForApproval
+    PendingDecision --> Approved: approve
+    PendingDecision --> Rejected: reject
+    Approved --> [*]
+    Rejected --> [*]
+```
+
+### Task State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> Open
+    Open --> InProgress: startWork
+    InProgress --> Blocked: markBlocked
+    Blocked --> InProgress: unblock
+    InProgress --> Submitted: submitCompletionEvidence
+    Submitted --> Completed: acceptCompletion
+    Submitted --> InProgress: requestRevision
+    Open --> Cancelled: cancel
+    Completed --> [*]
+    Cancelled --> [*]
+```
 
 ### Enforcement Guidelines
 
@@ -468,6 +604,12 @@ docmansystem/
 │   │       │   ├── (dashboard)/
 │   │       │   ├── research-proposals/
 │   │       │   ├── approved-projects/
+│   │       │   ├── seminars/
+│   │       │   ├── student-research/
+│   │       │   ├── related-documents/
+│   │       │   ├── councils/
+│   │       │   ├── ethics-dossiers/
+│   │       │   ├── researcher-profiles/
 │   │       │   ├── tasks/
 │   │       │   ├── reports/
 │   │       │   ├── settings/
@@ -484,6 +626,13 @@ docmansystem/
 │   │       │   ├── progress-reports/
 │   │       │   ├── adjustment-requests/
 │   │       │   ├── acceptance/
+│   │       │   ├── seminars/
+│   │       │   ├── student-research/
+│   │       │   ├── related-documents/
+│   │       │   ├── councils/
+│   │       │   ├── ethics-dossiers/
+│   │       │   ├── council-evaluations/
+│   │       │   ├── researcher-profiles/
 │   │       │   ├── tasks/
 │   │       │   ├── notifications/
 │   │       │   ├── files/
@@ -551,6 +700,13 @@ docmansystem/
 │           │   ├── adjustment-requests/
 │           │   ├── acceptance/
 │           │   ├── final-review/
+│           │   ├── seminars/
+│           │   ├── student-research/
+│           │   ├── related-documents/
+│           │   ├── councils/
+│           │   ├── ethics-dossiers/
+│           │   ├── council-evaluations/
+│           │   ├── researcher-profiles/
 │           │   ├── tasks/
 │           │   ├── notifications/
 │           │   ├── files/
@@ -603,7 +759,7 @@ docmansystem/
 - `apps/web/src/features/*` owns feature-specific UI and orchestration
 - `apps/web/src/components/ui/*` owns reusable design primitives only
 - `apps/web/src/components/layout/*` owns shell and navigation structure
-- Dashboard widgets, proposal forms, task views, and timeline/history views live in feature modules, not generic shared buckets
+- Dashboard widgets, proposal forms, seminar/student research views, related-document views, council/ethics views, researcher-profile views, task views, and timeline/history views live in feature modules, not generic shared buckets
 
 **Service Boundaries:**
 
@@ -624,17 +780,76 @@ docmansystem/
 
 - Research proposal intake and approval → `research-proposals`, `proposal-intake-periods`, `proposal-evaluations`, `approvals`, `files`, `audit-logs`, `notifications`
 - Approved project tracking → `approved-projects`, `progress-milestones`, `progress-reports`, `adjustment-requests`, `acceptance`, `final-review`, `files`, `audit-logs`
+- Seminar and student research tracking → `seminars`, `student-research`, `related-documents`, `files`, `audit-logs`, `notifications`, `dashboard`
+- Related-document management → `related-documents`, `files`, `audit-logs`, plus link validation through target domain services
+- Council and ethics management → `councils`, `ethics-dossiers`, `council-evaluations`, `related-documents`, `researcher-profiles`, `files`, `audit-logs`, `notifications`
+- Researcher profile management → `researcher-profiles`, `users`, `organizations`, `catalogs`, `audit-logs`, plus participation links to operational modules
 - Task management → `tasks`, `notifications`, `audit-logs`, `dashboard`
-- Role-based dashboard and reporting → `dashboard`, `reports`, plus read-side queries from all operational modules
+- Role-based dashboard and reporting → `dashboard`, `reports`, plus read-side queries from all operational modules including seminars, student research, related documents, councils, ethics dossiers, and researcher profiles
 
 **Cross-Cutting Concerns:**
 
 - Authentication and sessions → `auth`, shared guards and strategies, frontend auth lib
+- Password change/reset → `auth`, `users`, audit logging, backend credential policy utilities
 - Role and scope permissions → `roles`, `organizations`, shared `permissions` package, backend authorization layer
 - File management → `files` module plus `infrastructure/minio`
 - Audit logging → `audit-logs` module plus common logging hooks
 - Reminder and notification jobs → `notifications` module plus `jobs/reminders` plus Redis queue and scheduler
 - Shared DTOs, enums, and contracts → `packages/contracts`, `packages/domain-types`, `packages/validation`
+
+### ER Diagram
+
+This ER diagram is intentionally architecture-level. It shows ownership and major relationships; detailed fields and constraints belong in Prisma migrations and story implementation notes.
+
+```mermaid
+erDiagram
+    ORGANIZATIONS ||--o{ USERS : scopes
+    USERS ||--o{ USER_ROLES : has
+    ROLES ||--o{ USER_ROLES : assigned
+    USERS ||--o| RESEARCHER_PROFILES : may_link
+    ORGANIZATIONS ||--o{ RESEARCHER_PROFILES : owns
+
+    PROPOSAL_INTAKE_PERIODS ||--o{ RESEARCH_PROPOSALS : accepts
+    RESEARCH_PROPOSALS ||--o{ PROPOSAL_MEMBERS : has
+    RESEARCHER_PROFILES ||--o{ PROPOSAL_MEMBERS : participates
+    RESEARCH_PROPOSALS ||--o{ PROPOSAL_SUPPLEMENT_REQUESTS : has
+    RESEARCH_PROPOSALS ||--o{ PROPOSAL_EVALUATION_ASSIGNMENTS : assigns
+    PROPOSAL_EVALUATION_ASSIGNMENTS ||--o{ PROPOSAL_EVALUATIONS : produces
+    RESEARCH_PROPOSALS ||--o{ PROPOSAL_APPROVAL_DECISIONS : receives
+    RESEARCH_PROPOSALS ||--o| APPROVED_PROJECTS : becomes
+
+    APPROVED_PROJECTS ||--o{ PROJECT_MEMBERS : has
+    RESEARCHER_PROFILES ||--o{ PROJECT_MEMBERS : participates
+    APPROVED_PROJECTS ||--o{ PROGRESS_MILESTONES : plans
+    PROGRESS_MILESTONES ||--o{ PROGRESS_REPORTS : receives
+    APPROVED_PROJECTS ||--o{ ADJUSTMENT_REQUESTS : changes
+    APPROVED_PROJECTS ||--o{ ACCEPTANCE_REVIEWS : closes
+    APPROVED_PROJECTS ||--o{ FINAL_REVIEW_DECISIONS : finalizes
+
+    SEMINARS ||--o{ SEMINAR_PARTICIPANTS : has
+    STUDENT_RESEARCH_ACTIVITIES ||--o{ STUDENT_RESEARCH_PARTICIPANTS : has
+    RESEARCHER_PROFILES ||--o{ SEMINAR_PARTICIPANTS : participates
+    RESEARCHER_PROFILES ||--o{ STUDENT_RESEARCH_PARTICIPANTS : supervises_or_participates
+
+    COUNCILS ||--o{ COUNCIL_MEMBERS : has
+    RESEARCHER_PROFILES ||--o{ COUNCIL_MEMBERS : serves
+    ETHICS_DOSSIERS ||--o{ COUNCIL_EVALUATION_ASSIGNMENTS : assigns
+    COUNCIL_EVALUATION_ASSIGNMENTS ||--o{ COUNCIL_EVALUATIONS : produces
+    ETHICS_DOSSIERS ||--o{ ETHICS_SUPPLEMENT_REQUESTS : has
+    ETHICS_DOSSIERS ||--o{ COUNCIL_DECISIONS : receives
+    COUNCILS ||--o{ ETHICS_DOSSIERS : reviews
+
+    RELATED_DOCUMENTS ||--o{ RELATED_DOCUMENT_LINKS : links
+    FILE_RECORDS ||--o{ RELATED_DOCUMENTS : stores_document_file
+    FILE_RECORDS ||--o{ RESEARCH_PROPOSALS : attaches_to
+    FILE_RECORDS ||--o{ APPROVED_PROJECTS : attaches_to
+    FILE_RECORDS ||--o{ ETHICS_DOSSIERS : attaches_to
+
+    TASKS ||--o{ TASK_ASSIGNMENTS : has
+    USERS ||--o{ TASK_ASSIGNMENTS : assigned
+    AUDIT_LOGS }o--|| USERS : actor
+    NOTIFICATIONS }o--|| USERS : recipient
+```
 
 ### Core Domain Entities
 
@@ -646,6 +861,7 @@ docmansystem/
 - Organization
 - UserRoleAssignment
 - UserOrganizationScope
+- ResearcherProfile
 
 **Proposal Lifecycle:**
 
@@ -669,6 +885,33 @@ docmansystem/
 - AcceptanceReview
 - FinalReviewDecision
 
+**Seminar And Student Research:**
+
+- Seminar
+- SeminarParticipant
+- StudentResearchActivity
+- StudentResearchParticipant
+- ActivityMilestone
+- ActivityAdjustment
+- ActivityProduct
+
+**Related Documents:**
+
+- RelatedDocument
+- RelatedDocumentLink
+- RelatedDocumentVersion
+- RelatedDocumentReplacement
+
+**Council And Ethics:**
+
+- Council
+- CouncilMember
+- EthicsDossier
+- EthicsSupplementRequest
+- CouncilEvaluationAssignment
+- CouncilEvaluation
+- CouncilDecision
+
 **Task & Support:**
 
 - Task
@@ -690,6 +933,14 @@ docmansystem/
 - `user_roles`
 - `organizations`
 - `user_organization_scopes`
+- `password_reset_tokens`
+
+**Researcher Profile Ownership:**
+
+- `researcher_profiles`
+- `researcher_profile_user_links`
+- `researcher_expertise_keywords`
+- `researcher_participation_links`
 
 **Proposal Domain Ownership:**
 
@@ -712,6 +963,34 @@ docmansystem/
 - `adjustment_requests`
 - `acceptance_reviews`
 - `final_review_decisions`
+
+**Seminar And Student Research Domain Ownership:**
+
+- `seminars`
+- `seminar_participants`
+- `student_research_activities`
+- `student_research_participants`
+- `activity_milestones`
+- `activity_adjustments`
+- `activity_products`
+
+**Related Document Domain Ownership:**
+
+- `related_documents`
+- `related_document_links`
+- `related_document_versions`
+- `related_document_replacements`
+
+**Council And Ethics Domain Ownership:**
+
+- `councils`
+- `council_members`
+- `ethics_dossiers`
+- `ethics_dossier_attachments`
+- `ethics_supplement_requests`
+- `council_evaluation_assignments`
+- `council_evaluations`
+- `council_decisions`
 
 **Operational Support Ownership:**
 
@@ -811,15 +1090,19 @@ The project structure supports the architectural decisions. Apps, packages, back
 ### Requirements Coverage Validation ✅
 
 **Feature Coverage:**
-All four core modules from the PRD are represented structurally and logically:
+The core modules from the PRD and `detaiHVQY.md` are represented structurally and logically:
 
 - research proposal intake and approval
 - approved project tracking
+- seminar and student research tracking
 - task management
 - role-based dashboard and reports
+- related-document management
+- council and ethics management
+- researcher profile management
 
 **Functional Requirements Coverage:**
-The architecture supports identity and governance, catalogs, workflows, files, notifications, reminders, dashboards, reporting, and auditability.
+The architecture supports identity and governance, catalogs, researcher profiles, workflows, files, related documents, council/ethics operations, notifications, reminders, dashboards, reporting, and auditability.
 
 **Non-Functional Requirements Coverage:**
 The architecture addresses performance-sensitive views, backend-first security, workflow integrity, accessibility constraints, modular maintainability, and deployment simplicity for phase 1.
@@ -849,8 +1132,6 @@ The architecture specifies enough conventions to reduce drift between agents in 
 
 **Important Gaps:**
 
-- backup and recovery policy should be stated explicitly at the architecture level
-- workflow state machines should be summarized in a dedicated section for proposal, approved project, and task flows
 - API conventions can be made sharper for filtering, pagination, and workflow-action endpoints
 
 **Nice-to-Have Gaps:**
@@ -911,8 +1192,6 @@ The architecture specifies enough conventions to reduce drift between agents in 
 
 **Areas for Future Enhancement:**
 
-- explicit backup and recovery subsection
-- dedicated workflow state-machine subsection
 - compact API contract conventions subsection
 
 ### Implementation Handoff

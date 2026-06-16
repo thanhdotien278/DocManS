@@ -8,13 +8,14 @@ inputDocuments:
   - "/Users/Super/DocManS/_bmad-output/prd.md"
   - "/Users/Super/DocManS/_bmad-output/architecture.md"
   - "/Users/Super/DocManS/_bmad-output/project-context.md"
+  - "/Users/Super/DocManS/_bmad-output/detaiHVQY.md"
   - "/Users/Super/DocManS/docs/ux-design-guidelines.md"
 project: "DocManSystem"
 aliases:
   - "RTMS"
 status: "complete"
 created: "2026-04-27T23:59:00+0700"
-updated: "2026-04-28T00:24:00+0700"
+updated: "2026-06-16T00:00:00+0700"
 outputFile: "/Users/Super/DocManS/_bmad-output/epics-and-stories.md"
 ---
 
@@ -25,6 +26,8 @@ outputFile: "/Users/Super/DocManS/_bmad-output/epics-and-stories.md"
 This document provides the complete epic and story breakdown for DocManSystem, decomposing the requirements from the PRD, Architecture, Project Context, and UX Design into implementable stories.
 
 This document contains the approved implementation epics and detailed, testable stories for phased delivery.
+
+This revision aligns the implementation backlog with the seven module work items in `_bmad-output/detaiHVQY.md` section 2.1 through 2.7. EP-01 and EP-02 are preserved as already implemented scope; additional uncovered work is added after the existing epics.
 
 ## Traceability ID Convention
 
@@ -51,9 +54,11 @@ FR3: System administrators can manage user accounts, including creation, activat
 
 FR4: System administrators can manage roles and permission mappings required for phase 1 operations.
 
+FR4a: Authenticated users can change their own password, and authorized administrators can initiate a controlled password reset flow for internal users.
+
 FR5: System administrators can manage organizational units and map users to organization scope for role-based data access.
 
-FR6: The system can enforce role-based, organization-scoped, and state-based authorization across proposals, projects, tasks, files, dashboards, and reports.
+FR6: The system can enforce role-based, organization-scoped, and state-based authorization across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports.
 
 FR7: System administrators can manage shared catalogs required by business workflows, including organizational units, research fields, proposal types, statuses, priorities, report types, product types, forms, checklists, and scoring criteria.
 
@@ -121,7 +126,7 @@ FR36: Authorized users can upload, replace, view, and download files attached to
 
 FR37: The system can preserve file metadata including uploader, timestamp, related record, and other traceability context required for business use.
 
-FR38: The system can present workflow history and business-record history for proposals, projects, tasks, and related decisions.
+FR38: The system can present workflow history and business-record history for proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, and related decisions.
 
 FR39: The system can create audit-log records for critical business actions defined by this PRD.
 
@@ -135,15 +140,55 @@ FR43: The system can generate reminders for approaching deadlines, overdue repor
 
 FR44: The system can present user-specific work queues showing items waiting for the current user’s attention.
 
-FR45: Leadership and scientific management staff can access role-based dashboards showing waiting approvals, delayed projects, overdue tasks, upcoming reports, and summary indicators within authorized scope.
+FR45: Leadership and scientific management staff can access role-based dashboards showing waiting approvals, delayed projects, overdue tasks, council or ethics queues, seminar or student research milestones, document status gaps, upcoming reports, and summary indicators within authorized scope.
 
-FR46: Users can search and filter proposals, projects, tasks, and reports by relevant business attributes such as code, title, unit, field, status, assignee, due date, and intake period.
+FR46: Users can search and filter proposals, projects, seminar records, student research records, council records, document records, tasks, and reports by relevant business attributes such as code, title, unit, field, status, assignee, due date, and intake period.
 
 FR47: The system can provide traceable detail views that connect dashboard indicators and list results to the underlying workflow records.
 
 FR48: Authorized users can export designated lists and reports to Excel or PDF according to business needs and permission rules.
 
-FR49: The system can produce role-scoped reporting views and summary outputs by unit, field, status, reporting period, and related administrative dimensions.
+FR49: The system can produce role-scoped reporting views and summary outputs by unit, field, status, reporting period, module type, and related administrative dimensions.
+
+FR50: Scientific management staff can create or import approved seminar and student research records with responsible unit, participants, schedule, scope, and source decision metadata.
+
+FR51: Scientific management staff can maintain plans, related documents, milestones, and administrative notes for approved seminars and student research activities.
+
+FR52: Authorized users can record adjustment requests, budget metadata, products, and outcomes for seminars and student research activities.
+
+FR53: The system can treat seminar and student research statuses as controlled states, expose role-scoped lists, and preserve history for important changes.
+
+FR54: Authorized users can register governing, legal, planning, proposal, project, seminar, council, and other related documents with document type, issuing authority, code, date, effective status, and metadata.
+
+FR55: Authorized users can link related documents to proposals, approved projects, seminars, student research activities, councils, ethics dossiers, tasks, and reports.
+
+FR56: The system can preserve version or replacement history for important related documents and distinguish current, expired, superseded, and archived document states.
+
+FR57: The system can provide role-scoped search, filtering, and retrieval of related documents without exposing file metadata or document content outside authorized scope.
+
+FR58: Scientific management staff can create and manage council plans with purpose, schedule, member roles, related legal documents, and linked business records.
+
+FR59: Principal investigators or authorized staff can create, complete, and submit ethics dossiers with required structured data and attachments.
+
+FR60: Scientific management staff can review ethics dossier completeness, request supplements, and track resubmissions.
+
+FR61: Council members or assigned reviewers can access assigned ethics dossiers or council records and submit scores, comments, and recommendations.
+
+FR62: Scientific management staff can monitor council review progress, consolidate evaluation outcomes, and route records for approval.
+
+FR63: Leadership or approval authority can approve, reject, or otherwise decide council or ethics records according to workflow rules.
+
+FR64: The system can treat council and ethics workflow statuses as controlled states with role-scoped dashboards, reports, history, notifications, and audit logs.
+
+FR65: Authorized users can create and maintain researcher profiles with identity, academic rank or degree, title, contact details, organization, research fields, expertise keywords, and active status.
+
+FR66: Authorized users can link researcher profiles to user accounts where applicable while still allowing profile records for researchers who do not yet have system login accounts.
+
+FR67: Authorized users can associate researcher profiles with proposals, approved projects, seminars, student research activities, councils, ethics dossiers, reviews, publications, products, and tasks where relevant.
+
+FR68: Users can search and filter researcher profiles by name, unit, field, expertise, status, participation history, and other authorized business attributes.
+
+FR69: The system can preserve researcher profile history and audit important profile changes according to role and data-scope permissions.
 
 ### NonFunctional Requirements
 
@@ -264,6 +309,7 @@ FR1: Epic 1 - Xác thực truy cập nội bộ
 FR2: Epic 1 - Quản lý phiên đăng nhập và đăng xuất
 FR3: Epic 1 - Quản lý tài khoản người dùng
 FR4: Epic 1 - Quản lý vai trò và quyền
+FR4a: Epic 1 - Đổi mật khẩu và reset mật khẩu có kiểm soát
 FR5: Epic 1 - Quản lý đơn vị và phạm vi dữ liệu
 FR6: Epic 1 - Nền tảng phân quyền role/scope/state
 FR7: Epic 1 - Danh mục dùng chung
@@ -311,12 +357,32 @@ FR46: Epic 7 - Tìm kiếm và lọc
 FR47: Epic 7 - Drill-down tới bản ghi nguồn
 FR48: Epic 7 - Xuất Excel/PDF
 FR49: Epic 7 - Reporting theo phạm vi được phép
+FR50: Epic 8 - Khởi tạo hội thảo và sinh viên nghiên cứu khoa học đã duyệt
+FR51: Epic 8 - Kế hoạch, văn bản và mốc theo dõi
+FR52: Epic 8 - Điều chỉnh, kinh phí, sản phẩm và kết quả
+FR53: Epic 8 - State machine và lịch sử theo dõi hội thảo/sinh viên NCKH
+FR54: Epic 9 - Sổ đăng ký văn bản liên quan
+FR55: Epic 9 - Liên kết văn bản với bản ghi nghiệp vụ
+FR56: Epic 9 - Phiên bản, thay thế và trạng thái hiệu lực văn bản
+FR57: Epic 9 - Tra cứu văn bản theo phạm vi quyền
+FR58: Epic 10 - Kế hoạch hội đồng và thành viên
+FR59: Epic 10 - Tạo và nộp hồ sơ y đức
+FR60: Epic 10 - Kiểm tra hồ sơ y đức và yêu cầu bổ sung
+FR61: Epic 10 - Chấm điểm, nhận xét, kiến nghị hội đồng
+FR62: Epic 10 - Tổng hợp đánh giá và trình phê duyệt
+FR63: Epic 10 - Quyết định hội đồng/y đức
+FR64: Epic 10 - State machine, dashboard, báo cáo, history, notification, audit
+FR65: Epic 11 - Hồ sơ thông tin nhà khoa học
+FR66: Epic 11 - Liên kết hồ sơ nhà khoa học với tài khoản người dùng
+FR67: Epic 11 - Liên kết nhà khoa học với bản ghi nghiệp vụ
+FR68: Epic 11 - Tra cứu và lọc hồ sơ nhà khoa học
+FR69: Epic 11 - History và audit hồ sơ nhà khoa học
 
 ## Epic List
 
 ### EP-01: Nền Tảng Truy Cập, Phân Quyền, Danh Mục Và Khung Ứng Dụng
 Thiết lập nền tảng vận hành nội bộ để người dùng có thể đăng nhập, được áp quyền đúng vai trò và phạm vi dữ liệu, quản trị được dữ liệu nền, và sử dụng khung giao diện quản trị nhất quán cho các nghiệp vụ phía sau.
-**FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8
+**FRs covered:** FR1, FR2, FR3, FR4, FR4a, FR5, FR6, FR7, FR8
 
 ### EP-02: Tiếp Nhận Và Nộp Hồ Sơ Đề Tài
 Cho phép chuyên viên mở đợt tiếp nhận và chủ nhiệm đề tài tạo, hoàn thiện, đính kèm, kiểm tra và nộp hồ sơ đề xuất trong một quy trình đầy đủ và có thể truy vết.
@@ -341,6 +407,22 @@ Hỗ trợ vận hành xuyên suốt bằng giao việc, cập nhật trạng th
 ### EP-07: Dashboard Điều Hành, Tìm Kiếm, Báo Cáo Và Xuất Dữ Liệu
 Cung cấp lớp điều hành và ra quyết định cho lãnh đạo và chuyên viên thông qua dashboard theo vai trò, tìm kiếm/lọc, báo cáo tổng hợp và export có kiểm soát.
 **FRs covered:** FR45, FR46, FR47, FR48, FR49
+
+### EP-08: Theo Dõi Hội Thảo Và Sinh Viên Nghiên Cứu Khoa Học
+Quản lý các hội thảo và hoạt động sinh viên nghiên cứu khoa học đã được duyệt, bao gồm kế hoạch, văn bản, điều chỉnh, kinh phí, sản phẩm, trạng thái và lịch sử xử lý.
+**FRs covered:** FR50, FR51, FR52, FR53
+
+### EP-09: Quản Lý Văn Bản Liên Quan
+Quản lý sổ văn bản điều hành, pháp lý và văn bản liên quan tới đề tài, hội thảo, hội đồng, nhiệm vụ và báo cáo với metadata, trạng thái hiệu lực, version/replacement history và liên kết nghiệp vụ.
+**FRs covered:** FR54, FR55, FR56, FR57
+
+### EP-10: Quản Lý Hội Đồng Và Hồ Sơ Y Đức
+Quản lý kế hoạch hội đồng, thành viên, hồ sơ y đức, chấm điểm, tổng hợp đánh giá và trình/phê duyệt theo quy trình có kiểm soát.
+**FRs covered:** FR58, FR59, FR60, FR61, FR62, FR63, FR64
+
+### EP-11: Quản Lý Thông Tin Nhà Khoa Học
+Quản lý hồ sơ nhà khoa học dùng chung cho đề tài, dự án, hội thảo, sinh viên nghiên cứu khoa học, hội đồng, hồ sơ y đức, sản phẩm và báo cáo.
+**FRs covered:** FR65, FR66, FR67, FR68, FR69
 
 ## EP-01: Nền Tảng Truy Cập, Phân Quyền, Danh Mục Và Khung Ứng Dụng
 
@@ -405,7 +487,7 @@ So that I can access only protected internal functions assigned to me.
 
 **Scope:** Mô hình user nền tảng, credential storage an toàn, login form, logout flow, session/token handling, protected route middleware, backend auth endpoints, basic user context in shell.
 
-**Out of Scope:** Chưa có quản trị tài khoản phức tạp, chưa có reset password nâng cao, chưa tích hợp SSO hoặc external identity.
+**Out of Scope:** Chưa có quản trị tài khoản phức tạp, chưa tích hợp SSO hoặc external identity.
 
 **Acceptance Criteria:**
 
@@ -532,6 +614,52 @@ So that downstream workflows can use controlled reference data and notification 
 **VER-ST-1.4-02:** Cập nhật ít nhất một system parameter hoặc notification template
 **VER-ST-1.4-03:** Kiểm tra permission primitives xử lý trường hợp context thiếu
 **VER-ST-1.4-04:** Kiểm tra audit log cho thay đổi catalog/config
+
+### ST-1.5: Đổi mật khẩu và reset mật khẩu có kiểm soát
+**Use Case IDs:** `UC-125-A` Change password, `UC-125-B` Admin-initiated password reset
+**Traceability:** FR4a, FR2, FR3, FR6, FR39; NFR5, NFR6, NFR7, NFR8
+
+As an authenticated internal user and system administrator,
+I want users to change their own password and administrators to initiate controlled password resets,
+So that account recovery and credential hygiene can be handled without bypassing security rules.
+
+**Business Value:** Bổ sung năng lực vận hành tài khoản tối thiểu cho hệ thống nội bộ, giảm phụ thuộc xử lý thủ công khi người dùng quên hoặc cần thay đổi mật khẩu.
+
+**Scope:** Change-password form for authenticated users; verify current password; password policy validation; admin-initiated reset action; one-time reset token or temporary reset flow; token expiration; forced password change after reset where applicable; audit trail.
+
+**Out of Scope:** Chưa triển khai self-service forgot-password public flow, SMS, MFA, SSO, LDAP/OIDC password sync, hoặc passwordless authentication.
+
+**Acceptance Criteria:**
+
+**AC-ST-1.5-01:** Given người dùng đã đăng nhập
+**When** họ nhập mật khẩu hiện tại đúng và mật khẩu mới hợp lệ
+**Then** mật khẩu được thay đổi
+**And** phiên hoặc credential state được xử lý theo policy bảo mật đã định
+
+**AC-ST-1.5-02:** Given người dùng nhập sai mật khẩu hiện tại hoặc mật khẩu mới không đạt policy
+**When** gửi yêu cầu đổi mật khẩu
+**Then** hệ thống từ chối thao tác
+**And** hiển thị lỗi an toàn, không tiết lộ thông tin nhạy cảm
+
+**AC-ST-1.5-03:** Given system administrator có quyền phù hợp
+**When** khởi tạo reset mật khẩu cho một user nội bộ
+**Then** hệ thống tạo reset flow có thời hạn
+**And** user phải đặt mật khẩu mới trước khi tiếp tục sử dụng bình thường nếu policy yêu cầu
+
+**Technical Notes:**
+**TN-ST-1.5-01:** Password reset phải fail closed, token phải có expiration và không lưu plaintext; không mở rộng sang external identity trong phase 1.
+
+**Authorization Requirements:**
+**AUTH-ST-1.5-01:** Người dùng chỉ được đổi mật khẩu của chính mình; chỉ system administrator được khởi tạo reset cho người khác.
+
+**Audit-Log Requirements:**
+**AUD-ST-1.5-01:** Ghi audit log cho change password, initiate password reset, complete password reset với actor, target user, timestamp, kết quả và context tối thiểu; không log mật khẩu hoặc token.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-1.5-01:** Đổi mật khẩu thành công
+**VER-ST-1.5-02:** Chặn đổi mật khẩu khi current password sai hoặc password mới không đạt policy
+**VER-ST-1.5-03:** Admin khởi tạo reset và user hoàn tất reset
+**VER-ST-1.5-04:** Kiểm tra token expiration/fail closed và audit log
 
 ## EP-02: Tiếp Nhận Và Nộp Hồ Sơ Đề Tài
 
@@ -1131,52 +1259,133 @@ So that unresolved issues and overdue execution are visible early.
 **VER-ST-4.4-03:** Kiểm tra indicator theo đúng deadline
 **VER-ST-4.4-04:** Kiểm tra audit log follow-up/review
 
-### ST-4.5: Điều chỉnh, gia hạn, nghiệm thu và final review
-**Use Case IDs:** `UC-450-A` Adjustment or extension request, `UC-450-B` Acceptance and final review decision
-**Traceability:** FR27, FR28, FR30, FR38, FR39; NFR10; UX-DR11, UX-DR13, UX-DR14
+### ST-4.5: Yêu cầu điều chỉnh hoặc gia hạn đề tài
+**Use Case IDs:** `UC-450-A` Adjustment request, `UC-450-B` Extension request
+**Traceability:** FR27, FR30, FR38, FR39; NFR10; UX-DR10, UX-DR11, UX-DR13
 
+As a principal investigator,
+I want to submit adjustment or extension requests for an approved project,
+So that necessary changes are captured before any authority decision is made.
 
-As a principal investigator and approval authority,
-I want to request and decide key project lifecycle changes,
-So that project execution can adapt and close through controlled workflows.
+**Business Value:** Tách phần tạo yêu cầu thay đổi khỏi phần quyết định, giúp story nhỏ hơn và dễ kiểm thử state transition đầu vào.
 
-**Business Value:** Hoàn thiện các trạng thái quan trọng cuối vòng đời đề tài thực hiện và tránh xử lý ngoại luồng.
+**Scope:** Adjustment request form; extension request form; reason, requested changes, requested dates where applicable, supporting attachments; request status; project timeline entry.
 
-**Scope:** Adjustment/extension request submission; review/decision actions; acceptance/final review actions; explicit state transitions for approved project lifecycle.
-
-**Out of Scope:** Chưa có báo cáo phân tích nâng cao sau nghiệm thu; chưa có digital signature.
+**Out of Scope:** Chưa phê duyệt/từ chối request; chưa xử lý nghiệm thu hoặc final review.
 
 **Acceptance Criteria:**
 
-**AC-ST-4.5-01:** Given approved project ở trạng thái phù hợp
-**When** PI gửi adjustment hoặc extension request
-**Then** request được lưu với lý do và context cần thiết
-**And** project chuyển vào trạng thái chờ xử lý phù hợp
+**AC-ST-4.5-01:** Given approved project ở trạng thái cho phép điều chỉnh hoặc gia hạn
+**When** PI gửi request hợp lệ với lý do và supporting context
+**Then** request được lưu với trạng thái chờ xử lý
+**And** project detail hiển thị request trong timeline/history
 
-**AC-ST-4.5-02:** Given request hoặc project ở bước cần quyết định
-**When** authority phê duyệt hoặc từ chối adjustment/extension/acceptance/final review
-**Then** trạng thái project chuyển hợp lệ theo state machine
-**And** quyết định được lưu với history đầy đủ
+**AC-ST-4.5-02:** Given project không ở trạng thái cho phép request
+**When** PI cố gửi adjustment hoặc extension request
+**Then** hệ thống từ chối thao tác
+**And** không thay đổi trạng thái project
 
-**AC-ST-4.5-03:** Given thao tác không hợp lệ theo current project state
+**Technical Notes:**
+**TN-ST-4.5-01:** Request là entity nghiệp vụ riêng; project status chỉ chuyển qua explicit domain operation.
+
+**Authorization Requirements:**
+**AUTH-ST-4.5-01:** PI hoặc người được ủy quyền mới tạo request cho project thuộc scope; staff/leadership chỉ xem ở story này.
+
+**Audit-Log Requirements:**
+**AUD-ST-4.5-01:** Ghi audit log cho create adjustment request và create extension request.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-4.5-01:** Tạo adjustment request hợp lệ
+**VER-ST-4.5-02:** Tạo extension request hợp lệ
+**VER-ST-4.5-03:** Chặn request ở state không hợp lệ
+**VER-ST-4.5-04:** Kiểm tra timeline/history và audit log
+
+### ST-4.6: Quyết định điều chỉnh hoặc gia hạn đề tài
+**Use Case ID:** `UC-460` Adjustment and extension decision
+**Traceability:** FR28, FR30, FR38, FR39; NFR10; UX-DR11, UX-DR13, UX-DR14
+
+As a leadership or authorized staff user,
+I want to approve or reject adjustment and extension requests,
+So that project changes are decided through controlled and traceable authority actions.
+
+**Business Value:** Đóng vòng xử lý request thay đổi bằng quyết định rõ actor, thời điểm, lý do và trạng thái đích.
+
+**Scope:** Review pending adjustment/extension request; approve/reject action; decision note; project state update; request decision history.
+
+**Out of Scope:** Chưa xử lý nghiệm thu/final review; chưa có chữ ký số.
+
+**Acceptance Criteria:**
+
+**AC-ST-4.6-01:** Given adjustment hoặc extension request đang chờ xử lý
+**When** authority approve hoặc reject với decision note nếu cần
+**Then** request chuyển sang trạng thái quyết định
+**And** project state hoặc kế hoạch liên quan được cập nhật theo rule hợp lệ
+
+**AC-ST-4.6-02:** Given request không ở trạng thái chờ quyết định
+**When** user cố approve/reject
+**Then** hệ thống chặn thao tác
+**And** không ghi đè decision đã có
+
+**Technical Notes:**
+**TN-ST-4.6-01:** Decision phải chạy trong transaction cùng audit log và state update để tránh partial persistence.
+
+**Authorization Requirements:**
+**AUTH-ST-4.6-01:** Chỉ authorized staff hoặc approval authority được quyết định theo scope/state; PI không được quyết định request của chính mình.
+
+**Audit-Log Requirements:**
+**AUD-ST-4.6-01:** Ghi audit log cho approve/reject adjustment request và approve/reject extension request.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-4.6-01:** Approve adjustment/extension request
+**VER-ST-4.6-02:** Reject adjustment/extension request
+**VER-ST-4.6-03:** Chặn quyết định lặp hoặc sai state
+**VER-ST-4.6-04:** Kiểm tra project state, history và audit log
+
+### ST-4.7: Nghiệm thu và final review đề tài
+**Use Case ID:** `UC-470` Acceptance and final review
+**Traceability:** FR28, FR30, FR38, FR39; NFR10; UX-DR11, UX-DR13, UX-DR14
+
+As a scientific management staff member and approval authority,
+I want to run acceptance and final-review actions for approved projects,
+So that completed projects can be formally closed with traceable outcomes.
+
+**Business Value:** Tách giai đoạn đóng vòng đời đề tài khỏi request điều chỉnh/gia hạn, giúp nghiệm thu và final review có checklist, trạng thái và audit riêng.
+
+**Scope:** Acceptance readiness check; acceptance action; final review outcome; decision notes; supporting files; final project state transition; closure timeline.
+
+**Out of Scope:** Chưa làm báo cáo phân tích sau nghiệm thu, chữ ký số, hoặc integration kế toán.
+
+**Acceptance Criteria:**
+
+**AC-ST-4.7-01:** Given project đủ điều kiện nghiệm thu
+**When** authorized staff hoặc authority thực hiện acceptance action
+**Then** project chuyển sang trạng thái nghiệm thu phù hợp
+**And** quyết định được ghi vào timeline/history
+
+**AC-ST-4.7-02:** Given project cần final review
+**When** authority ghi nhận final review outcome
+**Then** project chuyển sang trạng thái đóng hoặc trạng thái đích hợp lệ
+**And** supporting files/notes được liên kết với decision
+
+**AC-ST-4.7-03:** Given project chưa đủ điều kiện nghiệm thu hoặc final review
 **When** user cố thực hiện action
 **Then** hệ thống chặn thao tác
 **And** không cho phép cập nhật tùy ý trạng thái project
 
 **Technical Notes:**
-**TN-ST-4.5-01:** Đây là story state-heavy; nên chia code theo explicit domain operations, không cập nhật status tự do.
+**TN-ST-4.7-01:** Acceptance/final review là domain operations riêng; không gộp với adjustment request workflow.
 
 **Authorization Requirements:**
-**AUTH-ST-4.5-01:** PI tạo request; staff/leadership/authority quyết định tùy loại action; members khác không được thao tác ngoài scope.
+**AUTH-ST-4.7-01:** Chỉ authorized staff hoặc approval authority được thực hiện acceptance/final review theo scope/state.
 
 **Audit-Log Requirements:**
-**AUD-ST-4.5-01:** Ghi audit log cho create adjustment request, approve/reject request, acceptance actions, final review decisions.
+**AUD-ST-4.7-01:** Ghi audit log cho acceptance actions và final review decisions.
 
 **Test or Manual Verification Checklist:**
-**VER-ST-4.5-01:** Tạo adjustment/extension request
-**VER-ST-4.5-02:** Approve/reject request
-**VER-ST-4.5-03:** Thực hiện acceptance/final review hợp lệ
-**VER-ST-4.5-04:** Kiểm tra state transition và audit log
+**VER-ST-4.7-01:** Thực hiện acceptance hợp lệ
+**VER-ST-4.7-02:** Ghi final review outcome hợp lệ
+**VER-ST-4.7-03:** Chặn action khi project chưa đủ điều kiện
+**VER-ST-4.7-04:** Kiểm tra state transition, supporting files, history và audit log
 
 ## EP-05: Giao Việc, Tệp Tin, Lịch Sử Và Audit
 
@@ -1498,7 +1707,7 @@ Tạo lớp hiển thị và điều hành cho chuyên viên và lãnh đạo tr
 
 
 As a scientific management staff member or leadership user,
-I want to search and filter proposals, projects, tasks, and reports,
+I want to search and filter proposals, projects, seminars, student research records, council records, documents, tasks, and reports,
 So that I can quickly locate records that need action.
 
 **Business Value:** Tăng tốc thao tác vận hành hàng ngày và là đầu vào cho điều hành, rà soát, báo cáo.
@@ -1539,7 +1748,7 @@ So that I can quickly locate records that need action.
 
 
 As a leadership or scientific management user,
-I want a role-based dashboard showing waiting approvals, delayed projects, overdue tasks, and upcoming reports,
+I want a role-based dashboard showing waiting approvals, delayed projects, overdue tasks, council or ethics queues, seminar/student research milestones, document status gaps, and upcoming reports,
 So that I can move directly from signals to action.
 
 **Business Value:** Tạo giao diện điều hành thực sự, tập trung vào việc cần xử lý thay vì chỉ hiển thị số liệu trang trí.
@@ -1553,7 +1762,7 @@ So that I can move directly from signals to action.
 **AC-ST-7.2-01:** Given user thuộc role leadership hoặc staff
 **When** mở dashboard
 **Then** họ thấy các widget phù hợp vai trò và scope của mình
-**And** các widget ưu tiên waiting approvals, delayed projects, overdue tasks, upcoming reports
+**And** các widget ưu tiên waiting approvals, delayed projects, overdue tasks, council/ethics queues, seminar/student research milestones, document status gaps, upcoming reports
 
 **AC-ST-7.2-02:** Given user click vào một chỉ báo dashboard
 **When** hệ thống điều hướng
@@ -1590,7 +1799,7 @@ So that I can support executive reporting and operational review without manual 
 
 **Business Value:** Giảm mạnh thời gian làm báo cáo thủ công và chuẩn hóa đầu ra báo cáo của hệ thống.
 
-**Scope:** Reporting views by unit/field/status/reporting period, export jobs or direct exports where suitable, Excel/PDF generation, progress/queued feedback for heavier exports.
+**Scope:** Reporting views by unit/field/status/reporting period/module type, export jobs or direct exports where suitable, Excel/PDF generation, progress/queued feedback for heavier exports.
 
 **Out of Scope:** Chưa có analytics tự phục vụ phức tạp; chưa export mọi loại dữ liệu trong hệ thống.
 
@@ -1625,3 +1834,653 @@ So that I can support executive reporting and operational review without manual 
 **VER-ST-7.3-02:** Export Excel
 **VER-ST-7.3-03:** Export PDF
 **VER-ST-7.3-04:** Kiểm tra file export không chứa dữ liệu ngoài scope
+
+## EP-08: Theo Dõi Hội Thảo Và Sinh Viên Nghiên Cứu Khoa Học
+
+Bao phủ công việc 2.3 trong `detaiHVQY.md`: theo dõi hội thảo và sinh viên nghiên cứu khoa học sau khi đã được duyệt, bao gồm kế hoạch, văn bản, điều chỉnh, kinh phí và sản phẩm nghiên cứu.
+
+### ST-8.1: Khởi tạo và quản lý bản ghi hội thảo hoặc sinh viên NCKH đã duyệt
+**Use Case ID:** `UC-810` Approved seminar and student research record management
+**Traceability:** FR50, FR53, FR38, FR39; NFR7, NFR8; UX-DR7, UX-DR8
+
+As a scientific management staff member,
+I want to create or import approved seminar and student research records,
+So that approved activities can be tracked in the same operational system as proposals and projects.
+
+**Business Value:** Đưa nhóm nghiệp vụ hội thảo và sinh viên NCKH vào cùng hệ thống theo dõi, giảm bảng tính riêng và tăng khả năng tổng hợp báo cáo.
+
+**Scope:** Tạo/import bản ghi đã duyệt; loại hoạt động seminar/student research; đơn vị phụ trách; người phụ trách; người tham gia; thời gian; nguồn quyết định; trạng thái ban đầu; list/detail cơ bản.
+
+**Out of Scope:** Chưa xử lý hồ sơ đề xuất hội thảo trước duyệt; chưa làm dashboard tổng hợp riêng.
+
+**Acceptance Criteria:**
+
+**AC-ST-8.1-01:** Given chuyên viên có quyền phù hợp
+**When** tạo bản ghi hội thảo hoặc sinh viên NCKH đã duyệt với dữ liệu bắt buộc
+**Then** hệ thống lưu bản ghi với mã/loại hoạt động/trạng thái hợp lệ
+**And** bản ghi xuất hiện trong danh sách theo scope của người dùng
+
+**AC-ST-8.1-02:** Given user không thuộc scope của bản ghi
+**When** họ cố xem chi tiết hoặc tìm kiếm bản ghi đó
+**Then** hệ thống từ chối hoặc không trả về bản ghi
+**And** không lộ metadata ngoài quyền
+
+**Technical Notes:**
+**TN-ST-8.1-01:** Tách domain naming cho seminar và student research rõ ràng; có thể dùng shared activity patterns nhưng không tạo abstraction chung nếu chưa cần.
+
+**Authorization Requirements:**
+**AUTH-ST-8.1-01:** Staff tạo/sửa trong scope được giao; leadership xem theo scope; người tham gia chỉ xem bản ghi liên quan nếu được cấp quyền.
+
+**Audit-Log Requirements:**
+**AUD-ST-8.1-01:** Ghi audit log cho create/update/import important activity record.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-8.1-01:** Tạo bản ghi hội thảo đã duyệt
+**VER-ST-8.1-02:** Tạo bản ghi sinh viên NCKH đã duyệt
+**VER-ST-8.1-03:** Kiểm tra list/detail theo scope
+**VER-ST-8.1-04:** Kiểm tra audit log tạo/cập nhật
+
+### ST-8.2: Quản lý kế hoạch, văn bản, kinh phí, điều chỉnh và sản phẩm
+**Use Case ID:** `UC-820` Seminar and student research tracking details
+**Traceability:** FR51, FR52, FR36, FR37, FR38, FR39; UX-DR9, UX-DR13, UX-DR15
+
+As a scientific management staff member,
+I want to maintain plans, documents, adjustments, budget metadata, and products,
+So that seminar and student research execution remains traceable from approval to outcome.
+
+**Business Value:** Biến bản ghi đã duyệt thành hồ sơ theo dõi có kế hoạch, căn cứ văn bản, biến động và kết quả đầu ra rõ ràng.
+
+**Scope:** Kế hoạch/mốc thời gian; liên kết văn bản; upload supporting files; điều chỉnh/gia hạn nếu có; budget metadata; sản phẩm/kết quả; timeline/history.
+
+**Out of Scope:** Chưa thay thế module quản lý văn bản đầy đủ của EP-09; story này chỉ dùng liên kết/tệp cần cho bản ghi hoạt động.
+
+**Acceptance Criteria:**
+
+**AC-ST-8.2-01:** Given bản ghi hội thảo hoặc sinh viên NCKH đã tồn tại
+**When** staff thêm kế hoạch, mốc, văn bản liên quan, budget metadata và sản phẩm
+**Then** dữ liệu được lưu và hiển thị trong detail theo section rõ ràng
+**And** các file/văn bản có metadata truy vết
+
+**AC-ST-8.2-02:** Given hoạt động cần điều chỉnh
+**When** staff ghi nhận adjustment với lý do và nội dung thay đổi
+**Then** history thể hiện adjustment
+**And** trạng thái hoặc mốc theo dõi được cập nhật qua operation hợp lệ
+
+**Technical Notes:**
+**TN-ST-8.2-01:** Reuse files/history patterns từ EP-05; tránh trộn related-document registry của EP-09 với file attachment đơn lẻ.
+
+**Authorization Requirements:**
+**AUTH-ST-8.2-01:** Chỉ staff có scope được cập nhật; người xem khác chỉ thấy dữ liệu/file nếu có quyền với activity record.
+
+**Audit-Log Requirements:**
+**AUD-ST-8.2-01:** Ghi audit log cho cập nhật kế hoạch quan trọng, adjustment, product/outcome, upload important file.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-8.2-01:** Thêm kế hoạch và mốc theo dõi
+**VER-ST-8.2-02:** Gắn văn bản/tệp hỗ trợ
+**VER-ST-8.2-03:** Ghi nhận adjustment và sản phẩm
+**VER-ST-8.2-04:** Kiểm tra timeline, permission và audit log
+
+### ST-8.3: Theo dõi trạng thái và tổng hợp báo cáo cho hội thảo/sinh viên NCKH
+**Use Case ID:** `UC-830` Seminar and student research status tracking
+**Traceability:** FR53, FR45, FR46, FR47, FR49; NFR2, NFR7; UX-DR17, UX-DR19, UX-DR20
+
+As a scientific management staff member or leadership user,
+I want status lists and summary signals for seminars and student research,
+So that delayed, waiting, or completed activities are visible in operational reporting.
+
+**Business Value:** Bảo đảm công việc 2.3 có mặt trong báo cáo điều hành, không bị tách khỏi dashboard và reporting chung.
+
+**Scope:** Controlled statuses; list filters; delayed/upcoming/completed indicators; summary counts; drill-down into records; export/reporting inclusion.
+
+**Out of Scope:** Chưa làm analytics nâng cao hoặc biểu đồ chuyên sâu riêng cho hoạt động này.
+
+**Acceptance Criteria:**
+
+**AC-ST-8.3-01:** Given nhiều bản ghi hội thảo và sinh viên NCKH ở các trạng thái khác nhau
+**When** staff lọc theo trạng thái, đơn vị, thời gian hoặc loại hoạt động
+**Then** danh sách trả về đúng bản ghi trong phạm vi quyền
+**And** status được hiển thị bằng text kết hợp màu/icon
+
+**AC-ST-8.3-02:** Given dashboard/reporting lấy dữ liệu theo scope
+**When** user xem summary hoặc drill-down
+**Then** số liệu hội thảo/sinh viên NCKH khớp với list nguồn
+**And** không chứa dữ liệu ngoài scope
+
+**Technical Notes:**
+**TN-ST-8.3-01:** Dashboard/report integration nên dùng query services scope-aware giống EP-07; không tạo reporting path riêng thiếu permission.
+
+**Authorization Requirements:**
+**AUTH-ST-8.3-01:** List, dashboard, reporting và export đều phải dùng cùng data-scope enforcement.
+
+**Audit-Log Requirements:** None for status viewing/export unless export được coi là hành động quan trọng theo policy EP-07.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-8.3-01:** Lọc list theo trạng thái/đơn vị/loại
+**VER-ST-8.3-02:** Kiểm tra dashboard summary và drill-down
+**VER-ST-8.3-03:** Kiểm tra scope filtering
+**VER-ST-8.3-04:** Kiểm tra status không chỉ dựa vào màu
+
+## EP-09: Quản Lý Văn Bản Liên Quan
+
+Bao phủ công việc 2.6 trong `detaiHVQY.md`: quản lý kế hoạch, văn bản quản lý nhà nước, pháp lý và văn bản liên quan đến đề tài, hội nghị/hội thảo theo trạng thái cập nhật.
+
+### ST-9.1: Sổ đăng ký văn bản liên quan
+**Use Case ID:** `UC-910` Related document registry
+**Traceability:** FR54, FR56, FR57, FR36, FR37, FR39; NFR7; UX-DR8, UX-DR15
+
+As a scientific management staff member,
+I want to register related governing, legal, planning, and business documents,
+So that important documents are searchable, permission-controlled, and traceable.
+
+**Business Value:** Tạo nguồn quản lý văn bản chính thức thay vì rải rác file đính kèm ở từng hồ sơ.
+
+**Scope:** Create/update document registry records; metadata fields such as code, title, type, issuing authority, issue date, effective date, status; file attachment; list/search/filter.
+
+**Out of Scope:** Chưa triển khai ký số, OCR, hoặc document workflow engine.
+
+**Acceptance Criteria:**
+
+**AC-ST-9.1-01:** Given staff có quyền quản lý văn bản
+**When** đăng ký văn bản mới với metadata và file hợp lệ
+**Then** văn bản được lưu trong registry
+**And** có thể tìm/lọc theo loại, mã, cơ quan ban hành, trạng thái và thời gian
+
+**AC-ST-9.1-02:** Given user không có quyền với văn bản
+**When** họ tìm kiếm hoặc truy cập file
+**Then** hệ thống không trả về nội dung hoặc metadata nhạy cảm
+**And** file download bị chặn
+
+**Technical Notes:**
+**TN-ST-9.1-01:** Registry record khác với generic file attachment; file module lưu object/metadata, related-documents module sở hữu nghiệp vụ văn bản.
+
+**Authorization Requirements:**
+**AUTH-ST-9.1-01:** Registration/update chỉ cho authorized staff; search/view/download theo role/scope/document classification.
+
+**Audit-Log Requirements:**
+**AUD-ST-9.1-01:** Ghi audit log cho register/update/soft delete related document và upload/download important document file.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-9.1-01:** Đăng ký văn bản mới
+**VER-ST-9.1-02:** Tìm/lọc văn bản
+**VER-ST-9.1-03:** Chặn user không có quyền xem/download
+**VER-ST-9.1-04:** Kiểm tra audit log văn bản/file
+
+### ST-9.2: Liên kết văn bản với bản ghi nghiệp vụ
+**Use Case ID:** `UC-920` Link related documents to business records
+**Traceability:** FR55, FR38, FR39, FR47; NFR7; UX-DR13, UX-DR14
+
+As a scientific management staff member,
+I want to link registered documents to proposals, projects, seminars, councils, tasks, and reports,
+So that every business record can show the governing or supporting documents behind it.
+
+**Business Value:** Làm rõ căn cứ pháp lý/quản trị của từng hồ sơ và hỗ trợ truy xuất nhanh khi review hoặc báo cáo.
+
+**Scope:** Link/unlink documents to supported business records; document panels on detail screens; reverse references from document detail to linked records; history entries for important link changes.
+
+**Out of Scope:** Chưa tự động suy luận link từ nội dung file; chưa đồng bộ văn bản ngoài hệ thống.
+
+**Acceptance Criteria:**
+
+**AC-ST-9.2-01:** Given một văn bản đã đăng ký và một business record được hỗ trợ
+**When** staff liên kết văn bản với record
+**Then** detail của record hiển thị văn bản liên quan
+**And** detail của văn bản hiển thị record được liên kết theo quyền
+
+**AC-ST-9.2-02:** Given user có quyền xem record nhưng không có quyền xem văn bản nhạy cảm
+**When** mở detail record
+**Then** hệ thống che hoặc không hiển thị văn bản ngoài quyền
+**And** không làm lộ file metadata nhạy cảm
+
+**Technical Notes:**
+**TN-ST-9.2-01:** Link table cần giữ target type/id rõ ràng; nếu dùng polymorphic relation phải có service validation để tránh link tới target không tồn tại hoặc ngoài scope.
+
+**Authorization Requirements:**
+**AUTH-ST-9.2-01:** Link/unlink yêu cầu quyền với cả document và target record; view yêu cầu quyền với document.
+
+**Audit-Log Requirements:**
+**AUD-ST-9.2-01:** Ghi audit log cho link/unlink important related document.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-9.2-01:** Link văn bản với proposal/project
+**VER-ST-9.2-02:** Link văn bản với seminar/council/task
+**VER-ST-9.2-03:** Kiểm tra reverse references
+**VER-ST-9.2-04:** Kiểm tra permission và audit log link/unlink
+
+### ST-9.3: Version, replacement history và trạng thái hiệu lực văn bản
+**Use Case ID:** `UC-930` Related document version and effective-state tracking
+**Traceability:** FR56, FR57, FR38, FR39; UX-DR15, UX-DR16
+
+As a scientific management staff member,
+I want to replace or supersede documents while preserving history,
+So that users can identify the current applicable document without losing prior context.
+
+**Business Value:** Tránh nhầm lẫn văn bản hiện hành/cũ và giữ đủ lịch sử phục vụ truy vết.
+
+**Scope:** Replace/supersede document operation; effective/current/expired/superseded/archived statuses; version/replacement history display; current-document indicators in lists and linked record panels.
+
+**Out of Scope:** Chưa tự động tính hiệu lực pháp lý phức tạp; chưa có rule engine cho văn bản.
+
+**Acceptance Criteria:**
+
+**AC-ST-9.3-01:** Given một văn bản cần thay thế
+**When** staff tạo bản thay thế hoặc đánh dấu superseded
+**Then** hệ thống lưu quan hệ replacement
+**And** văn bản cũ và mới đều hiển thị đúng trạng thái hiệu lực
+
+**AC-ST-9.3-02:** Given user xem record có nhiều văn bản liên quan
+**When** có văn bản hiện hành và văn bản đã superseded
+**Then** UI phân biệt rõ current và superseded bằng text/icon
+**And** vẫn truy cập lịch sử nếu user có quyền
+
+**Technical Notes:**
+**TN-ST-9.3-01:** Status transitions của document lifecycle phải là explicit operations; không chỉ sửa text status tự do.
+
+**Authorization Requirements:**
+**AUTH-ST-9.3-01:** Chỉ authorized staff được replace/supersede/archive; view history theo scope.
+
+**Audit-Log Requirements:**
+**AUD-ST-9.3-01:** Ghi audit log cho replace/supersede/archive related document.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-9.3-01:** Replace văn bản
+**VER-ST-9.3-02:** Đánh dấu superseded/archived
+**VER-ST-9.3-03:** Kiểm tra current indicator và history
+**VER-ST-9.3-04:** Kiểm tra audit log lifecycle
+
+## EP-10: Quản Lý Hội Đồng Và Hồ Sơ Y Đức
+
+Bao phủ công việc 2.7 trong `detaiHVQY.md`: quản lý kế hoạch hội đồng, văn bản pháp lý, hồ sơ y đức, chấm điểm, tổng hợp đánh giá và trình phê duyệt.
+
+### ST-10.1: Quản lý kế hoạch hội đồng, thành viên và văn bản liên quan
+**Use Case ID:** `UC-1010` Council plan and member management
+**Traceability:** FR58, FR55, FR56, FR38, FR39; NFR7; UX-DR7, UX-DR13
+
+As a scientific management staff member,
+I want to create council plans with members, schedule, purpose, and legal documents,
+So that council work is organized and traceable before dossiers are evaluated.
+
+**Business Value:** Chuẩn hóa khâu lập hội đồng, thành viên và căn cứ văn bản cho các hoạt động đánh giá.
+
+**Scope:** Council plan record; council purpose/type; meeting schedule; member roles; linked legal/administrative documents; linked proposal/project/ethics records where applicable.
+
+**Out of Scope:** Chưa xử lý chấm điểm chi tiết hoặc quyết định cuối trong story này.
+
+**Acceptance Criteria:**
+
+**AC-ST-10.1-01:** Given staff có quyền quản lý hội đồng
+**When** tạo kế hoạch hội đồng với thành viên, lịch và mục đích
+**Then** council plan được lưu với trạng thái hợp lệ
+**And** thành viên được hiển thị theo vai trò trong hội đồng
+
+**AC-ST-10.1-02:** Given council plan cần căn cứ văn bản
+**When** staff liên kết văn bản pháp lý/quản lý đã đăng ký
+**Then** council detail hiển thị văn bản liên quan theo quyền
+**And** history ghi nhận link quan trọng
+
+**Technical Notes:**
+**TN-ST-10.1-01:** Reuse related-document link từ EP-09; council membership phải rõ role trong hội đồng, không chỉ user assignment chung.
+
+**Authorization Requirements:**
+**AUTH-ST-10.1-01:** Staff tạo/sửa council plan trong scope; council members chỉ xem hội đồng được phân công.
+
+**Audit-Log Requirements:**
+**AUD-ST-10.1-01:** Ghi audit log cho create/update council plan, member assignment, link/unlink important legal documents.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-10.1-01:** Tạo council plan
+**VER-ST-10.1-02:** Gán thành viên và vai trò
+**VER-ST-10.1-03:** Liên kết văn bản pháp lý
+**VER-ST-10.1-04:** Kiểm tra permission và audit log
+
+### ST-10.2: Tạo, hoàn thiện và nộp hồ sơ y đức
+**Use Case ID:** `UC-1020` Ethics dossier creation and submission
+**Traceability:** FR59, FR36, FR37, FR39; NFR10; UX-DR9, UX-DR10, UX-DR15
+
+As a principal investigator or authorized staff member,
+I want to create and submit an ethics dossier with required data and attachments,
+So that ethics review can begin with a complete, traceable package.
+
+**Business Value:** Đưa hồ sơ y đức vào workflow kiểm soát thay vì xử lý rời rạc ngoài hệ thống.
+
+**Scope:** Ethics dossier draft; structured fields; required attachments; readiness validation; submit action; submission history/timeline.
+
+**Out of Scope:** Chưa chấm điểm hoặc quyết định hội đồng; chưa tích hợp chữ ký số.
+
+**Acceptance Criteria:**
+
+**AC-ST-10.2-01:** Given user có quyền tạo hồ sơ y đức
+**When** tạo nháp, nhập dữ liệu và upload tệp bắt buộc
+**Then** dossier được lưu với readiness status rõ ràng
+**And** file metadata hiển thị đầy đủ
+
+**AC-ST-10.2-02:** Given hồ sơ y đức đủ điều kiện
+**When** user xác nhận nộp
+**Then** dossier chuyển sang trạng thái submitted
+**And** timeline ghi actor, timestamp và trạng thái mới
+
+**AC-ST-10.2-03:** Given hồ sơ thiếu dữ liệu hoặc tệp bắt buộc
+**When** user cố nộp
+**Then** hệ thống chặn submit
+**And** chỉ ra điều kiện còn thiếu
+
+**Technical Notes:**
+**TN-ST-10.2-01:** Có thể reuse proposal draft/readiness patterns, nhưng domain terms phải là ethics dossier để tránh lẫn với proposal.
+
+**Authorization Requirements:**
+**AUTH-ST-10.2-01:** PI hoặc authorized staff tạo/nộp theo scope; người ngoài scope không xem/sửa dossier.
+
+**Audit-Log Requirements:**
+**AUD-ST-10.2-01:** Ghi audit log cho create/update/submit ethics dossier và upload important file.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-10.2-01:** Tạo hồ sơ y đức nháp
+**VER-ST-10.2-02:** Upload tệp bắt buộc
+**VER-ST-10.2-03:** Submit hồ sơ đủ điều kiện
+**VER-ST-10.2-04:** Chặn submit khi thiếu dữ liệu/file và kiểm tra audit log
+
+### ST-10.3: Kiểm tra hồ sơ y đức, yêu cầu bổ sung và phân công hội đồng
+**Use Case ID:** `UC-1030` Ethics completeness review and council assignment
+**Traceability:** FR60, FR58, FR61, FR38, FR39; NFR7, NFR8; UX-DR11, UX-DR13
+
+As a scientific management staff member,
+I want to check ethics dossier completeness, request supplements, and assign council reviewers,
+So that only complete dossiers move into formal evaluation.
+
+**Business Value:** Tạo luồng tiền kiểm hồ sơ y đức có lý do, hạn xử lý và phân công rõ ràng.
+
+**Scope:** Completeness review; request supplement with reason/due date; resubmission tracking; assign dossier to council/council members; assignment queue.
+
+**Out of Scope:** Chưa nhập score/comment chi tiết; chưa tổng hợp/approval.
+
+**Acceptance Criteria:**
+
+**AC-ST-10.3-01:** Given ethics dossier đã submitted
+**When** staff yêu cầu bổ sung với lý do và hạn
+**Then** dossier chuyển sang trạng thái chờ bổ sung
+**And** người nộp thấy yêu cầu và có thể nộp lại trong workflow hợp lệ
+
+**AC-ST-10.3-02:** Given dossier đã đủ điều kiện đánh giá
+**When** staff gán council hoặc council reviewers
+**Then** assignment được lưu
+**And** chỉ assignees được thấy hồ sơ trong queue của họ
+
+**Technical Notes:**
+**TN-ST-10.3-01:** Assignment-scope là rủi ro chính; không để council member thấy dossier ngoài phân công.
+
+**Authorization Requirements:**
+**AUTH-ST-10.3-01:** Staff trong scope được request supplement/assign; PI chỉ phản hồi dossier của mình; council members chỉ xem assigned dossiers.
+
+**Audit-Log Requirements:**
+**AUD-ST-10.3-01:** Ghi audit log cho request ethics supplement, resubmit ethics dossier, assign council reviewer.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-10.3-01:** Request supplement hồ sơ y đức
+**VER-ST-10.3-02:** Resubmit sau bổ sung
+**VER-ST-10.3-03:** Gán council reviewers
+**VER-ST-10.3-04:** Kiểm tra assignment permission và audit log
+
+### ST-10.4: Chấm điểm và gửi nhận xét hội đồng
+**Use Case ID:** `UC-1040` Council scoring and comments
+**Traceability:** FR61, FR64, FR38, FR39; NFR7, NFR8; UX-DR10, UX-DR13
+
+As a council member or assigned reviewer,
+I want to submit scores, comments, and recommendations for assigned ethics or council records,
+So that my evaluation is captured before staff consolidation.
+
+**Business Value:** Tách phần đánh giá cá nhân của hội đồng khỏi tổng hợp và quyết định, giúp kiểm soát quyền theo assignment rõ hơn.
+
+**Scope:** Score/comment/recommendation form; validation; save/submit review; assigned-reviewer queue; review completion status.
+
+**Out of Scope:** Chưa tổng hợp outcome; chưa phê duyệt/từ chối cuối cùng.
+
+**Acceptance Criteria:**
+
+**AC-ST-10.4-01:** Given council member được phân công
+**When** nhập score, comment và recommendation hợp lệ
+**Then** review được lưu với actor và timestamp
+**And** member không thể sửa review của người khác
+
+**AC-ST-10.4-02:** Given score hoặc comment bắt buộc còn thiếu
+**When** council member cố submit
+**Then** hệ thống chặn submit
+**And** hiển thị lỗi gần trường liên quan
+
+**Technical Notes:**
+**TN-ST-10.4-01:** Reuse scoring/review patterns từ EP-03 ở mức pattern, nhưng không ép chung entity nếu nghiệp vụ y đức có field/trạng thái riêng.
+
+**Authorization Requirements:**
+**AUTH-ST-10.4-01:** Council member chỉ review assigned record trong state cho phép; staff chỉ đọc để theo dõi/tổng hợp.
+
+**Audit-Log Requirements:**
+**AUD-ST-10.4-01:** Ghi audit log cho submit council score/comment.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-10.4-01:** Council member submit score/comment hợp lệ
+**VER-ST-10.4-02:** Chặn submit khi thiếu dữ liệu bắt buộc
+**VER-ST-10.4-03:** Chặn member không được phân công
+**VER-ST-10.4-04:** Kiểm tra completion status, history và audit log
+
+### ST-10.5: Tổng hợp đánh giá hội đồng và trình phê duyệt
+**Use Case ID:** `UC-1050` Council evaluation consolidation
+**Traceability:** FR62, FR64, FR38, FR39; NFR10; UX-DR7, UX-DR13
+
+As a scientific management staff member,
+I want to monitor council review progress, consolidate outcomes, and submit records for approval,
+So that approval authorities receive a complete and traceable evaluation package.
+
+**Business Value:** Biến các đánh giá cá nhân thành kết quả tổng hợp có kiểm soát trước khi chuyển sang quyết định cuối.
+
+**Scope:** Review progress view; completion indicators; consolidated outcome; readiness validation; submit-for-approval action; timeline/history.
+
+**Out of Scope:** Chưa approve/reject cuối cùng; chưa hỗ trợ biên bản họp ký số.
+
+**Acceptance Criteria:**
+
+**AC-ST-10.5-01:** Given ethics/council record có nhiều assigned reviewers
+**When** staff mở progress view
+**Then** họ thấy reviewer nào đã hoàn thành/chưa hoàn thành
+**And** có thể drill down tới review details trong phạm vi quyền
+
+**AC-ST-10.5-02:** Given đủ dữ liệu đánh giá theo rule
+**When** staff nhập consolidated outcome và submit for approval
+**Then** record chuyển sang trạng thái chờ phê duyệt
+**And** approval package gồm scores, comments, files và history cần thiết
+
+**Technical Notes:**
+**TN-ST-10.5-01:** Consolidation phải là domain operation riêng và phải kiểm tra readiness trước khi chuyển trạng thái.
+
+**Authorization Requirements:**
+**AUTH-ST-10.5-01:** Chỉ staff trong scope được tổng hợp và trình phê duyệt; council members không được sửa consolidated outcome.
+
+**Audit-Log Requirements:**
+**AUD-ST-10.5-01:** Ghi audit log cho consolidate council outcome và submit for approval.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-10.5-01:** Xem review progress
+**VER-ST-10.5-02:** Tạo consolidated outcome
+**VER-ST-10.5-03:** Submit for approval khi đủ điều kiện
+**VER-ST-10.5-04:** Kiểm tra state transition, history và audit log
+
+### ST-10.6: Quyết định phê duyệt hoặc từ chối hồ sơ y đức/hội đồng
+**Use Case ID:** `UC-1060` Council or ethics approval decision
+**Traceability:** FR63, FR64, FR38, FR39; NFR10; UX-DR11, UX-DR13, UX-DR14
+
+As an approval authority,
+I want to approve or reject council and ethics records,
+So that final decisions are made through an auditable state transition.
+
+**Business Value:** Tách quyết định cuối khỏi đánh giá/tổng hợp, giúp authority review rõ package và giảm rủi ro bypass workflow.
+
+**Scope:** Approval decision view; approve/reject/other disposition where policy allows; decision note; final state transition; decision history; dashboard/report hooks.
+
+**Out of Scope:** Chưa có chữ ký số, public certificate issuance, hoặc workflow hội đồng tùy biến động.
+
+**Acceptance Criteria:**
+
+**AC-ST-10.6-01:** Given record ở trạng thái chờ phê duyệt
+**When** approval authority review package
+**Then** họ thấy scores, comments, consolidated outcome, files và history cần quyết định
+**And** dữ liệu vẫn respect scope/permission
+
+**AC-ST-10.6-02:** Given approval authority gửi approve hoặc reject
+**When** quyết định được lưu
+**Then** record chuyển sang trạng thái đích hợp lệ
+**And** decision được ghi vào history và audit log
+
+**AC-ST-10.6-03:** Given record chưa ở trạng thái cho phép quyết định
+**When** user cố approve/reject
+**Then** hệ thống chặn thao tác
+**And** không cho phép bypass workflow state
+
+**Technical Notes:**
+**TN-ST-10.6-01:** Decision phải transactionally update state, history và audit log; dashboard/report hooks đọc từ state nguồn, không tạo state trùng lặp.
+
+**Authorization Requirements:**
+**AUTH-ST-10.6-01:** Chỉ approval authority có authority/scope phù hợp được quyết định; staff/council member/PI không được gọi action này nếu không có quyền.
+
+**Audit-Log Requirements:**
+**AUD-ST-10.6-01:** Ghi audit log cho approve/reject council or ethics record.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-10.6-01:** Approval authority approve record hợp lệ
+**VER-ST-10.6-02:** Approval authority reject record hợp lệ
+**VER-ST-10.6-03:** Chặn decision khi record sai state hoặc sai quyền
+**VER-ST-10.6-04:** Kiểm tra dashboard/report hooks, history và audit log
+
+## EP-11: Quản Lý Thông Tin Nhà Khoa Học
+
+Bao phủ phần quản lý thông tin nhà khoa học được nêu trong mục tiêu đề tài: duy trì hồ sơ nhà khoa học dùng chung, liên kết với tài khoản người dùng và các bản ghi nghiệp vụ để phục vụ tra cứu, phân công, hội đồng, báo cáo và thống kê.
+
+### ST-11.1: Tạo và duy trì hồ sơ nhà khoa học
+**Use Case ID:** `UC-1110` Researcher profile management
+**Traceability:** FR65, FR69, FR38, FR39; NFR7, NFR8; UX-DR8, UX-DR9, UX-DR10
+
+As a scientific management staff member,
+I want to create and maintain researcher profiles,
+So that scientist information can be reused consistently across research workflows.
+
+**Business Value:** Giảm nhập lặp thông tin nhà khoa học và tạo nguồn dữ liệu chuẩn cho đề tài, hội đồng, hồ sơ y đức, báo cáo và thống kê.
+
+**Scope:** Researcher profile CRUD; identity fields; academic rank/degree/title; contact details; organization/unit; research fields; expertise keywords; active/inactive status; profile detail; audit/history for important changes.
+
+**Out of Scope:** Chưa đồng bộ dữ liệu cán bộ từ hệ thống nhân sự; chưa làm hồ sơ học thuật công khai.
+
+**Acceptance Criteria:**
+
+**AC-ST-11.1-01:** Given staff có quyền quản lý hồ sơ nhà khoa học
+**When** tạo hồ sơ với dữ liệu bắt buộc
+**Then** profile được lưu với trạng thái hợp lệ
+**And** có thể mở lại để cập nhật theo quyền
+
+**AC-ST-11.1-02:** Given profile đã tồn tại
+**When** staff cập nhật học hàm/học vị, đơn vị, lĩnh vực hoặc trạng thái
+**Then** thay đổi được lưu
+**And** history/audit ghi nhận thay đổi quan trọng
+
+**Technical Notes:**
+**TN-ST-11.1-01:** Researcher profile là business directory riêng, không đồng nhất bắt buộc với user account.
+
+**Authorization Requirements:**
+**AUTH-ST-11.1-01:** Chỉ authorized staff hoặc admin được tạo/sửa profile; view theo role/scope và classification nếu có.
+
+**Audit-Log Requirements:**
+**AUD-ST-11.1-01:** Ghi audit log cho create/update/activate/deactivate researcher profile và thay đổi field quan trọng.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-11.1-01:** Tạo researcher profile
+**VER-ST-11.1-02:** Cập nhật thông tin học hàm/học vị/đơn vị/lĩnh vực
+**VER-ST-11.1-03:** Chuyển active/inactive
+**VER-ST-11.1-04:** Kiểm tra permission, history và audit log
+
+### ST-11.2: Liên kết hồ sơ nhà khoa học với tài khoản người dùng
+**Use Case ID:** `UC-1120` Researcher profile and user account linkage
+**Traceability:** FR66, FR3, FR5, FR6, FR39; NFR7, NFR8
+
+As a system administrator or scientific management staff member,
+I want to link researcher profiles to user accounts where applicable,
+So that login identity and scientist profile data can stay related without forcing every researcher profile to be a user account.
+
+**Business Value:** Cho phép dùng chung hồ sơ nhà khoa học cho cả người có tài khoản và người chưa cần đăng nhập, tránh nhân đôi hoặc ép sai mô hình dữ liệu.
+
+**Scope:** Link/unlink researcher profile to internal user account; detect duplicate/conflicting links; show account-link status; preserve profile records without account links.
+
+**Out of Scope:** Chưa tự động provision account từ researcher profile; chưa tích hợp identity provider ngoài.
+
+**Acceptance Criteria:**
+
+**AC-ST-11.2-01:** Given researcher profile và user account hợp lệ
+**When** admin hoặc authorized staff liên kết hai bản ghi
+**Then** profile hiển thị linked account
+**And** user context có thể tham chiếu profile khi cần
+
+**AC-ST-11.2-02:** Given researcher profile chưa có tài khoản
+**When** staff xem hoặc dùng profile trong nghiệp vụ
+**Then** profile vẫn hoạt động như business record hợp lệ
+**And** hệ thống không yêu cầu tạo tài khoản đăng nhập
+
+**AC-ST-11.2-03:** Given profile đã linked tới account khác
+**When** user cố link trùng không hợp lệ
+**Then** hệ thống chặn thao tác
+**And** giữ nguyên linkage hiện có
+
+**Technical Notes:**
+**TN-ST-11.2-01:** Linkage cần enforce uniqueness theo rule đã chọn; không để user account fields trở thành nguồn duy nhất của researcher data.
+
+**Authorization Requirements:**
+**AUTH-ST-11.2-01:** Chỉ admin hoặc authorized staff được link/unlink; thao tác phải kiểm tra quyền với cả user account và profile.
+
+**Audit-Log Requirements:**
+**AUD-ST-11.2-01:** Ghi audit log cho link/unlink researcher profile and user account.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-11.2-01:** Link profile với user account
+**VER-ST-11.2-02:** Unlink profile
+**VER-ST-11.2-03:** Dùng profile không có user account
+**VER-ST-11.2-04:** Chặn duplicate link và kiểm tra audit log
+
+### ST-11.3: Liên kết nhà khoa học với bản ghi nghiệp vụ và tra cứu hồ sơ
+**Use Case ID:** `UC-1130` Researcher participation links and search
+**Traceability:** FR67, FR68, FR69, FR46, FR47; NFR1, NFR3, NFR7; UX-DR7, UX-DR8, UX-DR19
+
+As a scientific management staff member,
+I want to link researcher profiles to business records and search profiles by expertise or participation,
+So that staff can find suitable reviewers, council members, project participants, and reporting data quickly.
+
+**Business Value:** Biến hồ sơ nhà khoa học thành dữ liệu vận hành có thể tra cứu và tái sử dụng cho phân công, hội đồng, thống kê và báo cáo.
+
+**Scope:** Link researcher profiles to proposals, approved projects, seminars, student research activities, councils, ethics dossiers, reviews, products, publications, and tasks where supported; participation role metadata; researcher search/filter by name, unit, field, expertise, status, and participation history; profile detail participation timeline.
+
+**Out of Scope:** Chưa tự động gợi ý reviewer/council member bằng thuật toán; chưa làm scoring chuyên gia nâng cao.
+
+**Acceptance Criteria:**
+
+**AC-ST-11.3-01:** Given researcher profile và business record hợp lệ
+**When** staff liên kết profile với vai trò tham gia phù hợp
+**Then** business record hiển thị nhà khoa học liên quan
+**And** researcher profile hiển thị participation history
+
+**AC-ST-11.3-02:** Given staff cần tìm nhà khoa học
+**When** tìm kiếm/lọc theo tên, đơn vị, lĩnh vực, expertise, trạng thái hoặc participation history
+**Then** hệ thống trả về profile trong phạm vi quyền
+**And** không lộ profile ngoài scope
+
+**AC-ST-11.3-03:** Given user không có quyền với business record liên kết
+**When** xem participation history
+**Then** hệ thống ẩn hoặc giới hạn thông tin liên kết ngoài quyền
+**And** không lộ metadata nhạy cảm
+
+**Technical Notes:**
+**TN-ST-11.3-01:** Participation links cần giữ target type/id và role rõ ràng; service layer phải validate target tồn tại và scope trước khi link.
+
+**Authorization Requirements:**
+**AUTH-ST-11.3-01:** Link/unlink yêu cầu quyền với profile và target record; search/filter phải enforce backend scope filtering.
+
+**Audit-Log Requirements:**
+**AUD-ST-11.3-01:** Ghi audit log cho link/unlink researcher profile to important business records và thay đổi participation role quan trọng.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-11.3-01:** Link researcher với proposal/project/council
+**VER-ST-11.3-02:** Tìm/lọc researcher theo expertise và unit
+**VER-ST-11.3-03:** Kiểm tra participation timeline
+**VER-ST-11.3-04:** Kiểm tra scope filtering và audit log
