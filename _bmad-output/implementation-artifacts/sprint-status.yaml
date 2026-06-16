@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-03T13:46:11+0700
-last_updated: 2026-06-16T18:43:11+0700
+last_updated: 2026-06-17T04:48:51+0700
 project: DocManS
 project_key: NOKEY
 tracking_system: file-system
@@ -51,7 +51,7 @@ development_status:
   epic-2: in-progress
   2-1-tao-va-quan-ly-dot-tiep-nhan-de-tai: review
   2-2-tao-nhap-ho-so-de-xuat-va-nhap-thong-tin-co-cau-truc: review
-  2-3-dinh-kem-ho-so-de-xuat-va-kiem-tra-dieu-kien-truoc-khi-nop: review
+  2-3-dinh-kem-ho-so-de-xuat-va-kiem-tra-dieu-kien-truoc-khi-nop: done
   2-4-nop-ho-so-chinh-thuc-va-xem-lich-su-nop: review
   epic-2-retrospective: optional
   epic-3: backlog
