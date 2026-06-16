@@ -1,6 +1,15 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { BadRequestException, ForbiddenException } from "@nestjs/common";
+import {
+  createProposalIntakePeriodPipe,
+  updateProposalIntakePeriodPipe
+} from "../dist/apps/api/proposal-intake-periods/proposal-intake-periods.dto.js";
+import {
+  createProposalAttachmentPipe,
+  createResearchProposalDraftPipe,
+  updateResearchProposalDraftPipe
+} from "../dist/apps/api/research-proposals/research-proposals.dto.js";
 import { ProposalIntakePeriodsService } from "../dist/apps/api/proposal-intake-periods/proposal-intake-periods.service.js";
 import { ResearchProposalsService } from "../dist/apps/api/research-proposals/research-proposals.service.js";
 
@@ -244,6 +253,57 @@ async function createDraft({ prisma, intakeService, proposalService }) {
 }
 
 describe("EP-02 proposal intake and submission behavior", () => {
+  it("validates EP-02 request DTOs at the API boundary", () => {
+    assert.doesNotThrow(() =>
+      createProposalIntakePeriodPipe.transform({
+        code: "INTAKE-2026",
+        title: "Đợt tiếp nhận 2026",
+        startsAt: futureDate(-1),
+        endsAt: futureDate(15),
+        requiredPackage: [{ code: "proposal-form", label: "Thuyết minh đề tài" }]
+      })
+    );
+    assert.throws(
+      () =>
+        createProposalIntakePeriodPipe.transform({
+          code: "INTAKE-2026",
+          title: "Đợt tiếp nhận 2026",
+          startsAt: futureDate(-1),
+          endsAt: futureDate(15),
+          requiredPackage: []
+        }),
+      BadRequestException
+    );
+    assert.doesNotThrow(() => updateProposalIntakePeriodPipe.transform({ description: "" }));
+
+    assert.doesNotThrow(() =>
+      createResearchProposalDraftPipe.transform({
+        intakePeriodId: "intake-1",
+        title: "Nghiên cứu ban đầu",
+        hostOrganizationUnitId: "org-khti",
+        budgetMetadata: { amount: "15000000" },
+        members: [{ name: "TS. Phạm Anh Tuấn", role: "Chủ nhiệm", organization: "Khoa Toán - Tin học" }]
+      })
+    );
+    assert.throws(
+      () =>
+        updateResearchProposalDraftPipe.transform({
+          members: [{ name: "Thiếu vai trò", organization: "Khoa Toán - Tin học" }]
+        }),
+      BadRequestException
+    );
+    assert.throws(
+      () =>
+        createProposalAttachmentPipe.transform({
+          requirementCode: "proposal-form",
+          fileName: "thuyet-minh.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 0
+        }),
+      BadRequestException
+    );
+  });
+
   it("staff can create, open, and close intake periods with audit rows while PIs only see open applicable periods", async () => {
     const prisma = createEp02Prisma();
     const auditLog = createAuditLog();
