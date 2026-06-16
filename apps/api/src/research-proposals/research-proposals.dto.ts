@@ -1,7 +1,6 @@
 import { BadRequestException, type PipeTransform } from "@nestjs/common";
 import {
   readBudgetMetadata,
-  readCode,
   readMembers,
   readOptionalCode,
   readOptionalDate,
@@ -42,28 +41,12 @@ export class UpdateResearchProposalDraftDto {
   members?: unknown[];
 }
 
-export class CreateProposalAttachmentDto {
-  [key: string]: unknown;
-
-  requirementCode!: string;
-  fileName!: string;
-  mimeType!: string;
-  sizeBytes!: number | string;
-}
-
 function assertRecord(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new BadRequestException({ message: PROPOSAL_VALIDATION_MESSAGE });
   }
 
   return value as Record<string, unknown>;
-}
-
-function readSizeBytes(value: unknown) {
-  const sizeBytes = typeof value === "number" ? value : Number(value);
-  if (!Number.isInteger(sizeBytes) || sizeBytes <= 0) {
-    throw new BadRequestException({ message: "Dung lượng tệp không hợp lệ." });
-  }
 }
 
 export const createResearchProposalDraftPipe: PipeTransform<unknown, CreateResearchProposalDraftDto> = {
@@ -120,17 +103,5 @@ export const updateResearchProposalDraftPipe: PipeTransform<unknown, UpdateResea
     }
 
     return input as UpdateResearchProposalDraftDto;
-  }
-};
-
-export const createProposalAttachmentPipe: PipeTransform<unknown, CreateProposalAttachmentDto> = {
-  transform(value: unknown) {
-    const input = assertRecord(value);
-    readCode(input.requirementCode, "requirementCode");
-    readText(input.fileName, "fileName", 240);
-    readText(input.mimeType, "mimeType", 120);
-    readSizeBytes(input.sizeBytes);
-
-    return input as unknown as CreateProposalAttachmentDto;
   }
 };

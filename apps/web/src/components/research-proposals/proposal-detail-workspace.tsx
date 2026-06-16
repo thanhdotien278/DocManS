@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, FileText, Save, Send, UploadCloud } from "lucide-react";
+import { CheckCircle2, Download, FileText, Save, Send, UploadCloud } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   loadProposalReadiness,
   loadResearchProposal,
+  getProposalAttachmentDownloadUrl,
   submitResearchProposal,
   updateResearchProposalDraft,
   uploadProposalAttachment,
@@ -19,6 +20,8 @@ import {
 } from "@/lib/research-proposals-api";
 
 type LoadState = "loading" | "ready" | "error";
+const ST23A_ALLOWED_FILE_TYPES = ".doc, .docx, .pdf, .xls, .xlsx";
+const ST23A_FILE_ACCEPT = ".doc,.docx,.pdf,.xls,.xlsx";
 
 function formatDate(value: string) {
   return value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "Chưa có";
@@ -158,9 +161,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
     try {
       await uploadProposalAttachment(proposal.id, {
         requirementCode: uploadRequirementCode,
-        fileName: uploadFile.name,
-        mimeType: uploadFile.type || "application/octet-stream",
-        sizeBytes: uploadFile.size
+        file: uploadFile
       });
       setUploadFile(null);
       setMessage("Đã tải tệp và cập nhật readiness.");
@@ -344,13 +345,13 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               </select>
               {selectedRequirement ? (
                 <span className="field-hint">
-                  {selectedRequirement.allowedMimeTypes.join(", ")} · tối đa {selectedRequirement.maxSizeMb}MB
+                  {ST23A_ALLOWED_FILE_TYPES} · tối đa {selectedRequirement.maxSizeMb}MB
                 </span>
               ) : null}
             </label>
             <label className="field">
               <span>Chọn tệp</span>
-              <input disabled={!canEdit} type="file" onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)} />
+              <input disabled={!canEdit} type="file" accept={ST23A_FILE_ACCEPT} onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)} />
             </label>
             <button className="button" type="submit" disabled={!canEdit}>
               <UploadCloud size={16} aria-hidden="true" />
@@ -369,9 +370,13 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                   <div>
                     <span className="record-title">{attachment.fileName}</span>
                     <span className="record-meta">
-                      {attachment.requirementCode} · {attachment.mimeType} · {formatBytes(attachment.sizeBytes)} · tải {formatDate(attachment.createdAt)}
+                      {attachment.requirementCode} · {attachment.mimeType} · {formatBytes(attachment.sizeBytes)} · người tải {attachment.uploadedById} ·{" "}
+                      {formatDate(attachment.createdAt)}
                     </span>
                   </div>
+                  <a className="button icon-button" href={getProposalAttachmentDownloadUrl(attachment.id)} title="Tải xuống">
+                    <Download size={16} aria-hidden="true" />
+                  </a>
                   <StatusBadge status={attachment.status === "active" ? "active" : "closed"} />
                 </article>
               ))}

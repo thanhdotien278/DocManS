@@ -216,6 +216,16 @@ Audit-log implementation rules:
 - File replacement flows should preserve enough history for auditability where the business workflow requires it.
 - Preview support is desirable for common file types when practical, but may not bypass permission checks.
 
+## File Module Pull-Forward Rule
+
+- Starting from ST-2.3A, all important business file upload, metadata view, download, replace, and delete flows must go through the shared `files` module.
+- Domain modules may define business meaning and permission policy for their records, but must not directly access MinIO.
+- MinIO object keys are internal implementation details and must not be used as authorization tokens or exposed as direct access paths.
+- PostgreSQL stores file metadata; MinIO stores file binary content.
+- File access must always enforce backend authorization based on actor, role, organization/data scope, related entity, and workflow state where applicable.
+- File actions must create audit logs when they are business-important.
+- New modules that need file attachments must integrate with the shared files module instead of adding separate upload implementations.
+
 # Notification And Reminder Rules
 
 - Notifications are part of phase 1 scope and should not be treated as optional polish.
