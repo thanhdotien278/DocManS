@@ -773,6 +773,8 @@ docmansystem/
 - Prisma schema is physically centralized but logically partitioned by domain comment blocks and ownership rules
 - Redis never becomes source-of-truth persistence
 - MinIO object storage is accessed only through the files module and supporting infrastructure adapters
+- Runtime business uploads are stored only in MinIO; PostgreSQL stores shared file metadata in `file_records`
+- Domain modules reference files by metadata records and related entity associations, never by direct MinIO object keys
 
 ### Requirements To Structure Mapping
 
@@ -792,7 +794,7 @@ docmansystem/
 - Authentication and sessions → `auth`, shared guards and strategies, frontend auth lib
 - Password change/reset → `auth`, `users`, audit logging, backend credential policy utilities
 - Role and scope permissions → `roles`, `organizations`, shared `permissions` package, backend authorization layer
-- File management → `files` module plus `infrastructure/minio`
+- File management → `files` module plus `infrastructure/minio`; `file_records` is the shared metadata table
 - Audit logging → `audit-logs` module plus common logging hooks
 - Reminder and notification jobs → `notifications` module plus `jobs/reminders` plus Redis queue and scheduler
 - Shared DTOs, enums, and contracts → `packages/contracts`, `packages/domain-types`, `packages/validation`

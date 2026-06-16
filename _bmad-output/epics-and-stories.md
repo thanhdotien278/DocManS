@@ -754,20 +754,84 @@ So that I can prepare a complete submission over multiple sessions.
 **VER-ST-2.2-03:** Kiểm tra validation inline
 **VER-ST-2.2-04:** Kiểm tra responsive form ở `390px`, `768px`, `1440px`
 
-### ST-2.3: Đính kèm hồ sơ đề xuất và kiểm tra điều kiện trước khi nộp
+### ST-2.3A: Nền tảng file module tối thiểu dùng chung cho hồ sơ đề xuất
+**Use Case IDs:** `UC-230-A` Proposal attachment foundation, `UC-530-A` Minimal shared file foundation
+**Traceability:** FR12, FR13, FR36, FR37, FR39; NFR7, NFR8; UX-DR15, UX-DR16
+
+
+As a principal investigator and future file-enabled domain module,
+I want proposal attachments to use a minimal shared files foundation,
+So that proposal upload/download works now without each later module reimplementing file storage.
+
+**Business Value:** Kéo phần nền tảng file module dùng chung vào EP-02 ở mức tối thiểu, để ST-2.3 có thể dùng cho proposal attachments và các epic sau có điểm mở rộng thống nhất.
+
+**Scope:** MinIO integration through `apps/api/src/infrastructure/minio`; backend `files` module under `apps/api/src/modules/files`; Prisma model/table `file_records` with migration; PostgreSQL metadata; MinIO-only binary storage; NestJS DTO validation and validation pipes; permission-checked upload, metadata view, and download; generic business association fields `relatedEntityType`, `relatedEntityId`, and `filePurpose` or `attachmentType`; initial `relatedEntityType = research_proposal`; frontend file UI pattern đủ dùng cho proposal attachments.
+
+**Out of Scope:** Không phải DMS đầy đủ và không phải toàn bộ ST-5.3; chưa làm advanced preview, full document management, full replacement workflow, virus scanning, OCR, search indexing, public share links, hoặc cross-module file UI standardization đầy đủ.
+
+**Acceptance Criteria:**
+
+**AC-ST-2.3A-01:** Given an authenticated PI with permission to edit a proposal draft
+**When** they upload a valid file type
+**Then** the file is stored in MinIO
+**And** a `file_records` metadata row is created in PostgreSQL
+
+**AC-ST-2.3A-02:** Given an invalid file type or oversized file
+**When** upload is attempted
+**Then** the backend rejects the upload with a clear validation error
+**And** stores nothing in PostgreSQL or MinIO
+
+**AC-ST-2.3A-03:** Given a file linked to a proposal
+**When** a user with permission requests metadata or download
+**Then** the files module returns the metadata or download stream through a permission-checked endpoint
+**And** does not expose a raw MinIO object key as the access path
+
+**AC-ST-2.3A-04:** Given a user without permission for the related proposal
+**When** they request metadata or download
+**Then** the backend rejects access
+**And** does not leak file metadata or object key
+
+**AC-ST-2.3A-05:** Given a successful upload or download of an important file
+**When** the operation completes
+**Then** an audit log entry is created with actor, action, timestamp, target file, related entity type, and related entity id
+
+**Technical Notes:**
+**TN-ST-2.3A-01:** Keep the `files` module generic, but only implement the proposal attachment use case now; `research-proposals` should call the files service or use files module APIs instead of duplicating upload/download logic.
+**TN-ST-2.3A-02:** The files module owns MinIO object access; other domain modules must never access MinIO directly.
+**TN-ST-2.3A-03:** Allowed extensions/MIME types for phase 1 initial implementation are `.doc`, `.docx`, `.pdf`, `.xls`, and `.xlsx`; max file size must be configurable through an environment variable.
+**TN-ST-2.3A-04:** Binary file content must be stored only in MinIO; no business file uploads may be stored in Git repo or local app folders.
+**TN-ST-2.3A-05:** Future intended `relatedEntityType` values include `approved_project`, `progress_report`, `task`, `seminar`, `student_research`, `related_document`, `council`, and `ethics_dossier`, but only `research_proposal` is implemented in this story.
+**TN-ST-2.3A-06:** Soft delete should be supported at metadata level if it fits current existing patterns; replacement/version history may be a minimal nullable schema hook or deferred to ST-5.3, but the schema must not make future replacement history difficult.
+**TN-ST-2.3A-07:** Use clear domain names, TypeScript strictness, NestJS DTO validation, validation pipes, and existing auth/current-user context from EP-01.
+
+**Authorization Requirements:**
+**AUTH-ST-2.3A-01:** Backend authorization is required on every upload, metadata view, and download, based on actor, role, organization/data scope, related entity, and workflow state where applicable.
+**AUTH-ST-2.3A-02:** Download endpoints must resolve access through the files module and related domain permission policy, never through raw MinIO object keys or client-trusted association data.
+
+**Audit-Log Requirements:**
+**AUD-ST-2.3A-01:** Ghi audit log cho upload/download important file với actor, action, timestamp, target file, related entity type, related entity id, và kết quả tối thiểu.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-2.3A-01:** Upload file hợp lệ cho `research_proposal` và kiểm tra MinIO object plus `file_records` metadata
+**VER-ST-2.3A-02:** Từ chối file sai extension/MIME hoặc vượt max size và xác nhận không lưu dữ liệu
+**VER-ST-2.3A-03:** Metadata/download hợp lệ qua endpoint permission-checked
+**VER-ST-2.3A-04:** Chặn metadata/download trái phép và không lộ object key
+**VER-ST-2.3A-05:** Kiểm tra audit log cho upload/download important file
+
+### ST-2.3: Quy trình đính kèm hồ sơ đề xuất và kiểm tra điều kiện trước khi nộp
 **Use Case IDs:** `UC-230-A` Proposal attachment management, `UC-230-B` Pre-submission validation
 **Traceability:** FR12, FR13, FR36, FR37, FR39; NFR7, NFR8; UX-DR15, UX-DR16
 
 
 As a principal investigator,
-I want to upload required attachments and see submission readiness,
+I want to attach required proposal files using the shared files foundation and see submission readiness,
 So that I can know whether my proposal can be submitted formally.
 
 **Business Value:** Giảm hồ sơ thiếu thành phần và tăng tỷ lệ nộp đúng ngay lần đầu.
 
-**Scope:** Upload file proposal attachments, file validation type/size, attachment metadata UI, required-file completeness checks, submission readiness panel.
+**Scope:** Proposal-specific attachment workflow built on ST-2.3A; required proposal attachments; proposal readiness panel; proposal attachment UI; display file name, type, size, uploader, and upload time; link uploaded files to proposal requirement items; block formal submission when required attachments are missing.
 
-**Out of Scope:** Chưa hỗ trợ replace/version history nâng cao ngoài mức cần cho proposal submission; chưa xử lý supplement cycle.
+**Out of Scope:** ST-2.3 không sở hữu low-level MinIO upload/download logic; không duplicate upload logic trong `research-proposals`; chưa hỗ trợ replace/version history nâng cao ngoài mức cần cho proposal submission; chưa xử lý supplement cycle.
 
 **Acceptance Criteria:**
 
@@ -787,7 +851,8 @@ So that I can know whether my proposal can be submitted formally.
 **And** chưa thể nộp chính thức khi điều kiện chưa đạt
 
 **Technical Notes:**
-**TN-ST-2.3-01:** Bắt đầu dùng files module theo chiều dọc proposal; enforcement permission cho upload/view file là bắt buộc.
+**TN-ST-2.3-01:** ST-2.3 dùng nền ST-2.3A; `research-proposals` gọi files service hoặc files module APIs cho upload/metadata/download.
+**TN-ST-2.3-02:** Proposal module sở hữu business requirement items và readiness rules; files module sở hữu object access, metadata persistence, validation, and permission-checked file endpoints.
 
 **Authorization Requirements:**
 **AUTH-ST-2.3-01:** Chỉ PI hoặc người được ủy quyền mới upload file vào draft của họ; backend luôn kiểm tra record association và quyền truy cập.
@@ -1480,20 +1545,20 @@ So that work progress is visible and verifiable.
 **VER-ST-5.2-03:** Upload evidence hoàn thành
 **VER-ST-5.2-04:** Kiểm tra history và audit log
 
-### ST-5.3: Dịch vụ file dùng chung với metadata, quyền truy cập và lịch sử thay thế
+### ST-5.3: Mở rộng dịch vụ file dùng chung với metadata, quyền truy cập và lịch sử thay thế
 **Use Case ID:** `UC-530` Shared file service access and replacement history
 **Traceability:** FR36, FR37, FR38, FR39; NFR7, NFR8; UX-DR15, UX-DR16
 
 
 As a authorized user,
-I want a consistent file-management capability across business records,
+I want the shared files foundation from ST-2.3A expanded across business records,
 So that important documents remain permission-controlled and traceable.
 
-**Business Value:** Tạo nền file management thống nhất cho proposal, project, report và task, giảm rủi ro lộ file hoặc mất truy vết.
+**Business Value:** Hoàn thiện file management dùng chung trên nền ST-2.3A, giảm rủi ro lộ file hoặc mất truy vết khi nhiều module bắt đầu dùng attachments.
 
-**Scope:** Shared files service/API/UI patterns for upload/view/download/replace, metadata display, permission enforcement, optional preview for common types, replacement/version history baseline.
+**Scope:** Later expansion of the shared files service built on ST-2.3A; replace file workflow; replacement/version history UI; cross-module file UI standardization; broader related entity support; optional preview for common types where practical; richer file history and audit lookup.
 
-**Out of Scope:** Chưa hỗ trợ mọi loại preview nâng cao; chưa làm DMS độc lập.
+**Out of Scope:** Không re-create nền tảng đã có ở ST-2.3A; chưa hỗ trợ mọi loại preview nâng cao; chưa làm DMS độc lập.
 
 **Acceptance Criteria:**
 
@@ -1513,7 +1578,8 @@ So that important documents remain permission-controlled and traceable.
 **And** vẫn truy vết được uploader và timestamp
 
 **Technical Notes:**
-**TN-ST-5.3-01:** Bao phủ FR36, FR37 và rules từ project context; phải qua files module.
+**TN-ST-5.3-01:** Bao phủ FR36, FR37 và rules từ project context; phải build on ST-2.3A và mở rộng files module hiện có thay vì tạo implementation riêng.
+**TN-ST-5.3-02:** Mở rộng related entity support cho approved projects, progress reports, tasks, seminars, student research, related documents, councils, and ethics dossiers theo permission policy của từng domain.
 
 **Authorization Requirements:**
 **AUTH-ST-5.3-01:** Permission check mọi lần upload/view/download/replace; record-level access bắt buộc.
