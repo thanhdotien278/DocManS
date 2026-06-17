@@ -18,6 +18,7 @@ inputDocuments:
   - "/Users/Super/DocManS/_bmad-output/planning-artifacts/product-brief-DocManSystem.md"
   - "/Users/Super/DocManS/docs/ux-design-guidelines.md"
   - "/Users/Super/DocManS/_bmad-output/project-context.md"
+  - "/Users/Super/DocManS/_bmad-output/detaiHVQY.md"
 workflowType: "prd"
 documentCounts:
   productBriefs: 1
@@ -26,7 +27,7 @@ documentCounts:
   projectDocs: 2
 outputFile: "/Users/Super/DocManS/_bmad-output/prd.md"
 created: "2026-04-27T22:31:49+0700"
-updated: "2026-04-27T22:58:29+0700"
+updated: "2026-06-16T00:00:00+0700"
 releaseMode: "single-release"
 classification:
   projectType: "web_app"
@@ -44,7 +45,7 @@ classification:
 
 DocManSystem, also referred to as RTMS, is a greenfield internal web application for the Military Medical Academy to manage the full lifecycle of university-level research topics and scientific project workflows. The product replaces fragmented handling through spreadsheets, email, disconnected files, and manual coordination with a single role-aware system that supports proposal intake, evaluation, approval, approved-project tracking, task execution, notifications, reminders, and executive reporting. The core business goal is not superficial digitization; it is to make workflow state, accountability, deadlines, and decision bottlenecks visible and controllable across the academy’s scientific management process.
 
-Phase 1 targets six major user roles: system administrator, scientific management staff, leadership or approval authority, principal investigator, project member, and reviewer or committee member. The product must preserve complex internal workflows rather than flatten them. It must support controlled state transitions, organization-scoped data access, role-based and state-based permissions, mandatory audit logging for critical actions, file traceability, and dashboard views filtered by the current user’s authority. The first release will focus on four core modules: research proposal intake and approval, approved project tracking, task management, and role-based dashboard and reporting.
+Phase 1 targets six major user roles: system administrator, scientific management staff, leadership or approval authority, principal investigator, project member, and reviewer or committee member. The product must preserve complex internal workflows rather than flatten them. It must support controlled state transitions, organization-scoped data access, role-based and state-based permissions, mandatory audit logging for critical actions, file traceability, and dashboard views filtered by the current user’s authority. The first release scope must cover the seven work items listed in `detaiHVQY.md` section 2.1 through 2.7: OMS proposal management, approved-project tracking, seminar and student research tracking, task management, executive dashboard, related-document management, and council/ethics management.
 
 This PRD assumes a modular-monolith phase 1 architecture and a strict implementation boundary: no microservices, no external identity integration in phase 1, no workflow engine, no deep financial subsystem, and no public submission portal. The expected operational outcome is a measurable reduction in incomplete proposal records, a strong increase in overdue visibility, faster reporting preparation, and a more auditable and disciplined research administration process.
 
@@ -69,14 +70,16 @@ The core insight is that the academy’s main pain is not lack of data entry too
 - Leadership can immediately see waiting approvals, overdue work, delayed projects, and unit-level summary metrics from role-scoped dashboard views.
 - Principal investigators can submit proposals, understand current status, respond to supplement requests, track approved project milestones, and submit periodic reports without needing manual email follow-up to know what happens next.
 - Reviewers and committee members can access only assigned proposals, submit scores and review comments, and complete evaluation work within a controlled and traceable workflow.
+- Scientific management staff can manage approved seminars, student research activities, related governing documents, council plans, and ethics dossiers without keeping parallel spreadsheets outside the system.
+- Scientific management staff can maintain researcher profiles and reuse them across proposals, projects, seminars, councils, reviews, and reports instead of repeatedly entering scientist information.
 - Users experience clear confirmation, error handling, and next-step guidance on important actions such as submit, approve, reject, request supplement, upload files, and update progress.
 
 ### Business Success
 
-- Reduce proposal returns caused by missing required documents or incorrect submission packages by at least 30 percent within the first 6 months after rollout.
+- Reduce proposal returns caused by missing required documents or incorrect submission packages, with the improvement target to be baselined during pilot/UAT because no reliable pre-system baseline is currently available.
 - Ensure 100 percent visibility of waiting approvals, overdue tasks, overdue reports, and delayed projects in role-appropriate dashboard views.
-- Reduce scientific management staff reporting preparation time for routine executive summaries by at least 50 percent.
-- Raise on-time completion rate for tracked tasks and scheduled reports to at least 90 percent for workflows covered by phase 1.
+- Improve scientific management staff reporting preparation time for routine executive summaries, with the target to be baselined during pilot/UAT.
+- Improve on-time completion for tracked tasks and scheduled reports, with the target to be baselined during pilot/UAT.
 - Ensure 100 percent of critical business actions defined in this PRD are traceable through audit logs and linked workflow history.
 
 ### Technical Success
@@ -89,7 +92,7 @@ The core insight is that the academy’s main pain is not lack of data entry too
 
 ### Measurable Outcomes
 
-- At least 90 percent of proposal submissions in phase 1 complete required validation without post-submission manual correction by staff.
+- Proposal submissions in phase 1 show measurable improvement in completeness after required validation, with the final target to be baselined during pilot/UAT.
 - At least 95 percent of reminders for overdue or upcoming due items are generated and delivered according to configured business rules during verification and early rollout.
 - All dashboard metrics must reflect current-user authorization scope with no unauthorized cross-unit leakage in QA verification.
 - All critical workflow actions listed in the audit-log section of this PRD must be verifiable in testing or controlled UAT scenarios.
@@ -100,8 +103,12 @@ The core insight is that the academy’s main pain is not lack of data entry too
 
 - Research proposal intake and approval workflow, including intake periods, draft proposals, submission, completeness checks, supplement requests, resubmission, reviewer assignment, scoring, review comments, summary, approval, and rejection.
 - Approved project tracking workflow, including project initiation from approved proposals, milestones, progress reporting, delay visibility, adjustment requests, extensions, acceptance, and final review handling.
+- Seminar and student research tracking workflow, including approved activity records, plans, related documents, adjustments, budget metadata, and research products.
 - Task management linked to business records or standalone administrative work, including assignment, due dates, priorities, reminders, progress tracking, and overdue alerts.
 - Role-based dashboard and reporting for scientific management staff and leadership, including waiting items, risk indicators, delayed work, and summary metrics by unit, field, status, and reporting cycle.
+- Related-document management for governing, legal, planning, proposal, project, seminar, and council documents with metadata, version context, effective status, and permission-checked access.
+- Council and ethics management, including council plans, member roles, ethics dossier submission, completeness review, scoring, consolidation, and approval routing.
+- Researcher profile management, including scientist identity, academic information, unit, expertise, account linkage, participation links, search, history, and auditability.
 - Role-based and scope-based authorization, audit logs, file management, in-app notifications, email notifications for important events, and export capabilities for core Excel/PDF reporting needs.
 
 ### Growth Features (Post-MVP)
@@ -159,6 +166,12 @@ In RTMS, he manages user accounts, role assignments, organizational mappings, sh
 
 This journey succeeds when administration is controlled, traceable, and separated from business authority, allowing support and investigation without weakening security or accountability.
 
+### Journey 6: Scientific Management Staff Tracks Seminars, Student Research, Documents, And Councils
+
+Mai is a scientific management staff member responsible for records that are adjacent to proposal and project management: approved seminars, student research activities, related legal or governing documents, council plans, and ethics dossiers. In the current process, these records may be tracked separately from proposals and projects, which weakens reporting and makes it difficult to know which plan, decision, document, or council action is current.
+
+In RTMS, she creates or imports approved seminar and student research records, maintains plans and related documents, records adjustments, tracks budget metadata and products, registers official documents with effective status, links documents to the relevant business records, prepares council plans, receives ethics dossiers, assigns council reviewers, consolidates scores, and routes decisions for approval. The journey succeeds when these adjacent research administration records are traceable, permission-controlled, and visible in the same operational reporting surface as proposals, projects, and tasks.
+
 ### Journey Requirements Summary
 
 These journeys require the system to support:
@@ -168,6 +181,7 @@ These journeys require the system to support:
 - scoped access to proposals, projects, reviews, tasks, files, and reports based on role, organization, assignment, and state
 - notifications and reminders for assignments, supplement requests, approvals, due dates, overdue items, and reporting milestones
 - auditable file upload, replacement, viewing, and download flows linked to business records
+- seminar, student research, related-document, council, and ethics-dossier records aligned with the same authorization, history, notification, and reporting rules
 - configuration and support capabilities for administrators without collapsing business authorization boundaries
 
 ## Domain-Specific Requirements
@@ -183,6 +197,7 @@ These journeys require the system to support:
 
 - Security and authorization are central domain constraints, not generic platform features. Role, organization scope, assignment scope, and workflow state must all influence access decisions.
 - The system must support dense administrative data, long-running workflows, and frequent file attachments without losing traceability.
+- The system must support official document registers, council records, ethics dossiers, seminar records, and student research records as first-class business objects rather than treating them as unstructured file attachments.
 - Notification and reminder logic must be derived from business deadlines and workflow state, not only from user-driven interactions.
 - Reporting and dashboard queries must remain trustworthy under authorization filtering; aggregate views must not reveal cross-scope information incorrectly.
 
@@ -257,7 +272,7 @@ RTMS is a browser-based internal administrative web application optimized for mu
 
 ### Strategy & Philosophy
 
-**Approach:** Single-release phase 1 scope with all four core business modules preserved. The scoping strategy is disciplined, not reduced: ship the full internal workflow needed for proposal intake and approval, approved-project tracking, task management, and role-based dashboard/reporting in one coherent release. Within that release, prioritize must-have operational capabilities over convenience enhancements.
+**Approach:** Single-release phase 1 scope with the seven functional work items from `detaiHVQY.md` section 2.1 through 2.7 preserved. The scoping strategy is disciplined, not reduced: ship the full internal workflow needed for proposal intake and approval, approved-project tracking, seminar and student research tracking, task management, executive dashboard/reporting, related-document management, and council/ethics management in one coherent release. Within that release, prioritize must-have operational capabilities over convenience enhancements.
 
 **Resource Requirements:** This scope assumes a delivery team capable of full-stack web implementation across frontend, backend, database, workflow logic, file handling, notifications, and QA. The team must be able to deliver secure authorization, auditability, and workflow correctness, not just CRUD screens.
 
@@ -266,6 +281,8 @@ RTMS is a browser-based internal administrative web application optimized for mu
 **Core User Journeys Supported:**
 
 - scientific management staff runs intake, review coordination, approval routing, project follow-up, and reporting
+- scientific management staff manages seminars, student research activities, related documents, council plans, and ethics dossiers
+- scientific management staff maintains researcher profiles and links scientists to business records
 - principal investigator submits and maintains proposals and approved-project progress records
 - reviewer or committee member evaluates assigned proposals and contributes to controlled review workflows
 - leadership monitors dashboard signals and acts on approvals, delays, risks, and reports
@@ -275,8 +292,12 @@ RTMS is a browser-based internal administrative web application optimized for mu
 
 - proposal intake periods, proposal draft/save/submit, completeness checks, supplement requests, resubmission, evaluation assignment, scoring, approval, rejection, and workflow history
 - approved-project records, milestones, progress reports, delay tracking, adjustment requests, extensions, acceptance, and final review
+- seminar and student research records, plans, documents, adjustments, budget metadata, products, and status tracking
 - task creation, assignment, prioritization, due dates, reminders, status updates, overdue indicators, and linkage to proposals or projects
 - role-based dashboards, filtered work queues, operational alerts, and reporting/export for key administrative and leadership use cases
+- related-document registry with document type, issuing authority, effective status, version context, and links to proposals, projects, seminars, councils, and tasks
+- council and ethics workflows covering council planning, member assignment, ethics dossier submission, completeness checks, scoring, consolidation, and approval routing
+- researcher profiles covering scientist identity, academic rank or degree, unit, expertise, account linkage, participation history, and searchable profile metadata
 - system administration for users, roles, units, catalogs, template-level configuration, and system parameters needed for phase 1
 - role-based, unit-scoped, assignment-scoped, and state-based authorization
 - audit logging for all critical business actions listed in this PRD
@@ -306,8 +327,9 @@ RTMS is a browser-based internal administrative web application optimized for mu
 - FR2: System administrators can assign one or more roles to a user.
 - FR3: System administrators can associate users with an organizational unit and other scope-defining organizational attributes.
 - FR4: The system can authenticate users and establish a role-aware session for authorized access.
+- FR4a: Authenticated users can change their own password, and authorized administrators can initiate a controlled password reset flow for internal users.
 - FR5: The system can enforce role-based access rules across all protected capabilities.
-- FR6: The system can enforce organization-scope or unit-scope access rules across proposals, projects, tasks, files, dashboards, and reports.
+- FR6: The system can enforce organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports.
 
 ### Shared Catalogs And Configuration
 
@@ -359,7 +381,7 @@ RTMS is a browser-based internal administrative web application optimized for mu
 
 - FR36: Authorized users can upload, replace, view, and download files attached to business records according to permission rules.
 - FR37: The system can preserve file metadata including uploader, timestamp, related record, and other traceability context required for business use.
-- FR38: The system can present workflow history and business-record history for proposals, projects, tasks, and related decisions.
+- FR38: The system can present workflow history and business-record history for proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, and related decisions.
 - FR39: The system can create audit-log records for critical business actions defined by this PRD.
 - FR40: Authorized administrators and authorized business users can inspect audit or history information appropriate to their responsibilities and permissions.
 
@@ -372,11 +394,43 @@ RTMS is a browser-based internal administrative web application optimized for mu
 
 ### Dashboard, Search, And Reporting
 
-- FR45: Leadership and scientific management staff can access role-based dashboards showing waiting approvals, delayed projects, overdue tasks, upcoming reports, and summary indicators within authorized scope.
-- FR46: Users can search and filter proposals, projects, tasks, and reports by relevant business attributes such as code, title, unit, field, status, assignee, due date, and intake period.
+- FR45: Leadership and scientific management staff can access role-based dashboards showing waiting approvals, delayed projects, overdue tasks, council or ethics queues, seminar or student research milestones, document status gaps, upcoming reports, and summary indicators within authorized scope.
+- FR46: Users can search and filter proposals, projects, seminar records, student research records, council records, document records, tasks, and reports by relevant business attributes such as code, title, unit, field, status, assignee, due date, and intake period.
 - FR47: The system can provide traceable detail views that connect dashboard indicators and list results to the underlying workflow records.
 - FR48: Authorized users can export designated lists and reports to Excel or PDF according to business needs and permission rules.
-- FR49: The system can produce role-scoped reporting views and summary outputs by unit, field, status, reporting period, and related administrative dimensions.
+- FR49: The system can produce role-scoped reporting views and summary outputs by unit, field, status, reporting period, module type, and related administrative dimensions.
+
+### Seminar And Student Research Tracking
+
+- FR50: Scientific management staff can create or import approved seminar and student research records with responsible unit, participants, schedule, scope, and source decision metadata.
+- FR51: Scientific management staff can maintain plans, related documents, milestones, and administrative notes for approved seminars and student research activities.
+- FR52: Authorized users can record adjustment requests, budget metadata, products, and outcomes for seminars and student research activities.
+- FR53: The system can treat seminar and student research statuses as controlled states, expose role-scoped lists, and preserve history for important changes.
+
+### Related Document Management
+
+- FR54: Authorized users can register governing, legal, planning, proposal, project, seminar, council, and other related documents with document type, issuing authority, code, date, effective status, and metadata.
+- FR55: Authorized users can link related documents to proposals, approved projects, seminars, student research activities, councils, ethics dossiers, tasks, and reports.
+- FR56: The system can preserve version or replacement history for important related documents and distinguish current, expired, superseded, and archived document states.
+- FR57: The system can provide role-scoped search, filtering, and retrieval of related documents without exposing file metadata or document content outside authorized scope.
+
+### Council And Ethics Management
+
+- FR58: Scientific management staff can create and manage council plans with purpose, schedule, member roles, related legal documents, and linked business records.
+- FR59: Principal investigators or authorized staff can create, complete, and submit ethics dossiers with required structured data and attachments.
+- FR60: Scientific management staff can review ethics dossier completeness, request supplements, and track resubmissions.
+- FR61: Council members or assigned reviewers can access assigned ethics dossiers or council records and submit scores, comments, and recommendations.
+- FR62: Scientific management staff can monitor council review progress, consolidate evaluation outcomes, and route records for approval.
+- FR63: Leadership or approval authority can approve, reject, or otherwise decide council or ethics records according to workflow rules.
+- FR64: The system can treat council and ethics workflow statuses as controlled states with role-scoped dashboards, reports, history, notifications, and audit logs.
+
+### Researcher Profile Management
+
+- FR65: Authorized users can create and maintain researcher profiles with identity, academic rank or degree, title, contact details, organization, research fields, expertise keywords, and active status.
+- FR66: Authorized users can link researcher profiles to user accounts where applicable while still allowing profile records for researchers who do not yet have system login accounts.
+- FR67: Authorized users can associate researcher profiles with proposals, approved projects, seminars, student research activities, councils, ethics dossiers, reviews, publications, products, and tasks where relevant.
+- FR68: Users can search and filter researcher profiles by name, unit, field, expertise, status, participation history, and other authorized business attributes.
+- FR69: The system can preserve researcher profile history and audit important profile changes according to role and data-scope permissions.
 
 ## User Personas
 
@@ -386,11 +440,11 @@ Maintains accounts, roles, organizational mappings, shared catalogs, configurati
 
 ### Scientific Management Staff
 
-Runs the end-to-end operational workflow for intake, review coordination, approvals, follow-up, reminders, and reporting. This is the most workflow-intensive persona in phase 1.
+Runs the end-to-end operational workflow for intake, review coordination, approvals, project follow-up, seminar and student research tracking, related documents, council operations, reminders, and reporting. This is the most workflow-intensive persona in phase 1.
 
 ### Leadership / Approval Authority
 
-Needs role-scoped visibility into approvals, overdue items, risky projects, and summary metrics, with the ability to review records and make formal decisions.
+Needs role-scoped visibility into approvals, overdue items, risky projects, council or ethics decisions, and summary metrics, with the ability to review records and make formal decisions.
 
 ### Principal Investigator
 
@@ -398,36 +452,36 @@ Creates proposals, responds to supplement requests, tracks project progress, sub
 
 ### Project Member
 
-Participates in approved-project work, receives assigned tasks, contributes evidence or files within granted scope, and monitors responsibilities related to the project.
+Participates in approved-project work, receives assigned tasks, contributes evidence or files within granted scope, and monitors responsibilities related to the project. May have a researcher profile linked to their system user when they are part of the scientific personnel directory.
 
 ### Reviewer / Committee Member
 
-Accesses assigned proposals or review records, submits scores and comments, and participates in controlled evaluation or acceptance workflows.
+Accesses assigned proposals, ethics dossiers, council records, or review records, submits scores and comments, and participates in controlled evaluation or acceptance workflows.
 
 ## Role-Based Access Requirements
 
 - Each protected capability must be explicitly mapped to one or more roles.
-- Business actions such as proposal submission, supplement request handling, review submission, approval decisions, project follow-up, and report export must be restricted by role.
+- Business actions such as proposal submission, supplement request handling, review submission, approval decisions, project follow-up, seminar/student research updates, document registration, ethics dossier submission, council decisions, and report export must be restricted by role.
 - Administrator permissions must remain distinct from business-decision permissions.
-- Reviewer and committee access must be limited to assigned items and required supporting context.
+- Reviewer, council member, and committee access must be limited to assigned items and required supporting context.
 - Leadership actions must be limited to authority-specific approval and visibility rules.
 
 ## Data-Scope Authorization Requirements
 
-- Access to proposals, projects, tasks, dashboards, reports, and files must be restricted by organizational scope where applicable.
+- Access to proposals, projects, seminars, student research activities, councils, ethics dossiers, researcher profiles, related documents, tasks, dashboards, reports, and files must be restricted by organizational scope where applicable.
 - Users must only see records for units, assignments, or approval scopes they are permitted to access.
 - Search results, dashboard counts, exports, notification targets, and history views must respect the same data-scope rules as detail pages.
 - Cross-unit visibility must be explicit and rule-driven, never implicit.
 
 ## Audit-Log Requirements
 
-- The system must create audit logs for login, logout, create, update, soft delete, submit proposal, request supplement, resubmit proposal, assign reviewer, submit score and comment, approve or reject, create task, assign task, update task status, upload important file, and download important file.
+- The system must create audit logs for login, logout, change password, initiate or complete password reset, create, update, soft delete, submit proposal, request supplement, resubmit proposal, assign reviewer, submit score and comment, approve or reject, create task, assign task, update task status, register or replace important related documents, create or update researcher profile, link researcher profile to user account or business record, submit ethics dossier, assign council reviewer, update council decision, upload important file, and download important file.
 - Audit-log entries must include actor, action, timestamp, target record, and sufficient business context to support investigation.
 - Audit logs must be retained in a form that supports operational review, dispute resolution, and timeline-style history where appropriate.
 
 ## File Attachment Requirements
 
-- File attachments must be associated with business records such as proposals, reports, decisions, tasks, and supporting evidence.
+- File attachments must be associated with business records such as proposals, reports, decisions, tasks, seminars, student research activities, related documents, councils, ethics dossiers, and supporting evidence.
 - Upload, replacement, view, preview, and download actions must enforce authorization checks.
 - Important file records must preserve metadata and traceability, including uploader, upload time, related record, and relevant version context.
 - File validation must enforce allowed type, size, and required association rules before acceptance.
@@ -436,14 +490,14 @@ Accesses assigned proposals or review records, submits scores and comments, and 
 
 - The system must support in-app notifications for workflow events that require awareness or action.
 - The system must support email notifications for important workflow events and reminders in phase 1.
-- Reminder workflows must cover supplement deadlines, review deadlines, approvals, project reporting deadlines, task due dates, and overdue items.
+- Reminder workflows must cover supplement deadlines, review deadlines, approvals, project reporting deadlines, seminar or student research milestones, council or ethics review deadlines, document effective dates where relevant, task due dates, and overdue items.
 - Notification delivery must respect role and data-scope authorization.
 
 ## Dashboard And Reporting Requirements
 
 - Dashboard content must be role-based and scope-filtered.
-- Leadership dashboards must prioritize pending approvals, delayed projects, overdue tasks, upcoming reports, unit-level summaries, and action-oriented queues.
-- Scientific management staff dashboards must prioritize operational backlogs, supplement queues, review progress, reporting deadlines, and unresolved issues.
+- Leadership dashboards must prioritize pending approvals, delayed projects, overdue tasks, council or ethics decisions, upcoming reports, unit-level summaries, and action-oriented queues.
+- Scientific management staff dashboards must prioritize operational backlogs, supplement queues, review progress, seminar/student research milestones, document status gaps, council/ethics queues, reporting deadlines, and unresolved issues.
 - Dashboard signals must link directly to filtered lists or detail views that explain the underlying records requiring action.
 - Report exports must preserve business filtering and permission rules and support the core Excel/PDF reporting needs defined for phase 1.
 
@@ -466,9 +520,9 @@ Accesses assigned proposals or review records, submits scores and comments, and 
 
 ### Core Workflow Acceptance
 
-- Proposal intake, supplement, review, approval, approved-project tracking, task management, notifications, and dashboard/reporting flows are all demonstrably available in phase 1 through test execution or controlled UAT scenarios.
-- Proposal and approved-project states are enforced as controlled workflows rather than free-form edits, verified by positive and negative workflow transition scenarios.
-- System administrator, scientific management staff, leadership, principal investigator, project member, and reviewer or committee member can each complete at least one primary role journey in verification scenarios without relying on external shadow tracking for the main workflow.
+- Proposal intake, supplement, review, approval, approved-project tracking, seminar/student research tracking, task management, related-document management, council/ethics management, notifications, and dashboard/reporting flows are all demonstrably available in phase 1 through test execution or controlled UAT scenarios.
+- Proposal, approved-project, seminar/student research, council/ethics, and task states are enforced as controlled workflows rather than free-form edits, verified by positive and negative workflow transition scenarios.
+- System administrator, scientific management staff, leadership, principal investigator, project member, reviewer, and council or committee member can each complete at least one primary role journey in verification scenarios without relying on external shadow tracking for the main workflow.
 
 ### Governance Acceptance
 
@@ -507,7 +561,7 @@ Accesses assigned proposals or review records, submits scores and comments, and 
 - Phase 1 is an internal authenticated system with no public self-service access.
 - The academy accepts a modular-monolith phase 1 approach with future extensibility rather than immediate distributed architecture.
 - Local authentication is acceptable in phase 1.
-- The three provided input documents represent the approved product direction for current PRD scope.
+- The provided planning documents plus `detaiHVQY.md` represent the approved product direction for current PRD scope.
 
 ## Non-Functional Requirements
 

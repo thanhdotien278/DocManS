@@ -1,8 +1,15 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { BadRequestException, ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
+import {
+  createProposalIntakePeriodPipe,
+  updateProposalIntakePeriodPipe
+} from "../dist/apps/api/proposal-intake-periods/proposal-intake-periods.dto.js";
+import { createResearchProposalDraftPipe, updateResearchProposalDraftPipe } from "../dist/apps/api/research-proposals/research-proposals.dto.js";
+import { uploadFilePipe } from "../dist/apps/api/modules/files/files.dto.js";
 import { ProposalIntakePeriodsService } from "../dist/apps/api/proposal-intake-periods/proposal-intake-periods.service.js";
 import { ResearchProposalsService } from "../dist/apps/api/research-proposals/research-proposals.service.js";
+import { FilesService } from "../dist/apps/api/modules/files/files.service.js";
 
 const adminUser = {
   id: "user-admin",
@@ -59,12 +66,32 @@ function createAuditLog() {
   };
 }
 
+function createObjectStorage() {
+  return {
+    objects: new Map(),
+    async putObject({ objectKey, content }) {
+      this.objects.set(objectKey, Buffer.from(content));
+    },
+    async getObject(objectKey) {
+      const content = this.objects.get(objectKey);
+      if (!content) {
+        throw new Error("object not found");
+      }
+      return content;
+    },
+    async deleteObject(objectKey) {
+      this.objects.delete(objectKey);
+    }
+  };
+}
+
 function createEp02Prisma() {
   const store = {
     intakePeriods: [],
     proposals: [],
     members: [],
     attachments: [],
+    fileRecords: [],
     submissionEvents: [],
     auditLogs: []
   };
@@ -175,6 +202,45 @@ function createEp02Prisma() {
         return store.attachments.filter((item) => item.proposalId === where.proposalId && item.status === "active");
       }
     },
+    fileRecord: {
+      async create({ data }) {
+        if (store.failNextFileRecordCreate) {
+          store.failNextFileRecordCreate = false;
+          throw new Error("file metadata create failed");
+        }
+        const record = {
+          id: nextId("file", store.fileRecords),
+          status: "active",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          deletedAt: null,
+          ...data
+        };
+        store.fileRecords.push(record);
+        return record;
+      },
+      async findMany({ where }) {
+        return store.fileRecords.filter((item) => {
+          if (where.id && item.id !== where.id) return false;
+          if (where.relatedEntityType && item.relatedEntityType !== where.relatedEntityType) return false;
+          if (where.relatedEntityId && item.relatedEntityId !== where.relatedEntityId) return false;
+          if (where.status && item.status !== where.status) return false;
+          if (where.deletedAt === null && item.deletedAt !== null) return false;
+          return true;
+        });
+      },
+      async findUnique({ where }) {
+        return store.fileRecords.find((item) => item.id === where.id) ?? null;
+      },
+      async update({ where, data }) {
+        const index = store.fileRecords.findIndex((item) => item.id === where.id);
+        if (index < 0) {
+          throw new Error("file record not found");
+        }
+        store.fileRecords[index] = { ...store.fileRecords[index], ...data, updatedAt: new Date() };
+        return store.fileRecords[index];
+      }
+    },
     proposalSubmissionEvent: {
       async create({ data }) {
         const record = {
@@ -207,6 +273,19 @@ function createEp02Prisma() {
   };
 
   return prisma;
+}
+
+function assertNoRawStorageFields(value) {
+  for (const key of ["objectKey", "internalKey", "bucket", "bucketName", "path", "storagePath", "minioKey"]) {
+    assert.equal(Object.hasOwn(value, key), false, `${key} must not be exposed`);
+  }
+}
+
+function createFilesService({ prisma, auditLog, objectStorage = createObjectStorage(), maxFileSizeBytes = 1024 * 1024 } = {}) {
+  return new FilesService(prisma, objectStorage, auditLog, {
+    maxFileSizeBytes,
+    allowedExtensions: [".doc", ".docx", ".pdf", ".xls", ".xlsx"]
+  });
 }
 
 async function createOpenIntake(service, actor = staffUser) {
@@ -244,6 +323,56 @@ async function createDraft({ prisma, intakeService, proposalService }) {
 }
 
 describe("EP-02 proposal intake and submission behavior", () => {
+  it("validates EP-02 request DTOs at the API boundary", () => {
+    assert.doesNotThrow(() =>
+      createProposalIntakePeriodPipe.transform({
+        code: "INTAKE-2026",
+        title: "Đợt tiếp nhận 2026",
+        startsAt: futureDate(-1),
+        endsAt: futureDate(15),
+        requiredPackage: [{ code: "proposal-form", label: "Thuyết minh đề tài" }]
+      })
+    );
+    assert.throws(
+      () =>
+        createProposalIntakePeriodPipe.transform({
+          code: "INTAKE-2026",
+          title: "Đợt tiếp nhận 2026",
+          startsAt: futureDate(-1),
+          endsAt: futureDate(15),
+          requiredPackage: []
+        }),
+      BadRequestException
+    );
+    assert.doesNotThrow(() => updateProposalIntakePeriodPipe.transform({ description: "" }));
+
+    assert.doesNotThrow(() =>
+      createResearchProposalDraftPipe.transform({
+        intakePeriodId: "intake-1",
+        title: "Nghiên cứu ban đầu",
+        hostOrganizationUnitId: "org-khti",
+        budgetMetadata: { amount: "15000000" },
+        members: [{ name: "TS. Phạm Anh Tuấn", role: "Chủ nhiệm", organization: "Khoa Toán - Tin học" }]
+      })
+    );
+    assert.throws(
+      () =>
+        updateResearchProposalDraftPipe.transform({
+          members: [{ name: "Thiếu vai trò", organization: "Khoa Toán - Tin học" }]
+        }),
+      BadRequestException
+    );
+    assert.throws(
+      () =>
+        uploadFilePipe.transform({
+          relatedEntityType: "approved_project",
+          relatedEntityId: "project-1",
+          filePurpose: "proposal-form"
+        }),
+      BadRequestException
+    );
+  });
+
   it("staff can create, open, and close intake periods with audit rows while PIs only see open applicable periods", async () => {
     const prisma = createEp02Prisma();
     const auditLog = createAuditLog();
@@ -289,12 +418,18 @@ describe("EP-02 proposal intake and submission behavior", () => {
       title: "Nghiên cứu ban đầu",
       hostOrganizationUnitId: "org-khti"
     });
+    const piDetail = await proposalService.getProposal(piUser, draft.id);
+    const staffDetail = await proposalService.getProposal(staffUser, draft.id);
     const updated = await proposalService.updateDraft(piUser, draft.id, {
       title: "Nghiên cứu cập nhật",
       summary: "Tóm tắt mới"
     });
 
     assert.equal(draft.status, "draft");
+    assert.equal(piDetail.canEdit, true);
+    assert.equal(piDetail.canSubmit, true);
+    assert.equal(staffDetail.canEdit, false);
+    assert.equal(staffDetail.canSubmit, false);
     assert.equal(updated.title, "Nghiên cứu cập nhật");
     assert.equal(updated.summary, "Tóm tắt mới");
     assert.deepEqual(
@@ -310,11 +445,13 @@ describe("EP-02 proposal intake and submission behavior", () => {
     );
   });
 
-  it("attachment upload validates type and size, records metadata, and readiness reports missing items", async () => {
+  it("shared files module stores proposal attachments in object storage with metadata, authorization, and audit logs", async () => {
     const prisma = createEp02Prisma();
     const auditLog = createAuditLog();
+    const objectStorage = createObjectStorage();
     const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
     const proposalService = new ResearchProposalsService(prisma, auditLog);
+    const filesService = createFilesService({ prisma, auditLog, objectStorage });
     const draft = await createDraft({ prisma, intakeService, proposalService });
 
     const initialReadiness = await proposalService.getReadiness(piUser, draft.id);
@@ -324,38 +461,297 @@ describe("EP-02 proposal intake and submission behavior", () => {
       ["proposal-form", "budget-form"]
     );
 
-    const attachment = await proposalService.createAttachment(piUser, draft.id, {
-      requirementCode: "proposal-form",
-      fileName: "thuyet-minh.pdf",
-      mimeType: "application/pdf",
-      sizeBytes: 256000
+    const attachment = await filesService.uploadFile(piUser, {
+      relatedEntityType: "research_proposal",
+      relatedEntityId: draft.id,
+      filePurpose: "proposal-form",
+      fileName: "Chá»‰ sá»‘ Glucose.docx",
+      originalFileName: "Chỉ số Glucose.docx",
+      description: "  Bản chỉ số xét nghiệm  ",
+      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      sizeBytes: 256000,
+      content: Buffer.alloc(256000, "p")
     });
 
-    assert.equal(attachment.fileName, "thuyet-minh.pdf");
+    assert.equal(attachment.fileName, "Chỉ số Glucose.docx");
+    assert.equal(attachment.description, "Bản chỉ số xét nghiệm");
     assert.equal(attachment.uploadedById, piUser.id);
-    assert.equal((await proposalService.listAttachments(piUser, draft.id)).length, 1);
+    assert.equal(attachment.filePurpose, "proposal-form");
+    assert.equal(attachment.canEdit, true);
+    assert.equal(attachment.canDelete, true);
+    assertNoRawStorageFields(attachment);
+    assert.equal(prisma.store.fileRecords.length, 1);
+    assert.equal(prisma.store.fileRecords[0].originalFileName, "Chỉ số Glucose.docx");
+    assert.equal(objectStorage.objects.size, 1);
+    const storedObjectKey = [...objectStorage.objects.keys()][0];
+    assert.match(storedObjectKey, new RegExp(`^research-proposals/${draft.id}/${attachment.id}/[a-f0-9-]+\\.docx$`));
+    assert.equal(storedObjectKey.includes("Glucose"), false);
+    assert.equal(storedObjectKey.includes("Chỉ"), false);
+    const proposalAttachments = await proposalService.listAttachments(piUser, draft.id);
+    assert.equal(proposalAttachments.length, 1);
+    assert.equal(proposalAttachments[0].description, "Bản chỉ số xét nghiệm");
+    assert.equal(proposalAttachments[0].canEdit, true);
+    assert.equal(proposalAttachments[0].canDelete, true);
+
+    const metadata = await filesService.listFiles(piUser, {
+      relatedEntityType: "research_proposal",
+      relatedEntityId: draft.id
+    });
+    assert.equal(metadata.length, 1);
+    assert.equal(metadata[0].fileName, "Chỉ số Glucose.docx");
+    assert.equal(metadata[0].description, "Bản chỉ số xét nghiệm");
+    assertNoRawStorageFields(metadata[0]);
+
+    const download = await filesService.downloadFile(piUser, attachment.id);
+    assert.equal(download.fileName, "Chỉ số Glucose.docx");
+    assert.deepEqual(download.content, Buffer.alloc(256000, "p"));
+    assertNoRawStorageFields(download);
+
+    objectStorage.objects.delete(storedObjectKey);
+    await assert.rejects(() => filesService.downloadFile(piUser, attachment.id), NotFoundException);
+    objectStorage.objects.set(storedObjectKey, Buffer.alloc(256000, "p"));
+
+    for (const fileName of ["Đơn đề nghị hoàn thiện.docx", "Báo cáo tổng hợp.pdf"]) {
+      const mimeType = fileName.endsWith(".pdf") ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      const accepted = await filesService.uploadFile(piUser, {
+        relatedEntityType: "research_proposal",
+        relatedEntityId: draft.id,
+        filePurpose: "budget-form",
+        fileName: "mojibake-name.pdf",
+        originalFileName: fileName,
+        mimeType,
+        sizeBytes: 1000,
+        content: Buffer.alloc(1000, "v")
+      });
+      assert.equal(accepted.fileName, fileName);
+      assertNoRawStorageFields(accepted);
+    }
+
+    const acceptedFiles = [
+      ["word-doc.doc", "application/msword"],
+      ["word-docx.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      ["sheet-xls.xls", "application/vnd.ms-excel"],
+      ["sheet-xlsx.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
+    ];
+    for (const [fileName, mimeType] of acceptedFiles) {
+      const accepted = await filesService.uploadFile(piUser, {
+        relatedEntityType: "research_proposal",
+        relatedEntityId: draft.id,
+        filePurpose: "budget-form",
+        fileName,
+        mimeType,
+        sizeBytes: 1000,
+        content: Buffer.alloc(1000, "a")
+      });
+      assert.equal(accepted.fileName, fileName);
+      assertNoRawStorageFields(accepted);
+    }
+
     await assert.rejects(
       () =>
-        proposalService.createAttachment(piUser, draft.id, {
-          requirementCode: "budget-form",
+        filesService.uploadFile(piUser, {
+          relatedEntityType: "research_proposal",
+          relatedEntityId: draft.id,
+          filePurpose: "budget-form",
           fileName: "du-toan.exe",
           mimeType: "application/x-msdownload",
-          sizeBytes: 1000
+          sizeBytes: 1000,
+          content: Buffer.from("bad")
         }),
       BadRequestException
     );
     await assert.rejects(
       () =>
-        proposalService.createAttachment(piUser, draft.id, {
-          requirementCode: "budget-form",
+        filesService.uploadFile(piUser, {
+          relatedEntityType: "research_proposal",
+          relatedEntityId: draft.id,
+          filePurpose: "budget-form",
           fileName: "du-toan.pdf",
-          mimeType: "application/pdf",
-          sizeBytes: 6 * 1024 * 1024
+          mimeType: "application/x-msdownload",
+          sizeBytes: 1000,
+          content: Buffer.alloc(1000, "b")
         }),
       BadRequestException
     );
-    await assert.rejects(() => proposalService.listAttachments(otherPiUser, draft.id), ForbiddenException);
-    assert.equal(auditLog.records.at(-1).action, "upload-proposal-attachment");
+    await assert.rejects(
+      () =>
+        filesService.uploadFile(piUser, {
+          relatedEntityType: "research_proposal",
+          relatedEntityId: draft.id,
+          filePurpose: "budget-form",
+          fileName: "du-toan.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 2 * 1024 * 1024,
+          content: Buffer.from("too large")
+        }),
+      BadRequestException
+    );
+    assert.equal(prisma.store.fileRecords.length, 7);
+    assert.equal(objectStorage.objects.size, 7);
+    await assert.rejects(
+      () =>
+        filesService.uploadFile(otherPiUser, {
+          relatedEntityType: "research_proposal",
+          relatedEntityId: draft.id,
+          filePurpose: "budget-form",
+          fileName: "du-toan.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1000,
+          content: Buffer.alloc(1000, "b")
+        }),
+      ForbiddenException
+    );
+    await assert.rejects(
+      () =>
+        filesService.uploadFile(staffUser, {
+          relatedEntityType: "research_proposal",
+          relatedEntityId: draft.id,
+          filePurpose: "budget-form",
+          fileName: "du-toan.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1000,
+          content: Buffer.alloc(1000, "b")
+        }),
+      ForbiddenException
+    );
+    await assert.rejects(
+      () =>
+        filesService.uploadFile(piUser, {
+          relatedEntityType: "approved_project",
+          relatedEntityId: draft.id,
+          filePurpose: "budget-form",
+          fileName: "du-toan.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1000,
+          content: Buffer.alloc(1000, "b")
+        }),
+      BadRequestException
+    );
+    prisma.store.proposals.push({
+      ...prisma.store.proposals.find((proposal) => proposal.id === draft.id),
+      id: "proposal-outside-scope",
+      hostOrganizationUnitId: "org-outside"
+    });
+    await assert.rejects(
+      () =>
+        filesService.uploadFile(piUser, {
+          relatedEntityType: "research_proposal",
+          relatedEntityId: "proposal-outside-scope",
+          filePurpose: "budget-form",
+          fileName: "du-toan.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1000,
+          content: Buffer.alloc(1000, "b")
+        }),
+      ForbiddenException
+    );
+    await assert.rejects(() => filesService.listFiles(otherPiUser, { relatedEntityType: "research_proposal", relatedEntityId: draft.id }), ForbiddenException);
+    await assert.rejects(() => filesService.downloadFile(otherPiUser, attachment.id), ForbiddenException);
+    const staffProposalAttachments = await proposalService.listAttachments(staffUser, draft.id);
+    assert.equal(staffProposalAttachments[0].canEdit, false);
+    assert.equal(staffProposalAttachments[0].canDelete, false);
+    const staffMetadata = await filesService.listFiles(staffUser, { relatedEntityType: "research_proposal", relatedEntityId: draft.id });
+    assert.equal(staffMetadata.length, 7);
+    assert.equal(staffMetadata[0].canEdit, false);
+    assert.equal(staffMetadata[0].canDelete, false);
+    assert.equal((await filesService.downloadFile(staffUser, attachment.id)).fileName, "Chỉ số Glucose.docx");
+    assert.ok(auditLog.records.some((record) => record.action === "upload-file"));
+    assert.equal(auditLog.records.at(-1).action, "download-file");
+  });
+
+  it("allows PI metadata edits and soft delete only on their own editable draft files", async () => {
+    const prisma = createEp02Prisma();
+    const auditLog = createAuditLog();
+    const objectStorage = createObjectStorage();
+    const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
+    const proposalService = new ResearchProposalsService(prisma, auditLog);
+    const filesService = createFilesService({ prisma, auditLog, objectStorage });
+    const draft = await createDraft({ prisma, intakeService, proposalService });
+
+    const attachment = await filesService.uploadFile(piUser, {
+      relatedEntityType: "research_proposal",
+      relatedEntityId: draft.id,
+      filePurpose: "proposal-form",
+      fileName: "Báo cáo tổng hợp.pdf",
+      description: "",
+      mimeType: "application/pdf",
+      sizeBytes: 1000,
+      content: Buffer.alloc(1000, "p")
+    });
+
+    const updated = await filesService.updateFile(piUser, attachment.id, {
+      description: "  Bản tổng hợp sau rà soát  "
+    });
+    assert.equal(updated.description, "Bản tổng hợp sau rà soát");
+    assert.equal((await filesService.listFiles(piUser, { relatedEntityType: "research_proposal", relatedEntityId: draft.id }))[0].description, "Bản tổng hợp sau rà soát");
+    assertNoRawStorageFields(updated);
+
+    await assert.rejects(() => filesService.updateFile(piUser, attachment.id, { description: "x".repeat(501) }), BadRequestException);
+    await assert.rejects(() => filesService.updateFile(otherPiUser, attachment.id, { description: "Chiếm quyền" }), ForbiddenException);
+    await assert.rejects(() => filesService.updateFile(staffUser, attachment.id, { description: "Nhân viên sửa" }), ForbiddenException);
+    await assert.rejects(() => filesService.deleteFile(otherPiUser, attachment.id), ForbiddenException);
+    await assert.rejects(() => filesService.deleteFile(staffUser, attachment.id), ForbiddenException);
+
+    const deleted = await filesService.deleteFile(piUser, attachment.id);
+    assert.equal(deleted.id, attachment.id);
+    assert.equal(deleted.status, "deleted");
+    assert.equal(objectStorage.objects.size, 1);
+    assert.deepEqual(await filesService.listFiles(piUser, { relatedEntityType: "research_proposal", relatedEntityId: draft.id }), []);
+    assert.equal((await proposalService.getReadiness(piUser, draft.id)).missingFiles.some((item) => item.code === "proposal-form"), true);
+    await assert.rejects(() => filesService.downloadFile(piUser, attachment.id), NotFoundException);
+    assert.deepEqual(
+      auditLog.records.map((record) => record.action).slice(-2),
+      ["update-file-description", "delete-file"]
+    );
+  });
+
+  it("failed file uploads do not leave usable metadata and clean up object storage when metadata creation fails", async () => {
+    const prisma = createEp02Prisma();
+    const auditLog = createAuditLog();
+    const objectStorage = {
+      ...createObjectStorage(),
+      async putObject() {
+        throw new Error("object storage unavailable");
+      }
+    };
+    const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
+    const proposalService = new ResearchProposalsService(prisma, auditLog);
+    const filesService = createFilesService({ prisma, auditLog, objectStorage });
+    const draft = await createDraft({ prisma, intakeService, proposalService });
+
+    await assert.rejects(
+      () =>
+        filesService.uploadFile(piUser, {
+          relatedEntityType: "research_proposal",
+          relatedEntityId: draft.id,
+          filePurpose: "proposal-form",
+          fileName: "thuyet-minh.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1000,
+          content: Buffer.alloc(1000, "p")
+        }),
+      /object storage unavailable/
+    );
+    assert.equal(prisma.store.fileRecords.length, 0);
+
+    const workingStorage = createObjectStorage();
+    const workingFilesService = createFilesService({ prisma, auditLog, objectStorage: workingStorage });
+    prisma.store.failNextFileRecordCreate = true;
+    await assert.rejects(
+      () =>
+        workingFilesService.uploadFile(piUser, {
+          relatedEntityType: "research_proposal",
+          relatedEntityId: draft.id,
+          filePurpose: "proposal-form",
+          fileName: "thuyet-minh.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1000,
+          content: Buffer.alloc(1000, "p")
+        }),
+      /file metadata create failed/
+    );
+    assert.equal(prisma.store.fileRecords.length, 0);
+    assert.equal(workingStorage.objects.size, 0);
   });
 
   it("submit proposal is an explicit readiness-gated state transition with history and edit lock", async () => {
@@ -371,17 +767,24 @@ describe("EP-02 proposal intake and submission behavior", () => {
       return true;
     });
 
-    await proposalService.createAttachment(piUser, draft.id, {
-      requirementCode: "proposal-form",
+    const filesService = createFilesService({ prisma, auditLog });
+    await filesService.uploadFile(piUser, {
+      relatedEntityType: "research_proposal",
+      relatedEntityId: draft.id,
+      filePurpose: "proposal-form",
       fileName: "thuyet-minh.pdf",
       mimeType: "application/pdf",
-      sizeBytes: 256000
+      sizeBytes: 256000,
+      content: Buffer.alloc(256000, "p")
     });
-    await proposalService.createAttachment(piUser, draft.id, {
-      requirementCode: "budget-form",
+    await filesService.uploadFile(piUser, {
+      relatedEntityType: "research_proposal",
+      relatedEntityId: draft.id,
+      filePurpose: "budget-form",
       fileName: "du-toan.pdf",
       mimeType: "application/pdf",
-      sizeBytes: 128000
+      sizeBytes: 128000,
+      content: Buffer.alloc(128000, "b")
     });
 
     await assert.rejects(() => proposalService.submitProposal(otherPiUser, draft.id), ForbiddenException);
@@ -397,5 +800,18 @@ describe("EP-02 proposal intake and submission behavior", () => {
     assert.equal(history[0].toStatus, "submitted");
     assert.equal(prisma.store.auditLogs.at(-1).action, "submit-proposal");
     await assert.rejects(() => proposalService.updateDraft(piUser, draft.id, { title: "Sửa sau nộp" }), BadRequestException);
+    await assert.rejects(
+      () =>
+        filesService.uploadFile(piUser, {
+          relatedEntityType: "research_proposal",
+          relatedEntityId: draft.id,
+          filePurpose: "proposal-form",
+          fileName: "bo-sung.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1000,
+          content: Buffer.alloc(1000, "s")
+        }),
+      ForbiddenException
+    );
   });
 });

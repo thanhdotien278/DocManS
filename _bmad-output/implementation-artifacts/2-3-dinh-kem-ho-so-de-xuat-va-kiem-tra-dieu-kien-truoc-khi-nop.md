@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready for Dev
+Done
 
 ## Epic
 
@@ -159,6 +159,22 @@ UI expectations:
   - Unauthorized user cannot see attachment metadata.
   - Readiness panel lists missing fields/files.
   - Audit log exists for upload.
+
+## Implementation Review - 2026-06-17
+
+Completed coverage:
+
+- ST-2.3A shared files foundation is implemented through `apps/api/src/modules/files` with MinIO object ownership, `file_records` metadata, allowed `.doc/.docx/.pdf/.xls/.xlsx` validation, configurable max size, permission-checked upload/list/download/update/delete routes, soft-delete metadata, and upload/download/update/delete audit rows.
+- ST-2.3 / UC-230-A proposal attachment workflow uses the shared files API from the proposal UI and API client, preserves Unicode-safe original filenames, displays proposal-linked metadata, and avoids raw object-key exposure on the client.
+- ST-2.3B / UC-230-B pre-submission readiness is covered by `GET /api/v1/research-proposals/:id/readiness`, missing structured-field/file reporting, and submit blocking until required files and required proposal data are present.
+
+Verification evidence:
+
+- `node --test tests/files-route.test.mjs` -> 5/5 pass.
+- `node --test tests/proposals-ep02.test.mjs` -> 7/7 pass.
+- `npm test` -> 48/48 pass.
+- `npm run typecheck` -> pass for web and API.
+- `npm run build` -> pass for Next.js web build and API build with Prisma generate.
 
 ## Done Definition
 

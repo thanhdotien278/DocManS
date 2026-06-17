@@ -1,6 +1,12 @@
 import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
+import {
+  createResearchProposalDraftPipe,
+  updateResearchProposalDraftPipe,
+  type CreateResearchProposalDraftDto,
+  type UpdateResearchProposalDraftDto
+} from "./research-proposals.dto.js";
 import { ResearchProposalsService } from "./research-proposals.service.js";
 
 @Controller("api/v1/research-proposals")
@@ -14,7 +20,7 @@ export class ResearchProposalsController {
   }
 
   @Post()
-  async createDraft(@Req() request: RequestWithCurrentUser, @Body() body: Record<string, unknown>) {
+  async createDraft(@Req() request: RequestWithCurrentUser, @Body(createResearchProposalDraftPipe) body: CreateResearchProposalDraftDto) {
     return { proposal: await this.proposalsService.createDraft(request.currentUser!, body) };
   }
 
@@ -24,7 +30,11 @@ export class ResearchProposalsController {
   }
 
   @Patch(":id")
-  async updateDraft(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body() body: Record<string, unknown>) {
+  async updateDraft(
+    @Req() request: RequestWithCurrentUser,
+    @Param("id") id: string,
+    @Body(updateResearchProposalDraftPipe) body: UpdateResearchProposalDraftDto
+  ) {
     return { proposal: await this.proposalsService.updateDraft(request.currentUser!, id, body) };
   }
 

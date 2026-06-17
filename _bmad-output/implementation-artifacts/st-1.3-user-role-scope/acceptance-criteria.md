@@ -112,7 +112,8 @@ Given a system administrator provides username, display name, initial password, 
 When they submit create user,
 Then the system creates the user,
 And stores the role assignment and organization scope assignment,
-And records audit log `AUD-ST-1.3-01`.
+And records audit log `AUD-ST-1.3-01`,
+And the UI shows success feedback, refreshes or updates the user list, and resets or closes form state only when safe.
 
 ### AC-ST-1.3-02-02: Duplicate username is blocked
 
@@ -127,6 +128,91 @@ Given role and organization scope are confirmed mandatory for ST-1.3,
 When a system administrator submits create user without role or without organization scope,
 Then the system rejects the request,
 And no user is created.
+
+## ST13 create-user defect/regression acceptance criteria
+
+These criteria refine the create-user behavior for defect `DEF-ST13-USER-CREATE-RESET-NULL` and use stable IDs requested for later implementation traceability.
+
+### AC-ST13-CREATE-01: Successful create persists complete user context
+
+Given a system administrator submits valid username, display name, initial password, role and organization scope,
+When create user succeeds,
+Then the system persists the user, assigned role(s), organization scope, active/default status and timestamps needed by the approved data model,
+And the created user appears in the user list after refresh or local list update.
+
+### AC-ST13-CREATE-02: Successful create shows safe success feedback
+
+Given create user succeeds,
+When the UI presents the result,
+Then the admin sees success feedback,
+And the UI does not show raw JavaScript/runtime error text.
+
+### AC-ST13-CREATE-03: Form reset/close is safe
+
+Given create user succeeds or fails,
+When the UI attempts to reset, close or update the create form,
+Then reset/close behavior happens only when the form instance/state is available,
+And no null form reset call is possible from the specified behavior.
+
+### AC-ST13-CREATE-04: Required fields are blocked with inline validation
+
+Given a system administrator leaves username, display name, initial password, role or organization scope empty or invalid,
+When they submit create user,
+Then the UI/API blocks creation with inline or form-level validation,
+And no user is created.
+
+### AC-ST13-CREATE-05: Duplicate username has a clear Vietnamese business error
+
+Given a user already exists with the submitted username,
+When a system administrator submits create user,
+Then creation is rejected,
+And the admin sees a clear Vietnamese message that the username already exists,
+And no duplicate user is created.
+
+### AC-ST13-CREATE-06: Invalid role or organization scope is rejected by backend
+
+Given the submitted role or organization scope is invalid, unavailable or outside the allowed catalog,
+When create user is submitted,
+Then backend validation rejects the request,
+And no user/assignment inconsistency is persisted.
+
+### AC-ST13-CREATE-07: Unauthorized users cannot create accounts
+
+Given an actor is unauthenticated or is not a system administrator,
+When they attempt create-user from UI or API,
+Then access is denied,
+And no user, role assignment or organization scope assignment is created.
+
+### AC-ST13-CREATE-08: Failed create has no partial persistence
+
+Given user creation, role assignment or organization scope assignment fails,
+When create user returns an error,
+Then the system does not leave partial role/scope assignments or inconsistent user records.
+
+### AC-ST13-CREATE-09: Successful create is audited
+
+Given create user succeeds,
+When the transaction completes,
+Then an audit log exists for user creation and role/scope assignment,
+And audit details exclude password or secret values.
+
+### AC-ST13-CREATE-10: Create-user UI states follow admin UX guidelines
+
+Given an admin uses the create-user flow,
+When loading, empty, success, validation or error states occur,
+Then the UI follows the institutional admin UX guidelines with clear, work-focused feedback and no raw runtime errors.
+
+### AC-ST13-CREATE-11: Create-user flow is responsive
+
+Given an admin uses the create-user flow at required project breakpoints,
+When the viewport is 390px, 768px or 1440px wide,
+Then the form, validation feedback, buttons and list update remain usable without full-page horizontal scroll.
+
+### AC-ST13-CREATE-12: Password and secrets never leak
+
+Given an initial password or secret value is submitted,
+When create user succeeds or fails,
+Then password/secret values are never logged, displayed after submit, returned in API response or included in audit details.
 
 ## UC-ST-1.3-03: Update user profile fields
 

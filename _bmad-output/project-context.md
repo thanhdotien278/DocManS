@@ -6,10 +6,11 @@ aliases:
 type: "project-context"
 status: "active"
 created: "2026-04-27T22:24:00+0700"
-updated: "2026-04-27T22:31:00+0700"
+updated: "2026-06-16T00:00:00+0700"
 inputs:
   - "/Users/Super/DocManS/_bmad-output/planning-artifacts/product-brief-DocManSystem.md"
   - "/Users/Super/DocManS/docs/ux-design-guidelines.md"
+  - "/Users/Super/DocManS/_bmad-output/detaiHVQY.md"
 audience:
   - "BMAD agents"
   - "AI coding agents"
@@ -20,20 +21,27 @@ scope: "Planning, architecture, story creation, development, testing, and review
 
 DocManSystem, also referred to as RTMS, is a greenfield internal web application for managing university-level research topics and scientific project workflows at the Military Medical Academy. Phase 1 is an internal institutional administration system, not a public SaaS product.
 
-The system must prioritize operational clarity over novelty. Primary goals are process digitization, transparency, overdue visibility, controlled approvals, progress tracking, and executive reporting. The MVP primarily serves scientific management staff, leadership, principal investigators, and reviewer or council roles involved in evaluation workflows.
+The system must prioritize operational clarity over novelty. Primary goals are process digitization, transparency, overdue visibility, controlled approvals, progress tracking, related-document traceability, council/ethics traceability, and executive reporting. The MVP primarily serves scientific management staff, leadership, principal investigators, and reviewer or council roles involved in evaluation workflows.
 
 Core business modules in phase 1:
 
 1. Research proposal intake and approval (OMS)
 2. Approved project tracking
-3. Task management
-4. Role-based executive dashboard and reports
+3. Seminar and student research tracking
+4. Task management
+5. Role-based executive dashboard and reports
+6. Related-document management
+7. Council and ethics management
 
 Key operational scope inside those modules includes:
 
 - intake periods, proposal submission, supplement requests, resubmission, evaluation assignment, scoring, summary, approval, and rejection
 - approved-project progress milestones, periodic progress reports, adjustment requests, extensions, acceptance, and final review
+- approved seminar and student research records, plans, related documents, adjustments, budget metadata, products, and outcomes
+- researcher profiles with academic identity, unit, expertise, account linkage, participation history, and search/reporting support
 - task assignment, reminders, overdue tracking, and completion monitoring
+- related governing, legal, planning, proposal, project, seminar, and council documents with metadata, effective status, and version context
+- council plans, member roles, ethics dossiers, completeness checks, scoring, consolidated evaluation, and approval routing
 - executive dashboard views, filtered reporting, Excel export, PDF export, and traceable business history
 
 # Technology Stack
@@ -96,6 +104,13 @@ The phase 1 domain should be organized around these modules:
 - `adjustment-requests`
 - `acceptance`
 - `final-review`
+- `seminars`
+- `student-research`
+- `related-documents`
+- `councils`
+- `ethics-dossiers`
+- `council-evaluations`
+- `researcher-profiles`
 - `tasks`
 - `notifications`
 - `files`
@@ -122,6 +137,7 @@ Primary business roles to preserve across planning and implementation:
 - State-based authorization is required wherever business status affects allowed actions.
 - Dashboard queries must always respect both role and data scope.
 - Report exports, search results, and list views must always respect both role and data scope.
+- Seminar, student research, related-document, council, ethics-dossier, and researcher-profile access must use the same backend-enforced role/scope/state rules as proposals and approved projects.
 - File upload and download operations must always enforce permission checks.
 - Never trust frontend authorization. The backend must enforce all permissions.
 - Backend validation is mandatory and must not rely only on frontend validation.
@@ -133,7 +149,7 @@ Primary business roles to preserve across planning and implementation:
 Data-scope rules must be explicit in design and stories:
 
 - users must be linked to organization or unit scope where applicable
-- staff and leaders must only see proposals, projects, tasks, dashboard items, and reports within their permitted scope unless granted broader authority
+- staff and leaders must only see proposals, projects, seminars, student research activities, related documents, councils, ethics dossiers, researcher profiles, tasks, dashboard items, and reports within their permitted scope unless granted broader authority
 - cross-unit visibility must never be assumed; it must be granted by role and rule
 - reviewer and council access should be constrained to assigned records and required context only
 
@@ -151,6 +167,9 @@ Mandatory audit-log actions:
 
 - login
 - logout
+- change password
+- initiate password reset
+- complete password reset
 - create
 - update
 - soft delete
@@ -161,6 +180,16 @@ Mandatory audit-log actions:
 - submit score and review comment
 - approve
 - reject
+- register related document
+- replace related document
+- submit ethics dossier
+- request ethics supplement
+- assign council reviewer
+- submit council score and comment
+- update council decision
+- create or update researcher profile
+- link researcher profile to user account
+- link researcher profile to business record
 - create task
 - assign task
 - update task status
@@ -187,12 +216,22 @@ Audit-log implementation rules:
 - File replacement flows should preserve enough history for auditability where the business workflow requires it.
 - Preview support is desirable for common file types when practical, but may not bypass permission checks.
 
+## File Module Pull-Forward Rule
+
+- Starting from ST-2.3A, all important business file upload, metadata view, download, replace, and delete flows must go through the shared `files` module.
+- Domain modules may define business meaning and permission policy for their records, but must not directly access MinIO.
+- MinIO object keys are internal implementation details and must not be used as authorization tokens or exposed as direct access paths.
+- PostgreSQL stores file metadata; MinIO stores file binary content.
+- File access must always enforce backend authorization based on actor, role, organization/data scope, related entity, and workflow state where applicable.
+- File actions must create audit logs when they are business-important.
+- New modules that need file attachments must integrate with the shared files module instead of adding separate upload implementations.
+
 # Notification And Reminder Rules
 
 - Notifications are part of phase 1 scope and should not be treated as optional polish.
 - Support in-app notifications for important business events.
 - Support email notifications for important business events where specified in requirements.
-- Reminder workflows must cover approaching deadlines, overdue tasks, overdue reports, supplement requests, new evaluation assignments, approval requests, and relevant state changes.
+- Reminder workflows must cover approaching deadlines, overdue tasks, overdue reports, supplement requests, new evaluation assignments, approval requests, seminar or student research milestones, council or ethics review deadlines, document effective-date checks where relevant, and relevant state changes.
 - Notification delivery must respect role, data scope, and record-level permissions.
 - Background reminder jobs should be idempotent and safe to retry.
 - Notification templates and trigger rules should be configurable at a simple administrative level where practical, without introducing a workflow engine.
@@ -231,6 +270,8 @@ Audit-log implementation rules:
 - Proposal status and approved-project status must be modeled as controlled state machines.
 - Status transitions must happen through explicit domain operations, not arbitrary field edits.
 - Task status and key approval-related statuses should also be treated as controlled state flows where business logic depends on them.
+- Seminar/student research statuses, related-document lifecycle states, council statuses, and ethics-dossier statuses must be modeled as controlled states wherever business rules depend on them.
+- Researcher profile active/inactive status and important participation links must be changed through explicit operations where auditability matters.
 - Soft delete should be used for important business records where recovery and traceability matter.
 - Do not change database schema without a Prisma migration.
 - Use Prisma migrations for all schema changes.
@@ -279,7 +320,7 @@ Audit-log implementation rules:
 - Do not update important business records with hard delete by default.
 - Do not treat status fields as free-form values.
 - Do not expose dashboard data outside the current user’s role and organization scope.
-- Do not expose report exports, search results, file metadata, or notification content outside the current user’s scope.
+- Do not expose report exports, search results, file metadata, related-document metadata, council records, ethics dossiers, or notification content outside the current user’s scope.
 - Do not add features beyond the active story.
 - Do not over-engineer shared abstractions before repeated need is proven.
 - Do not modify database schema without a Prisma migration.
@@ -298,7 +339,7 @@ Use this checklist during PRD writing, architecture, story drafting, implementat
 - Does it create required audit logs for the business actions it introduces or changes?
 - Does it enforce file permissions for upload and download flows?
 - Does it model proposal and project statuses as controlled transitions?
-- Does it also model task and approval-related statuses explicitly where needed?
+- Does it also model task, seminar/student research, related-document, council/ethics, and approval-related statuses explicitly where needed?
 - Does it use backend validation with DTOs and validation pipes?
 - Does every schema change include a Prisma migration?
 - Does the UI remain consistent with the institutional dashboard style and responsive breakpoints?
