@@ -43,16 +43,85 @@ Draft for owner review
   2. System validates required fields and username uniqueness.
   3. System creates the user and stores role/scope assignments.
   4. System writes audit log for create user.
+  5. System shows success feedback.
+  6. System refreshes or updates the user list.
+  7. System resets or closes the create form only when the form instance/state is available.
 - Alternate/error flows:
   - Duplicate username is rejected.
   - Missing role or organization scope is rejected when mandatory policy is confirmed.
   - Invalid role or organization scope is rejected.
+  - Missing username, display name, initial password, role or organization scope shows inline validation and blocks submit.
+  - Weak or empty initial password is rejected according to the approved phase 1 password policy.
+  - API validation or business failure keeps entered data where appropriate and shows a safe Vietnamese error message.
+  - Network/server error shows a retryable safe error state and preserves form state.
+  - Non-admin actor is denied by UI/API and no user is created.
+  - UI must not call unsafe reset behavior on a null/unmounted form reference.
   - Audit logging failure follows the later implementation policy, with expected fail-safe behavior documented before coding.
 - Postconditions: New user appears in admin list with assigned role, organization scope and status.
-- Related AC IDs: `AC-ST-1.3-02-01`, `AC-ST-1.3-02-02`, `AC-ST-1.3-02-03`
+- Related AC IDs: `AC-ST-1.3-02-01`, `AC-ST-1.3-02-02`, `AC-ST-1.3-02-03`, `AC-ST13-CREATE-01` through `AC-ST13-CREATE-12`
 - Related AUTH IDs: `AUTH-ST-1.3-01`, `AUTH-ST-1.3-02`, `AUTH-ST-1.3-03`
 - Related AUD IDs: `AUD-ST-1.3-01`
-- Related TEST IDs: `TEST-ST-1.3-SVC-01`, `TEST-ST-1.3-API-02`, `TEST-ST-1.3-WEB-02`, `TEST-ST-1.3-AUD-01`
+- Related TEST IDs: `TEST-ST-1.3-SVC-01`, `TEST-ST-1.3-API-02`, `TEST-ST-1.3-WEB-02`, `TEST-ST-1.3-AUD-01`, `T-ST13-CREATE-001` through `T-ST13-CREATE-014`
+
+## UC-ST13 create-user refinement set
+
+The IDs below are stable refinement IDs for implementation and regression planning around `DEF-ST13-USER-CREATE-RESET-NULL`. They refine `UC-ST-1.3-02` without replacing the existing BMAD story IDs.
+
+### UC-ST13-01: Admin creates user successfully with role and organization scope
+
+- Actor: System administrator.
+- Expected outcome: User, role assignment, organization scope assignment, default/active status and audit log are created consistently; user appears in the refreshed list.
+- Related AC IDs: `AC-ST13-CREATE-01`, `AC-ST13-CREATE-02`, `AC-ST13-CREATE-08`, `AC-ST13-CREATE-09`, `AC-ST13-CREATE-12`
+- Related TEST IDs: `T-ST13-CREATE-001`, `T-ST13-CREATE-008`, `T-ST13-CREATE-011`, `T-ST13-CREATE-012`
+
+### UC-ST13-02: Admin submits create-user form with missing/invalid fields and sees inline validation
+
+- Actor: System administrator.
+- Expected outcome: Missing username, display name, password, role or scope is blocked before create; errors are shown inline or at form level without clearing valid entered data unnecessarily.
+- Related AC IDs: `AC-ST13-CREATE-04`, `AC-ST13-CREATE-10`, `AC-ST13-CREATE-12`
+- Related TEST IDs: `T-ST13-CREATE-002`, `T-ST13-CREATE-014`
+
+### UC-ST13-03: Admin tries duplicate username and receives clear business error
+
+- Actor: System administrator.
+- Expected outcome: Duplicate username is rejected with a clear Vietnamese business message and no second user is created.
+- Related AC IDs: `AC-ST13-CREATE-05`, `AC-ST13-CREATE-08`
+- Related TEST IDs: `T-ST13-CREATE-003`
+
+### UC-ST13-04: Admin selects invalid or unavailable role/scope and creation is blocked
+
+- Actor: System administrator.
+- Expected outcome: Invalid role or organization scope is rejected by backend validation, and no partial assignment is stored.
+- Related AC IDs: `AC-ST13-CREATE-06`, `AC-ST13-CREATE-08`
+- Related TEST IDs: `T-ST13-CREATE-004`, `T-ST13-CREATE-005`, `T-ST13-CREATE-010`
+
+### UC-ST13-05: Non-admin attempts create-user action and is denied
+
+- Actor: Authenticated non-admin user.
+- Expected outcome: UI/API denies create-user access and no mutation occurs.
+- Related AC IDs: `AC-ST13-CREATE-07`
+- Related TEST IDs: `T-ST13-CREATE-006`
+
+### UC-ST13-06: Create-user API succeeds but UI form reset/close/update sequence must not crash
+
+- Actor: System administrator.
+- Expected outcome: Success feedback and list refresh happen without raw runtime errors; form reset/close only runs when safe.
+- Related AC IDs: `AC-ST13-CREATE-02`, `AC-ST13-CREATE-03`, `AC-ST13-CREATE-10`, `AC-ST13-CREATE-11`
+- Related TEST IDs: `T-ST13-CREATE-008`, `T-ST13-CREATE-009`, `T-ST13-CREATE-013`, `T-ST13-CREATE-014`
+
+### UC-ST13-07: Create-user API fails and UI must not call unsafe reset on null form reference
+
+- Actor: System administrator.
+- Expected outcome: Failed create keeps form state where appropriate, shows a safe error, and does not attempt unsafe reset/close behavior.
+- Related AC IDs: `AC-ST13-CREATE-03`, `AC-ST13-CREATE-10`
+- Related TEST IDs: `T-ST13-CREATE-007`, `T-ST13-CREATE-009`
+
+### UC-ST13-08: Network/server error during create user shows safe retryable error and preserves form state
+
+- Actor: System administrator.
+- Expected outcome: Network/server failure shows safe retryable feedback, preserves entered values where appropriate, and does not leak raw runtime details.
+- Related AC IDs: `AC-ST13-CREATE-02`, `AC-ST13-CREATE-10`, `AC-ST13-CREATE-12`
+- Related TEST IDs: `T-ST13-CREATE-007`, `T-ST13-CREATE-009`, `T-ST13-CREATE-012`
 
 ## UC-ST-1.3-03: Update user profile fields
 

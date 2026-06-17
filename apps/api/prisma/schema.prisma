@@ -25,6 +25,7 @@ model User {
   ownedResearchProposals ResearchProposal[] @relation("ProposalOwner")
   submittedResearchProposals ResearchProposal[] @relation("ProposalSubmitter")
   uploadedProposalAttachments ProposalAttachment[] @relation("AttachmentUploader")
+  uploadedFileRecords FileRecord[] @relation("FileRecordUploader")
   proposalSubmissionEvents ProposalSubmissionEvent[] @relation("SubmissionActor")
 
   @@map("users")
@@ -249,6 +250,32 @@ model ProposalAttachment {
   @@index([uploadedById])
   @@index([requirementCode])
   @@map("proposal_attachments")
+}
+
+model FileRecord {
+  id                String    @id @default(uuid())
+  relatedEntityType String    @map("related_entity_type")
+  relatedEntityId   String    @map("related_entity_id")
+  filePurpose       String    @map("file_purpose")
+  originalFileName  String    @map("original_file_name")
+  description       String?
+  mimeType          String    @map("mime_type")
+  sizeBytes         Int       @map("size_bytes")
+  storageBucket     String    @map("storage_bucket")
+  storageObjectKey  String    @map("storage_object_key")
+  uploadedById      String    @map("uploaded_by_id")
+  uploadedBy        User      @relation("FileRecordUploader", fields: [uploadedById], references: [id])
+  status            String    @default("active")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
+
+  @@index([relatedEntityType, relatedEntityId])
+  @@index([uploadedById])
+  @@index([filePurpose])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("file_records")
 }
 
 model ProposalSubmissionEvent {

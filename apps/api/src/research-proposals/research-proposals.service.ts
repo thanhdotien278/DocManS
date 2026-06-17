@@ -14,12 +14,11 @@ import {
   isScientificManagement,
   isSystemAdmin
 } from "../proposals-shared/proposal-access.js";
-import type { ProposalMemberInput, ProposalMissingItem, RequiredPackageItem } from "../proposals-shared/proposal-types.js";
+import type { ProposalMemberInput, ProposalMissingItem } from "../proposals-shared/proposal-types.js";
 import {
   assertDateRange,
   normalizeRequiredPackage,
   readBudgetMetadata,
-  readCode,
   readDate,
   readMembers,
   readOptionalCode,
@@ -68,12 +67,16 @@ type ProposalMemberRecord = ProposalMemberInput & {
 
 type ProposalAttachmentRecord = {
   id: string;
-  proposalId: string;
-  requirementCode: string;
-  fileName: string;
+  relatedEntityType?: string;
+  relatedEntityId?: string;
+  proposalId?: string;
+  filePurpose?: string;
+  requirementCode?: string;
+  originalFileName?: string;
+  fileName?: string;
+  description?: string | null;
   mimeType: string;
   sizeBytes: number;
-  storageKey: string;
   uploadedById: string;
   status: string;
   createdAt: Date;
@@ -102,13 +105,13 @@ export class ResearchProposalsService {
       orderBy: { createdAt: "desc" }
     })) as ResearchProposalRecord[];
 
-    return records.filter((proposal) => canReadProposal(actor, proposal)).map((proposal) => this.toProposalResponse(proposal));
+    return records.filter((proposal) => canReadProposal(actor, proposal)).map((proposal) => this.toProposalResponse(proposal, actor));
   }
 
   async getProposal(actor: SafeUserContext, proposalId: string) {
     const proposal = await this.findProposal(proposalId);
     assertCanReadProposal(actor, proposal);
-    return this.toProposalDetailResponse(proposal);
+    return this.toProposalDetailResponse(proposal, undefined, actor);
   }
 
   async createDraft(actor: SafeUserContext, input: Record<string, unknown>) {
@@ -157,7 +160,7 @@ export class ResearchProposalsService {
       username: pi.username
     });
 
-    return this.toProposalDetailResponse(proposal, members);
+    return this.toProposalDetailResponse(proposal, members, pi);
   }
 
   async updateDraft(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>) {
@@ -221,56 +224,13 @@ export class ResearchProposalsService {
       username: actor.username
     });
 
-    return this.toProposalDetailResponse(updated, members);
+    return this.toProposalDetailResponse(updated, members, actor);
   }
 
   async listAttachments(actor: SafeUserContext, proposalId: string) {
     const proposal = await this.findProposal(proposalId);
     assertCanReadProposal(actor, proposal);
-    return this.findAttachments(proposalId);
-  }
-
-  async createAttachment(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>) {
-    const proposal = await this.findProposal(proposalId);
-    assertCanEditProposalDraft(actor, proposal);
-    this.assertEditableDraft(proposal);
-
-    const requiredPackage = await this.getRequiredPackageForProposal(proposal);
-    const requirementCode = readCode(input.requirementCode, "requirementCode");
-    const requirement = requiredPackage.find((item) => item.code === requirementCode);
-    if (!requirement) {
-      throw new BadRequestException({ message: "Loại tài liệu không thuộc danh sách bắt buộc của đợt tiếp nhận." });
-    }
-
-    const fileName = readText(input.fileName, "fileName", 240);
-    const mimeType = readText(input.mimeType, "mimeType", 120);
-    const sizeBytes = this.readSizeBytes(input.sizeBytes);
-    this.assertAttachmentAllowed(requirement, mimeType, sizeBytes);
-
-    const attachment = (await this.prisma.proposalAttachment.create({
-      data: {
-        proposalId,
-        requirementCode,
-        fileName,
-        mimeType,
-        sizeBytes,
-        storageKey: `research-proposals/${proposalId}/${Date.now()}-${fileName.replace(/[^a-z0-9._-]/gi, "-")}`,
-        uploadedById: actor.id,
-        status: "active"
-      } as never
-    })) as ProposalAttachmentRecord;
-
-    await this.auditLog.record({
-      action: "upload-proposal-attachment",
-      result: "success",
-      actorId: actor.id,
-      targetEntity: "proposal-attachment",
-      targetEntityId: attachment.id,
-      username: actor.username,
-      reason: `research-proposal:${proposalId}`
-    });
-
-    return this.toAttachmentResponse(attachment);
+    return this.findAttachments(proposalId, { canMutate: this.canMutateProposalFiles(actor, proposal) });
   }
 
   async getReadiness(actor: SafeUserContext, proposalId: string) {
@@ -332,7 +292,7 @@ export class ResearchProposalsService {
       return updated;
     })) as unknown as ResearchProposalRecord;
 
-    return this.toProposalDetailResponse(submitted);
+    return this.toProposalDetailResponse(submitted, undefined, actor);
   }
 
   async listHistory(actor: SafeUserContext, proposalId: string) {
@@ -398,12 +358,12 @@ export class ResearchProposalsService {
     })) as ProposalMemberRecord[];
   }
 
-  private async findAttachments(proposalId: string) {
-    const records = (await this.prisma.proposalAttachment.findMany({
-      where: { proposalId, status: "active" },
+  private async findAttachments(proposalId: string, options: { canMutate: boolean } = { canMutate: false }) {
+    const records = (await this.prisma.fileRecord.findMany({
+      where: { relatedEntityType: "research_proposal", relatedEntityId: proposalId, status: "active", deletedAt: null },
       orderBy: { createdAt: "asc" }
     })) as ProposalAttachmentRecord[];
-    return records.map((attachment) => this.toAttachmentResponse(attachment));
+    return records.map((attachment) => this.toAttachmentResponse(attachment, options));
   }
 
   private async getRequiredPackageForProposal(proposal: ResearchProposalRecord) {
@@ -413,7 +373,11 @@ export class ResearchProposalsService {
 
   private async computeReadiness(proposal: ResearchProposalRecord) {
     const requiredPackage = await this.getRequiredPackageForProposal(proposal);
-    const attachments = await this.findAttachments(proposal.id);
+    const attachments = (await this.findAttachments(proposal.id)).map((attachment) => ({
+      ...attachment,
+      canEdit: false,
+      canDelete: false
+    }));
     const members = await this.findMembers(proposal.id);
     const missingFields = this.getMissingFields(proposal, members);
     const missingFiles = requiredPackage
@@ -462,33 +426,14 @@ export class ResearchProposalsService {
     return missing;
   }
 
-  private readSizeBytes(value: unknown) {
-    const sizeBytes = typeof value === "number" ? value : Number(value);
-    if (!Number.isInteger(sizeBytes) || sizeBytes <= 0) {
-      throw new BadRequestException({ message: "Dung lượng tệp không hợp lệ." });
-    }
-
-    return sizeBytes;
-  }
-
-  private assertAttachmentAllowed(requirement: RequiredPackageItem, mimeType: string, sizeBytes: number) {
-    if (!requirement.allowedMimeTypes.includes(mimeType)) {
-      throw new BadRequestException({ message: `Tệp ${requirement.label} phải thuộc định dạng cho phép.` });
-    }
-
-    if (sizeBytes > requirement.maxSizeMb * 1024 * 1024) {
-      throw new BadRequestException({ message: `Tệp ${requirement.label} vượt quá dung lượng ${requirement.maxSizeMb}MB.` });
-    }
-  }
-
-  private async toProposalDetailResponse(proposal: ResearchProposalRecord, providedMembers?: ProposalMemberInput[]) {
+  private async toProposalDetailResponse(proposal: ResearchProposalRecord, providedMembers?: ProposalMemberInput[], actor?: SafeUserContext) {
     const members = providedMembers ?? (await this.findMembers(proposal.id));
-    const attachments = await this.findAttachments(proposal.id);
+    const attachments = await this.findAttachments(proposal.id, { canMutate: this.canMutateProposalFiles(actor, proposal) });
     const history = await this.listHistoryForProposal(proposal.id);
     const requiredPackage = await this.getRequiredPackageForProposal(proposal);
 
     return {
-      ...this.toProposalResponse(proposal),
+      ...this.toProposalResponse(proposal, actor),
       members,
       attachments,
       history,
@@ -496,7 +441,22 @@ export class ResearchProposalsService {
     };
   }
 
-  private toProposalResponse(proposal: ResearchProposalRecord) {
+  private canMutateProposalFiles(actor: SafeUserContext | undefined, proposal: ResearchProposalRecord) {
+    if (!actor || proposal.status !== "draft" || !isPrincipalInvestigator(actor) || proposal.ownerId !== actor.id) {
+      return false;
+    }
+
+    try {
+      assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private toProposalResponse(proposal: ResearchProposalRecord, actor?: SafeUserContext) {
+    const canEditDraft = Boolean(actor && proposal.status === "draft" && isPrincipalInvestigator(actor) && proposal.ownerId === actor.id);
+
     return {
       id: proposal.id,
       code: proposal.code ?? "",
@@ -516,24 +476,29 @@ export class ResearchProposalsService {
       submittedById: proposal.submittedById ?? "",
       createdAt: proposal.createdAt.toISOString(),
       updatedAt: proposal.updatedAt.toISOString(),
-      canEdit: proposal.status === "draft",
-      canSubmit: proposal.status === "draft"
+      canEdit: canEditDraft,
+      canSubmit: canEditDraft
     };
   }
 
-  private toAttachmentResponse(attachment: ProposalAttachmentRecord) {
+  private toAttachmentResponse(attachment: ProposalAttachmentRecord, options: { canMutate: boolean }) {
     return {
       id: attachment.id,
-      proposalId: attachment.proposalId,
-      requirementCode: attachment.requirementCode,
-      fileName: attachment.fileName,
+      proposalId: attachment.proposalId ?? attachment.relatedEntityId ?? "",
+      relatedEntityType: attachment.relatedEntityType ?? "research_proposal",
+      relatedEntityId: attachment.relatedEntityId ?? attachment.proposalId ?? "",
+      filePurpose: attachment.filePurpose ?? attachment.requirementCode ?? "",
+      requirementCode: attachment.requirementCode ?? attachment.filePurpose ?? "",
+      fileName: attachment.fileName ?? attachment.originalFileName ?? "",
+      description: attachment.description ?? null,
       mimeType: attachment.mimeType,
       sizeBytes: attachment.sizeBytes,
-      storageKey: attachment.storageKey,
       uploadedById: attachment.uploadedById,
       status: attachment.status,
       createdAt: attachment.createdAt.toISOString(),
-      updatedAt: attachment.updatedAt.toISOString()
+      updatedAt: attachment.updatedAt.toISOString(),
+      canEdit: options.canMutate,
+      canDelete: options.canMutate
     };
   }
 

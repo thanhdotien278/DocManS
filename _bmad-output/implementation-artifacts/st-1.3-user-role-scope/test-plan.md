@@ -204,7 +204,7 @@ No test code is written in this artifact. All implementation status values are `
 ### TEST-ST-1.3-WEB-02: Create user UI
 
 - Covers: `UC-ST-1.3-02`, `AC-ST-1.3-02-01`, `AC-ST-1.3-02-02`, `AC-ST-1.3-02-03`
-- Expected verification: create form captures username, display name, initial password, role and organization scope with validation feedback.
+- Expected verification: create form captures username, display name, initial password, role and organization scope with validation feedback, success feedback, safe list refresh/update and no unsafe null reset behavior.
 - Implementation status: `not-started`
 - Review status: `pending-owner-review`
 
@@ -316,6 +316,108 @@ No test code is written in this artifact. All implementation status values are `
 
 - Covers: `AUTH-ST-1.3-03`, `AUTH-ST-1.3-05`, `AC-ST-1.3-08-01`
 - Expected verification: missing or inconsistent role/scope context denies protected access.
+- Implementation status: `not-started`
+- Review status: `pending-owner-review`
+
+## ST13 create-user defect/regression tests
+
+These are specification-only test IDs for later implementation. No test code is written in this update.
+
+### T-ST13-CREATE-001: Create user happy path as system admin
+
+- Covers: `UC-ST13-01`, `AC-ST13-CREATE-01`, `AC-ST13-CREATE-02`, `AC-ST13-CREATE-09`
+- Expected verification: system admin creates user with role and organization scope; user appears in list and audit exists.
+- Implementation status: `not-started`
+- Review status: `pending-owner-review`
+
+### T-ST13-CREATE-002: Required-field validation for username, display name, password, role, scope
+
+- Covers: `UC-ST13-02`, `AC-ST13-CREATE-04`, `AC-ST13-CREATE-10`
+- Expected verification: each missing required field blocks create and shows safe validation feedback.
+- Implementation status: `not-started`
+- Review status: `pending-owner-review`
+
+### T-ST13-CREATE-003: Duplicate username business error
+
+- Covers: `UC-ST13-03`, `AC-ST13-CREATE-05`, `AC-ST13-CREATE-08`
+- Expected verification: duplicate username is rejected with a clear Vietnamese user-facing message and no duplicate record.
+- Implementation status: `not-started`
+- Review status: `pending-owner-review`
+
+### T-ST13-CREATE-004: Invalid role ID rejected
+
+- Covers: `UC-ST13-04`, `AC-ST13-CREATE-06`, `AC-ST13-CREATE-08`
+- Expected verification: invalid role ID is rejected by backend validation and does not create partial data.
+- Implementation status: `not-started`
+- Review status: `pending-owner-review`
+
+### T-ST13-CREATE-005: Invalid organization scope ID rejected
+
+- Covers: `UC-ST13-04`, `AC-ST13-CREATE-06`, `AC-ST13-CREATE-08`
+- Expected verification: invalid organization scope ID is rejected by backend validation and does not create partial data.
+- Implementation status: `not-started`
+- Review status: `pending-owner-review`
+
+### T-ST13-CREATE-006: Non-admin cannot access create-user UI/API
+
+- Covers: `UC-ST13-05`, `AC-ST13-CREATE-07`
+- Expected verification: non-admin is denied from create-user UI/API and no mutation occurs.
+- Implementation status: `not-started`
+- Review status: `pending-owner-review`
+
+### T-ST13-CREATE-007: API failure does not reset form and shows safe error
+
+- Covers: `UC-ST13-07`, `UC-ST13-08`, `AC-ST13-CREATE-03`, `AC-ST13-CREATE-10`
+- Expected verification: failed create preserves form state where appropriate, shows safe retryable/form-level error and does not call unsafe reset.
+- Implementation status: `not-started`
+- Review status: `pending-owner-review`
+
+### T-ST13-CREATE-008: Successful create refreshes user list and clears form safely
+
+- Covers: `UC-ST13-01`, `UC-ST13-06`, `AC-ST13-CREATE-01`, `AC-ST13-CREATE-02`, `AC-ST13-CREATE-03`
+- Expected verification: success refreshes or updates list and clears/closes form only when safe.
+- Implementation status: `not-started`
+- Review status: `pending-owner-review`
+
+### T-ST13-CREATE-009: Regression test for reset null runtime error
+
+- Covers: `DEF-ST13-USER-CREATE-RESET-NULL`, `UC-ST13-06`, `UC-ST13-07`, `UC-ST13-08`, `AC-ST13-CREATE-02`, `AC-ST13-CREATE-03`, `AC-ST13-CREATE-10`
+- Expected verification: `Cannot read properties of null (reading 'reset')` does not appear in UI or console during success, validation failure, API failure or network/server failure.
+- Implementation status: `not-started`
+- Review status: `pending-owner-review`
+
+### T-ST13-CREATE-010: No partial persistence when role/scope assignment fails
+
+- Covers: `UC-ST13-04`, `AC-ST13-CREATE-08`
+- Expected verification: simulated role/scope assignment failure leaves no inconsistent user or assignment records.
+- Implementation status: `not-started`
+- Review status: `pending-owner-review`
+
+### T-ST13-CREATE-011: Audit log created for successful create and assignments
+
+- Covers: `UC-ST13-01`, `AC-ST13-CREATE-09`
+- Expected verification: audit log records successful create and role/scope assignment without secrets.
+- Implementation status: `not-started`
+- Review status: `pending-owner-review`
+
+### T-ST13-CREATE-012: No password leakage in logs, audit log, UI, or API response
+
+- Covers: `UC-ST13-01`, `UC-ST13-08`, `AC-ST13-CREATE-12`
+- Expected verification: initial password is absent from logs, audit details, UI after submit and API responses.
+- Implementation status: `not-started`
+- Review status: `pending-owner-review`
+
+### T-ST13-CREATE-013: Responsive/manual check at 390px, 768px, 1440px
+
+- Covers: `UC-ST13-06`, `AC-ST13-CREATE-11`
+- Expected verification: create-user form, validation, success/error feedback and user list update are usable at 390px, 768px and 1440px with no full-page horizontal scroll.
+- Implementation status: `not-started`
+- Review status: `pending-owner-review`
+
+### T-ST13-CREATE-014: Accessibility check for create-user form
+
+- Covers: `UC-ST13-02`, `UC-ST13-06`, `AC-ST13-CREATE-10`, `AC-ST13-CREATE-11`
+- Expected verification: labels, focus order, keyboard submit/cancel and async error announcement use accessible behavior such as `aria-live` or equivalent.
 - Implementation status: `not-started`
 - Review status: `pending-owner-review`
 

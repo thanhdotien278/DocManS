@@ -4,6 +4,11 @@
 
 In Progress
 
+## Sprint Progress Update - 2026-06-17
+
+- ST-2.1, ST-2.2, and ST-2.3 are complete and marked `done` in the sprint tracker.
+- Work has moved to ST-2.4 for formal proposal submission and submission history.
+
 ## Source
 
 - Source epic: `_bmad-output/epics-and-stories.md` -> `EP-02: Tiep Nhan Va Nop Ho So De Tai`
@@ -53,7 +58,7 @@ Out of scope:
 
 ## Epic Done Definition
 
-- All four EP-02 story files are implemented and marked `done` in `sprint-status.yaml`.
+- All four EP-02 story files are implemented, with ST-2.1 through ST-2.3 marked `done` and ST-2.4 actively in progress in `sprint-status.yaml`.
 - A PI can complete the happy path from eligible intake period to submitted proposal.
 - Unauthorized users cannot create/edit/submit proposals or access attachments outside their allowed scope.
 - Audit logs and submission history are verifiable for the core EP-02 actions.
