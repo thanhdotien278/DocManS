@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Download, FileText, Pencil, Save, Send, Trash2, UploadCloud, X } from "lucide-react";
+import { useSession } from "@/components/auth/session-provider";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { formatVndNumber, numberToVietnameseWords, parseVndNumber } from "@/lib/vietnamese-currency";
 import {
   deleteProposalAttachment,
   loadProposalReadiness,
@@ -17,6 +19,7 @@ import {
   uploadProposalAttachment,
   type ApiErrorWithReadiness,
   type ProposalDraftInput,
+  type ProposalAttachment,
   type ProposalReadiness,
   type ResearchProposal
 } from "@/lib/research-proposals-api";
@@ -24,6 +27,14 @@ import {
 type LoadState = "loading" | "ready" | "error";
 const ST23A_ALLOWED_FILE_TYPES = ".doc, .docx, .pdf, .xls, .xlsx";
 const ST23A_FILE_ACCEPT = ".doc,.docx,.pdf,.xls,.xlsx";
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  "proposal-form": "Thuyết minh đề tài",
+  proposalForm: "Thuyết minh đề tài",
+  THUYET_MINH: "Thuyết minh đề tài",
+  "budget-form": "Dự toán kinh phí",
+  budgetForm: "Dự toán kinh phí",
+  DU_TOAN_KINH_PHI: "Dự toán kinh phí"
+};
 
 function formatDate(value: string) {
   return value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "Chưa có";
@@ -38,6 +49,10 @@ function formatBytes(value: number) {
     return `${(value / (1024 * 1024)).toFixed(1)} MB`;
   }
   return `${Math.max(1, Math.round(value / 1024))} KB`;
+}
+
+function getDocumentTypeLabel(code: string, fallback?: string) {
+  return DOCUMENT_TYPE_LABELS[code] ?? fallback ?? code;
 }
 
 function toDraftInput(proposal: ResearchProposal): ProposalDraftInput {
@@ -58,6 +73,7 @@ function toDraftInput(proposal: ResearchProposal): ProposalDraftInput {
 }
 
 export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) {
+  const { account } = useSession();
   const [state, setState] = useState<LoadState>("loading");
   const [proposal, setProposal] = useState<ResearchProposal | null>(null);
   const [readiness, setReadiness] = useState<ProposalReadiness | null>(null);
@@ -66,10 +82,9 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadRequirementCode, setUploadRequirementCode] = useState("");
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploadDescription, setUploadDescription] = useState("");
-  const [fileInputKey, setFileInputKey] = useState(0);
+  const [uploadFiles, setUploadFiles] = useState<Record<string, File | null>>({});
+  const [uploadDescriptions, setUploadDescriptions] = useState<Record<string, string>>({});
+  const [fileInputKeys, setFileInputKeys] = useState<Record<string, number>>({});
   const [uploadError, setUploadError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [editingAttachmentId, setEditingAttachmentId] = useState("");
@@ -85,7 +100,6 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
       setProposal(proposalData);
       setReadiness(readinessData);
       setForm(toDraftInput(proposalData));
-      setUploadRequirementCode(proposalData.requiredPackage?.[0]?.code ?? "");
       setState("ready");
     } catch {
       setState("error");
@@ -99,10 +113,17 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   const canEdit = proposal?.status === "draft" && proposal.canEdit;
   const canSubmit = proposal?.status === "draft" && proposal.canSubmit;
   const requirementOptions = proposal?.requiredPackage ?? [];
-  const selectedRequirement = useMemo(
-    () => requirementOptions.find((item) => item.code === uploadRequirementCode),
-    [requirementOptions, uploadRequirementCode]
+  const documentGroups = useMemo(
+    () =>
+      requirementOptions.map((item) => ({
+        ...item,
+        label: getDocumentTypeLabel(item.code, item.label),
+        attachments:
+          proposal?.attachments?.filter((attachment) => (attachment.requirementCode || attachment.filePurpose) === item.code) ?? []
+      })),
+    [proposal?.attachments, requirementOptions]
   );
+  const budgetWords = numberToVietnameseWords(form?.budgetMetadata?.amount);
 
   function updateMember(field: "name" | "role" | "organization", value: string) {
     setForm((current) =>
@@ -113,6 +134,26 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
           }
         : current
     );
+  }
+
+  function getSubmissionActorName(event: NonNullable<ResearchProposal["history"]>[number]) {
+    if (event.actorDisplayName) {
+      return event.actorDisplayName;
+    }
+    if (proposal?.submittedById && account?.id === proposal.submittedById) {
+      return account.name;
+    }
+    return "Không xác định";
+  }
+
+  function getAttachmentUploaderName(attachment: ProposalAttachment) {
+    if (attachment.uploaderDisplayName) {
+      return attachment.uploaderDisplayName;
+    }
+    if (attachment.uploadedById && account?.id === attachment.uploadedById) {
+      return account.name;
+    }
+    return "Không xác định";
   }
 
   function validateDraft() {
@@ -159,12 +200,13 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
     }
   }
 
-  async function handleUpload(event: React.FormEvent<HTMLFormElement>) {
+  async function handleUpload(event: React.FormEvent<HTMLFormElement>, requirementCode: string) {
     event.preventDefault();
     setUploadError("");
     setAttachmentError("");
     setMessage("");
-    if (!proposal || !uploadRequirementCode || !uploadFile) {
+    const uploadFile = uploadFiles[requirementCode];
+    if (!proposal || !requirementCode || !uploadFile) {
       setUploadError("Chọn loại tài liệu và tệp cần tải lên.");
       return;
     }
@@ -172,13 +214,13 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
     setIsUploading(true);
     try {
       await uploadProposalAttachment(proposal.id, {
-        requirementCode: uploadRequirementCode,
-        description: uploadDescription,
+        requirementCode,
+        description: uploadDescriptions[requirementCode] ?? "",
         file: uploadFile
       });
-      setUploadFile(null);
-      setUploadDescription("");
-      setFileInputKey((current) => current + 1);
+      setUploadFiles((current) => ({ ...current, [requirementCode]: null }));
+      setUploadDescriptions((current) => ({ ...current, [requirementCode]: "" }));
+      setFileInputKeys((current) => ({ ...current, [requirementCode]: (current[requirementCode] ?? 0) + 1 }));
       setMessage("Đã tải tệp và cập nhật readiness.");
       await refresh();
     } catch (error) {
@@ -372,13 +414,16 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                 <span>Kinh phí dự kiến</span>
                 <input
                   disabled={!canEdit}
-                  type="number"
-                  min={0}
-                  value={form.budgetMetadata?.amount ?? 0}
-                  onChange={(event) =>
-                    setForm({ ...form, budgetMetadata: { ...form.budgetMetadata, amount: Number(event.target.value), currency: "VND" } })
-                  }
+                  inputMode="numeric"
+                  value={formatVndNumber(form.budgetMetadata?.amount)}
+                  onChange={(event) => {
+                    const amount = parseVndNumber(event.target.value);
+                    setForm({ ...form, budgetMetadata: { ...form.budgetMetadata, amount, currency: "VND" } });
+                  }}
                 />
+                <span className="field-hint">
+                  {budgetWords ? `Bằng chữ: ${budgetWords}` : "Nhập kinh phí để hệ thống tự chuyển thành chữ."}
+                </span>
               </label>
             </div>
 
@@ -396,178 +441,262 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
           </form>
         </SectionCard>
 
-        <SectionCard title="Tệp tài liệu" subtitle="Metadata tệp được lưu theo hồ sơ, loại tài liệu, người tải và thời điểm tải">
-          <form className="upload-row" onSubmit={(event) => void handleUpload(event)}>
-            <label className="field">
-              <span>Loại tài liệu</span>
-              <select disabled={!canEdit} value={uploadRequirementCode} onChange={(event) => setUploadRequirementCode(event.target.value)}>
-                {requirementOptions.map((item) => (
-                  <option key={item.code} value={item.code}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-              {selectedRequirement ? (
-                <span className="field-hint">
-                  {ST23A_ALLOWED_FILE_TYPES} · tối đa {selectedRequirement.maxSizeMb}MB
-                </span>
-              ) : null}
-            </label>
-            <label className="field">
-              <span>Chọn tệp</span>
-              <input
-                key={fileInputKey}
-                disabled={!canEdit}
-                type="file"
-                accept={ST23A_FILE_ACCEPT}
-                onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)}
-              />
-            </label>
-            <label className="field">
-              <span>Mô tả tài liệu</span>
-              <input
-                disabled={!canEdit}
-                maxLength={500}
-                value={uploadDescription}
-                onChange={(event) => setUploadDescription(event.target.value)}
-                placeholder="Mô tả ngắn cho tệp"
-              />
-            </label>
-            <button className="button" type="submit" disabled={!canEdit || isUploading}>
-              <UploadCloud size={16} aria-hidden="true" />
-              {isUploading ? "Đang tải" : "Tải tệp"}
-            </button>
-          </form>
+        <SectionCard title="Tệp tài liệu" subtitle="Theo dõi từng tài liệu bắt buộc và metadata nộp hồ sơ">
           {uploadError ? <p className="form-error">{uploadError}</p> : null}
           {attachmentError ? <p className="form-error">{attachmentError}</p> : null}
 
-          {proposal.attachments?.length ? (
-            <div className="file-list">
-              {proposal.attachments.map((attachment) => (
-                <article className="file-item" key={attachment.id}>
-                  <span className="file-icon">
-                    <FileText size={17} aria-hidden="true" />
-                  </span>
+          <div className="document-groups">
+            {documentGroups.map((group) => (
+              <section className="document-box" key={group.code} aria-labelledby={`document-${group.code}`}>
+                <div className="document-box-header">
                   <div>
-                    <span className="record-title">{attachment.fileName}</span>
-                    <span className="file-description">{attachment.description || "Chưa có mô tả"}</span>
-                    <span className="record-meta">
-                      {attachment.requirementCode} · {attachment.mimeType} · {formatBytes(attachment.sizeBytes)} · người tải {attachment.uploadedById} ·{" "}
-                      {formatDate(attachment.createdAt)}
-                    </span>
+                    <h3 id={`document-${group.code}`}>{group.label}</h3>
+                    <p>
+                      {ST23A_ALLOWED_FILE_TYPES} · tối đa {group.maxSizeMb}MB
+                    </p>
                   </div>
-                  <div className="file-actions">
-                    <a
-                      className="button icon-button"
-                      href={getProposalAttachmentDownloadUrl(attachment.id)}
-                      title="Tải xuống"
-                      aria-label={`Tải xuống ${attachment.fileName}`}
-                    >
-                      <Download size={16} aria-hidden="true" />
-                    </a>
-                    {attachment.canEdit ? (
-                      <button
-                        className="button icon-button"
-                        type="button"
-                        title="Sửa mô tả"
-                        aria-label={`Sửa mô tả ${attachment.fileName}`}
-                        onClick={() => startEditingAttachment(attachment.id, attachment.description)}
-                      >
-                        <Pencil size={16} aria-hidden="true" />
-                      </button>
-                    ) : null}
-                    {attachment.canDelete ? (
-                      <button
-                        className="button icon-button danger"
-                        type="button"
-                        title="Xóa tệp"
-                        aria-label={`Xóa tệp ${attachment.fileName}`}
-                        disabled={deletingAttachmentId === attachment.id}
-                        onClick={() => void handleDeleteAttachment(attachment.id, attachment.fileName)}
-                      >
-                        <Trash2 size={16} aria-hidden="true" />
-                      </button>
-                    ) : null}
-                    <StatusBadge status={attachment.status === "active" ? "active" : "closed"} />
-                  </div>
-                  {editingAttachmentId === attachment.id ? (
-                    <form className="attachment-edit-row" onSubmit={(event) => void handleUpdateAttachmentDescription(event, attachment.id)}>
-                      <label className="field">
-                        <span>Mô tả tài liệu</span>
-                        <textarea rows={3} maxLength={500} value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
-                      </label>
-                      <div className="button-row compact-actions">
-                        <button className="button primary" type="submit" disabled={updatingAttachmentId === attachment.id}>
-                          <Save size={16} aria-hidden="true" />
-                          {updatingAttachmentId === attachment.id ? "Đang lưu" : "Lưu mô tả"}
-                        </button>
-                        <button
-                          className="button"
-                          type="button"
-                          onClick={() => {
-                            setEditingAttachmentId("");
-                            setEditDescription("");
-                          }}
-                        >
-                          <X size={16} aria-hidden="true" />
-                          Hủy
-                        </button>
-                      </div>
-                    </form>
-                  ) : null}
-                </article>
-              ))}
-            </div>
-          ) : (
-            <EmptyState title="Chưa có tệp" message="Tải các tài liệu bắt buộc trước khi nộp chính thức." />
-          )}
+                  <StatusBadge status={group.attachments.length ? "active" : "draft"} />
+                </div>
+
+                {canEdit ? (
+                  <form className="document-upload-row" onSubmit={(event) => void handleUpload(event, group.code)}>
+                    <label className="field">
+                      <span>Chọn tệp</span>
+                      <input
+                        key={fileInputKeys[group.code] ?? 0}
+                        type="file"
+                        accept={ST23A_FILE_ACCEPT}
+                        onChange={(event) => setUploadFiles((current) => ({ ...current, [group.code]: event.target.files?.[0] ?? null }))}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Mô tả tài liệu</span>
+                      <input
+                        maxLength={500}
+                        value={uploadDescriptions[group.code] ?? ""}
+                        onChange={(event) => setUploadDescriptions((current) => ({ ...current, [group.code]: event.target.value }))}
+                        placeholder="Mô tả ngắn cho tệp"
+                      />
+                    </label>
+                    <button className="button" type="submit" disabled={isUploading}>
+                      <UploadCloud size={16} aria-hidden="true" />
+                      {isUploading ? "Đang tải" : "Tải tệp"}
+                    </button>
+                  </form>
+                ) : null}
+
+                {group.attachments.length ? (
+                  <>
+                    <div className="table-wrap document-table-wrap">
+                      <table className="data-table document-table">
+                        <thead>
+                          <tr>
+                            <th>Tên tệp</th>
+                            <th>Mô tả tài liệu</th>
+                            <th>Kích thước</th>
+                            <th>Người tải lên</th>
+                            <th>Thời gian nộp</th>
+                            <th>Thao tác</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.attachments.map((attachment) => (
+                            <tr key={attachment.id}>
+                              <td>
+                                <span className="record-title">{attachment.fileName}</span>
+                              </td>
+                              <td>{attachment.description || "Chưa có mô tả"}</td>
+                              <td>{formatBytes(attachment.sizeBytes)}</td>
+                              <td>{getAttachmentUploaderName(attachment)}</td>
+                              <td>{formatDate(attachment.createdAt)}</td>
+                              <td>
+                                <div className="file-actions compact-actions">
+                                  <a
+                                    className="button icon-button"
+                                    href={getProposalAttachmentDownloadUrl(attachment.id)}
+                                    title="Tải xuống"
+                                    aria-label={`Tải xuống ${attachment.fileName}`}
+                                  >
+                                    <Download size={16} aria-hidden="true" />
+                                  </a>
+                                  {attachment.canEdit ? (
+                                    <button
+                                      className="button icon-button"
+                                      type="button"
+                                      title="Chỉnh sửa mô tả"
+                                      aria-label={`Chỉnh sửa mô tả ${attachment.fileName}`}
+                                      onClick={() => startEditingAttachment(attachment.id, attachment.description)}
+                                    >
+                                      <Pencil size={16} aria-hidden="true" />
+                                    </button>
+                                  ) : null}
+                                  {attachment.canDelete ? (
+                                    <button
+                                      className="button icon-button danger"
+                                      type="button"
+                                      title="Xóa tài liệu"
+                                      aria-label={`Xóa tài liệu ${attachment.fileName}`}
+                                      disabled={deletingAttachmentId === attachment.id}
+                                      onClick={() => void handleDeleteAttachment(attachment.id, attachment.fileName)}
+                                    >
+                                      <Trash2 size={16} aria-hidden="true" />
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="mobile-list document-mobile-list">
+                      {group.attachments.map((attachment) => (
+                        <article className="file-item" key={attachment.id}>
+                          <span className="file-icon">
+                            <FileText size={17} aria-hidden="true" />
+                          </span>
+                          <div>
+                            <span className="record-title">{attachment.fileName}</span>
+                            <dl className="document-meta-list">
+                              <div>
+                                <dt>Mô tả tài liệu</dt>
+                                <dd>{attachment.description || "Chưa có mô tả"}</dd>
+                              </div>
+                              <div>
+                                <dt>Kích thước</dt>
+                                <dd>{formatBytes(attachment.sizeBytes)}</dd>
+                              </div>
+                              <div>
+                                <dt>Người tải lên</dt>
+                                <dd>{getAttachmentUploaderName(attachment)}</dd>
+                              </div>
+                              <div>
+                                <dt>Thời gian nộp</dt>
+                                <dd>{formatDate(attachment.createdAt)}</dd>
+                              </div>
+                            </dl>
+                          </div>
+                          <div className="file-actions">
+                            <a
+                              className="button icon-button"
+                              href={getProposalAttachmentDownloadUrl(attachment.id)}
+                              title="Tải xuống"
+                              aria-label={`Tải xuống ${attachment.fileName}`}
+                            >
+                              <Download size={16} aria-hidden="true" />
+                            </a>
+                            {attachment.canEdit ? (
+                              <button
+                                className="button icon-button"
+                                type="button"
+                                title="Chỉnh sửa mô tả"
+                                aria-label={`Chỉnh sửa mô tả ${attachment.fileName}`}
+                                onClick={() => startEditingAttachment(attachment.id, attachment.description)}
+                              >
+                                <Pencil size={16} aria-hidden="true" />
+                              </button>
+                            ) : null}
+                            {attachment.canDelete ? (
+                              <button
+                                className="button icon-button danger"
+                                type="button"
+                                title="Xóa tài liệu"
+                                aria-label={`Xóa tài liệu ${attachment.fileName}`}
+                                disabled={deletingAttachmentId === attachment.id}
+                                onClick={() => void handleDeleteAttachment(attachment.id, attachment.fileName)}
+                              >
+                                <Trash2 size={16} aria-hidden="true" />
+                              </button>
+                            ) : null}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <EmptyState title="Chưa có tài liệu" message={`${group.label} chưa được tải lên.`} />
+                )}
+              </section>
+            ))}
+          </div>
+
+          {editingAttachmentId ? (
+            <form className="attachment-edit-row standalone" onSubmit={(event) => void handleUpdateAttachmentDescription(event, editingAttachmentId)}>
+              <label className="field">
+                <span>Mô tả tài liệu</span>
+                <textarea rows={3} maxLength={500} value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
+              </label>
+              <div className="button-row compact-actions">
+                <button className="button primary" type="submit" disabled={updatingAttachmentId === editingAttachmentId}>
+                  <Save size={16} aria-hidden="true" />
+                  {updatingAttachmentId === editingAttachmentId ? "Đang lưu" : "Lưu mô tả"}
+                </button>
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => {
+                    setEditingAttachmentId("");
+                    setEditDescription("");
+                  }}
+                >
+                  <X size={16} aria-hidden="true" />
+                  Hủy
+                </button>
+              </div>
+            </form>
+          ) : null}
         </SectionCard>
       </div>
 
       <div className="grid">
-        <SectionCard title="Readiness" subtitle="Điều kiện dữ liệu và tệp trước khi nộp">
-          {readiness?.ready ? (
-            <p className="state-message success">
-              <CheckCircle2 size={16} aria-hidden="true" /> Hồ sơ đã đủ điều kiện nộp.
-            </p>
-          ) : (
-            <div className="readiness-list">
-              <strong>Còn thiếu</strong>
-              {(readiness?.missingFields.length || 0) + (readiness?.missingFiles.length || 0) === 0 ? (
-                <span className="record-meta">Đang kiểm tra điều kiện.</span>
-              ) : null}
-              {readiness?.missingFields.map((item) => (
-                <span key={item.code}>Dữ liệu: {item.label}</span>
-              ))}
-              {readiness?.missingFiles.map((item) => (
-                <span key={item.code}>Tệp: {item.label}</span>
-              ))}
-            </div>
-          )}
-          <button className="button primary submit-button" type="button" disabled={!canSubmit || isSubmitting} onClick={() => void handleSubmit()}>
-            <Send size={16} aria-hidden="true" />
-            {isSubmitting ? "Đang nộp" : "Nộp chính thức"}
-          </button>
+        <SectionCard title="Nộp chính thức" subtitle="Xác nhận khi hồ sơ đã đủ điều kiện">
+          <div className="submit-panel">
+            {readiness?.ready ? (
+              <p className="state-message success compact-state">
+                <CheckCircle2 size={16} aria-hidden="true" /> Hồ sơ đã đủ điều kiện nộp.
+              </p>
+            ) : (
+              <div className="readiness-list compact-readiness">
+                <strong>Còn thiếu</strong>
+                {(readiness?.missingFields.length || 0) + (readiness?.missingFiles.length || 0) === 0 ? (
+                  <span className="record-meta">Đang kiểm tra điều kiện.</span>
+                ) : null}
+                {readiness?.missingFields.map((item) => (
+                  <span key={item.code}>Dữ liệu: {item.label}</span>
+                ))}
+                {readiness?.missingFiles.map((item) => (
+                  <span key={item.code}>Tài liệu: {item.label}</span>
+                ))}
+              </div>
+            )}
+            <button className="button primary submit-button" type="button" disabled={!canSubmit || isSubmitting} onClick={() => void handleSubmit()}>
+              <Send size={16} aria-hidden="true" />
+              {isSubmitting ? "Đang nộp" : "Nộp chính thức"}
+            </button>
+          </div>
           {!canSubmit ? <p className="record-meta">Chỉ hồ sơ nháp của chủ sở hữu mới được nộp.</p> : null}
         </SectionCard>
 
         <SectionCard title="Timeline" subtitle="Lịch sử nộp và thay đổi trạng thái chính">
           {proposal.history?.length ? (
-            <div className="timeline">
-              {proposal.history.map((event) => (
-                <article className="timeline-item" key={event.id}>
-                  <span className="timeline-dot" />
-                  <div>
-                    <p className="timeline-title">
-                      {event.fromStatus} → {event.toStatus}
-                    </p>
-                    <p className="timeline-meta">
-                      {formatDate(event.submittedAt)} · actor {event.actorId}
-                    </p>
-                    {event.note ? <p className="timeline-meta">{event.note}</p> : null}
-                  </div>
-                </article>
-              ))}
+            <div className="table-wrap timeline-table-wrap">
+              <table className="data-table timeline-table">
+                <thead>
+                  <tr>
+                    <th>Người nộp</th>
+                    <th>Thời gian nộp</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {proposal.history.map((event) => (
+                    <tr key={event.id}>
+                      <td>{getSubmissionActorName(event)}</td>
+                      <td>{formatDate(event.submittedAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <EmptyState title="Chưa có lịch sử nộp" message="Timeline sẽ xuất hiện khi hồ sơ được nộp chính thức." />

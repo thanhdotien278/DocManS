@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { loadProposalIntakePeriods, type ProposalIntakePeriod } from "@/lib/proposal-intake-periods-api";
+import { formatVndNumber, parseVndNumber } from "@/lib/vietnamese-currency";
 import {
   createResearchProposalDraft,
   loadResearchProposals,
@@ -38,7 +39,7 @@ function defaultForm(hostOrganizationUnitId = ""): ProposalDraftInput {
     endDate: todayInput(210),
     objectives: "",
     summary: "",
-    budgetMetadata: { amount: 0, currency: "VND" },
+    budgetMetadata: { currency: "VND" },
     members: [{ name: "", role: "Chủ nhiệm", organization: "" }]
   };
 }
@@ -325,12 +326,12 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
               <label className="field">
                 <span>Kinh phí dự kiến</span>
                 <input
-                  type="number"
-                  min={0}
-                  value={form.budgetMetadata?.amount ?? 0}
-                  onChange={(event) =>
-                    setForm({ ...form, budgetMetadata: { ...form.budgetMetadata, amount: Number(event.target.value), currency: "VND" } })
-                  }
+                  inputMode="numeric"
+                  value={formatVndNumber(form.budgetMetadata?.amount)}
+                  onChange={(event) => {
+                    const amount = parseVndNumber(event.target.value);
+                    setForm({ ...form, budgetMetadata: { ...form.budgetMetadata, amount, currency: "VND" } });
+                  }}
                 />
               </label>
             </div>

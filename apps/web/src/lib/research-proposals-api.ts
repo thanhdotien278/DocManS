@@ -19,6 +19,7 @@ export type ProposalAttachment = {
   mimeType: string;
   sizeBytes: number;
   uploadedById: string;
+  uploaderDisplayName: string;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -30,6 +31,7 @@ export type ProposalHistoryEvent = {
   id: string;
   proposalId: string;
   actorId: string;
+  actorDisplayName: string;
   fromStatus: string;
   toStatus: string;
   submittedAt: string;

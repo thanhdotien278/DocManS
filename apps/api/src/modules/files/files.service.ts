@@ -25,6 +25,9 @@ type FileRecord = {
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
+  uploadedBy?: {
+    displayName: string;
+  } | null;
 };
 
 type ProposalRecord = {
@@ -114,7 +117,12 @@ export class FilesService {
           storageObjectKey: objectKey,
           uploadedById: actor.id,
           status: "active"
-        } as never
+        } as never,
+        include: {
+          uploadedBy: {
+            select: { displayName: true }
+          }
+        }
       })) as FileRecord;
     } catch (error) {
       await this.objectStorage.deleteObject?.(objectKey);
@@ -145,7 +153,12 @@ export class FilesService {
         status: "active",
         deletedAt: null
       },
-      orderBy: { createdAt: "asc" }
+      orderBy: { createdAt: "asc" },
+      include: {
+        uploadedBy: {
+          select: { displayName: true }
+        }
+      }
     })) as FileRecord[];
     return records.map((record) => this.toFileResponse(record, { canMutate }));
   }
@@ -184,7 +197,12 @@ export class FilesService {
       where: { id: fileId },
       data: {
         description: this.readDescription(input.description)
-      } as never
+      } as never,
+      include: {
+        uploadedBy: {
+          select: { displayName: true }
+        }
+      }
     })) as FileRecord;
 
     await this.auditLog.record({
@@ -208,7 +226,12 @@ export class FilesService {
       data: {
         status: "deleted",
         deletedAt: new Date()
-      } as never
+      } as never,
+      include: {
+        uploadedBy: {
+          select: { displayName: true }
+        }
+      }
     })) as FileRecord;
 
     await this.auditLog.record({
@@ -313,7 +336,12 @@ export class FilesService {
 
   private async findActiveFile(fileId: string) {
     const record = (await this.prisma.fileRecord.findUnique({
-      where: { id: fileId }
+      where: { id: fileId },
+      include: {
+        uploadedBy: {
+          select: { displayName: true }
+        }
+      }
     })) as FileRecord | null;
     if (!record || record.status !== "active" || record.deletedAt) {
       throw new NotFoundException({ message: "Không tìm thấy tệp." });
@@ -340,6 +368,7 @@ export class FilesService {
       mimeType: record.mimeType,
       sizeBytes: record.sizeBytes,
       uploadedById: record.uploadedById,
+      uploaderDisplayName: record.uploadedBy?.displayName ?? "",
       status: record.status,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),

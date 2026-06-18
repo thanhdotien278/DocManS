@@ -81,6 +81,9 @@ type ProposalAttachmentRecord = {
   status: string;
   createdAt: Date;
   updatedAt: Date;
+  uploadedBy?: {
+    displayName: string;
+  } | null;
 };
 
 type ProposalSubmissionEventRecord = {
@@ -91,6 +94,9 @@ type ProposalSubmissionEventRecord = {
   toStatus: string;
   submittedAt: Date;
   note: string | null;
+  actor?: {
+    displayName: string;
+  } | null;
 };
 
 @Injectable()
@@ -165,8 +171,7 @@ export class ResearchProposalsService {
 
   async updateDraft(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>) {
     const proposal = await this.findProposal(proposalId);
-    assertCanEditProposalDraft(actor, proposal);
-    this.assertEditableDraft(proposal);
+    this.assertCanMutateProposalDraft(actor, proposal);
 
     const data: Record<string, unknown> = {};
     if (input.title !== undefined) {
@@ -241,11 +246,10 @@ export class ResearchProposalsService {
 
   async submitProposal(actor: SafeUserContext, proposalId: string) {
     const proposal = await this.findProposal(proposalId);
-    assertCanEditProposalDraft(actor, proposal);
-    this.assertEditableDraft(proposal);
+    const pi = this.assertCanMutateProposalDraft(actor, proposal);
 
     const intake = await this.findIntakePeriod(proposal.intakePeriodId);
-    this.assertIntakeEligibleForProposal(actor, intake);
+    this.assertIntakeEligibleForProposal(pi, intake);
 
     const readiness = await this.computeReadiness(proposal);
     if (!readiness.ready) {
@@ -271,7 +275,7 @@ export class ResearchProposalsService {
         data: {
           proposalId,
           actorId: actor.id,
-          fromStatus: "draft",
+          fromStatus: proposal.status,
           toStatus: "submitted",
           submittedAt,
           note: "PI nộp hồ sơ chính thức"
@@ -285,7 +289,14 @@ export class ResearchProposalsService {
           actorId: actor.id,
           targetEntity: "research-proposal",
           targetEntityId: proposalId,
-          username: actor.username
+          username: actor.username,
+          reason: JSON.stringify({
+            fromStatus: proposal.status,
+            toStatus: "submitted",
+            readinessReady: readiness.ready,
+            missingFields: readiness.missingFields.length,
+            missingFiles: readiness.missingFiles.length
+          })
         }
       });
 
@@ -300,7 +311,12 @@ export class ResearchProposalsService {
     assertCanReadProposal(actor, proposal);
     const records = (await this.prisma.proposalSubmissionEvent.findMany({
       where: { proposalId },
-      orderBy: { submittedAt: "asc" }
+      orderBy: { submittedAt: "asc" },
+      include: {
+        actor: {
+          select: { displayName: true }
+        }
+      }
     })) as ProposalSubmissionEventRecord[];
 
     return records.map((record) => this.toHistoryResponse(record));
@@ -342,6 +358,13 @@ export class ResearchProposalsService {
     }
   }
 
+  private assertCanMutateProposalDraft(actor: SafeUserContext, proposal: ResearchProposalRecord) {
+    const pi = assertCanEditProposalDraft(actor, proposal);
+    assertHasOrganizationScope(pi, proposal.hostOrganizationUnitId);
+    this.assertEditableDraft(proposal);
+    return pi;
+  }
+
   private async replaceMembers(proposalId: string, members: ProposalMemberInput[]) {
     await this.prisma.proposalMember.deleteMany({ where: { proposalId } });
     if (members.length) {
@@ -361,7 +384,12 @@ export class ResearchProposalsService {
   private async findAttachments(proposalId: string, options: { canMutate: boolean } = { canMutate: false }) {
     const records = (await this.prisma.fileRecord.findMany({
       where: { relatedEntityType: "research_proposal", relatedEntityId: proposalId, status: "active", deletedAt: null },
-      orderBy: { createdAt: "asc" }
+      orderBy: { createdAt: "asc" },
+      include: {
+        uploadedBy: {
+          select: { displayName: true }
+        }
+      }
     })) as ProposalAttachmentRecord[];
     return records.map((attachment) => this.toAttachmentResponse(attachment, options));
   }
@@ -455,7 +483,7 @@ export class ResearchProposalsService {
   }
 
   private toProposalResponse(proposal: ResearchProposalRecord, actor?: SafeUserContext) {
-    const canEditDraft = Boolean(actor && proposal.status === "draft" && isPrincipalInvestigator(actor) && proposal.ownerId === actor.id);
+    const canEditDraft = this.canEditProposalDraft(actor, proposal);
 
     return {
       id: proposal.id,
@@ -481,6 +509,19 @@ export class ResearchProposalsService {
     };
   }
 
+  private canEditProposalDraft(actor: SafeUserContext | undefined, proposal: ResearchProposalRecord) {
+    if (!actor || proposal.status !== "draft" || !isPrincipalInvestigator(actor) || proposal.ownerId !== actor.id) {
+      return false;
+    }
+
+    try {
+      assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private toAttachmentResponse(attachment: ProposalAttachmentRecord, options: { canMutate: boolean }) {
     return {
       id: attachment.id,
@@ -494,6 +535,7 @@ export class ResearchProposalsService {
       mimeType: attachment.mimeType,
       sizeBytes: attachment.sizeBytes,
       uploadedById: attachment.uploadedById,
+      uploaderDisplayName: attachment.uploadedBy?.displayName ?? "",
       status: attachment.status,
       createdAt: attachment.createdAt.toISOString(),
       updatedAt: attachment.updatedAt.toISOString(),
@@ -505,7 +547,12 @@ export class ResearchProposalsService {
   private async listHistoryForProposal(proposalId: string) {
     const records = (await this.prisma.proposalSubmissionEvent.findMany({
       where: { proposalId },
-      orderBy: { submittedAt: "asc" }
+      orderBy: { submittedAt: "asc" },
+      include: {
+        actor: {
+          select: { displayName: true }
+        }
+      }
     })) as ProposalSubmissionEventRecord[];
 
     return records.map((record) => this.toHistoryResponse(record));
@@ -516,6 +563,7 @@ export class ResearchProposalsService {
       id: record.id,
       proposalId: record.proposalId,
       actorId: record.actorId,
+      actorDisplayName: record.actor?.displayName ?? "",
       fromStatus: record.fromStatus,
       toStatus: record.toStatus,
       submittedAt: record.submittedAt.toISOString(),
