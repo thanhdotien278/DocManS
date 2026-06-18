@@ -36,6 +36,7 @@ const piUser = {
   ...adminUser,
   id: "user-pi",
   username: "patuan",
+  displayName: "Phạm Anh Tuấn",
   role: "principal-investigator",
   roleLabel: "Chủ nhiệm đề tài",
   roles: ["principal-investigator"],
@@ -98,6 +99,10 @@ function createEp02Prisma() {
 
   function nextId(prefix, collection) {
     return `${prefix}-${collection.length + 1}`;
+  }
+
+  function userDisplayName(userId) {
+    return [adminUser, staffUser, piUser, otherPiUser].find((user) => user.id === userId)?.displayName ?? "";
   }
 
   const prisma = {
@@ -214,6 +219,7 @@ function createEp02Prisma() {
           createdAt: new Date(),
           updatedAt: new Date(),
           deletedAt: null,
+          uploadedBy: { displayName: userDisplayName(data.uploadedById) },
           ...data
         };
         store.fileRecords.push(record);
@@ -238,6 +244,7 @@ function createEp02Prisma() {
           throw new Error("file record not found");
         }
         store.fileRecords[index] = { ...store.fileRecords[index], ...data, updatedAt: new Date() };
+        store.fileRecords[index].uploadedBy = { displayName: userDisplayName(store.fileRecords[index].uploadedById) };
         return store.fileRecords[index];
       }
     },
@@ -247,6 +254,7 @@ function createEp02Prisma() {
           id: nextId("event", store.submissionEvents),
           submittedAt: new Date(),
           note: null,
+          actor: { displayName: userDisplayName(data.actorId) },
           ...data
         };
         store.submissionEvents.push(record);
@@ -476,6 +484,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     assert.equal(attachment.fileName, "Chỉ số Glucose.docx");
     assert.equal(attachment.description, "Bản chỉ số xét nghiệm");
     assert.equal(attachment.uploadedById, piUser.id);
+    assert.equal(attachment.uploaderDisplayName, piUser.displayName);
     assert.equal(attachment.filePurpose, "proposal-form");
     assert.equal(attachment.canEdit, true);
     assert.equal(attachment.canDelete, true);
@@ -490,6 +499,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     const proposalAttachments = await proposalService.listAttachments(piUser, draft.id);
     assert.equal(proposalAttachments.length, 1);
     assert.equal(proposalAttachments[0].description, "Bản chỉ số xét nghiệm");
+    assert.equal(proposalAttachments[0].uploaderDisplayName, piUser.displayName);
     assert.equal(proposalAttachments[0].canEdit, true);
     assert.equal(proposalAttachments[0].canDelete, true);
 
@@ -500,10 +510,12 @@ describe("EP-02 proposal intake and submission behavior", () => {
     assert.equal(metadata.length, 1);
     assert.equal(metadata[0].fileName, "Chỉ số Glucose.docx");
     assert.equal(metadata[0].description, "Bản chỉ số xét nghiệm");
+    assert.equal(metadata[0].uploaderDisplayName, piUser.displayName);
     assertNoRawStorageFields(metadata[0]);
 
     const download = await filesService.downloadFile(piUser, attachment.id);
     assert.equal(download.fileName, "Chỉ số Glucose.docx");
+    assert.equal(download.uploaderDisplayName, piUser.displayName);
     assert.deepEqual(download.content, Buffer.alloc(256000, "p"));
     assertNoRawStorageFields(download);
 
@@ -795,10 +807,22 @@ describe("EP-02 proposal intake and submission behavior", () => {
     assert.equal(submitted.status, "submitted");
     assert.equal(submitted.submittedById, piUser.id);
     assert.ok(submitted.submittedAt);
+    assert.equal(submitted.canEdit, false);
+    assert.equal(submitted.canSubmit, false);
+    assert.equal(submitted.history.length, 1);
     assert.equal(history.length, 1);
     assert.equal(history[0].fromStatus, "draft");
     assert.equal(history[0].toStatus, "submitted");
+    assert.equal(history[0].actorDisplayName, piUser.displayName);
     assert.equal(prisma.store.auditLogs.at(-1).action, "submit-proposal");
+    assert.deepEqual(JSON.parse(prisma.store.auditLogs.at(-1).reason), {
+      fromStatus: "draft",
+      toStatus: "submitted",
+      readinessReady: true,
+      missingFields: 0,
+      missingFiles: 0
+    });
+    await assert.rejects(() => proposalService.submitProposal(piUser, draft.id), BadRequestException);
     await assert.rejects(() => proposalService.updateDraft(piUser, draft.id, { title: "Sửa sau nộp" }), BadRequestException);
     await assert.rejects(
       () =>
@@ -813,5 +837,50 @@ describe("EP-02 proposal intake and submission behavior", () => {
         }),
       ForbiddenException
     );
+  });
+
+  it("rejects submission and draft edits when structured readiness or organization scope fails closed", async () => {
+    const prisma = createEp02Prisma();
+    const auditLog = createAuditLog();
+    const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
+    const proposalService = new ResearchProposalsService(prisma, auditLog);
+    const intake = await createOpenIntake(intakeService);
+
+    const incompleteDraft = await proposalService.createDraft(piUser, {
+      intakePeriodId: intake.id,
+      title: "Hồ sơ thiếu dữ liệu",
+      hostOrganizationUnitId: "org-khti"
+    });
+    await assert.rejects(() => proposalService.submitProposal(piUser, incompleteDraft.id), (error) => {
+      assert.equal(error instanceof BadRequestException, true);
+      const response = error.getResponse();
+      assert.ok(response.missingFields.some((item) => item.code === "research-field"));
+      assert.ok(response.missingFields.some((item) => item.code === "members"));
+      assert.ok(response.missingFiles.some((item) => item.code === "proposal-form"));
+      return true;
+    });
+
+    const readyDraft = await createDraft({ prisma, intakeService, proposalService });
+    const filesService = createFilesService({ prisma, auditLog });
+    for (const filePurpose of ["proposal-form", "budget-form"]) {
+      await filesService.uploadFile(piUser, {
+        relatedEntityType: "research_proposal",
+        relatedEntityId: readyDraft.id,
+        filePurpose,
+        fileName: `${filePurpose}.pdf`,
+        mimeType: "application/pdf",
+        sizeBytes: 1000,
+        content: Buffer.alloc(1000, "p")
+      });
+    }
+
+    const stored = prisma.store.proposals.find((proposal) => proposal.id === readyDraft.id);
+    stored.hostOrganizationUnitId = "org-outside";
+
+    const detail = await proposalService.getProposal(piUser, readyDraft.id);
+    assert.equal(detail.canEdit, false);
+    assert.equal(detail.canSubmit, false);
+    await assert.rejects(() => proposalService.submitProposal(piUser, readyDraft.id), ForbiddenException);
+    await assert.rejects(() => proposalService.updateDraft(piUser, readyDraft.id, { title: "Sửa ngoài phạm vi" }), ForbiddenException);
   });
 });
