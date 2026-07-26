@@ -89,7 +89,8 @@ describe("workspace smoke checks", () => {
       "ProposalMember",
       "ProposalAttachment",
       "FileRecord",
-      "ProposalSubmissionEvent"
+      "ProposalSubmissionEvent",
+      "ProposalSupplementRequest"
     ]);
     assert.match(schemaSource, /@@map\("users"\)/);
     assert.match(schemaSource, /@@map\("roles"\)/);
@@ -106,6 +107,7 @@ describe("workspace smoke checks", () => {
     assert.match(schemaSource, /@@map\("proposal_members"\)/);
     assert.match(schemaSource, /@@map\("proposal_attachments"\)/);
     assert.match(schemaSource, /@@map\("proposal_submission_events"\)/);
+    assert.match(schemaSource, /@@map\("proposal_supplement_requests"\)/);
   });
 
   it("defines a local database setup path for Epic 1", () => {

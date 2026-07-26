@@ -13,6 +13,8 @@ import {
   loadProposalReadiness,
   loadResearchProposal,
   getProposalAttachmentDownloadUrl,
+  requestProposalSupplement,
+  resubmitResearchProposal,
   submitResearchProposal,
   updateProposalAttachmentMetadata,
   updateResearchProposalDraft,
@@ -92,6 +94,11 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   const [updatingAttachmentId, setUpdatingAttachmentId] = useState("");
   const [deletingAttachmentId, setDeletingAttachmentId] = useState("");
   const [attachmentError, setAttachmentError] = useState("");
+  const [supplementReason, setSupplementReason] = useState("");
+  const [supplementDueDate, setSupplementDueDate] = useState("");
+  const [supplementError, setSupplementError] = useState("");
+  const [isRequestingSupplement, setIsRequestingSupplement] = useState(false);
+  const [isResubmitting, setIsResubmitting] = useState(false);
 
   async function refresh() {
     setState("loading");
@@ -110,8 +117,10 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
     void refresh();
   }, [proposalId]);
 
-  const canEdit = proposal?.status === "draft" && proposal.canEdit;
-  const canSubmit = proposal?.status === "draft" && proposal.canSubmit;
+  const canEdit = Boolean(proposal?.canEdit);
+  const canSubmit = Boolean(proposal?.canSubmit);
+  const canRequestSupplement = account?.role === "scientific-management" && proposal?.status === "submitted";
+  const isSupplementFlow = proposal?.status === "supplement_requested";
   const requirementOptions = proposal?.requiredPackage ?? [];
   const documentGroups = useMemo(
     () =>
@@ -192,7 +201,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
       setProposal(result.proposal);
       setForm(toDraftInput(result.proposal));
       setReadiness(await loadProposalReadiness(proposal.id));
-      setMessage("Đã lưu hồ sơ nháp.");
+      setMessage(isSupplementFlow ? "Đã lưu nội dung bổ sung." : "Đã lưu hồ sơ nháp.");
     } catch (error) {
       setFormError({ submit: error instanceof Error ? error.message : "Không thể lưu hồ sơ." });
     } finally {
@@ -311,6 +320,77 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
     }
   }
 
+  async function handleRequestSupplement(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!proposal || !canRequestSupplement) {
+      return;
+    }
+
+    setSupplementError("");
+    setMessage("");
+    if (!supplementReason.trim() || !supplementDueDate) {
+      setSupplementError("Nhập lý do và hạn phản hồi.");
+      return;
+    }
+
+    const confirmed = window.confirm("Gửi yêu cầu bổ sung cho hồ sơ này?");
+    if (!confirmed) {
+      return;
+    }
+
+    setIsRequestingSupplement(true);
+    try {
+      const result = await requestProposalSupplement(proposal.id, {
+        reason: supplementReason,
+        dueDate: supplementDueDate
+      });
+      setProposal(result.proposal);
+      setForm(toDraftInput(result.proposal));
+      setReadiness(await loadProposalReadiness(proposal.id));
+      setSupplementReason("");
+      setSupplementDueDate("");
+      setMessage("Đã gửi yêu cầu bổ sung.");
+    } catch (error) {
+      setSupplementError(error instanceof Error ? error.message : "Không thể gửi yêu cầu bổ sung.");
+    } finally {
+      setIsRequestingSupplement(false);
+    }
+  }
+
+  async function handleResubmit() {
+    if (!proposal) {
+      return;
+    }
+
+    setMessage("");
+    setFormError({});
+    const confirmed = window.confirm("Nộp lại hồ sơ sau bổ sung?");
+    if (!confirmed) {
+      return;
+    }
+
+    setIsResubmitting(true);
+    try {
+      const result = await resubmitResearchProposal(proposal.id);
+      setProposal(result.proposal);
+      setForm(toDraftInput(result.proposal));
+      setReadiness(await loadProposalReadiness(proposal.id));
+      setMessage("Đã nộp lại hồ sơ.");
+    } catch (error) {
+      const readinessError = error as ApiErrorWithReadiness;
+      if (readinessError.missingFields || readinessError.missingFiles) {
+        setReadiness({
+          ready: false,
+          missingFields: readinessError.missingFields ?? [],
+          missingFiles: readinessError.missingFiles ?? []
+        });
+      }
+      setFormError({ submit: error instanceof Error ? error.message : "Không thể nộp lại hồ sơ." });
+    } finally {
+      setIsResubmitting(false);
+    }
+  }
+
   if (state === "loading") {
     return <p className="state-message">Đang tải chi tiết hồ sơ...</p>;
   }
@@ -335,6 +415,12 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                 <span className="meta-label">Ngày nộp</span>
                 <span className="meta-value">{proposal.submittedAt ? formatDate(proposal.submittedAt) : "Chưa nộp"}</span>
               </div>
+              {proposal.supplementRequests?.at(-1) ? (
+                <div className="meta-item">
+                  <span className="meta-label">Yêu cầu bổ sung</span>
+                  <span className="meta-value">Hạn phản hồi {formatDate(proposal.supplementRequests.at(-1)?.dueDate ?? "")}</span>
+                </div>
+              ) : null}
             </div>
 
             <div className="form-section-inline">
@@ -432,7 +518,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
             <div className="button-row">
               <button className="button primary" type="submit" disabled={!canEdit || isSaving}>
                 <Save size={16} aria-hidden="true" />
-                {isSaving ? "Đang lưu" : "Lưu nháp"}
+                {isSaving ? "Đang lưu" : isSupplementFlow ? "Lưu bổ sung" : "Lưu nháp"}
               </button>
               <Link className="button" href="/my-proposals">
                 Danh sách hồ sơ
@@ -440,6 +526,50 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
             </div>
           </form>
         </SectionCard>
+
+        {proposal.supplementRequests?.length || canRequestSupplement ? (
+          <SectionCard title="Yêu cầu bổ sung" subtitle="Lý do, hạn phản hồi và trạng thái xử lý của vòng bổ sung">
+            {proposal.supplementRequests?.length ? (
+              <div className="timeline">
+                {proposal.supplementRequests.map((request) => (
+                  <article className="timeline-item" key={request.id}>
+                    <span className="timeline-dot" />
+                    <div>
+                      <p className="timeline-title">{request.reason}</p>
+                      <p className="timeline-meta">
+                        Người yêu cầu: {request.actorDisplayName || "Không xác định"} · Hạn phản hồi: {formatDate(request.dueDate)}
+                      </p>
+                      <p className="timeline-meta">
+                        Trạng thái: {request.status === "resolved" ? "Đã xử lý" : "Đang chờ bổ sung"}
+                        {request.resolvedAt ? ` · Hoàn tất: ${formatDate(request.resolvedAt)}` : ""}
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="Chưa có yêu cầu bổ sung" message="Staff có thể gửi yêu cầu khi hồ sơ đã nộp cần hoàn thiện thêm." />
+            )}
+
+            {canRequestSupplement ? (
+              <form className="admin-form compact-form" onSubmit={(event) => void handleRequestSupplement(event)}>
+                <label className="field">
+                  <span>Lý do bổ sung</span>
+                  <textarea rows={3} maxLength={2000} value={supplementReason} onChange={(event) => setSupplementReason(event.target.value)} />
+                </label>
+                <label className="field">
+                  <span>Hạn phản hồi</span>
+                  <input type="date" value={supplementDueDate} onChange={(event) => setSupplementDueDate(event.target.value)} />
+                </label>
+                {supplementError ? <p className="form-error">{supplementError}</p> : null}
+                <button className="button primary" type="submit" disabled={isRequestingSupplement}>
+                  <Send size={16} aria-hidden="true" />
+                  {isRequestingSupplement ? "Đang gửi" : "Yêu cầu bổ sung"}
+                </button>
+              </form>
+            ) : null}
+          </SectionCard>
+        ) : null}
 
         <SectionCard title="Tệp tài liệu" subtitle="Theo dõi từng tài liệu bắt buộc và metadata nộp hồ sơ">
           {uploadError ? <p className="form-error">{uploadError}</p> : null}
@@ -670,12 +800,17 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                 ))}
               </div>
             )}
-            <button className="button primary submit-button" type="button" disabled={!canSubmit || isSubmitting} onClick={() => void handleSubmit()}>
+            <button
+              className="button primary submit-button"
+              type="button"
+              disabled={!canSubmit || isSubmitting || isResubmitting}
+              onClick={() => void (isSupplementFlow ? handleResubmit() : handleSubmit())}
+            >
               <Send size={16} aria-hidden="true" />
-              {isSubmitting ? "Đang nộp" : "Nộp chính thức"}
+              {isSubmitting || isResubmitting ? "Đang nộp" : isSupplementFlow ? "Nộp lại hồ sơ" : "Nộp chính thức"}
             </button>
           </div>
-          {!canSubmit ? <p className="record-meta">Chỉ hồ sơ nháp của chủ sở hữu mới được nộp.</p> : null}
+          {!canSubmit ? <p className="record-meta">Chỉ chủ sở hữu hồ sơ ở trạng thái hợp lệ mới được nộp.</p> : null}
         </SectionCard>
 
         <SectionCard title="Timeline" subtitle="Lịch sử nộp và thay đổi trạng thái chính">

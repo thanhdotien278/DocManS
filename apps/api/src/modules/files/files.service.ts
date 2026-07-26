@@ -302,7 +302,7 @@ export class FilesService {
     const proposal = await this.findRelatedProposal(relatedEntityType, relatedEntityId);
     assertCanEditProposalDraft(actor, proposal);
     assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
-    if (proposal.status !== "draft") {
+    if (proposal.status !== "draft" && proposal.status !== "supplement_requested") {
       throw new ForbiddenException({ message: "Hồ sơ không còn cho phép tải tệp." });
     }
   }

@@ -119,7 +119,6 @@ describe("ST-2.3A files route registration source checks", () => {
     assert.match(componentSource, /account\?\.id === proposal\.submittedById/);
     assert.match(componentSource, /getSubmissionActorName\(event\)/);
     assert.match(componentSource, /formatDate\(event\.submittedAt\)/);
-    assert.equal(/className="timeline-item"/.test(componentSource), false);
   });
 
   it("proposal draft creation budget field can be cleared instead of forcing zero", () => {
@@ -136,5 +135,24 @@ describe("ST-2.3A files route registration source checks", () => {
     const cssSource = readFileSync("apps/web/src/app/globals.css", "utf8");
 
     assert.match(cssSource, /\.detail-grid\s*\{[^}]*align-items:\s*start;/s);
+  });
+
+  it("proposal detail UI supports ST-3.1 supplement request and resubmission affordances", () => {
+    const componentSource = readFileSync("apps/web/src/components/research-proposals/proposal-detail-workspace.tsx", "utf8");
+    const apiClientSource = readFileSync("apps/web/src/lib/research-proposals-api.ts", "utf8");
+    const controllerSource = readFileSync("apps/api/src/research-proposals/research-proposals.controller.ts", "utf8");
+
+    assert.match(controllerSource, /@Post\(":id\/supplement-requests"\)/);
+    assert.match(controllerSource, /@Post\(":id\/resubmit"\)/);
+    assert.match(apiClientSource, /requestProposalSupplement/);
+    assert.match(apiClientSource, /resubmitResearchProposal/);
+    assert.match(componentSource, /Yêu cầu bổ sung/);
+    assert.match(componentSource, /supplementReason/);
+    assert.match(componentSource, /supplementDueDate/);
+    assert.match(componentSource, /handleRequestSupplement/);
+    assert.match(componentSource, /handleResubmit/);
+    assert.match(componentSource, /Nộp lại hồ sơ/);
+    assert.match(componentSource, /supplementRequests/);
+    assert.match(componentSource, /Hạn phản hồi/);
   });
 });

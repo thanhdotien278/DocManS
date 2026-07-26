@@ -27,6 +27,7 @@ model User {
   uploadedProposalAttachments ProposalAttachment[] @relation("AttachmentUploader")
   uploadedFileRecords FileRecord[] @relation("FileRecordUploader")
   proposalSubmissionEvents ProposalSubmissionEvent[] @relation("SubmissionActor")
+  proposalSupplementRequests ProposalSupplementRequest[] @relation("SupplementRequestActor")
 
   @@map("users")
 }
@@ -210,6 +211,7 @@ model ResearchProposal {
   members                ProposalMember[]
   attachments            ProposalAttachment[]
   submissionEvents       ProposalSubmissionEvent[]
+  supplementRequests     ProposalSupplementRequest[]
 
   @@index([intakePeriodId])
   @@index([ownerId])
@@ -292,4 +294,22 @@ model ProposalSubmissionEvent {
   @@index([proposalId])
   @@index([actorId])
   @@map("proposal_submission_events")
+}
+
+model ProposalSupplementRequest {
+  id          String           @id @default(uuid())
+  proposalId  String           @map("proposal_id")
+  proposal    ResearchProposal @relation(fields: [proposalId], references: [id])
+  actorId     String           @map("actor_id")
+  actor       User             @relation("SupplementRequestActor", fields: [actorId], references: [id])
+  reason      String
+  dueDate     DateTime         @map("due_date")
+  requestedAt DateTime         @default(now()) @map("requested_at")
+  resolvedAt  DateTime?        @map("resolved_at")
+  status      String           @default("open")
+
+  @@index([proposalId])
+  @@index([actorId])
+  @@index([status])
+  @@map("proposal_supplement_requests")
 }

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
@@ -99,6 +99,20 @@ type ProposalSubmissionEventRecord = {
   } | null;
 };
 
+type ProposalSupplementRequestRecord = {
+  id: string;
+  proposalId: string;
+  actorId: string;
+  reason: string;
+  dueDate: Date;
+  requestedAt: Date;
+  resolvedAt: Date | null;
+  status: string;
+  actor?: {
+    displayName: string;
+  } | null;
+};
+
 @Injectable()
 export class ResearchProposalsService {
   constructor(
@@ -171,7 +185,7 @@ export class ResearchProposalsService {
 
   async updateDraft(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>) {
     const proposal = await this.findProposal(proposalId);
-    this.assertCanMutateProposalDraft(actor, proposal);
+    this.assertCanMutateProposalContent(actor, proposal);
 
     const data: Record<string, unknown> = {};
     if (input.title !== undefined) {
@@ -221,7 +235,7 @@ export class ResearchProposalsService {
     }
 
     await this.auditLog.record({
-      action: "update-proposal-draft",
+      action: proposal.status === "supplement_requested" ? "update-proposal-during-supplement" : "update-proposal-draft",
       result: "success",
       actorId: actor.id,
       targetEntity: "research-proposal",
@@ -306,6 +320,139 @@ export class ResearchProposalsService {
     return this.toProposalDetailResponse(submitted, undefined, actor);
   }
 
+  async requestSupplement(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>) {
+    const proposal = await this.findProposal(proposalId);
+    this.assertCanRequestSupplement(actor, proposal);
+    if (proposal.status !== "submitted") {
+      throw new BadRequestException({ message: "Chỉ hồ sơ đã nộp chính thức mới được yêu cầu bổ sung ở bước này." });
+    }
+
+    const reason = readText(input.reason, "reason", 2000);
+    const dueDate = readDate(input.dueDate, "dueDate");
+    const requestedAt = new Date();
+    const updated = (await this.prisma.$transaction(async (tx) => {
+      const record = (await tx.researchProposal.update({
+        where: { id: proposalId },
+        data: { status: "supplement_requested" } as never
+      })) as ResearchProposalRecord;
+
+      await tx.proposalSupplementRequest.create({
+        data: {
+          proposalId,
+          actorId: actor.id,
+          reason,
+          dueDate,
+          requestedAt,
+          status: "open"
+        } as never
+      });
+
+      await tx.proposalSubmissionEvent.create({
+        data: {
+          proposalId,
+          actorId: actor.id,
+          fromStatus: proposal.status,
+          toStatus: "supplement_requested",
+          submittedAt: requestedAt,
+          note: "Staff yêu cầu bổ sung hồ sơ"
+        } as never
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: "request-supplement",
+          result: "success",
+          actorId: actor.id,
+          targetEntity: "research-proposal",
+          targetEntityId: proposalId,
+          username: actor.username,
+          reason: JSON.stringify({
+            fromStatus: proposal.status,
+            toStatus: "supplement_requested",
+            dueDate: dueDate.toISOString(),
+            reason
+          })
+        }
+      });
+
+      return record;
+    })) as unknown as ResearchProposalRecord;
+
+    return this.toProposalDetailResponse(updated, undefined, actor);
+  }
+
+  async resubmitProposal(actor: SafeUserContext, proposalId: string) {
+    const proposal = await this.findProposal(proposalId);
+    const pi = this.assertCanResubmitSupplement(actor, proposal);
+    const openRequest = await this.findOpenSupplementRequest(proposalId);
+    if (!openRequest) {
+      throw new BadRequestException({ message: "Không tìm thấy yêu cầu bổ sung đang mở." });
+    }
+
+    const readiness = await this.computeReadiness(proposal);
+    if (!readiness.ready) {
+      throw new BadRequestException({
+        message: "Hồ sơ chưa đủ điều kiện nộp lại.",
+        missingFields: readiness.missingFields,
+        missingFiles: readiness.missingFiles
+      });
+    }
+
+    const submittedAt = new Date();
+    const updated = (await this.prisma.$transaction(async (tx) => {
+      const record = (await tx.researchProposal.update({
+        where: { id: proposalId },
+        data: {
+          status: "resubmitted",
+          submittedAt,
+          submittedById: pi.id
+        } as never
+      })) as ResearchProposalRecord;
+
+      await tx.proposalSupplementRequest.update({
+        where: { id: openRequest.id },
+        data: {
+          status: "resolved",
+          resolvedAt: submittedAt
+        } as never
+      });
+
+      await tx.proposalSubmissionEvent.create({
+        data: {
+          proposalId,
+          actorId: pi.id,
+          fromStatus: proposal.status,
+          toStatus: "resubmitted",
+          submittedAt,
+          note: "PI nộp lại hồ sơ sau yêu cầu bổ sung"
+        } as never
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: "resubmit-proposal",
+          result: "success",
+          actorId: pi.id,
+          targetEntity: "research-proposal",
+          targetEntityId: proposalId,
+          username: pi.username,
+          reason: JSON.stringify({
+            fromStatus: proposal.status,
+            toStatus: "resubmitted",
+            supplementRequestId: openRequest.id,
+            readinessReady: readiness.ready,
+            missingFields: readiness.missingFields.length,
+            missingFiles: readiness.missingFiles.length
+          })
+        }
+      });
+
+      return record;
+    })) as unknown as ResearchProposalRecord;
+
+    return this.toProposalDetailResponse(updated, undefined, pi);
+  }
+
   async listHistory(actor: SafeUserContext, proposalId: string) {
     const proposal = await this.findProposal(proposalId);
     assertCanReadProposal(actor, proposal);
@@ -362,6 +509,31 @@ export class ResearchProposalsService {
     const pi = assertCanEditProposalDraft(actor, proposal);
     assertHasOrganizationScope(pi, proposal.hostOrganizationUnitId);
     this.assertEditableDraft(proposal);
+    return pi;
+  }
+
+  private assertCanMutateProposalContent(actor: SafeUserContext, proposal: ResearchProposalRecord) {
+    const pi = assertCanEditProposalDraft(actor, proposal);
+    assertHasOrganizationScope(pi, proposal.hostOrganizationUnitId);
+    if (proposal.status !== "draft" && proposal.status !== "supplement_requested") {
+      throw new BadRequestException({ message: "Hồ sơ không ở trạng thái cho phép chỉnh sửa." });
+    }
+    return pi;
+  }
+
+  private assertCanRequestSupplement(actor: SafeUserContext, proposal: ResearchProposalRecord) {
+    if (!isScientificManagement(actor)) {
+      throw new ForbiddenException({ message: "Chỉ chuyên viên quản lý khoa học được yêu cầu bổ sung hồ sơ." });
+    }
+    assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
+  }
+
+  private assertCanResubmitSupplement(actor: SafeUserContext, proposal: ResearchProposalRecord) {
+    const pi = assertCanEditProposalDraft(actor, proposal);
+    assertHasOrganizationScope(pi, proposal.hostOrganizationUnitId);
+    if (proposal.status !== "supplement_requested") {
+      throw new BadRequestException({ message: "Chỉ hồ sơ đang chờ bổ sung mới được nộp lại." });
+    }
     return pi;
   }
 
@@ -458,6 +630,7 @@ export class ResearchProposalsService {
     const members = providedMembers ?? (await this.findMembers(proposal.id));
     const attachments = await this.findAttachments(proposal.id, { canMutate: this.canMutateProposalFiles(actor, proposal) });
     const history = await this.listHistoryForProposal(proposal.id);
+    const supplementRequests = await this.listSupplementRequestsForProposal(proposal.id);
     const requiredPackage = await this.getRequiredPackageForProposal(proposal);
 
     return {
@@ -465,12 +638,18 @@ export class ResearchProposalsService {
       members,
       attachments,
       history,
+      supplementRequests,
       requiredPackage
     };
   }
 
   private canMutateProposalFiles(actor: SafeUserContext | undefined, proposal: ResearchProposalRecord) {
-    if (!actor || proposal.status !== "draft" || !isPrincipalInvestigator(actor) || proposal.ownerId !== actor.id) {
+    if (
+      !actor ||
+      (proposal.status !== "draft" && proposal.status !== "supplement_requested") ||
+      !isPrincipalInvestigator(actor) ||
+      proposal.ownerId !== actor.id
+    ) {
       return false;
     }
 
@@ -510,7 +689,12 @@ export class ResearchProposalsService {
   }
 
   private canEditProposalDraft(actor: SafeUserContext | undefined, proposal: ResearchProposalRecord) {
-    if (!actor || proposal.status !== "draft" || !isPrincipalInvestigator(actor) || proposal.ownerId !== actor.id) {
+    if (
+      !actor ||
+      (proposal.status !== "draft" && proposal.status !== "supplement_requested") ||
+      !isPrincipalInvestigator(actor) ||
+      proposal.ownerId !== actor.id
+    ) {
       return false;
     }
 
@@ -556,6 +740,41 @@ export class ResearchProposalsService {
     })) as ProposalSubmissionEventRecord[];
 
     return records.map((record) => this.toHistoryResponse(record));
+  }
+
+  private async findOpenSupplementRequest(proposalId: string) {
+    return (await this.prisma.proposalSupplementRequest.findFirst({
+      where: { proposalId, status: "open" },
+      orderBy: { requestedAt: "desc" }
+    })) as ProposalSupplementRequestRecord | null;
+  }
+
+  private async listSupplementRequestsForProposal(proposalId: string) {
+    const records = (await this.prisma.proposalSupplementRequest.findMany({
+      where: { proposalId },
+      orderBy: { requestedAt: "asc" },
+      include: {
+        actor: {
+          select: { displayName: true }
+        }
+      }
+    })) as ProposalSupplementRequestRecord[];
+
+    return records.map((record) => this.toSupplementRequestResponse(record));
+  }
+
+  private toSupplementRequestResponse(record: ProposalSupplementRequestRecord) {
+    return {
+      id: record.id,
+      proposalId: record.proposalId,
+      actorId: record.actorId,
+      actorDisplayName: record.actor?.displayName ?? "",
+      reason: record.reason,
+      dueDate: record.dueDate.toISOString(),
+      requestedAt: record.requestedAt.toISOString(),
+      resolvedAt: record.resolvedAt?.toISOString() ?? "",
+      status: record.status
+    };
   }
 
   private toHistoryResponse(record: ProposalSubmissionEventRecord) {
