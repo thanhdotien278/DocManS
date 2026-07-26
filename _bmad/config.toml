@@ -11,7 +11,7 @@
 # ─────────────────────────────────────────────────────────────────
 
 [core]
-document_output_language = "Vietnamese"
+document_output_language = "English"
 output_folder = "_bmad-output"
 project_name = "DocManSystem"
 
