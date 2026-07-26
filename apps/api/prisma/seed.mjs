@@ -12,12 +12,15 @@ const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: databaseUrl })
 });
 
+// Demo/local seed accounts. All seeded users share the password "1234"
+// (scrypt-hashed below, salt = user id, matching apps/api/src/auth/password.service.ts).
+// This is for local development and demos only — never use in production.
 const users = [
   {
     id: "user-admin",
     username: "admin",
     passwordHash:
-      "scrypt:user-admin:96634051871e68281b278b3fd4750c99b588a7de2d52473164898e8c8bef8317235443d642c5ecb4b92a434ad6fad6909a16e0642697c58222e82b92e3437589",
+      "scrypt:user-admin:88577689e88df3ec17a117384f8a68ff4e516d4ccc3c4a7783764eb66f4a72a8c35ae574d915e01d7ba3fe5e3a800b30463e721c488544ca3fc90192544e0c43",
     displayName: "TS. Đỗ Tiến Thành",
     status: "active",
     role: "system-admin",
@@ -39,7 +42,7 @@ const users = [
     id: "user-staff",
     username: "nmphuong",
     passwordHash:
-      "scrypt:user-staff:21e0f40659a682a8424cd382598d61ea7496422a6ba948c34f797f1ab4fb8ebf14a7eaaec584b01664235365c3ada4fec689509141ab54419041e4b4bf92be41",
+      "scrypt:user-staff:ea925bf5f31fe306cb863a45afec44a4e67d84423e431cb93de5af91425c6723cb66ac59963afe1f47ad86d3c16aec95f73bffc74c22d75b032fd1093f7a71d5",
     displayName: "TS. Nguyễn Minh Phương",
     status: "active",
     role: "scientific-management",

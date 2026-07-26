@@ -189,7 +189,9 @@ npm run typecheck
 
 ## Demo Login
 
-The web app uses local in-memory account profiles. There is no backend authentication yet.
+The web app authenticates against the API (`POST /api/v1/auth/login`) using Prisma-seeded
+accounts, so the **API and database must be running** (see [Environment Setup](#environment-setup)
+and `npm run db:setup`).
 
 Open:
 
@@ -197,21 +199,18 @@ Open:
 http://localhost:3000/login
 ```
 
-How login works:
+Sign in with a username below. **All seeded accounts share the password `1234`** (local development only).
 
-- Select an access profile
-- Use the matching username shown on the form
-- Enter any non-empty password
+| Role | Username | Password |
+| --- | --- | --- |
+| System admin | `admin` | `1234` |
+| Leadership (Giám Đốc) | `tvtien` | `1234` |
+| Scientific management | `nmphuong` | `1234` |
+| Principal investigator | `patuan` | `1234` |
+| Reviewer | `nmtrung` | `1234` |
+| Staff | `hdtien1`, `hdtien2` | `1234` |
 
-Sample demo accounts:
-
-| Role | Username |
-| --- | --- |
-| Leadership | `nvm_bgh` |
-| Scientific management | `vlan_qlkh` |
-| Principal investigator | `patuan_pi` |
-| Reviewer | `ttha_reviewer` |
-| System admin | `nqbao_admin` |
+See [`docs/development/auth-seed-users.md`](docs/development/auth-seed-users.md) for the full list and troubleshooting.
 
 ## Main Routes
 
@@ -221,7 +220,7 @@ Sample demo accounts:
 - `/proposals/[id]`
 - `/tasks`
 
-Additional routes are role-aware and are driven by the session profile in `apps/web/src/lib/accounts.ts`.
+Additional routes are role-aware and are driven by the authenticated session (`apps/web/src/lib/session.ts`, backed by the API `/auth` endpoints).
 
 ## Available Scripts
 
@@ -239,6 +238,6 @@ npm test
 
 ## Notes
 
-- The API is currently a placeholder service for visual and workflow development.
-- Authentication is session-based in the browser and uses seeded local profiles.
+- The API (NestJS) exposes auth/session, admin, and research-proposal endpoints backed by PostgreSQL via Prisma.
+- Authentication uses server-side sessions (HTTP-only cookie) validated by the API against seeded accounts.
 - The repository also contains BMAD documentation and planning artifacts for product and UX work.
