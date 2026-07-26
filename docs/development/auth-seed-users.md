@@ -2,13 +2,13 @@
 
 Story 1.2 uses Prisma-seeded internal accounts for local development until Story 1.3 introduces user, role, and organization management screens.
 
-These credentials are for local development only.
+These credentials are for local development only. All seeded accounts share the password `1234`.
 
 | Username | Password | Role | Unit |
 | --- | --- | --- | --- |
-| `admin` | `Admin@12345` | Quản trị hệ thống | Khoa Toán - Tin học |
+| `admin` | `1234` | Quản trị hệ thống | Khoa Toán - Tin học |
 | `tvtien` | `1234` | Giám Đốc | Ban Giám Đốc |
-| `nmphuong` | `Nmphuong@12345` | Trưởng phòng | Phòng KHQS |
+| `nmphuong` | `1234` | Trưởng phòng | Phòng KHQS |
 | `patuan` | `1234` | Chủ nhiệm đề tài | Khoa Toán - Tin học |
 | `nmtrung` | `1234` | Thành viên Hội đồng | Ban Quản lý KHQS |
 | `hdtien1` | `1234` | Chuyên viên | Phòng KHQS |
