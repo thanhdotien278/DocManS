@@ -5,3 +5,11 @@
 #
 # [agents.bmad-agent-pm]
 # description = "Prefers short, bulleted PRDs over narrative drafts."
+
+# BMad planning artifacts (PRD, epics, stories, architecture, change
+# proposals) are authored in English. Vietnamese is reserved for the
+# product's own UX/UI copy — labels, buttons, badges, messages — because
+# the end users are Vietnamese. Quote UI strings in Vietnamese inside
+# English specs rather than translating the surrounding document.
+[core]
+document_output_language = "English"
