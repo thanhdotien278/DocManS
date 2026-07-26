@@ -76,8 +76,83 @@ describe("ST-2.3A files route registration source checks", () => {
     assert.match(componentSource, /description: uploadDescription/);
     assert.match(componentSource, /handleUpdateAttachmentDescription/);
     assert.match(componentSource, /handleDeleteAttachment/);
-    assert.match(componentSource, /aria-label=\{`Sửa mô tả/);
-    assert.match(componentSource, /aria-label=\{`Xóa tệp/);
+    assert.match(componentSource, /aria-label=\{`Chỉnh sửa mô tả/);
+    assert.match(componentSource, /aria-label=\{`Xóa tài liệu/);
     assert.match(componentSource, /attachment\.description/);
+  });
+
+  it("proposal detail UI groups required documents and avoids raw technical actor labels", () => {
+    const componentSource = readFileSync("apps/web/src/components/research-proposals/proposal-detail-workspace.tsx", "utf8");
+
+    assert.match(componentSource, /DOCUMENT_TYPE_LABELS/);
+    assert.match(componentSource, /"proposal-form": "Thuyết minh đề tài"/);
+    assert.match(componentSource, /"budget-form": "Dự toán kinh phí"/);
+    assert.match(componentSource, /document-groups/);
+    assert.match(componentSource, /uploaderDisplayName/);
+    assert.match(componentSource, /function getAttachmentUploaderName/);
+    assert.match(componentSource, /account\?\.id === attachment\.uploadedById/);
+    assert.match(componentSource, /getAttachmentUploaderName\(attachment\)/);
+    assert.match(componentSource, /Người tải lên/);
+    assert.match(componentSource, /Thời gian nộp/);
+    assert.equal(/người tải \{attachment\.uploadedById\}/.test(componentSource), false);
+  });
+
+  it("proposal detail UI formats VND input and translates submission timeline labels", () => {
+    const componentSource = readFileSync("apps/web/src/components/research-proposals/proposal-detail-workspace.tsx", "utf8");
+
+    assert.match(componentSource, /formatVndNumber/);
+    assert.match(componentSource, /parseVndNumber/);
+    assert.match(componentSource, /numberToVietnameseWords/);
+    assert.match(componentSource, /Bằng chữ:/);
+    assert.match(componentSource, /Người nộp/);
+    assert.equal(/actor \{event\.actorId\}/.test(componentSource), false);
+  });
+
+  it("proposal submission history renders as a submitter and submission-time table", () => {
+    const componentSource = readFileSync("apps/web/src/components/research-proposals/proposal-detail-workspace.tsx", "utf8");
+
+    assert.match(componentSource, /className="data-table timeline-table"/);
+    assert.match(componentSource, /<th>\s*Người nộp\s*<\/th>/);
+    assert.match(componentSource, /<th>\s*Thời gian nộp\s*<\/th>/);
+    assert.match(componentSource, /function getSubmissionActorName/);
+    assert.match(componentSource, /event\.actorDisplayName/);
+    assert.match(componentSource, /account\?\.id === proposal\.submittedById/);
+    assert.match(componentSource, /getSubmissionActorName\(event\)/);
+    assert.match(componentSource, /formatDate\(event\.submittedAt\)/);
+  });
+
+  it("proposal draft creation budget field can be cleared instead of forcing zero", () => {
+    const componentSource = readFileSync("apps/web/src/components/research-proposals/research-proposals-panel.tsx", "utf8");
+
+    assert.match(componentSource, /formatVndNumber/);
+    assert.match(componentSource, /parseVndNumber/);
+    assert.match(componentSource, /budgetMetadata: \{ currency: "VND" \}/);
+    assert.match(componentSource, /value=\{formatVndNumber\(form\.budgetMetadata\?\.amount\)\}/);
+    assert.equal(/type="number"[\s\S]*value=\{form\.budgetMetadata\?\.amount \?\? 0\}/.test(componentSource), false);
+  });
+
+  it("proposal detail side cards keep content height instead of stretching", () => {
+    const cssSource = readFileSync("apps/web/src/app/globals.css", "utf8");
+
+    assert.match(cssSource, /\.detail-grid\s*\{[^}]*align-items:\s*start;/s);
+  });
+
+  it("proposal detail UI supports ST-3.1 supplement request and resubmission affordances", () => {
+    const componentSource = readFileSync("apps/web/src/components/research-proposals/proposal-detail-workspace.tsx", "utf8");
+    const apiClientSource = readFileSync("apps/web/src/lib/research-proposals-api.ts", "utf8");
+    const controllerSource = readFileSync("apps/api/src/research-proposals/research-proposals.controller.ts", "utf8");
+
+    assert.match(controllerSource, /@Post\(":id\/supplement-requests"\)/);
+    assert.match(controllerSource, /@Post\(":id\/resubmit"\)/);
+    assert.match(apiClientSource, /requestProposalSupplement/);
+    assert.match(apiClientSource, /resubmitResearchProposal/);
+    assert.match(componentSource, /Yêu cầu bổ sung/);
+    assert.match(componentSource, /supplementReason/);
+    assert.match(componentSource, /supplementDueDate/);
+    assert.match(componentSource, /handleRequestSupplement/);
+    assert.match(componentSource, /handleResubmit/);
+    assert.match(componentSource, /Nộp lại hồ sơ/);
+    assert.match(componentSource, /supplementRequests/);
+    assert.match(componentSource, /Hạn phản hồi/);
   });
 });
