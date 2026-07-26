@@ -41,6 +41,13 @@ export class UpdateResearchProposalDraftDto {
   members?: unknown[];
 }
 
+export class RequestProposalSupplementDto {
+  [key: string]: unknown;
+
+  reason!: string;
+  dueDate!: string;
+}
+
 function assertRecord(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new BadRequestException({ message: PROPOSAL_VALIDATION_MESSAGE });
@@ -103,5 +110,18 @@ export const updateResearchProposalDraftPipe: PipeTransform<unknown, UpdateResea
     }
 
     return input as UpdateResearchProposalDraftDto;
+  }
+};
+
+export const requestProposalSupplementPipe: PipeTransform<unknown, RequestProposalSupplementDto> = {
+  transform(value: unknown) {
+    const input = assertRecord(value);
+    readText(input.reason, "reason", 2000);
+    readOptionalDate(input.dueDate, "dueDate");
+    if (!input.dueDate) {
+      throw new BadRequestException({ message: PROPOSAL_VALIDATION_MESSAGE });
+    }
+
+    return input as RequestProposalSupplementDto;
   }
 };

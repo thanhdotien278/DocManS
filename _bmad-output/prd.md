@@ -330,6 +330,7 @@ RTMS is a browser-based internal administrative web application optimized for mu
 - FR4a: Authenticated users can change their own password, and authorized administrators can initiate a controlled password reset flow for internal users.
 - FR5: The system can enforce role-based access rules across all protected capabilities.
 - FR6: The system can enforce organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports.
+- FR6a: The system can distinguish account-level system roles from record-scoped participation or assignment roles, including principal investigator, project member, scientific secretary, reviewer, council member, and ethics reviewer, so those roles only grant permissions within the specific proposal, project, council, review, ethics dossier, task, or related record context.
 
 ### Shared Catalogs And Configuration
 
@@ -429,6 +430,7 @@ RTMS is a browser-based internal administrative web application optimized for mu
 - FR65: Authorized users can create and maintain researcher profiles with identity, academic rank or degree, title, contact details, organization, research fields, expertise keywords, and active status.
 - FR66: Authorized users can link researcher profiles to user accounts where applicable while still allowing profile records for researchers who do not yet have system login accounts.
 - FR67: Authorized users can associate researcher profiles with proposals, approved projects, seminars, student research activities, councils, ethics dossiers, reviews, publications, products, and tasks where relevant.
+- FR67a: The system can enforce conflict-of-interest and separation-of-duty rules when assigning participation, reviewer, council, secretary, or approval roles, including blocking self-review, self-approval, and unauthorized secretary decision actions within the same business record.
 - FR68: Users can search and filter researcher profiles by name, unit, field, expertise, status, participation history, and other authorized business attributes.
 - FR69: The system can preserve researcher profile history and audit important profile changes according to role and data-scope permissions.
 
@@ -465,6 +467,8 @@ Accesses assigned proposals, ethics dossiers, council records, or review records
 - Administrator permissions must remain distinct from business-decision permissions.
 - Reviewer, council member, and committee access must be limited to assigned items and required supporting context.
 - Leadership actions must be limited to authority-specific approval and visibility rules.
+- Principal investigator, project member, scientific secretary, reviewer, council member, and ethics reviewer status must be treated as record-scoped participation or assignment context unless explicitly configured as an account-level system role for another purpose.
+- Authorization must evaluate conflict-of-interest rules before sensitive assignments or decisions, including reviewer assignment, council membership assignment, proposal approval, project adjustment decisions, and council or ethics approval.
 
 ## Data-Scope Authorization Requirements
 
@@ -472,6 +476,7 @@ Accesses assigned proposals, ethics dossiers, council records, or review records
 - Users must only see records for units, assignments, or approval scopes they are permitted to access.
 - Search results, dashboard counts, exports, notification targets, and history views must respect the same data-scope rules as detail pages.
 - Cross-unit visibility must be explicit and rule-driven, never implicit.
+- Effective permission must be calculated from system role, organization scope, record participation role, assignment scope, workflow state, and conflict policy; missing or ambiguous context must fail closed.
 
 ## Audit-Log Requirements
 
@@ -527,6 +532,7 @@ Accesses assigned proposals, ethics dossiers, council records, or review records
 ### Governance Acceptance
 
 - Role-based, data-scope, and state-based authorization are enforced on protected operations, verified through role-specific and cross-scope negative test scenarios.
+- Participation-role, assignment-scope, and conflict-of-interest authorization are enforced on protected operations, verified through negative scenarios such as PI self-review, leadership self-approval, secretary overreach, and council member access outside assigned records.
 - Critical audit-log actions are generated and verifiable for the workflow actions listed in this PRD.
 - File access, preview, and file download permissions are enforced and verifiable for authorized and unauthorized cases.
 
@@ -577,7 +583,7 @@ Accesses assigned proposals, ethics dossiers, council records, or review records
 - NFR5: All authenticated traffic shall require encrypted transport in deployment environments, verified by environment configuration review and transport-layer access tests.
 - NFR6: Passwords, credentials, and session-related secrets shall never be stored or transmitted in plaintext application flows, verified by security review and automated or manual inspection of relevant authentication paths.
 - NFR7: Authorization shall be enforced on the backend for all protected operations, including dashboards, reports, search, exports, workflow actions, file access, and history views, verified by endpoint and service-level authorization tests for allowed and denied cases.
-- NFR8: The system shall fail closed when authorization scope, assignment scope, or state-based permission context cannot be resolved safely, verified by negative-path tests.
+- NFR8: The system shall fail closed when authorization scope, participation role, assignment scope, conflict policy, or state-based permission context cannot be resolved safely, verified by negative-path tests.
 - NFR9: Audit-log records for critical actions shall be queryable by authorized users within the product or operational support tooling and verifiable during audit-log acceptance testing.
 
 ### Reliability And Data Integrity

@@ -19,6 +19,7 @@ export type ProposalAttachment = {
   mimeType: string;
   sizeBytes: number;
   uploadedById: string;
+  uploaderDisplayName: string;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -30,10 +31,23 @@ export type ProposalHistoryEvent = {
   id: string;
   proposalId: string;
   actorId: string;
+  actorDisplayName: string;
   fromStatus: string;
   toStatus: string;
   submittedAt: string;
   note: string;
+};
+
+export type ProposalSupplementRequest = {
+  id: string;
+  proposalId: string;
+  actorId: string;
+  actorDisplayName: string;
+  reason: string;
+  dueDate: string;
+  requestedAt: string;
+  resolvedAt: string;
+  status: string;
 };
 
 export type ResearchProposal = {
@@ -54,7 +68,7 @@ export type ResearchProposal = {
     currency?: string;
     note?: string;
   };
-  status: "draft" | "submitted";
+  status: "draft" | "submitted" | "supplement_requested" | "resubmitted";
   submittedAt: string;
   submittedById: string;
   createdAt: string;
@@ -64,6 +78,7 @@ export type ResearchProposal = {
   members?: ProposalMember[];
   attachments?: ProposalAttachment[];
   history?: ProposalHistoryEvent[];
+  supplementRequests?: ProposalSupplementRequest[];
   requiredPackage?: RequiredPackageItem[];
 };
 
@@ -222,6 +237,19 @@ export async function loadProposalReadiness(id: string) {
 
 export async function submitResearchProposal(id: string) {
   return requestJson<{ proposal: ResearchProposal }>(`/research-proposals/${id}/submit`, {
+    method: "POST"
+  });
+}
+
+export async function requestProposalSupplement(id: string, input: { reason: string; dueDate: string }) {
+  return requestJson<{ proposal: ResearchProposal }>(`/research-proposals/${id}/supplement-requests`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function resubmitResearchProposal(id: string) {
+  return requestJson<{ proposal: ResearchProposal }>(`/research-proposals/${id}/resubmit`, {
     method: "POST"
   });
 }

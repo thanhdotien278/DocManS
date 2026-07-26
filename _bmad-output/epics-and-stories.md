@@ -60,6 +60,8 @@ FR5: System administrators can manage organizational units and map users to orga
 
 FR6: The system can enforce role-based, organization-scoped, and state-based authorization across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports.
 
+FR6a: The system can distinguish account-level system roles from record-scoped participation or assignment roles, including principal investigator, project member, scientific secretary, reviewer, council member, and ethics reviewer, so those roles only grant permissions within the specific business record context.
+
 FR7: System administrators can manage shared catalogs required by business workflows, including organizational units, research fields, proposal types, statuses, priorities, report types, product types, forms, checklists, and scoring criteria.
 
 FR8: System administrators can configure system parameters, notification templates, and selected workflow-supporting settings required for phase 1 operations.
@@ -185,6 +187,8 @@ FR65: Authorized users can create and maintain researcher profiles with identity
 FR66: Authorized users can link researcher profiles to user accounts where applicable while still allowing profile records for researchers who do not yet have system login accounts.
 
 FR67: Authorized users can associate researcher profiles with proposals, approved projects, seminars, student research activities, councils, ethics dossiers, reviews, publications, products, and tasks where relevant.
+
+FR67a: The system can enforce conflict-of-interest and separation-of-duty rules when assigning participation, reviewer, council, secretary, or approval roles, including blocking self-review, self-approval, and unauthorized secretary decision actions within the same business record.
 
 FR68: Users can search and filter researcher profiles by name, unit, field, expertise, status, participation history, and other authorized business attributes.
 
@@ -312,6 +316,7 @@ FR4: Epic 1 - Quản lý vai trò và quyền
 FR4a: Epic 1 - Đổi mật khẩu và reset mật khẩu có kiểm soát
 FR5: Epic 1 - Quản lý đơn vị và phạm vi dữ liệu
 FR6: Epic 1 - Nền tảng phân quyền role/scope/state
+FR6a: Epic 1 - Phân biệt system role với participation/assignment role theo bản ghi
 FR7: Epic 1 - Danh mục dùng chung
 FR8: Epic 1 - Cấu hình hệ thống và mẫu thông báo
 FR9: Epic 2 - Quản lý đợt tiếp nhận
@@ -375,6 +380,7 @@ FR64: Epic 10 - State machine, dashboard, báo cáo, history, notification, audi
 FR65: Epic 11 - Hồ sơ thông tin nhà khoa học
 FR66: Epic 11 - Liên kết hồ sơ nhà khoa học với tài khoản người dùng
 FR67: Epic 11 - Liên kết nhà khoa học với bản ghi nghiệp vụ
+FR67a: Cross-epic - Luật conflict-of-interest và tách quyền quyết định
 FR68: Epic 11 - Tra cứu và lọc hồ sơ nhà khoa học
 FR69: Epic 11 - History và audit hồ sơ nhà khoa học
 
@@ -966,7 +972,7 @@ So that incomplete proposals can be corrected within a traceable workflow.
 
 ### ST-3.2: Phân công reviewer và truy cập proposal theo assignment
 **Use Case IDs:** `UC-320-A` Reviewer assignment, `UC-320-B` Assigned proposal access
-**Traceability:** FR17, FR38, FR39; NFR7, NFR8
+**Traceability:** FR17, FR38, FR39, FR67a; NFR7, NFR8
 
 
 As a scientific management staff member,
@@ -996,11 +1002,18 @@ So that evaluation work is routed securely to the right people.
 **Then** assignment mới có hiệu lực
 **And** lịch sử phân công được lưu vết
 
+**AC-ST-3.2-04:** Given người được gán reviewer/hội đồng có vai trò PI, thành viên, hoặc thư ký khoa học trên cùng proposal
+**When** staff cố gán người đó làm reviewer độc lập
+**Then** hệ thống kiểm tra conflict policy và chặn assignment không hợp lệ
+**And** không tạo quyền reviewer hoặc notification cho assignment bị chặn
+
 **Technical Notes:**
 **TN-ST-3.2-01:** Data-scope + assignment-scope enforcement là trọng tâm; tránh cho reviewer thấy proposal ngoài assignment.
+**TN-ST-3.2-02:** Reviewer assignment phải kiểm tra researcher profile/user linkage và participation role của cùng proposal; reviewer là assignment-scoped role, không phải quyền global áp cho mọi proposal.
 
 **Authorization Requirements:**
 **AUTH-ST-3.2-01:** Chỉ staff hoặc role được phép mới assign/reassign; reviewer chỉ xem assigned items.
+**AUTH-ST-3.2-02:** Không được assign reviewer/council evaluator khi conflict policy xác định người đó đang là PI, participant, secretary, hoặc actor bị loại trừ trên cùng proposal.
 
 **Audit-Log Requirements:**
 **AUD-ST-3.2-01:** Ghi audit log cho `assign reviewer` và thay đổi assignment liên quan.
@@ -1010,6 +1023,7 @@ So that evaluation work is routed securely to the right people.
 **VER-ST-3.2-02:** Reviewer được gán truy cập được
 **VER-ST-3.2-03:** Reviewer không được gán bị chặn
 **VER-ST-3.2-04:** Kiểm tra lịch sử và audit log assignment
+**VER-ST-3.2-05:** Chặn gán reviewer bị conflict với PI/member/secretary của cùng proposal
 
 ### ST-3.3: Reviewer chấm điểm và gửi nhận xét
 **Use Case ID:** `UC-330` Reviewer scoring and comments
@@ -1102,7 +1116,7 @@ So that proposals can move efficiently toward an approval decision.
 
 ### ST-3.5: Phê duyệt hoặc từ chối proposal
 **Use Case ID:** `UC-350` Proposal approval decision
-**Traceability:** FR20, FR21, FR22, FR23, FR38, FR39; NFR8, NFR10; UX-DR11, UX-DR13, UX-DR14
+**Traceability:** FR20, FR21, FR22, FR23, FR38, FR39, FR67a; NFR8, NFR10; UX-DR11, UX-DR13, UX-DR14
 
 
 As a leadership or approval authority user,
@@ -1132,11 +1146,18 @@ So that accepted proposals can advance into project execution while rejected one
 **Then** hệ thống từ chối thao tác
 **And** không cho phép bypass workflow state
 
+**AC-ST-3.5-04:** Given approval authority cũng là PI, participant, reviewer, hoặc secretary của chính proposal
+**When** họ cố approve/reject proposal đó
+**Then** hệ thống áp dụng conflict policy và chặn self-approval không hợp lệ
+**And** giữ nguyên trạng thái proposal
+
 **Technical Notes:**
 **TN-ST-3.5-01:** Đây là story đóng vòng proposal; confirmation UX bắt buộc; fail closed nếu thiếu authority context.
+**TN-ST-3.5-02:** Approval authorization phải kiểm tra authority scope, workflow state, và conflict policy trên cùng proposal trước khi tạo decision.
 
 **Authorization Requirements:**
 **AUTH-ST-3.5-01:** Chỉ approval authority được quyết định; staff/reviewer/PI không được gọi action này ngoài permission rules.
+**AUTH-ST-3.5-02:** Người có authority nhưng có conflict participation/assignment trên cùng proposal không được tự approve/reject nếu policy không cho phép.
 
 **Audit-Log Requirements:**
 **AUD-ST-3.5-01:** Ghi audit log cho `approve` và `reject`.
@@ -1146,6 +1167,7 @@ So that accepted proposals can advance into project execution while rejected one
 **VER-ST-3.5-02:** Reject proposal hợp lệ
 **VER-ST-3.5-03:** Chặn quyết định khi proposal chưa ở state đúng
 **VER-ST-3.5-04:** Kiểm tra history và audit log cho decision
+**VER-ST-3.5-05:** Chặn self-approval khi approval authority có conflict role trên cùng proposal
 
 ## EP-04: Theo Dõi Đề Tài Được Duyệt Và Tiến Độ Thực Hiện
 
@@ -2160,7 +2182,7 @@ Bao phủ công việc 2.7 trong `detaiHVQY.md`: quản lý kế hoạch hội �
 
 ### ST-10.1: Quản lý kế hoạch hội đồng, thành viên và văn bản liên quan
 **Use Case ID:** `UC-1010` Council plan and member management
-**Traceability:** FR58, FR55, FR56, FR38, FR39; NFR7; UX-DR7, UX-DR13
+**Traceability:** FR58, FR55, FR56, FR38, FR39, FR67a; NFR7; UX-DR7, UX-DR13
 
 As a scientific management staff member,
 I want to create council plans with members, schedule, purpose, and legal documents,
@@ -2184,11 +2206,18 @@ So that council work is organized and traceable before dossiers are evaluated.
 **Then** council detail hiển thị văn bản liên quan theo quyền
 **And** history ghi nhận link quan trọng
 
+**AC-ST-10.1-03:** Given staff gán thành viên hội đồng với vai trò chair, secretary, member, hoặc reviewer
+**When** người được gán có conflict với record liên quan
+**Then** hệ thống chặn membership không hợp lệ theo conflict policy
+**And** vai trò secretary chỉ có hiệu lực trong council được gán
+
 **Technical Notes:**
 **TN-ST-10.1-01:** Reuse related-document link từ EP-09; council membership phải rõ role trong hội đồng, không chỉ user assignment chung.
+**TN-ST-10.1-02:** Scientific secretary là council/project-scoped role; không dùng làm role global và không tự động cấp quyền approve/reject.
 
 **Authorization Requirements:**
 **AUTH-ST-10.1-01:** Staff tạo/sửa council plan trong scope; council members chỉ xem hội đồng được phân công.
+**AUTH-ST-10.1-02:** Staff phải kiểm tra conflict policy khi gán chair, secretary, member, hoặc reviewer cho council liên quan đến proposal/project/ethics record.
 
 **Audit-Log Requirements:**
 **AUD-ST-10.1-01:** Ghi audit log cho create/update council plan, member assignment, link/unlink important legal documents.
@@ -2198,6 +2227,7 @@ So that council work is organized and traceable before dossiers are evaluated.
 **VER-ST-10.1-02:** Gán thành viên và vai trò
 **VER-ST-10.1-03:** Liên kết văn bản pháp lý
 **VER-ST-10.1-04:** Kiểm tra permission và audit log
+**VER-ST-10.1-05:** Chặn council membership có conflict và xác nhận secretary không có quyền ngoài council được gán
 
 ### ST-10.2: Tạo, hoàn thiện và nộp hồ sơ y đức
 **Use Case ID:** `UC-1020` Ethics dossier creation and submission
@@ -2247,7 +2277,7 @@ So that ethics review can begin with a complete, traceable package.
 
 ### ST-10.3: Kiểm tra hồ sơ y đức, yêu cầu bổ sung và phân công hội đồng
 **Use Case ID:** `UC-1030` Ethics completeness review and council assignment
-**Traceability:** FR60, FR58, FR61, FR38, FR39; NFR7, NFR8; UX-DR11, UX-DR13
+**Traceability:** FR60, FR58, FR61, FR38, FR39, FR67a; NFR7, NFR8; UX-DR11, UX-DR13
 
 As a scientific management staff member,
 I want to check ethics dossier completeness, request supplements, and assign council reviewers,
@@ -2271,11 +2301,18 @@ So that only complete dossiers move into formal evaluation.
 **Then** assignment được lưu
 **And** chỉ assignees được thấy hồ sơ trong queue của họ
 
+**AC-ST-10.3-03:** Given council reviewer hoặc council member được đề xuất có conflict với ethics dossier
+**When** staff cố gán assignment
+**Then** hệ thống chặn assignment theo conflict policy
+**And** không lộ dossier cho người bị chặn
+
 **Technical Notes:**
 **TN-ST-10.3-01:** Assignment-scope là rủi ro chính; không để council member thấy dossier ngoài phân công.
+**TN-ST-10.3-02:** Ethics council assignment phải dùng assignment/council membership scope riêng, không dựa vào role global của user.
 
 **Authorization Requirements:**
 **AUTH-ST-10.3-01:** Staff trong scope được request supplement/assign; PI chỉ phản hồi dossier của mình; council members chỉ xem assigned dossiers.
+**AUTH-ST-10.3-02:** Conflict policy phải được kiểm tra trước khi gán council reviewer hoặc council member cho ethics dossier.
 
 **Audit-Log Requirements:**
 **AUD-ST-10.3-01:** Ghi audit log cho request ethics supplement, resubmit ethics dossier, assign council reviewer.
@@ -2285,6 +2322,7 @@ So that only complete dossiers move into formal evaluation.
 **VER-ST-10.3-02:** Resubmit sau bổ sung
 **VER-ST-10.3-03:** Gán council reviewers
 **VER-ST-10.3-04:** Kiểm tra assignment permission và audit log
+**VER-ST-10.3-05:** Chặn gán council reviewer/member có conflict với ethics dossier
 
 ### ST-10.4: Chấm điểm và gửi nhận xét hội đồng
 **Use Case ID:** `UC-1040` Council scoring and comments
@@ -2370,7 +2408,7 @@ So that approval authorities receive a complete and traceable evaluation package
 
 ### ST-10.6: Quyết định phê duyệt hoặc từ chối hồ sơ y đức/hội đồng
 **Use Case ID:** `UC-1060` Council or ethics approval decision
-**Traceability:** FR63, FR64, FR38, FR39; NFR10; UX-DR11, UX-DR13, UX-DR14
+**Traceability:** FR63, FR64, FR38, FR39, FR67a; NFR10; UX-DR11, UX-DR13, UX-DR14
 
 As an approval authority,
 I want to approve or reject council and ethics records,
@@ -2399,11 +2437,18 @@ So that final decisions are made through an auditable state transition.
 **Then** hệ thống chặn thao tác
 **And** không cho phép bypass workflow state
 
+**AC-ST-10.6-04:** Given approval authority có conflict participation, council, reviewer, hoặc secretary role trên cùng record
+**When** họ cố approve/reject hồ sơ y đức hoặc council record
+**Then** hệ thống chặn self-approval không hợp lệ theo conflict policy
+**And** không tạo decision hoặc audit decision sai
+
 **Technical Notes:**
 **TN-ST-10.6-01:** Decision phải transactionally update state, history và audit log; dashboard/report hooks đọc từ state nguồn, không tạo state trùng lặp.
+**TN-ST-10.6-02:** Decision service phải kiểm tra authority scope, state, assignment/council membership, và conflict policy trong cùng transaction boundary.
 
 **Authorization Requirements:**
 **AUTH-ST-10.6-01:** Chỉ approval authority có authority/scope phù hợp được quyết định; staff/council member/PI không được gọi action này nếu không có quyền.
+**AUTH-ST-10.6-02:** Approval authority có conflict trên cùng council/ethics record không được approve/reject nếu policy không cho phép.
 
 **Audit-Log Requirements:**
 **AUD-ST-10.6-01:** Ghi audit log cho approve/reject council or ethics record.
@@ -2413,6 +2458,7 @@ So that final decisions are made through an auditable state transition.
 **VER-ST-10.6-02:** Approval authority reject record hợp lệ
 **VER-ST-10.6-03:** Chặn decision khi record sai state hoặc sai quyền
 **VER-ST-10.6-04:** Kiểm tra dashboard/report hooks, history và audit log
+**VER-ST-10.6-05:** Chặn self-approval khi authority có conflict role trên cùng record
 
 ## EP-11: Quản Lý Thông Tin Nhà Khoa Học
 
@@ -2507,7 +2553,7 @@ So that login identity and scientist profile data can stay related without forci
 
 ### ST-11.3: Liên kết nhà khoa học với bản ghi nghiệp vụ và tra cứu hồ sơ
 **Use Case ID:** `UC-1130` Researcher participation links and search
-**Traceability:** FR67, FR68, FR69, FR46, FR47; NFR1, NFR3, NFR7; UX-DR7, UX-DR8, UX-DR19
+**Traceability:** FR67, FR67a, FR68, FR69, FR46, FR47; NFR1, NFR3, NFR7; UX-DR7, UX-DR8, UX-DR19
 
 As a scientific management staff member,
 I want to link researcher profiles to business records and search profiles by expertise or participation,
@@ -2515,7 +2561,7 @@ So that staff can find suitable reviewers, council members, project participants
 
 **Business Value:** Biến hồ sơ nhà khoa học thành dữ liệu vận hành có thể tra cứu và tái sử dụng cho phân công, hội đồng, thống kê và báo cáo.
 
-**Scope:** Link researcher profiles to proposals, approved projects, seminars, student research activities, councils, ethics dossiers, reviews, products, publications, and tasks where supported; participation role metadata; researcher search/filter by name, unit, field, expertise, status, and participation history; profile detail participation timeline.
+**Scope:** Link researcher profiles to proposals, approved projects, seminars, student research activities, councils, ethics dossiers, reviews, products, publications, and tasks where supported; record-scoped participation role metadata; assignment role metadata for reviews/tasks where applicable; researcher search/filter by name, unit, field, expertise, status, and participation history; profile detail participation timeline.
 
 **Out of Scope:** Chưa tự động gợi ý reviewer/council member bằng thuật toán; chưa làm scoring chuyên gia nâng cao.
 
@@ -2536,11 +2582,19 @@ So that staff can find suitable reviewers, council members, project participants
 **Then** hệ thống ẩn hoặc giới hạn thông tin liên kết ngoài quyền
 **And** không lộ metadata nhạy cảm
 
+**AC-ST-11.3-04:** Given staff tạo hoặc cập nhật participation link
+**When** chọn vai trò PI, co-investigator/member, scientific secretary, reviewer, council member, ethics reviewer, hoặc task assignee
+**Then** hệ thống lưu vai trò theo đúng target record và effective dates/status nếu có
+**And** vai trò đó không trở thành system role global của user
+
 **Technical Notes:**
 **TN-ST-11.3-01:** Participation links cần giữ target type/id và role rõ ràng; service layer phải validate target tồn tại và scope trước khi link.
+**TN-ST-11.3-02:** Proposal/project participation, review assignment, council membership, ethics reviewer assignment, và task assignment có thể dùng bảng/domain model riêng nếu cần rule khác nhau; không ép mọi liên kết vào một bảng generic làm mất conflict policy.
+**TN-ST-11.3-03:** Participation role changes must feed permission policy, search/history, and conflict checks without making PI/member/secretary/reviewer global user roles.
 
 **Authorization Requirements:**
 **AUTH-ST-11.3-01:** Link/unlink yêu cầu quyền với profile và target record; search/filter phải enforce backend scope filtering.
+**AUTH-ST-11.3-02:** Link/update participation role phải kiểm tra conflict policy và không được cấp quyền ngoài target record.
 
 **Audit-Log Requirements:**
 **AUD-ST-11.3-01:** Ghi audit log cho link/unlink researcher profile to important business records và thay đổi participation role quan trọng.
@@ -2550,3 +2604,4 @@ So that staff can find suitable reviewers, council members, project participants
 **VER-ST-11.3-02:** Tìm/lọc researcher theo expertise và unit
 **VER-ST-11.3-03:** Kiểm tra participation timeline
 **VER-ST-11.3-04:** Kiểm tra scope filtering và audit log
+**VER-ST-11.3-05:** Kiểm tra participation role chỉ có hiệu lực trong target record và không thành system role global
