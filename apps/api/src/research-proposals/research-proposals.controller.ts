@@ -3,8 +3,10 @@ import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
 import {
   createResearchProposalDraftPipe,
+  requestProposalSupplementPipe,
   updateResearchProposalDraftPipe,
   type CreateResearchProposalDraftDto,
+  type RequestProposalSupplementDto,
   type UpdateResearchProposalDraftDto
 } from "./research-proposals.dto.js";
 import { ResearchProposalsService } from "./research-proposals.service.js";
@@ -46,6 +48,20 @@ export class ResearchProposalsController {
   @Post(":id/submit")
   async submitProposal(@Req() request: RequestWithCurrentUser, @Param("id") id: string) {
     return { proposal: await this.proposalsService.submitProposal(request.currentUser!, id) };
+  }
+
+  @Post(":id/supplement-requests")
+  async requestSupplement(
+    @Req() request: RequestWithCurrentUser,
+    @Param("id") id: string,
+    @Body(requestProposalSupplementPipe) body: RequestProposalSupplementDto
+  ) {
+    return { proposal: await this.proposalsService.requestSupplement(request.currentUser!, id, body) };
+  }
+
+  @Post(":id/resubmit")
+  async resubmitProposal(@Req() request: RequestWithCurrentUser, @Param("id") id: string) {
+    return { proposal: await this.proposalsService.resubmitProposal(request.currentUser!, id) };
   }
 
   @Get(":id/history")

@@ -161,6 +161,8 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
               <option value="">Tất cả</option>
               <option value="draft">Nháp</option>
               <option value="submitted">Đã nộp</option>
+              <option value="supplement_requested">Chờ bổ sung</option>
+              <option value="resubmitted">Đã nộp lại</option>
             </select>
           </label>
         </div>

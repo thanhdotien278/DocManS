@@ -13,6 +13,8 @@ export const statusMeta: Record<
   "pending-approval": { label: "Chờ phê duyệt", tone: "warning", Icon: Clock3 },
   "in-review": { label: "Đang đánh giá", tone: "warning", Icon: Clock3 },
   "needs-supplement": { label: "Cần bổ sung", tone: "info", Icon: HelpCircle },
+  supplement_requested: { label: "Chờ bổ sung", tone: "warning", Icon: HelpCircle },
+  resubmitted: { label: "Đã nộp lại", tone: "info", Icon: CheckCircle2 },
   submitted: { label: "Đã nộp", tone: "info", Icon: CheckCircle2 },
   overdue: { label: "Quá hạn", tone: "danger", Icon: XCircle },
   expired: { label: "Quá hạn", tone: "danger", Icon: XCircle },

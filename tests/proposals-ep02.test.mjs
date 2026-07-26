@@ -5,7 +5,11 @@ import {
   createProposalIntakePeriodPipe,
   updateProposalIntakePeriodPipe
 } from "../dist/apps/api/proposal-intake-periods/proposal-intake-periods.dto.js";
-import { createResearchProposalDraftPipe, updateResearchProposalDraftPipe } from "../dist/apps/api/research-proposals/research-proposals.dto.js";
+import {
+  createResearchProposalDraftPipe,
+  requestProposalSupplementPipe,
+  updateResearchProposalDraftPipe
+} from "../dist/apps/api/research-proposals/research-proposals.dto.js";
 import { uploadFilePipe } from "../dist/apps/api/modules/files/files.dto.js";
 import { ProposalIntakePeriodsService } from "../dist/apps/api/proposal-intake-periods/proposal-intake-periods.service.js";
 import { ResearchProposalsService } from "../dist/apps/api/research-proposals/research-proposals.service.js";
@@ -93,6 +97,7 @@ function createEp02Prisma() {
     members: [],
     attachments: [],
     fileRecords: [],
+    supplementRequests: [],
     submissionEvents: [],
     auditLogs: []
   };
@@ -264,6 +269,42 @@ function createEp02Prisma() {
         return store.submissionEvents.filter((item) => item.proposalId === where.proposalId);
       }
     },
+    proposalSupplementRequest: {
+      async create({ data }) {
+        const record = {
+          id: nextId("supplement", store.supplementRequests),
+          requestedAt: new Date(),
+          resolvedAt: null,
+          status: "open",
+          actor: { displayName: userDisplayName(data.actorId) },
+          ...data
+        };
+        store.supplementRequests.push(record);
+        return record;
+      },
+      async update({ where, data }) {
+        const index = store.supplementRequests.findIndex((item) => item.id === where.id);
+        if (index < 0) {
+          throw new Error("supplement request not found");
+        }
+        store.supplementRequests[index] = { ...store.supplementRequests[index], ...data };
+        return store.supplementRequests[index];
+      },
+      async findFirst({ where }) {
+        return (
+          store.supplementRequests
+            .filter((item) => {
+              if (where.proposalId && item.proposalId !== where.proposalId) return false;
+              if (where.status && item.status !== where.status) return false;
+              return true;
+            })
+            .at(-1) ?? null
+        );
+      },
+      async findMany({ where }) {
+        return store.supplementRequests.filter((item) => item.proposalId === where.proposalId);
+      }
+    },
     auditLog: {
       async create({ data }) {
         const record = {
@@ -370,6 +411,14 @@ describe("EP-02 proposal intake and submission behavior", () => {
         }),
       BadRequestException
     );
+    assert.doesNotThrow(() =>
+      requestProposalSupplementPipe.transform({
+        reason: "Thiếu bản giải trình chỉnh sửa.",
+        dueDate: futureDate(7)
+      })
+    );
+    assert.throws(() => requestProposalSupplementPipe.transform({ reason: "", dueDate: futureDate(7) }), BadRequestException);
+    assert.throws(() => requestProposalSupplementPipe.transform({ reason: "Thiếu tài liệu", dueDate: "bad-date" }), BadRequestException);
     assert.throws(
       () =>
         uploadFilePipe.transform({
@@ -882,5 +931,112 @@ describe("EP-02 proposal intake and submission behavior", () => {
     assert.equal(detail.canSubmit, false);
     await assert.rejects(() => proposalService.submitProposal(piUser, readyDraft.id), ForbiddenException);
     await assert.rejects(() => proposalService.updateDraft(piUser, readyDraft.id, { title: "Sửa ngoài phạm vi" }), ForbiddenException);
+  });
+
+  it("staff requests supplement and PI resubmits with controlled state, history, and audit logs", async () => {
+    const prisma = createEp02Prisma();
+    const auditLog = createAuditLog();
+    const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
+    const proposalService = new ResearchProposalsService(prisma, auditLog);
+    const filesService = createFilesService({ prisma, auditLog });
+    const draft = await createDraft({ prisma, intakeService, proposalService });
+
+    for (const filePurpose of ["proposal-form", "budget-form"]) {
+      await filesService.uploadFile(piUser, {
+        relatedEntityType: "research_proposal",
+        relatedEntityId: draft.id,
+        filePurpose,
+        fileName: `${filePurpose}.pdf`,
+        mimeType: "application/pdf",
+        sizeBytes: 1000,
+        content: Buffer.alloc(1000, "p")
+      });
+    }
+    const submitted = await proposalService.submitProposal(piUser, draft.id);
+
+    await assert.rejects(
+      () =>
+        proposalService.requestSupplement(staffUser, submitted.id, {
+          reason: "Thiếu bản giải trình chỉnh sửa và bảng dự toán chi tiết.",
+          dueDate: futureDate(7)
+        }),
+      ForbiddenException
+    );
+
+    const scopedStaff = { ...staffUser, organizationScopes: [{ id: "org-khti", code: "KHTI", name: "Khoa Toán - Tin học" }] };
+    const supplementRequested = await proposalService.requestSupplement(scopedStaff, submitted.id, {
+      reason: "Thiếu bản giải trình chỉnh sửa và bảng dự toán chi tiết.",
+      dueDate: futureDate(7)
+    });
+
+    assert.equal(supplementRequested.status, "supplement_requested");
+    assert.equal(supplementRequested.canEdit, false);
+    assert.equal(supplementRequested.canSubmit, false);
+    assert.equal(supplementRequested.supplementRequests.length, 1);
+    assert.equal(supplementRequested.supplementRequests[0].reason, "Thiếu bản giải trình chỉnh sửa và bảng dự toán chi tiết.");
+    assert.equal(supplementRequested.supplementRequests[0].actorId, scopedStaff.id);
+    assert.equal(supplementRequested.supplementRequests[0].actorDisplayName, scopedStaff.displayName);
+    assert.equal(supplementRequested.history.at(-1).toStatus, "supplement_requested");
+    assert.equal(prisma.store.auditLogs.at(-1).action, "request-supplement");
+
+    const piDetail = await proposalService.getProposal(piUser, submitted.id);
+    assert.equal(piDetail.status, "supplement_requested");
+    assert.equal(piDetail.canEdit, true);
+    assert.equal(piDetail.canSubmit, true);
+    assert.equal(piDetail.supplementRequests[0].status, "open");
+
+    await assert.rejects(() => proposalService.updateDraft(otherPiUser, submitted.id, { title: "Chiếm quyền bổ sung" }), ForbiddenException);
+    await assert.rejects(() => proposalService.resubmitProposal(otherPiUser, submitted.id), ForbiddenException);
+
+    const revised = await proposalService.updateDraft(piUser, submitted.id, {
+      summary: "Đề tài đã bổ sung bản giải trình và dự toán theo yêu cầu."
+    });
+    assert.equal(revised.summary, "Đề tài đã bổ sung bản giải trình và dự toán theo yêu cầu.");
+    assert.equal(auditLog.records.at(-1).action, "update-proposal-during-supplement");
+
+    const extraFile = await filesService.uploadFile(piUser, {
+      relatedEntityType: "research_proposal",
+      relatedEntityId: submitted.id,
+      filePurpose: "budget-form",
+      fileName: "du-toan-bo-sung.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 1000,
+      content: Buffer.alloc(1000, "b")
+    });
+    assert.equal(extraFile.canEdit, true);
+    await assert.rejects(
+      () =>
+        filesService.uploadFile(scopedStaff, {
+          relatedEntityType: "research_proposal",
+          relatedEntityId: submitted.id,
+          filePurpose: "budget-form",
+          fileName: "staff-upload.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1000,
+          content: Buffer.alloc(1000, "s")
+        }),
+      ForbiddenException
+    );
+
+    const resubmitted = await proposalService.resubmitProposal(piUser, submitted.id);
+    assert.equal(resubmitted.status, "resubmitted");
+    assert.equal(resubmitted.canEdit, false);
+    assert.equal(resubmitted.canSubmit, false);
+    assert.equal(resubmitted.supplementRequests[0].status, "resolved");
+    assert.ok(resubmitted.supplementRequests[0].resolvedAt);
+    assert.equal(resubmitted.history.at(-1).fromStatus, "supplement_requested");
+    assert.equal(resubmitted.history.at(-1).toStatus, "resubmitted");
+    assert.equal(auditLog.records.some((record) => record.action === "upload-file"), true);
+    assert.equal(prisma.store.auditLogs.at(-1).action, "resubmit-proposal");
+
+    await assert.rejects(() => proposalService.resubmitProposal(piUser, submitted.id), BadRequestException);
+    await assert.rejects(
+      () =>
+        proposalService.requestSupplement(scopedStaff, draft.id, {
+          reason: "Không thể yêu cầu bổ sung sau khi đã nộp lại.",
+          dueDate: futureDate(5)
+        }),
+      BadRequestException
+    );
   });
 });

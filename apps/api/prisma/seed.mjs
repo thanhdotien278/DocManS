@@ -28,7 +28,7 @@ const users = [
     id: "user-leadership",
     username: "tvtien",
     passwordHash:
-      "scrypt:user-leadership:c52b02ae6aac82353472c53850ab0412925b90f6f907f994c57901aef4d3c11323904a8ec6b2db58f6c70573084e1bba15d044f9bb5571b388e3b6942d02b563",
+      "scrypt:user-leadership:ee6993e65023030a9cf863925cf50c6a8e94a829eaeb344059bfb66e2c5419622123ea57a1891543a9f3aa308e48e24057a41bd16860c6150bbfac36614ef657",
     displayName: "GS. TS. Trần Viết Tiến",
     status: "active",
     role: "leadership",
@@ -50,7 +50,7 @@ const users = [
     id: "user-pi",
     username: "patuan",
     passwordHash:
-      "scrypt:user-pi:673213cfbafd5eaafdea44928251a6c15053da9e1b623e286fbea163e313bd210030b3d33d7d1c25106c4e3a73386dee074ef956c64926d12a518b7167ddfcf8",
+      "scrypt:user-pi:a2b881672bd86b9b7bc23fa6b11a507a1d4142e00c19a9ff0f66f815bee1882f417f0253352b0bd54c66772e4a3949671c0c7f37a691a43c5d05e556e6919a38",
     displayName: "TS. Phạm Anh Tuấn",
     status: "active",
     role: "principal-investigator",
@@ -61,12 +61,34 @@ const users = [
     id: "user-reviewer",
     username: "nmtrung",
     passwordHash:
-      "scrypt:user-reviewer:13749652ddde4378a437b85696b6de3892467ce0515b242bdbba8870094e3e6397705a73560f724ceaee5f9ee5750b8bb218de88ae5b5eb9839f437e27dc4e90",
+      "scrypt:user-reviewer:b0782812a1c75cef9db6596a7c88ae497fac0d08b7c7230c908d3c413fc08c2bed386eccfc0cbc10a64a088f1ad9bf6a2f6507410ea3d833bbb0907d958ac12a",
     displayName: "TS. Đỗ Minh Trung",
     status: "active",
     role: "reviewer",
     roleLabel: "Thành viên Hội đồng",
     unit: "Ban Quản lý KHQS"
+  },
+  {
+    id: "user-staff-hdtien1",
+    username: "hdtien1",
+    passwordHash:
+      "scrypt:user-staff-hdtien1:0ca10cf0ed59766007948d5e2010afb69514a438a457e62f20eb392bfae619b1d91f2fed126c591a8a9f2d945e1d0705fbf6545f1e371e3ce692d19ab1ecdea0",
+    displayName: "HD Tiến 1",
+    status: "active",
+    role: "scientific-management",
+    roleLabel: "Chuyên viên",
+    unit: "Phòng KHQS"
+  },
+  {
+    id: "user-staff-hdtien2",
+    username: "hdtien2",
+    passwordHash:
+      "scrypt:user-staff-hdtien2:3fcf32d5cd6957b752759325f0ee8c06f19db00e53ba051225606826fe336f7fe8bf4655570b109ee0a59eb1e90bf02c40e9a5f7d67f93562cbbac1774e7ad74",
+    displayName: "HD Tiến 2",
+    status: "active",
+    role: "scientific-management",
+    roleLabel: "Chuyên viên",
+    unit: "Phòng KHQS"
   }
 ];
 
