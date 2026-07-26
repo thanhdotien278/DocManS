@@ -519,6 +519,10 @@ Accesses assigned proposals, ethics dossiers, council records, or review records
 - Mobile form layouts must support one-column input flow and may use sticky primary actions where forms are long.
 - Workflow-heavy screens should expose current status, timeline or stepper context, and history without burying them in hard-to-find overlays.
 - Status communication must combine color with text labels or icons.
+- A user who holds different roles on different records must work inside one unified workspace: navigation follows the account-level system role, while what the user may do inside a record follows that record's participation. The UI must not offer a global role switcher or require the user to declare which role they are acting as.
+- Every list row and detail screen must state the viewer's role on the specific record being shown, and must never present the account-level system role as if it were the record role.
+- A personal work area shared by all signed-in users must gather the records they own, the records they participate in, and the items awaiting their action, each entry labelled with its record-scoped role.
+- Actions blocked by conflict-of-interest policy must remain visible but disabled with a plain-language reason, rather than being silently hidden.
 - Accessibility for core workflows must target WCAG AA.
 
 ## Acceptance Criteria
@@ -541,6 +545,7 @@ Accesses assigned proposals, ethics dossiers, council records, or review records
 - Core administrative screens work across the required breakpoints of `360px`, `390px`, `430px`, `768px`, `1024px`, and `1440px`.
 - Dashboard, list, detail, and form experiences remain usable and legible on desktop and mobile/tablet layouts without full-page horizontal scrolling on mobile.
 - Core workflows satisfy the baseline accessibility expectations stated in this PRD, verified by keyboard navigation checks, visible focus checks, label checks, and status readability checks on affected screens.
+- A user who is simultaneously the owner of one proposal, a participant in another, and an approval authority can carry out each responsibility without switching accounts or roles, sees the correct record-scoped role stated on each record, and is blocked with a stated reason from approving a proposal they participate in.
 
 ## Phase 1 Out-Of-Scope
 

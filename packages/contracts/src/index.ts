@@ -14,3 +14,17 @@ export type WorkflowStatus =
   | "rejected"
   | "overdue"
   | "completed";
+
+/**
+ * The persisted `ResearchProposal.status` values (EP-02, EP-03). Distinct from `WorkflowStatus`,
+ * which is the broader presentation vocabulary the demo surfaces also use.
+ */
+export type ProposalWorkflowStatus =
+  | "draft"
+  | "submitted"
+  | "supplement_requested"
+  | "resubmitted"
+  | "under_review"
+  | "ready_for_approval"
+  | "approved"
+  | "rejected";

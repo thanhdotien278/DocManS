@@ -1,5 +1,8 @@
 import { ForbiddenException } from "@nestjs/common";
 import type { SafeUserContext } from "../auth/auth.types.js";
+import type { ProposalParticipation } from "./proposal-participation.js";
+import type { ProposalReviewAccess } from "./proposal-review-access.js";
+import { isWorkflowVisibleStatus } from "./proposal-workflow.js";
 
 type IntakeLike = {
   applicableOrganizationUnitId?: string | null;
@@ -28,6 +31,14 @@ export function isScientificManagement(user?: SafeUserContext) {
 
 export function isPrincipalInvestigator(user?: SafeUserContext) {
   return hasRole(user, "principal-investigator");
+}
+
+export function isLeadership(user?: SafeUserContext) {
+  return hasRole(user, "leadership");
+}
+
+export function isReviewerAccount(user?: SafeUserContext) {
+  return hasRole(user, "reviewer") || hasRole(user, "council-member");
 }
 
 export function assertCanManageIntakePeriods(user?: SafeUserContext) {
@@ -68,13 +79,41 @@ export function intakeAppliesToUser(intake: IntakeLike, user: SafeUserContext) {
   return getOrganizationScopeIds(user).includes(intake.applicableOrganizationUnitId);
 }
 
-export function canReadProposal(user: SafeUserContext | undefined, proposal: ProposalLike) {
+/**
+ * `participation` is the caller's resolved record-scoped relationship to this proposal (ST-3.0) and
+ * `reviewAccess` their resolved reviewer assignment on it (ST-3.2). Both only ever widen access to
+ * the single record they were resolved from, never to the user's account-level authority
+ * (AUTH-ST-3.0-02). Omitting either keeps the narrower behaviour, which is the fail-closed
+ * direction: an unresolved context grants nothing.
+ */
+export function canReadProposal(
+  user: SafeUserContext | undefined,
+  proposal: ProposalLike,
+  participation?: ProposalParticipation,
+  reviewAccess?: ProposalReviewAccess
+) {
   if (!user) {
     return false;
   }
 
   if (isSystemAdmin(user) || isScientificManagement(user)) {
     return true;
+  }
+
+  if (participation?.isParticipant) {
+    return true;
+  }
+
+  // ST-3.2: assignment-scoped, and only for a proposal that has entered the formal workflow. A
+  // `reviewer` account with no assignment on this proposal reads nothing (AC-ST-3.2-02).
+  if (reviewAccess?.isAssignedReviewer && isWorkflowVisibleStatus(proposal.status)) {
+    return true;
+  }
+
+  // ST-3.5: approval authority needs the whole decision package (AC-ST-3.5-01). Drafts stay
+  // private to their owner until the proposal is formally submitted.
+  if (isLeadership(user)) {
+    return isWorkflowVisibleStatus(proposal.status);
   }
 
   if (isPrincipalInvestigator(user)) {
@@ -84,8 +123,13 @@ export function canReadProposal(user: SafeUserContext | undefined, proposal: Pro
   return false;
 }
 
-export function assertCanReadProposal(user: SafeUserContext | undefined, proposal: ProposalLike) {
-  if (!canReadProposal(user, proposal)) {
+export function assertCanReadProposal(
+  user: SafeUserContext | undefined,
+  proposal: ProposalLike,
+  participation?: ProposalParticipation,
+  reviewAccess?: ProposalReviewAccess
+) {
+  if (!canReadProposal(user, proposal, participation, reviewAccess)) {
     throw new ForbiddenException({ message: "Không có quyền xem hồ sơ đề xuất này." });
   }
 

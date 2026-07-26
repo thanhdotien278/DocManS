@@ -2,7 +2,7 @@
 
 ## Status
 
-ready-for-dev
+done
 
 ## Epic
 
@@ -162,3 +162,50 @@ UI expectations:
 - Consolidated outcome is explicit, permission-checked, and traceable.
 - Proposal can enter ST-3.5 decision package through controlled state.
 - Scope remains isolated from leadership decision workflow.
+
+## Delivered Implementation
+
+### Data model
+
+`ProposalEvaluationSummary` (`proposal_evaluation_summaries`) — one row per proposal (unique
+`proposal_id`), with `summary`, `recommendation`, `status` (`draft` | `ready_for_approval`),
+`createdById`, `updatedById` and `markedReadyAt`.
+
+### Backend
+
+- `GET :id/review-progress` — per-reviewer completion, the named pending reviewers, the average
+  total score, the submitted reviews and the current consolidated outcome. Staff, admin and
+  leadership read it; reviewers and PIs are refused (AC-ST-3.4-01, AC-ST-3.4-03).
+- `PUT :id/evaluation-summary` — save the consolidated outcome. `markReady` is an explicit flag, so
+  a draft consolidation cannot drift into an approval-ready state as a side effect of an ordinary
+  save. With `markReady: true` the proposal moves to `ready_for_approval`, any still-open assignment
+  is completed with the round, the transition is written to the timeline and the audit action
+  becomes `mark-ready-for-approval` (AC-ST-3.4-02, AC-ST-3.4-04).
+
+Completion is measured against assignments that are still part of the round: a revoked assignment
+does not hold the proposal open, a completed one counts as done. Marking ready while a review is
+outstanding is refused and the response names the reviewers still pending. Every action re-checks
+`scientific-management` plus organization scope, so out-of-scope staff are refused on scope alone.
+
+Audit actions: `consolidate-evaluation`, `mark-ready-for-approval`.
+
+### Frontend
+
+The consolidation half of `proposal-evaluation-panel.tsx`: submitted reviews with scores and
+comments, a visible "còn N phiếu chưa gửi" warning naming the pending reviewers, the summary form,
+and separate "Lưu nháp tổng hợp" and "Chuyển chờ phê duyệt" actions with confirmation on the second.
+`/proposals` gained `under_review`, `ready_for_approval`, `approved` and `rejected` status filters.
+
+### Coverage
+
+`tests/proposals-ep03.test.mjs` — three ST-3.4 tests: progress reports per-reviewer completion and a
+revoked assignment stops holding the round open; consolidation is gated on completion, a draft save
+does not move the proposal, marking ready transitions it once and updates rather than duplicates the
+summary row; and reviewers, PIs and out-of-scope staff can neither read nor change the consolidation
+while leadership reads it.
+
+## Post-Review Hardening
+
+See the shared section in `3-2-phan-cong-reviewer-va-truy-cap-proposal-theo-assignment.md`, which
+records the adversarial review of the whole evaluation module and the fixes applied across ST-3.2 to
+ST-3.5.
