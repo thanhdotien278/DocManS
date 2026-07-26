@@ -111,6 +111,17 @@ const organizationUnits = [
   ["org-bqlkhqs", "BQLKHQS", "Ban Quản lý KHQS"]
 ];
 
+// Scientific management staff operate the intake, supplement, assignment and consolidation flows
+// for the units they oversee, not only for their own department. Without this the seeded staff
+// accounts sit in Phòng KHQS while the seeded PI files under Khoa Toán - Tin học, so every
+// scope-checked staff action (ST-3.1 supplement, ST-3.2 assignment, ST-3.4 consolidation) is
+// refused and the demo cannot reach the approval step.
+const additionalOrganizationScopes = {
+  "user-staff": ["org-khti", "org-bqlkhqs"],
+  "user-staff-hdtien1": ["org-khti", "org-bqlkhqs"],
+  "user-staff-hdtien2": ["org-khti", "org-bqlkhqs"]
+};
+
 for (const [id, code, label, description] of roles) {
   await prisma.role.upsert({
     where: { code },
@@ -172,6 +183,16 @@ for (const user of users) {
       },
       update: { isPrimary: true },
       create: { userId: user.id, organizationUnitId: organizationUnit.id, isPrimary: true }
+    });
+  }
+
+  for (const organizationUnitId of additionalOrganizationScopes[user.id] ?? []) {
+    await prisma.userOrganizationScope.upsert({
+      where: {
+        userId_organizationUnitId: { userId: user.id, organizationUnitId }
+      },
+      update: { isPrimary: false },
+      create: { userId: user.id, organizationUnitId, isPrimary: false }
     });
   }
 }

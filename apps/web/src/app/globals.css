@@ -1283,6 +1283,37 @@ summary:focus-visible {
   color: var(--danger);
 }
 
+.state-message.warning {
+  border-color: #e6cf8f;
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+/* ST-3.0: record-scoped participation list on the proposal detail screen. */
+.participation-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.participation-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  padding: 8px 10px;
+}
+
+.participation-name {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
 .settings-list,
 .reference-grid {
   display: grid;

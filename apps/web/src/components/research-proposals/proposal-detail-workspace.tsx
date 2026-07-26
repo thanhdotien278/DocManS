@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Download, FileText, Pencil, Save, Send, Trash2, UploadCloud, X } from "lucide-react";
 import { useSession } from "@/components/auth/session-provider";
+import { ProposalDecisionPanel } from "@/components/research-proposals/proposal-decision-panel";
+import { ProposalEvaluationPanel } from "@/components/research-proposals/proposal-evaluation-panel";
+import { ProposalReviewForm } from "@/components/research-proposals/proposal-review-form";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ParticipationBadge } from "@/components/ui/participation-badge";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatVndNumber, numberToVietnameseWords, parseVndNumber } from "@/lib/vietnamese-currency";
@@ -69,8 +73,8 @@ function toDraftInput(proposal: ResearchProposal): ProposalDraftInput {
     summary: proposal.summary,
     budgetMetadata: proposal.budgetMetadata,
     members: proposal.members?.length
-      ? proposal.members
-      : [{ name: "", role: "Chủ nhiệm", organization: "" }]
+      ? proposal.members.map((member) => ({ ...member, username: "" }))
+      : [{ name: "", role: "Chủ nhiệm", organization: "", username: "" }]
   };
 }
 
@@ -113,14 +117,42 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
     }
   }
 
+  /**
+   * Re-reads the proposal after an EP-03 panel changed the workflow, without dropping back to the
+   * loading state — that would unmount the panel that is still reporting its own result.
+   */
+  async function refreshWorkflowState() {
+    try {
+      const [proposalData, readinessData] = await Promise.all([loadResearchProposal(proposalId), loadProposalReadiness(proposalId)]);
+      setProposal(proposalData);
+      setReadiness(readinessData);
+      setForm(toDraftInput(proposalData));
+    } catch {
+      setState("error");
+    }
+  }
+
   useEffect(() => {
     void refresh();
   }, [proposalId]);
 
   const canEdit = Boolean(proposal?.canEdit);
   const canSubmit = Boolean(proposal?.canSubmit);
+  // Record-scoped role resolved by the backend. Never inferred from account.role (UX-DR26).
+  const viewerParticipation = proposal?.viewerParticipation;
+  const otherParticipationLabels = (viewerParticipation?.labels ?? []).slice(1);
+  // Shown, not hidden, so a conflict-blocked action can explain itself (UX-DR27).
+  const conflictMessage = viewerParticipation?.conflict?.conflicted ? viewerParticipation.conflict.message : "";
   const canRequestSupplement = account?.role === "scientific-management" && proposal?.status === "submitted";
   const isSupplementFlow = proposal?.status === "supplement_requested";
+  // EP-03 panel visibility. These are render hints only — each panel resolves its own authority
+  // against the API and renders nothing when the viewer is not entitled to it. Both `role` and the
+  // `roles` array are checked, so an account that holds several system roles keeps every surface it
+  // is entitled to instead of only the one its primary role names.
+  const accountRoles = new Set([account?.role, ...(account?.roles ?? [])].filter(Boolean));
+  const showEvaluationPanel = accountRoles.has("scientific-management");
+  const showReviewForm = Boolean(proposal?.viewerReviewAssignment?.isAssignedReviewer);
+  const showDecisionPanel = accountRoles.has("leadership");
   const requirementOptions = proposal?.requiredPackage ?? [];
   const documentGroups = useMemo(
     () =>
@@ -134,12 +166,24 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   );
   const budgetWords = numberToVietnameseWords(form?.budgetMetadata?.amount);
 
-  function updateMember(field: "name" | "role" | "organization", value: string) {
+  function updateMember(field: "name" | "role" | "organization" | "username", value: string) {
     setForm((current) =>
       current
         ? {
             ...current,
-            members: [{ name: "", role: "Chủ nhiệm", organization: "", ...(current.members?.[0] ?? {}), [field]: value }]
+            members: [
+              {
+                name: "",
+                role: "Chủ nhiệm",
+                organization: "",
+                ...(current.members?.[0] ?? {}),
+                [field]: value,
+                // Editing the account field re-resolves the link. The server-echoed userId has to
+                // go, or the API would keep the old account and silently discard the new username —
+                // and clearing the field could never unlink.
+                ...(field === "username" ? { userId: "" } : {})
+              }
+            ]
           }
         : current
     );
@@ -406,6 +450,15 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
           <form className="admin-form" onSubmit={(event) => void handleSave(event)}>
             <div className="meta-grid">
               <div className="meta-item">
+                <span className="meta-label">Vai trò của tôi với hồ sơ này</span>
+                <span className="meta-value">
+                  <ParticipationBadge role={viewerParticipation?.role} label={viewerParticipation?.label} />
+                </span>
+                {otherParticipationLabels.length > 0 ? (
+                  <span className="record-meta">Vai trò khác trên hồ sơ: {otherParticipationLabels.join(", ")}</span>
+                ) : null}
+              </div>
+              <div className="meta-item">
                 <span className="meta-label">Trạng thái</span>
                 <span className="meta-value">
                   <StatusBadge status={proposal.status} />
@@ -422,6 +475,12 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                 </div>
               ) : null}
             </div>
+
+            {conflictMessage ? (
+              <p className="state-message warning" role="status">
+                {conflictMessage}
+              </p>
+            ) : null}
 
             <div className="form-section-inline">
               <div className="section-mini-heading">Thông tin chung</div>
@@ -475,6 +534,17 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                   />
                 </label>
                 <label className="field">
+                  <span>Tài khoản hệ thống (nếu có)</span>
+                  <input
+                    disabled={!canEdit}
+                    value={form.members?.[0]?.username ?? ""}
+                    onChange={(event) => updateMember("username", event.target.value)}
+                    placeholder={
+                      proposal.members?.[0]?.isAccountLinked ? "Đã liên kết tài khoản" : "Tên đăng nhập, để trống nếu là người ngoài hệ thống"
+                    }
+                  />
+                </label>
+                <label className="field">
                   <span>Bắt đầu</span>
                   <input disabled={!canEdit} type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} />
                 </label>
@@ -484,6 +554,22 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                   {formError.endDate ? <span className="field-error">{formError.endDate}</span> : null}
                 </label>
               </div>
+
+              {proposal.members?.length ? (
+                <ul className="participation-list">
+                  {proposal.members.map((member, index) => (
+                    <li className="participation-item" key={member.id ?? `${member.name}-${index}`}>
+                      <span className="participation-name">{member.name}</span>
+                      <ParticipationBadge role={member.participationRole} label={member.participationRoleLabel} />
+                      <span className="record-meta">
+                        {member.organization}
+                        {" · "}
+                        {member.isAccountLinked ? "Đã liên kết tài khoản" : "Người ngoài hệ thống"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
 
             <div className="form-section-inline">
@@ -570,6 +656,14 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
             ) : null}
           </SectionCard>
         ) : null}
+
+        {showReviewForm ? <ProposalReviewForm proposalId={proposal.id} onReviewSubmitted={() => void refreshWorkflowState()} /> : null}
+
+        {showEvaluationPanel ? (
+          <ProposalEvaluationPanel proposalId={proposal.id} onWorkflowChange={() => void refreshWorkflowState()} />
+        ) : null}
+
+        {showDecisionPanel ? <ProposalDecisionPanel proposalId={proposal.id} onDecision={() => void refreshWorkflowState()} /> : null}
 
         <SectionCard title="Tệp tài liệu" subtitle="Theo dõi từng tài liệu bắt buộc và metadata nộp hồ sơ">
           {uploadError ? <p className="form-error">{uploadError}</p> : null}

@@ -14,7 +14,17 @@ import {
   isScientificManagement,
   isSystemAdmin
 } from "../proposals-shared/proposal-access.js";
-import type { ProposalMemberInput, ProposalMissingItem } from "../proposals-shared/proposal-types.js";
+import {
+  evaluateProposalConflict,
+  getParticipationRoleLabel,
+  normalizeParticipationRole,
+  type ProposalParticipation
+} from "../proposals-shared/proposal-participation.js";
+import { getAssignmentRoleLabel, type ProposalReviewAccess } from "../proposals-shared/proposal-review-access.js";
+import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
+import { PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
+import type { ProposalMemberPersistInput, ProposalMissingItem } from "../proposals-shared/proposal-types.js";
+import { ProposalParticipationService } from "./proposal-participation.service.js";
 import {
   assertDateRange,
   normalizeRequiredPackage,
@@ -59,9 +69,14 @@ type ResearchProposalRecord = {
   updatedAt: Date;
 };
 
-type ProposalMemberRecord = ProposalMemberInput & {
+type ProposalMemberRecord = {
   id: string;
   proposalId: string;
+  name: string;
+  role: string;
+  organization: string;
+  userId: string | null;
+  participationRole: string | null;
   createdAt: Date;
 };
 
@@ -117,7 +132,9 @@ type ProposalSupplementRequestRecord = {
 export class ResearchProposalsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly auditLog: AuditLogService
+    private readonly auditLog: AuditLogService,
+    private readonly participation: ProposalParticipationService,
+    private readonly reviewAccess: ProposalReviewAccessService
   ) {}
 
   async listProposals(actor: SafeUserContext) {
@@ -125,13 +142,29 @@ export class ResearchProposalsService {
       orderBy: { createdAt: "desc" }
     })) as ResearchProposalRecord[];
 
-    return records.filter((proposal) => canReadProposal(actor, proposal)).map((proposal) => this.toProposalResponse(proposal, actor));
+    const [participationByProposal, reviewAccessByProposal] = await Promise.all([
+      this.participation.resolveForProposals(actor?.id, records),
+      this.reviewAccess.resolveForProposals(
+        actor?.id,
+        records.map((proposal) => proposal.id)
+      )
+    ]);
+
+    return records
+      .filter((proposal) => canReadProposal(actor, proposal, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id)))
+      .map((proposal) =>
+        this.toProposalResponse(proposal, actor, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id))
+      );
   }
 
   async getProposal(actor: SafeUserContext, proposalId: string) {
     const proposal = await this.findProposal(proposalId);
-    assertCanReadProposal(actor, proposal);
-    return this.toProposalDetailResponse(proposal, undefined, actor);
+    const [participation, reviewAccess] = await Promise.all([
+      this.participation.resolveForProposal(actor?.id, proposal),
+      this.reviewAccess.resolveForProposal(actor?.id, proposalId)
+    ]);
+    assertCanReadProposal(actor, proposal, participation, reviewAccess);
+    return this.toProposalDetailResponse(proposal, actor, participation, reviewAccess);
   }
 
   async createDraft(actor: SafeUserContext, input: Record<string, unknown>) {
@@ -150,6 +183,9 @@ export class ResearchProposalsService {
     }
 
     const members = readMembers(input.members);
+    // Account resolution runs before the write so an unknown account rejects the whole create
+    // rather than leaving a committed draft behind with no audit entry.
+    const resolvedMembers = members?.length ? await this.participation.resolveMemberAccounts(members) : undefined;
     const proposal = (await this.prisma.researchProposal.create({
       data: {
         intakePeriodId,
@@ -167,8 +203,8 @@ export class ResearchProposalsService {
       } as never
     })) as ResearchProposalRecord;
 
-    if (members?.length) {
-      await this.replaceMembers(proposal.id, members);
+    if (resolvedMembers?.length) {
+      await this.replaceMembers(proposal.id, resolvedMembers, pi);
     }
 
     await this.auditLog.record({
@@ -180,7 +216,7 @@ export class ResearchProposalsService {
       username: pi.username
     });
 
-    return this.toProposalDetailResponse(proposal, members, pi);
+    return this.toProposalDetailResponse(proposal, pi);
   }
 
   async updateDraft(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>) {
@@ -225,13 +261,15 @@ export class ResearchProposalsService {
     }
 
     const members = readMembers(input.members);
+    // Account resolution runs before the write so an unknown account rejects the whole update.
+    const resolvedMembers = members ? await this.participation.resolveMemberAccounts(members) : undefined;
     const updated = (await this.prisma.researchProposal.update({
       where: { id: proposalId },
       data: data as never
     })) as ResearchProposalRecord;
 
-    if (members) {
-      await this.replaceMembers(proposalId, members);
+    if (resolvedMembers) {
+      await this.replaceMembers(proposalId, resolvedMembers, actor);
     }
 
     await this.auditLog.record({
@@ -243,18 +281,18 @@ export class ResearchProposalsService {
       username: actor.username
     });
 
-    return this.toProposalDetailResponse(updated, members, actor);
+    return this.toProposalDetailResponse(updated, actor);
   }
 
   async listAttachments(actor: SafeUserContext, proposalId: string) {
     const proposal = await this.findProposal(proposalId);
-    assertCanReadProposal(actor, proposal);
+    await this.assertReadableProposal(actor, proposal);
     return this.findAttachments(proposalId, { canMutate: this.canMutateProposalFiles(actor, proposal) });
   }
 
   async getReadiness(actor: SafeUserContext, proposalId: string) {
     const proposal = await this.findProposal(proposalId);
-    assertCanReadProposal(actor, proposal);
+    await this.assertReadableProposal(actor, proposal);
     return this.computeReadiness(proposal);
   }
 
@@ -317,7 +355,7 @@ export class ResearchProposalsService {
       return updated;
     })) as unknown as ResearchProposalRecord;
 
-    return this.toProposalDetailResponse(submitted, undefined, actor);
+    return this.toProposalDetailResponse(submitted, actor);
   }
 
   async requestSupplement(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>) {
@@ -378,7 +416,7 @@ export class ResearchProposalsService {
       return record;
     })) as unknown as ResearchProposalRecord;
 
-    return this.toProposalDetailResponse(updated, undefined, actor);
+    return this.toProposalDetailResponse(updated, actor);
   }
 
   async resubmitProposal(actor: SafeUserContext, proposalId: string) {
@@ -450,12 +488,12 @@ export class ResearchProposalsService {
       return record;
     })) as unknown as ResearchProposalRecord;
 
-    return this.toProposalDetailResponse(updated, undefined, pi);
+    return this.toProposalDetailResponse(updated, pi);
   }
 
   async listHistory(actor: SafeUserContext, proposalId: string) {
     const proposal = await this.findProposal(proposalId);
-    assertCanReadProposal(actor, proposal);
+    await this.assertReadableProposal(actor, proposal);
     const records = (await this.prisma.proposalSubmissionEvent.findMany({
       where: { proposalId },
       orderBy: { submittedAt: "asc" },
@@ -537,13 +575,57 @@ export class ResearchProposalsService {
     return pi;
   }
 
-  private async replaceMembers(proposalId: string, members: ProposalMemberInput[]) {
+  /**
+   * Replaces the participation list and records what changed (AUD-ST-3.0-01). Newly linked
+   * accounts are audited individually so a participation-to-account link is traceable on its own,
+   * not just as part of a bulk edit.
+   */
+  private async replaceMembers(proposalId: string, members: ProposalMemberPersistInput[], actor: SafeUserContext) {
+    const previous = await this.findMembers(proposalId);
+    const previousUserIds = new Set(previous.map((member) => member.userId).filter((value): value is string => Boolean(value)));
+    const nextUserIds = new Set(members.map((member) => member.userId).filter((value): value is string => Boolean(value)));
+
     await this.prisma.proposalMember.deleteMany({ where: { proposalId } });
     if (members.length) {
       await this.prisma.proposalMember.createMany({
         data: members.map((member) => ({ proposalId, ...member }))
       });
     }
+
+    for (const member of members) {
+      if (member.userId && !previousUserIds.has(member.userId)) {
+        await this.auditLog.record({
+          action: "link-proposal-participant",
+          result: "success",
+          actorId: actor.id,
+          targetEntity: "proposal-participation",
+          targetEntityId: proposalId,
+          username: actor.username,
+          reason: JSON.stringify({
+            proposalId,
+            linkedUserId: member.userId,
+            participationRole: member.participationRole,
+            name: member.name
+          })
+        });
+      }
+    }
+
+    await this.auditLog.record({
+      action: "update-proposal-participation",
+      result: "success",
+      actorId: actor.id,
+      targetEntity: "proposal-participation",
+      targetEntityId: proposalId,
+      username: actor.username,
+      reason: JSON.stringify({
+        proposalId,
+        previousCount: previous.length,
+        nextCount: members.length,
+        linkedUserIds: [...nextUserIds].filter((userId) => !previousUserIds.has(userId)),
+        unlinkedUserIds: [...previousUserIds].filter((userId) => !nextUserIds.has(userId))
+      })
+    });
   }
 
   private async findMembers(proposalId: string) {
@@ -626,21 +708,75 @@ export class ResearchProposalsService {
     return missing;
   }
 
-  private async toProposalDetailResponse(proposal: ResearchProposalRecord, providedMembers?: ProposalMemberInput[], actor?: SafeUserContext) {
-    const members = providedMembers ?? (await this.findMembers(proposal.id));
+  private async toProposalDetailResponse(
+    proposal: ResearchProposalRecord,
+    actor?: SafeUserContext,
+    resolvedParticipation?: ProposalParticipation,
+    resolvedReviewAccess?: ProposalReviewAccess
+  ) {
+    const members = await this.findMembers(proposal.id);
+    const participation = resolvedParticipation ?? (await this.participation.resolveForProposal(actor?.id, proposal, members));
+    const reviewAccess = resolvedReviewAccess ?? (await this.reviewAccess.resolveForProposal(actor?.id, proposal.id));
     const attachments = await this.findAttachments(proposal.id, { canMutate: this.canMutateProposalFiles(actor, proposal) });
     const history = await this.listHistoryForProposal(proposal.id);
     const supplementRequests = await this.listSupplementRequestsForProposal(proposal.id);
     const requiredPackage = await this.getRequiredPackageForProposal(proposal);
 
     return {
-      ...this.toProposalResponse(proposal, actor),
-      members,
+      ...this.toProposalResponse(proposal, actor, participation, reviewAccess),
+      members: members.map((member) => this.toMemberResponse(member)),
       attachments,
       history,
       supplementRequests,
       requiredPackage
     };
+  }
+
+  private toMemberResponse(member: ProposalMemberRecord) {
+    const participationRole = normalizeParticipationRole(member.participationRole ?? member.role);
+
+    return {
+      id: member.id,
+      name: member.name,
+      role: member.role,
+      organization: member.organization,
+      userId: member.userId ?? "",
+      isAccountLinked: Boolean(member.userId),
+      participationRole,
+      participationRoleLabel: getParticipationRoleLabel(participationRole)
+    };
+  }
+
+  /**
+   * The viewer's role on this specific record plus the conflict statement behind it, so the UI can
+   * state the record role (UX-DR26) and explain a blocked control instead of hiding it (UX-DR27).
+   */
+  private toViewerParticipation(participation?: ProposalParticipation) {
+    const conflict = evaluateProposalConflict(participation);
+
+    return {
+      role: participation?.role ?? "unknown",
+      label: participation?.label ?? getParticipationRoleLabel("unknown"),
+      roles: participation?.roles ?? [],
+      labels: participation?.labels ?? [],
+      isOwner: participation?.isOwner ?? false,
+      isParticipant: participation?.isParticipant ?? false,
+      conflict: {
+        conflicted: conflict.conflicted,
+        reasonCode: conflict.reasonCode,
+        reason: conflict.reason,
+        message: conflict.viewerMessage
+      }
+    };
+  }
+
+  private async assertReadableProposal(actor: SafeUserContext, proposal: ResearchProposalRecord) {
+    const [participation, reviewAccess] = await Promise.all([
+      this.participation.resolveForProposal(actor?.id, proposal),
+      this.reviewAccess.resolveForProposal(actor?.id, proposal.id)
+    ]);
+    assertCanReadProposal(actor, proposal, participation, reviewAccess);
+    return participation;
   }
 
   private canMutateProposalFiles(actor: SafeUserContext | undefined, proposal: ResearchProposalRecord) {
@@ -661,10 +797,25 @@ export class ResearchProposalsService {
     }
   }
 
-  private toProposalResponse(proposal: ResearchProposalRecord, actor?: SafeUserContext) {
+  private toProposalResponse(
+    proposal: ResearchProposalRecord,
+    actor?: SafeUserContext,
+    participation?: ProposalParticipation,
+    reviewAccess?: ProposalReviewAccess
+  ) {
     const canEditDraft = this.canEditProposalDraft(actor, proposal);
 
     return {
+      viewerParticipation: this.toViewerParticipation(participation),
+      // EP-03 UI hints. The backend stays authoritative — every evaluation endpoint re-checks
+      // authority, workflow state and conflict for itself.
+      viewerReviewAssignment: {
+        isAssignedReviewer: reviewAccess?.isAssignedReviewer ?? false,
+        assignmentId: reviewAccess?.assignmentId ?? "",
+        assignmentRole: reviewAccess?.assignmentRole ?? "none",
+        assignmentRoleLabel: reviewAccess?.isAssignedReviewer ? getAssignmentRoleLabel(reviewAccess.assignmentRole) : ""
+      },
+      statusLabel: PROPOSAL_STATUS_LABELS[proposal.status] ?? proposal.status,
       id: proposal.id,
       code: proposal.code ?? "",
       intakePeriodId: proposal.intakePeriodId,

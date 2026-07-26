@@ -1,10 +1,63 @@
 import { getApiBaseUrl } from "@/lib/session";
 import type { RequiredPackageItem } from "@/lib/proposal-intake-periods-api";
 
+/** Record-scoped participation role codes returned by the API (ST-3.0). */
+export type ProposalParticipationRole = "principal-investigator" | "secretary" | "member" | "none" | "unknown";
+
 export type ProposalMember = {
+  id?: string;
   name: string;
   role: string;
   organization: string;
+  /** Set when the participant is linked to a system account; empty for external participants. */
+  userId?: string;
+  /** Write-only alternative to `userId` — the API resolves it to an account. */
+  username?: string;
+  isAccountLinked?: boolean;
+  participationRole?: ProposalParticipationRole;
+  participationRoleLabel?: string;
+};
+
+/**
+ * The viewer's role on this specific proposal, computed by the backend from the record
+ * relationship. Never derive this from the account-level system role (UX-DR26).
+ */
+export type ProposalViewerParticipation = {
+  role: ProposalParticipationRole;
+  label: string;
+  roles: ProposalParticipationRole[];
+  labels: string[];
+  isOwner: boolean;
+  isParticipant: boolean;
+  conflict: {
+    conflicted: boolean;
+    reasonCode: "no-conflict" | "participation" | "unresolved";
+    reason: string;
+    /** Plain-language reason to show next to a blocked control (UX-DR27). */
+    message: string;
+  };
+};
+
+/** The persisted proposal workflow states (EP-02 intake/submission, EP-03 evaluation/approval). */
+export type ProposalWorkflowStatus =
+  | "draft"
+  | "submitted"
+  | "supplement_requested"
+  | "resubmitted"
+  | "under_review"
+  | "ready_for_approval"
+  | "approved"
+  | "rejected";
+
+/**
+ * The viewer's reviewer assignment on this specific proposal (ST-3.2). Like participation, it is
+ * resolved from the assignment record — the `reviewer` account role grants nothing on its own.
+ */
+export type ProposalViewerReviewAssignment = {
+  isAssignedReviewer: boolean;
+  assignmentId: string;
+  assignmentRole: "reviewer" | "committee_member" | "none";
+  assignmentRoleLabel: string;
 };
 
 export type ProposalAttachment = {
@@ -68,13 +121,17 @@ export type ResearchProposal = {
     currency?: string;
     note?: string;
   };
-  status: "draft" | "submitted" | "supplement_requested" | "resubmitted";
+  status: ProposalWorkflowStatus;
+  /** Vietnamese label for `status`, resolved by the backend so both apps read the same wording. */
+  statusLabel?: string;
   submittedAt: string;
   submittedById: string;
   createdAt: string;
   updatedAt: string;
   canEdit: boolean;
   canSubmit: boolean;
+  viewerParticipation?: ProposalViewerParticipation;
+  viewerReviewAssignment?: ProposalViewerReviewAssignment;
   members?: ProposalMember[];
   attachments?: ProposalAttachment[];
   history?: ProposalHistoryEvent[];

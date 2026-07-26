@@ -307,6 +307,14 @@ UX-DR22: Mobile and tablet designs must be treated as first-class, with no scree
 
 UX-DR23: Reusable UI patterns and components should be preferred across modules, and new components should only be introduced when they can serve multiple similar screens.
 
+UX-DR24: A user who holds different roles on different records must work inside one unified workspace. Navigation is derived from the account-level system role, while what the user may do inside a record is derived from that record's participation. The UI must not offer a global role switcher and must not ask the user to choose which role they are acting as.
+
+UX-DR25: A personal work area shared by every signed-in user must gather that user's own items regardless of which role produced them, grouping at minimum the records they own, the records they participate in, and the items awaiting their action, each entry carrying its record-scoped role label.
+
+UX-DR26: Any list row or detail screen for a record where the viewer has a participation role must state that role explicitly, for example the Vietnamese labels `Chủ nhiệm`, `Thành viên`, `Người phê duyệt`, `Người đánh giá`. Screens must never present the account-level system role as if it were the user's role on the record, and must not rely on separate per-role screens to express the difference.
+
+UX-DR27: When conflict-of-interest policy blocks an action, the control must remain visible but disabled and must state the reason in plain language, for example `Bạn đang tham gia hồ sơ này nên không thể phê duyệt`. Blocked actions must not be silently hidden, and work queues must exclude records the user is disqualified from acting on.
+
 ### FR Coverage Map
 
 FR1: Epic 1 - Xác thực truy cập nội bộ
@@ -316,7 +324,7 @@ FR4: Epic 1 - Quản lý vai trò và quyền
 FR4a: Epic 1 - Đổi mật khẩu và reset mật khẩu có kiểm soát
 FR5: Epic 1 - Quản lý đơn vị và phạm vi dữ liệu
 FR6: Epic 1 - Nền tảng phân quyền role/scope/state
-FR6a: Epic 1 - Phân biệt system role với participation/assignment role theo bản ghi
+FR6a: Epic 1, Epic 3 - Phân biệt system role với participation/assignment role theo bản ghi (proposal participation linkage delivered by ST-3.0)
 FR7: Epic 1 - Danh mục dùng chung
 FR8: Epic 1 - Cấu hình hệ thống và mẫu thông báo
 FR9: Epic 2 - Quản lý đợt tiếp nhận
@@ -396,7 +404,7 @@ Cho phép chuyên viên mở đợt tiếp nhận và chủ nhiệm đề tài t
 
 ### EP-03: Bổ Sung, Đánh Giá Và Phê Duyệt Đề Tài
 Cho phép các bên liên quan xử lý đầy đủ vòng đời thẩm định đề xuất từ yêu cầu bổ sung đến phân công đánh giá, chấm điểm, tổng hợp và phê duyệt/từ chối theo trạng thái được kiểm soát.
-**FRs covered:** FR15, FR16, FR17, FR18, FR19, FR20, FR21, FR22
+**FRs covered:** FR6a, FR15, FR16, FR17, FR18, FR19, FR20, FR21, FR22, FR67a
 
 ### EP-04: Theo Dõi Đề Tài Được Duyệt Và Tiến Độ Thực Hiện
 Biến đề tài được duyệt thành hồ sơ triển khai thực tế với milestone, báo cáo định kỳ, điều chỉnh/gia hạn, nghiệm thu và giám sát tiến độ theo workflow rõ ràng.
@@ -923,6 +931,67 @@ So that the proposal enters the controlled intake workflow with traceable status
 
 Cho phép xử lý toàn bộ giai đoạn thẩm định đề xuất sau khi nộp chính thức, từ bổ sung đến quyết định phê duyệt.
 
+### ST-3.0: Proposal participation model and conflict-of-interest primitives
+**Use Case IDs:** `UC-300-A` Participation resolution, `UC-300-B` Conflict policy evaluation
+**Traceability:** FR6a, FR67a, FR38, FR39; NFR7, NFR8; UX-DR24, UX-DR26, UX-DR27
+
+
+As a scientific management staff member and platform maintainer,
+I want proposal participation to be linked to real user accounts and exposed as a per-record role,
+So that conflict-of-interest rules become evaluable and every screen can state the viewer's role on that specific proposal.
+
+**Business Value:** Unblocks ST-3.2 and ST-3.5, whose conflict rules cannot be evaluated while proposal participation is stored as free text. Gives every user one consistent answer to "what am I on this record?", which is the foundation for users who hold different roles on different proposals.
+
+**Scope:** Link proposal participants to user accounts where an account exists; resolve the current user's participation role for a given proposal; return that role and the derived capability flags through the proposal API; provide one reusable conflict-policy primitive; Prisma migration; continue to support participants who have no system account.
+
+**Out of Scope:** Cross-module personal work hub (ST-7.4); council and ethics participation (EP-10); researcher-profile linkage (EP-11); assigning multiple account-level system roles to one user.
+
+**Acceptance Criteria:**
+
+**AC-ST-3.0-01:** Given a proposal that records participants
+**When** a participant who holds a system account is saved
+**Then** the participation record stores a resolved reference to that user account
+**And** participants without a system account remain valid as descriptive entries
+
+**AC-ST-3.0-02:** Given a user opens a proposal they are related to
+**When** the proposal detail or list response is produced
+**Then** the response states that user's participation role on that specific proposal
+**And** the role is derived from the record relationship rather than the account-level system role
+
+**AC-ST-3.0-03:** Given a user has no relationship to a proposal
+**When** they retrieve it within their permitted data scope
+**Then** the response reports no participation role
+**And** no participation-derived permission is granted
+
+**AC-ST-3.0-04:** Given a candidate is the principal investigator, a participant, or the secretary on a proposal
+**When** the conflict-policy primitive is evaluated for that candidate and that proposal
+**Then** it reports a conflict
+**And** reviewer assignment and approval decisions can block the action consistently through one shared rule
+
+**AC-ST-3.0-05:** Given participation on a proposal changes
+**When** a participant is added, replaced, or removed
+**Then** the change is captured in audit history with actor and target record
+
+**Technical Notes:**
+**TN-ST-3.0-01:** Requires a Prisma migration adding an optional user reference to the proposal participation record; keep the existing descriptive fields so external participants stay supported.
+**TN-ST-3.0-02:** Participation resolution must be a backend service consumed by both authorization and response shaping; the frontend must never infer participation from the account-level role.
+**TN-ST-3.0-03:** The conflict primitive must fail closed when participation context cannot be resolved.
+**TN-ST-3.0-04:** This story is a prerequisite for ST-3.2 (AC-ST-3.2-04) and ST-3.5 (AC-ST-3.5-04); both acceptance criteria are unevaluable until participation is account-linked.
+
+**Authorization Requirements:**
+**AUTH-ST-3.0-01:** Participation data is editable only by actors already permitted to edit the proposal in its current workflow state.
+**AUTH-ST-3.0-02:** Participation grants record-scoped permissions only and must never widen account-level authority.
+
+**Audit-Log Requirements:**
+**AUD-ST-3.0-01:** Record audit entries for linking a participant to a user account and for participation changes on a proposal.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-3.0-01:** Link a participant to an existing account and verify the reference resolves
+**VER-ST-3.0-02:** Save an external participant without an account and verify it remains valid
+**VER-ST-3.0-03:** Verify the per-record participation role returned for owner, participant, and unrelated users
+**VER-ST-3.0-04:** Verify the conflict primitive reports a conflict for principal investigator, participant, and secretary
+**VER-ST-3.0-05:** Verify audit entries for participation changes
+
 ### ST-3.1: Yêu cầu bổ sung và nộp lại hồ sơ
 **Use Case IDs:** `UC-310-A` Supplement request, `UC-310-B` Proposal resubmission
 **Traceability:** FR15, FR16, FR22, FR38, FR39; NFR10; UX-DR10, UX-DR13, UX-DR14
@@ -1010,6 +1079,7 @@ So that evaluation work is routed securely to the right people.
 **Technical Notes:**
 **TN-ST-3.2-01:** Data-scope + assignment-scope enforcement là trọng tâm; tránh cho reviewer thấy proposal ngoài assignment.
 **TN-ST-3.2-02:** Reviewer assignment phải kiểm tra researcher profile/user linkage và participation role của cùng proposal; reviewer là assignment-scoped role, không phải quyền global áp cho mọi proposal.
+**TN-ST-3.2-03:** Depends on ST-3.0. AC-ST-3.2-04 is unevaluable until proposal participation is linked to user accounts, because the conflict check must answer whether the assignment candidate already participates in this proposal.
 
 **Authorization Requirements:**
 **AUTH-ST-3.2-01:** Chỉ staff hoặc role được phép mới assign/reassign; reviewer chỉ xem assigned items.
@@ -1154,6 +1224,7 @@ So that accepted proposals can advance into project execution while rejected one
 **Technical Notes:**
 **TN-ST-3.5-01:** Đây là story đóng vòng proposal; confirmation UX bắt buộc; fail closed nếu thiếu authority context.
 **TN-ST-3.5-02:** Approval authorization phải kiểm tra authority scope, workflow state, và conflict policy trên cùng proposal trước khi tạo decision.
+**TN-ST-3.5-03:** Depends on ST-3.0. AC-ST-3.5-04 is unevaluable until proposal participation is linked to user accounts, because self-approval detection must resolve the approver's participation on this proposal.
 
 **Authorization Requirements:**
 **AUTH-ST-3.5-01:** Chỉ approval authority được quyết định; staff/reviewer/PI không được gọi action này ngoài permission rules.
@@ -1922,6 +1993,62 @@ So that I can support executive reporting and operational review without manual 
 **VER-ST-7.3-02:** Export Excel
 **VER-ST-7.3-03:** Export PDF
 **VER-ST-7.3-04:** Kiểm tra file export không chứa dữ liệu ngoài scope
+
+### ST-7.4: Unified personal work hub across modules
+**Use Case ID:** `UC-740` Personal work hub
+**Traceability:** FR6a, FR38, FR39, FR55, FR56; NFR7, NFR8; UX-DR25, UX-DR26, UX-DR27
+
+
+As any signed-in user,
+I want one personal area that gathers everything involving me across modules,
+So that I do not have to visit separate role-specific screens to discover my own work.
+
+**Business Value:** A user is frequently the owner of one record, a participant in another, and an approver elsewhere. Without a shared personal hub, those items are scattered across role-specific screens and the user has no single place that answers "what is mine today?".
+
+**Scope:** One personal area available to every signed-in user regardless of account-level role; sections for records the user owns, records the user participates in, and items awaiting the user's action; per-entry record-scoped role label; exclusion of records the user is disqualified from acting on; drill-down into the underlying record.
+
+**Out of Scope:** Redesigning module dashboards (ST-7.2); notification delivery (EP-06); participation modelling itself, which is delivered by ST-3.0 for proposals and by the owning epics for other record types.
+
+**Acceptance Criteria:**
+
+**AC-ST-7.4-01:** Given a signed-in user with any account-level system role
+**When** they open the personal work hub
+**Then** the hub is available and lists only items connected to that user
+**And** it does not require the user to select which role they are acting as
+
+**AC-ST-7.4-02:** Given the user owns some records and participates in others
+**When** the hub is rendered
+**Then** owned and participating records appear in distinct sections
+**And** each entry states the user's record-scoped role
+
+**AC-ST-7.4-03:** Given the user's account-level role grants decision authority
+**When** the hub lists items awaiting their action
+**Then** records where the user has a conflicting participation are excluded from that queue
+**And** the exclusion is explained in the hub
+
+**AC-ST-7.4-04:** Given a user has no items in a section
+**When** the hub is rendered
+**Then** the empty section is either hidden or shown with a clear empty state
+**And** the hub remains readable at the required breakpoints
+
+**Technical Notes:**
+**TN-ST-7.4-01:** The hub aggregates across modules and must apply the same role, data-scope, state, and conflict rules as the underlying detail screens; it must never widen visibility.
+**TN-ST-7.4-02:** Depends on record-scoped participation being resolvable per module; proposals are covered by ST-3.0.
+**TN-ST-7.4-03:** Aggregation queries must respect the current user's authorization context and avoid leaking counts for records the user cannot access.
+
+**Authorization Requirements:**
+**AUTH-ST-7.4-01:** Every hub entry must be independently authorized; the hub is a view over permitted records, not a permission grant.
+**AUTH-ST-7.4-02:** Action queues must apply conflict policy before listing an item as actionable by the current user.
+
+**Audit-Log Requirements:**
+**AUD-ST-7.4-01:** No new business audit action is introduced; actions launched from the hub are audited by their owning module.
+
+**Test or Manual Verification Checklist:**
+**VER-ST-7.4-01:** Open the hub as users with different account-level roles
+**VER-ST-7.4-02:** Verify owned and participating records appear with correct role labels
+**VER-ST-7.4-03:** Verify a record the user participates in is excluded from their approval queue
+**VER-ST-7.4-04:** Verify no out-of-scope record appears in any section
+**VER-ST-7.4-05:** Verify hub layout at the required breakpoints
 
 ## EP-08: Theo Dõi Hội Thảo Và Sinh Viên Nghiên Cứu Khoa Học
 
