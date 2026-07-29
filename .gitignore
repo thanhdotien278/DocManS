@@ -11,3 +11,4 @@ __pycache__/
 *.tsbuildinfo
 apps/web/.next/
 .agents/
+.claude/
