@@ -2,7 +2,7 @@
 
 ## Status
 
-ready-for-dev
+done
 
 ## Epic
 
@@ -173,3 +173,123 @@ UI expectations:
 - Assigned reviewers can access only assigned proposal packages.
 - Conflict-policy checks prevent PI/member/secretary self-review paths.
 - Scope remains isolated from scoring, consolidation, and approval.
+
+## Delivered Implementation
+
+### Data model
+
+`ProposalReviewAssignment` (`proposal_review_assignments`) — `reviewerUserId`, `assignmentRole`
+(`reviewer` | `committee_member`), `status` (`assigned` | `revoked` | `completed`), `assignedById`,
+`assignedAt`, optional `dueDate`, `revokedAt`, `completedAt`.
+
+Migration `20260727000000_ep03_proposal_evaluation`. Revoked rows are kept as history, so the
+uniqueness rule is a **partial** unique index over `(proposal_id, reviewer_user_id) WHERE status =
+'assigned'`: one live assignment per reviewer per proposal, re-assignable after a revoke without
+rewriting the earlier row (AC-ST-3.2-03).
+
+### Backend
+
+New module `apps/api/src/proposal-evaluations/`, sharing the `research-proposals` base path.
+
+- `POST :id/review-assignments` — staff-only, in scope, from `submitted` / `resubmitted` /
+  `under_review`. Validates candidate -> conflict -> duplicate in that order, so a conflicted
+  candidate is reported as a conflict rather than as "already assigned". The first assignment moves
+  the proposal to `under_review` and writes the transition; later ones join the open round.
+- `GET :id/review-assignments` — staff, admin and leadership read the roster.
+- `POST :id/review-assignments/:assignmentId/revoke` — revoke-then-assign is the reassignment path.
+- `GET review-assignments/mine` — the reviewer queue, built from assignment rows. Declared before
+  the `:id` routes and two segments long, so it is never captured by `@Get(":id")`.
+- `GET :id/review-package` — the assigned reviewer's package: proposal body, members (names and
+  organisations only, no account ids), attachments and workflow history.
+
+`ProposalReviewAccessService` (`proposals-shared/`) is the single seam for "is this user assigned to
+this proposal". It depends on Prisma alone, so the proposals module, the files module and the
+evaluation module each provide it directly and no module cycle is introduced.
+
+### Authorization
+
+`canReadProposal` takes the resolved assignment as a fourth optional argument. An assigned reviewer
+reads that one proposal and nothing else; an unassigned `reviewer` account reads nothing and its
+proposal list comes back empty (AC-ST-3.2-02). `FilesService.assertCanRead` resolves the same
+assignment, so the attachment list and the download agree. Assignment never confers edit or submit.
+
+Conflict (AC-ST-3.2-04) reuses `ProposalParticipationService.evaluateConflict` from ST-3.0 — the
+principal investigator, the secretary and any participant are all refused, the denial is audited
+with `result: failure`, and no assignment row, transition or reviewer permission is created.
+
+Audit actions: `assign-reviewer`, `change-reviewer-assignment`.
+
+### Frontend
+
+- `proposal-evaluation-panel.tsx` — staff roster, per-reviewer completion, assign form and revoke.
+- `reviewer-queue-panel.tsx` at `/my-reviews` — assigned proposals, due dates and review state.
+- The proposal response carries `viewerReviewAssignment`, so the detail screen states the viewer's
+  assignment role on that record without inferring it from the account role.
+
+### Coverage
+
+`tests/proposals-ep03.test.mjs` — six ST-3.2 tests: assignment opens the round and is audited; a
+second assignment does not rewrite the status; only the assigned reviewer reads the proposal, the
+package and the files; revoking retains history, stops access and allows reassignment; PI, member
+and secretary are all refused as candidates; and authorization plus workflow state fail closed.
+Verified end to end against the running API and Postgres.
+
+## Post-Review Hardening
+
+An adversarial review pass (5 independent lenses, each finding refuted by a separate verifier) raised
+32 candidates; the ones that survived verification and were fixed in this epic:
+
+1. **Score coercion.** `validateReviewScores` used `Number(raw)`, so `true` became 1 and `[5]` became
+   5 — a hand-built request could store a score nobody entered. It now accepts a number or a whole
+   decimal string and rejects everything else.
+2. **Read scope on the evaluation surfaces.** `getReviewProgress` and `listAssignments` checked the
+   staff role but not the organization scope, so out-of-scope staff could read every reviewer's name
+   and score for a unit they do not operate. Both now go through `assertCanReadEvaluation`, which
+   scopes staff and admits leadership without a unit scope. The system-administrator role was also
+   removed from these reads, matching section 7.4 of the permission matrix (`None`).
+3. **Lost updates on workflow transitions.** Every operation read the proposal, validated its status,
+   then wrote — so two interleaved requests could both pass validation, letting one proposal be
+   approved *and* rejected, or receive its "opened the round" transition twice. The status write is
+   now conditional on the status that was validated (`updateProposalStatusGuarded`), so the second
+   writer updates zero rows and its transaction rolls back.
+4. **Draft save erased omitted fields.** `PUT :id/my-review` read an absent `comment` or `scoreData`
+   as empty, so a partial payload wiped work already saved. Absent fields now keep their stored value.
+5. **Re-assigning a reviewer who already reviewed.** The duplicate check only looked for `assigned`
+   rows, so a reviewer holding a `completed` assignment could be assigned again and be counted twice
+   in the round. Any non-revoked assignment now blocks a new one.
+6. **Unique-index race.** Two concurrent assignments for the same reviewer both passed the pre-check;
+   the partial unique index stopped the second but surfaced as a 500. It is now translated into the
+   same 400 the pre-check produces.
+7. **Panels swallowed real failures.** A network error or a 500 was rendered as "not entitled" and the
+   whole panel silently vanished. Only 401/403 now mean that; everything else shows the error.
+8. **Multi-hat accounts.** Panel visibility keyed on `account.role` alone, so an account holding
+   several system roles lost surfaces it was entitled to. Both `role` and the `roles` array are checked.
+9. **"Chuyển chờ phê duyệt" stayed enabled** with no assignments or outstanding reviews and failed with
+   a contradictory message. It is now disabled with the reason stated next to it (UX-DR27).
+10. **Staff self-review path.** `assignReviewer` ran the conflict primitive on the candidate but never
+    compared the candidate to the assigning actor, and consolidation ran no conflict check at all — so
+    one staff member could assign themselves, submit a review, and then consolidate their own review
+    through to `ready_for_approval`. The participation primitive cannot see this, because staff hold no
+    participation row. Self-assignment is now refused, and consolidation runs the same conflict rule as
+    the approval decision (`resolveActorConflict`, shared by ST-3.4 and ST-3.5).
+11. **Evaluation reads leaked draft metadata.** `getDecisionPackage`, `getReviewProgress` and
+    `listAssignments` had no workflow-state gate, so leadership could read a `draft` proposal's
+    existence and attachment count through them while `canReadProposal` refused the same account the
+    same record. All three now apply the same gate.
+12. **Unsaved consolidation text was wiped** by the refresh that follows an assign or revoke. The form
+    now keeps what the user is typing until it is saved.
+13. **Reviewer queue** rendered "Hạn Không đặt hạn" when no due date was set, and the review form's
+    field errors were not tied to their inputs and its results were not announced. Both fixed.
+
+Regression tests for items 1-5 are in `tests/proposals-ep03.test.mjs` under
+"EP-03 hardening found by adversarial review".
+
+Two confirmed findings were **not** acted on, deliberately:
+
+- The conflict rule cannot see participation that is not linked to an account. That is a boundary of
+  the ST-3.0 participation model, recorded in `deferred-work.md`.
+- A reviewer's "đề nghị chỉnh sửa, bổ sung" outcome has no return path to the PI, because ST-3.1
+  restricts supplement requests to `submitted` and `tests/proposals-ep02.test.mjs` asserts that a
+  resubmitted proposal cannot be sent back again. Widening it would change agreed ST-3.1 behaviour and
+  the permission matrix state rule, so it is flagged for the product owner in
+  `proposals-shared/proposal-workflow.ts` and `deferred-work.md` rather than decided here.

@@ -2,7 +2,7 @@
 
 ## Status
 
-ready-for-dev
+done
 
 ## Epic
 
@@ -165,3 +165,57 @@ UI expectations:
 - Review validation is backend-enforced.
 - Staff can see completion state needed for ST-3.4.
 - PI/internal-review visibility follows permission policy.
+
+## Delivered Implementation
+
+### Data model
+
+`ProposalReview` (`proposal_reviews`) — `assignmentId` (**unique**), `reviewerUserId`, `status`
+(`draft` | `submitted`), `scoreData` (JSONB), `totalScore`, `comment`, `recommendation`,
+`submittedAt`. The unique `assignmentId` is what makes AC-ST-3.3-01 structural: a review belongs to
+one assignment, so no request shape can reach another reviewer's row.
+
+### Scoring rubric
+
+Fixed in code in `proposals-shared/proposal-review-access.ts`, not a rubric builder (explicitly out
+of scope): Giá trị khoa học 30, Tính khả thi 25, Hiệu quả ứng dụng 25, Tính hợp lý của kinh phí 20 —
+100 total. Criterion codes match the `scoring-criterion` catalog type seeded in EP-01, so a later
+story can move the table into the catalog without changing the stored `scoreData` shape.
+Recommendations: `approve`, `revise`, `reject`.
+
+### Backend
+
+- `GET :id/my-review` — the caller's own review plus the rubric and recommendation options, so the
+  form can never present a criterion the server would reject.
+- `PUT :id/my-review` — draft save. Accepts partial scores so a reviewer can stop halfway, but still
+  refuses an out-of-range number: "missing" is allowed, "invalid" is not.
+- `POST :id/my-review/submit` — validates every criterion, the comment and the recommendation, and
+  returns `fieldErrors` keyed by field for inline display (AC-ST-3.3-02). Nothing is written when
+  validation fails. Submitting completes the assignment, writes a `ProposalSubmissionEvent` so staff
+  see completion on the timeline (AC-ST-3.3-03), and audits the submit.
+
+All three resolve the caller's assignment first, so an unassigned reviewer, staff, the PI and
+leadership are all refused (AC-ST-3.3-04). A submitted review is immutable; any reopen policy is
+left to an explicit later story. A draft save is deliberately **not** audited — only the submit is.
+
+Audit action: `submit-score-and-review-comment`.
+
+### Frontend
+
+`proposal-review-form.tsx` — one labelled input per criterion with its maximum, a running total,
+comment, recommendation, and inline `fieldErrors`. A submitted review renders read-only rather than
+disappearing, so the reviewer can still see what they sent.
+
+### Coverage
+
+`tests/proposals-ep03.test.mjs` — three ST-3.3 tests: a valid submit stores the review, completes
+the assignment, writes the timeline event and the audit entry, and shows as completed to staff;
+incomplete or out-of-range scoring blocks the submit, saves nothing and returns field-level errors;
+and unassigned reviewers, staff, PI and leadership are refused while two reviewers write separate
+rows and a submitted review cannot be edited.
+
+## Post-Review Hardening
+
+See the shared section in `3-2-phan-cong-reviewer-va-truy-cap-proposal-theo-assignment.md`, which
+records the adversarial review of the whole evaluation module and the fixes applied across ST-3.2 to
+ST-3.5.

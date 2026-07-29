@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Eye, FileText, Plus, Save, Search } from "lucide-react";
 import { useSession } from "@/components/auth/session-provider";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ParticipationBadge } from "@/components/ui/participation-badge";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { loadProposalIntakePeriods, type ProposalIntakePeriod } from "@/lib/proposal-intake-periods-api";
@@ -90,7 +91,7 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
     });
   }, [keyword, proposals, statusFilter]);
 
-  function updateMember(field: "name" | "role" | "organization", value: string) {
+  function updateMember(field: "name" | "role" | "organization" | "username", value: string) {
     setForm((current) => ({
       ...current,
       members: [{ name: "", role: "Chủ nhiệm", organization: "", ...(current.members?.[0] ?? {}), [field]: value }]
@@ -163,6 +164,10 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
               <option value="submitted">Đã nộp</option>
               <option value="supplement_requested">Chờ bổ sung</option>
               <option value="resubmitted">Đã nộp lại</option>
+              <option value="under_review">Đang đánh giá</option>
+              <option value="ready_for_approval">Chờ phê duyệt</option>
+              <option value="approved">Đã duyệt</option>
+              <option value="rejected">Từ chối</option>
             </select>
           </label>
         </div>
@@ -179,6 +184,7 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
                 <thead>
                   <tr>
                     <th>Hồ sơ</th>
+                    <th>Vai trò của tôi</th>
                     <th>Đợt</th>
                     <th>Thời gian</th>
                     <th>Kinh phí</th>
@@ -194,6 +200,12 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
                           {proposal.title}
                         </Link>
                         <span className="record-meta">{proposal.code || proposal.id}</span>
+                      </td>
+                      <td>
+                        <ParticipationBadge
+                          role={proposal.viewerParticipation?.role}
+                          label={proposal.viewerParticipation?.label}
+                        />
                       </td>
                       <td>{intakes.find((intake) => intake.id === proposal.intakePeriodId)?.title ?? proposal.intakePeriodId}</td>
                       <td>
@@ -228,6 +240,7 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
                     </div>
                     <StatusBadge status={proposal.status} />
                   </div>
+                  <ParticipationBadge role={proposal.viewerParticipation?.role} label={proposal.viewerParticipation?.label} />
                   <span className="record-meta">
                     {formatDate(proposal.startDate)} - {formatDate(proposal.endDate)}
                   </span>
@@ -302,6 +315,14 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
                 <label className="field">
                   <span>Đơn vị thành viên</span>
                   <input value={form.members?.[0]?.organization ?? ""} onChange={(event) => updateMember("organization", event.target.value)} />
+                </label>
+                <label className="field">
+                  <span>Tài khoản hệ thống (nếu có)</span>
+                  <input
+                    value={form.members?.[0]?.username ?? ""}
+                    onChange={(event) => updateMember("username", event.target.value)}
+                    placeholder="Tên đăng nhập, để trống nếu là người ngoài hệ thống"
+                  />
                 </label>
                 <label className="field">
                   <span>Bắt đầu</span>

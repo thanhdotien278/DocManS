@@ -1,5 +1,5 @@
 # generated: 2026-06-03T13:46:11+0700
-# last_updated: 2026-06-18T19:38:08+0700
+# last_updated: 2026-07-27T01:45:00+0700
 # project: DocManS
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-03T13:46:11+0700
-last_updated: 2026-06-18T19:38:08+0700
+last_updated: 2026-07-27T01:45:00+0700
 project: DocManS
 project_key: NOKEY
 tracking_system: file-system
@@ -54,12 +54,13 @@ development_status:
   2-3-dinh-kem-ho-so-de-xuat-va-kiem-tra-dieu-kien-truoc-khi-nop: done
   2-4-nop-ho-so-chinh-thuc-va-xem-lich-su-nop: done
   epic-2-retrospective: optional
-  epic-3: in-progress
-  3-1-yeu-cau-bo-sung-va-nop-lai-ho-so: ready-for-dev
-  3-2-phan-cong-reviewer-va-truy-cap-proposal-theo-assignment: ready-for-dev
-  3-3-reviewer-cham-diem-va-gui-nhan-xet: ready-for-dev
-  3-4-theo-doi-tien-do-danh-gia-va-tong-hop-ket-qua: ready-for-dev
-  3-5-phe-duyet-hoac-tu-choi-proposal: ready-for-dev
+  epic-3: done
+  3-0-proposal-participation-model-and-conflict-primitives: done
+  3-1-yeu-cau-bo-sung-va-nop-lai-ho-so: done
+  3-2-phan-cong-reviewer-va-truy-cap-proposal-theo-assignment: done
+  3-3-reviewer-cham-diem-va-gui-nhan-xet: done
+  3-4-theo-doi-tien-do-danh-gia-va-tong-hop-ket-qua: done
+  3-5-phe-duyet-hoac-tu-choi-proposal: done
   epic-3-retrospective: optional
   epic-4: backlog
   4-1-khoi-tao-ho-so-de-tai-thuc-hien-tu-proposal-da-duyet: backlog
@@ -83,4 +84,5 @@ development_status:
   7-1-tim-kiem-loc-va-danh-sach-dieu-huong-xuyen-module: backlog
   7-2-dashboard-theo-vai-tro-voi-drill-down-hanh-dong: backlog
   7-3-bao-cao-tong-hop-va-xuat-excel-pdf: backlog
+  7-4-unified-personal-work-hub: backlog
   epic-7-retrospective: optional

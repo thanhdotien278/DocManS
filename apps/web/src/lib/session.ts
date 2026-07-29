@@ -19,7 +19,9 @@ export type ShellAccount = {
   id: string;
   username: string;
   name: string;
+  /** Account-level system role. Drives navigation only — never a record-scoped capability. */
   role: CurrentUser["role"];
+  roles: CurrentUser["role"][];
   roleLabel: string;
   unit: string;
   initials: string;
@@ -36,6 +38,7 @@ export function toShellAccount(user: CurrentUser): ShellAccount {
     username: user.username,
     name: user.displayName,
     role: user.role,
+    roles: user.roles?.length ? user.roles : [user.role],
     roleLabel: user.roleLabel,
     unit: user.unit,
     initials: user.displayName.trim().charAt(0).toUpperCase() || "U",

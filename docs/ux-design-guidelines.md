@@ -255,7 +255,56 @@ Yêu cầu:
 - Không lặp lại logo trong từng card/panel.
 - Ảnh lễ nghi, ảnh sự kiện, carousel chỉ phù hợp với website công khai, không phù hợp màn hình quản trị nội bộ.
 
-## 15. Checklist Tuân Thủ Khi Thiết Kế
+## 15. Người Dùng Đa Vai Trò Và Vai Trò Theo Hồ Sơ
+
+Một người trong RTMS có thể vừa là chủ nhiệm đề tài này, vừa là thành viên đề tài khác, đồng thời giữ chức vụ lãnh đạo. Thiết kế phải tách bạch hai trục khác nhau và không được gộp làm một:
+
+| Trục | Ví dụ | Quyết định điều gì | Số lượng mỗi người |
+| --- | --- | --- | --- |
+| Vai trò hệ thống | Lãnh đạo, chuyên viên quản lý khoa học, quản trị hệ thống | Người dùng mở được phân hệ và menu nào | Một |
+| Vai trò theo hồ sơ | Chủ nhiệm, thành viên, thư ký, người đánh giá của **một** hồ sơ cụ thể | Trong hồ sơ đó người dùng làm được gì | Nhiều, theo từng hồ sơ |
+
+Nguyên tắc bắt buộc:
+
+- Dùng một không gian làm việc hợp nhất. Không làm nút chuyển vai trò và không bắt người dùng chọn "đang đóng vai gì" trước khi làm việc.
+- Điều hướng bám theo vai trò hệ thống. Quyền thao tác bên trong một hồ sơ bám theo quan hệ của người dùng với chính hồ sơ đó.
+- Không suy ra quyền trong hồ sơ từ vai trò hệ thống. Giao diện phải hiển thị theo dữ liệu quan hệ do backend trả về.
+- Phân biệt vai trò bằng nhãn trong cùng một danh sách, không tách thành nhiều màn hình riêng cho từng vai.
+
+Khu "Của tôi" dùng chung cho mọi người dùng:
+
+- Luôn hiển thị bất kể vai trò hệ thống, vì việc tham gia đề tài có thể xảy ra với bất kỳ ai, kể cả lãnh đạo.
+- Gom tối thiểu ba nhóm: hồ sơ tôi chủ nhiệm, hồ sơ tôi tham gia, việc đang chờ tôi xử lý.
+- Mỗi mục phải kèm nhãn vai trò, trạng thái và hành động phù hợp ngữ cảnh.
+
+Nhãn vai trò theo hồ sơ:
+
+| Nhãn | Ý nghĩa |
+| --- | --- |
+| Chủ nhiệm | Sở hữu hồ sơ, được sửa và nộp theo trạng thái cho phép |
+| Thành viên | Tham gia hồ sơ, được xem và thao tác trong phạm vi được giao |
+| Người phê duyệt | Có thẩm quyền quyết định với hồ sơ, trừ hồ sơ mình tham gia |
+| Người đánh giá | Được phân công chấm điểm và nhận xét hồ sơ |
+
+Trong màn hình chi tiết hồ sơ:
+
+- Hiển thị rõ vai trò của người đang xem với hồ sơ này, ngay đầu trang.
+- Mở hoặc khóa hành động theo quan hệ với hồ sơ, không theo vai trò hệ thống.
+- Nếu một người có nhiều quan hệ trên cùng hồ sơ, hiển thị quan hệ có quyền cao nhất và nêu các quan hệ còn lại.
+
+Chống xung đột lợi ích:
+
+- Trên hồ sơ mà người dùng là chủ nhiệm hoặc thành viên, các nút phê duyệt và đánh giá phải hiển thị nhưng bị vô hiệu hóa, kèm lý do bằng ngôn ngữ dễ hiểu.
+- Không ẩn nút một cách im lặng, vì người dùng sẽ không hiểu vì sao mình không làm được.
+- Danh sách việc chờ xử lý phải loại sẵn các hồ sơ mà người dùng bị loại trừ, và nói rõ đã loại trừ.
+
+Cần tránh:
+
+- Nút chuyển vai trò trên thanh công cụ.
+- Tách "hồ sơ của tôi" và "tất cả hồ sơ" thành hai trang khác nhau chỉ để phân biệt vai trò.
+- Hiển thị vai trò hệ thống ở vị trí mà người dùng sẽ hiểu nhầm là vai trò với hồ sơ đang xem.
+
+## 16. Checklist Tuân Thủ Khi Thiết Kế
 
 Trước khi chốt một màn hình UX/UI, cần kiểm tra:
 
@@ -271,8 +320,11 @@ Trước khi chốt một màn hình UX/UI, cần kiểm tra:
 - Các breakpoint `360px`, `390px`, `430px`, `768px`, `1024px`, `1440px` đã được kiểm tra chưa.
 - Có focus state, label, inline error và keyboard navigation cơ bản không.
 - Có tránh hero, carousel, gradient mạnh, emoji icon và decoration không cần thiết không.
+- Màn hình có nêu rõ vai trò của người đang xem với hồ sơ đang mở không.
+- Hành động bị chặn do xung đột lợi ích có hiển thị kèm lý do thay vì bị ẩn không.
+- Màn hình có tránh suy ra quyền trong hồ sơ từ vai trò hệ thống không.
 
-## 16. Nguyên Tắc Khi Có Thiết Kế Mới
+## 17. Nguyên Tắc Khi Có Thiết Kế Mới
 
 Khi thiết kế thêm màn hình hoặc tính năng mới:
 

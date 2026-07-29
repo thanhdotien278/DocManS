@@ -9,9 +9,5 @@
 # — it is never touched by the installer.
 # ─────────────────────────────────────────────────────────────────
 
-[core]
-user_name = "ThanhDaika"
-communication_language = "Vietnamese"
-
 [modules.bmm]
-user_skill_level = "intermediate"
+user_skill_level = "expert"
