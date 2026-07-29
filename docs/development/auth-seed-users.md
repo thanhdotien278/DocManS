@@ -16,6 +16,30 @@ These credentials are for local development only. All seeded accounts share the 
 
 The seed file stores precomputed `scrypt` password hashes only. Plaintext credentials are documented here for local development and are not returned through auth endpoints.
 
+## Organization scopes
+
+The `Unit` column above is each account's home unit. Backend authorization checks the account's
+**organization scopes**, which are not always just that one unit.
+
+The three scientific-management accounts (`nmphuong`, `hdtien1`, `hdtien2`) are additionally scoped
+to `org-khti` (Khoa Toán - Tin học) and `org-bqlkhqs` (Ban Quản lý KHQS), because staff operate the
+intake, supplement, reviewer-assignment and consolidation flows for the units they oversee rather
+than only for their own department. Without those extra scopes the seeded PI (`patuan`, Khoa Toán -
+Tin học) files proposals no seeded staff account may act on, and the EP-02/EP-03 demo stalls at the
+first scope-checked staff action.
+
+| Username | Organization scopes |
+| --- | --- |
+| `admin` | `org-khti` |
+| `tvtien` | `org-bgq` |
+| `nmphuong`, `hdtien1`, `hdtien2` | `org-khqs`, `org-khti`, `org-bqlkhqs` |
+| `patuan` | `org-khti` |
+| `nmtrung` | `org-bqlkhqs` |
+
+Leadership (`tvtien`) does not need a matching organization scope to read or decide a proposal:
+approval authority is evaluated from the `leadership` role plus the proposal's workflow state, and
+reviewers read only the proposals they were explicitly assigned to.
+
 Local database setup:
 
 ```bash

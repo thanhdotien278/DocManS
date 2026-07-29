@@ -2,7 +2,7 @@
 
 ## Status
 
-ready-for-dev
+done
 
 ## Epic
 
@@ -164,3 +164,58 @@ UI expectations:
 - Decision state, history, and audit logs are consistent.
 - Conflict policy prevents self-approval.
 - Approved proposal is ready for ST-4.1 without ST-3.5 creating project execution records.
+
+## Delivered Implementation
+
+### Data model
+
+`ProposalDecision` (`proposal_decisions`) — `decision` (`approved` | `rejected`), `note`,
+`decidedById`, `decidedAt`, `fromStatus`, `toStatus`. Decisions accumulate as history rather than
+being overwritten, so a later reopen policy does not lose the original record.
+
+### Backend
+
+- `GET :id/decision-package` — the authority-scoped read model: workflow status, `canDecide`, the
+  conflict statement, review progress, every submitted review, the consolidated summary, prior
+  decisions, the attachment count and the full workflow trail (AC-ST-3.5-01).
+- `POST :id/approve` and `POST :id/reject` — one transaction writes the status change, the decision
+  row, the `ProposalSubmissionEvent` and the audit entry (AC-ST-3.5-02). Review outputs and the
+  consolidated summary are never mutated by the decision. A rejection requires a note.
+
+Authority, workflow state and conflict are checked in the same service path, so no caller can
+satisfy two of the three and skip the last. Only `ready_for_approval` is decidable, which also makes
+a second decision on an already-decided proposal impossible (AC-ST-3.5-03). Authority is the
+`leadership` role only — a system administrator role does not imply business approval authority, as
+section 2 of the permission matrix states.
+
+Conflict (AC-ST-3.5-04) is the ST-3.0 participation primitive **plus** a reviewer assignment on the
+same proposal: an authority who scored the proposal would otherwise be judging their own review.
+A blocked decision is audited with `result: failure` and leaves the proposal state untouched.
+
+Leadership read access was opened here, as carried forward from ST-3.0: leadership reads any
+proposal that has entered the formal workflow, i.e. every state except `draft`. It does not require
+a matching organization scope. Drafts stay private to their owner until formal submission.
+
+Audit actions: `approve-proposal`, `reject-proposal`.
+
+### Frontend
+
+- `proposal-decision-panel.tsx` — the decision package, the reviews behind it, prior decisions, a
+  note field, and confirmed approve/reject actions. A conflict is shown with its reason rather than
+  the buttons silently vanishing (UX-DR27).
+- `approval-queue-panel.tsx` at `/approvals` — "chờ quyết định" and "đã quyết định" lists.
+
+### Coverage
+
+`tests/proposals-ep03.test.mjs` — four ST-3.5 tests: the authority reads the full package while
+staff, PI and reviewers are refused; approve and reject are transactional and do not mutate review
+outputs, and a rejection without a reason is refused; a proposal that is not ready for approval
+cannot be decided and a decided one cannot be decided again; and self-approval is blocked both for a
+participating authority and for one who was assigned as a reviewer, while an unrelated authority
+decides normally. Verified end to end against the running API and Postgres.
+
+## Post-Review Hardening
+
+See the shared section in `3-2-phan-cong-reviewer-va-truy-cap-proposal-theo-assignment.md`, which
+records the adversarial review of the whole evaluation module and the fixes applied across ST-3.2 to
+ST-3.5.

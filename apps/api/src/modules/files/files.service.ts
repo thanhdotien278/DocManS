@@ -7,6 +7,8 @@ import type { SafeUserContext } from "../../auth/auth.types.js";
 import type { ObjectStorage } from "../../infrastructure/minio/minio-object-storage.service.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { assertCanEditProposalDraft, assertCanReadProposal, assertHasOrganizationScope } from "../../proposals-shared/proposal-access.js";
+import { ProposalReviewAccessService } from "../../proposals-shared/proposal-review-access.service.js";
+import { ProposalParticipationService } from "../../research-proposals/proposal-participation.service.js";
 import { RESEARCH_PROPOSAL_ENTITY_TYPE } from "./files.dto.js";
 
 type FileRecord = {
@@ -82,6 +84,8 @@ export class FilesService {
     private readonly prisma: PrismaService,
     private readonly objectStorage: ObjectStorage,
     private readonly auditLog: AuditLogService,
+    private readonly participation: ProposalParticipationService,
+    private readonly reviewAccess: ProposalReviewAccessService,
     private readonly config: FileModuleConfig = defaultFileConfig()
   ) {}
 
@@ -309,7 +313,14 @@ export class FilesService {
 
   private async assertCanRead(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {
     const proposal = await this.findRelatedProposal(relatedEntityType, relatedEntityId);
-    assertCanReadProposal(actor, proposal);
+    // File reads must resolve participation and reviewer assignment the same way the proposal read
+    // does (ST-3.0, ST-3.2), otherwise a linked participant or an assigned reviewer sees the
+    // attachment list on the proposal but every download is refused.
+    const [participation, reviewAccess] = await Promise.all([
+      this.participation.resolveForProposal(actor?.id, proposal),
+      this.reviewAccess.resolveForProposal(actor?.id, proposal.id)
+    ]);
+    assertCanReadProposal(actor, proposal, participation, reviewAccess);
   }
 
   private async canMutateEntity(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {

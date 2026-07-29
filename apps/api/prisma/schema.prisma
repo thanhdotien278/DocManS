@@ -28,6 +28,13 @@ model User {
   uploadedFileRecords FileRecord[] @relation("FileRecordUploader")
   proposalSubmissionEvents ProposalSubmissionEvent[] @relation("SubmissionActor")
   proposalSupplementRequests ProposalSupplementRequest[] @relation("SupplementRequestActor")
+  proposalParticipations ProposalMember[] @relation("ProposalParticipant")
+  proposalReviewAssignments ProposalReviewAssignment[] @relation("ReviewAssignmentReviewer")
+  assignedProposalReviews ProposalReviewAssignment[] @relation("ReviewAssignmentAssigner")
+  proposalReviews ProposalReview[] @relation("ProposalReviewReviewer")
+  createdEvaluationSummaries ProposalEvaluationSummary[] @relation("EvaluationSummaryCreator")
+  updatedEvaluationSummaries ProposalEvaluationSummary[] @relation("EvaluationSummaryEditor")
+  proposalDecisions ProposalDecision[] @relation("ProposalDecisionAuthority")
 
   @@map("users")
 }
@@ -212,6 +219,10 @@ model ResearchProposal {
   attachments            ProposalAttachment[]
   submissionEvents       ProposalSubmissionEvent[]
   supplementRequests     ProposalSupplementRequest[]
+  reviewAssignments      ProposalReviewAssignment[]
+  reviews                ProposalReview[]
+  evaluationSummary      ProposalEvaluationSummary?
+  decisions              ProposalDecision[]
 
   @@index([intakePeriodId])
   @@index([ownerId])
@@ -221,15 +232,20 @@ model ResearchProposal {
 }
 
 model ProposalMember {
-  id           String           @id @default(uuid())
-  proposalId   String           @map("proposal_id")
-  proposal     ResearchProposal @relation(fields: [proposalId], references: [id])
-  name         String
-  role         String
-  organization String
-  createdAt    DateTime         @default(now()) @map("created_at")
+  id                String           @id @default(uuid())
+  proposalId        String           @map("proposal_id")
+  proposal          ResearchProposal @relation(fields: [proposalId], references: [id])
+  userId            String?          @map("user_id")
+  user              User?            @relation("ProposalParticipant", fields: [userId], references: [id])
+  name              String
+  role              String
+  participationRole String           @default("member") @map("participation_role")
+  organization      String
+  createdAt         DateTime         @default(now()) @map("created_at")
 
   @@index([proposalId])
+  @@index([userId])
+  @@index([participationRole])
   @@map("proposal_members")
 }
 
@@ -312,4 +328,93 @@ model ProposalSupplementRequest {
   @@index([actorId])
   @@index([status])
   @@map("proposal_supplement_requests")
+}
+
+/// ST-3.2 — reviewer access is granted per assignment, never by account role alone.
+model ProposalReviewAssignment {
+  id             String           @id @default(uuid())
+  proposalId     String           @map("proposal_id")
+  proposal       ResearchProposal @relation(fields: [proposalId], references: [id])
+  reviewerUserId String           @map("reviewer_user_id")
+  reviewer       User             @relation("ReviewAssignmentReviewer", fields: [reviewerUserId], references: [id])
+  assignmentRole String           @default("reviewer") @map("assignment_role")
+  status         String           @default("assigned")
+  assignedById   String           @map("assigned_by_id")
+  assignedBy     User             @relation("ReviewAssignmentAssigner", fields: [assignedById], references: [id])
+  assignedAt     DateTime         @default(now()) @map("assigned_at")
+  dueDate        DateTime?        @map("due_date")
+  revokedAt      DateTime?        @map("revoked_at")
+  completedAt    DateTime?        @map("completed_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  review         ProposalReview?
+
+  @@index([proposalId])
+  @@index([reviewerUserId])
+  @@index([status])
+  @@map("proposal_review_assignments")
+}
+
+/// ST-3.3 — one review per assignment, owned by the assigned reviewer.
+model ProposalReview {
+  id             String                   @id @default(uuid())
+  proposalId     String                   @map("proposal_id")
+  proposal       ResearchProposal         @relation(fields: [proposalId], references: [id])
+  assignmentId   String                   @unique @map("assignment_id")
+  assignment     ProposalReviewAssignment @relation(fields: [assignmentId], references: [id])
+  reviewerUserId String                   @map("reviewer_user_id")
+  reviewer       User                     @relation("ProposalReviewReviewer", fields: [reviewerUserId], references: [id])
+  status         String                   @default("draft")
+  scoreData      Json?                    @map("score_data")
+  totalScore     Int?                     @map("total_score")
+  comment        String?
+  recommendation String?
+  submittedAt    DateTime?                @map("submitted_at")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+
+  @@index([proposalId])
+  @@index([reviewerUserId])
+  @@index([status])
+  @@map("proposal_reviews")
+}
+
+/// ST-3.4 — one consolidated staff outcome per proposal.
+model ProposalEvaluationSummary {
+  id             String           @id @default(uuid())
+  proposalId     String           @unique @map("proposal_id")
+  proposal       ResearchProposal @relation(fields: [proposalId], references: [id])
+  summary        String
+  recommendation String
+  status         String           @default("draft")
+  createdById    String           @map("created_by_id")
+  createdBy      User             @relation("EvaluationSummaryCreator", fields: [createdById], references: [id])
+  updatedById    String           @map("updated_by_id")
+  updatedBy      User             @relation("EvaluationSummaryEditor", fields: [updatedById], references: [id])
+  markedReadyAt  DateTime?        @map("marked_ready_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("proposal_evaluation_summaries")
+}
+
+/// ST-3.5 — the leadership decision, kept as history even if a later policy reopens the proposal.
+model ProposalDecision {
+  id          String           @id @default(uuid())
+  proposalId  String           @map("proposal_id")
+  proposal    ResearchProposal @relation(fields: [proposalId], references: [id])
+  decision    String
+  note        String?
+  decidedById String           @map("decided_by_id")
+  decidedBy   User             @relation("ProposalDecisionAuthority", fields: [decidedById], references: [id])
+  decidedAt   DateTime         @default(now()) @map("decided_at")
+  fromStatus  String           @map("from_status")
+  toStatus    String           @map("to_status")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  @@index([proposalId])
+  @@index([decidedById])
+  @@index([decision])
+  @@map("proposal_decisions")
 }

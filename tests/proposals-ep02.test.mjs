@@ -12,8 +12,11 @@ import {
 } from "../dist/apps/api/research-proposals/research-proposals.dto.js";
 import { uploadFilePipe } from "../dist/apps/api/modules/files/files.dto.js";
 import { ProposalIntakePeriodsService } from "../dist/apps/api/proposal-intake-periods/proposal-intake-periods.service.js";
+import { ProposalParticipationService } from "../dist/apps/api/research-proposals/proposal-participation.service.js";
+import { ProposalReviewAccessService } from "../dist/apps/api/proposals-shared/proposal-review-access.service.js";
 import { ResearchProposalsService } from "../dist/apps/api/research-proposals/research-proposals.service.js";
 import { FilesService } from "../dist/apps/api/modules/files/files.service.js";
+import { createEvaluationTables } from "./helpers/evaluation-prisma.mjs";
 
 const adminUser = {
   id: "user-admin",
@@ -106,8 +109,15 @@ function createEp02Prisma() {
     return `${prefix}-${collection.length + 1}`;
   }
 
+  const knownUsers = [adminUser, staffUser, piUser, otherPiUser].map((user) => ({
+    id: user.id,
+    username: user.username,
+    usernameKey: user.username.toLowerCase(),
+    displayName: user.displayName
+  }));
+
   function userDisplayName(userId) {
-    return [adminUser, staffUser, piUser, otherPiUser].find((user) => user.id === userId)?.displayName ?? "";
+    return knownUsers.find((user) => user.id === userId)?.displayName ?? "";
   }
 
   const prisma = {
@@ -187,13 +197,25 @@ function createEp02Prisma() {
         const records = data.map((item) => ({
           id: nextId("member", store.members),
           createdAt: new Date(),
+          userId: null,
+          participationRole: "member",
           ...item
         }));
         store.members.push(...records);
         return { count: records.length };
       },
       async findMany({ where }) {
-        return store.members.filter((item) => item.proposalId === where.proposalId);
+        const proposalIds = Array.isArray(where?.proposalId?.in) ? where.proposalId.in : [where?.proposalId];
+        return store.members.filter((item) => proposalIds.includes(item.proposalId));
+      }
+    },
+    user: {
+      async findMany({ where }) {
+        const ids = where?.OR?.flatMap((clause) => clause.id?.in ?? []) ?? [];
+        const usernameKeys = where?.OR?.flatMap((clause) => clause.usernameKey?.in ?? []) ?? [];
+        return knownUsers.filter(
+          (user) => ids.includes(user.id) || usernameKeys.includes(user.username.toLowerCase())
+        );
       }
     },
     proposalAttachment: {
@@ -316,6 +338,8 @@ function createEp02Prisma() {
         return record;
       }
     },
+    // EP-03 tables: the proposal and file read paths resolve reviewer assignments (ST-3.2).
+    ...createEvaluationTables(store, [adminUser, staffUser, piUser, otherPiUser]),
     async $transaction(callback) {
       return callback(this);
     }
@@ -331,7 +355,7 @@ function assertNoRawStorageFields(value) {
 }
 
 function createFilesService({ prisma, auditLog, objectStorage = createObjectStorage(), maxFileSizeBytes = 1024 * 1024 } = {}) {
-  return new FilesService(prisma, objectStorage, auditLog, {
+  return new FilesService(prisma, objectStorage, auditLog, new ProposalParticipationService(prisma), new ProposalReviewAccessService(prisma), {
     maxFileSizeBytes,
     allowedExtensions: [".doc", ".docx", ".pdf", ".xls", ".xlsx"]
   });
@@ -467,7 +491,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     const prisma = createEp02Prisma();
     const auditLog = createAuditLog();
     const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
-    const proposalService = new ResearchProposalsService(prisma, auditLog);
+    const proposalService = new ResearchProposalsService(prisma, auditLog, new ProposalParticipationService(prisma), new ProposalReviewAccessService(prisma));
     await createOpenIntake(intakeService);
 
     const draft = await proposalService.createDraft(piUser, {
@@ -507,7 +531,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     const auditLog = createAuditLog();
     const objectStorage = createObjectStorage();
     const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
-    const proposalService = new ResearchProposalsService(prisma, auditLog);
+    const proposalService = new ResearchProposalsService(prisma, auditLog, new ProposalParticipationService(prisma), new ProposalReviewAccessService(prisma));
     const filesService = createFilesService({ prisma, auditLog, objectStorage });
     const draft = await createDraft({ prisma, intakeService, proposalService });
 
@@ -725,7 +749,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     const auditLog = createAuditLog();
     const objectStorage = createObjectStorage();
     const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
-    const proposalService = new ResearchProposalsService(prisma, auditLog);
+    const proposalService = new ResearchProposalsService(prisma, auditLog, new ProposalParticipationService(prisma), new ProposalReviewAccessService(prisma));
     const filesService = createFilesService({ prisma, auditLog, objectStorage });
     const draft = await createDraft({ prisma, intakeService, proposalService });
 
@@ -776,7 +800,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
       }
     };
     const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
-    const proposalService = new ResearchProposalsService(prisma, auditLog);
+    const proposalService = new ResearchProposalsService(prisma, auditLog, new ProposalParticipationService(prisma), new ProposalReviewAccessService(prisma));
     const filesService = createFilesService({ prisma, auditLog, objectStorage });
     const draft = await createDraft({ prisma, intakeService, proposalService });
 
@@ -819,7 +843,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     const prisma = createEp02Prisma();
     const auditLog = createAuditLog();
     const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
-    const proposalService = new ResearchProposalsService(prisma, auditLog);
+    const proposalService = new ResearchProposalsService(prisma, auditLog, new ProposalParticipationService(prisma), new ProposalReviewAccessService(prisma));
     const draft = await createDraft({ prisma, intakeService, proposalService });
 
     await assert.rejects(() => proposalService.submitProposal(piUser, draft.id), (error) => {
@@ -892,7 +916,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     const prisma = createEp02Prisma();
     const auditLog = createAuditLog();
     const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
-    const proposalService = new ResearchProposalsService(prisma, auditLog);
+    const proposalService = new ResearchProposalsService(prisma, auditLog, new ProposalParticipationService(prisma), new ProposalReviewAccessService(prisma));
     const intake = await createOpenIntake(intakeService);
 
     const incompleteDraft = await proposalService.createDraft(piUser, {
@@ -937,7 +961,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     const prisma = createEp02Prisma();
     const auditLog = createAuditLog();
     const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
-    const proposalService = new ResearchProposalsService(prisma, auditLog);
+    const proposalService = new ResearchProposalsService(prisma, auditLog, new ProposalParticipationService(prisma), new ProposalReviewAccessService(prisma));
     const filesService = createFilesService({ prisma, auditLog });
     const draft = await createDraft({ prisma, intakeService, proposalService });
 

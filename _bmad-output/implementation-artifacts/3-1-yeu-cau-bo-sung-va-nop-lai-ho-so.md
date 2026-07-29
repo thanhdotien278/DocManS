@@ -2,7 +2,7 @@
 
 ## Status
 
-ready-for-dev
+done
 
 ## Epic
 
@@ -174,3 +174,30 @@ UI expectations:
 - Authorization is backend-enforced and fail-closed.
 - UI exposes only allowed actions for staff and PI.
 - Scope remains isolated from reviewer assignment, scoring, consolidation, and approval.
+
+## Delivered Implementation
+
+Implemented earlier in the epic (commit `09f18de`) and verified again while closing EP-03.
+
+- Migration `20260618000000_st_31_proposal_supplement_requests` -> `proposal_supplement_requests`
+  (`reason`, `due_date`, `status` `open`/`resolved`, actor, `requested_at`, `resolved_at`).
+- `POST /api/v1/research-proposals/:id/supplement-requests` — scientific-management only, inside the
+  proposal's organization scope, and only from `submitted`. One transaction writes the request row,
+  the `supplement_requested` transition, the `ProposalSubmissionEvent` and the audit entry.
+- `POST /api/v1/research-proposals/:id/resubmit` — the owning PI only, only from
+  `supplement_requested`, and only when readiness passes. It resolves the open request and moves the
+  proposal to `resubmitted` in the same transaction.
+- Editing during supplement reuses `updateDraft`, which allows `draft` and `supplement_requested`
+  only and audits the supplement case as `update-proposal-during-supplement`.
+- UI: the supplement card on `proposal-detail-workspace.tsx` shows reason, deadline and resolution
+  state; the submit button becomes "Nộp lại hồ sơ" while a request is open.
+
+Audit actions: `request-supplement`, `update-proposal-during-supplement`, `resubmit-proposal`.
+
+Coverage: `tests/proposals-ep02.test.mjs` — "staff requests supplement and PI resubmits with
+controlled state, history, and audit logs" covers AC-ST-3.1-01 through AC-ST-3.1-04 (staff request,
+PI edit and resubmit, blocked invalid state, blocked non-owner and out-of-scope staff).
+
+Note recorded while closing the epic: the seeded scientific-management accounts had no organization
+scope over the seeded PI's unit, so this story's staff action was refused for every demo account.
+Fixed in `apps/api/prisma/seed.mjs`; see `docs/development/auth-seed-users.md`.

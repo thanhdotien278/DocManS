@@ -241,6 +241,26 @@ Common record-scoped roles:
 | View evaluation output before decision | None | Read scoped | Read authority scoped | None unless policy allows result view | None unless participating view is allowed | Read own submitted review | Approval authority scope, reviewer assignment scope | Ready for approval | No | FR20, Story 3.5 |
 | Approve/reject proposal | None | None | Approve/Reject with conflict check | Read result | Read result if participating | None | Approval authority scope, conflict policy scope | Ready for approval | Yes | FR21, FR22, FR67a, Story 3.5 |
 
+#### 7.4.1 Implemented Read-Scope Decisions (EP-03)
+
+These resolve the "read scoped" cells above into the concrete rules the backend enforces. They are
+recorded here because each one widens who may read a proposal, and the rule must be reviewable next
+to the matrix it implements.
+
+| Rule | Decision | Where |
+| --- | --- | --- |
+| Reviewer read | Granted only by an `assigned` or `completed` `ProposalReviewAssignment` row on that one proposal, and only while the proposal is in the formal workflow. The `reviewer` account role grants nothing by itself; a revoked assignment stops granting immediately. | `canReadProposal`, `ProposalReviewAccessService` |
+| Reviewer file read | Resolved by the same assignment lookup as the proposal read, so the attachment list and the download agree. Upload still requires proposal ownership. | `FilesService.assertCanRead` |
+| Leadership read | Granted for any proposal that has entered the formal workflow, i.e. every state except `draft`. Leadership does not need a matching organization scope; drafts stay private to their owner until formal submission. | `canReadProposal` |
+| Approval authority | The `leadership` role only. A system administrator role does not imply business approval authority, per section 2. | `assertApprovalAuthority` |
+| Staff evaluation actions | `scientific-management` **and** an organization scope covering the proposal's host unit, re-checked on every assignment and consolidation action. | `assertScientificManagementScope` |
+| Decision conflict | The shared ST-3.0 participation primitive, plus a reviewer assignment on the same proposal — an authority who scored the proposal cannot then decide it. | `ProposalDecisionsService.resolveDecisionConflict` |
+
+Workflow states used by EP-03: `submitted` / `resubmitted` -> `under_review` (first reviewer
+assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `approved` | `rejected`
+(leadership decision). The allowed states per action are declared once in
+`apps/api/src/proposals-shared/proposal-workflow.ts`.
+
 ### 7.5 Approved Project Tracking
 
 | Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
@@ -376,6 +396,15 @@ Common record-scoped roles:
   their validation, conflict policy, lifecycle, or audit requirements differ.
 - UI button visibility may use this matrix for UX hints, but backend checks are
   mandatory and authoritative.
+- Participation must be resolvable from the record to a user account. A
+  participation entry stored only as descriptive text cannot be used to evaluate
+  conflict policy, and any conflict rule that depends on it is unenforceable
+  until that linkage exists.
+- The effective participation role for the current user should be returned with
+  the record so the UI can state the viewer's role on that record. The UI must
+  not derive the record role from the account-level system role.
+- When conflict policy denies an action, the denial reason should be available to
+  the UI so the blocked control can explain itself rather than disappear.
 - API tests and manual QA should include allowed and denied cases for every
   protected capability.
 - Dashboard aggregates, search counts, report exports, notifications, and file

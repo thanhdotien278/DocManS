@@ -69,7 +69,7 @@ describe("workspace smoke checks", () => {
     assert.match(passwordServiceSource, /scrypt/);
   });
 
-  it("keeps database scope focused on auth, access, catalogs, config, audit, and EP-02 proposal intake models", () => {
+  it("keeps database scope focused on auth, access, catalogs, config, audit, and the EP-02/EP-03 proposal models", () => {
     const schemaSource = readFileSync("apps/api/prisma/schema.prisma", "utf8");
     const models = [...schemaSource.matchAll(/^model\s+(\w+)/gm)].map((match) => match[1]);
 
@@ -90,7 +90,11 @@ describe("workspace smoke checks", () => {
       "ProposalAttachment",
       "FileRecord",
       "ProposalSubmissionEvent",
-      "ProposalSupplementRequest"
+      "ProposalSupplementRequest",
+      "ProposalReviewAssignment",
+      "ProposalReview",
+      "ProposalEvaluationSummary",
+      "ProposalDecision"
     ]);
     assert.match(schemaSource, /@@map\("users"\)/);
     assert.match(schemaSource, /@@map\("roles"\)/);
@@ -108,6 +112,10 @@ describe("workspace smoke checks", () => {
     assert.match(schemaSource, /@@map\("proposal_attachments"\)/);
     assert.match(schemaSource, /@@map\("proposal_submission_events"\)/);
     assert.match(schemaSource, /@@map\("proposal_supplement_requests"\)/);
+    assert.match(schemaSource, /@@map\("proposal_review_assignments"\)/);
+    assert.match(schemaSource, /@@map\("proposal_reviews"\)/);
+    assert.match(schemaSource, /@@map\("proposal_evaluation_summaries"\)/);
+    assert.match(schemaSource, /@@map\("proposal_decisions"\)/);
   });
 
   it("defines a local database setup path for Epic 1", () => {
