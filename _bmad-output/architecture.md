@@ -19,7 +19,7 @@ project_name: "DocManSystem"
 user_name: "ThanhDaika"
 date: "2026-04-27"
 created: "2026-04-27T22:51:34+0700"
-updated: "2026-06-16T00:00:00+0700"
+updated: "2026-07-29T00:00:00+0700"
 lastStep: 8
 status: "complete"
 completedAt: "2026-04-27"
@@ -28,6 +28,13 @@ completedAt: "2026-04-27"
 # Architecture Decision Document
 
 _This document builds collaboratively through step-by-step discovery. Sections are appended as we work through each architectural decision together._
+
+> **Reality baseline (2026-07-29):** This document is the adopted target
+> architecture, not a statement that every decision is already implemented.
+> Current code still contains multi-role/global business-role data and
+> proposal-specific permission seams. The identity/authorization foundation
+> must migrate and consolidate those seams before dependent features rely on
+> the target contract.
 
 ## Project Context Analysis
 
@@ -38,6 +45,12 @@ RTMS requires a full internal workflow platform rather than isolated CRUD module
 
 **Non-Functional Requirements:**
 Architecture must satisfy backend-enforced authorization, controlled workflow state transitions, auditability of critical actions, file traceability, responsive list/detail/form experiences, WCAG AA baseline accessibility, transactional integrity for key workflow actions, and maintainability of a modular monolith. Performance expectations are strongest on authenticated list views, dashboard widgets, search/filter flows, and common workflow actions.
+
+Authorization decisions must use the complete record context: one active
+account-level system role, organization scope, typed record participation
+roles, assignment scope, valid record delegation, workflow state, and conflict
+policy. The architecture must preserve relationship lifecycle and must return
+backend-derived capability and denial-reason data for permission-sensitive UI.
 
 **Scale & Complexity:**
 The project is a high-complexity internal web platform because it combines multi-role workflows, multi-stage approval paths, organization-scoped data visibility, role-scoped dashboards, audit-log requirements, reminder jobs, file-management controls, and dense administrative UX.
@@ -63,6 +76,9 @@ The project is a high-complexity internal web platform because it combines multi
 - role-based authorization across all protected operations
 - data-scope authorization by unit/organization
 - state-based authorization for workflow actions
+- record-participation and assignment authorization for each business record
+- explicit delegation lifecycle and separation-of-duty conflict enforcement
+- backend-derived capability responses for record-role UX
 - audit-log capture and queryability for critical business events
 - file permission enforcement and file metadata traceability
 - reminder and notification consistency with business deadlines
@@ -162,6 +178,8 @@ nx add @nx/nest
 - Use Redis for cache, queue, reminder jobs, and notification orchestration
 - Use MinIO as the file object store
 - Enforce role-based, data-scope, and state-based authorization in backend services
+- Enforce record participation, assignment, delegation, relationship
+  lifecycle, and conflict policy in the same backend authorization decision
 - Model proposal, approved-project, task, seminar/student research, related-document, council, and ethics workflows as explicit state machines
 - Use Docker Compose and Nginx for phase 1 deployment
 - Exclude microservices, Kubernetes, SSO, LDAP, OIDC, MFA, and Elasticsearch or OpenSearch from phase 1
@@ -196,11 +214,140 @@ nx add @nx/nest
 ### Authentication & Security
 
 - **Phase 1 authentication:** local application authentication with extensible adapter boundaries for future SSO
-- **Authorization model:** role-based plus data-scope plus state-based authorization combined in backend guards, services, and policies
+- **System-role model:** exactly one active account-level role per user:
+  `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`,
+  `LEADERSHIP_APPROVAL_AUTHORITY`, or `RESEARCHER_INTERNAL_USER`
+- **Record-role model:** PI, co-investigator, project member, scientific
+  secretary, reviewer, council member, ethics reviewer, and task assignee are
+  typed record relationships, never additional global roles
+- **Authorization model:** system role plus organization/data scope plus
+  record participation plus assignment scope plus valid delegation plus
+  workflow state plus conflict policy
 - **Session and security strategy:** authenticated web session or token-based app session, but always enforced server-side
 - **Security middleware:** request validation, auth guards, permission checks, audit logging hooks, and rate protection for login-sensitive endpoints
 - **Sensitive file rule:** file metadata visibility and file download access must be permission-checked every time
-- **Failure posture:** fail closed when role, scope, assignment, or state context is ambiguous
+- **Resolver posture:** each applicable context dimension returns
+  `resolved(value)`, `resolved(empty)`, or `unresolved/error`; inapplicable
+  dimensions return `not-applicable`. Resolved-empty supplies no allow, while
+  unresolved, failed, stale, or ambiguous applicable context fails closed.
+- **Precedence rule:** every denial overrides additive permissions. When several
+  denials apply, select the primary code in this order:
+  `UNAUTHENTICATED`, `ORG_SCOPE_DENIED`, `RELATIONSHIP_INACTIVE`,
+  `WORKFLOW_STATE_DENIED`, `CONFLICT_DENIED`, `DELEGATION_INVALID`,
+  `ACTION_NOT_GRANTED`. Delegation cannot override a denial.
+
+#### Authorization Decision Contract
+
+Every protected application-service action must evaluate the same ordered
+contract:
+
+The normative field schemas, complete denial-code order, relationship
+multiplicity, request-wide time, disclosure matrix, delegation/job envelopes,
+personal-work aggregation, and integration fixtures are defined in
+`planning-artifacts/architecture/architecture-DocManSystem-2026-07-29/AUTHORIZATION-CONTRACTS.md`.
+
+1. Resolve the authenticated actor and active system role.
+2. Resolve normalized organization/data scope: actor organization IDs, target
+   organization ID, explicit cross-unit grants, and any assignment target. An
+   action is in scope only through an explicit intersection, never an inferred
+   hierarchy.
+3. Resolve all active typed participation, assignment, council-membership, and
+   task relationships for the target record.
+4. Resolve an exact-match `PermissionActionV1` delegation grant initiated by
+   the current action holder and approved by authorized scientific-management
+   staff. The grant, grantor, delegate, and source authority must all be active
+   at the database server's authoritative UTC time.
+5. Evaluate workflow-state guards.
+6. Evaluate conflict and separation-of-duty rules.
+7. Allow only an explicitly permitted action. Otherwise deny with the
+   deterministic primary `AuthorizationDecisionCodeV1`, plain-language reason,
+   policy version, and evaluated context versions.
+
+No controller, frontend component, dashboard query, export job, notification
+job, or file endpoint may skip this contract or infer a “highest role.”
+Applicable context resolvers must preserve the distinction between
+resolved-empty, not-applicable, and unresolved/error.
+
+#### Capability Response Contract
+
+Protected record and list DTOs use the shared, versioned
+`ViewerAuthorizationV1` shape:
+
+```text
+viewerAuthorization:
+  schemaVersion: "v1"
+  systemRole
+  viewerRelationships[]
+  allowedActions[]: PermissionActionV1
+  blockedActions[]:
+    action: PermissionActionV1
+    code: AuthorizationDecisionCodeV1
+    reason
+  policyVersion
+  evaluatedContextVersions[]
+```
+
+This response is descriptive, not a client-side authorization grant. Every
+mutation re-evaluates authoritative context in the owning service's transaction
+or validates the same context versions atomically. Lists may return the
+versioned compact form, but it must preserve security-relevant viewer
+relationships and blocked actions. Capability responses disclose only the
+viewer's own relationships and facts needed to explain the result; they never
+reveal another person's hidden assignment or the source of a conflict. Unknown
+schema versions, action IDs, and denial codes fail closed in protected clients.
+
+#### Delegation Contract
+
+- The current action holder initiates an action-specific grant; authorized
+  scientific management staff approves or revokes it.
+- Each grant stores grantor, approver, delegate, target type/id, action set,
+  start/end, status, revocation metadata, and audit context.
+- Draft/edit/file and PI submission actions may be delegated when listed.
+  Reviewer assignment, scoring, membership changes, approval, rejection, and
+  final decisions are non-delegable.
+- Ending the grantor's source relationship invalidates the grant immediately.
+- Action IDs come from `PermissionActionV1`, use exact matching, and do not
+  support wildcards or delegation chains.
+- Grant intervals use database-server UTC and the half-open rule
+  `startsAt <= asOf < endsAt`; a null end is unbounded. A grant is usable only
+  when approved, active, unrevoked, both accounts are active, organization
+  scope still intersects, and the source authority still grants that action.
+- Delegation never widens organization scope, bypasses state, or overrides
+  conflict policy.
+
+#### Relationship Lifecycle Contract
+
+- Participation, assignment, council membership, and delegation use
+  database-server UTC instants and half-open intervals
+  `effectiveFrom <= asOf < effectiveUntil`; a null end is unbounded.
+- Status and interval must both be active. Revocation/inactivation wins
+  immediately, including at an interval boundary.
+- Lifecycle history is immutable and is corrected through auditable successor
+  records, not physical deletion.
+- Overlapping active relations of the same type for the same actor and record
+  are rejected unless the owning domain explicitly declares multiplicity.
+- API reads, jobs, audit, and tests use the same authoritative `asOf` instant.
+
+#### Review Disclosure Contract
+
+Before the configured disclosure state, PI, co-investigator, members, and
+scientific secretaries receive no reviewer identity, raw score, reviewer
+comment, or consolidated evaluation material in lists, details, files, exports,
+notifications, dashboards, or history. After final decision, only the
+policy-approved summary is exposed by default. Any wider institutional
+disclosure requires a separately approved, versioned policy.
+
+#### Mutation, Job, and Audit Contract
+
+- The owning service binds authorization and mutation to one transaction or
+  atomically validates record/context versions and rejects a mismatch.
+- Background jobs run under a service principal, retain the initiating actor
+  identity for audit, and re-authorize current source context before a
+  protected notification, export, reminder, or projection side effect.
+- `AuthorizationAuditV1` is append-only and records event/correlation ID,
+  actor and service principal, target, exact action ID, authoritative time,
+  policy/schema version, evaluated context versions, primary decision code,
+  evaluated rule outcomes, and redacted before/after values.
 
 ### API & Communication Patterns
 
@@ -220,6 +367,13 @@ nx add @nx/nest
 - **Form architecture:** sectioned forms with validation, confirmation flows, and explicit workflow actions
 - **Data-heavy screens:** tables on desktop, mobile-adapted list and card views, no full-page horizontal scrolling on mobile
 - **Dashboard architecture:** role-aware server-backed dashboard sections with drill-down links into filtered operational lists
+- **Permission-sensitive UI:** render record-role badges, enabled actions,
+  visible disabled actions, and denial reasons from the capability response;
+  never infer capabilities from the system role or collapse multiple
+  relationships into a highest role
+- **Personal work architecture:** one cross-module personal area for owned,
+  participating, secretary, review, task, and pending-action items; each item
+  is independently authorized and conflict-filtered by the backend
 
 ### Infrastructure & Deployment
 
@@ -260,21 +414,38 @@ nx add @nx/nest
 1. Initialize Nx workspace and create frontend and backend apps
 2. Establish shared packages and repository conventions
 3. Build authentication, organizations, roles, and permission primitives
-4. Define Prisma schema foundations and migration workflow
-5. Implement audit-log, file, notification, and job infrastructure
+4. Define Prisma schema foundations, researcher-profile/account linkage,
+   typed participation relations, delegation grants, and the brownfield
+   migration that removes global PI/reviewer/council authority, chooses one
+   system-role source of truth, and consolidates existing permission seams
+5. Implement the shared authorization decision contract, capability response,
+   versioned action/decision/audit registries, conflict service, audit log, and
+   minimum file infrastructure
 6. Implement proposal and approved-project domain modules with state machines
-7. Implement seminar/student research, related-document, council/ethics, and researcher-profile modules
-8. Implement task workflows, dashboards, reporting, and UX shells on top of stable domain APIs
+   and typed participation/assignment relationships
+7. Implement researcher-profile participation history before
+   conflict-sensitive council and ethics assignment
+8. Implement task, seminar/student-research, related-document, and
+   council/ethics domains with their own authorized query contracts
+9. Add domain reminder/search/dashboard/report/personal-work integrations only
+   after each source domain is contract-complete: authoritative relationship
+   and state resolvers, versioned authorized query DTO, mutation
+   re-authorization, disclosure rules, and consumer contract tests
 
 **Cross-Component Dependencies:**
 
 - authorization depends on users, roles, organizations, assignments, and workflow states
+- record authorization additionally depends on active participation,
+  delegation, and conflict context owned by the target domain
 - dashboards depend on scope-aware query services across multiple modules
 - notifications and reminders depend on workflow events, deadlines, and Redis-backed jobs
 - file management depends on permission checks, domain ownership, and audit logging
 - audit logging depends on consistent application service boundaries across all modules
 - related documents depend on the files module for object storage and on domain modules for link validation
-- council and ethics workflows depend on researcher profiles, user accounts, related documents, files, notifications, and audit logs
+- council and ethics workflows depend on researcher profiles, user accounts,
+  typed participation/council relations, related documents, files,
+  notifications, and audit logs; minimum researcher identity and linkage must
+  be delivered first
 
 ## Implementation Patterns & Consistency Rules
 
@@ -389,10 +560,18 @@ nx add @nx/nest
 
 - Every protected backend action must evaluate:
   - authenticated actor
-  - role
+  - exactly one active account-level system role
   - organization or data scope
+  - all active record participation roles
+  - assignment or council-membership scope
+  - valid action-specific delegation
   - state-based permission if applicable
-- Authorization logic must not live only in decorators or only in frontend guards; it must be enforceable in backend application flow
+  - conflict and separation-of-duty policy
+- Deny rules take precedence over additive allows, and missing context fails
+  closed
+- Authorization logic must not live only in decorators or only in frontend guards; it must be enforced by backend application services through one shared policy contract
+- Domain modules own relationship resolution and action rules; the shared
+  authorization service composes them and returns capability/denial results
 
 **Audit-Log Pattern:**
 
@@ -431,6 +610,152 @@ nx add @nx/nest
 - Direct arbitrary state mutation is forbidden
 - Transition guards must be centralized and testable
 - Each workflow-owning module must expose transition functions that perform authorization, validation, persistence, audit logging, and notification hooks in one application flow where applicable
+
+## Authorization Architecture Spine
+
+This is an adopted target contract. `[ADOPTED]` means accepted from the
+planning sources, not already implemented; the brownfield migration in AD-12
+must complete before dependent stories rely on it.
+
+### AD-1 — Account Role Cardinality [ADOPTED]
+
+- **Binds:** auth, users, navigation, seed data
+- **Prevents:** stacked global PI/member/secretary/reviewer authority
+- **Rule:** each account has exactly one active system role; business roles are
+  typed record relationships
+
+### AD-2 — Complete Authorization Context [ADOPTED]
+
+- **Binds:** every protected query, mutation, export, file action, job, and
+  notification
+- **Prevents:** role-only or scope-only permission decisions
+- **Rule:** evaluate system role, organization scope, active record
+  relationships, assignment scope, valid delegation, workflow state, and
+  conflict policy; applicable resolvers distinguish resolved-value,
+  resolved-empty, not-applicable, and unresolved/error; only unresolved,
+  failed, stale, or ambiguous applicable context fails closed
+
+### AD-3 — Deny Precedence [ADOPTED]
+
+- **Binds:** policy evaluation and capability projection
+- **Prevents:** highest-role, role-union, or delegation bypass
+- **Rule:** all denials override additive allows; simultaneous denials use the
+  complete ordered `AuthorizationDecisionCodeV1` registry, including
+  unresolved/stale/ambiguous/unknown-contract/context-version failures
+
+### AD-4 — Domain-Owned Relationships [ADOPTED]
+
+- **Binds:** proposal, project, council, ethics, review, task, and researcher
+  modules
+- **Prevents:** one generic participation table erasing domain conflict rules
+- **Rule:** source domains own typed relationships and lifecycle; researcher
+  profiles own shared identity; authorized history is a query-on-read
+  aggregation and never an authorization or mutation source of truth
+
+### AD-5 — Explicit Delegation [ADOPTED]
+
+- **Binds:** governance, audit, source-domain action policies
+- **Prevents:** informal “act on behalf of” access
+- **Rule:** only current-holder-initiated, staff-approved, active, unrevoked,
+  exact-action, time-bounded grants are valid; source authority must remain
+  active; wildcards and chains are forbidden; reviewer assignment, scoring,
+  membership changes, approval, rejection, and final decisions are
+  non-delegable
+
+### AD-6 — Server Capability Contract [ADOPTED]
+
+- **Binds:** API DTOs, web UI, mobile layouts, tests
+- **Prevents:** frontend permission inference and unexplained hidden actions
+- **Rule:** one versioned shared DTO states minimum-disclosure viewer
+  relationships, allowed actions, blocked actions, stable codes, reasons, and
+  evaluated context versions; unknown versions/codes fail closed, and
+  mutations re-evaluate authoritative context atomically
+
+### AD-7 — Conflict-Safe Personal Work [ADOPTED]
+
+- **Binds:** personal work hub, dashboards, work queues
+- **Prevents:** cross-module count leakage and conflicted approval items
+- **Rule:** query source-domain authorized contracts at read time, exclude
+  inaccessible items from results and counts, and exclude conflicted items
+  from enabled/actionable queues while preserving a minimal blocked item with
+  the backend denial code and reason
+
+### AD-8 — Dependency Ordering [ADOPTED]
+
+- **Binds:** epic and story sequencing
+- **Prevents:** aggregate features depending on future domain contracts
+- **Rule:** deliver identity/participation foundations before conflict-sensitive
+  council work; add file, reminder, search, dashboard, report, and personal-hub
+  integrations only after each source domain exists
+
+### AD-9 — Canonical Lifecycle Time [ADOPTED]
+
+- **Binds:** participation, assignment, council membership, delegation, jobs,
+  audit, and tests
+- **Prevents:** different authority at time-zone or end-date boundaries
+- **Rule:** use database-server UTC and half-open intervals
+  `effectiveFrom <= asOf < effectiveUntil`; revocation wins immediately,
+  lifecycle history is immutable, and overlapping active same-type relations
+  are rejected unless the owning domain explicitly permits multiplicity
+
+### AD-10 — Shared Contract Registries [ADOPTED]
+
+- **Binds:** shared permissions package, source domains, API clients, audit
+- **Prevents:** incompatible action IDs, denial codes, capability shapes, and
+  audit interpretations
+- **Rule:** versioned action, decision-code, viewer-authorization,
+  personal-work-entry, and authorization-audit contracts have one shared owner;
+  their normative schemas and canonical fixtures are defined in
+  `AUTHORIZATION-CONTRACTS.md`; action matching is exact and unknown values deny
+
+### AD-11 — Restricted Review Disclosure [ADOPTED]
+
+- **Binds:** lists, details, files, exports, notifications, dashboards, history,
+  proposal, review, council, and ethics
+- **Prevents:** leaking reviewer identities or internal evaluation material
+- **Rule:** before disclosure state, PI, co-investigator, members, and
+  secretaries receive no reviewer identity, raw score, comment, or
+  consolidation data; all surfaces and the published summary follow the
+  normative disclosure matrix
+
+### AD-12 — Brownfield Authorization Migration [ADOPTED]
+
+- **Binds:** Prisma role data, seeds, auth/session DTOs, permission types,
+  navigation, current permission seams, and dependent stories
+- **Prevents:** old global roles and new record policy granting in parallel
+- **Rule:** foundation work chooses one system-role source of truth, migrates
+  legacy business-role accounts to canonical system role plus typed record
+  relations, enforces one active system role, and consolidates existing
+  permission seams before dependent work
+
+### AD-13 — Authoritative Commands and Jobs [ADOPTED]
+
+- **Binds:** mutations, delayed jobs, reminders, notifications, exports, audit
+- **Prevents:** time-of-check/time-of-use grants and stale queued authority
+- **Rule:** authorize and mutate in one transaction or atomically validate
+  `ContextVersionTokenV1`; jobs use `AuthorizationJobEnvelopeV1` service-only
+  or on-behalf-of semantics and cancel when current authority no longer holds
+
+### AD-14 — Contract-Complete Integration Gate [ADOPTED]
+
+- **Binds:** source domains and file, reminder, search, dashboard, report, and
+  personal-work consumers
+- **Prevents:** integrations against incomplete tables or DTOs
+- **Rule:** a source is integration-ready only with authoritative
+  relationship/state resolvers, a versioned authorized query contract,
+  mutation re-authorization, disclosure rules, and the canonical producer and
+  consumer fixture suite; any enabled-source failure follows the normative
+  whole-response fail-closed contract
+
+### Deferred
+
+- External identity integration and multiple active system roles remain outside
+  phase 1.
+- Any institution-approved widening beyond AD-11 requires a future versioned
+  policy decision; the restricted default remains binding until then.
+- The scientist-permission file is treated as the product owner's accepted
+  planning policy; institutional governance approval is a production/UAT
+  sign-off item.
 
 ## Workflow State Machine Diagrams
 
@@ -575,7 +900,12 @@ stateDiagram-v2
 
 ## Project Structure & Boundaries
 
-### Complete Project Directory Structure
+### Target Project Directory Structure
+
+The tree below is the target layout, not a claim that every path currently
+exists. Existing `apps/api/src/permissions/`, proposal authorization seams, and
+the current `packages/permissions/` contract must be migrated or consolidated
+into it; do not create a parallel policy system.
 
 ```text
 docmansystem/
@@ -635,6 +965,7 @@ docmansystem/
 │   │       │   ├── researcher-profiles/
 │   │       │   ├── tasks/
 │   │       │   ├── notifications/
+│   │       │   ├── personal-work/
 │   │       │   ├── files/
 │   │       │   └── reports/
 │   │       ├── components/
@@ -709,6 +1040,8 @@ docmansystem/
 │           │   ├── researcher-profiles/
 │           │   ├── tasks/
 │           │   ├── notifications/
+│           │   ├── delegations/
+│           │   ├── personal-work/
 │           │   ├── files/
 │           │   ├── audit-logs/
 │           │   ├── dashboard/
@@ -760,6 +1093,8 @@ docmansystem/
 - `apps/web/src/components/ui/*` owns reusable design primitives only
 - `apps/web/src/components/layout/*` owns shell and navigation structure
 - Dashboard widgets, proposal forms, seminar/student research views, related-document views, council/ethics views, researcher-profile views, task views, and timeline/history views live in feature modules, not generic shared buckets
+- Personal-work views consume an authorized cross-module read contract; they
+  do not own or widen source-domain permissions
 
 **Service Boundaries:**
 
@@ -794,6 +1129,11 @@ docmansystem/
 - Authentication and sessions → `auth`, shared guards and strategies, frontend auth lib
 - Password change/reset → `auth`, `users`, audit logging, backend credential policy utilities
 - Role and scope permissions → `roles`, `organizations`, shared `permissions` package, backend authorization layer
+- Record participation, assignment, conflict, and delegation → owning domain
+  modules plus `delegations`, shared `permissions`, and the backend
+  authorization layer
+- Personal work hub → `personal-work` read module plus authorized query
+  contracts from each source domain
 - File management → `files` module plus `infrastructure/minio`; `file_records` is the shared metadata table
 - Audit logging → `audit-logs` module plus common logging hooks
 - Reminder and notification jobs → `notifications` module plus `jobs/reminders` plus Redis queue and scheduler
@@ -936,6 +1276,7 @@ erDiagram
 - `organizations`
 - `user_organization_scopes`
 - `password_reset_tokens`
+- `record_delegations`
 
 **Researcher Profile Ownership:**
 
@@ -1003,6 +1344,55 @@ erDiagram
 - `file_records`
 - `export_jobs`
 
+**Authorization Data Ownership Invariants:**
+
+- `user_roles` enforces at most one active system-role assignment per account
+  in phase 1.
+- `proposal_members`, `project_members`, `seminar_participants`,
+  `student_research_participants`, `council_members`, evaluation assignments,
+  and task assignments own their typed role, status, and effective dates.
+- Co-investigator is a distinct participation value with project-member
+  default authority unless an explicit responsibility or delegation grants
+  more.
+- `researcher_participation_links`, if retained, is a rebuildable read-only
+  directory/history index. Phase-1 authorized history uses query-on-read source
+  contracts; the index is never a mutation or authorization source of truth,
+  and corrections/deletions follow the owning source-domain lifecycle.
+- Each owning domain resolves its active relationships for the shared
+  authorization service. Generic polymorphic links must not replace
+  domain-specific conflict rules.
+- `record_delegations` is owned by governance, uses exact
+  `PermissionActionV1` identifiers and UTC half-open validity intervals, and is
+  authoritatively validated against target scope, both accounts, grant status,
+  and the grantor's source action inside every protected mutation.
+
+**Brownfield migration invariant:**
+
+- Existing `User.role`, `UserRoleAssignment`, auth/session `roles[]`, global
+  PI/reviewer/council permission constants, navigation assumptions, seed data,
+  and proposal-specific authorization seams must be inventoried and migrated.
+- Foundation work chooses one persistence source for the single active system
+  role, maps existing business-role users to a canonical system role plus typed
+  record relationships, and prevents legacy and target policies from granting
+  authority in parallel.
+- Existing `apps/api/src/permissions/`, `apps/api/src/proposals-shared/`, and
+  `packages/permissions/` seams are consolidated or migrated; a second parallel
+  policy engine is forbidden.
+
+**Shared read-model invariant:**
+
+- Researcher history and personal work query versioned authorized source-domain
+  contracts at request time in phase 1. A source returns completeness,
+  source/context version, and observation time; unresolved/stale/partial source
+  results fail closed and do not contribute items or counts.
+- `PersonalWorkEntryV1` carries source domain, stable source ID, record/context
+  version, exact target action, route reference, actionable flag, and a
+  minimum-disclosure blocked code/reason. Source mutations reject stale context
+  deterministically.
+- Conflicted records remain visible only as minimally identified blocked items;
+  they are excluded from actionable counts and enabled queues. Hidden
+  assignments or conflict-source facts are never disclosed.
+
 ### Integration Points
 
 **Internal Communication:**
@@ -1024,6 +1414,8 @@ erDiagram
 - user action enters web route
 - web calls backend API
 - backend validates DTO plus permission plus state transition
+- backend resolves active record relationships and delegation, then evaluates
+  state and conflict policy
 - backend persists via Prisma and PostgreSQL
 - backend emits audit, notification, and file side effects
 - background jobs handle delayed reminders, email dispatch, and heavy exports
@@ -1042,6 +1434,10 @@ erDiagram
 - backend modules by domain
 - frontend features by domain
 - no generic dumping grounds for business logic
+- shared authorization depends on domain fact-provider ports and versioned
+  contracts, never domain persistence models
+- domains consume shared decision/action contracts and do not reinterpret
+  policy internals; architecture tests enforce this dependency direction
 
 **Test Organization:**
 
@@ -1087,7 +1483,9 @@ The chosen stack and architectural decisions are compatible. Nx workspace, Next.
 The implementation patterns reinforce the architecture rather than contradict it. Naming, routing, DTO validation, authorization enforcement, audit-log capture, background job handling, and workflow transition patterns are aligned with the chosen stack and domain rules.
 
 **Structure Alignment:**
-The project structure supports the architectural decisions. Apps, packages, backend domain modules, and infrastructure adapters are separated clearly enough to preserve modularity while still supporting one deployable product architecture.
+The target project structure supports the architectural decisions. Its
+brownfield transition explicitly consolidates the current permission seams
+before dependent modules are added, avoiding parallel policy engines.
 
 ### Requirements Coverage Validation ✅
 
@@ -1135,18 +1533,26 @@ The architecture specifies enough conventions to reduce drift between agents in 
 **Important Gaps:**
 
 - API conventions can be made sharper for filtering, pagination, and workflow-action endpoints
+- the exact SQL/data rollout for legacy global business-role migration remains
+  story-level work, but AD-12 fixes its required completion conditions
 
 **Nice-to-Have Gaps:**
 
 - example request and response envelopes for common list and action endpoints
-- explicit observability event and log taxonomy
-- example permission matrix excerpts for key roles
+- observability taxonomy beyond the required `AuthorizationAuditV1` envelope
+- institution-approved widening of review disclosure beyond the binding
+  restricted default
 
 ### Validation Issues Addressed
 
 - The architecture preserves modular-monolith constraints and avoids phase 1 scope violations
 - No contradictory technology choices were found
 - No structural conflicts were found between backend module ownership and frontend feature organization
+- The 2026-07-29 update adds the complete record-scoped authorization context,
+  deny precedence, relationship lifecycle, delegation governance, capability
+  response, personal-work boundary, brownfield migration, review disclosure,
+  authoritative command/job handling, and contract-complete dependency
+  ordering required by the scientist permission policy
 
 ### Architecture Completeness Checklist
 
