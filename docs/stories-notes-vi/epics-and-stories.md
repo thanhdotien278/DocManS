@@ -20,6 +20,11 @@ outputFile: "/Users/Super/DocManS/_bmad-output/epics-and-stories.md"
 
 # DocManSystem - Phân Rã Epic
 
+> **Lưu ý 2026-07-29:** Đây là ghi chú lịch sử, không còn là backlog chuẩn.
+> Backlog đã hoàn thiện phân quyền và được BMAD kiểm tra nằm tại
+> [`_bmad-output/epics.md`](../../_bmad-output/epics.md). Không triển khai trực
+> tiếp từ nội dung cũ bên dưới.
+
 ## Tổng Quan
 
 Tài liệu này cung cấp đầy đủ phân rã epic và story cho DocManSystem, chuyển các yêu cầu từ PRD, Architecture, Project Context và UX Design thành các story có thể triển khai.
