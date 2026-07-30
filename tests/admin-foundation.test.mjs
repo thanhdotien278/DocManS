@@ -6,7 +6,7 @@ import { AdminCatalogsService } from "../dist/apps/api/admin/admin-catalogs.serv
 import { AdminConfigController } from "../dist/apps/api/admin/admin-config.controller.js";
 import { AdminConfigService } from "../dist/apps/api/admin/admin-config.service.js";
 import { adminRequestPipe } from "../dist/apps/api/admin/admin-request.pipe.js";
-import { AdminUsersController } from "../dist/apps/api/admin/admin-users.controller.js";
+import { AdminRolesController, AdminUsersController } from "../dist/apps/api/admin/admin-users.controller.js";
 import { AdminUsersService } from "../dist/apps/api/admin/admin-users.service.js";
 import { evaluatePermission } from "../dist/apps/api/permissions/permission-policy.js";
 
@@ -16,8 +16,8 @@ const adminUser = {
   displayName: "Admin",
   role: "system-admin",
   roleLabel: "Quản trị hệ thống",
+  systemRole: "SYSTEM_ADMIN",
   unit: "Học viện Quân y",
-  roles: ["system-admin"],
   organizationScopes: [{ id: "org-root", code: "HVQY", name: "Học viện Quân y" }]
 };
 
@@ -27,7 +27,7 @@ const staffUser = {
   username: "staff",
   role: "scientific-management",
   roleLabel: "Chuyên viên",
-  roles: ["scientific-management"]
+  systemRole: "SCIENTIFIC_MANAGEMENT_STAFF"
 };
 
 function createAuditLog() {
@@ -53,12 +53,13 @@ function createAdminPrisma() {
     users: [],
     roleAssignments: [],
     organizationScopes: [],
+    failNextScopeCreate: false,
     catalogs: [],
     systemParameters: [],
     notificationTemplates: []
   };
 
-  return {
+  const prisma = {
     store,
     role: {
       async findMany() {
@@ -124,15 +125,7 @@ function createAdminPrisma() {
               return false;
             }
           }
-          if (where.role && user.role !== where.role) {
-            return false;
-          }
-          const roleCode = where.roleAssignments?.some?.role?.code;
-          if (roleCode && !user.roleAssignments?.some((assignment) => assignment.role?.code === roleCode)) {
-            return false;
-          }
-          const roleId = where.roleAssignments?.some?.roleId;
-          if (roleId && !user.roleAssignments?.some((assignment) => assignment.role?.id === roleId)) {
+          if (where.systemRole && user.systemRole !== where.systemRole) {
             return false;
           }
           if (where.unit && user.unit !== where.unit) {
@@ -175,13 +168,46 @@ function createAdminPrisma() {
     },
     userOrganizationScope: {
       async create({ data }) {
+        if (store.failNextScopeCreate) {
+          store.failNextScopeCreate = false;
+          throw new Error("scope write failed");
+        }
         store.organizationScopes.push(data);
         return data;
       },
       async deleteMany({ where }) {
         const before = store.organizationScopes.length;
-        store.organizationScopes = store.organizationScopes.filter((scope) => scope.userId !== where.userId);
+        store.organizationScopes = store.organizationScopes.filter(
+          (scope) => scope.userId !== where.userId || (where.isPrimary !== undefined && scope.isPrimary !== where.isPrimary)
+        );
         return { count: before - store.organizationScopes.length };
+      },
+      async updateMany({ where, data }) {
+        let count = 0;
+        store.organizationScopes = store.organizationScopes.map((scope) => {
+          if (scope.userId === where.userId && (where.isPrimary === undefined || scope.isPrimary === where.isPrimary)) {
+            count += 1;
+            return { ...scope, ...data };
+          }
+          return scope;
+        });
+        return { count };
+      },
+      async upsert({ where, create, update }) {
+        const key = where.userId_organizationUnitId;
+        const index = store.organizationScopes.findIndex(
+          (scope) => scope.userId === key.userId && scope.organizationUnitId === key.organizationUnitId
+        );
+        if (index >= 0) {
+          store.organizationScopes[index] = { ...store.organizationScopes[index], ...update };
+          return store.organizationScopes[index];
+        }
+        if (store.failNextScopeCreate) {
+          store.failNextScopeCreate = false;
+          throw new Error("scope write failed");
+        }
+        store.organizationScopes.push(create);
+        return create;
       }
     },
     catalogItem: {
@@ -222,8 +248,21 @@ function createAdminPrisma() {
         store.notificationTemplates.push(record);
         return record;
       }
+    },
+    async $transaction(callback) {
+      const users = structuredClone(store.users);
+      const organizationScopes = structuredClone(store.organizationScopes);
+      try {
+        return await callback(prisma);
+      } catch (error) {
+        store.users = users;
+        store.organizationScopes = organizationScopes;
+        throw error;
+      }
     }
   };
+
+  return prisma;
 }
 
 describe("admin foundation API behavior", () => {
@@ -239,35 +278,85 @@ describe("admin foundation API behavior", () => {
     );
   });
 
-  it("creates a user with role and organization scope assignments and an audit row", async () => {
+  it("accepts each canonical system role when creating a user", async () => {
     const prisma = createAdminPrisma();
     const auditLog = createAuditLog();
     const service = new AdminUsersService(prisma, auditLog, createPasswordService());
 
-    const result = await service.createUser(adminUser, {
-      username: "new.staff",
-      displayName: "New Staff",
-      password: "ChangeMe123",
-      roleCode: "system-admin",
-      organizationUnitId: "org-root"
-    });
+    for (const [index, systemRole] of [
+      "SYSTEM_ADMIN",
+      "SCIENTIFIC_MANAGEMENT_STAFF",
+      "LEADERSHIP_APPROVAL_AUTHORITY",
+      "RESEARCHER_INTERNAL_USER"
+    ].entries()) {
+      const result = await service.createUser(adminUser, {
+        username: `new.user.${index}`,
+        displayName: `New User ${index}`,
+        password: "ChangeMe123",
+        systemRole,
+        organizationUnitId: "org-root"
+      });
 
-    assert.equal(result.username, "new.staff");
-    assert.equal(prisma.store.users[0].passwordHash, "hashed:ChangeMe123");
-    assert.deepEqual(prisma.store.roleAssignments[0], {
-      userId: "user-created",
-      roleId: "role-admin",
-      isPrimary: true
+      assert.equal(result.username, `new.user.${index}`);
+      assert.equal(prisma.store.users[index].passwordHash, "hashed:ChangeMe123");
+      assert.equal(prisma.store.users[index].systemRole, systemRole);
+    }
+
+    assert.equal(prisma.store.organizationScopes.length, 4);
+    assert.deepEqual(auditLog.records.map((record) => record.action), ["AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01"]);
+  });
+
+  it("Story 1.4: rolls back user creation when the initial organization scope cannot be written", async () => {
+    const prisma = createAdminPrisma();
+    const service = new AdminUsersService(prisma, createAuditLog(), createPasswordService());
+    prisma.store.failNextScopeCreate = true;
+
+    await assert.rejects(
+      () => service.createUser(adminUser, {
+        username: "scope.failure",
+        displayName: "Scope Failure",
+        password: "ChangeMe123",
+        systemRole: "RESEARCHER_INTERNAL_USER",
+        organizationUnitId: "org-root"
+      }),
+      /scope write failed/
+    );
+
+    assert.deepEqual(prisma.store.users, []);
+    assert.deepEqual(prisma.store.organizationScopes, []);
+  });
+
+  it("rejects non-canonical system roles for user create and update", async () => {
+    const prisma = createAdminPrisma();
+    const service = new AdminUsersService(prisma, createAuditLog(), createPasswordService());
+
+    await assert.rejects(
+      () => service.createUser(adminUser, {
+        username: "invalid.role",
+        displayName: "Invalid Role",
+        password: "ChangeMe123",
+        systemRole: "reviewer",
+        organizationUnitId: "org-root"
+      }),
+      { name: "BadRequestException" }
+    );
+
+    prisma.store.users.push({
+      id: "target-user",
+      username: "target",
+      usernameKey: "target",
+      displayName: "Target",
+      status: "active",
+      role: "system-admin",
+      roleLabel: "Quản trị hệ thống",
+      systemRole: "SYSTEM_ADMIN",
+      unit: "Học viện Quân y",
+      passwordHash: "secret"
     });
-    assert.deepEqual(prisma.store.organizationScopes[0], {
-      userId: "user-created",
-      organizationUnitId: "org-root",
-      isPrimary: true
+    await assert.rejects(() => service.updateUser(adminUser, "target-user", { systemRole: "ROLE_ADMIN" }), {
+      name: "BadRequestException"
     });
-    assert.equal(auditLog.records[0].action, "AUD-ST-1.3-01");
-    assert.equal(auditLog.records[0].actorId, "user-admin");
-    assert.equal(auditLog.records[0].targetEntity, "user");
-    assert.equal(auditLog.records[0].targetEntityId, "user-created");
+    assert.equal(prisma.store.users[0].systemRole, "SYSTEM_ADMIN");
   });
 
   it("TEST-ST-1.3-API-FILTER-01..08 lists, searches, filters, combines, and safely rejects invalid status", async () => {
@@ -282,6 +371,7 @@ describe("admin foundation API behavior", () => {
         status: "active",
         role: "principal-investigator",
         roleLabel: "Chủ nhiệm đề tài",
+        systemRole: "RESEARCHER_INTERNAL_USER",
         unit: "Khoa A",
         passwordHash: "secret",
         roleAssignments: [{ isPrimary: true, role: { id: "role-pi", code: "principal-investigator", label: "Chủ nhiệm đề tài" } }],
@@ -295,6 +385,7 @@ describe("admin foundation API behavior", () => {
         status: "locked",
         role: "scientific-management",
         roleLabel: "Chuyên viên",
+        systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
         unit: "Khoa B",
         passwordHash: "secret",
         roleAssignments: [{ isPrimary: true, role: { id: "role-staff", code: "scientific-management", label: "Chuyên viên" } }],
@@ -308,6 +399,7 @@ describe("admin foundation API behavior", () => {
         status: "disabled",
         role: "reviewer",
         roleLabel: "Phản biện",
+        systemRole: "RESEARCHER_INTERNAL_USER",
         unit: "Khoa A",
         passwordHash: "secret",
         roleAssignments: [{ isPrimary: true, role: { id: "role-reviewer", code: "reviewer", label: "Phản biện" } }],
@@ -331,12 +423,8 @@ describe("admin foundation API behavior", () => {
       ["charlie.reviewer"]
     );
     assert.deepEqual(
-      (await service.listUsers({ roleCode: "principal-investigator" })).map((user) => user.username),
-      ["alice.pi"]
-    );
-    assert.deepEqual(
-      (await service.listUsers({ roleId: "role-staff" })).map((user) => user.username),
-      ["bob.staff"]
+      (await service.listUsers({ systemRole: "RESEARCHER_INTERNAL_USER" })).map((user) => user.username),
+      ["alice.pi", "charlie.reviewer"]
     );
     assert.deepEqual(
       (await service.listUsers({ organizationId: "org-a" })).map((user) => user.username),
@@ -350,7 +438,7 @@ describe("admin foundation API behavior", () => {
       (
         await service.listUsers({
           keyword: "alice",
-          roleCode: "principal-investigator",
+          systemRole: "RESEARCHER_INTERNAL_USER",
           organizationId: "org-a",
           status: "active"
         })
@@ -381,20 +469,21 @@ describe("admin foundation API behavior", () => {
       status: "active",
       role: "system-admin",
       roleLabel: "Quản trị hệ thống",
+      systemRole: "SYSTEM_ADMIN",
       unit: "Học viện Quân y",
       passwordHash: "secret"
     });
 
     await service.updateUser(adminUser, "target-user", {
       displayName: "Updated Target",
-      roleCode: "scientific-management",
+      systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
       organizationUnitId: "org-child"
     });
     await service.setUserStatus(adminUser, "target-user", "locked");
     await service.setUserStatus(adminUser, "target-user", "active");
 
     assert.equal(prisma.store.users[0].displayName, "Updated Target");
-    assert.equal(prisma.store.users[0].role, "scientific-management");
+    assert.equal(prisma.store.users[0].systemRole, "SCIENTIFIC_MANAGEMENT_STAFF");
     assert.equal(prisma.store.users[0].unit, "Khoa chuyên môn");
     assert.equal(prisma.store.users[0].status, "active");
     assert.deepEqual(
@@ -402,6 +491,71 @@ describe("admin foundation API behavior", () => {
       ["AUD-ST-1.3-02", "AUD-ST-1.3-03", "AUD-ST-1.3-04", "AUD-ST-1.3-05", "AUD-ST-1.3-06"]
     );
     assert.equal(auditLog.records.some((record) => JSON.stringify(record).includes("secret")), false);
+  });
+
+  it("Story 1.4 Session 5: rolls back role, status, and scope when the scope write fails", async () => {
+    const prisma = createAdminPrisma();
+    const auditLog = createAuditLog();
+    const service = new AdminUsersService(prisma, auditLog, createPasswordService());
+    prisma.store.units = [
+      { id: "org-root", code: "HVQY", name: "Học viện Quân y", status: "active" },
+      { id: "org-child", code: "KHOA", name: "Khoa chuyên môn", status: "active" }
+    ];
+    prisma.store.users.push({
+      id: "target-user",
+      username: "target",
+      usernameKey: "target",
+      displayName: "Target",
+      status: "active",
+      systemRole: "SYSTEM_ADMIN",
+      unit: "Học viện Quân y",
+      passwordHash: "secret"
+    });
+    prisma.store.organizationScopes.push({ userId: "target-user", organizationUnitId: "org-root", isPrimary: true });
+    prisma.store.failNextScopeCreate = true;
+
+    await assert.rejects(
+      () =>
+        service.updateUser(adminUser, "target-user", {
+          systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
+          organizationUnitId: "org-child",
+          status: "locked"
+        }),
+      /scope write failed/
+    );
+
+    assert.deepEqual(
+      { systemRole: prisma.store.users[0].systemRole, status: prisma.store.users[0].status, unit: prisma.store.users[0].unit },
+      { systemRole: "SYSTEM_ADMIN", status: "active", unit: "Học viện Quân y" }
+    );
+    assert.deepEqual(prisma.store.organizationScopes, [{ userId: "target-user", organizationUnitId: "org-root", isPrimary: true }]);
+    assert.deepEqual(auditLog.records, []);
+  });
+
+  it("Story 1.4: keeps explicit secondary scopes when the primary scope changes", async () => {
+    const prisma = createAdminPrisma();
+    const service = new AdminUsersService(prisma, createAuditLog(), createPasswordService());
+    prisma.store.units = [
+      { id: "org-root", code: "HVQY", name: "Học viện Quân y", status: "active" },
+      { id: "org-child", code: "KHOA", name: "Khoa chuyên môn", status: "active" },
+      { id: "org-explicit", code: "KHQS", name: "Phòng KHQS", status: "active" }
+    ];
+    prisma.store.users.push({
+      id: "target-user", username: "target", usernameKey: "target", displayName: "Target", status: "active",
+      systemRole: "SYSTEM_ADMIN", unit: "Học viện Quân y", passwordHash: "secret"
+    });
+    prisma.store.organizationScopes.push(
+      { userId: "target-user", organizationUnitId: "org-root", isPrimary: true },
+      { userId: "target-user", organizationUnitId: "org-explicit", isPrimary: false }
+    );
+
+    await service.updateUser(adminUser, "target-user", { organizationUnitId: "org-child" });
+
+    assert.deepEqual(prisma.store.organizationScopes, [
+      { userId: "target-user", organizationUnitId: "org-root", isPrimary: false },
+      { userId: "target-user", organizationUnitId: "org-explicit", isPrimary: false },
+      { userId: "target-user", organizationUnitId: "org-child", isPrimary: true }
+    ]);
   });
 
   it("catalog and config endpoints require admin and record audits", async () => {
@@ -434,29 +588,36 @@ describe("admin foundation API behavior", () => {
     );
   });
 
-  it("admin can create and update roles and organization units with audit rows", async () => {
+  it("lists exactly the four immutable system roles and still manages organization units", async () => {
     const prisma = createAdminPrisma();
     const auditLog = createAuditLog();
     const service = new AdminUsersService(prisma, auditLog, createPasswordService());
 
-    const role = await service.createRole(adminUser, {
-      code: "council-member",
-      label: "Thành viên hội đồng",
-      description: "Tham gia hội đồng đánh giá"
-    });
-    const updatedRole = await service.updateRole(adminUser, role.id, { status: "inactive" });
+    const roles = await service.listRoles();
     const unit = await service.createOrganizationUnit(adminUser, { code: "QYCT", name: "Khoa Quân y cơ sở" });
     const updatedUnit = await service.updateOrganizationUnit(adminUser, unit.id, { status: "inactive" });
 
-    assert.equal(updatedRole.status, "inactive");
+    assert.deepEqual(roles.map((role) => role.code), [
+      "SYSTEM_ADMIN",
+      "SCIENTIFIC_MANAGEMENT_STAFF",
+      "LEADERSHIP_APPROVAL_AUTHORITY",
+      "RESEARCHER_INTERNAL_USER"
+    ]);
     assert.equal(updatedUnit.status, "inactive");
     assert.deepEqual(
       auditLog.records.map((record) => record.action),
-      ["create-role", "update-role", "create-organization-unit", "update-organization-unit"]
+      ["create-organization-unit", "update-organization-unit"]
     );
   });
 
-  it("permission primitives fail closed without complete context and allow admin management actions", () => {
+  it("does not expose role creation or role updates", () => {
+    const controller = new AdminRolesController(new AdminUsersService(createAdminPrisma(), createAuditLog(), createPasswordService()));
+
+    assert.equal(typeof controller.createRole, "undefined");
+    assert.equal(typeof controller.updateRole, "undefined");
+  });
+
+  it("permission primitives accept one canonical system role and fail closed for missing, invalid, or legacy role context", () => {
     assert.deepEqual(evaluatePermission({}, "update", "catalog"), {
       allowed: false,
       reason: "Missing authenticated actor context."
@@ -464,12 +625,28 @@ describe("admin foundation API behavior", () => {
 
     assert.deepEqual(
       evaluatePermission(
-        { userId: "user-admin", roles: ["system-admin"], organizationUnitIds: ["org-root"] },
+        { userId: "user-admin", systemRole: "SYSTEM_ADMIN", organizationUnitIds: ["org-root"] },
         "update",
         "catalog"
       ),
       { allowed: true, reason: "System administrator can manage platform foundation resources." }
     );
+
+    const missingOrLegacyRoleContexts = [
+      { userId: "user-missing-role", organizationUnitIds: ["org-root"] },
+      { userId: "user-legacy-role", roles: ["system-admin"], organizationUnitIds: ["org-root"] }
+    ];
+    for (const context of missingOrLegacyRoleContexts) {
+      assert.deepEqual(evaluatePermission(context, "update", "catalog"), {
+        allowed: false,
+        reason: "Missing authenticated actor context."
+      });
+    }
+
+    assert.deepEqual(evaluatePermission({ userId: "user-invalid-role", systemRole: "reviewer", organizationUnitIds: ["org-root"] }, "update", "catalog"), {
+      allowed: false,
+      reason: "Invalid system role context."
+    });
   });
 
   it("admin DTO validation rejects malformed request bodies before service handling", () => {

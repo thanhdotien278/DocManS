@@ -13,14 +13,15 @@ model User {
   displayName        String                  @map("display_name")
   passwordHash       String                  @map("password_hash")
   status             String
-  role               String
-  roleLabel          String                  @map("role_label")
+  legacyRole         String?                 @map("legacy_role")
+  systemRole         String?                 @map("system_role")
+  legacyRoleLabel    String?                 @map("legacy_role_label")
   unit               String
   createdAt          DateTime                @default(now()) @map("created_at")
   updatedAt          DateTime                @updatedAt @map("updated_at")
   sessions           Session[]
   auditLogs          AuditLog[]
-  roleAssignments    UserRoleAssignment[]
+  systemRoleMigrationIssues SystemRoleMigrationIssue[]
   organizationScopes UserOrganizationScope[]
   ownedResearchProposals ResearchProposal[] @relation("ProposalOwner")
   submittedResearchProposals ResearchProposal[] @relation("ProposalSubmitter")
@@ -39,17 +40,15 @@ model User {
   @@map("users")
 }
 
-model Role {
-  id          String               @id @default(uuid())
-  code        String               @unique
-  label       String
-  description String?
-  status      String               @default("active")
-  createdAt   DateTime             @default(now()) @map("created_at")
-  updatedAt   DateTime             @updatedAt @map("updated_at")
-  assignments UserRoleAssignment[]
+model SystemRoleMigrationIssue {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  roles     Json     @map("roles")
+  reason    String
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
 
-  @@map("roles")
+  @@map("system_role_migration_issues")
 }
 
 model OrganizationUnit {
@@ -68,20 +67,6 @@ model OrganizationUnit {
 
   @@index([parentId])
   @@map("organization_units")
-}
-
-model UserRoleAssignment {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  roleId    String   @map("role_id")
-  isPrimary Boolean  @default(false) @map("is_primary")
-  createdAt DateTime @default(now()) @map("created_at")
-  user      User     @relation(fields: [userId], references: [id])
-  role      Role     @relation(fields: [roleId], references: [id])
-
-  @@unique([userId, roleId])
-  @@index([roleId])
-  @@map("user_role_assignments")
 }
 
 model UserOrganizationScope {

@@ -4,10 +4,8 @@ export type CurrentUser = {
   id: string;
   username: string;
   displayName: string;
-  role: "system-admin" | "leadership" | "scientific-management" | "principal-investigator" | "reviewer" | "council-member";
-  roleLabel: string;
+  systemRole: "SYSTEM_ADMIN" | "SCIENTIFIC_MANAGEMENT_STAFF" | "LEADERSHIP_APPROVAL_AUTHORITY" | "RESEARCHER_INTERNAL_USER";
   unit: string;
-  roles?: CurrentUser["role"][];
   organizationScopes?: Array<{
     id: string;
     code: string;
@@ -20,9 +18,8 @@ export type ShellAccount = {
   username: string;
   name: string;
   /** Account-level system role. Drives navigation only — never a record-scoped capability. */
-  role: CurrentUser["role"];
-  roles: CurrentUser["role"][];
-  roleLabel: string;
+  systemRole: CurrentUser["systemRole"];
+  systemRoleLabel: string;
   unit: string;
   initials: string;
   organizationScopes?: CurrentUser["organizationScopes"];
@@ -37,11 +34,20 @@ export function toShellAccount(user: CurrentUser): ShellAccount {
     id: user.id,
     username: user.username,
     name: user.displayName,
-    role: user.role,
-    roles: user.roles?.length ? user.roles : [user.role],
-    roleLabel: user.roleLabel,
+    systemRole: user.systemRole,
+    systemRoleLabel: getSystemRoleLabel(user.systemRole),
     unit: user.unit,
     initials: user.displayName.trim().charAt(0).toUpperCase() || "U",
     organizationScopes: user.organizationScopes
   };
+}
+
+export function getSystemRoleLabel(systemRole: CurrentUser["systemRole"]) {
+  return systemRole === "SYSTEM_ADMIN"
+    ? "Quản trị hệ thống"
+    : systemRole === "SCIENTIFIC_MANAGEMENT_STAFF"
+      ? "Chuyên viên quản lý khoa học"
+      : systemRole === "LEADERSHIP_APPROVAL_AUTHORITY"
+        ? "Lãnh đạo phê duyệt"
+        : "Người dùng nghiên cứu nội bộ";
 }

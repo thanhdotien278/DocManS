@@ -20,6 +20,7 @@ const staffUser = {
   displayName: "TS. Nguyễn Minh Phương",
   status: "active",
   role: "scientific-management",
+  systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
   roleLabel: "Trưởng phòng",
   unit: "Phòng KHQS",
   roles: ["scientific-management"],
@@ -44,6 +45,7 @@ const piUser = {
   username: "patuan",
   displayName: "TS. Phạm Anh Tuấn",
   role: "principal-investigator",
+  systemRole: "RESEARCHER_INTERNAL_USER",
   roleLabel: "Chủ nhiệm đề tài",
   unit: "Khoa Toán - Tin học",
   roles: ["principal-investigator"],
@@ -56,10 +58,14 @@ const leadershipUser = {
   username: "tvtien",
   displayName: "GS. TS. Trần Viết Tiến",
   role: "leadership",
+  systemRole: "LEADERSHIP_APPROVAL_AUTHORITY",
   roleLabel: "Giám Đốc",
   unit: "Ban Giám Đốc",
   roles: ["leadership"],
-  organizationScopes: [{ id: "org-bgd", code: "BGD", name: "Ban Giám Đốc" }]
+  organizationScopes: [
+    { id: "org-bgd", code: "BGD", name: "Ban Giám Đốc" },
+    { id: ORG_KHTI, code: "KHTI", name: "Khoa Toán - Tin học" }
+  ]
 };
 
 /** Leadership who is also a linked participant on the proposal — AC-ST-3.5-04. */
@@ -76,6 +82,7 @@ const reviewerUser = {
   username: "nmtrung",
   displayName: "TS. Đỗ Minh Trung",
   role: "reviewer",
+  systemRole: "RESEARCHER_INTERNAL_USER",
   roleLabel: "Thành viên Hội đồng",
   unit: "Ban Quản lý KHQS",
   roles: ["reviewer"]
@@ -94,6 +101,16 @@ const unassignedReviewerUser = {
   id: "user-reviewer-outsider",
   username: "lvhung",
   displayName: "TS. Lê Văn Hùng"
+};
+
+/** A council-member account only becomes a reviewer through an explicit proposal assignment. */
+const councilMemberUser = {
+  ...reviewerUser,
+  id: "user-council-member",
+  username: "hdtien3",
+  displayName: "TS. Thành viên Hội đồng",
+  role: "council-member",
+  roles: ["council-member"]
 };
 
 /** Linked as an ordinary participant of the proposal — a conflicted reviewer candidate. */
@@ -121,6 +138,7 @@ const ACCOUNTS = [
   reviewerUser,
   secondReviewerUser,
   unassignedReviewerUser,
+  councilMemberUser,
   memberUser,
   secretaryUser
 ];
@@ -534,6 +552,14 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     await assert.rejects(() => services.assignments.getReviewPackage(unassignedReviewerUser, proposal.id), ForbiddenException);
     await assert.rejects(() => services.filesService.downloadFile(unassignedReviewerUser, files[0].id), ForbiddenException);
     assert.deepEqual(await services.proposalService.listProposals(unassignedReviewerUser), []);
+
+    // A council-member label is also inert until an explicit committee assignment exists.
+    await services.assignments.assignReviewer(staffUser, proposal.id, {
+      reviewerUsername: councilMemberUser.username,
+      assignmentRole: "committee_member"
+    });
+    const councilPackage = await services.assignments.getReviewPackage(councilMemberUser, proposal.id);
+    assert.equal(councilPackage.assignmentRole, "committee_member");
 
     // The reviewer queue lists only assigned records.
     const queue = await services.assignments.listMyAssignments(reviewerUser);

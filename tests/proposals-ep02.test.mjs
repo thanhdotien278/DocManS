@@ -23,6 +23,7 @@ const adminUser = {
   username: "admin",
   displayName: "Admin",
   role: "system-admin",
+  systemRole: "SYSTEM_ADMIN",
   roleLabel: "Quản trị hệ thống",
   unit: "Học viện Quân y",
   roles: ["system-admin"],
@@ -34,9 +35,13 @@ const staffUser = {
   id: "user-staff",
   username: "staff",
   role: "scientific-management",
+  systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
   roleLabel: "Chuyên viên",
   roles: ["scientific-management"],
-  organizationScopes: [{ id: "org-khqs", code: "KHQS", name: "Phòng KHQS" }]
+  organizationScopes: [
+    { id: "org-khqs", code: "KHQS", name: "Phòng KHQS" },
+    { id: "org-khti", code: "KHTI", name: "Khoa Toán - Tin học" }
+  ]
 };
 
 const piUser = {
@@ -45,6 +50,7 @@ const piUser = {
   username: "patuan",
   displayName: "Phạm Anh Tuấn",
   role: "principal-investigator",
+  systemRole: "RESEARCHER_INTERNAL_USER",
   roleLabel: "Chủ nhiệm đề tài",
   roles: ["principal-investigator"],
   organizationScopes: [{ id: "org-khti", code: "KHTI", name: "Khoa Toán - Tin học" }]
@@ -950,9 +956,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     const stored = prisma.store.proposals.find((proposal) => proposal.id === readyDraft.id);
     stored.hostOrganizationUnitId = "org-outside";
 
-    const detail = await proposalService.getProposal(piUser, readyDraft.id);
-    assert.equal(detail.canEdit, false);
-    assert.equal(detail.canSubmit, false);
+    await assert.rejects(() => proposalService.getProposal(piUser, readyDraft.id), ForbiddenException);
     await assert.rejects(() => proposalService.submitProposal(piUser, readyDraft.id), ForbiddenException);
     await assert.rejects(() => proposalService.updateDraft(piUser, readyDraft.id, { title: "Sửa ngoài phạm vi" }), ForbiddenException);
   });
@@ -980,10 +984,14 @@ describe("EP-02 proposal intake and submission behavior", () => {
 
     await assert.rejects(
       () =>
-        proposalService.requestSupplement(staffUser, submitted.id, {
+        proposalService.requestSupplement(
+          { ...staffUser, organizationScopes: [{ id: "org-khqs", code: "KHQS", name: "Phòng KHQS" }] },
+          submitted.id,
+          {
           reason: "Thiếu bản giải trình chỉnh sửa và bảng dự toán chi tiết.",
           dueDate: futureDate(7)
-        }),
+          }
+        ),
       ForbiddenException
     );
 

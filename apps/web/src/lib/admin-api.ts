@@ -5,10 +5,7 @@ export type AdminUser = {
   username: string;
   displayName: string;
   status: string;
-  role: string;
-  roleLabel: string;
-  roleCode?: string;
-  roleId?: string;
+  systemRole: string | null;
   unit: string;
   organizationUnitId?: string;
 };
@@ -71,9 +68,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 export type UserFilterInput = {
   keyword?: string;
   search?: string;
-  roleCode?: string;
-  roleId?: string;
-  role?: string;
+  systemRole?: string;
   organizationId?: string;
   organization?: string;
   status?: string;
@@ -111,7 +106,7 @@ export async function createAdminUser(input: {
   username: string;
   displayName: string;
   password: string;
-  roleCode: string;
+  systemRole: string;
   organizationUnitId: string;
 }) {
   return requestJson<{ user: AdminUser }>("/users", {
@@ -131,7 +126,7 @@ export async function updateAdminUser(
   userId: string,
   input: {
     displayName: string;
-    roleCode: string;
+    systemRole: string;
     organizationUnitId: string;
   }
 ) {
@@ -182,20 +177,6 @@ export async function updateNotificationTemplate(input: { key: string; subject: 
   return requestJson<{ template: NotificationTemplate }>("/config/notification-templates", {
     method: "PUT",
     body: JSON.stringify(input)
-  });
-}
-
-export async function createRole(input: { code: string; label: string; description?: string }) {
-  return requestJson<{ role: AdminRole }>("/roles", {
-    method: "POST",
-    body: JSON.stringify(input)
-  });
-}
-
-export async function updateRoleStatus(roleId: string, status: string) {
-  return requestJson<{ role: AdminRole }>(`/roles/${roleId}`, {
-    method: "PATCH",
-    body: JSON.stringify({ status })
   });
 }
 

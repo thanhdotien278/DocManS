@@ -8,28 +8,16 @@ const createUserPipe = adminRequestPipe({
   username: { maxLength: 80 },
   displayName: { maxLength: 160 },
   password: { maxLength: 256 },
-  roleCode: { maxLength: 80 },
+  systemRole: { maxLength: 80 },
   organizationUnitId: { maxLength: 80 }
 });
 const updateUserPipe = adminRequestPipe({
   displayName: { maxLength: 160, optional: true },
-  roleCode: { maxLength: 80, optional: true },
+  systemRole: { maxLength: 80, optional: true },
   organizationUnitId: { maxLength: 80, optional: true },
   status: { maxLength: 40, optional: true }
 });
 const updateUserStatusPipe = adminRequestPipe({ status: { maxLength: 40 } });
-const createRolePipe = adminRequestPipe({
-  code: { maxLength: 80 },
-  label: { maxLength: 160 },
-  description: { maxLength: 240, optional: true },
-  status: { maxLength: 40, optional: true }
-});
-const updateRolePipe = adminRequestPipe({
-  code: { maxLength: 80, optional: true },
-  label: { maxLength: 160, optional: true },
-  description: { maxLength: 240, optional: true },
-  status: { maxLength: 40, optional: true }
-});
 const createOrganizationUnitPipe = adminRequestPipe({
   code: { maxLength: 80 },
   name: { maxLength: 160 },
@@ -89,17 +77,6 @@ export class AdminRolesController {
     return { roles: await this.usersService.listRoles() };
   }
 
-  @Post()
-  async createRole(@Req() request: RequestWithCurrentUser, @Body(createRolePipe) body: Record<string, unknown>) {
-    const actor = assertSystemAdmin(request.currentUser);
-    return { role: await this.usersService.createRole(actor, body as Record<string, unknown>) };
-  }
-
-  @Patch(":id")
-  async updateRole(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body(updateRolePipe) body: Record<string, unknown>) {
-    const actor = assertSystemAdmin(request.currentUser);
-    return { role: await this.usersService.updateRole(actor, id, body as Record<string, unknown>) };
-  }
 }
 
 @Controller("api/v1/organization-units")

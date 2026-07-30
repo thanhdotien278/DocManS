@@ -13,7 +13,7 @@ export function MobileNav() {
     return null;
   }
 
-  const navigationItems = getNavigationItems(account.role);
+  const navigationItems = getNavigationItems(account.systemRole);
 
   return (
     <details className="mobile-menu">

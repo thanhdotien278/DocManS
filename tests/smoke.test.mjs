@@ -75,9 +75,8 @@ describe("workspace smoke checks", () => {
 
     assert.deepEqual(models, [
       "User",
-      "Role",
+      "SystemRoleMigrationIssue",
       "OrganizationUnit",
-      "UserRoleAssignment",
       "UserOrganizationScope",
       "Session",
       "AuditLog",
@@ -97,9 +96,9 @@ describe("workspace smoke checks", () => {
       "ProposalDecision"
     ]);
     assert.match(schemaSource, /@@map\("users"\)/);
-    assert.match(schemaSource, /@@map\("roles"\)/);
+    assert.match(schemaSource, /@@map\("system_role_migration_issues"\)/);
+    assert.match(schemaSource, /systemRole\s+String\?/);
     assert.match(schemaSource, /@@map\("organization_units"\)/);
-    assert.match(schemaSource, /@@map\("user_role_assignments"\)/);
     assert.match(schemaSource, /@@map\("user_organization_scopes"\)/);
     assert.match(schemaSource, /@@map\("sessions"\)/);
     assert.match(schemaSource, /@@map\("audit_logs"\)/);

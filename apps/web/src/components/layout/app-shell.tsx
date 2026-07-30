@@ -51,7 +51,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <div>
                   <span className="user-name">{account.name}</span>
                   <span className="user-role">
-                    {account.roleLabel} - {account.unit}
+                    {account.systemRoleLabel} - {account.unit}
                   </span>
                 </div>
                 <ChevronDown className="user-caret" size={16} aria-hidden="true" />
@@ -59,7 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="user-menu-panel">
                 <p className="user-menu-heading">{account.name}</p>
                 <p className="user-menu-meta">
-                  {account.roleLabel} - {account.unit}
+                  {account.systemRoleLabel} - {account.unit}
                 </p>
                 <LogoutButton />
               </div>

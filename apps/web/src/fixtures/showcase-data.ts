@@ -214,7 +214,7 @@ export function getProposalById(id: string) {
 
 export function getDashboardSnapshot(role: UserRole): DashboardSnapshot {
   switch (role) {
-    case "scientific-management":
+    case "SCIENTIFIC_MANAGEMENT_STAFF":
       return {
         eyebrow: "Điều hành nghiệp vụ",
         title: "Dashboard chuyên viên quản lý khoa học",
@@ -280,7 +280,7 @@ export function getDashboardSnapshot(role: UserRole): DashboardSnapshot {
           }
         ]
       };
-    case "principal-investigator":
+    case "RESEARCHER_INTERNAL_USER":
       return {
         eyebrow: "Công việc cá nhân",
         title: "Dashboard chủ nhiệm đề tài",
@@ -348,75 +348,7 @@ export function getDashboardSnapshot(role: UserRole): DashboardSnapshot {
           }
         ]
       };
-    case "reviewer":
-      return {
-        eyebrow: "Thẩm định cá nhân",
-        title: "Dashboard thành viên hội đồng",
-        description: "Tổng hợp hồ sơ được phân công, đánh giá chưa hoàn thành và lịch họp hội đồng sắp tới.",
-        primaryActionLabel: "Mở hồ sơ được phân công",
-        primaryActionHref: "/assigned-proposals",
-        kpis: [
-          { label: "Hồ sơ được phân công", value: "07", meta: "02 hồ sơ mới cập nhật trong hôm nay", tone: "info" },
-          { label: "Đánh giá chưa hoàn thành", value: "03", meta: "Cần bổ sung nhận xét trước hạn", tone: "warning" },
-          { label: "Hạn chấm sắp đến", value: "02", meta: "Cần nộp trước 30/04/2026", tone: "danger" },
-          { label: "Lịch họp hội đồng", value: "01", meta: "Phiên họp tổng hợp vào ngày 02/05/2026", tone: "default" }
-        ],
-        panels: [
-          {
-            variant: "table",
-            title: "Hồ sơ được phân công",
-            subtitle: "Danh sách hồ sơ trong phạm vi thẩm định hiện hành",
-            actionLabel: "Mở danh sách",
-            actionHref: "/assigned-proposals",
-            rows: proposals.slice(0, 3).map((proposal) => ({
-              code: proposal.code,
-              title: proposal.title,
-              meta: `Chủ nhiệm: ${proposal.owner}`,
-              unit: proposal.unit,
-              status: proposal.status,
-              dueDate: proposal.dueDate,
-              href: `/proposals/${proposal.id}`
-            }))
-          },
-          {
-            variant: "list",
-            title: "Đánh giá của tôi",
-            subtitle: "Các hồ sơ cần hoàn tất nhận xét",
-            actionLabel: "Mở đánh giá",
-            actionHref: "/my-reviews",
-            items: [
-              { title: "HVQY-2026-014 cần bổ sung đánh giá tiêu chí ứng dụng", meta: "Hạn nộp 29/04/2026" },
-              { title: "HVQY-2026-021 cần xác nhận điểm thành phần", meta: "Hạn nộp 30/04/2026" },
-              { title: "HVQY-2026-032 cần đối chiếu tài liệu bổ trợ", meta: "Hạn nộp 02/05/2026" }
-            ]
-          },
-          {
-            variant: "list",
-            title: "Lịch họp hội đồng",
-            subtitle: "Lịch làm việc cần được xác nhận",
-            actionLabel: "Mở lịch họp",
-            actionHref: "/council-schedule",
-            items: [
-              { title: "Phiên họp tổng hợp kết quả đợt 1/2026", meta: "08:00 - 02/05/2026 - Phòng họp 201" },
-              { title: "Họp chuyên đề đánh giá đề tài cấp cơ sở", meta: "14:00 - 04/05/2026 - Phòng họp 305" },
-              { title: "Làm việc với tổ thư ký hội đồng", meta: "09:00 - 05/05/2026 - Phòng Quản lý khoa học" }
-            ]
-          },
-          {
-            variant: "list",
-            title: "Thông báo liên quan",
-            subtitle: "Thông tin về phân công và hạn xử lý",
-            actionLabel: "Mở thông báo",
-            actionHref: "/notifications",
-            items: [
-              { title: "Đã cập nhật tài liệu hồ sơ HVQY-2026-014", meta: "Từ tổ thư ký hội đồng - 08:15 hôm nay" },
-              { title: "Cần xác nhận tham dự phiên họp ngày 02/05/2026", meta: "Thông báo văn phòng hội đồng" },
-              { title: "Báo cáo tổng hợp nhận xét đã mở cho phiên đợt 1/2026", meta: "Cập nhật lúc 16:20 hôm qua" }
-            ]
-          }
-        ]
-      };
-    case "system-admin":
+    case "SYSTEM_ADMIN":
       return {
         eyebrow: "Quản trị hệ thống",
         title: "Dashboard quản trị hệ thống",
@@ -480,7 +412,7 @@ export function getDashboardSnapshot(role: UserRole): DashboardSnapshot {
           }
         ]
       };
-    case "leadership":
+    case "LEADERSHIP_APPROVAL_AUTHORITY":
     default:
       return {
         eyebrow: "Điều hành",

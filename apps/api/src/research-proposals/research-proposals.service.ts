@@ -6,11 +6,10 @@ import {
   assertCanEditProposalDraft,
   assertCanReadProposal,
   assertHasOrganizationScope,
-  assertPrincipalInvestigator,
+  assertCanCreateProposalDraft,
   canReadProposal,
   intakeAppliesToUser,
   isIntakeOpenForSubmission,
-  isPrincipalInvestigator,
   isScientificManagement,
   isSystemAdmin
 } from "../proposals-shared/proposal-access.js";
@@ -168,7 +167,7 @@ export class ResearchProposalsService {
   }
 
   async createDraft(actor: SafeUserContext, input: Record<string, unknown>) {
-    const pi = assertPrincipalInvestigator(actor);
+    const pi = assertCanCreateProposalDraft(actor);
     const intakePeriodId = readText(input.intakePeriodId, "intakePeriodId", 80);
     const hostOrganizationUnitId = readText(input.hostOrganizationUnitId, "hostOrganizationUnitId", 80);
     assertHasOrganizationScope(pi, hostOrganizationUnitId);
@@ -783,7 +782,6 @@ export class ResearchProposalsService {
     if (
       !actor ||
       (proposal.status !== "draft" && proposal.status !== "supplement_requested") ||
-      !isPrincipalInvestigator(actor) ||
       proposal.ownerId !== actor.id
     ) {
       return false;
@@ -843,7 +841,6 @@ export class ResearchProposalsService {
     if (
       !actor ||
       (proposal.status !== "draft" && proposal.status !== "supplement_requested") ||
-      !isPrincipalInvestigator(actor) ||
       proposal.ownerId !== actor.id
     ) {
       return false;

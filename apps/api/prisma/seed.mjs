@@ -23,8 +23,7 @@ const users = [
       "scrypt:user-admin:88577689e88df3ec17a117384f8a68ff4e516d4ccc3c4a7783764eb66f4a72a8c35ae574d915e01d7ba3fe5e3a800b30463e721c488544ca3fc90192544e0c43",
     displayName: "TS. Đỗ Tiến Thành",
     status: "active",
-    role: "system-admin",
-    roleLabel: "Quản trị hệ thống",
+    systemRole: "SYSTEM_ADMIN",
     unit: "Khoa Toán - Tin học"
   },
   {
@@ -34,8 +33,7 @@ const users = [
       "scrypt:user-leadership:ee6993e65023030a9cf863925cf50c6a8e94a829eaeb344059bfb66e2c5419622123ea57a1891543a9f3aa308e48e24057a41bd16860c6150bbfac36614ef657",
     displayName: "GS. TS. Trần Viết Tiến",
     status: "active",
-    role: "leadership",
-    roleLabel: "Giám Đốc",
+    systemRole: "LEADERSHIP_APPROVAL_AUTHORITY",
     unit: "Ban Giám Đốc"
   },
   {
@@ -45,8 +43,7 @@ const users = [
       "scrypt:user-staff:ea925bf5f31fe306cb863a45afec44a4e67d84423e431cb93de5af91425c6723cb66ac59963afe1f47ad86d3c16aec95f73bffc74c22d75b032fd1093f7a71d5",
     displayName: "TS. Nguyễn Minh Phương",
     status: "active",
-    role: "scientific-management",
-    roleLabel: "Trưởng phòng",
+    systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
     unit: "Phòng KHQS"
   },
   {
@@ -56,8 +53,7 @@ const users = [
       "scrypt:user-pi:a2b881672bd86b9b7bc23fa6b11a507a1d4142e00c19a9ff0f66f815bee1882f417f0253352b0bd54c66772e4a3949671c0c7f37a691a43c5d05e556e6919a38",
     displayName: "TS. Phạm Anh Tuấn",
     status: "active",
-    role: "principal-investigator",
-    roleLabel: "Chủ nhiệm đề tài",
+    systemRole: "RESEARCHER_INTERNAL_USER",
     unit: "Khoa Toán - Tin học"
   },
   {
@@ -67,8 +63,7 @@ const users = [
       "scrypt:user-reviewer:b0782812a1c75cef9db6596a7c88ae497fac0d08b7c7230c908d3c413fc08c2bed386eccfc0cbc10a64a088f1ad9bf6a2f6507410ea3d833bbb0907d958ac12a",
     displayName: "TS. Đỗ Minh Trung",
     status: "active",
-    role: "reviewer",
-    roleLabel: "Thành viên Hội đồng",
+    systemRole: "RESEARCHER_INTERNAL_USER",
     unit: "Ban Quản lý KHQS"
   },
   {
@@ -78,8 +73,7 @@ const users = [
       "scrypt:user-staff-hdtien1:0ca10cf0ed59766007948d5e2010afb69514a438a457e62f20eb392bfae619b1d91f2fed126c591a8a9f2d945e1d0705fbf6545f1e371e3ce692d19ab1ecdea0",
     displayName: "HD Tiến 1",
     status: "active",
-    role: "scientific-management",
-    roleLabel: "Chuyên viên",
+    systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
     unit: "Phòng KHQS"
   },
   {
@@ -89,18 +83,9 @@ const users = [
       "scrypt:user-staff-hdtien2:3fcf32d5cd6957b752759325f0ee8c06f19db00e53ba051225606826fe336f7fe8bf4655570b109ee0a59eb1e90bf02c40e9a5f7d67f93562cbbac1774e7ad74",
     displayName: "HD Tiến 2",
     status: "active",
-    role: "scientific-management",
-    roleLabel: "Chuyên viên",
+    systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
     unit: "Phòng KHQS"
   }
-];
-
-const roles = [
-  ["role-system-admin", "system-admin", "Quản trị hệ thống", "Toàn quyền quản trị nền tảng"],
-  ["role-leadership", "leadership", "Lãnh đạo", "Phê duyệt và theo dõi điều hành"],
-  ["role-scientific-management", "scientific-management", "Chuyên viên quản lý khoa học", "Vận hành nghiệp vụ quản lý khoa học"],
-  ["role-principal-investigator", "principal-investigator", "Chủ nhiệm đề tài", "Tạo và theo dõi hồ sơ đề tài"],
-  ["role-reviewer", "reviewer", "Reviewer/Hội đồng", "Đánh giá hồ sơ được phân công"]
 ];
 
 const organizationUnits = [
@@ -117,18 +102,12 @@ const organizationUnits = [
 // scope-checked staff action (ST-3.1 supplement, ST-3.2 assignment, ST-3.4 consolidation) is
 // refused and the demo cannot reach the approval step.
 const additionalOrganizationScopes = {
+  "user-admin": ["org-bgq", "org-khqs", "org-bqlkhqs"],
+  "user-leadership": ["org-hvqy", "org-khti", "org-khqs", "org-bqlkhqs"],
   "user-staff": ["org-khti", "org-bqlkhqs"],
   "user-staff-hdtien1": ["org-khti", "org-bqlkhqs"],
   "user-staff-hdtien2": ["org-khti", "org-bqlkhqs"]
 };
-
-for (const [id, code, label, description] of roles) {
-  await prisma.role.upsert({
-    where: { code },
-    update: { label, description, status: "active" },
-    create: { id, code, label, description, status: "active" }
-  });
-}
 
 for (const [id, code, name] of organizationUnits) {
   await prisma.organizationUnit.upsert({
@@ -147,8 +126,7 @@ for (const user of users) {
       displayName: user.displayName,
       passwordHash: user.passwordHash,
       status: user.status,
-      role: user.role,
-      roleLabel: user.roleLabel,
+      systemRole: user.systemRole,
       unit: user.unit
     },
     create: {
@@ -157,21 +135,7 @@ for (const user of users) {
     }
   });
 
-  const role = await prisma.role.findUnique({ where: { code: user.role } });
   const organizationUnit = await prisma.organizationUnit.findFirst({ where: { name: user.unit } });
-
-  if (role) {
-    await prisma.userRoleAssignment.upsert({
-      where: {
-        userId_roleId: {
-          userId: user.id,
-          roleId: role.id
-        }
-      },
-      update: { isPrimary: true },
-      create: { userId: user.id, roleId: role.id, isPrimary: true }
-    });
-  }
 
   if (organizationUnit) {
     await prisma.userOrganizationScope.upsert({

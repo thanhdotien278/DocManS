@@ -111,7 +111,7 @@ function renderPanel(panel: DashboardPanel) {
 }
 
 export default function DashboardPage() {
-  const snapshot = getDashboardSnapshot("leadership");
+  const snapshot = getDashboardSnapshot("LEADERSHIP_APPROVAL_AUTHORITY");
 
   return (
     <>

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
-import type { AuthSession, InternalUser, SafeUserContext } from "./auth.types.js";
+import { SYSTEM_ROLES, type AuthSession, type InternalUser, type SafeUserContext, type SystemRole } from "./auth.types.js";
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
 
@@ -12,7 +12,6 @@ export class AuthStore {
     const user = await this.prisma.user.findUnique({
       where: { usernameKey: username.trim().toLowerCase() },
       include: {
-        roleAssignments: { include: { role: true } },
         organizationScopes: { include: { organizationUnit: true } }
       }
     });
@@ -24,7 +23,6 @@ export class AuthStore {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
-        roleAssignments: { include: { role: true } },
         organizationScopes: { include: { organizationUnit: true } }
       }
     });
@@ -37,10 +35,8 @@ export class AuthStore {
       id: user.id,
       username: user.username,
       displayName: user.displayName,
-      role: user.role,
-      roleLabel: user.roleLabel,
+      systemRole: user.systemRole,
       unit: user.unit,
-      roles: user.roles,
       organizationScopes: user.organizationScopes
     };
   }
@@ -97,17 +93,8 @@ export class AuthStore {
     displayName: string;
     passwordHash: string;
     status: string;
-    role: string;
-    roleLabel: string;
+    systemRole: string | null;
     unit: string;
-    roleAssignments?: Array<{
-      isPrimary: boolean;
-      role: {
-        code: string;
-        label: string;
-        status: string;
-      };
-    }>;
     organizationScopes?: Array<{
       isPrimary: boolean;
       organizationUnit: {
@@ -118,22 +105,10 @@ export class AuthStore {
       };
     }>;
   }): InternalUser | null {
-    const activeRoleAssignments = user.roleAssignments?.filter((assignment) => assignment.role.status === "active") ?? [];
-    if (activeRoleAssignments.length === 0) {
+    if (!user.systemRole || !SYSTEM_ROLES.includes(user.systemRole as SystemRole)) {
       return null;
     }
-
-    const primaryRoleAssignment = activeRoleAssignments.find((assignment) => assignment.isPrimary) ?? activeRoleAssignments[0];
-    const primaryRole = primaryRoleAssignment.role.code;
-    const role = this.toRole(primaryRole);
-
-    if (!role) {
-      return null;
-    }
-
-    const roles = activeRoleAssignments
-      .map((assignment) => this.toRole(assignment.role.code))
-      .filter((item): item is InternalUser["role"] => Boolean(item));
+    const systemRole = user.systemRole as SystemRole;
     const organizationScopes =
       user.organizationScopes
         ?.filter((scope) => scope.organizationUnit.status === "active")
@@ -153,27 +128,10 @@ export class AuthStore {
       displayName: user.displayName,
       passwordHash: user.passwordHash,
       status: user.status === "active" ? "active" : "disabled",
-      role,
-      roleLabel: primaryRoleAssignment.role.label,
+      systemRole,
       unit: organizationScopes[0].name,
-      roles: roles.length ? roles : [role],
       organizationScopes
     };
-  }
-
-  private toRole(role: string): InternalUser["role"] | null {
-    if (
-      role === "system-admin" ||
-      role === "leadership" ||
-      role === "scientific-management" ||
-      role === "principal-investigator" ||
-      role === "reviewer" ||
-      role === "council-member"
-    ) {
-      return role;
-    }
-
-    return null;
   }
 
   private toAuthSession(session: {

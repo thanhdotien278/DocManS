@@ -17,28 +17,20 @@ type ProposalLike = {
   status: string;
 };
 
-export function hasRole(user: SafeUserContext | undefined, role: SafeUserContext["role"]) {
-  return Boolean(user && (user.role === role || user.roles?.includes(role)));
-}
-
 export function isSystemAdmin(user?: SafeUserContext) {
-  return hasRole(user, "system-admin");
+  return user?.systemRole === "SYSTEM_ADMIN";
 }
 
 export function isScientificManagement(user?: SafeUserContext) {
-  return hasRole(user, "scientific-management");
+  return user?.systemRole === "SCIENTIFIC_MANAGEMENT_STAFF";
 }
 
-export function isPrincipalInvestigator(user?: SafeUserContext) {
-  return hasRole(user, "principal-investigator");
+export function isResearcherInternalUser(user?: SafeUserContext) {
+  return user?.systemRole === "RESEARCHER_INTERNAL_USER";
 }
 
 export function isLeadership(user?: SafeUserContext) {
-  return hasRole(user, "leadership");
-}
-
-export function isReviewerAccount(user?: SafeUserContext) {
-  return hasRole(user, "reviewer") || hasRole(user, "council-member");
+  return user?.systemRole === "LEADERSHIP_APPROVAL_AUTHORITY";
 }
 
 export function assertCanManageIntakePeriods(user?: SafeUserContext) {
@@ -46,15 +38,15 @@ export function assertCanManageIntakePeriods(user?: SafeUserContext) {
     throw new ForbiddenException({ message: "Không có quyền quản lý đợt tiếp nhận." });
   }
 
-  return user;
+  return user as SafeUserContext;
 }
 
-export function assertPrincipalInvestigator(user?: SafeUserContext) {
-  if (!user || !isPrincipalInvestigator(user)) {
-    throw new ForbiddenException({ message: "Chỉ chủ nhiệm đề tài được thực hiện thao tác này." });
+export function assertCanCreateProposalDraft(user?: SafeUserContext) {
+  if (!isResearcherInternalUser(user)) {
+    throw new ForbiddenException({ message: "Chỉ người dùng nghiên cứu nội bộ được tạo hồ sơ đề xuất." });
   }
 
-  return user;
+  return user as SafeUserContext;
 }
 
 export function getOrganizationScopeIds(user?: SafeUserContext) {
@@ -96,6 +88,10 @@ export function canReadProposal(
     return false;
   }
 
+  if (!getOrganizationScopeIds(user).includes(proposal.hostOrganizationUnitId)) {
+    return false;
+  }
+
   if (isSystemAdmin(user) || isScientificManagement(user)) {
     return true;
   }
@@ -116,11 +112,7 @@ export function canReadProposal(
     return isWorkflowVisibleStatus(proposal.status);
   }
 
-  if (isPrincipalInvestigator(user)) {
-    return proposal.ownerId === user.id;
-  }
-
-  return false;
+  return proposal.ownerId === user.id;
 }
 
 export function assertCanReadProposal(
@@ -137,7 +129,10 @@ export function assertCanReadProposal(
 }
 
 export function assertCanEditProposalDraft(user: SafeUserContext | undefined, proposal: ProposalLike) {
-  const actor = assertPrincipalInvestigator(user);
+  if (!user) {
+    throw new ForbiddenException({ message: "Không có quyền sửa hồ sơ đề xuất này." });
+  }
+  const actor = user;
 
   if (proposal.ownerId !== actor.id) {
     throw new ForbiddenException({ message: "Không có quyền sửa hồ sơ đề xuất này." });

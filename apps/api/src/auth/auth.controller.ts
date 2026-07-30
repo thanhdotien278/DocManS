@@ -59,7 +59,7 @@ export class AuthController {
   @Get("audit-logs")
   @UseGuards(SessionAuthGuard)
   async auditLogs(@Req() request: any) {
-    if (request.currentUser?.role !== "system-admin") {
+    if (request.currentUser?.systemRole !== "SYSTEM_ADMIN") {
       throw new ForbiddenException({ message: "Không có quyền truy cập nhật ký kiểm toán." });
     }
 

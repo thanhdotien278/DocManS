@@ -1,10 +1,7 @@
-export type UserRole =
-  | "system-admin"
-  | "scientific-management"
-  | "leadership"
-  | "principal-investigator"
-  | "reviewer"
-  | "council-member";
+export { SYSTEM_ROLES } from "./system-roles.js";
+export type { SystemRole } from "./system-roles.js";
+import type { SystemRole } from "./system-roles.js";
+export type UserRole = SystemRole;
 
 export type PermissionAction =
   | "read"
@@ -32,7 +29,7 @@ export type PermissionResource =
 
 export type PermissionContext = {
   userId?: string;
-  roles?: UserRole[];
+  systemRole?: SystemRole;
   organizationUnitIds?: string[];
   resourceOwnerId?: string;
   resourceOrganizationUnitId?: string;
@@ -49,7 +46,7 @@ export function evaluatePermission(
   action: PermissionAction,
   resource: PermissionResource
 ): PermissionDecision {
-  if (!context.userId || !context.roles?.length) {
+  if (!context.userId || !context.systemRole) {
     return {
       allowed: false,
       reason: "Missing authenticated actor context."
@@ -59,7 +56,7 @@ export function evaluatePermission(
   const isFoundationResource = resource === "user" || resource === "role" || resource === "organization" || resource === "catalog";
   const isManagementAction = action === "read" || action === "create" || action === "update" || action === "delete";
 
-  if (context.roles.includes("system-admin") && isFoundationResource && isManagementAction) {
+  if (context.systemRole === "SYSTEM_ADMIN" && isFoundationResource && isManagementAction) {
     return {
       allowed: true,
       reason: "System administrator can manage platform foundation resources."

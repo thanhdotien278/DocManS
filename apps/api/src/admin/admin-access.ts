@@ -6,7 +6,7 @@ export type RequestWithCurrentUser = {
 };
 
 export function assertSystemAdmin(user?: SafeUserContext): SafeUserContext {
-  if (!user || user.role !== "system-admin") {
+  if (!user || user.systemRole !== "SYSTEM_ADMIN") {
     throw new ForbiddenException({ message: "Chỉ quản trị viên hệ thống được thực hiện thao tác này." });
   }
 
