@@ -496,6 +496,13 @@ summary:focus-visible {
   color: var(--danger);
 }
 
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .grid {
   display: grid;
   gap: 16px;

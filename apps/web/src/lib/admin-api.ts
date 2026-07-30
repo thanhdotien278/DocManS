@@ -59,10 +59,27 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error("Không thể xử lý yêu cầu. Vui lòng kiểm tra quyền truy cập hoặc thử lại.");
+    const body = await response.json().catch(() => null);
+    throw new Error(readApiErrorMessage(body) ?? "Không thể xử lý yêu cầu. Vui lòng kiểm tra quyền truy cập hoặc thử lại.");
   }
 
   return (await response.json()) as T;
+}
+
+function readApiErrorMessage(body: unknown) {
+  if (!body || typeof body !== "object") {
+    return null;
+  }
+
+  const message = (body as { message?: unknown }).message;
+  if (typeof message === "string") {
+    return message;
+  }
+  if (Array.isArray(message) && message.every((item) => typeof item === "string")) {
+    return message.join(" ");
+  }
+
+  return null;
 }
 
 export type UserFilterInput = {
@@ -158,6 +175,26 @@ export async function createCatalogItem(input: {
   return requestJson<{ item: CatalogItem }>("/catalogs", {
     method: "POST",
     body: JSON.stringify(input)
+  });
+}
+
+export async function updateCatalogItem(
+  itemId: string,
+  input: {
+    name?: string;
+    description?: string;
+    status?: string;
+  }
+) {
+  return requestJson<{ item: CatalogItem }>(`/catalogs/${itemId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function softDeleteCatalogItem(itemId: string) {
+  return requestJson<{ item: CatalogItem }>(`/catalogs/${itemId}`, {
+    method: "DELETE"
   });
 }
 

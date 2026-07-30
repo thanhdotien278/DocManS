@@ -211,11 +211,21 @@ function createAdminPrisma() {
       }
     },
     catalogItem: {
-      async findMany() {
-        return store.catalogs.filter((item) => !item.deletedAt);
+      async findMany(args = {}) {
+        return store.catalogs
+          .filter((item) => !item.deletedAt)
+          .filter((item) => !args.where?.type || item.type === args.where.type);
+      },
+      async findUnique({ where }) {
+        return store.catalogs.find((item) => item.id === where.id) ?? null;
       },
       async create({ data }) {
-        const record = { id: "catalog-created", createdAt: new Date(), updatedAt: new Date(), deletedAt: null, ...data };
+        if (store.catalogs.some((item) => item.type === data.type && item.code === data.code)) {
+          const error = new Error("Unique constraint failed");
+          error.code = "P2002";
+          throw error;
+        }
+        const record = { id: `catalog-${store.catalogs.length + 1}`, createdAt: new Date(), updatedAt: new Date(), deletedAt: null, ...data };
         store.catalogs.push(record);
         return record;
       },
@@ -223,6 +233,19 @@ function createAdminPrisma() {
         const index = store.catalogs.findIndex((item) => item.id === where.id);
         store.catalogs[index] = { ...store.catalogs[index], ...data, updatedAt: new Date() };
         return store.catalogs[index];
+      },
+      async updateMany({ where, data }) {
+        let count = 0;
+        store.catalogs = store.catalogs.map((item) => {
+          const matchesId = where.id === undefined || item.id === where.id;
+          const matchesDeletedAt = where.deletedAt === undefined || item.deletedAt === where.deletedAt;
+          if (matchesId && matchesDeletedAt) {
+            count += 1;
+            return { ...item, ...data, updatedAt: new Date() };
+          }
+          return item;
+        });
+        return { count };
       }
     },
     systemParameter: {
@@ -252,11 +275,17 @@ function createAdminPrisma() {
     async $transaction(callback) {
       const users = structuredClone(store.users);
       const organizationScopes = structuredClone(store.organizationScopes);
+      const catalogs = structuredClone(store.catalogs);
+      const systemParameters = structuredClone(store.systemParameters);
+      const notificationTemplates = structuredClone(store.notificationTemplates);
       try {
         return await callback(prisma);
       } catch (error) {
         store.users = users;
         store.organizationScopes = organizationScopes;
+        store.catalogs = catalogs;
+        store.systemParameters = systemParameters;
+        store.notificationTemplates = notificationTemplates;
         throw error;
       }
     }
@@ -572,33 +601,144 @@ describe("admin foundation API behavior", () => {
     ]);
   });
 
-  it("catalog and config endpoints require admin and record audits", async () => {
+  it("Story 1.6: catalog APIs require admin, validate supported changes, soft-delete, and audit successes", async () => {
     const prisma = createAdminPrisma();
     const auditLog = createAuditLog();
     const catalogController = new AdminCatalogsController(new AdminCatalogsService(prisma, auditLog));
-    const configController = new AdminConfigController(new AdminConfigService(prisma, auditLog));
 
     await assert.rejects(
       () => catalogController.createCatalogItem({ currentUser: staffUser }, { type: "research-field", code: "AI", name: "AI" }),
       ForbiddenException
     );
 
-    await catalogController.createCatalogItem(
+    const created = await catalogController.createCatalogItem(
       { currentUser: adminUser },
       { type: "research-field", code: "AI", name: "Trí tuệ nhân tạo" }
     );
-    await configController.updateSystemParameter(
-      { currentUser: adminUser },
-      { key: "session_timeout_minutes", value: "720", label: "Thời gian phiên" }
+    assert.equal(created.item.status, "active");
+    await assert.rejects(
+      () => catalogController.createCatalogItem({ currentUser: adminUser }, { type: "research-field", code: "AI", name: "Trùng mã" }),
+      { name: "BadRequestException" }
     );
-    await configController.updateNotificationTemplate(
+    await assert.rejects(
+      () => catalogController.updateCatalogItem({ currentUser: adminUser }, created.item.id, { code: "AI-NEW" }),
+      { name: "BadRequestException" }
+    );
+    await assert.rejects(
+      () => catalogController.updateCatalogItem({ currentUser: adminUser }, created.item.id, { type: "proposal-type" }),
+      { name: "BadRequestException" }
+    );
+    await assert.rejects(
+      () => catalogController.updateCatalogItem({ currentUser: adminUser }, created.item.id, {}),
+      { name: "BadRequestException" }
+    );
+
+    const updated = await catalogController.updateCatalogItem(
       { currentUser: adminUser },
-      { key: "login_notice", subject: "Thông báo", body: "Nội dung mẫu" }
+      created.item.id,
+      { name: "Trí tuệ nhân tạo ứng dụng", description: "Nhóm lĩnh vực thử nghiệm", status: "inactive" }
+    );
+    assert.equal(updated.item.name, "Trí tuệ nhân tạo ứng dụng");
+    assert.equal(updated.item.status, "inactive");
+
+    const activeAgain = await catalogController.updateCatalogItem(
+      { currentUser: adminUser },
+      created.item.id,
+      { status: "active" }
+    );
+    assert.equal(activeAgain.item.status, "active");
+
+    await catalogController.softDeleteCatalogItem({ currentUser: adminUser }, created.item.id);
+    assert.deepEqual(await catalogController.listCatalogItems({ currentUser: adminUser }, "research-field"), { items: [] });
+    await assert.rejects(
+      () => catalogController.updateCatalogItem({ currentUser: adminUser }, created.item.id, { status: "inactive" }),
+      { name: "NotFoundException" }
     );
 
     assert.deepEqual(
       auditLog.records.map((record) => record.action),
-      ["create-catalog", "update-system-parameter", "update-notification-template"]
+      ["create-catalog", "update-catalog", "update-catalog", "soft-delete-catalog"]
+    );
+  });
+
+  it("Story 1.6: config APIs reject unsupported parameters/templates/placeholders without partial persistence", async () => {
+    const prisma = createAdminPrisma();
+    const auditLog = createAuditLog();
+    const configController = new AdminConfigController(new AdminConfigService(prisma, auditLog));
+
+    await assert.rejects(
+      () => configController.updateSystemParameter({ currentUser: staffUser }, { key: "session_timeout_minutes", value: "720", label: "Thời gian phiên" }),
+      ForbiddenException
+    );
+
+    await configController.updateSystemParameter(
+      { currentUser: adminUser },
+      { key: "session_timeout_minutes", value: "720", label: "Thời gian phiên" }
+    );
+    await assert.rejects(
+      () => configController.updateSystemParameter({ currentUser: adminUser }, { key: "session_timeout_minutes", value: "0", label: "Thời gian phiên" }),
+      { name: "BadRequestException" }
+    );
+    await assert.rejects(
+      () => configController.updateSystemParameter({ currentUser: adminUser }, { key: "unknown_parameter", value: "1", label: "Không hỗ trợ" }),
+      { name: "BadRequestException" }
+    );
+    assert.deepEqual(
+      prisma.store.systemParameters.map((record) => `${record.key}:${record.value}`),
+      ["session_timeout_minutes:720"]
+    );
+
+    await configController.updateNotificationTemplate(
+      { currentUser: adminUser },
+      {
+        key: "user_created",
+        subject: "Tài khoản {{username}} đã được tạo",
+        body: "Xin chào {{displayName}}, tài khoản {{username}} đã sẵn sàng."
+      }
+    );
+    await assert.rejects(
+      () =>
+        configController.updateNotificationTemplate(
+          { currentUser: adminUser },
+          {
+            key: "user_created",
+            subject: "Tài khoản {{rawPassword}}",
+            body: "Nội dung {{unknown}}"
+          }
+        ),
+      { name: "BadRequestException" }
+    );
+    await assert.rejects(
+      () =>
+        configController.updateNotificationTemplate(
+          { currentUser: adminUser },
+          {
+            key: "login_notice",
+            subject: "Thông báo",
+            body: "Nội dung"
+          }
+        ),
+      { name: "BadRequestException" }
+    );
+
+    prisma.store.notificationTemplates[0].status = "inactive";
+    await configController.updateNotificationTemplate(
+      { currentUser: adminUser },
+      {
+        key: "user_created",
+        subject: "Tài khoản {{username}} đã cập nhật",
+        body: "Xin chào {{displayName}}, tài khoản {{username}} đã cập nhật."
+      }
+    );
+    assert.equal(prisma.store.notificationTemplates[0].status, "inactive");
+
+    assert.deepEqual(
+      auditLog.records.map((record) => record.action),
+      ["update-system-parameter", "update-notification-template", "update-notification-template"]
+    );
+    assert.deepEqual(
+      prisma.store.notificationTemplates.map((record) => `${record.key}:${record.subject}`),
+      ["user_created:Tài khoản {{username}} đã cập nhật"]
     );
   });
 
