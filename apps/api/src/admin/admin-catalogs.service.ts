@@ -35,40 +35,41 @@ export class AdminCatalogsService {
 
   async createCatalogItem(actor: SafeUserContext, input: CatalogInput) {
     const data = this.readCatalogInput(input);
-    const item = await this.prisma.catalogItem.create({ data });
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const item = await tx.catalogItem.create({ data });
 
-    await this.auditLog.record({
-      action: "create-catalog",
-      result: "success",
-      actorId: actor.id,
-      targetEntity: "catalog",
-      targetEntityId: item.id,
-      username: actor.username
-    });
+        await this.auditLog.record(
+          {
+            action: "create-catalog",
+            result: "success",
+            actorId: actor.id,
+            targetEntity: "catalog",
+            targetEntityId: item.id,
+            username: actor.username
+          },
+          tx
+        );
 
-    return item;
+        return item;
+      });
+    } catch (error) {
+      this.throwCatalogConflict(error);
+      throw error;
+    }
   }
 
   async updateCatalogItem(actor: SafeUserContext, itemId: string, input: CatalogInput) {
-    const existing = await this.prisma.catalogItem.findUnique({ where: { id: itemId } });
-    if (!existing || existing.deletedAt) {
-      throw new NotFoundException({ message: "Không tìm thấy catalog." });
+    if (input.type !== undefined || input.code !== undefined) {
+      throw new BadRequestException({ message: "Không được thay đổi loại hoặc mã catalog sau khi tạo." });
     }
 
     const data: {
-      type?: string;
-      code?: string;
       name?: string;
       description?: string;
       status?: string;
     } = {};
 
-    if (input.type !== undefined) {
-      data.type = this.readCatalogType(input.type);
-    }
-    if (input.code !== undefined) {
-      data.code = readCode(input.code, "code");
-    }
     if (input.name !== undefined) {
       data.name = readText(input.name, "name");
     }
@@ -79,42 +80,77 @@ export class AdminCatalogsService {
       data.status = this.readStatus(input.status);
     }
 
-    const item = await this.prisma.catalogItem.update({
-      where: { id: itemId },
-      data
-    });
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException({ message: "Cần ít nhất một trường cập nhật." });
+    }
 
-    await this.auditLog.record({
-      action: "update-catalog",
-      result: "success",
-      actorId: actor.id,
-      targetEntity: "catalog",
-      targetEntityId: item.id,
-      username: actor.username
-    });
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const updated = await tx.catalogItem.updateMany({
+          where: { id: itemId, deletedAt: null },
+          data
+        });
+        if (updated.count === 0) {
+          throw new NotFoundException({ message: "Không tìm thấy catalog." });
+        }
 
-    return item;
+        const item = await tx.catalogItem.findUnique({ where: { id: itemId } });
+        if (!item) {
+          throw new NotFoundException({ message: "Không tìm thấy catalog." });
+        }
+
+        await this.auditLog.record(
+          {
+            action: "update-catalog",
+            result: "success",
+            actorId: actor.id,
+            targetEntity: "catalog",
+            targetEntityId: item.id,
+            username: actor.username
+          },
+          tx
+        );
+
+        return item;
+      });
+    } catch (error) {
+      this.throwCatalogConflict(error);
+      throw error;
+    }
   }
 
   async softDeleteCatalogItem(actor: SafeUserContext, itemId: string) {
-    const item = await this.prisma.catalogItem.update({
-      where: { id: itemId },
-      data: {
-        deletedAt: new Date(),
-        status: "archived"
+    return this.prisma.$transaction(async (tx) => {
+      const deleted = await tx.catalogItem.updateMany({
+        where: { id: itemId, deletedAt: null },
+        data: {
+          deletedAt: new Date(),
+          status: "archived"
+        }
+      });
+      if (deleted.count === 0) {
+        throw new NotFoundException({ message: "Không tìm thấy catalog." });
       }
-    });
 
-    await this.auditLog.record({
-      action: "soft-delete-catalog",
-      result: "success",
-      actorId: actor.id,
-      targetEntity: "catalog",
-      targetEntityId: item.id,
-      username: actor.username
-    });
+      const item = await tx.catalogItem.findUnique({ where: { id: itemId } });
+      if (!item) {
+        throw new NotFoundException({ message: "Không tìm thấy catalog." });
+      }
 
-    return item;
+      await this.auditLog.record(
+        {
+          action: "soft-delete-catalog",
+          result: "success",
+          actorId: actor.id,
+          targetEntity: "catalog",
+          targetEntityId: item.id,
+          username: actor.username
+        },
+        tx
+      );
+
+      return item;
+    });
   }
 
   private readCatalogInput(input: CatalogInput) {
@@ -143,5 +179,11 @@ export class AdminCatalogsService {
     }
 
     return status;
+  }
+
+  private throwCatalogConflict(error: unknown): never | void {
+    if ((error as { code?: string })?.code === "P2002") {
+      throw new BadRequestException({ message: "Mã catalog đã tồn tại trong loại catalog này." });
+    }
   }
 }

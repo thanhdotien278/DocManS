@@ -41,7 +41,8 @@ export function AdminConfigPanel() {
     event.preventDefault();
     setMessage("");
     setFormError("");
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const input = {
       key: String(form.get("key") ?? "").trim(),
       value: String(form.get("value") ?? "").trim(),
@@ -56,7 +57,9 @@ export function AdminConfigPanel() {
     setIsSubmitting(true);
     try {
       await updateSystemParameter(input);
-      event.currentTarget.reset();
+      if (formElement.isConnected) {
+        formElement.reset();
+      }
       setMessage("Đã cập nhật tham số hệ thống.");
       await refresh();
     } catch (error) {
@@ -70,7 +73,8 @@ export function AdminConfigPanel() {
     event.preventDefault();
     setMessage("");
     setFormError("");
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const input = {
       key: String(form.get("templateKey") ?? "").trim(),
       subject: String(form.get("subject") ?? "").trim(),
@@ -85,7 +89,9 @@ export function AdminConfigPanel() {
     setIsSubmitting(true);
     try {
       await updateNotificationTemplate(input);
-      event.currentTarget.reset();
+      if (formElement.isConnected) {
+        formElement.reset();
+      }
       setMessage("Đã cập nhật mẫu thông báo.");
       await refresh();
     } catch (error) {

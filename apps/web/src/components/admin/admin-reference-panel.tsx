@@ -80,7 +80,8 @@ export function AdminUnitsPanel() {
     event.preventDefault();
     setMessage("");
     setFormError("");
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const input = {
       code: String(form.get("code") ?? "").trim(),
       name: String(form.get("name") ?? "").trim()
@@ -93,7 +94,9 @@ export function AdminUnitsPanel() {
 
     try {
       await createOrganizationUnit(input);
-      event.currentTarget.reset();
+      if (formElement.isConnected) {
+        formElement.reset();
+      }
       setMessage("Đã tạo đơn vị.");
       await refresh();
     } catch (error) {
