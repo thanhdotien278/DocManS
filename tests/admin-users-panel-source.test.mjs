@@ -17,9 +17,14 @@ describe("admin users create form source behavior", () => {
 
   it("auto-applies user filters when dropdown values change", () => {
     assert.match(source, /async function handleFilterChange/);
-    assert.match(source, /<select[\s\S]*?name="roleCode"[\s\S]*?onChange=\{\(event\) => void handleFilterChange\(event\)\}/);
+    assert.match(source, /<select[\s\S]*?name="systemRole"[\s\S]*?onChange=\{\(event\) => void handleFilterChange\(event\)\}/);
     assert.match(source, /<select[\s\S]*?name="organizationId"[\s\S]*?onChange=\{\(event\) => void handleFilterChange\(event\)\}/);
     assert.match(source, /<select[\s\S]*?name="status"[\s\S]*?onChange=\{\(event\) => void handleFilterChange\(event\)\}/);
+  });
+
+  it("uses the fixed system-role payload for create and update", () => {
+    assert.equal(source.includes("roleCode"), false);
+    assert.match(source, /name="systemRole"/);
   });
 
   it("does not reuse form inputs between create and edit user modes", () => {

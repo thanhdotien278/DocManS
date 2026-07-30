@@ -3,10 +3,11 @@ import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import {
+  assertHasOrganizationScope,
   assertCanManageIntakePeriods,
   intakeAppliesToUser,
   isIntakeOpenForSubmission,
-  isPrincipalInvestigator,
+  isResearcherInternalUser,
   isScientificManagement,
   isSystemAdmin
 } from "../proposals-shared/proposal-access.js";
@@ -50,11 +51,12 @@ export class ProposalIntakePeriodsService {
 
     if (isSystemAdmin(actor) || isScientificManagement(actor)) {
       return records
+        .filter((record) => intakeAppliesToUser(record, actor))
         .filter((record) => !statusFilter || this.effectiveStatus(record) === statusFilter || record.status === statusFilter)
         .map((record) => this.toResponse(record));
     }
 
-    if (isPrincipalInvestigator(actor)) {
+    if (isResearcherInternalUser(actor)) {
       return records
         .filter((record) => isIntakeOpenForSubmission(record) && intakeAppliesToUser(record, actor))
         .map((record) => this.toResponse(record));
@@ -65,6 +67,10 @@ export class ProposalIntakePeriodsService {
 
   async createPeriod(actor: SafeUserContext, input: Record<string, unknown>) {
     assertCanManageIntakePeriods(actor);
+    const applicableOrganizationUnitId = readOptionalText(input.applicableOrganizationUnitId, "applicableOrganizationUnitId", 80);
+    if (applicableOrganizationUnitId) {
+      assertHasOrganizationScope(actor, applicableOrganizationUnitId);
+    }
 
     const startsAt = readDate(input.startsAt, "startsAt");
     const endsAt = readDate(input.endsAt, "endsAt");
@@ -78,7 +84,7 @@ export class ProposalIntakePeriodsService {
         startsAt,
         endsAt,
         status: "draft",
-        applicableOrganizationUnitId: readOptionalText(input.applicableOrganizationUnitId, "applicableOrganizationUnitId", 80),
+        applicableOrganizationUnitId,
         requiredPackage: readRequiredPackage(input.requiredPackage)
       }
     })) as IntakePeriodRecord;
@@ -117,7 +123,11 @@ export class ProposalIntakePeriodsService {
       data.endsAt = readDate(input.endsAt, "endsAt");
     }
     if (input.applicableOrganizationUnitId !== undefined) {
-      data.applicableOrganizationUnitId = readOptionalText(input.applicableOrganizationUnitId, "applicableOrganizationUnitId", 80) ?? null;
+      const applicableOrganizationUnitId = readOptionalText(input.applicableOrganizationUnitId, "applicableOrganizationUnitId", 80);
+      if (applicableOrganizationUnitId) {
+        assertHasOrganizationScope(actor, applicableOrganizationUnitId);
+      }
+      data.applicableOrganizationUnitId = applicableOrganizationUnitId ?? null;
     }
     if (input.requiredPackage !== undefined) {
       data.requiredPackage = readRequiredPackage(input.requiredPackage);

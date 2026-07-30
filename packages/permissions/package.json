@@ -3,5 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts"
+  "main": "./src/index.ts",
+  "exports": {
+    "./system-roles": {
+      "types": "./src/system-roles.d.ts",
+      "default": "./src/system-roles.js"
+    }
+  }
 }

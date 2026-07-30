@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import { PasswordService } from "../auth/password.service.js";
-import type { SafeUserContext } from "../auth/auth.types.js";
+import { SYSTEM_ROLES, type SafeUserContext, type SystemRole } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { readCode, readText } from "./admin-access.js";
 
@@ -9,13 +9,13 @@ type CreateUserInput = {
   username?: unknown;
   displayName?: unknown;
   password?: unknown;
-  roleCode?: unknown;
+  systemRole?: unknown;
   organizationUnitId?: unknown;
 };
 
 type UpdateUserInput = {
   displayName?: unknown;
-  roleCode?: unknown;
+  systemRole?: unknown;
   organizationUnitId?: unknown;
   status?: unknown;
 };
@@ -23,18 +23,9 @@ type UpdateUserInput = {
 type ListUsersInput = {
   keyword?: unknown;
   search?: unknown;
-  roleId?: unknown;
-  roleCode?: unknown;
-  role?: unknown;
+  systemRole?: unknown;
   organizationId?: unknown;
   organization?: unknown;
-  status?: unknown;
-};
-
-type RoleInput = {
-  code?: unknown;
-  label?: unknown;
-  description?: unknown;
   status?: unknown;
 };
 
@@ -55,15 +46,13 @@ export class AdminUsersService {
 
   async listUsers(input: ListUsersInput = {}) {
     const keyword = readOptionalDescription(input.keyword ?? input.search, 120);
-    const roleCode = readOptionalDescription(input.roleCode ?? input.role, 80);
-    const roleId = readOptionalDescription(input.roleId, 80);
+    const systemRole = input.systemRole === undefined ? undefined : this.readSystemRole(input.systemRole);
     const organizationId = readOptionalDescription(input.organizationId, 80);
     const organization = readOptionalDescription(input.organization, 160);
     const status = readOptionalDescription(input.status, 40);
     const where: {
       OR?: Array<{ username: { contains: string; mode: "insensitive" } } | { displayName: { contains: string; mode: "insensitive" } }>;
-      role?: string;
-      roleAssignments?: { some: { roleId: string } };
+      systemRole?: SystemRole;
       unit?: string;
       organizationScopes?: { some: { organizationUnitId: string } };
       status?: string;
@@ -75,11 +64,8 @@ export class AdminUsersService {
         { displayName: { contains: keyword, mode: "insensitive" } }
       ];
     }
-    if (roleCode) {
-      where.role = roleCode;
-    }
-    if (roleId) {
-      where.roleAssignments = { some: { roleId } };
+    if (systemRole) {
+      where.systemRole = systemRole;
     }
     if (organization) {
       where.unit = organization;
@@ -94,7 +80,6 @@ export class AdminUsersService {
     const users = await this.prisma.user.findMany({
       where,
       include: {
-        roleAssignments: { include: { role: true } },
         organizationScopes: { include: { organizationUnit: true } }
       },
       orderBy: { displayName: "asc" }
@@ -104,70 +89,12 @@ export class AdminUsersService {
   }
 
   async listRoles() {
-    return this.prisma.role.findMany({
-      where: { status: "active" },
-      orderBy: { label: "asc" }
-    });
-  }
-
-  async createRole(actor: SafeUserContext, input: RoleInput) {
-    const role = await this.prisma.role.create({
-      data: {
-        code: readCode(input.code, "code"),
-        label: readText(input.label, "label"),
-        description: readOptionalDescription(input.description),
-        status: input.status === undefined ? "active" : this.readActiveStatus(input.status)
-      }
-    });
-
-    await this.auditLog.record({
-      action: "create-role",
-      result: "success",
-      actorId: actor.id,
-      targetEntity: "role",
-      targetEntityId: role.id,
-      username: actor.username
-    });
-
-    return role;
-  }
-
-  async updateRole(actor: SafeUserContext, roleId: string, input: RoleInput) {
-    const data: {
-      code?: string;
-      label?: string;
-      description?: string;
-      status?: string;
-    } = {};
-
-    if (input.code !== undefined) {
-      data.code = readCode(input.code, "code");
-    }
-    if (input.label !== undefined) {
-      data.label = readText(input.label, "label");
-    }
-    if (input.description !== undefined) {
-      data.description = readOptionalDescription(input.description);
-    }
-    if (input.status !== undefined) {
-      data.status = this.readActiveStatus(input.status);
-    }
-
-    const role = await this.prisma.role.update({
-      where: { id: roleId },
-      data
-    });
-
-    await this.auditLog.record({
-      action: "update-role",
-      result: "success",
-      actorId: actor.id,
-      targetEntity: "role",
-      targetEntityId: role.id,
-      username: actor.username
-    });
-
-    return role;
+    return SYSTEM_ROLES.map((systemRole) => ({
+      id: systemRole,
+      code: systemRole,
+      label: this.toRoleLabel(systemRole),
+      status: "active"
+    }));
   }
 
   async listOrganizationUnits() {
@@ -241,7 +168,7 @@ export class AdminUsersService {
     const username = readCode(input.username, "username").toLowerCase();
     const displayName = readText(input.displayName, "displayName");
     const password = readText(input.password, "password", 256);
-    const roleCode = readCode(input.roleCode, "roleCode");
+    const systemRole = this.readSystemRole(input.systemRole);
     const organizationUnitId = readText(input.organizationUnitId, "organizationUnitId");
 
     const existing = await this.prisma.user.findUnique({ where: { usernameKey: username } });
@@ -249,36 +176,31 @@ export class AdminUsersService {
       throw new BadRequestException({ message: "Tên đăng nhập đã tồn tại." });
     }
 
-    const role = await this.findActiveRole(roleCode);
     const organizationUnit = await this.findActiveOrganizationUnit(organizationUnitId);
     const passwordHash = await this.passwordService.hashPassword(password);
 
-    const user = await this.prisma.user.create({
-      data: {
-        username,
-        usernameKey: username,
-        displayName,
-        passwordHash,
-        status: "active",
-        role: role.code,
-        roleLabel: role.label,
-        unit: organizationUnit.name
-      }
-    });
+    const user = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          username,
+          usernameKey: username,
+          displayName,
+          passwordHash,
+          status: "active",
+          systemRole,
+          unit: organizationUnit.name
+        }
+      });
 
-    await this.prisma.userRoleAssignment.create({
-      data: {
-        userId: user.id,
-        roleId: role.id,
-        isPrimary: true
-      }
-    });
-    await this.prisma.userOrganizationScope.create({
-      data: {
-        userId: user.id,
-        organizationUnitId: organizationUnit.id,
-        isPrimary: true
-      }
+      await tx.userOrganizationScope.create({
+        data: {
+          userId: created.id,
+          organizationUnitId: organizationUnit.id,
+          isPrimary: true
+        }
+      });
+
+      return created;
     });
 
     await this.auditLog.record({
@@ -290,7 +212,7 @@ export class AdminUsersService {
       username: actor.username,
       reason: safeAuditContext({
         username: user.username,
-        roleCode: role.code,
+        systemRole,
         organizationUnitId: organizationUnit.id,
         organizationUnitName: organizationUnit.name
       })
@@ -308,8 +230,7 @@ export class AdminUsersService {
     const data: {
       displayName?: string;
       status?: string;
-      role?: string;
-      roleLabel?: string;
+      systemRole?: string;
       unit?: string;
     } = {};
 
@@ -329,26 +250,23 @@ export class AdminUsersService {
       });
     }
 
-    if (input.roleCode !== undefined) {
-      const role = await this.findActiveRole(readCode(input.roleCode, "roleCode"));
-      data.role = role.code;
-      data.roleLabel = role.label;
-      await this.prisma.userRoleAssignment.deleteMany({ where: { userId } });
-      await this.prisma.userRoleAssignment.create({ data: { userId, roleId: role.id, isPrimary: true } });
+    if (input.systemRole !== undefined) {
+      const systemRole = this.readSystemRole(input.systemRole);
+      data.systemRole = systemRole;
       auditEvents.push({
         action: "AUD-ST-1.3-03",
-        before: { role: existing.role, roleLabel: existing.roleLabel },
-        after: { role: role.code, roleLabel: role.label }
+        before: { systemRole: existing.systemRole },
+        after: { systemRole }
       });
     }
 
-    if (input.organizationUnitId !== undefined) {
-      const organizationUnit = await this.findActiveOrganizationUnit(readText(input.organizationUnitId, "organizationUnitId"));
+    const organizationUnit =
+      input.organizationUnitId === undefined
+        ? undefined
+        : await this.findActiveOrganizationUnit(readText(input.organizationUnitId, "organizationUnitId"));
+
+    if (organizationUnit) {
       data.unit = organizationUnit.name;
-      await this.prisma.userOrganizationScope.deleteMany({ where: { userId } });
-      await this.prisma.userOrganizationScope.create({
-        data: { userId, organizationUnitId: organizationUnit.id, isPrimary: true }
-      });
       auditEvents.push({
         action: "AUD-ST-1.3-04",
         before: { unit: existing.unit },
@@ -364,9 +282,25 @@ export class AdminUsersService {
       });
     }
 
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data
+    const user = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id: userId },
+        data
+      });
+
+      if (organizationUnit) {
+        await tx.userOrganizationScope.updateMany({
+          where: { userId, isPrimary: true },
+          data: { isPrimary: false }
+        });
+        await tx.userOrganizationScope.upsert({
+          where: { userId_organizationUnitId: { userId, organizationUnitId: organizationUnit.id } },
+          update: { isPrimary: true },
+          create: { userId, organizationUnitId: organizationUnit.id, isPrimary: true }
+        });
+      }
+
+      return updated;
     });
 
     for (const event of auditEvents) {
@@ -388,13 +322,23 @@ export class AdminUsersService {
     return this.updateUser(actor, userId, { status: statusInput });
   }
 
-  private async findActiveRole(code: string) {
-    const role = await this.prisma.role.findUnique({ where: { code } });
-    if (!role || role.status !== "active") {
-      throw new BadRequestException({ message: "Vai trò không hợp lệ." });
+  private readSystemRole(value: unknown): SystemRole {
+    const systemRole = readText(value, "systemRole", 80);
+    if (!SYSTEM_ROLES.includes(systemRole as SystemRole)) {
+      throw new BadRequestException({ message: "Vai trò hệ thống không hợp lệ." });
     }
 
-    return role;
+    return systemRole as SystemRole;
+  }
+
+  private toRoleLabel(systemRole: SystemRole) {
+    return systemRole === "SYSTEM_ADMIN"
+      ? "Quản trị hệ thống"
+      : systemRole === "SCIENTIFIC_MANAGEMENT_STAFF"
+        ? "Chuyên viên quản lý khoa học"
+        : systemRole === "LEADERSHIP_APPROVAL_AUTHORITY"
+          ? "Lãnh đạo phê duyệt"
+          : "Người dùng nghiên cứu nội bộ";
   }
 
   private async findActiveOrganizationUnit(id: string) {
@@ -429,17 +373,8 @@ export class AdminUsersService {
     username: string;
     displayName: string;
     status: string;
-    role: string;
-    roleLabel: string;
+    systemRole: string | null;
     unit: string;
-    roleAssignments?: Array<{
-      isPrimary: boolean;
-      role: {
-        id: string;
-        code: string;
-        label: string;
-      };
-    }>;
     organizationScopes?: Array<{
       isPrimary: boolean;
       organizationUnit: {
@@ -448,7 +383,6 @@ export class AdminUsersService {
       };
     }>;
   }) {
-    const roleAssignment = user.roleAssignments?.find((assignment) => assignment.isPrimary) ?? user.roleAssignments?.[0];
     const organizationScope = user.organizationScopes?.find((scope) => scope.isPrimary) ?? user.organizationScopes?.[0];
 
     return {
@@ -456,10 +390,7 @@ export class AdminUsersService {
       username: user.username,
       displayName: user.displayName,
       status: user.status,
-      role: user.role,
-      roleLabel: user.roleLabel,
-      roleCode: roleAssignment?.role.code ?? user.role,
-      roleId: roleAssignment?.role.id,
+      systemRole: user.systemRole,
       unit: user.unit,
       organizationUnitId: organizationScope?.organizationUnit.id
     };

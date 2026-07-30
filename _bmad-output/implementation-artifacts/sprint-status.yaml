@@ -1,0 +1,130 @@
+# generated: 2026-07-29T17:30:00+07:00
+# last_updated: 2026-07-30T11:49:01+07:00
+# project: DocManSystem
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: /Users/Super/DocManS/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status: backlog | in-progress | done
+# Story Status: backlog | ready-for-dev | in-progress | review | done
+# Retrospective Status: optional | done
+
+# WORKFLOW NOTES:
+# ===============
+# - An epic becomes in-progress when one of its stories has begun planning or implementation.
+# - Stories remain in canonical Epic order; create one story specification at a time unless capacity permits parallel work.
+# - Retrospectives are optional until their Epic is complete.
+
+generated: 2026-07-29T17:30:00+07:00
+last_updated: 2026-07-30T11:49:01+07:00
+project: DocManSystem
+project_key: NOKEY
+tracking_system: file-system
+story_location: /Users/Super/DocManS/_bmad-output/implementation-artifacts
+
+development_status:
+  epic-1: in-progress
+  1-1-khoi-tao-workspace-nx-va-khung-ung-dung-noi-bo: done
+  1-2-dang-nhap-dang-xuat-va-quan-ly-phien-noi-bo: done
+  1-3-quan-tri-vong-doi-tai-khoan-nguoi-dung: done
+  1-4-mot-vai-tro-he-thong-pham-vi-to-chuc-va-chuyen-doi-du-lieu-cu: done
+  1-5-doi-mat-khau-va-dat-lai-mat-khau-co-kiem-soat: backlog
+  1-6-quan-ly-danh-muc-va-cau-hinh-van-hanh-dung-chung: backlog
+  1-7-hop-dong-phan-quyen-va-bo-danh-gia-policy-dung-chung: backlog
+  1-8-capability-response-va-giao-dien-khong-suy-dien-quyen: backlog
+  1-9-vong-doi-quan-he-theo-ho-so-va-gioi-han-thu-ky-khoa-hoc: backlog
+  1-10-vong-doi-uy-quyen-theo-hanh-dong-va-ho-so: backlog
+  epic-1-retrospective: optional
+  epic-2: backlog
+  2-1-tao-va-duy-tri-ho-so-nha-khoa-hoc: backlog
+  2-2-lien-ket-ho-so-nha-khoa-hoc-voi-tai-khoan: backlog
+  2-3-lich-su-tham-gia-tu-nguon-nghiep-vu-co-tham-quyen: backlog
+  2-4-kiem-tra-xung-dot-loi-ich-truoc-khi-phan-cong: backlog
+  2-5-tim-kiem-va-xem-danh-ba-nha-khoa-hoc-theo-pham-vi: backlog
+  2-6-timeline-va-audit-ho-so-nha-khoa-hoc: backlog
+  epic-2-retrospective: optional
+  epic-3: backlog
+  3-1-tai-len-va-truy-cap-tep-qua-ho-so-nguon: backlog
+  3-2-metadata-phien-ban-thay-the-va-soft-delete-tep: backlog
+  3-3-timeline-workflow-va-lich-su-ho-so-nghiep-vu: backlog
+  3-4-ghi-audit-cho-hanh-dong-quan-trong: backlog
+  3-5-tra-cuu-audit-va-lich-su-theo-tham-quyen: backlog
+  epic-3-retrospective: optional
+  epic-4: backlog
+  4-1-tao-va-quan-ly-dot-tiep-nhan-de-xuat: backlog
+  4-2-tao-de-xuat-nhap-va-thiet-lap-quan-he-tham-gia: backlog
+  4-3-nhap-va-cong-tac-tren-thong-tin-de-xuat-co-cau-truc: backlog
+  4-4-dinh-kem-va-quan-ly-tep-de-xuat: backlog
+  4-5-kiem-tra-muc-do-san-sang-truoc-khi-nop: backlog
+  4-6-nop-chinh-thuc-va-xem-lich-su-nop-de-xuat: backlog
+  epic-4-retrospective: optional
+  epic-5: backlog
+  5-1-kiem-tra-tinh-day-du-va-yeu-cau-bo-sung: backlog
+  5-2-chinh-sua-theo-yeu-cau-va-nop-lai-de-xuat: backlog
+  5-3-phan-cong-reviewer-voi-kiem-tra-xung-dot: backlog
+  5-4-reviewer-truy-cap-va-nop-danh-gia-cua-minh: backlog
+  5-5-theo-doi-tien-do-va-tong-hop-danh-gia-noi-bo: backlog
+  5-6-thu-ky-khoa-hoc-ho-tro-hanh-chinh-cho-quy-trinh-danh-gia: backlog
+  5-7-lanh-dao-xem-ho-so-trinh-quyet-dinh: backlog
+  5-8-phe-duyet-tu-choi-va-cong-bo-ket-qua-de-xuat: backlog
+  epic-5-retrospective: optional
+  epic-6: backlog
+  6-1-khoi-tao-de-tai-tu-proposal-duoc-phe-duyet: backlog
+  6-2-quan-ly-thanh-vien-trach-nhiem-milestone-va-checkpoint: backlog
+  6-3-chu-nhiem-nop-bao-cao-tien-do-va-bang-chung: backlog
+  6-4-thanh-vien-dong-gop-tep-va-minh-chung-trong-pham-vi-duoc-giao: backlog
+  6-5-ra-soat-bao-cao-va-theo-doi-cham-tien-do: backlog
+  6-6-gui-yeu-cau-dieu-chinh-hoac-gia-han: backlog
+  6-7-quyet-dinh-dieu-chinh-hoac-gia-han: backlog
+  6-8-chuan-bi-va-nop-ho-so-nghiem-thu-hoac-danh-gia-cuoi: backlog
+  6-9-ra-soat-va-quyet-dinh-nghiem-thu-hoac-danh-gia-cuoi: backlog
+  6-10-trang-thai-lich-su-va-truy-van-duoc-phan-quyen-cua-de-tai: backlog
+  epic-6-retrospective: optional
+  epic-7: backlog
+  7-1-tao-cong-viec-doc-lap-hoac-lien-ket-ho-so: backlog
+  7-2-phan-cong-va-quan-ly-vong-doi-nguoi-thuc-hien: backlog
+  7-3-cap-nhat-tien-do-va-trang-thai-cong-viec: backlog
+  7-4-tep-va-minh-chung-hoan-thanh-cong-viec: backlog
+  7-5-danh-sach-viec-sap-han-qua-han-va-contract-tich-hop: backlog
+  epic-7-retrospective: optional
+  epic-8: backlog
+  8-1-tao-hoac-nhap-ban-ghi-hoat-dong-da-duoc-phe-duyet: backlog
+  8-2-quan-ly-ke-hoach-moc-tai-lieu-va-ghi-chu-hanh-chinh: backlog
+  8-3-ghi-nhan-dieu-chinh-kinh-phi-san-pham-va-ket-qua: backlog
+  8-4-dieu-khien-trang-thai-va-xem-lich-su-hoat-dong: backlog
+  8-5-danh-sach-duoc-phan-quyen-va-contract-tich-hop-hoat-dong: backlog
+  epic-8-retrospective: optional
+  epic-9: backlog
+  9-1-dang-ky-van-ban-va-tep-noi-dung: backlog
+  9-2-lien-ket-van-ban-voi-ho-so-nghiep-vu-da-co: backlog
+  9-3-quan-ly-phien-ban-thay-the-va-trang-thai-hieu-luc: backlog
+  9-4-tim-kiem-va-truy-xuat-van-ban-theo-quyen: backlog
+  9-5-nhac-hieu-luc-va-contract-tich-hop-van-ban: backlog
+  epic-9-retrospective: optional
+  epic-10: backlog
+  10-1-lap-ke-hoach-hoi-dong-thanh-vien-va-can-cu-lien-quan: backlog
+  10-2-thu-ky-khoa-hoc-ho-tro-van-hanh-hoi-dong: backlog
+  10-3-tao-hoan-thien-va-nop-ho-so-dao-duc: backlog
+  10-4-kiem-tra-ho-so-dao-duc-va-xu-ly-bo-sung: backlog
+  10-5-phan-cong-hoi-dong-va-reviewer-voi-eligibility-conflict: backlog
+  10-6-thanh-vien-hoi-dong-hoac-reviewer-nop-danh-gia-duoc-phan-cong: backlog
+  10-7-theo-doi-tong-hop-va-trinh-ket-qua-hoi-dong: backlog
+  10-8-quyet-dinh-hoi-dong-hoac-ho-so-dao-duc: backlog
+  10-9-contract-tich-hop-hoi-dong-va-ho-so-dao-duc: backlog
+  epic-10-retrospective: optional
+  epic-11: backlog
+  11-1-thong-bao-trong-ung-dung-theo-su-kien-nghiep-vu: backlog
+  11-2-email-cho-su-kien-va-ket-qua-quan-trong: backlog
+  11-3-nhac-han-va-cong-viec-ton-dong-an-toan: backlog
+  11-4-tong-hop-backend-cho-khu-cua-toi: backlog
+  11-5-giao-dien-cua-toi-va-muc-bi-chan-do-xung-dot: backlog
+  epic-11-retrospective: optional
+  epic-12: backlog
+  12-1-tim-kiem-va-loc-xuyen-phan-he-theo-quyen: backlog
+  12-2-dashboard-dieu-hanh-theo-vai-tro-va-pham-vi: backlog
+  12-3-drill-down-va-doi-chieu-chi-so-voi-ho-so-nguon: backlog
+  12-4-bao-cao-tong-hop-theo-pham-vi-nghiep-vu: backlog
+  12-5-xuat-excel-pdf-co-kiem-soat-va-truy-vet: backlog
+  epic-12-retrospective: optional

@@ -1,13 +1,9 @@
+import { SYSTEM_ROLES, type SystemRole } from "@rtms/permissions/system-roles";
+
+export { SYSTEM_ROLES, type SystemRole };
+
 export const AUTH_SESSION_COOKIE = "rtms_session";
 export const AUTH_FAILURE_MESSAGE = "Tên đăng nhập hoặc mật khẩu không hợp lệ.";
-
-export type InternalUserRole =
-  | "system-admin"
-  | "leadership"
-  | "scientific-management"
-  | "principal-investigator"
-  | "reviewer"
-  | "council-member";
 
 export type InternalUserStatus = "active" | "disabled";
 
@@ -17,10 +13,8 @@ export type InternalUser = {
   displayName: string;
   passwordHash: string;
   status: InternalUserStatus;
-  role: InternalUserRole;
-  roleLabel: string;
+  systemRole: SystemRole;
   unit: string;
-  roles: InternalUserRole[];
   organizationScopes: OrganizationScope[];
 };
 
@@ -34,10 +28,8 @@ export type SafeUserContext = {
   id: string;
   username: string;
   displayName: string;
-  role: InternalUserRole;
-  roleLabel: string;
+  systemRole: SystemRole;
   unit: string;
-  roles: InternalUserRole[];
   organizationScopes: OrganizationScope[];
 };
 

@@ -29,7 +29,6 @@ type ReviewerCandidate = {
   username: string;
   displayName: string;
   status: string;
-  role: string;
   unit: string;
 };
 
@@ -515,7 +514,6 @@ export class ProposalReviewAssignmentsService {
         username: true,
         displayName: true,
         status: true,
-        role: true,
         unit: true
       }
     })) as ReviewerCandidate | null;

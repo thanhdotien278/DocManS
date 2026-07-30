@@ -23,12 +23,10 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 export type UserRole =
-  | "leadership"
-  | "scientific-management"
-  | "principal-investigator"
-  | "reviewer"
-  | "council-member"
-  | "system-admin";
+  | "SYSTEM_ADMIN"
+  | "SCIENTIFIC_MANAGEMENT_STAFF"
+  | "LEADERSHIP_APPROVAL_AUTHORITY"
+  | "RESEARCHER_INTERNAL_USER";
 
 export type AccountProfile = {
   id: string;
@@ -59,7 +57,7 @@ export const accountProfiles: AccountProfile[] = [
     id: "leadership-nguyen-van-minh",
     username: "nvm_bgh",
     name: "GS. TS. Trần Viết Tiến",
-    role: "leadership",
+    role: "LEADERSHIP_APPROVAL_AUTHORITY",
     roleLabel: "Giám Đốc",
     unit: "Ban Giám Đốc",
     initials: "T"
@@ -68,7 +66,7 @@ export const accountProfiles: AccountProfile[] = [
     id: "staff-vu-lan",
     username: "vlan_qlkh",
     name: "TS. Nguyễn Minh Phương",
-    role: "scientific-management",
+    role: "SCIENTIFIC_MANAGEMENT_STAFF",
     roleLabel: "Trưởng phòng",
     unit: "Trưởng phòng KHQS",
     initials: "P"
@@ -77,7 +75,7 @@ export const accountProfiles: AccountProfile[] = [
     id: "pi-pham-anh-tuan",
     username: "patuan_pi",
     name: "TS. Phạm Anh Tuấn",
-    role: "principal-investigator",
+    role: "RESEARCHER_INTERNAL_USER",
     roleLabel: "Chủ nhiệm đề tài",
     unit: "Khoa Toán - Tin học",
     initials: "T"
@@ -86,7 +84,7 @@ export const accountProfiles: AccountProfile[] = [
     id: "reviewer-tran-thu-ha",
     username: "ttha_reviewer",
     name: "TS. Đỗ Minh Trung",
-    role: "reviewer",
+    role: "RESEARCHER_INTERNAL_USER",
     roleLabel: "Thành viên Hội đồng",
     unit: "Ban Quản lý KHQS",
     initials: "T"
@@ -95,7 +93,7 @@ export const accountProfiles: AccountProfile[] = [
     id: "admin-nguyen-quoc-bao",
     username: "nqbao_admin",
     name: "TS. Đỗ Tiến Thành",
-    role: "system-admin",
+    role: "SYSTEM_ADMIN",
     roleLabel: "Quản trị hệ thống",
     unit: "Khoa Toán - Tin học",
     initials: "T"
@@ -253,14 +251,14 @@ export const routeDefinitions: Record<string, RouteDefinition> = {
 };
 
 export const navigationByRole: Record<UserRole, NavigationItem[]> = {
-  leadership: [
+  LEADERSHIP_APPROVAL_AUTHORITY: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/approvals", label: "Hồ sơ chờ phê duyệt", icon: FileClock },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
     { href: "/tasks", label: "Giao việc", icon: ClipboardCheck },
     { href: "/reports", label: "Báo cáo", icon: BarChart3 }
   ],
-  "scientific-management": [
+  SCIENTIFIC_MANAGEMENT_STAFF: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/proposals", label: "Quản lý đề tài", icon: Files },
     { href: "/intakes", label: "Đợt tiếp nhận", icon: CalendarRange },
@@ -269,7 +267,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/tasks", label: "Giao việc", icon: ClipboardCheck },
     { href: "/reports", label: "Báo cáo", icon: BarChart3 }
   ],
-  "principal-investigator": [
+  RESEARCHER_INTERNAL_USER: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/my-proposals", label: "Hồ sơ của tôi", icon: FileText },
     { href: "/my-projects", label: "Đề tài đang thực hiện", icon: FolderKanban },
@@ -277,21 +275,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/my-tasks", label: "Công việc của tôi", icon: ListTodo },
     { href: "/notifications", label: "Thông báo", icon: Bell }
   ],
-  reviewer: [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/assigned-proposals", label: "Hồ sơ được phân công", icon: FileCheck2 },
-    { href: "/my-reviews", label: "Đánh giá của tôi", icon: Files },
-    { href: "/council-schedule", label: "Lịch họp hội đồng", icon: CalendarDays },
-    { href: "/notifications", label: "Thông báo", icon: Bell }
-  ],
-  "council-member": [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/assigned-proposals", label: "Hồ sơ được phân công", icon: FileCheck2 },
-    { href: "/my-reviews", label: "Đánh giá của tôi", icon: Files },
-    { href: "/council-schedule", label: "Lịch họp hội đồng", icon: CalendarDays },
-    { href: "/notifications", label: "Thông báo", icon: Bell }
-  ],
-  "system-admin": [
+  SYSTEM_ADMIN: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/users", label: "Người dùng", icon: Users },
     { href: "/roles", label: "Vai trò", icon: ShieldCheck },

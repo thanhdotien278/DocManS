@@ -1,3 +1,5 @@
+import { SYSTEM_ROLES, type SystemRole } from "../auth/auth.types.js";
+
 type PermissionAction = "read" | "create" | "update" | "delete" | "submit" | "approve" | "reject" | "assign" | "export";
 type PermissionResource =
   | "workspace"
@@ -13,7 +15,7 @@ type PermissionResource =
   | "report";
 type PermissionContext = {
   userId?: string;
-  roles?: Array<"system-admin" | "scientific-management" | "leadership" | "principal-investigator" | "reviewer" | "council-member">;
+  systemRole?: SystemRole;
   organizationUnitIds?: string[];
   resourceOwnerId?: string;
   resourceOrganizationUnitId?: string;
@@ -32,14 +34,21 @@ export function evaluatePermission(
   action: PermissionAction,
   resource: PermissionResource
 ): PermissionDecision {
-  if (!context.userId || !context.roles?.length) {
+  if (!context.userId || !context.systemRole) {
     return {
       allowed: false,
       reason: "Missing authenticated actor context."
     };
   }
 
-  if (context.roles.includes("system-admin") && FOUNDATION_RESOURCES.includes(resource) && MANAGEMENT_ACTIONS.includes(action)) {
+  if (!SYSTEM_ROLES.includes(context.systemRole)) {
+    return {
+      allowed: false,
+      reason: "Invalid system role context."
+    };
+  }
+
+  if (context.systemRole === "SYSTEM_ADMIN" && FOUNDATION_RESOURCES.includes(resource) && MANAGEMENT_ACTIONS.includes(action)) {
     return {
       allowed: true,
       reason: "System administrator can manage platform foundation resources."

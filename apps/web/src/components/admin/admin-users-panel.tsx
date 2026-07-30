@@ -23,7 +23,7 @@ function readUserFilters(formElement: HTMLFormElement): UserFilterInput {
 
   return {
     keyword: String(form.get("keyword") ?? "").trim(),
-    roleCode: String(form.get("roleCode") ?? ""),
+    systemRole: String(form.get("systemRole") ?? ""),
     organizationId: String(form.get("organizationId") ?? ""),
     status: String(form.get("status") ?? "")
   };
@@ -60,7 +60,7 @@ export function AdminUsersPanel() {
   }, []);
 
   const activeCount = useMemo(() => users.filter((user) => user.status === "active").length, [users]);
-  const hasAppliedFilters = Boolean(filters.keyword || filters.roleCode || filters.organizationId || filters.status);
+  const hasAppliedFilters = Boolean(filters.keyword || filters.systemRole || filters.organizationId || filters.status);
 
   async function handleFilterSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,7 +100,7 @@ export function AdminUsersPanel() {
       displayName: String(form.get("displayName") ?? "").trim(),
       password: String(form.get("password") ?? ""),
       confirmPassword: String(form.get("confirmPassword") ?? ""),
-      roleCode: String(form.get("roleCode") ?? ""),
+      systemRole: String(form.get("systemRole") ?? ""),
       organizationUnitId: String(form.get("organizationUnitId") ?? "")
     };
 
@@ -109,7 +109,7 @@ export function AdminUsersPanel() {
       !input.displayName ||
       !input.password ||
       !input.confirmPassword ||
-      !input.roleCode ||
+      !input.systemRole ||
       !input.organizationUnitId
     ) {
       setFormError("Vui lòng nhập đủ thông tin tài khoản, vai trò và đơn vị.");
@@ -127,7 +127,7 @@ export function AdminUsersPanel() {
         username: input.username,
         displayName: input.displayName,
         password: input.password,
-        roleCode: input.roleCode,
+        systemRole: input.systemRole,
         organizationUnitId: input.organizationUnitId
       });
       if (formElement.isConnected) {
@@ -174,11 +174,11 @@ export function AdminUsersPanel() {
     const form = new FormData(event.currentTarget);
     const input = {
       displayName: String(form.get("displayName") ?? "").trim(),
-      roleCode: String(form.get("roleCode") ?? ""),
+      systemRole: String(form.get("systemRole") ?? ""),
       organizationUnitId: String(form.get("organizationUnitId") ?? "")
     };
 
-    if (!input.displayName || !input.roleCode || !input.organizationUnitId) {
+    if (!input.displayName || !input.systemRole || !input.organizationUnitId) {
       setFormError("Vui lòng nhập đủ họ tên hiển thị, vai trò và phạm vi đơn vị.");
       return;
     }
@@ -212,8 +212,8 @@ export function AdminUsersPanel() {
           <label className="filter-field">
             <span>Vai trò</span>
             <select
-              name="roleCode"
-              defaultValue={filters.roleCode ?? ""}
+              name="systemRole"
+              defaultValue={filters.systemRole ?? ""}
               onChange={(event) => void handleFilterChange(event)}
             >
               <option value="">Tất cả vai trò</option>
@@ -293,7 +293,7 @@ export function AdminUsersPanel() {
                         <span className="record-title">{user.displayName}</span>
                         <span className="record-meta">{user.username}</span>
                       </td>
-                      <td>{user.roleLabel}</td>
+                      <td>{roles.find((role) => role.code === user.systemRole)?.label ?? "Chưa xác định"}</td>
                       <td>{user.unit}</td>
                       <td>
                         <StatusBadge status={user.status === "active" ? "approved" : "blocked"} />
@@ -331,7 +331,7 @@ export function AdminUsersPanel() {
                     <StatusBadge status={user.status === "active" ? "approved" : "blocked"} />
                   </div>
                   <span className="record-meta">
-                    {user.roleLabel} - {user.unit}
+                    {roles.find((role) => role.code === user.systemRole)?.label ?? "Chưa xác định"} - {user.unit}
                   </span>
                   <div className="button-row">
                     <button className="button" type="button" onClick={() => setEditingUser(user)}>
@@ -370,7 +370,7 @@ export function AdminUsersPanel() {
             </label>
             <label className="field">
               <span>Vai trò</span>
-              <select name="roleCode" defaultValue={editingUser.roleCode ?? editingUser.role}>
+              <select name="systemRole" defaultValue={editingUser.systemRole ?? ""}>
                 {roles.map((role) => (
                   <option value={role.code} key={role.id}>
                     {role.label}
@@ -424,7 +424,7 @@ export function AdminUsersPanel() {
             </label>
             <label className="field">
               <span>Vai trò</span>
-              <select name="roleCode" defaultValue="">
+              <select name="systemRole" defaultValue="">
                 <option value="" disabled>
                   Chọn vai trò
                 </option>

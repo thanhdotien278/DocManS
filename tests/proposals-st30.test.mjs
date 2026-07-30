@@ -18,10 +18,14 @@ const staffUser = {
   username: "staff",
   displayName: "Chuyên viên KHQS",
   role: "scientific-management",
+  systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
   roleLabel: "Chuyên viên quản lý khoa học",
   unit: "Phòng KHQS",
   roles: ["scientific-management"],
-  organizationScopes: [{ id: "org-khqs", code: "KHQS", name: "Phòng KHQS" }]
+  organizationScopes: [
+    { id: "org-khqs", code: "KHQS", name: "Phòng KHQS" },
+    { id: "org-khti", code: "KHTI", name: "Khoa Toán - Tin học" }
+  ]
 };
 
 const piUser = {
@@ -30,6 +34,7 @@ const piUser = {
   username: "patuan",
   displayName: "Phạm Anh Tuấn",
   role: "principal-investigator",
+  systemRole: "RESEARCHER_INTERNAL_USER",
   roleLabel: "Chủ nhiệm đề tài",
   roles: ["principal-investigator"],
   organizationScopes: [{ id: "org-khti", code: "KHTI", name: "Khoa Toán - Tin học" }]
@@ -42,6 +47,7 @@ const memberUser = {
   username: "ntlan",
   displayName: "Nguyễn Thị Lan",
   role: "reviewer",
+  systemRole: "RESEARCHER_INTERNAL_USER",
   roleLabel: "Người đánh giá",
   roles: ["reviewer"]
 };
@@ -53,6 +59,7 @@ const secretaryUser = {
   username: "ttminh",
   displayName: "Trần Thanh Minh",
   role: "council-member",
+  systemRole: "RESEARCHER_INTERNAL_USER",
   roleLabel: "Thành viên hội đồng",
   roles: ["council-member"]
 };
@@ -64,8 +71,16 @@ const outsiderUser = {
   username: "lvhung",
   displayName: "Lê Văn Hùng",
   role: "reviewer",
+  systemRole: "RESEARCHER_INTERNAL_USER",
   roleLabel: "Người đánh giá",
   roles: ["reviewer"]
+};
+
+/** Carries the legacy PI label but owns and participates in no proposal. */
+const legacyPiUser = {
+  ...piUser,
+  id: "user-legacy-pi",
+  username: "pi.khong-quan-he"
 };
 
 const ACCOUNTS = [staffUser, piUser, memberUser, secretaryUser, outsiderUser];
@@ -507,6 +522,26 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
       hostOrganizationUnitId: "org-khti"
     });
     await assert.rejects(() => services.proposalService.getProposal(memberUser, other.id), ForbiddenException);
+  });
+
+  it("Story 1.4 Session 4: legacy PI, reviewer, and council labels grant no proposal authority without a record relationship", async () => {
+    const services = createServices();
+    const created = await createProposalWithParticipants(services, LINKED_TEAM);
+
+    // Ownership and ProposalMember remain the only PI/member paths to this record.
+    assert.equal((await services.proposalService.getProposal(piUser, created.id)).canEdit, true);
+    assert.equal((await services.proposalService.getProposal(memberUser, created.id)).viewerParticipation.isParticipant, true);
+
+    // These fields emulate legacy account data. They must not become proposal permissions.
+    for (const actor of [legacyPiUser, outsiderUser]) {
+      await assert.rejects(() => services.proposalService.getProposal(actor, created.id), ForbiddenException);
+      await assert.rejects(() => services.proposalService.updateDraft(actor, created.id, { title: "Chiếm quyền" }), ForbiddenException);
+      await assert.rejects(() => services.proposalService.submitProposal(actor, created.id), ForbiddenException);
+    }
+
+    // A council-member label is equally inert unless it is represented by a proposal relationship.
+    const unlinkedCouncilMember = { ...secretaryUser, id: "user-council-unlinked", username: "hoi-dong-khong-quan-he" };
+    await assert.rejects(() => services.proposalService.getProposal(unlinkedCouncilMember, created.id), ForbiddenException);
   });
 
   it("VER-ST-3.0-03: the proposal list states the record role per row", async () => {

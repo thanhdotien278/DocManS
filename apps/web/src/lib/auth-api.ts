@@ -22,8 +22,7 @@ function isCurrentUser(value: unknown): value is CurrentUser {
     typeof user.id === "string" &&
     typeof user.username === "string" &&
     typeof user.displayName === "string" &&
-    typeof user.role === "string" &&
-    typeof user.roleLabel === "string" &&
+    typeof user.systemRole === "string" &&
     typeof user.unit === "string"
   );
 }

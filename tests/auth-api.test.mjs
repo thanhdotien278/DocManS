@@ -19,6 +19,7 @@ const activeUser = {
   status: "active",
   role: "system-admin",
   roleLabel: "Quản trị hệ thống",
+  systemRole: "SYSTEM_ADMIN",
   unit: "Học viện Quân y"
 };
 
@@ -29,6 +30,7 @@ function safeUser(user = activeUser) {
     displayName: user.displayName,
     role: user.role,
     roleLabel: user.roleLabel,
+    systemRole: user.systemRole,
     unit: user.unit
   };
 }
@@ -275,7 +277,7 @@ describe("auth API behavior", () => {
 
     const user = await authStore.findUserById("user-1");
 
-    assert.deepEqual(user.roles, ["system-admin"]);
+    assert.equal(user.systemRole, "SYSTEM_ADMIN");
     assert.deepEqual(user.organizationScopes, [{ id: "org-root", code: "HVQY", name: "Học viện Quân y" }]);
     assert.deepEqual(authStore.toSafeUser(user).organizationScopes, [
       { id: "org-root", code: "HVQY", name: "Học viện Quân y" }
@@ -310,6 +312,23 @@ describe("auth API behavior", () => {
 
       assert.equal(await authStore.findUserById("user-1"), null);
     }
+  });
+
+  it("fails closed for an unresolved system-role migration even when legacy assignments exist", async () => {
+    const authStore = new AuthStore({
+      user: {
+        async findUnique() {
+          return {
+            ...activeUser,
+            systemRole: null,
+            roleAssignments: [{ isPrimary: true, role: { code: "reviewer", label: "Reviewer", status: "active" } }],
+            organizationScopes: [{ isPrimary: true, organizationUnit: { id: "org-root", code: "HVQY", name: "Học viện Quân y", status: "active" } }]
+          };
+        }
+      }
+    });
+
+    assert.equal(await authStore.findUserById("user-1"), null);
   });
 
   it("DTO validation rejects invalid login payloads", () => {

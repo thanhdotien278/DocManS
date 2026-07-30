@@ -138,21 +138,18 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
 
   const canEdit = Boolean(proposal?.canEdit);
   const canSubmit = Boolean(proposal?.canSubmit);
-  // Record-scoped role resolved by the backend. Never inferred from account.role (UX-DR26).
+  // Record-scoped role resolved by the backend. Never inferred from an account system role (UX-DR26).
   const viewerParticipation = proposal?.viewerParticipation;
   const otherParticipationLabels = (viewerParticipation?.labels ?? []).slice(1);
   // Shown, not hidden, so a conflict-blocked action can explain itself (UX-DR27).
   const conflictMessage = viewerParticipation?.conflict?.conflicted ? viewerParticipation.conflict.message : "";
-  const canRequestSupplement = account?.role === "scientific-management" && proposal?.status === "submitted";
+  const canRequestSupplement = account?.systemRole === "SCIENTIFIC_MANAGEMENT_STAFF" && proposal?.status === "submitted";
   const isSupplementFlow = proposal?.status === "supplement_requested";
   // EP-03 panel visibility. These are render hints only — each panel resolves its own authority
-  // against the API and renders nothing when the viewer is not entitled to it. Both `role` and the
-  // `roles` array are checked, so an account that holds several system roles keeps every surface it
-  // is entitled to instead of only the one its primary role names.
-  const accountRoles = new Set([account?.role, ...(account?.roles ?? [])].filter(Boolean));
-  const showEvaluationPanel = accountRoles.has("scientific-management");
+  // against the API and renders nothing when the viewer is not entitled to it.
+  const showEvaluationPanel = account?.systemRole === "SCIENTIFIC_MANAGEMENT_STAFF";
   const showReviewForm = Boolean(proposal?.viewerReviewAssignment?.isAssignedReviewer);
-  const showDecisionPanel = accountRoles.has("leadership");
+  const showDecisionPanel = account?.systemRole === "LEADERSHIP_APPROVAL_AUTHORITY";
   const requirementOptions = proposal?.requiredPackage ?? [];
   const documentGroups = useMemo(
     () =>
