@@ -1,5 +1,5 @@
 # generated: 2026-07-29T17:30:00+07:00
-# last_updated: 2026-07-30T11:49:01+07:00
+# last_updated: 2026-07-30T13:15:00+07:00
 # project: DocManSystem
 # project_key: NOKEY
 # tracking_system: file-system
@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-07-30T11:49:01+07:00
+last_updated: 2026-07-30T13:15:00+07:00
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -30,7 +30,7 @@ development_status:
   1-2-dang-nhap-dang-xuat-va-quan-ly-phien-noi-bo: done
   1-3-quan-tri-vong-doi-tai-khoan-nguoi-dung: done
   1-4-mot-vai-tro-he-thong-pham-vi-to-chuc-va-chuyen-doi-du-lieu-cu: done
-  1-5-doi-mat-khau-va-dat-lai-mat-khau-co-kiem-soat: backlog
+  1-5-doi-mat-khau-va-dat-lai-mat-khau-co-kiem-soat: done
   1-6-quan-ly-danh-muc-va-cau-hinh-van-hanh-dung-chung: backlog
   1-7-hop-dong-phan-quyen-va-bo-danh-gia-policy-dung-chung: backlog
   1-8-capability-response-va-giao-dien-khong-suy-dien-quyen: backlog

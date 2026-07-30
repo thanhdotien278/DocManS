@@ -27,13 +27,14 @@ async function hasValidSession(request: NextRequest) {
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const isPublicRoute = pathname === "/login" || pathname === "/password-reset";
   const hasSessionCookie = Boolean(request.cookies.get(AUTH_SESSION_COOKIE)?.value);
 
-  if (!hasSessionCookie && pathname !== "/login") {
+  if (!hasSessionCookie && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (hasSessionCookie && pathname !== "/login" && !(await hasValidSession(request))) {
+  if (hasSessionCookie && !isPublicRoute && !(await hasValidSession(request))) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 

@@ -136,6 +136,13 @@ export async function updateAdminUser(
   });
 }
 
+export async function initiateAdminPasswordReset(userId: string) {
+  return requestJson<{ token: string; expiresAt: string }>(`/users/${userId}/password-reset`, {
+    method: "POST",
+    body: JSON.stringify({})
+  });
+}
+
 export async function loadCatalogItems(type?: string) {
   const query = type ? `?type=${encodeURIComponent(type)}` : "";
   const response = await requestJson<{ items: CatalogItem[] }>(`/catalogs${query}`);

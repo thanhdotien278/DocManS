@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import { PasswordService } from "../auth/password.service.js";
+import { AuthService } from "../auth/auth.service.js";
 import { SYSTEM_ROLES, type SafeUserContext, type SystemRole } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { readCode, readText } from "./admin-access.js";
@@ -41,7 +42,8 @@ export class AdminUsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
-    private readonly passwordService: PasswordService
+    private readonly passwordService: PasswordService,
+    private readonly authService?: AuthService
   ) {}
 
   async listUsers(input: ListUsersInput = {}) {
@@ -320,6 +322,13 @@ export class AdminUsersService {
 
   async setUserStatus(actor: SafeUserContext, userId: string, statusInput: unknown) {
     return this.updateUser(actor, userId, { status: statusInput });
+  }
+
+  async initiatePasswordReset(actor: SafeUserContext, userId: string, context: { ip?: string; userAgent?: string }) {
+    if (!this.authService) {
+      throw new BadRequestException({ message: "Dịch vụ đặt lại mật khẩu chưa sẵn sàng." });
+    }
+    return this.authService.initiatePasswordReset(actor, userId, context);
   }
 
   private readSystemRole(value: unknown): SystemRole {

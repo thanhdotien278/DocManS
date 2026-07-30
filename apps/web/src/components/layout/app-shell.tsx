@@ -12,7 +12,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { account, isLoading } = useSession();
 
-  if (pathname === "/login") {
+  if (pathname === "/login" || pathname === "/password-reset") {
     return <>{children}</>;
   }
 
@@ -61,6 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <p className="user-menu-meta">
                   {account.systemRoleLabel} - {account.unit}
                 </p>
+                <a className="button" href="/change-password">Đổi mật khẩu</a>
                 <LogoutButton />
               </div>
             </details>
