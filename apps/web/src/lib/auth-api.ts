@@ -66,6 +66,27 @@ export async function logoutSession() {
   }
 }
 
+export async function changePassword(currentPassword: string, newPassword: string) {
+  const response = await fetch(`${getApiBaseUrl()}/auth/change-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ currentPassword, newPassword })
+  });
+  const body = (await response.json().catch(() => ({}))) as { message?: string };
+  if (!response.ok) throw new Error(body.message ?? "Không thể đổi mật khẩu.");
+}
+
+export async function completePasswordReset(token: string, newPassword: string) {
+  const response = await fetch(`${getApiBaseUrl()}/auth/password-reset/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, newPassword })
+  });
+  const body = (await response.json().catch(() => ({}))) as { message?: string };
+  if (!response.ok) throw new Error(body.message ?? "Không thể đặt lại mật khẩu.");
+}
+
 export async function getCurrentUser() {
   try {
     const response = await fetch(`${getApiBaseUrl()}/auth/me`, {

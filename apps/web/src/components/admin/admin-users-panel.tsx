@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Edit3, Lock, Save, Search, Unlock, UserPlus, X } from "lucide-react";
+import { Edit3, KeyRound, Lock, Save, Search, Unlock, UserPlus, X } from "lucide-react";
 import {
   createAdminUser,
+  initiateAdminPasswordReset,
   loadAdminAccessData,
   updateAdminUser,
   updateAdminUserStatus,
@@ -40,6 +41,8 @@ export function AdminUsersPanel() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [filters, setFilters] = useState<UserFilterInput>({});
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [resetCredential, setResetCredential] = useState<{ username: string; token: string; expiresAt: string } | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   async function refresh(nextFilters = filters) {
     setState("loading");
@@ -163,6 +166,16 @@ export function AdminUsersPanel() {
     }
   }
 
+  async function handlePasswordReset(user: AdminUser) {
+    if (isResetting) return;
+    if (!window.confirm(`Khởi tạo mã đặt lại mật khẩu một lần cho ${user.username}? Mã sẽ chỉ hiển thị sau khi tạo.`)) return;
+    setFormError(""); setMessage("");
+    setIsResetting(true);
+    try { const result = await initiateAdminPasswordReset(user.id); setResetCredential({ username: user.username, ...result }); }
+    catch (error) { setFormError(error instanceof Error ? error.message : "Không thể khởi tạo đặt lại mật khẩu."); }
+    finally { setIsResetting(false); }
+  }
+
   async function handleEditUser(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editingUser) {
@@ -204,6 +217,7 @@ export function AdminUsersPanel() {
       >
         {state === "loading" ? <p className="state-message">Đang tải danh sách tài khoản...</p> : null}
         {state === "error" ? <p className="state-message error">Không thể tải dữ liệu quản trị tài khoản.</p> : null}
+        {resetCredential ? <div className="state-message success"><p>Mã một lần cho <strong>{resetCredential.username}</strong>, hết hạn {new Date(resetCredential.expiresAt).toLocaleString("vi-VN")}:</p><code>{resetCredential.token}</code><p>Chuyển mã qua kênh được phê duyệt; mã sẽ không hiển thị lại sau khi rời trang.</p><button className="button" type="button" onClick={() => setResetCredential(null)}>Đã sao chép an toàn</button></div> : null}
         <form className="filter-bar" onSubmit={(event) => void handleFilterSubmit(event)}>
           <label className="filter-field">
             <span>Tìm kiếm</span>
@@ -305,6 +319,7 @@ export function AdminUsersPanel() {
                             <Edit3 size={16} aria-hidden="true" />
                             Sửa
                           </button>
+                          <button className="button" type="button" onClick={() => void handlePasswordReset(user)}><KeyRound size={16} aria-hidden="true" />Đặt lại MK</button>
                           <button
                             className={user.status === "active" ? "button danger" : "button"}
                             type="button"
@@ -338,6 +353,7 @@ export function AdminUsersPanel() {
                       <Edit3 size={16} aria-hidden="true" />
                       Sửa
                     </button>
+                    <button className="button" type="button" onClick={() => void handlePasswordReset(user)}><KeyRound size={16} aria-hidden="true" />Đặt lại mật khẩu</button>
                     <button
                       className={user.status === "active" ? "button danger" : "button"}
                       type="button"

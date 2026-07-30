@@ -3,6 +3,7 @@ import { AuthService } from "./auth.service.js";
 import type { LoginRequest } from "./auth.types.js";
 import { LoginRequestPipe } from "./login-request.pipe.js";
 import { SessionAuthGuard } from "./session-auth.guard.js";
+import { ChangePasswordRequestPipe, CompletePasswordResetRequestPipe } from "./password-request.pipe.js";
 import {
   createExpiredSessionCookie,
   createSessionCookie,
@@ -45,6 +46,34 @@ export class AuthController {
   @UseGuards(SessionAuthGuard)
   me(@Req() request: any) {
     return { user: request.currentUser };
+  }
+
+  @Post("change-password")
+  @UseGuards(SessionAuthGuard)
+  async changePassword(@Body() body: unknown, @Req() request: any, @Res({ passthrough: true }) response: any) {
+    let input: { currentPassword: string; newPassword: string };
+    try {
+      input = new ChangePasswordRequestPipe().transform(body);
+    } catch (error) {
+      await this.authService.recordPasswordChangeFailure(request.currentUser.id, requestContext(request), "request_invalid");
+      throw error;
+    }
+    await this.authService.changePassword(request.currentUser.id, input, requestContext(request));
+    response.setHeader("Set-Cookie", createExpiredSessionCookie(process.env.NODE_ENV === "production"));
+    return { success: true };
+  }
+
+  @Post("password-reset/complete")
+  async completePasswordReset(@Body() body: unknown, @Req() request: any) {
+    let input: { token: string; newPassword: string };
+    try {
+      input = new CompletePasswordResetRequestPipe().transform(body);
+    } catch (error) {
+      await this.authService.recordPasswordResetFailure(requestContext(request), "request_invalid");
+      throw error;
+    }
+    await this.authService.completePasswordReset(input, requestContext(request));
+    return { success: true };
   }
 
   @Get("protected")

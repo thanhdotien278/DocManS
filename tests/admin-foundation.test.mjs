@@ -278,6 +278,20 @@ describe("admin foundation API behavior", () => {
     );
   });
 
+  it("password-reset initiation is restricted to system administrators and forwards request context", async () => {
+    const calls = [];
+    const controller = new AdminUsersController({
+      async initiatePasswordReset(actor, userId, context) {
+        calls.push({ actor, userId, context });
+        return { token: "one-time", expiresAt: "2026-07-30T00:30:00.000Z" };
+      }
+    });
+    await assert.rejects(() => controller.initiatePasswordReset({ currentUser: staffUser }, "user-1", {}), ForbiddenException);
+    const result = await controller.initiatePasswordReset({ currentUser: adminUser, ip: "127.0.0.1", headers: { "user-agent": "node-test" } }, "user-1", {});
+    assert.equal(result.token, "one-time");
+    assert.deepEqual(calls[0].context, { ip: "127.0.0.1", userAgent: "node-test" });
+  });
+
   it("accepts each canonical system role when creating a user", async () => {
     const prisma = createAdminPrisma();
     const auditLog = createAuditLog();

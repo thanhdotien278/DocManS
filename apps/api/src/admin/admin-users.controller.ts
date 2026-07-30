@@ -18,6 +18,7 @@ const updateUserPipe = adminRequestPipe({
   status: { maxLength: 40, optional: true }
 });
 const updateUserStatusPipe = adminRequestPipe({ status: { maxLength: 40 } });
+const passwordResetPipe = adminRequestPipe({});
 const createOrganizationUnitPipe = adminRequestPipe({
   code: { maxLength: 80 },
   name: { maxLength: 160 },
@@ -63,6 +64,13 @@ export class AdminUsersController {
   ) {
     const actor = assertSystemAdmin(request.currentUser);
     return { user: await this.usersService.setUserStatus(actor, id, body?.status) };
+  }
+
+  @Post(":id/password-reset")
+  async initiatePasswordReset(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body(passwordResetPipe) _body: Record<string, unknown>) {
+    const actor = assertSystemAdmin(request.currentUser);
+    const rawRequest = request as RequestWithCurrentUser & { ip?: string; headers?: Record<string, string | undefined> };
+    return this.usersService.initiatePasswordReset(actor, id, { ip: rawRequest.ip, userAgent: rawRequest.headers?.["user-agent"] });
   }
 }
 

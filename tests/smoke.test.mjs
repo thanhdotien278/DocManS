@@ -79,6 +79,7 @@ describe("workspace smoke checks", () => {
       "OrganizationUnit",
       "UserOrganizationScope",
       "Session",
+      "PasswordResetToken",
       "AuditLog",
       "CatalogItem",
       "SystemParameter",

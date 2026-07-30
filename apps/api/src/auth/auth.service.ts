@@ -1,9 +1,10 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { AuditLogService } from "./audit-log.service.js";
 import { AuthRateLimitService } from "./auth-rate-limit.service.js";
 import { AuthStore } from "./auth.store.js";
 import { PasswordService } from "./password.service.js";
 import { AUTH_FAILURE_MESSAGE, type LoginRequest } from "./auth.types.js";
+import { validateNewPassword } from "./password-request.pipe.js";
 
 const DUMMY_PASSWORD_HASH =
   "scrypt:rtms-dummy-user:96634051871e68281b278b3fd4750c99b588a7de2d52473164898e8c8bef8317235443d642c5ecb4b92a434ad6fad6909a16e0642697c58222e82b92e3437589";
@@ -98,6 +99,65 @@ export class AuthService {
 
   async listAuditLogs() {
     return this.auditLog.list();
+  }
+
+  async changePassword(userId: string, input: { currentPassword: string; newPassword: string }, context: RequestContext) {
+    const user = await this.authStore.findUserById(userId);
+    if (!user || !(await this.passwordService.verifyPassword(input.currentPassword, user.passwordHash))) {
+      await this.auditLog.record({ action: "change-password", result: "failure", actorId: userId, targetEntity: "user", targetEntityId: userId, ip: context.ip, userAgent: context.userAgent, reason: "current_password_invalid" });
+      throw new BadRequestException({ message: "Mật khẩu hiện tại không chính xác." });
+    }
+    try {
+      validateNewPassword(input.newPassword);
+    } catch (error) {
+      await this.recordPasswordChangeFailure(user.id, context, "new_password_policy_invalid");
+      throw error;
+    }
+    await this.authStore.changePassword(user.id, await this.passwordService.hashPassword(input.newPassword));
+    await this.auditLog.record({ action: "change-password", result: "success", actorId: user.id, targetEntity: "user", targetEntityId: user.id, username: user.username, ip: context.ip, userAgent: context.userAgent });
+  }
+
+  async initiatePasswordReset(actor: { id: string; username: string }, userId: string, context: RequestContext) {
+    const user = await this.authStore.findUserById(userId);
+    if (!user) {
+      await this.auditLog.record({ action: "initiate-password-reset", result: "failure", actorId: actor.id, targetEntity: "user", targetEntityId: userId, username: actor.username, ip: context.ip, userAgent: context.userAgent, reason: "target_not_found_or_unavailable" });
+      throw new BadRequestException({ message: "Không tìm thấy người dùng cần đặt lại mật khẩu." });
+    }
+    const reset = this.passwordService.createResetToken();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    await this.authStore.createPasswordResetToken(user.id, actor.id, reset.tokenHash, expiresAt);
+    await this.auditLog.record({ action: "initiate-password-reset", result: "success", actorId: actor.id, targetEntity: "user", targetEntityId: user.id, username: actor.username, ip: context.ip, userAgent: context.userAgent });
+    return { token: reset.token, expiresAt: expiresAt.toISOString() };
+  }
+
+  async completePasswordReset(input: { token: string; newPassword: string }, context: RequestContext) {
+    const rateLimitKey = `password-reset:${context.ip ?? "unknown"}`;
+    this.rateLimit.assertCanAttempt(rateLimitKey);
+    try {
+      validateNewPassword(input.newPassword);
+    } catch (error) {
+      await this.recordPasswordResetFailure(context, "new_password_policy_invalid");
+      throw error;
+    }
+    const userId = await this.authStore.completePasswordReset(
+      this.passwordService.hashResetToken(input.token),
+      await this.passwordService.hashPassword(input.newPassword)
+    );
+    if (!userId) {
+      this.rateLimit.recordFailure(rateLimitKey);
+      await this.recordPasswordResetFailure(context, "invalid_or_expired");
+      throw new BadRequestException({ message: "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn." });
+    }
+    this.rateLimit.reset(rateLimitKey);
+    await this.auditLog.record({ action: "complete-password-reset", result: "success", actorId: userId, targetEntity: "user", targetEntityId: userId, ip: context.ip, userAgent: context.userAgent });
+  }
+
+  async recordPasswordChangeFailure(userId: string, context: RequestContext, reason: string) {
+    await this.auditLog.record({ action: "change-password", result: "failure", actorId: userId, targetEntity: "user", targetEntityId: userId, ip: context.ip, userAgent: context.userAgent, reason });
+  }
+
+  async recordPasswordResetFailure(context: RequestContext, reason: string) {
+    await this.auditLog.record({ action: "complete-password-reset", result: "failure", targetEntity: "password-reset", targetEntityId: "unknown", ip: context.ip, userAgent: context.userAgent, reason });
   }
 
   private createRateLimitKey(username: string, ip?: string) {

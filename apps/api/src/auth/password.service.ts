@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 
 const scrypt = promisify(scryptCallback);
@@ -8,6 +8,15 @@ const SCRYPT_HEX_LENGTH = KEY_LENGTH * 2;
 
 @Injectable()
 export class PasswordService {
+  createResetToken() {
+    const token = randomBytes(32).toString("base64url");
+    return { token, tokenHash: this.hashResetToken(token) };
+  }
+
+  hashResetToken(token: string) {
+    return createHash("sha256").update(token).digest("hex");
+  }
+
   async hashPassword(password: string, salt = randomBytes(16).toString("hex")) {
     const derivedKey = (await scrypt(password, salt, KEY_LENGTH)) as Buffer;
     return `scrypt:${salt}:${derivedKey.toString("hex")}`;

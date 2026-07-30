@@ -8,6 +8,7 @@ import { AuthService } from "../dist/apps/api/auth/auth.service.js";
 import { AuthStore } from "../dist/apps/api/auth/auth.store.js";
 import { LoginRequestPipe } from "../dist/apps/api/auth/login-request.pipe.js";
 import { PasswordService } from "../dist/apps/api/auth/password.service.js";
+import { ChangePasswordRequestPipe, CompletePasswordResetRequestPipe } from "../dist/apps/api/auth/password-request.pipe.js";
 import { SessionAuthGuard } from "../dist/apps/api/auth/session-auth.guard.js";
 import { readSessionCookie } from "../dist/apps/api/auth/session-cookie.js";
 
@@ -39,6 +40,8 @@ function createAuthStore({ user = activeUser, activeSession = { id: "session-1",
   return {
     createdSessions: [],
     revokedSessions: [],
+    passwordChanges: [],
+    resetTokens: [],
     findUserByUsernameCalls: 0,
     async findUserByUsername(username) {
       this.findUserByUsernameCalls += 1;
@@ -58,6 +61,15 @@ function createAuthStore({ user = activeUser, activeSession = { id: "session-1",
     },
     async getActiveSession(sessionId) {
       return sessionId === activeSession?.id ? activeSession : null;
+    },
+    async changePassword(userId, passwordHash) {
+      this.passwordChanges.push({ userId, passwordHash });
+    },
+    async createPasswordResetToken(userId, createdById, tokenHash, expiresAt) {
+      this.resetTokens.push({ userId, createdById, tokenHash, expiresAt });
+    },
+    async completePasswordReset() {
+      return "user-1";
     },
     toSafeUser: safeUser
   };
@@ -82,6 +94,15 @@ function createPasswordService(isValid = true) {
     async verifyPassword() {
       this.verifyPasswordCalls += 1;
       return isValid;
+    },
+    async hashPassword(password) {
+      return `hash:${password}`;
+    },
+    createResetToken() {
+      return { token: "raw-reset-token", tokenHash: "hashed-reset-token" };
+    },
+    hashResetToken(token) {
+      return `digest:${token}`;
     }
   };
 }
@@ -212,7 +233,8 @@ describe("auth API behavior", () => {
     const middlewareSource = readFileSync("apps/web/src/middleware.ts", "utf8");
 
     assert.equal(/hasSessionCookie\s*&&\s*pathname\s*===\s*["']\/login["']/.test(middlewareSource), false);
-    assert.match(middlewareSource, /!hasSessionCookie && pathname !== "\/login"/);
+    assert.match(middlewareSource, /pathname === "\/password-reset"/);
+    assert.match(middlewareSource, /!hasSessionCookie && !isPublicRoute/);
     assert.match(middlewareSource, /hasValidSession/);
     assert.match(middlewareSource, /\/auth\/me/);
     assert.match(middlewareSource, /API_INTERNAL_BASE_URL/);
@@ -339,6 +361,90 @@ describe("auth API behavior", () => {
         name: "BadRequestException"
       });
     }
+  });
+
+  it("password-change validation and service reject invalid current credentials without mutation", async () => {
+    const pipe = new ChangePasswordRequestPipe();
+    assert.throws(() => pipe.transform({ currentPassword: "x", newPassword: "short" }), { name: "BadRequestException" });
+    const { service, store, auditLog } = createService({ passwordIsValid: false });
+    await assert.rejects(() => service.changePassword("user-1", { currentPassword: "wrong", newPassword: "ValidPassword1" }, {}), HttpException);
+    assert.deepEqual(store.passwordChanges, []);
+    assert.equal(auditLog.records.at(-1).action, "change-password");
+  });
+
+  it("successful password change invalidates server-side credentials and audits without secrets", async () => {
+    const { service, store, auditLog } = createService();
+    await service.changePassword("user-1", { currentPassword: "correct", newPassword: "ValidPassword1" }, {});
+    assert.deepEqual(store.passwordChanges, [{ userId: "user-1", passwordHash: "hash:ValidPassword1" }]);
+    const record = auditLog.records.at(-1);
+    assert.equal(record.action, "change-password");
+    assert.equal(JSON.stringify(record).includes("ValidPassword1"), false);
+  });
+
+  it("change-password controller clears the caller cookie and audits invalid request input", async () => {
+    const { service, auditLog } = createService();
+    const controller = new AuthController(service);
+    const response = createResponse();
+    const result = await controller.changePassword(
+      { currentPassword: "correct", newPassword: "ValidPassword1" },
+      { currentUser: safeUser(), headers: {}, ip: "127.0.0.1" },
+      response
+    );
+    assert.deepEqual(result, { success: true });
+    assert.match(response.headers["Set-Cookie"], /Max-Age=0/);
+    await assert.rejects(() => controller.changePassword({ currentPassword: "x", newPassword: "short" }, { currentUser: safeUser(), headers: {} }, createResponse()));
+    assert.equal(auditLog.records.at(-1).reason, "request_invalid");
+  });
+
+  it("reset completion validates the token shape, consumes a digest, and never audits the raw token", async () => {
+    const pipe = new CompletePasswordResetRequestPipe();
+    assert.throws(() => pipe.transform({ token: "", newPassword: "ValidPassword1" }), { name: "BadRequestException" });
+    const { service, store, auditLog } = createService();
+    await service.completePasswordReset({ token: "raw-reset-token", newPassword: "ValidPassword1" }, {});
+    assert.equal(store.passwordChanges.length, 0);
+    assert.equal(auditLog.records.at(-1).action, "complete-password-reset");
+    assert.equal(JSON.stringify(auditLog.records.at(-1)).includes("raw-reset-token"), false);
+  });
+
+  it("admin reset initiation stores only a digest with a 30-minute expiry and does not audit secrets", async () => {
+    const { service, store, auditLog } = createService();
+    const result = await service.initiatePasswordReset({ id: "admin-1", username: "admin" }, "user-1", {});
+    assert.equal(result.token, "raw-reset-token");
+    assert.equal(store.resetTokens.length, 1);
+    assert.equal(store.resetTokens[0].tokenHash, "hashed-reset-token");
+    assert.equal(JSON.stringify(auditLog.records.at(-1)).includes("raw-reset-token"), false);
+    assert.ok(new Date(store.resetTokens[0].expiresAt).getTime() - Date.now() <= 30 * 60 * 1000);
+  });
+
+  it("auth store consumes a valid reset token only once before changing credentials", async () => {
+    let used = false;
+    const writes = [];
+    const tx = {
+      passwordResetToken: {
+        async findFirst() { return used ? null : { id: "reset-1", userId: "user-1" }; },
+        async updateMany({ data }) { if (data.usedAt && !used) { used = true; return { count: 1 }; } return { count: 0 }; }
+      },
+      user: { async update(input) { writes.push(input); } },
+      session: { async updateMany(input) { writes.push(input); } }
+    };
+    const store = new AuthStore({ $transaction: async (callback) => callback(tx) });
+    assert.equal(await store.completePasswordReset("digest", "new-hash"), "user-1");
+    assert.equal(await store.completePasswordReset("digest", "new-hash"), null);
+    assert.equal(writes.length, 2);
+  });
+
+  it("auth store revokes all sessions and outstanding reset tokens when a password changes", async () => {
+    const writes = [];
+    const tx = {
+      user: { async update(input) { writes.push(input); } },
+      session: { async updateMany(input) { writes.push(input); } },
+      passwordResetToken: { async updateMany(input) { writes.push(input); } }
+    };
+    const store = new AuthStore({ $transaction: async (callback) => callback(tx) });
+    await store.changePassword("user-1", "new-hash");
+    assert.deepEqual(writes[0], { where: { id: "user-1" }, data: { passwordHash: "new-hash" } });
+    assert.deepEqual(writes[1].where, { userId: "user-1", revokedAt: null });
+    assert.deepEqual(writes[2].where, { userId: "user-1", usedAt: null });
   });
 
   it("oversized login credentials are rejected before auth lookup or hash verification", async () => {

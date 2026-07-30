@@ -69,6 +69,43 @@ export class AuthStore {
     return this.toAuthSession(revokedSession);
   }
 
+  async changePassword(userId: string, passwordHash: string) {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: userId }, data: { passwordHash } });
+      await tx.session.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
+      await tx.passwordResetToken.updateMany({ where: { userId, usedAt: null }, data: { usedAt: new Date() } });
+    });
+  }
+
+  async createPasswordResetToken(userId: string, createdById: string, tokenHash: string, expiresAt: Date) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.passwordResetToken.updateMany({ where: { userId, usedAt: null }, data: { usedAt: new Date() } });
+      return tx.passwordResetToken.create({ data: { userId, createdById, tokenHash, expiresAt } });
+    });
+  }
+
+  async completePasswordReset(tokenHash: string, passwordHash: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const token = await tx.passwordResetToken.findFirst({
+        where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } }
+      });
+      if (!token) {
+        return null;
+      }
+      const consumed = await tx.passwordResetToken.updateMany({
+        where: { id: token.id, usedAt: null, expiresAt: { gt: new Date() } },
+        data: { usedAt: new Date() }
+      });
+      if (consumed.count !== 1) {
+        return null;
+      }
+      await tx.user.update({ where: { id: token.userId }, data: { passwordHash } });
+      await tx.session.updateMany({ where: { userId: token.userId, revokedAt: null }, data: { revokedAt: new Date() } });
+      await tx.passwordResetToken.updateMany({ where: { userId: token.userId, usedAt: null }, data: { usedAt: new Date() } });
+      return token.userId;
+    });
+  }
+
   async getActiveSession(sessionId: string) {
     const session = await this.prisma.session.findFirst({
       where: {
