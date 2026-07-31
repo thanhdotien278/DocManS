@@ -215,6 +215,9 @@ model ResearchProposal {
   submittedAt            DateTime?                 @map("submitted_at")
   submittedById          String?                   @map("submitted_by_id")
   submittedBy            User?                     @relation("ProposalSubmitter", fields: [submittedById], references: [id])
+  authorizationRelationshipVersion Int             @default(0) @map("authorization_relationship_version")
+  authorizationConflictVersion     Int             @default(0) @map("authorization_conflict_version")
+  authorizationContextUpdatedAt    DateTime        @default(now()) @map("authorization_context_updated_at")
   createdAt              DateTime                  @default(now()) @map("created_at")
   updatedAt              DateTime                  @updatedAt @map("updated_at")
   members                ProposalMember[]

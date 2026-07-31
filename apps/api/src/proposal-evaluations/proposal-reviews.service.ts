@@ -168,6 +168,14 @@ export class ProposalReviewsService {
         data: { status: "completed", completedAt: submittedAt } as never
       });
 
+      await tx.researchProposal.update({
+        where: { id: proposalId },
+        data: {
+          authorizationRelationshipVersion: { increment: 1 },
+          authorizationContextUpdatedAt: submittedAt
+        } as never
+      });
+
       // AC-ST-3.3-03: staff read review completion from the proposal timeline, so the submission is
       // a workflow event and not only a row in proposal_reviews.
       await tx.proposalSubmissionEvent.create({

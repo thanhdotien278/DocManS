@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Eye, FileText, Plus, Save, Search } from "lucide-react";
 import { useSession } from "@/components/auth/session-provider";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ParticipationBadge } from "@/components/ui/participation-badge";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { loadProposalIntakePeriods, type ProposalIntakePeriod } from "@/lib/proposal-intake-periods-api";
@@ -27,6 +26,10 @@ function todayInput(offsetDays = 0) {
   const date = new Date();
   date.setDate(date.getDate() + offsetDays);
   return date.toISOString().slice(0, 10);
+}
+
+function relationshipLabel(type: string) {
+  return { PROPOSAL_PI: "Chủ nhiệm", PROPOSAL_MEMBER: "Thành viên", PROPOSAL_SCIENTIFIC_SECRETARY: "Thư ký", REVIEWER_ASSIGNMENT: "Người phản biện" }[type] ?? type;
 }
 
 function defaultForm(hostOrganizationUnitId = ""): ProposalDraftInput {
@@ -202,10 +205,9 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
                         <span className="record-meta">{proposal.code || proposal.id}</span>
                       </td>
                       <td>
-                        <ParticipationBadge
-                          role={proposal.viewerParticipation?.role}
-                          label={proposal.viewerParticipation?.label}
-                        />
+                        {(proposal.viewerAuthorization?.viewerRelationships ?? []).map((relationship) => (
+                          <span className="status-badge info" key={relationship.type}>{relationshipLabel(relationship.type)}</span>
+                        ))}
                       </td>
                       <td>{intakes.find((intake) => intake.id === proposal.intakePeriodId)?.title ?? proposal.intakePeriodId}</td>
                       <td>
@@ -240,7 +242,9 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
                     </div>
                     <StatusBadge status={proposal.status} />
                   </div>
-                  <ParticipationBadge role={proposal.viewerParticipation?.role} label={proposal.viewerParticipation?.label} />
+                  {(proposal.viewerAuthorization?.viewerRelationships ?? []).map((relationship) => (
+                    <span className="status-badge info" key={relationship.type}>{relationshipLabel(relationship.type)}</span>
+                  ))}
                   <span className="record-meta">
                     {formatDate(proposal.startDate)} - {formatDate(proposal.endDate)}
                   </span>

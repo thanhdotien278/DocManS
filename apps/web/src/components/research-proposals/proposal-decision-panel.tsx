@@ -18,7 +18,7 @@ function formatDate(value: string) {
  * workflow trail behind them. A conflict is shown with its reason rather than silently hiding the
  * buttons (UX-DR27), and the backend re-checks authority, state and conflict on the action itself.
  */
-export function ProposalDecisionPanel({ proposalId, onDecision }: { proposalId: string; onDecision: () => void }) {
+export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, blockedReason }: { proposalId: string; onDecision: () => void; canDecide: boolean; blockedReason: string }) {
   const [decisionPackage, setDecisionPackage] = useState<ProposalDecisionPackage | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
   const [loadError, setLoadError] = useState("");
@@ -55,7 +55,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision }: { proposalId: 
   }
 
   if (state === "forbidden" || !decisionPackage) {
-    return null;
+    return <SectionCard title="Hồ sơ trình phê duyệt" subtitle="Quyết định phê duyệt hoặc từ chối"><button className="button primary" type="button" disabled title={blockedReason}>Phê duyệt</button><p className="record-meta">{blockedReason}</p></SectionCard>;
   }
 
   const { conflict, evaluationSummary, progress } = decisionPackage;
@@ -189,7 +189,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision }: { proposalId: 
             maxLength={2000}
             value={note}
             onChange={(event) => setNote(event.target.value)}
-            disabled={!decisionPackage.canDecide}
+            disabled={!canDecide || !decisionPackage.canDecide}
           />
         </label>
 
@@ -200,7 +200,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision }: { proposalId: 
           <button
             className="button primary"
             type="button"
-            disabled={!decisionPackage.canDecide || busyDecision !== ""}
+            disabled={!canDecide || !decisionPackage.canDecide || busyDecision !== ""}
             onClick={() => void handleDecide("approve")}
           >
             <CheckCircle2 size={16} aria-hidden="true" />
@@ -209,16 +209,16 @@ export function ProposalDecisionPanel({ proposalId, onDecision }: { proposalId: 
           <button
             className="button danger"
             type="button"
-            disabled={!decisionPackage.canDecide || busyDecision !== ""}
+            disabled={!canDecide || !decisionPackage.canDecide || busyDecision !== ""}
             onClick={() => void handleDecide("reject")}
           >
             <XCircle size={16} aria-hidden="true" />
             {busyDecision === "reject" ? "Đang xử lý" : "Không phê duyệt"}
           </button>
         </div>
-        {!decisionPackage.canDecide && !conflict.conflicted ? (
+        {(!canDecide || !decisionPackage.canDecide) ? (
           <p className="record-meta">
-            Hồ sơ đang ở trạng thái &quot;{decisionPackage.proposalStatusLabel}&quot; nên chưa thể ra quyết định phê duyệt.
+            {blockedReason || `Hồ sơ đang ở trạng thái "${decisionPackage.proposalStatusLabel}" nên chưa thể ra quyết định phê duyệt.`}
           </p>
         ) : null}
       </form>

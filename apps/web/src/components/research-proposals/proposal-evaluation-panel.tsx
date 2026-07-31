@@ -32,7 +32,7 @@ function formatDueDate(value: string) {
  * Actions are shown whenever the viewer is staff and only disabled by workflow state, so a blocked
  * control explains itself instead of disappearing (UX-DR27). The backend remains authoritative.
  */
-export function ProposalEvaluationPanel({ proposalId, onWorkflowChange }: { proposalId: string; onWorkflowChange: () => void }) {
+export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssignReviewers, canConsolidate, blockedReason }: { proposalId: string; onWorkflowChange: () => void; canAssignReviewers: boolean; canConsolidate: boolean; blockedReason: string }) {
   const [progress, setProgress] = useState<ProposalReviewProgress | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
   const [loadError, setLoadError] = useState("");
@@ -88,11 +88,10 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange }: { prop
   }
 
   if (state === "forbidden" || !progress) {
-    return null;
+    return <SectionCard title="Phân công đánh giá" subtitle="Người phản biện và thành viên hội đồng"><button className="button primary" type="button" disabled title={blockedReason}>Phân công người đánh giá</button><p className="record-meta">{blockedReason}</p></SectionCard>;
   }
 
-  const canAssign = ["submitted", "resubmitted", "under_review"].includes(progress.proposalStatus);
-  const canConsolidate = ["under_review", "ready_for_approval"].includes(progress.proposalStatus);
+  const canAssign = canAssignReviewers;
   const isReadyForApproval = progress.evaluationSummary?.status === "ready_for_approval";
 
   async function handleAssign(event: React.FormEvent<HTMLFormElement>) {

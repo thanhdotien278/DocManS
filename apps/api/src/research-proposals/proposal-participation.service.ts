@@ -13,11 +13,13 @@ type ParticipationMemberRecord = {
   proposalId: string;
   userId: string | null;
   participationRole: string | null;
+  createdAt: Date;
 };
 
 type ProposalOwnerRecord = {
   id: string;
   ownerId: string;
+  createdAt: Date;
 };
 
 /**
@@ -34,8 +36,8 @@ export class ProposalParticipationService {
   /** Resolves one user's participation on one proposal. Pass `members` to avoid a second query. */
   async resolveForProposal(
     userId: string | undefined,
-    proposal: { id: string; ownerId: string },
-    members?: Array<{ userId?: string | null; participationRole?: string | null }>
+    proposal: { id: string; ownerId: string; createdAt: Date },
+    members?: Array<{ userId?: string | null; participationRole?: string | null; createdAt?: Date | null }>
   ): Promise<ProposalParticipation> {
     const participationMembers = members ?? (await this.findMembers([proposal.id]));
 
@@ -102,7 +104,7 @@ export class ProposalParticipationService {
     try {
       proposal = (await this.prisma.researchProposal.findUnique({
         where: { id: proposalId },
-        select: { id: true, ownerId: true }
+        select: { id: true, ownerId: true, createdAt: true }
       })) as ProposalOwnerRecord | null;
     } catch {
       return evaluateProposalConflict(null);

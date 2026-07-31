@@ -171,6 +171,9 @@ function createEp02Prisma() {
           status: "draft",
           submittedAt: null,
           submittedById: null,
+          authorizationRelationshipVersion: 0,
+          authorizationConflictVersion: 0,
+          authorizationContextUpdatedAt: new Date(),
           createdAt: new Date(),
           updatedAt: new Date(),
           ...data
@@ -183,7 +186,11 @@ function createEp02Prisma() {
         if (index < 0) {
           throw new Error("proposal not found");
         }
-        store.proposals[index] = { ...store.proposals[index], ...data, updatedAt: new Date() };
+        const current = store.proposals[index];
+        const values = Object.fromEntries(
+          Object.entries(data).map(([key, value]) => [key, value && typeof value === "object" && "increment" in value ? current[key] + value.increment : value])
+        );
+        store.proposals[index] = { ...current, ...values, updatedAt: new Date() };
         return store.proposals[index];
       },
       async findUnique({ where }) {

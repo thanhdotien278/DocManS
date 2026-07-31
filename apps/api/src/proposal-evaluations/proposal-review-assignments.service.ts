@@ -136,6 +136,14 @@ export class ProposalReviewAssignmentsService {
           include: ASSIGNMENT_INCLUDE
         })) as ReviewAssignmentRecord;
 
+        await tx.researchProposal.update({
+          where: { id: proposalId },
+          data: {
+            authorizationRelationshipVersion: { increment: 1 },
+            authorizationContextUpdatedAt: assignedAt
+          } as never
+        });
+
         // The first assignment is what opens the evaluation phase; later ones join a proposal that is
         // already under review and must not rewrite its status.
         if (movesToUnderReview) {
@@ -205,6 +213,14 @@ export class ProposalReviewAssignmentsService {
         data: { status: REVIEW_ASSIGNMENT_STATUS.revoked, revokedAt } as never,
         include: ASSIGNMENT_INCLUDE
       })) as ReviewAssignmentRecord;
+
+      await tx.researchProposal.update({
+        where: { id: proposalId },
+        data: {
+          authorizationRelationshipVersion: { increment: 1 },
+          authorizationContextUpdatedAt: revokedAt
+        } as never
+      });
 
       await tx.auditLog.create({
         data: {

@@ -64,6 +64,7 @@ export type ReviewAssignmentLike = {
   id: string;
   status: string;
   assignmentRole?: string | null;
+  assignedAt?: Date | null;
 };
 
 export type ProposalReviewAccess = {
@@ -72,12 +73,14 @@ export type ProposalReviewAccess = {
   /** The active assignment, if any. Reviews are written against this id, never against a user id. */
   assignmentId: string;
   assignmentRole: ReviewAssignmentRole | "none";
+  effectiveFrom: string;
 };
 
 const NO_REVIEW_ACCESS: ProposalReviewAccess = {
   isAssignedReviewer: false,
   assignmentId: "",
-  assignmentRole: "none"
+  assignmentRole: "none",
+  effectiveFrom: ""
 };
 
 export function normalizeAssignmentRole(value: unknown): ReviewAssignmentRole {
@@ -118,7 +121,8 @@ export function resolveProposalReviewAccess(assignments?: ReviewAssignmentLike[]
   return {
     isAssignedReviewer: true,
     assignmentId: active.id,
-    assignmentRole: normalizeAssignmentRole(active.assignmentRole)
+    assignmentRole: normalizeAssignmentRole(active.assignmentRole),
+    effectiveFrom: active.assignedAt?.toISOString() ?? ""
   };
 }
 

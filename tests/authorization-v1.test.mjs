@@ -7,7 +7,8 @@ import {
   runAuthorizedMutationV1
 } from "../dist/apps/api/permissions/authorization-v1.service.js";
 import { evaluateAuthorizationV1 as evaluateFromExistingPolicySeam } from "../dist/apps/api/permissions/permission-policy.js";
-import { isPermissionActionV1 } from "../packages/permissions/src/index.js";
+import { projectProposalViewerAuthorizationV1 } from "../dist/apps/api/permissions/proposal-capability-v1.js";
+import { isPermissionActionV1, isViewerAuthorizationV1 } from "../packages/permissions/src/index.js";
 
 const base = {
   requestId: "request-1",
@@ -20,6 +21,125 @@ const dimensions = ["systemRole", "organizationScope", "relationship", "assignme
 const resolvers = (overrides = {}) => ({
   ...Object.fromEntries(dimensions.map((dimension) => [dimension, async () => ({ dimension, resolution: "RESOLVED_VALUE", allowed: true, reason: `${dimension} grants.` })])),
   ...overrides
+});
+
+describe("Story 1.8 viewer capability V1", () => {
+  const actor = { id: "user-1", username: "researcher", systemRole: "RESEARCHER_INTERNAL_USER", organizationScopes: [{ id: "org-1" }] };
+  const proposal = {
+    id: "proposal-1",
+    hostOrganizationUnitId: "org-1",
+    status: "draft",
+    updatedAt: new Date("2026-07-31T00:00:00.000Z"),
+    authorizationContextUpdatedAt: new Date("2026-07-31T01:00:00.000Z"),
+    authorizationRelationshipVersion: 7,
+    authorizationConflictVersion: 3
+  };
+
+  it("preserves every viewer relationship and returns canonical exact actions", () => {
+    const capability = projectProposalViewerAuthorizationV1({
+      actor,
+      proposal,
+      canRead: true,
+      canEdit: true,
+      canManageFiles: true,
+      participation: {
+        role: "principal-investigator",
+        label: "Chủ nhiệm",
+        roles: ["principal-investigator", "member"],
+        labels: [],
+        isOwner: true,
+        isParticipant: true,
+        relationshipEffectiveFrom: {
+          "principal-investigator": "2026-07-01T00:00:00.000Z",
+          member: "2026-07-02T00:00:00.000Z"
+        }
+      },
+      reviewAccess: {
+        isAssignedReviewer: true,
+        assignmentId: "assignment-1",
+        assignmentRole: "reviewer",
+        effectiveFrom: "2026-07-03T00:00:00.000Z"
+      }
+    });
+    assert.equal(isViewerAuthorizationV1(capability), true);
+    assert.deepEqual(capability.viewerRelationships.map((relationship) => relationship.type), ["PROPOSAL_MEMBER", "PROPOSAL_PI", "REVIEWER_ASSIGNMENT"]);
+    assert.deepEqual(capability.allowedActions, [...capability.allowedActions].sort());
+    assert.equal(capability.blockedActions.find((item) => item.action === "proposal.review.submit")?.code, "CONFLICT_DENIED");
+    assert.equal(capability.evaluatedAsOf, proposal.authorizationContextUpdatedAt.toISOString());
+    assert.equal(capability.contextVersion.relationshipVersion, 7);
+    assert.equal(capability.contextVersion.conflictVersion, 3);
+    assert.deepEqual(capability.viewerRelationships.map((relationship) => relationship.effectiveFrom), [
+      "2026-07-02T00:00:00.000Z",
+      "2026-07-01T00:00:00.000Z",
+      "2026-07-03T00:00:00.000Z"
+    ]);
+  });
+
+  it("fails closed when a client receives an unsupported capability version or action", () => {
+    const valid = projectProposalViewerAuthorizationV1({
+      actor,
+      proposal,
+      canRead: true,
+      canEdit: true,
+      canManageFiles: true,
+      participation: {
+        role: "principal-investigator",
+        label: "Chủ nhiệm",
+        roles: ["principal-investigator"],
+        labels: [],
+        isOwner: true,
+        isParticipant: true,
+        relationshipEffectiveFrom: { "principal-investigator": "2026-07-01T00:00:00.000Z" }
+      }
+    });
+    assert.equal(isViewerAuthorizationV1({ ...valid, schemaVersion: "v2" }), false);
+    assert.equal(isViewerAuthorizationV1({ ...valid, allowedActions: ["proposal.*"] }), false);
+  });
+
+  it("rejects overlapping actions and non-canonical viewer relationships", () => {
+    const valid = projectProposalViewerAuthorizationV1({ actor, proposal, canRead: true, canEdit: true, canManageFiles: true });
+    const firstAction = valid.allowedActions[0];
+    assert.equal(isViewerAuthorizationV1({ ...valid, blockedActions: [{ action: firstAction, code: "ACTION_NOT_GRANTED", reason: "Không được phép." }] }), false);
+    assert.equal(isViewerAuthorizationV1({
+      ...valid,
+      viewerRelationships: [
+        { type: "PROPOSAL_PI", status: "ACTIVE", effectiveFrom: "2026-07-01T00:00:00.000Z", effectiveUntil: null },
+        { type: "PROPOSAL_MEMBER", status: "ACTIVE", effectiveFrom: "2026-07-02T00:00:00.000Z", effectiveUntil: null }
+      ]
+    }), false);
+  });
+
+  it("projects conflict blocks that match review consolidation, decision, and supplement backend guards", () => {
+    const participant = {
+      role: "member",
+      label: "Thành viên",
+      roles: ["member"],
+      labels: ["Thành viên"],
+      isOwner: false,
+      isParticipant: true,
+      relationshipEffectiveFrom: { member: "2026-07-01T00:00:00.000Z" }
+    };
+    const staffCapability = projectProposalViewerAuthorizationV1({
+      actor: { ...actor, systemRole: "SCIENTIFIC_MANAGEMENT_STAFF" },
+      proposal: { ...proposal, status: "under_review" },
+      participation: participant,
+      canRead: true,
+      canEdit: false,
+      canManageFiles: false
+    });
+    assert.equal(staffCapability.blockedActions.find((item) => item.action === "proposal.review.consolidate")?.code, "CONFLICT_DENIED");
+    assert.equal(staffCapability.blockedActions.find((item) => item.action === "proposal.supplement.request")?.code, "WORKFLOW_STATE_DENIED");
+
+    const authorityCapability = projectProposalViewerAuthorizationV1({
+      actor: { ...actor, systemRole: "LEADERSHIP_APPROVAL_AUTHORITY" },
+      proposal: { ...proposal, status: "ready_for_approval" },
+      reviewAccess: { isAssignedReviewer: true, assignmentId: "assignment-1", assignmentRole: "reviewer", effectiveFrom: "2026-07-01T00:00:00.000Z" },
+      canRead: true,
+      canEdit: false,
+      canManageFiles: false
+    });
+    assert.equal(authorityCapability.blockedActions.find((item) => item.action === "proposal.decision.approve")?.code, "CONFLICT_DENIED");
+  });
 });
 
 describe("Story 1.7 authorization V1", () => {

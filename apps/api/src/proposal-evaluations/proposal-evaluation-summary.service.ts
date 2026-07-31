@@ -156,6 +156,13 @@ export class ProposalEvaluationSummaryService {
           where: { proposalId, status: REVIEW_ASSIGNMENT_STATUS.assigned },
           data: { status: REVIEW_ASSIGNMENT_STATUS.completed, completedAt: now } as never
         });
+        await tx.researchProposal.update({
+          where: { id: proposalId },
+          data: {
+            authorizationRelationshipVersion: { increment: 1 },
+            authorizationContextUpdatedAt: now
+          } as never
+        });
 
         await tx.proposalSubmissionEvent.create({
           data: {

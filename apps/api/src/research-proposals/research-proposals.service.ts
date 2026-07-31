@@ -24,6 +24,7 @@ import { ProposalReviewAccessService } from "../proposals-shared/proposal-review
 import { PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import type { ProposalMemberPersistInput, ProposalMissingItem } from "../proposals-shared/proposal-types.js";
 import { ProposalParticipationService } from "./proposal-participation.service.js";
+import { projectProposalViewerAuthorizationV1 } from "../permissions/proposal-capability-v1.js";
 import {
   assertDateRange,
   normalizeRequiredPackage,
@@ -64,6 +65,9 @@ type ResearchProposalRecord = {
   status: string;
   submittedAt: Date | null;
   submittedById: string | null;
+  authorizationRelationshipVersion: number;
+  authorizationConflictVersion: number;
+  authorizationContextUpdatedAt: Date;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -185,7 +189,7 @@ export class ResearchProposalsService {
     // Account resolution runs before the write so an unknown account rejects the whole create
     // rather than leaving a committed draft behind with no audit entry.
     const resolvedMembers = members?.length ? await this.participation.resolveMemberAccounts(members) : undefined;
-    const proposal = (await this.prisma.researchProposal.create({
+    let proposal = (await this.prisma.researchProposal.create({
       data: {
         intakePeriodId,
         ownerId: pi.id,
@@ -204,6 +208,7 @@ export class ResearchProposalsService {
 
     if (resolvedMembers?.length) {
       await this.replaceMembers(proposal.id, resolvedMembers, pi);
+      proposal = await this.findProposal(proposal.id);
     }
 
     await this.auditLog.record({
@@ -262,13 +267,14 @@ export class ResearchProposalsService {
     const members = readMembers(input.members);
     // Account resolution runs before the write so an unknown account rejects the whole update.
     const resolvedMembers = members ? await this.participation.resolveMemberAccounts(members) : undefined;
-    const updated = (await this.prisma.researchProposal.update({
+    let updated = (await this.prisma.researchProposal.update({
       where: { id: proposalId },
       data: data as never
     })) as ResearchProposalRecord;
 
     if (resolvedMembers) {
       await this.replaceMembers(proposalId, resolvedMembers, actor);
+      updated = await this.findProposal(proposalId);
     }
 
     await this.auditLog.record({
@@ -590,6 +596,14 @@ export class ResearchProposalsService {
         data: members.map((member) => ({ proposalId, ...member }))
       });
     }
+    await this.prisma.researchProposal.update({
+      where: { id: proposalId },
+      data: {
+        authorizationRelationshipVersion: { increment: 1 },
+        authorizationConflictVersion: { increment: 1 },
+        authorizationContextUpdatedAt: new Date()
+      } as never
+    });
 
     for (const member of members) {
       if (member.userId && !previousUserIds.has(member.userId)) {
@@ -802,8 +816,21 @@ export class ResearchProposalsService {
     reviewAccess?: ProposalReviewAccess
   ) {
     const canEditDraft = this.canEditProposalDraft(actor, proposal);
+    const canRead = canReadProposal(actor, proposal, participation, reviewAccess);
+    const viewerAuthorization = actor
+      ? projectProposalViewerAuthorizationV1({
+          actor,
+          proposal,
+          participation,
+          reviewAccess,
+          canRead,
+          canEdit: canEditDraft,
+          canManageFiles: this.canMutateProposalFiles(actor, proposal)
+        })
+      : undefined;
 
     return {
+      viewerAuthorization,
       viewerParticipation: this.toViewerParticipation(participation),
       // EP-03 UI hints. The backend stays authoritative — every evaluation endpoint re-checks
       // authority, workflow state and conflict for itself.

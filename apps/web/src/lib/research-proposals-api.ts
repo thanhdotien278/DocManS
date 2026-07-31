@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from "@/lib/session";
 import type { RequiredPackageItem } from "@/lib/proposal-intake-periods-api";
+import { isViewerAuthorizationV1, type BlockedActionV1, type PermissionActionV1, type ViewerAuthorizationV1 } from "@rtms/permissions";
 
 /** Record-scoped participation role codes returned by the API (ST-3.0). */
 export type ProposalParticipationRole = "principal-investigator" | "secretary" | "member" | "none" | "unknown";
@@ -59,6 +60,30 @@ export type ProposalViewerReviewAssignment = {
   assignmentRole: "reviewer" | "committee_member" | "none";
   assignmentRoleLabel: string;
 };
+
+export type ProposalCapabilityState = {
+  capability: ViewerAuthorizationV1 | null;
+  reloadRequired: boolean;
+  reason: string;
+};
+
+export function getProposalCapabilityState(proposal: Pick<ResearchProposal, "id" | "viewerAuthorization">): ProposalCapabilityState {
+  if (!isViewerAuthorizationV1(proposal.viewerAuthorization)) {
+    return { capability: null, reloadRequired: true, reason: "Không thể xác minh quyền thao tác. Vui lòng tải lại hồ sơ hoặc liên hệ hỗ trợ." };
+  }
+  if (proposal.viewerAuthorization.contextVersion.domain !== "proposal" || proposal.viewerAuthorization.contextVersion.recordId !== proposal.id) {
+    return { capability: null, reloadRequired: true, reason: "Ngữ cảnh quyền không khớp hồ sơ đang mở. Vui lòng tải lại hồ sơ hoặc liên hệ hỗ trợ." };
+  }
+  return { capability: proposal.viewerAuthorization, reloadRequired: false, reason: "" };
+}
+
+export function blockedProposalAction(state: ProposalCapabilityState, action: PermissionActionV1): BlockedActionV1 | null {
+  return state.capability?.blockedActions.find((item) => item.action === action) ?? null;
+}
+
+export function canPerformProposalAction(state: ProposalCapabilityState, action: PermissionActionV1) {
+  return !state.reloadRequired && Boolean(state.capability?.allowedActions.includes(action));
+}
 
 export type ProposalAttachment = {
   id: string;
@@ -130,6 +155,7 @@ export type ResearchProposal = {
   updatedAt: string;
   canEdit: boolean;
   canSubmit: boolean;
+  viewerAuthorization?: ViewerAuthorizationV1;
   viewerParticipation?: ProposalViewerParticipation;
   viewerReviewAssignment?: ProposalViewerReviewAssignment;
   members?: ProposalMember[];

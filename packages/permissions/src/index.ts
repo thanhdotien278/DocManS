@@ -1,6 +1,7 @@
 export { SYSTEM_ROLES } from "./system-roles.js";
 export type { SystemRole } from "./system-roles.js";
 import { SYSTEM_ROLES } from "./system-roles.js";
+import type { SystemRole } from "./system-roles.js";
 
 export const AUTHORIZATION_SCHEMA_VERSION_V1 = "v1" as const;
 export const AUTHORIZATION_DECISION_CODE_ORDER_V1 = [
@@ -28,7 +29,9 @@ export const PERMISSION_ACTION_IDS_V1 = [
   "proposal.draft.update",
   "proposal.submit",
   "proposal.review.assign",
+  "proposal.review.consolidate",
   "proposal.review.submit",
+  "proposal.supplement.request",
   "proposal.decision.approve",
   "proposal.decision.reject",
   "file.read",
@@ -48,6 +51,32 @@ export type ContextVersionTokenV1 = {
   conflictVersion: number;
   delegationVersion: number;
   policyVersion: string;
+};
+
+export const VIEWER_RELATIONSHIP_TYPES_V1 = [
+  "PROPOSAL_PI",
+  "PROPOSAL_MEMBER",
+  "PROPOSAL_SCIENTIFIC_SECRETARY",
+  "REVIEWER_ASSIGNMENT",
+  "COUNCIL_MEMBER"
+] as const;
+export type ViewerRelationshipTypeV1 = (typeof VIEWER_RELATIONSHIP_TYPES_V1)[number];
+export type ViewerRelationshipV1 = {
+  type: ViewerRelationshipTypeV1;
+  status: "ACTIVE" | "INACTIVE";
+  effectiveFrom: string;
+  effectiveUntil: string | null;
+};
+export type BlockedActionV1 = { action: PermissionActionV1; code: AuthorizationDecisionCodeV1; reason: string };
+export type ViewerAuthorizationV1 = {
+  schemaVersion: "v1";
+  systemRole: SystemRole;
+  viewerRelationships: ViewerRelationshipV1[];
+  allowedActions: PermissionActionV1[];
+  blockedActions: BlockedActionV1[];
+  policyVersion: string;
+  evaluatedAsOf: string;
+  contextVersion: ContextVersionTokenV1;
 };
 
 export type AuthorizationContextV1 = {
@@ -106,6 +135,33 @@ export function isContextVersionTokenV1(value: unknown): value is ContextVersion
   if (!value || typeof value !== "object") return false;
   const token = value as ContextVersionTokenV1;
   return typeof token.domain === "string" && typeof token.recordId === "string" && Number.isInteger(token.aggregateVersion) && token.aggregateVersion >= 0 && Number.isInteger(token.relationshipVersion) && token.relationshipVersion >= 0 && Number.isInteger(token.conflictVersion) && token.conflictVersion >= 0 && Number.isInteger(token.delegationVersion) && token.delegationVersion >= 0 && typeof token.policyVersion === "string";
+}
+
+export function isViewerAuthorizationV1(value: unknown): value is ViewerAuthorizationV1 {
+  if (!value || typeof value !== "object") return false;
+  const capability = value as ViewerAuthorizationV1;
+  const relationshipTypes = Array.isArray(capability.viewerRelationships) ? capability.viewerRelationships.map((relationship) => relationship?.type) : [];
+  const allowedActions = Array.isArray(capability.allowedActions) ? capability.allowedActions : [];
+  const blockedActions = Array.isArray(capability.blockedActions) ? capability.blockedActions.map((action) => action?.action) : [];
+  return capability.schemaVersion === AUTHORIZATION_SCHEMA_VERSION_V1 &&
+    typeof capability.systemRole === "string" && SYSTEM_ROLES.includes(capability.systemRole as SystemRole) &&
+    Array.isArray(capability.viewerRelationships) && capability.viewerRelationships.every((relationship) =>
+      typeof relationship?.type === "string" && VIEWER_RELATIONSHIP_TYPES_V1.includes(relationship.type as ViewerRelationshipTypeV1) &&
+      (relationship.status === "ACTIVE" || relationship.status === "INACTIVE") &&
+      typeof relationship.effectiveFrom === "string" && (typeof relationship.effectiveUntil === "string" || relationship.effectiveUntil === null)
+    ) &&
+    Array.isArray(capability.viewerRelationships) && isSortedUnique(relationshipTypes) && capability.viewerRelationships.every((relationship) =>
+      typeof relationship?.type === "string" && VIEWER_RELATIONSHIP_TYPES_V1.includes(relationship.type as ViewerRelationshipTypeV1)
+    ) &&
+    Array.isArray(capability.allowedActions) && isSortedUnique(allowedActions) && capability.allowedActions.every(isPermissionActionV1) &&
+    Array.isArray(capability.blockedActions) && capability.blockedActions.every((action) =>
+      typeof action?.action === "string" && isPermissionActionV1(action.action) && isAuthorizationDecisionCodeV1(action.code) && typeof action.reason === "string"
+    ) && isSortedUnique(blockedActions) && !blockedActions.some((action) => allowedActions.includes(action)) &&
+    typeof capability.policyVersion === "string" && typeof capability.evaluatedAsOf === "string" && isContextVersionTokenV1(capability.contextVersion);
+}
+
+function isSortedUnique(values: string[]) {
+  return values.every((value, index) => index === 0 || values[index - 1]! < value);
 }
 
 // Legacy foundation adapter: retained until protected domains migrate to V1.

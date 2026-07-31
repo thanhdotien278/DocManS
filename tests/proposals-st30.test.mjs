@@ -162,6 +162,9 @@ function createPrisma() {
           status: "draft",
           submittedAt: null,
           submittedById: null,
+          authorizationRelationshipVersion: 0,
+          authorizationConflictVersion: 0,
+          authorizationContextUpdatedAt: new Date(),
           createdAt: new Date(),
           updatedAt: new Date(),
           ...data
@@ -171,7 +174,11 @@ function createPrisma() {
       },
       async update({ where, data }) {
         const index = store.proposals.findIndex((item) => item.id === where.id);
-        store.proposals[index] = { ...store.proposals[index], ...data, updatedAt: new Date() };
+        const current = store.proposals[index];
+        const values = Object.fromEntries(
+          Object.entries(data).map(([key, value]) => [key, value && typeof value === "object" && "increment" in value ? current[key] + value.increment : value])
+        );
+        store.proposals[index] = { ...current, ...values, updatedAt: new Date() };
         return store.proposals[index];
       },
       async findUnique({ where }) {
@@ -558,6 +565,26 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     const staffList = await services.proposalService.listProposals(staffUser);
     assert.equal(staffList.length, 1);
     assert.equal(staffList[0].viewerParticipation.role, "none");
+  });
+
+  it("Story 1.8: list and detail expose the same viewer capability without leaking other actors", async () => {
+    const services = createServices();
+    const created = await createProposalWithParticipants(services, LINKED_TEAM);
+    const [listView] = await services.proposalService.listProposals(memberUser);
+    const detailView = await services.proposalService.getProposal(memberUser, created.id);
+
+    assert.deepEqual(listView.viewerAuthorization, detailView.viewerAuthorization);
+    assert.deepEqual(detailView.viewerAuthorization.viewerRelationships.map((relationship) => relationship.type), ["PROPOSAL_MEMBER"]);
+    assert.equal(detailView.viewerAuthorization.blockedActions.find((action) => action.action === "proposal.draft.update").code, "ACTION_NOT_GRANTED");
+    assert.doesNotMatch(JSON.stringify(detailView.viewerAuthorization), /patuan|ttminh|Phạm Anh Tuấn|Thanh Minh/);
+    assert.equal(detailView.viewerAuthorization.contextVersion.relationshipVersion, 1);
+    assert.equal(detailView.viewerAuthorization.contextVersion.conflictVersion, 1);
+    assert.match(detailView.viewerAuthorization.viewerRelationships[0].effectiveFrom, /^\d{4}-\d{2}-\d{2}T/);
+
+    await services.proposalService.updateDraft(piUser, created.id, { members: LINKED_TEAM });
+    const updated = await services.proposalService.getProposal(memberUser, created.id);
+    assert.equal(updated.viewerAuthorization.contextVersion.relationshipVersion, 2);
+    assert.equal(updated.viewerAuthorization.contextVersion.conflictVersion, 2);
   });
 
   it("VER-ST-3.0-04: the conflict primitive reports a conflict for PI, participant, and secretary", async () => {

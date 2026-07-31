@@ -23,7 +23,7 @@ function formatDate(value: string) {
  * never present a criterion the server would reject. A submitted review renders read-only rather
  * than disappearing, so the reviewer can still see what they sent.
  */
-export function ProposalReviewForm({ proposalId, onReviewSubmitted }: { proposalId: string; onReviewSubmitted: () => void }) {
+export function ProposalReviewForm({ proposalId, onReviewSubmitted, canSubmitReview, blockedReason }: { proposalId: string; onReviewSubmitted: () => void; canSubmitReview: boolean; blockedReason: string }) {
   const [review, setReview] = useState<MyProposalReview | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
   const [loadError, setLoadError] = useState("");
@@ -91,11 +91,11 @@ export function ProposalReviewForm({ proposalId, onReviewSubmitted }: { proposal
   }
 
   if (state === "forbidden" || !review) {
-    return null;
+    return <SectionCard title="Phiếu đánh giá của tôi" subtitle="Chấm điểm và nhận xét theo phân công"><button className="button" type="button" disabled title={blockedReason}>Lưu nháp</button><p className="record-meta">{blockedReason}</p></SectionCard>;
   }
 
   const isSubmitted = review.status === "submitted";
-  const canEdit = review.canEdit;
+  const canEdit = canSubmitReview && review.canEdit;
 
   function collectScores() {
     return Object.fromEntries(
@@ -256,7 +256,7 @@ export function ProposalReviewForm({ proposalId, onReviewSubmitted }: { proposal
           </button>
         </div>
         {!canEdit && !isSubmitted ? (
-          <p className="record-meta">Hồ sơ không ở trạng thái cho phép nhập kết quả đánh giá.</p>
+          <p className="record-meta">{blockedReason || "Hồ sơ không ở trạng thái cho phép nhập kết quả đánh giá."}</p>
         ) : null}
       </form>
     </SectionCard>
