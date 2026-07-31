@@ -35,6 +35,7 @@ type FileRecord = {
 type ProposalRecord = {
   id: string;
   ownerId: string;
+  createdAt: Date;
   hostOrganizationUnitId: string;
   status: string;
 };

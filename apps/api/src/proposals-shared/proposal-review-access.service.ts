@@ -24,7 +24,7 @@ export class ProposalReviewAccessService {
     try {
       const assignments = (await this.prisma.proposalReviewAssignment.findMany({
         where: { proposalId, reviewerUserId: userId },
-        select: { id: true, status: true, assignmentRole: true }
+        select: { id: true, status: true, assignmentRole: true, assignedAt: true }
       })) as ReviewAssignmentLike[];
 
       return resolveProposalReviewAccess(assignments);
@@ -44,7 +44,7 @@ export class ProposalReviewAccessService {
     try {
       assignments = (await this.prisma.proposalReviewAssignment.findMany({
         where: { proposalId: { in: proposalIds }, reviewerUserId: userId },
-        select: { id: true, proposalId: true, status: true, assignmentRole: true }
+        select: { id: true, proposalId: true, status: true, assignmentRole: true, assignedAt: true }
       })) as AssignmentRow[];
     } catch {
       return resolved;

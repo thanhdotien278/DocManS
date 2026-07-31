@@ -14,6 +14,9 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { formatVndNumber, numberToVietnameseWords, parseVndNumber } from "@/lib/vietnamese-currency";
 import {
   deleteProposalAttachment,
+  blockedProposalAction,
+  canPerformProposalAction,
+  getProposalCapabilityState,
   loadProposalReadiness,
   loadResearchProposal,
   getProposalAttachmentDownloadUrl,
@@ -59,6 +62,10 @@ function formatBytes(value: number) {
 
 function getDocumentTypeLabel(code: string, fallback?: string) {
   return DOCUMENT_TYPE_LABELS[code] ?? fallback ?? code;
+}
+
+function relationshipLabel(type: string) {
+  return { PROPOSAL_PI: "Chủ nhiệm", PROPOSAL_MEMBER: "Thành viên", PROPOSAL_SCIENTIFIC_SECRETARY: "Thư ký", REVIEWER_ASSIGNMENT: "Người phản biện" }[type] ?? type;
 }
 
 function toDraftInput(proposal: ResearchProposal): ProposalDraftInput {
@@ -136,20 +143,15 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
     void refresh();
   }, [proposalId]);
 
-  const canEdit = Boolean(proposal?.canEdit);
-  const canSubmit = Boolean(proposal?.canSubmit);
-  // Record-scoped role resolved by the backend. Never inferred from an account system role (UX-DR26).
-  const viewerParticipation = proposal?.viewerParticipation;
-  const otherParticipationLabels = (viewerParticipation?.labels ?? []).slice(1);
-  // Shown, not hidden, so a conflict-blocked action can explain itself (UX-DR27).
-  const conflictMessage = viewerParticipation?.conflict?.conflicted ? viewerParticipation.conflict.message : "";
-  const canRequestSupplement = account?.systemRole === "SCIENTIFIC_MANAGEMENT_STAFF" && proposal?.status === "submitted";
+  const capabilityState = proposal ? getProposalCapabilityState(proposal) : { capability: null, reloadRequired: true, reason: "Đang tải quyền thao tác." };
+  const canEdit = canPerformProposalAction(capabilityState, "proposal.draft.update");
+  const canSubmit = canPerformProposalAction(capabilityState, "proposal.submit");
+  const canRequestSupplement = canPerformProposalAction(capabilityState, "proposal.supplement.request");
+  const canUpload = canPerformProposalAction(capabilityState, "file.upload");
   const isSupplementFlow = proposal?.status === "supplement_requested";
-  // EP-03 panel visibility. These are render hints only — each panel resolves its own authority
-  // against the API and renders nothing when the viewer is not entitled to it.
-  const showEvaluationPanel = account?.systemRole === "SCIENTIFIC_MANAGEMENT_STAFF";
-  const showReviewForm = Boolean(proposal?.viewerReviewAssignment?.isAssignedReviewer);
-  const showDecisionPanel = account?.systemRole === "LEADERSHIP_APPROVAL_AUTHORITY";
+  const showEvaluationPanel = canPerformProposalAction(capabilityState, "proposal.review.assign") || Boolean(blockedProposalAction(capabilityState, "proposal.review.assign"));
+  const showReviewForm = canPerformProposalAction(capabilityState, "proposal.review.submit") || Boolean(blockedProposalAction(capabilityState, "proposal.review.submit"));
+  const showDecisionPanel = canPerformProposalAction(capabilityState, "proposal.decision.approve") || Boolean(blockedProposalAction(capabilityState, "proposal.decision.approve"));
   const requirementOptions = proposal?.requiredPackage ?? [];
   const documentGroups = useMemo(
     () =>
@@ -449,11 +451,10 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               <div className="meta-item">
                 <span className="meta-label">Vai trò của tôi với hồ sơ này</span>
                 <span className="meta-value">
-                  <ParticipationBadge role={viewerParticipation?.role} label={viewerParticipation?.label} />
+                  {(capabilityState.capability?.viewerRelationships ?? []).map((relationship) => (
+                    <span className="status-badge info" key={relationship.type}>{relationshipLabel(relationship.type)}</span>
+                  ))}
                 </span>
-                {otherParticipationLabels.length > 0 ? (
-                  <span className="record-meta">Vai trò khác trên hồ sơ: {otherParticipationLabels.join(", ")}</span>
-                ) : null}
               </div>
               <div className="meta-item">
                 <span className="meta-label">Trạng thái</span>
@@ -473,9 +474,9 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               ) : null}
             </div>
 
-            {conflictMessage ? (
+            {capabilityState.reloadRequired ? (
               <p className="state-message warning" role="status">
-                {conflictMessage}
+                {capabilityState.reason}
               </p>
             ) : null}
 
@@ -610,7 +611,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
           </form>
         </SectionCard>
 
-        {proposal.supplementRequests?.length || canRequestSupplement ? (
+        {proposal.supplementRequests?.length || canRequestSupplement || blockedProposalAction(capabilityState, "proposal.supplement.request") ? (
           <SectionCard title="Yêu cầu bổ sung" subtitle="Lý do, hạn phản hồi và trạng thái xử lý của vòng bổ sung">
             {proposal.supplementRequests?.length ? (
               <div className="timeline">
@@ -634,33 +635,32 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               <EmptyState title="Chưa có yêu cầu bổ sung" message="Staff có thể gửi yêu cầu khi hồ sơ đã nộp cần hoàn thiện thêm." />
             )}
 
-            {canRequestSupplement ? (
-              <form className="admin-form compact-form" onSubmit={(event) => void handleRequestSupplement(event)}>
+            <form className="admin-form compact-form" onSubmit={(event) => void handleRequestSupplement(event)}>
                 <label className="field">
                   <span>Lý do bổ sung</span>
-                  <textarea rows={3} maxLength={2000} value={supplementReason} onChange={(event) => setSupplementReason(event.target.value)} />
+                  <textarea disabled={!canRequestSupplement} rows={3} maxLength={2000} value={supplementReason} onChange={(event) => setSupplementReason(event.target.value)} />
                 </label>
                 <label className="field">
                   <span>Hạn phản hồi</span>
-                  <input type="date" value={supplementDueDate} onChange={(event) => setSupplementDueDate(event.target.value)} />
+                  <input disabled={!canRequestSupplement} type="date" value={supplementDueDate} onChange={(event) => setSupplementDueDate(event.target.value)} />
                 </label>
                 {supplementError ? <p className="form-error">{supplementError}</p> : null}
-                <button className="button primary" type="submit" disabled={isRequestingSupplement}>
+                <button className="button primary" type="submit" disabled={!canRequestSupplement || isRequestingSupplement} title={!canRequestSupplement ? blockedProposalAction(capabilityState, "proposal.supplement.request")?.reason ?? capabilityState.reason : undefined}>
                   <Send size={16} aria-hidden="true" />
                   {isRequestingSupplement ? "Đang gửi" : "Yêu cầu bổ sung"}
                 </button>
+                {!canRequestSupplement ? <p className="record-meta">{blockedProposalAction(capabilityState, "proposal.supplement.request")?.reason ?? capabilityState.reason}</p> : null}
               </form>
-            ) : null}
           </SectionCard>
         ) : null}
 
-        {showReviewForm ? <ProposalReviewForm proposalId={proposal.id} onReviewSubmitted={() => void refreshWorkflowState()} /> : null}
+        {showReviewForm ? <ProposalReviewForm proposalId={proposal.id} onReviewSubmitted={() => void refreshWorkflowState()} canSubmitReview={canPerformProposalAction(capabilityState, "proposal.review.submit")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.submit")?.reason ?? capabilityState.reason} /> : null}
 
         {showEvaluationPanel ? (
-          <ProposalEvaluationPanel proposalId={proposal.id} onWorkflowChange={() => void refreshWorkflowState()} />
+          <ProposalEvaluationPanel proposalId={proposal.id} onWorkflowChange={() => void refreshWorkflowState()} canAssignReviewers={canPerformProposalAction(capabilityState, "proposal.review.assign")} canConsolidate={canPerformProposalAction(capabilityState, "proposal.review.consolidate")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.assign")?.reason ?? capabilityState.reason} />
         ) : null}
 
-        {showDecisionPanel ? <ProposalDecisionPanel proposalId={proposal.id} onDecision={() => void refreshWorkflowState()} /> : null}
+        {showDecisionPanel ? <ProposalDecisionPanel proposalId={proposal.id} onDecision={() => void refreshWorkflowState()} canDecide={canPerformProposalAction(capabilityState, "proposal.decision.approve")} blockedReason={blockedProposalAction(capabilityState, "proposal.decision.approve")?.reason ?? capabilityState.reason} /> : null}
 
         <SectionCard title="Tệp tài liệu" subtitle="Theo dõi từng tài liệu bắt buộc và metadata nộp hồ sơ">
           {uploadError ? <p className="form-error">{uploadError}</p> : null}
@@ -679,11 +679,12 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                   <StatusBadge status={group.attachments.length ? "active" : "draft"} />
                 </div>
 
-                {canEdit ? (
+                {
                   <form className="document-upload-row" onSubmit={(event) => void handleUpload(event, group.code)}>
                     <label className="field">
                       <span>Chọn tệp</span>
                       <input
+                        disabled={!canUpload}
                         key={fileInputKeys[group.code] ?? 0}
                         type="file"
                         accept={ST23A_FILE_ACCEPT}
@@ -693,18 +694,20 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                     <label className="field">
                       <span>Mô tả tài liệu</span>
                       <input
+                        disabled={!canUpload}
                         maxLength={500}
                         value={uploadDescriptions[group.code] ?? ""}
                         onChange={(event) => setUploadDescriptions((current) => ({ ...current, [group.code]: event.target.value }))}
                         placeholder="Mô tả ngắn cho tệp"
                       />
                     </label>
-                    <button className="button" type="submit" disabled={isUploading}>
+                    <button className="button" type="submit" disabled={!canUpload || isUploading} title={!canUpload ? blockedProposalAction(capabilityState, "file.upload")?.reason ?? capabilityState.reason : undefined}>
                       <UploadCloud size={16} aria-hidden="true" />
                       {isUploading ? "Đang tải" : "Tải tệp"}
                     </button>
                   </form>
-                ) : null}
+                }
+                {!canUpload ? <p className="record-meta">{blockedProposalAction(capabilityState, "file.upload")?.reason ?? capabilityState.reason}</p> : null}
 
                 {group.attachments.length ? (
                   <>
@@ -901,7 +904,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               {isSubmitting || isResubmitting ? "Đang nộp" : isSupplementFlow ? "Nộp lại hồ sơ" : "Nộp chính thức"}
             </button>
           </div>
-          {!canSubmit ? <p className="record-meta">Chỉ chủ sở hữu hồ sơ ở trạng thái hợp lệ mới được nộp.</p> : null}
+          {!canSubmit ? <p className="record-meta">{blockedProposalAction(capabilityState, "proposal.submit")?.reason ?? capabilityState.reason}</p> : null}
         </SectionCard>
 
         <SectionCard title="Timeline" subtitle="Lịch sử nộp và thay đổi trạng thái chính">

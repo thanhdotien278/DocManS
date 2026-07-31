@@ -45,7 +45,7 @@ export async function evaluateAuthorizationV1(context: AuthorizationContextV1, r
   const code = selectPrimaryCode(applicableCodes);
   const allowed = code === "ALLOWED" && outcomes.some((outcome) => outcome.allowed === true && outcome.resolution === "RESOLVED_VALUE");
   const finalCode = allowed ? "ALLOWED" : code === "ALLOWED" ? "ACTION_NOT_GRANTED" : code;
-  const reason = publicReason(finalCode);
+  const reason = publicAuthorizationReasonV1(finalCode);
   return {
     allowed,
     code: finalCode,
@@ -60,7 +60,7 @@ export async function evaluateAuthorizationV1(context: AuthorizationContextV1, r
       asOf: context.asOf,
       policyVersion: AUTHORIZATION_SCHEMA_VERSION_V1,
       contextVersions,
-      outcomes: outcomes.map((outcome) => ({ ...outcome, reason: publicReason(outcomeCodes(outcome)[0] ?? "ACTION_NOT_GRANTED") })),
+      outcomes: outcomes.map((outcome) => ({ ...outcome, reason: publicAuthorizationReasonV1(outcomeCodes(outcome)[0] ?? "ACTION_NOT_GRANTED") })),
       primaryDecisionCode: finalCode
     }
   };
@@ -119,7 +119,7 @@ function sameVersionTokens(expected: ContextVersionTokenV1[], current: ContextVe
   });
 }
 
-function publicReason(code: AuthorizationDecisionCodeV1) {
+export function publicAuthorizationReasonV1(code: AuthorizationDecisionCodeV1) {
   const reasons: Record<AuthorizationDecisionCodeV1, string> = {
     UNAUTHENTICATED: "Bạn cần đăng nhập để thực hiện hành động này.", ACCOUNT_INACTIVE: "Tài khoản hiện không hoạt động.", CONTRACT_VERSION_UNSUPPORTED: "Phiên bản hợp đồng phân quyền không được hỗ trợ.", CONTRACT_CODE_UNKNOWN: "Mã phân quyền không được hỗ trợ.", CONTEXT_UNRESOLVED: "Không thể xác minh ngữ cảnh phân quyền một cách an toàn.", CONTEXT_STALE: "Ngữ cảnh phân quyền đã cũ. Vui lòng tải lại trước khi thử lại.", CONTEXT_AMBIGUOUS: "Ngữ cảnh phân quyền không rõ ràng.", CONTEXT_VERSION_MISMATCH: "Dữ liệu phân quyền đã thay đổi. Vui lòng tải lại trước khi thử lại.", ORG_SCOPE_DENIED: "Bạn không có phạm vi tổ chức phù hợp cho hành động này.", RELATIONSHIP_INACTIVE: "Quan hệ nghiệp vụ cần thiết hiện không còn hiệu lực.", WORKFLOW_STATE_DENIED: "Trạng thái hồ sơ hiện không cho phép hành động này.", CONFLICT_DENIED: "Hành động bị từ chối do xung đột lợi ích.", DELEGATION_INVALID: "Ủy quyền cho hành động này không hợp lệ.", ACTION_NOT_GRANTED: "Bạn không được cấp quyền thực hiện hành động này.", ALLOWED: "Hành động được cho phép."
   };

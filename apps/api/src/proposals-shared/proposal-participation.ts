@@ -14,6 +14,7 @@ export type ProposalConflictReasonCode = "no-conflict" | "participation" | "unre
 export type ParticipationMemberSource = {
   userId?: string | null;
   participationRole?: string | null;
+  createdAt?: Date | null;
 };
 
 export type ProposalParticipation = {
@@ -25,6 +26,7 @@ export type ProposalParticipation = {
   labels: string[];
   isOwner: boolean;
   isParticipant: boolean;
+  relationshipEffectiveFrom: Partial<Record<Exclude<ProposalParticipationRole, "none" | "unknown">, string>>;
 };
 
 export type ProposalConflictDecision = {
@@ -74,7 +76,8 @@ const UNKNOWN_PARTICIPATION: ProposalParticipation = {
   roles: [],
   labels: [],
   isOwner: false,
-  isParticipant: false
+  isParticipant: false,
+  relationshipEffectiveFrom: {}
 };
 
 function foldVietnamese(value: string) {
@@ -125,7 +128,7 @@ export function getParticipationRoleLabel(role: ProposalParticipationRole) {
  */
 export function resolveProposalParticipation(input: {
   userId?: string | null;
-  proposal?: { ownerId?: string | null } | null;
+  proposal?: { ownerId?: string | null; createdAt?: Date | null } | null;
   members?: ParticipationMemberSource[] | null;
 }): ProposalParticipation {
   const userId = typeof input.userId === "string" ? input.userId.trim() : "";
@@ -135,13 +138,22 @@ export function resolveProposalParticipation(input: {
 
   const isOwner = input.proposal.ownerId === userId;
   const roles = new Set<ProposalParticipationRole>();
+  const relationshipEffectiveFrom: ProposalParticipation["relationshipEffectiveFrom"] = {};
   if (isOwner) {
     roles.add("principal-investigator");
+    const effectiveFrom = input.proposal.createdAt?.toISOString();
+    if (effectiveFrom) relationshipEffectiveFrom["principal-investigator"] = effectiveFrom;
   }
 
   for (const member of input.members) {
     if (member?.userId && member.userId === userId) {
-      roles.add(normalizeParticipationRole(member.participationRole));
+      const role = normalizeParticipationRole(member.participationRole);
+      if (role === "none" || role === "unknown") continue;
+      roles.add(role);
+      const effectiveFrom = member.createdAt?.toISOString();
+      if (effectiveFrom && (!relationshipEffectiveFrom[role] || effectiveFrom < relationshipEffectiveFrom[role]!)) {
+        relationshipEffectiveFrom[role] = effectiveFrom;
+      }
     }
   }
 
@@ -153,7 +165,8 @@ export function resolveProposalParticipation(input: {
       roles: [],
       labels: [],
       isOwner: false,
-      isParticipant: false
+      isParticipant: false,
+      relationshipEffectiveFrom: {}
     };
   }
 
@@ -163,7 +176,8 @@ export function resolveProposalParticipation(input: {
     roles: ordered,
     labels: ordered.map(getParticipationRoleLabel),
     isOwner,
-    isParticipant: true
+    isParticipant: true,
+    relationshipEffectiveFrom
   };
 }
 
