@@ -65,6 +65,8 @@ export type ReviewAssignmentLike = {
   status: string;
   assignmentRole?: string | null;
   assignedAt?: Date | null;
+  effectiveFrom?: Date | null;
+  effectiveUntil?: Date | null;
 };
 
 export type ProposalReviewAccess = {
@@ -74,13 +76,15 @@ export type ProposalReviewAccess = {
   assignmentId: string;
   assignmentRole: ReviewAssignmentRole | "none";
   effectiveFrom: string;
+  effectiveUntil: string | null;
 };
 
 const NO_REVIEW_ACCESS: ProposalReviewAccess = {
   isAssignedReviewer: false,
   assignmentId: "",
   assignmentRole: "none",
-  effectiveFrom: ""
+  effectiveFrom: "",
+  effectiveUntil: null
 };
 
 export function normalizeAssignmentRole(value: unknown): ReviewAssignmentRole {
@@ -105,14 +109,16 @@ export function getRecommendationLabel(value: string | null | undefined) {
  * `assigned` row grants access: a revoked assignment stays in history but stops granting anything,
  * and a completed one keeps read access to the package the review was written against.
  */
-export function resolveProposalReviewAccess(assignments?: ReviewAssignmentLike[] | null): ProposalReviewAccess {
+export function resolveProposalReviewAccess(assignments?: ReviewAssignmentLike[] | null, asOf = new Date()): ProposalReviewAccess {
   if (!assignments?.length) {
     return NO_REVIEW_ACCESS;
   }
 
-  const active =
-    assignments.find((assignment) => assignment.status === REVIEW_ASSIGNMENT_STATUS.assigned) ??
-    assignments.find((assignment) => assignment.status === REVIEW_ASSIGNMENT_STATUS.completed);
+  const active = assignments.find((assignment) =>
+    (assignment.status === REVIEW_ASSIGNMENT_STATUS.assigned || assignment.status === REVIEW_ASSIGNMENT_STATUS.completed) &&
+    (!assignment.effectiveFrom || assignment.effectiveFrom <= asOf) &&
+    (!assignment.effectiveUntil || asOf < assignment.effectiveUntil)
+  );
 
   if (!active) {
     return NO_REVIEW_ACCESS;
@@ -122,7 +128,8 @@ export function resolveProposalReviewAccess(assignments?: ReviewAssignmentLike[]
     isAssignedReviewer: true,
     assignmentId: active.id,
     assignmentRole: normalizeAssignmentRole(active.assignmentRole),
-    effectiveFrom: active.assignedAt?.toISOString() ?? ""
+    effectiveFrom: (active.effectiveFrom ?? active.assignedAt)?.toISOString() ?? "",
+    effectiveUntil: active.effectiveUntil?.toISOString() ?? null
   };
 }
 

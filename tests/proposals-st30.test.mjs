@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { BadRequestException, ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException } from "@nestjs/common";
 import { FilesService } from "../dist/apps/api/modules/files/files.service.js";
 import { ProposalIntakePeriodsService } from "../dist/apps/api/proposal-intake-periods/proposal-intake-periods.service.js";
 import { ProposalParticipationService } from "../dist/apps/api/research-proposals/proposal-participation.service.js";
@@ -192,16 +192,29 @@ function createPrisma() {
       async updateMany({ where, data }) {
         let count = 0;
         store.proposals = store.proposals.map((item) => {
-          if (item.id !== where.id || (where.status !== undefined && item.status !== where.status)) {
+          if (item.id !== where.id ||
+            (where.status !== undefined && item.status !== where.status) ||
+            (where.authorizationRelationshipVersion !== undefined && item.authorizationRelationshipVersion !== where.authorizationRelationshipVersion) ||
+            (where.authorizationConflictVersion !== undefined && item.authorizationConflictVersion !== where.authorizationConflictVersion)) {
             return item;
           }
           count += 1;
-          return { ...item, ...data, updatedAt: new Date() };
+          const values = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value && typeof value === "object" && "increment" in value ? item[key] + value.increment : value]));
+          return { ...item, ...values, updatedAt: new Date() };
         });
         return { count };
       }
     },
     proposalMember: {
+      async updateMany({ where, data }) {
+        let count = 0;
+        store.members = store.members.map((item) => {
+          if (item.id !== where.id || (where.status && item.status !== where.status)) return item;
+          count += 1;
+          return { ...item, ...data };
+        });
+        return { count };
+      },
       async deleteMany({ where }) {
         const before = store.members.length;
         store.members = store.members.filter((item) => item.proposalId !== where.proposalId);
@@ -213,6 +226,9 @@ function createPrisma() {
           createdAt: new Date(),
           userId: null,
           participationRole: "member",
+          status: "ACTIVE",
+          effectiveFrom: new Date(),
+          effectiveUntil: null,
           ...item
         }));
         store.members.push(...records);
@@ -284,6 +300,9 @@ function createPrisma() {
     },
     // EP-03 tables: the proposal and file read paths resolve reviewer assignments (ST-3.2).
     ...createEvaluationTables(store, ACCOUNTS),
+    async $queryRaw() {
+      return [{ asOf: new Date() }];
+    },
     async $transaction(callback) {
       return callback(this);
     }
@@ -581,10 +600,20 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     assert.equal(detailView.viewerAuthorization.contextVersion.conflictVersion, 1);
     assert.match(detailView.viewerAuthorization.viewerRelationships[0].effectiveFrom, /^\d{4}-\d{2}-\d{2}T/);
 
-    await services.proposalService.updateDraft(piUser, created.id, { members: LINKED_TEAM });
+    await services.proposalService.updateDraft(piUser, created.id, {
+      members: LINKED_TEAM,
+      contextVersion: detailView.viewerAuthorization.contextVersion
+    });
     const updated = await services.proposalService.getProposal(memberUser, created.id);
     assert.equal(updated.viewerAuthorization.contextVersion.relationshipVersion, 2);
     assert.equal(updated.viewerAuthorization.contextVersion.conflictVersion, 2);
+    await assert.rejects(
+      () => services.proposalService.updateDraft(piUser, created.id, {
+        members: LINKED_TEAM,
+        contextVersion: detailView.viewerAuthorization.contextVersion
+      }),
+      (error) => error instanceof ConflictException && error.getResponse().code === "CONTEXT_VERSION_MISMATCH"
+    );
   });
 
   it("VER-ST-3.0-04: the conflict primitive reports a conflict for PI, participant, and secretary", async () => {
@@ -661,9 +690,23 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     assert.equal(changes.length, 1);
     assert.equal(JSON.parse(changes[0].reason).nextCount, 4);
 
+    const initial = await services.proposalService.getProposal(piUser, created.id);
+    await assert.rejects(
+      () => services.proposalService.updateDraft(piUser, created.id, {
+        members: [
+          { name: "TS. Phạm Anh Tuấn", role: "Chủ nhiệm", organization: "Khoa Toán - Tin học", username: "patuan" },
+          { name: "TS. Phạm Anh Tuấn", role: "Chủ nhiệm", organization: "Khoa Toán - Tin học", username: "patuan" }
+        ],
+        contextVersion: initial.viewerAuthorization.contextVersion
+      }),
+      BadRequestException
+    );
+
     // Removing a participant is captured as an unlink, not silently dropped.
+    const current = await services.proposalService.getProposal(piUser, created.id);
     await services.proposalService.updateDraft(piUser, created.id, {
-      members: [{ name: "TS. Phạm Anh Tuấn", role: "Chủ nhiệm", organization: "Khoa Toán - Tin học", username: "patuan" }]
+      members: [{ name: "TS. Phạm Anh Tuấn", role: "Chủ nhiệm", organization: "Khoa Toán - Tin học", username: "patuan" }],
+      contextVersion: current.viewerAuthorization.contextVersion
     });
 
     const latestChange = JSON.parse(services.auditLog.find("update-proposal-participation").at(-1).reason);
@@ -678,7 +721,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
   it("normalizes participation roles from canonical codes and Vietnamese labels", () => {
     assert.equal(normalizeParticipationRole("principal-investigator"), "principal-investigator");
     assert.equal(normalizeParticipationRole("Chủ nhiệm"), "principal-investigator");
-    assert.equal(normalizeParticipationRole("Đồng chủ nhiệm đề tài"), "principal-investigator");
+    assert.equal(normalizeParticipationRole("Đồng chủ nhiệm đề tài"), "co-investigator");
     assert.equal(normalizeParticipationRole("secretary"), "secretary");
     assert.equal(normalizeParticipationRole("Thư ký khoa học"), "secretary");
     assert.equal(normalizeParticipationRole("THƯ KÝ"), "secretary");

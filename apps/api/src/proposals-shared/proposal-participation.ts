@@ -7,7 +7,7 @@
  * participation is a property of the record relationship only (AUTH-ST-3.0-02).
  */
 
-export type ProposalParticipationRole = "principal-investigator" | "secretary" | "member" | "none" | "unknown";
+export type ProposalParticipationRole = "principal-investigator" | "co-investigator" | "secretary" | "member" | "none" | "unknown";
 
 export type ProposalConflictReasonCode = "no-conflict" | "participation" | "unresolved";
 
@@ -15,6 +15,9 @@ export type ParticipationMemberSource = {
   userId?: string | null;
   participationRole?: string | null;
   createdAt?: Date | null;
+  status?: string | null;
+  effectiveFrom?: Date | null;
+  effectiveUntil?: Date | null;
 };
 
 export type ProposalParticipation = {
@@ -27,6 +30,7 @@ export type ProposalParticipation = {
   isOwner: boolean;
   isParticipant: boolean;
   relationshipEffectiveFrom: Partial<Record<Exclude<ProposalParticipationRole, "none" | "unknown">, string>>;
+  relationshipEffectiveUntil: Partial<Record<Exclude<ProposalParticipationRole, "none" | "unknown">, string | null>>;
 };
 
 export type ProposalConflictDecision = {
@@ -41,6 +45,7 @@ export type ProposalConflictDecision = {
 
 export const PROPOSAL_PARTICIPATION_ROLE_LABELS: Record<ProposalParticipationRole, string> = {
   "principal-investigator": "Chủ nhiệm",
+  "co-investigator": "Đồng chủ nhiệm",
   secretary: "Thư ký",
   member: "Thành viên",
   none: "Không tham gia",
@@ -48,7 +53,7 @@ export const PROPOSAL_PARTICIPATION_ROLE_LABELS: Record<ProposalParticipationRol
 };
 
 /** Assignable participation roles, ordered by precedence when a user holds several. */
-export const PROPOSAL_PARTICIPATION_ROLES: ProposalParticipationRole[] = ["principal-investigator", "secretary", "member"];
+export const PROPOSAL_PARTICIPATION_ROLES: ProposalParticipationRole[] = ["principal-investigator", "co-investigator", "secretary", "member"];
 
 const CONFLICT_REASONS: Record<string, { reason: string; viewerMessage: string }> = {
   "principal-investigator": {
@@ -77,7 +82,8 @@ const UNKNOWN_PARTICIPATION: ProposalParticipation = {
   labels: [],
   isOwner: false,
   isParticipant: false,
-  relationshipEffectiveFrom: {}
+  relationshipEffectiveFrom: {},
+  relationshipEffectiveUntil: {}
 };
 
 function foldVietnamese(value: string) {
@@ -106,6 +112,10 @@ export function normalizeParticipationRole(value: unknown): ProposalParticipatio
     return "member";
   }
 
+  if (normalized === "co-investigator" || normalized.includes("dong chu nhiem")) {
+    return "co-investigator";
+  }
+
   if (normalized === "principal-investigator" || normalized.includes("chu nhiem")) {
     return "principal-investigator";
   }
@@ -122,12 +132,37 @@ export function getParticipationRoleLabel(role: ProposalParticipationRole) {
 }
 
 /**
+ * The source domain supplies lifecycle facts; this shared pure function only evaluates them at
+ * the caller's request-wide UTC instant. `effectiveUntil` is exclusive so authority stops at the
+ * exact end instant. Unknown statuses and malformed dates fail closed.
+ */
+export function isRelationshipActiveAt(
+  relationship: { status?: string | null; effectiveFrom?: Date | null; effectiveUntil?: Date | null },
+  asOf: Date
+) {
+  // Rows created before the ST-1.9 migration have neither lifecycle column. The migration
+  // backfills them from `createdAt`; accepting only this wholly absent legacy shape avoids
+  // revoking legitimate history during a rolling deploy while malformed new facts still deny.
+  if (relationship.status === undefined && relationship.effectiveFrom === undefined && relationship.effectiveUntil === undefined) {
+    return true;
+  }
+  const effectiveFrom = relationship.effectiveFrom;
+  const effectiveUntil = relationship.effectiveUntil;
+  return relationship.status === "ACTIVE" &&
+    asOf instanceof Date && !Number.isNaN(asOf.valueOf()) &&
+    effectiveFrom instanceof Date && !Number.isNaN(effectiveFrom.valueOf()) &&
+    effectiveFrom <= asOf &&
+    (effectiveUntil === null || effectiveUntil === undefined || (effectiveUntil instanceof Date && !Number.isNaN(effectiveUntil.valueOf()) && asOf < effectiveUntil));
+}
+
+/**
  * Resolves what `userId` is on this specific proposal (AC-ST-3.0-02, AC-ST-3.0-03).
  * Returns `unknown` — not `none` — when the participation context itself cannot be read, so
  * callers that gate on it stay fail-closed (TN-ST-3.0-03).
  */
 export function resolveProposalParticipation(input: {
   userId?: string | null;
+  asOf?: Date;
   proposal?: { ownerId?: string | null; createdAt?: Date | null } | null;
   members?: ParticipationMemberSource[] | null;
 }): ProposalParticipation {
@@ -136,23 +171,32 @@ export function resolveProposalParticipation(input: {
     return UNKNOWN_PARTICIPATION;
   }
 
+  const asOf = input.asOf ?? new Date();
+  if (Number.isNaN(asOf.valueOf())) return UNKNOWN_PARTICIPATION;
   const isOwner = input.proposal.ownerId === userId;
   const roles = new Set<ProposalParticipationRole>();
   const relationshipEffectiveFrom: ProposalParticipation["relationshipEffectiveFrom"] = {};
+  const relationshipEffectiveUntil: ProposalParticipation["relationshipEffectiveUntil"] = {};
   if (isOwner) {
     roles.add("principal-investigator");
     const effectiveFrom = input.proposal.createdAt?.toISOString();
     if (effectiveFrom) relationshipEffectiveFrom["principal-investigator"] = effectiveFrom;
+    relationshipEffectiveUntil["principal-investigator"] = null;
   }
 
   for (const member of input.members) {
-    if (member?.userId && member.userId === userId) {
+    if (member?.userId && member.userId === userId && isRelationshipActiveAt({
+      status: member.status,
+      effectiveFrom: member.effectiveFrom,
+      effectiveUntil: member.effectiveUntil
+    }, asOf)) {
       const role = normalizeParticipationRole(member.participationRole);
       if (role === "none" || role === "unknown") continue;
       roles.add(role);
-      const effectiveFrom = member.createdAt?.toISOString();
+      const effectiveFrom = (member.effectiveFrom ?? member.createdAt)?.toISOString();
       if (effectiveFrom && (!relationshipEffectiveFrom[role] || effectiveFrom < relationshipEffectiveFrom[role]!)) {
         relationshipEffectiveFrom[role] = effectiveFrom;
+        relationshipEffectiveUntil[role] = member.effectiveUntil?.toISOString() ?? null;
       }
     }
   }
@@ -166,7 +210,8 @@ export function resolveProposalParticipation(input: {
       labels: [],
       isOwner: false,
       isParticipant: false,
-      relationshipEffectiveFrom: {}
+      relationshipEffectiveFrom: {},
+      relationshipEffectiveUntil: {}
     };
   }
 
@@ -177,7 +222,8 @@ export function resolveProposalParticipation(input: {
     labels: ordered.map(getParticipationRoleLabel),
     isOwner,
     isParticipant: true,
-    relationshipEffectiveFrom
+    relationshipEffectiveFrom,
+    relationshipEffectiveUntil
   };
 }
 

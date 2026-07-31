@@ -240,7 +240,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
         },
         members: form.members?.filter((member) => member.name.trim() && member.role.trim() && member.organization.trim())
       };
-      const result = await updateResearchProposalDraft(proposal.id, payload);
+      const result = await updateResearchProposalDraft(proposal.id, payload, proposal.viewerAuthorization?.contextVersion);
       setProposal(result.proposal);
       setForm(toDraftInput(result.proposal));
       setReadiness(await loadProposalReadiness(proposal.id));

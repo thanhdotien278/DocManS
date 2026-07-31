@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-07-31T16:10:00+07:00
+last_updated: 2026-08-01T00:00:00+07:00
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -34,7 +34,7 @@ development_status:
   1-6-quan-ly-danh-muc-va-cau-hinh-van-hanh-dung-chung: done
   1-7-hop-dong-phan-quyen-va-bo-danh-gia-policy-dung-chung: done
   1-8-capability-response-va-giao-dien-khong-suy-dien-quyen: done
-  1-9-vong-doi-quan-he-theo-ho-so-va-gioi-han-thu-ky-khoa-hoc: backlog
+  1-9-vong-doi-quan-he-theo-ho-so-va-gioi-han-thu-ky-khoa-hoc: done
   1-10-vong-doi-uy-quyen-theo-hanh-dong-va-ho-so: backlog
   epic-1-retrospective: optional
   epic-2: backlog

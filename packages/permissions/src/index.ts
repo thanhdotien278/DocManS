@@ -55,12 +55,36 @@ export type ContextVersionTokenV1 = {
 
 export const VIEWER_RELATIONSHIP_TYPES_V1 = [
   "PROPOSAL_PI",
+  "PROPOSAL_CO_INVESTIGATOR",
   "PROPOSAL_MEMBER",
   "PROPOSAL_SCIENTIFIC_SECRETARY",
+  "PROJECT_PI",
+  "PROJECT_CO_INVESTIGATOR",
+  "PROJECT_MEMBER",
+  "PROJECT_SCIENTIFIC_SECRETARY",
   "REVIEWER_ASSIGNMENT",
-  "COUNCIL_MEMBER"
+  "COUNCIL_MEMBER",
+  "COUNCIL_SCIENTIFIC_SECRETARY",
+  "ETHICS_REVIEWER_ASSIGNMENT",
+  "TASK_ASSIGNEE"
 ] as const;
 export type ViewerRelationshipTypeV1 = (typeof VIEWER_RELATIONSHIP_TYPES_V1)[number];
+export const RELATIONSHIP_MULTIPLICITY_V1: Record<ViewerRelationshipTypeV1, "one"> = Object.fromEntries(
+  VIEWER_RELATIONSHIP_TYPES_V1.map((type) => [type, "one" as const])
+) as Record<ViewerRelationshipTypeV1, "one">;
+/** Runtime contract for relationship facts emitted by a source domain, never a shared authority store. */
+export const RELATIONSHIP_FACT_STATUSES_V1 = ["ACTIVE", "SUSPENDED", "ENDED", "REVOKED"] as const;
+export type RelationshipFactStatusV1 = (typeof RELATIONSHIP_FACT_STATUSES_V1)[number];
+export type SourceRelationshipFactV1 = {
+  type: ViewerRelationshipTypeV1;
+  actorUserId: string;
+  domain: string;
+  recordId: string;
+  status: RelationshipFactStatusV1;
+  effectiveFrom: string;
+  effectiveUntil: string | null;
+  contextVersion: ContextVersionTokenV1;
+};
 export type ViewerRelationshipV1 = {
   type: ViewerRelationshipTypeV1;
   status: "ACTIVE" | "INACTIVE";
@@ -135,6 +159,18 @@ export function isContextVersionTokenV1(value: unknown): value is ContextVersion
   if (!value || typeof value !== "object") return false;
   const token = value as ContextVersionTokenV1;
   return typeof token.domain === "string" && typeof token.recordId === "string" && Number.isInteger(token.aggregateVersion) && token.aggregateVersion >= 0 && Number.isInteger(token.relationshipVersion) && token.relationshipVersion >= 0 && Number.isInteger(token.conflictVersion) && token.conflictVersion >= 0 && Number.isInteger(token.delegationVersion) && token.delegationVersion >= 0 && typeof token.policyVersion === "string";
+}
+
+export function isSourceRelationshipFactV1(value: unknown): value is SourceRelationshipFactV1 {
+  if (!value || typeof value !== "object") return false;
+  const fact = value as SourceRelationshipFactV1;
+  const startsAt = Date.parse(fact.effectiveFrom);
+  const endsAt = fact.effectiveUntil === null ? null : Date.parse(fact.effectiveUntil);
+  return typeof fact.actorUserId === "string" && fact.actorUserId.length > 0 &&
+    typeof fact.domain === "string" && fact.domain.length > 0 && typeof fact.recordId === "string" && fact.recordId.length > 0 &&
+    VIEWER_RELATIONSHIP_TYPES_V1.includes(fact.type) && RELATIONSHIP_FACT_STATUSES_V1.includes(fact.status) &&
+    Number.isFinite(startsAt) && (endsAt === null || (Number.isFinite(endsAt) && startsAt < endsAt)) &&
+    isContextVersionTokenV1(fact.contextVersion);
 }
 
 export function isViewerAuthorizationV1(value: unknown): value is ViewerAuthorizationV1 {

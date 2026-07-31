@@ -36,11 +36,21 @@ export const PERMISSION_ACTION_IDS_V1 = [
 ];
 export const VIEWER_RELATIONSHIP_TYPES_V1 = [
     "PROPOSAL_PI",
+    "PROPOSAL_CO_INVESTIGATOR",
     "PROPOSAL_MEMBER",
     "PROPOSAL_SCIENTIFIC_SECRETARY",
+    "PROJECT_PI",
+    "PROJECT_CO_INVESTIGATOR",
+    "PROJECT_MEMBER",
+    "PROJECT_SCIENTIFIC_SECRETARY",
     "REVIEWER_ASSIGNMENT",
-    "COUNCIL_MEMBER"
+    "COUNCIL_MEMBER",
+    "COUNCIL_SCIENTIFIC_SECRETARY",
+    "ETHICS_REVIEWER_ASSIGNMENT",
+    "TASK_ASSIGNEE"
 ];
+export const RELATIONSHIP_MULTIPLICITY_V1 = Object.fromEntries(VIEWER_RELATIONSHIP_TYPES_V1.map((type) => [type, "one"]));
+export const RELATIONSHIP_FACT_STATUSES_V1 = ["ACTIVE", "SUSPENDED", "ENDED", "REVOKED"];
 export function isAuthorizationDecisionCodeV1(value) {
     return typeof value === "string" && AUTHORIZATION_DECISION_CODE_ORDER_V1.includes(value);
 }
@@ -58,6 +68,18 @@ export function isContextVersionTokenV1(value) {
         return false;
     const token = value;
     return typeof token.domain === "string" && typeof token.recordId === "string" && Number.isInteger(token.aggregateVersion) && token.aggregateVersion >= 0 && Number.isInteger(token.relationshipVersion) && token.relationshipVersion >= 0 && Number.isInteger(token.conflictVersion) && token.conflictVersion >= 0 && Number.isInteger(token.delegationVersion) && token.delegationVersion >= 0 && typeof token.policyVersion === "string";
+}
+export function isSourceRelationshipFactV1(value) {
+    if (!value || typeof value !== "object")
+        return false;
+    const fact = value;
+    const startsAt = Date.parse(fact.effectiveFrom);
+    const endsAt = fact.effectiveUntil === null ? null : Date.parse(fact.effectiveUntil);
+    return typeof fact.actorUserId === "string" && fact.actorUserId.length > 0 &&
+        typeof fact.domain === "string" && fact.domain.length > 0 && typeof fact.recordId === "string" && fact.recordId.length > 0 &&
+        VIEWER_RELATIONSHIP_TYPES_V1.includes(fact.type) && RELATIONSHIP_FACT_STATUSES_V1.includes(fact.status) &&
+        Number.isFinite(startsAt) && (endsAt === null || (Number.isFinite(endsAt) && startsAt < endsAt)) &&
+        isContextVersionTokenV1(fact.contextVersion);
 }
 export function isViewerAuthorizationV1(value) {
     if (!value || typeof value !== "object")

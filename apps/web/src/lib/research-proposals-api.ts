@@ -242,10 +242,14 @@ export async function loadResearchProposal(id: string) {
   return response.proposal;
 }
 
-export async function updateResearchProposalDraft(id: string, input: Partial<ProposalDraftInput>) {
+export async function updateResearchProposalDraft(
+  id: string,
+  input: Partial<ProposalDraftInput>,
+  contextVersion?: ViewerAuthorizationV1["contextVersion"]
+) {
   return requestJson<{ proposal: ResearchProposal }>(`/research-proposals/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(input)
+    body: JSON.stringify({ ...input, ...(input.members !== undefined ? { contextVersion } : {}) })
   });
 }
 

@@ -198,9 +198,31 @@ function createEp02Prisma() {
       },
       async findMany() {
         return [...store.proposals].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      },
+      async updateMany({ where, data }) {
+        let count = 0;
+        store.proposals = store.proposals.map((item) => {
+          if (item.id !== where.id ||
+            (where.status !== undefined && item.status !== where.status) ||
+            (where.authorizationRelationshipVersion !== undefined && item.authorizationRelationshipVersion !== where.authorizationRelationshipVersion) ||
+            (where.authorizationConflictVersion !== undefined && item.authorizationConflictVersion !== where.authorizationConflictVersion)) return item;
+          count += 1;
+          const values = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value && typeof value === "object" && "increment" in value ? item[key] + value.increment : value]));
+          return { ...item, ...values, updatedAt: new Date() };
+        });
+        return { count };
       }
     },
     proposalMember: {
+      async updateMany({ where, data }) {
+        let count = 0;
+        store.members = store.members.map((item) => {
+          if (item.id !== where.id || (where.status && item.status !== where.status)) return item;
+          count += 1;
+          return { ...item, ...data };
+        });
+        return { count };
+      },
       async deleteMany({ where }) {
         const before = store.members.length;
         store.members = store.members.filter((item) => item.proposalId !== where.proposalId);
@@ -212,6 +234,9 @@ function createEp02Prisma() {
           createdAt: new Date(),
           userId: null,
           participationRole: "member",
+          status: "ACTIVE",
+          effectiveFrom: new Date(),
+          effectiveUntil: null,
           ...item
         }));
         store.members.push(...records);
@@ -353,6 +378,9 @@ function createEp02Prisma() {
     },
     // EP-03 tables: the proposal and file read paths resolve reviewer assignments (ST-3.2).
     ...createEvaluationTables(store, [adminUser, staffUser, piUser, otherPiUser]),
+    async $queryRaw() {
+      return [{ asOf: new Date() }];
+    },
     async $transaction(callback) {
       return callback(this);
     }

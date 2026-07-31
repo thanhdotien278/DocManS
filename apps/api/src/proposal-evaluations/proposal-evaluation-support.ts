@@ -26,6 +26,8 @@ export type ReviewAssignmentRecord = {
   status: string;
   assignedById: string;
   assignedAt: Date;
+  effectiveFrom: Date;
+  effectiveUntil: Date | null;
   dueDate: Date | null;
   revokedAt: Date | null;
   completedAt: Date | null;
