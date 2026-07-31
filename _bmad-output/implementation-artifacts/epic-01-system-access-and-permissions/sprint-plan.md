@@ -14,8 +14,8 @@
 | 1.3 | Quản trị vòng đời tài khoản người dùng | `done` |
 | 1.4 | Một vai trò hệ thống, phạm vi tổ chức và chuyển đổi dữ liệu cũ | `done` |
 | 1.5 | Đổi mật khẩu và đặt lại mật khẩu có kiểm soát | `backlog` |
-| 1.6 | Quản lý danh mục và cấu hình vận hành dùng chung | `backlog` |
-| 1.7 | Hợp đồng phân quyền và bộ đánh giá policy dùng chung | `backlog` |
+| 1.6 | Quản lý danh mục và cấu hình vận hành dùng chung | `done` |
+| 1.7 | Hợp đồng phân quyền và bộ đánh giá policy dùng chung | `review` |
 | 1.8 | Capability response và giao diện không suy diễn quyền | `backlog` |
 | 1.9 | Vòng đời quan hệ theo hồ sơ và giới hạn thư ký khoa học | `backlog` |
 | 1.10 | Vòng đời ủy quyền theo hành động và hồ sơ | `backlog` |

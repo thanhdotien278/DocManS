@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-07-30T15:55:00+07:00
+last_updated: 2026-07-31T14:00:00+07:00
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -31,8 +31,8 @@ development_status:
   1-3-quan-tri-vong-doi-tai-khoan-nguoi-dung: done
   1-4-mot-vai-tro-he-thong-pham-vi-to-chuc-va-chuyen-doi-du-lieu-cu: done
   1-5-doi-mat-khau-va-dat-lai-mat-khau-co-kiem-soat: done
-  1-6-quan-ly-danh-muc-va-cau-hinh-van-hanh-dung-chung: review
-  1-7-hop-dong-phan-quyen-va-bo-danh-gia-policy-dung-chung: backlog
+  1-6-quan-ly-danh-muc-va-cau-hinh-van-hanh-dung-chung: done
+  1-7-hop-dong-phan-quyen-va-bo-danh-gia-policy-dung-chung: done
   1-8-capability-response-va-giao-dien-khong-suy-dien-quyen: backlog
   1-9-vong-doi-quan-he-theo-ho-so-va-gioi-han-thu-ky-khoa-hoc: backlog
   1-10-vong-doi-uy-quyen-theo-hanh-dong-va-ho-so: backlog

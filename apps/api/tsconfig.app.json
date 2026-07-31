@@ -10,7 +10,10 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "@rtms/permissions": ["packages/permissions/src/index.js"]
+    }
   },
   "include": ["src/**/*.ts"]
 }
