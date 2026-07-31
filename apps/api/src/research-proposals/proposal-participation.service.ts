@@ -14,7 +14,15 @@ type ParticipationMemberRecord = {
   userId: string | null;
   participationRole: string | null;
   createdAt: Date;
+  status: string;
+  effectiveFrom: Date;
+  effectiveUntil: Date | null;
 };
+
+/** Source-owned relationship facts consumed by shared authorization projections. */
+export interface ProposalRelationshipFactProvider {
+  findForProposals(proposalIds: string[], userId?: string, asOf?: Date): Promise<ParticipationMemberRecord[]>;
+}
 
 type ProposalOwnerRecord = {
   id: string;
@@ -30,19 +38,21 @@ type ProposalOwnerRecord = {
  * (TN-ST-3.0-02). ST-3.2 (reviewer assignment) and ST-3.5 (approval) consume `evaluateConflict`.
  */
 @Injectable()
-export class ProposalParticipationService {
+export class ProposalParticipationService implements ProposalRelationshipFactProvider {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Resolves one user's participation on one proposal. Pass `members` to avoid a second query. */
   async resolveForProposal(
     userId: string | undefined,
     proposal: { id: string; ownerId: string; createdAt: Date },
-    members?: Array<{ userId?: string | null; participationRole?: string | null; createdAt?: Date | null }>
+    members?: Array<{ userId?: string | null; participationRole?: string | null; createdAt?: Date | null; status?: string | null; effectiveFrom?: Date | null; effectiveUntil?: Date | null }>,
+    asOf = new Date()
   ): Promise<ProposalParticipation> {
-    const participationMembers = members ?? (await this.findMembers([proposal.id]));
+    const participationMembers = members ?? (await this.findForProposals([proposal.id], userId, asOf));
 
     return resolveProposalParticipation({
       userId,
+      asOf,
       proposal,
       members: participationMembers
     });
@@ -52,7 +62,7 @@ export class ProposalParticipationService {
    * Batch variant for list responses: one query for the whole page, narrowed to this user's own
    * participation rows since nobody else's relationships affect what this user is on the record.
    */
-  async resolveForProposals(userId: string | undefined, proposals: ProposalOwnerRecord[]): Promise<Map<string, ProposalParticipation>> {
+  async resolveForProposals(userId: string | undefined, proposals: ProposalOwnerRecord[], asOf = new Date()): Promise<Map<string, ProposalParticipation>> {
     const resolved = new Map<string, ProposalParticipation>();
     if (proposals.length === 0) {
       return resolved;
@@ -60,14 +70,15 @@ export class ProposalParticipationService {
 
     if (!userId) {
       for (const proposal of proposals) {
-        resolved.set(proposal.id, resolveProposalParticipation({ userId, proposal, members: null }));
+        resolved.set(proposal.id, resolveProposalParticipation({ userId, asOf, proposal, members: null }));
       }
       return resolved;
     }
 
-    const members = await this.findMembers(
+    const members = await this.findForProposals(
       proposals.map((proposal) => proposal.id),
-      userId
+      userId,
+      asOf
     );
     const membersByProposal = new Map<string, ParticipationMemberRecord[]>();
     for (const member of members) {
@@ -81,6 +92,7 @@ export class ProposalParticipationService {
         proposal.id,
         resolveProposalParticipation({
           userId,
+          asOf,
           proposal,
           members: membersByProposal.get(proposal.id) ?? []
         })
@@ -172,14 +184,14 @@ export class ProposalParticipationService {
     });
   }
 
-  private async findMembers(proposalIds: string[], userId?: string): Promise<ParticipationMemberRecord[]> {
+  async findForProposals(proposalIds: string[], userId?: string, _asOf = new Date()): Promise<ParticipationMemberRecord[]> {
     if (proposalIds.length === 0) {
       return [];
     }
 
     return (await this.prisma.proposalMember.findMany({
       where: { proposalId: { in: proposalIds }, ...(userId ? { userId } : {}) },
-      select: { proposalId: true, userId: true, participationRole: true }
+      select: { proposalId: true, userId: true, participationRole: true, createdAt: true, status: true, effectiveFrom: true, effectiveUntil: true }
     })) as ParticipationMemberRecord[];
   }
 }

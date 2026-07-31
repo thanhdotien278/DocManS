@@ -1,4 +1,7 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+// @ts-ignore The runtime package is JavaScript; its TypeScript source entry supplies this contract.
+import { isContextVersionTokenV1, type ContextVersionTokenV1 } from "@rtms/permissions";
+import { readTransactionClockV1 } from "../permissions/authorization-v1.service.js";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
@@ -16,6 +19,7 @@ import {
 import {
   evaluateProposalConflict,
   getParticipationRoleLabel,
+  isRelationshipActiveAt,
   normalizeParticipationRole,
   type ProposalParticipation
 } from "../proposals-shared/proposal-participation.js";
@@ -80,6 +84,9 @@ type ProposalMemberRecord = {
   organization: string;
   userId: string | null;
   participationRole: string | null;
+  status: string;
+  effectiveFrom: Date;
+  effectiveUntil: Date | null;
   createdAt: Date;
 };
 
@@ -141,15 +148,17 @@ export class ResearchProposalsService {
   ) {}
 
   async listProposals(actor: SafeUserContext) {
+    const asOf = new Date();
     const records = (await this.prisma.researchProposal.findMany({
       orderBy: { createdAt: "desc" }
     })) as ResearchProposalRecord[];
 
     const [participationByProposal, reviewAccessByProposal] = await Promise.all([
-      this.participation.resolveForProposals(actor?.id, records),
+      this.participation.resolveForProposals(actor?.id, records, asOf),
       this.reviewAccess.resolveForProposals(
         actor?.id,
-        records.map((proposal) => proposal.id)
+        records.map((proposal) => proposal.id),
+        asOf
       )
     ]);
 
@@ -161,10 +170,11 @@ export class ResearchProposalsService {
   }
 
   async getProposal(actor: SafeUserContext, proposalId: string) {
+    const asOf = new Date();
     const proposal = await this.findProposal(proposalId);
     const [participation, reviewAccess] = await Promise.all([
-      this.participation.resolveForProposal(actor?.id, proposal),
-      this.reviewAccess.resolveForProposal(actor?.id, proposalId)
+      this.participation.resolveForProposal(actor?.id, proposal, undefined, asOf),
+      this.reviewAccess.resolveForProposal(actor?.id, proposalId, asOf)
     ]);
     assertCanReadProposal(actor, proposal, participation, reviewAccess);
     return this.toProposalDetailResponse(proposal, actor, participation, reviewAccess);
@@ -267,15 +277,14 @@ export class ResearchProposalsService {
     const members = readMembers(input.members);
     // Account resolution runs before the write so an unknown account rejects the whole update.
     const resolvedMembers = members ? await this.participation.resolveMemberAccounts(members) : undefined;
-    let updated = (await this.prisma.researchProposal.update({
+    const expectedContextVersion = resolvedMembers ? this.readProposalContextVersion(input.contextVersion, proposalId) : undefined;
+    if (resolvedMembers) {
+      await this.replaceMembers(proposalId, resolvedMembers, actor, expectedContextVersion);
+    }
+    const updated = (await this.prisma.researchProposal.update({
       where: { id: proposalId },
       data: data as never
     })) as ResearchProposalRecord;
-
-    if (resolvedMembers) {
-      await this.replaceMembers(proposalId, resolvedMembers, actor);
-      updated = await this.findProposal(proposalId);
-    }
 
     await this.auditLog.record({
       action: proposal.status === "supplement_requested" ? "update-proposal-during-supplement" : "update-proposal-draft",
@@ -291,8 +300,8 @@ export class ResearchProposalsService {
 
   async listAttachments(actor: SafeUserContext, proposalId: string) {
     const proposal = await this.findProposal(proposalId);
-    await this.assertReadableProposal(actor, proposal);
-    return this.findAttachments(proposalId, { canMutate: this.canMutateProposalFiles(actor, proposal) });
+    const participation = await this.assertReadableProposal(actor, proposal);
+    return this.findAttachments(proposalId, { canMutate: this.canMutateProposalFiles(actor, proposal, participation) });
   }
 
   async getReadiness(actor: SafeUserContext, proposalId: string) {
@@ -581,29 +590,88 @@ export class ResearchProposalsService {
   }
 
   /**
-   * Replaces the participation list and records what changed (AUD-ST-3.0-01). Newly linked
-   * accounts are audited individually so a participation-to-account link is traceable on its own,
-   * not just as part of a bulk edit.
+   * Synchronises the current participation set without deleting history. Rows removed from the
+   * draft end at one UTC instant; re-adding the same actor+role creates a successor row.
    */
-  private async replaceMembers(proposalId: string, members: ProposalMemberPersistInput[], actor: SafeUserContext) {
-    const previous = await this.findMembers(proposalId);
-    const previousUserIds = new Set(previous.map((member) => member.userId).filter((value): value is string => Boolean(value)));
+  private async replaceMembers(
+    proposalId: string,
+    members: ProposalMemberPersistInput[],
+    actor: SafeUserContext,
+    expectedContextVersion?: ContextVersionTokenV1
+  ) {
+    let previous: ProposalMemberRecord[] = [];
     const nextUserIds = new Set(members.map((member) => member.userId).filter((value): value is string => Boolean(value)));
-
-    await this.prisma.proposalMember.deleteMany({ where: { proposalId } });
-    if (members.length) {
-      await this.prisma.proposalMember.createMany({
-        data: members.map((member) => ({ proposalId, ...member }))
-      });
+    const key = (member: { userId?: string | null; participationRole?: string | null; name: string; role: string; organization: string }) =>
+      `${member.userId ?? `external:${member.name}:${member.organization}`}:${normalizeParticipationRole(member.participationRole ?? member.role)}`;
+    const desiredKeys = members.map((member) => key(member));
+    if (new Set(desiredKeys).size !== desiredKeys.length) {
+      throw new BadRequestException({ message: "Không thể lưu quan hệ trùng loại trên cùng hồ sơ." });
     }
-    await this.prisma.researchProposal.update({
-      where: { id: proposalId },
-      data: {
-        authorizationRelationshipVersion: { increment: 1 },
-        authorizationConflictVersion: { increment: 1 },
-        authorizationContextUpdatedAt: new Date()
-      } as never
-    });
+    const desired = new Map(members.map((member, index) => [desiredKeys[index]!, member]));
+    let active: ProposalMemberRecord[] = [];
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const changedAt = await readTransactionClockV1(tx);
+        previous = (await tx.proposalMember.findMany({ where: { proposalId } })) as ProposalMemberRecord[];
+        active = previous.filter((member) => member.status === "ACTIVE" && (!member.effectiveUntil || member.effectiveUntil > changedAt));
+        const activeByKey = new Map(active.map((member) => [key(member), member]));
+        const sameMember = (current: ProposalMemberRecord, next: ProposalMemberPersistInput) =>
+          current.name === next.name && current.role === next.role && current.organization === next.organization && current.userId === next.userId;
+        const ending = active.filter((member) => {
+          const next = desired.get(key(member));
+          return !next || !sameMember(member, next);
+        });
+        const creating = [...desired]
+          .filter(([memberKey, member]) => {
+            const current = activeByKey.get(memberKey);
+            return !current || !sameMember(current, member);
+          })
+          .map(([, member]) => member);
+        for (const member of ending) {
+          await tx.proposalMember.updateMany({
+            where: { id: member.id, status: "ACTIVE" },
+            data: { status: "ENDED", effectiveUntil: changedAt }
+          } as never);
+        }
+        if (creating.length) {
+          await tx.proposalMember.createMany({
+            data: creating.map((member) => ({ proposalId, ...member, status: "ACTIVE", effectiveFrom: changedAt, effectiveUntil: null }))
+          } as never);
+        }
+        // A submitted membership payload is an authorization-context refresh even when its
+        // canonical set is unchanged; invalidate a capability obtained before this mutation.
+        const contextUpdate = await tx.researchProposal.updateMany({
+          where: {
+            id: proposalId,
+            ...(expectedContextVersion
+              ? {
+                  authorizationRelationshipVersion: expectedContextVersion.relationshipVersion,
+                  authorizationConflictVersion: expectedContextVersion.conflictVersion
+                }
+              : {})
+          },
+          data: {
+            authorizationRelationshipVersion: { increment: 1 },
+            authorizationConflictVersion: { increment: 1 },
+            authorizationContextUpdatedAt: changedAt
+          } as never
+        });
+        if (expectedContextVersion && contextUpdate.count !== 1) {
+          throw new ConflictException({
+            message: "Dữ liệu phân quyền đã thay đổi. Vui lòng tải lại trước khi thử lại.",
+            code: "CONTEXT_VERSION_MISMATCH"
+          });
+        }
+      });
+    } catch (error) {
+      if ((error as { code?: string })?.code === "P2002" || (error as { meta?: { code?: string } })?.meta?.code === "23P01") {
+        throw new BadRequestException({ message: "Không thể lưu quan hệ trùng hoặc chồng lấn trên cùng hồ sơ." });
+      }
+      throw error;
+    }
+
+    const previousUserIds = new Set(previous.map((member) => member.userId).filter((value): value is string => Boolean(value)));
 
     for (const member of members) {
       if (member.userId && !previousUserIds.has(member.userId)) {
@@ -633,12 +701,23 @@ export class ResearchProposalsService {
       username: actor.username,
       reason: JSON.stringify({
         proposalId,
-        previousCount: previous.length,
+        previousCount: active.length,
         nextCount: members.length,
         linkedUserIds: [...nextUserIds].filter((userId) => !previousUserIds.has(userId)),
         unlinkedUserIds: [...previousUserIds].filter((userId) => !nextUserIds.has(userId))
       })
     });
+  }
+
+  private readProposalContextVersion(value: unknown, proposalId: string): ContextVersionTokenV1 {
+    if (!isContextVersionTokenV1(value)) {
+      throw new BadRequestException({ message: "Thiếu hoặc không hợp lệ contextVersion của hồ sơ." });
+    }
+    const contextVersion = value as ContextVersionTokenV1;
+    if (contextVersion.domain !== "proposal" || contextVersion.recordId !== proposalId || contextVersion.policyVersion !== "v1") {
+      throw new BadRequestException({ message: "Thiếu hoặc không hợp lệ contextVersion của hồ sơ." });
+    }
+    return contextVersion;
   }
 
   private async findMembers(proposalId: string) {
@@ -673,7 +752,7 @@ export class ResearchProposalsService {
       canEdit: false,
       canDelete: false
     }));
-    const members = await this.findMembers(proposal.id);
+    const members = (await this.findMembers(proposal.id)).filter((member) => isRelationshipActiveAt(member, new Date()));
     const missingFields = this.getMissingFields(proposal, members);
     const missingFiles = requiredPackage
       .filter((item) => !attachments.some((attachment) => attachment.requirementCode === item.code))
@@ -730,7 +809,7 @@ export class ResearchProposalsService {
     const members = await this.findMembers(proposal.id);
     const participation = resolvedParticipation ?? (await this.participation.resolveForProposal(actor?.id, proposal, members));
     const reviewAccess = resolvedReviewAccess ?? (await this.reviewAccess.resolveForProposal(actor?.id, proposal.id));
-    const attachments = await this.findAttachments(proposal.id, { canMutate: this.canMutateProposalFiles(actor, proposal) });
+    const attachments = await this.findAttachments(proposal.id, { canMutate: this.canMutateProposalFiles(actor, proposal, participation) });
     const history = await this.listHistoryForProposal(proposal.id);
     const supplementRequests = await this.listSupplementRequestsForProposal(proposal.id);
     const requiredPackage = await this.getRequiredPackageForProposal(proposal);
@@ -756,7 +835,10 @@ export class ResearchProposalsService {
       userId: member.userId ?? "",
       isAccountLinked: Boolean(member.userId),
       participationRole,
-      participationRoleLabel: getParticipationRoleLabel(participationRole)
+      participationRoleLabel: getParticipationRoleLabel(participationRole),
+      status: member.status,
+      effectiveFrom: member.effectiveFrom.toISOString(),
+      effectiveUntil: member.effectiveUntil?.toISOString() ?? ""
     };
   }
 
@@ -792,14 +874,16 @@ export class ResearchProposalsService {
     return participation;
   }
 
-  private canMutateProposalFiles(actor: SafeUserContext | undefined, proposal: ResearchProposalRecord) {
+  private canMutateProposalFiles(actor: SafeUserContext | undefined, proposal: ResearchProposalRecord, participation?: ProposalParticipation) {
     if (
       !actor ||
-      (proposal.status !== "draft" && proposal.status !== "supplement_requested") ||
-      proposal.ownerId !== actor.id
+      (proposal.status !== "draft" && proposal.status !== "supplement_requested")
     ) {
       return false;
     }
+
+    const isSecretary = participation?.roles.includes("secretary") ?? false;
+    if (proposal.ownerId !== actor.id && !isSecretary) return false;
 
     try {
       assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
@@ -825,7 +909,7 @@ export class ResearchProposalsService {
           reviewAccess,
           canRead,
           canEdit: canEditDraft,
-          canManageFiles: this.canMutateProposalFiles(actor, proposal)
+          canManageFiles: this.canMutateProposalFiles(actor, proposal, participation)
         })
       : undefined;
 

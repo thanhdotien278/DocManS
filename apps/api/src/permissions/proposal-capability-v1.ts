@@ -73,13 +73,19 @@ function viewerRelationships(participation: ProposalParticipation | undefined, r
   const relationships: ViewerRelationshipV1[] = [];
   for (const role of participation?.roles ?? []) {
     if (role === "none" || role === "unknown") continue;
-    const type = role === "principal-investigator" ? "PROPOSAL_PI" : role === "secretary" ? "PROPOSAL_SCIENTIFIC_SECRETARY" : "PROPOSAL_MEMBER";
+    const type = role === "principal-investigator"
+      ? "PROPOSAL_PI"
+      : role === "co-investigator"
+        ? "PROPOSAL_CO_INVESTIGATOR"
+        : role === "secretary"
+          ? "PROPOSAL_SCIENTIFIC_SECRETARY"
+          : "PROPOSAL_MEMBER";
     const effectiveFrom = participation?.relationshipEffectiveFrom[role];
     if (!effectiveFrom) continue;
-    relationships.push({ type, status: "ACTIVE", effectiveFrom, effectiveUntil: null });
+    relationships.push({ type, status: "ACTIVE", effectiveFrom, effectiveUntil: participation?.relationshipEffectiveUntil?.[role] ?? null });
   }
   if (reviewAccess?.isAssignedReviewer && reviewAccess.effectiveFrom) {
-    relationships.push({ type: "REVIEWER_ASSIGNMENT", status: "ACTIVE", effectiveFrom: reviewAccess.effectiveFrom, effectiveUntil: null });
+    relationships.push({ type: "REVIEWER_ASSIGNMENT", status: "ACTIVE", effectiveFrom: reviewAccess.effectiveFrom, effectiveUntil: reviewAccess.effectiveUntil ?? null });
   }
   return relationships.sort((left, right) => left.type.localeCompare(right.type));
 }
@@ -90,6 +96,7 @@ function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): {
     return (action === "file.upload" ? input.canManageFiles : input.canEdit) ? null : blocked(input.proposal.status === "draft" || input.proposal.status === "supplement_requested" ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");
   }
   if (action === "proposal.review.assign") {
+    if (input.participation?.isParticipant) return blocked("CONFLICT_DENIED");
     if (input.actor.systemRole !== "SCIENTIFIC_MANAGEMENT_STAFF") return blocked("ACTION_NOT_GRANTED");
     return ["submitted", "resubmitted", "under_review"].includes(input.proposal.status) ? null : blocked("WORKFLOW_STATE_DENIED");
   }

@@ -6,7 +6,7 @@ import { AuditLogService } from "../../auth/audit-log.service.js";
 import type { SafeUserContext } from "../../auth/auth.types.js";
 import type { ObjectStorage } from "../../infrastructure/minio/minio-object-storage.service.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { assertCanEditProposalDraft, assertCanReadProposal, assertHasOrganizationScope } from "../../proposals-shared/proposal-access.js";
+import { assertCanReadProposal, assertHasOrganizationScope } from "../../proposals-shared/proposal-access.js";
 import { ProposalReviewAccessService } from "../../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../../research-proposals/proposal-participation.service.js";
 import { RESEARCH_PROPOSAL_ENTITY_TYPE } from "./files.dto.js";
@@ -108,26 +108,31 @@ export class FilesService {
 
     let record: FileRecord;
     try {
-      record = (await this.prisma.fileRecord.create({
-        data: {
-          id: fileId,
-          relatedEntityType: input.relatedEntityType,
-          relatedEntityId: input.relatedEntityId,
-          filePurpose: input.filePurpose,
-          originalFileName,
-          description,
-          mimeType: input.mimeType,
-          sizeBytes: input.sizeBytes,
-          storageBucket: this.config.bucketName ?? "rtms-files",
-          storageObjectKey: objectKey,
-          uploadedById: actor.id,
-          status: "active"
-        } as never,
-        include: {
-          uploadedBy: {
-            select: { displayName: true }
+      record = (await this.prisma.$transaction(async (tx) => {
+        // Object storage has no transaction with Postgres. Rechecking here ensures a lifecycle
+        // change between the initial authorization and metadata write rolls back the usable file.
+        await this.assertCanUpload(actor, input.relatedEntityType, input.relatedEntityId);
+        return tx.fileRecord.create({
+          data: {
+            id: fileId,
+            relatedEntityType: input.relatedEntityType,
+            relatedEntityId: input.relatedEntityId,
+            filePurpose: input.filePurpose,
+            originalFileName,
+            description,
+            mimeType: input.mimeType,
+            sizeBytes: input.sizeBytes,
+            storageBucket: this.config.bucketName ?? "rtms-files",
+            storageObjectKey: objectKey,
+            uploadedById: actor.id,
+            status: "active"
+          } as never,
+          include: {
+            uploadedBy: {
+              select: { displayName: true }
+            }
           }
-        }
+        });
       })) as FileRecord;
     } catch (error) {
       await this.objectStorage.deleteObject?.(objectKey);
@@ -305,10 +310,14 @@ export class FilesService {
 
   private async assertCanUpload(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {
     const proposal = await this.findRelatedProposal(relatedEntityType, relatedEntityId);
-    assertCanEditProposalDraft(actor, proposal);
     assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
     if (proposal.status !== "draft" && proposal.status !== "supplement_requested") {
       throw new ForbiddenException({ message: "Hồ sơ không còn cho phép tải tệp." });
+    }
+    if (proposal.ownerId === actor.id) return;
+    const participation = await this.participation.resolveForProposal(actor.id, proposal);
+    if (!participation.roles.includes("secretary")) {
+      throw new ForbiddenException({ message: "Không có quyền tải tệp cho hồ sơ đề xuất này." });
     }
   }
 

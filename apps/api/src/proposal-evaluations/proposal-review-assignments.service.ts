@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
+import { readTransactionClockV1 } from "../permissions/authorization-v1.service.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
 import {
   getAssignmentRoleLabel,
@@ -71,6 +72,10 @@ export class ProposalReviewAssignmentsService {
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
     assertScientificManagementScope(actor, proposal);
     assertProposalStatus(proposal, REVIEWER_ASSIGNABLE_STATUSES, "Chỉ hồ sơ đã nộp hoặc đang đánh giá mới được phân công người đánh giá.");
+    const actorConflict = await this.participation.evaluateConflict(actor.id, proposalId);
+    if (actorConflict.conflicted) {
+      throw new ForbiddenException({ message: "Người đang tham gia hồ sơ không thể phân công người đánh giá." });
+    }
 
     const candidate = await this.resolveReviewerCandidate(input);
     const assignmentRole = normalizeAssignmentRole(input.assignmentRole);
@@ -118,11 +123,11 @@ export class ProposalReviewAssignmentsService {
       });
     }
 
-    const assignedAt = new Date();
     const movesToUnderReview = proposal.status !== PROPOSAL_STATUS.underReview;
 
     const created = (await this.runAssignmentTransaction(candidate.displayName, () =>
       this.prisma.$transaction(async (tx) => {
+        const assignedAt = await readTransactionClockV1(tx);
         const assignment = (await tx.proposalReviewAssignment.create({
           data: {
             proposalId,
@@ -131,6 +136,8 @@ export class ProposalReviewAssignmentsService {
             status: REVIEW_ASSIGNMENT_STATUS.assigned,
             assignedById: actor.id,
             assignedAt,
+            effectiveFrom: assignedAt,
+            effectiveUntil: null,
             dueDate
           } as never,
           include: ASSIGNMENT_INCLUDE
@@ -205,12 +212,11 @@ export class ProposalReviewAssignmentsService {
     }
 
     const reason = typeof input.reason === "string" ? input.reason.trim().slice(0, 2000) : "";
-    const revokedAt = new Date();
-
     const updated = (await this.prisma.$transaction(async (tx) => {
+      const revokedAt = await readTransactionClockV1(tx);
       const record = (await tx.proposalReviewAssignment.update({
         where: { id: assignmentId },
-        data: { status: REVIEW_ASSIGNMENT_STATUS.revoked, revokedAt } as never,
+        data: { status: REVIEW_ASSIGNMENT_STATUS.revoked, revokedAt, effectiveUntil: revokedAt } as never,
         include: ASSIGNMENT_INCLUDE
       })) as ReviewAssignmentRecord;
 
@@ -455,6 +461,8 @@ export class ProposalReviewAssignmentsService {
       assignedById: assignment.assignedById,
       assignedByDisplayName: assignment.assignedBy?.displayName ?? "",
       assignedAt: assignment.assignedAt.toISOString(),
+      effectiveFrom: (assignment.effectiveFrom ?? assignment.assignedAt).toISOString(),
+      effectiveUntil: assignment.effectiveUntil?.toISOString() ?? "",
       dueDate: assignment.dueDate?.toISOString() ?? "",
       revokedAt: assignment.revokedAt?.toISOString() ?? "",
       completedAt: assignment.completedAt?.toISOString() ?? "",

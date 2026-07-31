@@ -14,6 +14,7 @@ import {
   type ReviewRecommendation
 } from "../proposals-shared/proposal-review-access.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
+import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
 import { REVIEW_SUBMITTABLE_STATUSES } from "../proposals-shared/proposal-workflow.js";
 import {
   assertProposalStatus,
@@ -34,7 +35,8 @@ export class ProposalReviewsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
-    private readonly reviewAccess: ProposalReviewAccessService
+    private readonly reviewAccess: ProposalReviewAccessService,
+    private readonly participation: ProposalParticipationService
   ) {}
 
   /** The rubric the reviewer form renders. Fixed in code by design — ST-3.3 rules out a builder. */
@@ -231,6 +233,10 @@ export class ProposalReviewsService {
   }
 
   private async assertAssigned(actor: SafeUserContext, proposalId: string) {
+    const conflict = await this.participation.evaluateConflict(actor.id, proposalId);
+    if (conflict.conflicted) {
+      throw new ForbiddenException({ message: "Người đang tham gia hồ sơ không thể chấm điểm hoặc gửi đánh giá." });
+    }
     const access = await this.reviewAccess.resolveForProposal(actor?.id, proposalId);
     if (!access.isAssignedReviewer) {
       throw new ForbiddenException({ message: "Bạn không được phân công đánh giá hồ sơ này." });

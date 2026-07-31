@@ -245,12 +245,16 @@ model ProposalMember {
   name              String
   role              String
   participationRole String           @default("member") @map("participation_role")
+  status            String           @default("ACTIVE")
+  effectiveFrom     DateTime         @default(now()) @map("effective_from")
+  effectiveUntil    DateTime?        @map("effective_until")
   organization      String
   createdAt         DateTime         @default(now()) @map("created_at")
 
   @@index([proposalId])
   @@index([userId])
   @@index([participationRole])
+  @@index([proposalId, userId, participationRole, status])
   @@map("proposal_members")
 }
 
@@ -347,6 +351,8 @@ model ProposalReviewAssignment {
   assignedById   String           @map("assigned_by_id")
   assignedBy     User             @relation("ReviewAssignmentAssigner", fields: [assignedById], references: [id])
   assignedAt     DateTime         @default(now()) @map("assigned_at")
+  effectiveFrom  DateTime         @default(now()) @map("effective_from")
+  effectiveUntil DateTime?        @map("effective_until")
   dueDate        DateTime?        @map("due_date")
   revokedAt      DateTime?        @map("revoked_at")
   completedAt    DateTime?        @map("completed_at")

@@ -253,16 +253,29 @@ function createPrisma() {
       async updateMany({ where, data }) {
         let count = 0;
         store.proposals = store.proposals.map((item) => {
-          if (item.id !== where.id || (where.status !== undefined && item.status !== where.status)) {
+          if (item.id !== where.id ||
+            (where.status !== undefined && item.status !== where.status) ||
+            (where.authorizationRelationshipVersion !== undefined && item.authorizationRelationshipVersion !== where.authorizationRelationshipVersion) ||
+            (where.authorizationConflictVersion !== undefined && item.authorizationConflictVersion !== where.authorizationConflictVersion)) {
             return item;
           }
           count += 1;
-          return { ...item, ...data, updatedAt: new Date() };
+          const values = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value && typeof value === "object" && "increment" in value ? item[key] + value.increment : value]));
+          return { ...item, ...values, updatedAt: new Date() };
         });
         return { count };
       }
     },
     proposalMember: {
+      async updateMany({ where, data }) {
+        let count = 0;
+        store.members = store.members.map((item) => {
+          if (item.id !== where.id || (where.status && item.status !== where.status)) return item;
+          count += 1;
+          return { ...item, ...data };
+        });
+        return { count };
+      },
       async deleteMany({ where }) {
         const before = store.members.length;
         store.members = store.members.filter((item) => item.proposalId !== where.proposalId);
@@ -274,6 +287,9 @@ function createPrisma() {
           createdAt: new Date(),
           userId: null,
           participationRole: "member",
+          status: "ACTIVE",
+          effectiveFrom: new Date(),
+          effectiveUntil: null,
           ...item
         }));
         store.members.push(...records);
@@ -348,6 +364,9 @@ function createPrisma() {
       }
     },
     ...createEvaluationTables(store, ACCOUNTS),
+    async $queryRaw() {
+      return [{ asOf: new Date() }];
+    },
     async $transaction(callback) {
       return callback(this);
     }
@@ -383,7 +402,7 @@ function createServices() {
   const objectStorage = createObjectStorage();
 
   const assignments = new ProposalReviewAssignmentsService(prisma, auditLog, participation, reviewAccess);
-  const reviews = new ProposalReviewsService(prisma, auditLog, reviewAccess);
+  const reviews = new ProposalReviewsService(prisma, auditLog, reviewAccess, participation);
   const summaries = new ProposalEvaluationSummaryService(prisma, auditLog, assignments, reviews, participation, reviewAccess);
   const decisions = new ProposalDecisionsService(prisma, auditLog, participation, reviewAccess, assignments, reviews, summaries);
 
@@ -623,6 +642,19 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     assert.equal(JSON.parse(services.auditLog.find("assign-reviewer")[0].reason).reasonCode, "participation");
   });
 
+  it("Story 1.9: an active staff secretary cannot bypass the capability response to assign a reviewer", async () => {
+    const services = createServices();
+    const proposal = await createSubmittedProposal(services, {
+      members: [...TEAM, { name: staffUser.displayName, role: "Thư ký khoa học", organization: "Phòng KHQS", username: staffUser.username }]
+    });
+
+    await assert.rejects(
+      () => services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUsername: reviewerUser.username }),
+      ForbiddenException
+    );
+    assert.equal(services.prisma.store.reviewAssignments.length, 0);
+  });
+
   it("AC-ST-3.2-01: authorization and workflow state are enforced fail-closed", async () => {
     const services = createServices();
     const proposal = await createSubmittedProposal(services);
@@ -788,6 +820,30 @@ describe("ST-3.3 reviewer scoring and comments", () => {
       BadRequestException
     );
     assert.equal(services.prisma.store.reviews[0].comment, "Nhận xét của phản biện 1.");
+  });
+
+  it("Story 1.9: a reviewer who becomes a secretary cannot save or submit a review", async () => {
+    const services = createServices();
+    const { proposal } = await createProposalUnderReview(services);
+    services.prisma.store.members.push({
+      id: "member-reviewer-secretary",
+      proposalId: proposal.id,
+      userId: reviewerUser.id,
+      name: reviewerUser.displayName,
+      role: "Thư ký khoa học",
+      participationRole: "secretary",
+      organization: "Phòng KHQS",
+      status: "ACTIVE",
+      effectiveFrom: new Date(Date.now() - 1000),
+      effectiveUntil: null,
+      createdAt: new Date()
+    });
+
+    await assert.rejects(() => services.reviews.saveMyReview(reviewerUser, proposal.id, { comment: "Không được phép" }), ForbiddenException);
+    await assert.rejects(
+      () => services.reviews.submitMyReview(reviewerUser, proposal.id, { scoreData: FULL_SCORES, comment: "Không được phép", recommendation: "approve" }),
+      ForbiddenException
+    );
   });
 });
 
