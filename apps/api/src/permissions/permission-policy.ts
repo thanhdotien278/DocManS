@@ -1,5 +1,12 @@
 import { SYSTEM_ROLES, type SystemRole } from "../auth/auth.types.js";
 
+export {
+  buildAuthorizationContextV1,
+  evaluateAuthorizationV1,
+  readTransactionClockV1,
+  runAuthorizedMutationV1
+} from "./authorization-v1.service.js";
+
 type PermissionAction = "read" | "create" | "update" | "delete" | "submit" | "approve" | "reject" | "assign" | "export";
 type PermissionResource =
   | "workspace"

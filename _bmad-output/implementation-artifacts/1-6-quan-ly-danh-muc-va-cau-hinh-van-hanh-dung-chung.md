@@ -4,7 +4,7 @@ baseline_commit: 0e9c513c759f8ccdcb201527a0f0250a0e8a36f3
 
 # Story 1.6: Shared Catalog and Operational Configuration Management
 
-Status: review
+Status: done
 
 ## Story
 
@@ -88,6 +88,8 @@ GPT-5.6
 - Implemented phase 1 config allowlists for `session_timeout_minutes` and `user_created`, including numeric bounds and per-template placeholder validation.
 - Added catalog edit, activate/deactivate, and soft-delete controls to the existing admin catalog UI.
 - Verified `npm run typecheck`, `npm test` (112/112), `npm run build`, and `git diff --check`.
+- Resolved the review findings by making catalog identity immutable, guarding concurrent soft-delete mutations, rejecting empty updates, returning correct duplicate and field-validation errors, and representing archive/refresh states in the admin UI.
+- Final completion evidence on 2026-07-31: `npm run typecheck` and `npm test` passed (116/116).
 
 ### File List
 
@@ -104,3 +106,4 @@ GPT-5.6
 
 - 2026-07-30: Created implementation-ready Story 1.6 specification and started development.
 - 2026-07-30: Implemented Story 1.6 backend validation/audit, admin catalog UI actions, regression coverage, and moved story to review.
+- 2026-07-31: Revalidated review fixes and marked done after `npm run typecheck` and the full 116-test suite passed.
