@@ -174,6 +174,7 @@ export class ProposalReviewsService {
         where: { id: proposalId },
         data: {
           authorizationRelationshipVersion: { increment: 1 },
+          authorizationDelegationVersion: { increment: 1 },
           authorizationContextUpdatedAt: submittedAt
         } as never
       });

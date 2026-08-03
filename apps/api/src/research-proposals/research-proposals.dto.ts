@@ -48,6 +48,12 @@ export class RequestProposalSupplementDto {
   dueDate!: string;
 }
 
+export class DelegatedMutationDto {
+  [key: string]: unknown;
+  delegationId?: string;
+  contextVersion?: unknown;
+}
+
 function assertRecord(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new BadRequestException({ message: PROPOSAL_VALIDATION_MESSAGE });
@@ -123,5 +129,15 @@ export const requestProposalSupplementPipe: PipeTransform<unknown, RequestPropos
     }
 
     return input as RequestProposalSupplementDto;
+  }
+};
+
+export const delegatedMutationPipe: PipeTransform<unknown, DelegatedMutationDto> = {
+  transform(value: unknown) {
+    if (value === undefined || value === null) return {};
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new BadRequestException({ message: "Dữ liệu ủy quyền không hợp lệ." });
+    const input = value as Record<string, unknown>;
+    if (input.delegationId !== undefined && (typeof input.delegationId !== "string" || !input.delegationId)) throw new BadRequestException({ message: "delegationId không hợp lệ." });
+    return input as DelegatedMutationDto;
   }
 };

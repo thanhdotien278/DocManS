@@ -32,7 +32,8 @@ describe("Story 1.8 viewer capability V1", () => {
     updatedAt: new Date("2026-07-31T00:00:00.000Z"),
     authorizationContextUpdatedAt: new Date("2026-07-31T01:00:00.000Z"),
     authorizationRelationshipVersion: 7,
-    authorizationConflictVersion: 3
+    authorizationConflictVersion: 3,
+    authorizationDelegationVersion: 0
   };
 
   it("preserves every viewer relationship and returns canonical exact actions", () => {
@@ -68,6 +69,7 @@ describe("Story 1.8 viewer capability V1", () => {
     assert.equal(capability.evaluatedAsOf, proposal.authorizationContextUpdatedAt.toISOString());
     assert.equal(capability.contextVersion.relationshipVersion, 7);
     assert.equal(capability.contextVersion.conflictVersion, 3);
+    assert.equal(capability.contextVersion.delegationVersion, 0);
     assert.deepEqual(capability.viewerRelationships.map((relationship) => relationship.effectiveFrom), [
       "2026-07-02T00:00:00.000Z",
       "2026-07-01T00:00:00.000Z",

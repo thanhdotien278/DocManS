@@ -164,6 +164,7 @@ function createPrisma() {
           submittedById: null,
           authorizationRelationshipVersion: 0,
           authorizationConflictVersion: 0,
+          authorizationDelegationVersion: 0,
           authorizationContextUpdatedAt: new Date(),
           createdAt: new Date(),
           updatedAt: new Date(),
