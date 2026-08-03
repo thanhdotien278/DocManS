@@ -159,7 +159,8 @@ export class ProposalEvaluationSummaryService {
         await tx.researchProposal.update({
           where: { id: proposalId },
           data: {
-            authorizationRelationshipVersion: { increment: 1 },
+          authorizationRelationshipVersion: { increment: 1 },
+          authorizationDelegationVersion: { increment: 1 },
             authorizationContextUpdatedAt: now
           } as never
         });

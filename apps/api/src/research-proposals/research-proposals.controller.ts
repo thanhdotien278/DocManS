@@ -5,9 +5,11 @@ import {
   createResearchProposalDraftPipe,
   requestProposalSupplementPipe,
   updateResearchProposalDraftPipe,
+  delegatedMutationPipe,
   type CreateResearchProposalDraftDto,
   type RequestProposalSupplementDto,
   type UpdateResearchProposalDraftDto
+  ,type DelegatedMutationDto
 } from "./research-proposals.dto.js";
 import { ResearchProposalsService } from "./research-proposals.service.js";
 
@@ -46,8 +48,8 @@ export class ResearchProposalsController {
   }
 
   @Post(":id/submit")
-  async submitProposal(@Req() request: RequestWithCurrentUser, @Param("id") id: string) {
-    return { proposal: await this.proposalsService.submitProposal(request.currentUser!, id) };
+  async submitProposal(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body(delegatedMutationPipe) body: DelegatedMutationDto) {
+    return { proposal: await this.proposalsService.submitProposal(request.currentUser!, id, body) };
   }
 
   @Post(":id/supplement-requests")

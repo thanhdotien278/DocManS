@@ -32,8 +32,11 @@ export const PERMISSION_ACTION_IDS_V1 = [
     "proposal.decision.approve",
     "proposal.decision.reject",
     "file.read",
-    "file.upload"
+    "file.upload",
+    "delegation.grant.approve"
 ];
+export const DELEGATION_GRANT_STATUSES_V1 = ["PENDING_APPROVAL", "ACTIVE", "REVOKED", "EXPIRED", "REJECTED"];
+export const DELEGABLE_PERMISSION_ACTION_IDS_V1 = ["proposal.submit"];
 export const VIEWER_RELATIONSHIP_TYPES_V1 = [
     "PROPOSAL_PI",
     "PROPOSAL_CO_INVESTIGATOR",
@@ -56,6 +59,25 @@ export function isAuthorizationDecisionCodeV1(value) {
 }
 export function isPermissionActionV1(value) {
     return typeof value === "string" && PERMISSION_ACTION_IDS_V1.includes(value);
+}
+export function isDelegablePermissionActionV1(value) {
+    return typeof value === "string" && DELEGABLE_PERMISSION_ACTION_IDS_V1.includes(value);
+}
+export function isDelegationGrantV1(value) {
+    if (!value || typeof value !== "object")
+        return false;
+    const grant = value;
+    const startsAt = Date.parse(grant.startsAt);
+    const endsAt = grant.endsAt === null ? null : Date.parse(grant.endsAt);
+    return grant.schemaVersion === AUTHORIZATION_SCHEMA_VERSION_V1 &&
+        [grant.grantId, grant.grantorUserId, grant.delegateUserId, grant.targetDomain, grant.targetRecordId, grant.targetOrganizationId, grant.reason].every((field) => typeof field === "string" && field.length > 0) &&
+        grant.grantorUserId !== grant.delegateUserId &&
+        (grant.approverUserId === null || (typeof grant.approverUserId === "string" && grant.approverUserId.length > 0 && grant.approverUserId !== grant.grantorUserId)) &&
+        Array.isArray(grant.actionIds) && grant.actionIds.length > 0 && new Set(grant.actionIds).size === grant.actionIds.length && grant.actionIds.every(isDelegablePermissionActionV1) &&
+        isContextVersionTokenV1(grant.sourceAuthorityVersion) && Number.isFinite(startsAt) && (endsAt === null || (Number.isFinite(endsAt) && startsAt < endsAt)) &&
+        DELEGATION_GRANT_STATUSES_V1.includes(grant.status) &&
+        (grant.approvedAt === null || Number.isFinite(Date.parse(grant.approvedAt))) &&
+        (grant.revokedAt === null || Number.isFinite(Date.parse(grant.revokedAt)));
 }
 export function isAuthorizationResolutionV1(value) {
     return value === "RESOLVED_VALUE" || value === "RESOLVED_EMPTY" || value === "NOT_APPLICABLE" || value === "UNRESOLVED" || value === "STALE" || value === "AMBIGUOUS";

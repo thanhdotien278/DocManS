@@ -15,6 +15,7 @@ type ProposalCapabilityInput = {
     authorizationContextUpdatedAt: Date;
     authorizationRelationshipVersion: number;
     authorizationConflictVersion: number;
+    authorizationDelegationVersion: number;
   };
   participation?: ProposalParticipation;
   reviewAccess?: ProposalReviewAccess;
@@ -63,7 +64,7 @@ export function projectProposalViewerAuthorizationV1(input: ProposalCapabilityIn
       aggregateVersion: Math.max(0, input.proposal.updatedAt.getTime()),
       relationshipVersion: Math.max(0, input.proposal.authorizationRelationshipVersion),
       conflictVersion: Math.max(0, input.proposal.authorizationConflictVersion),
-      delegationVersion: 0,
+      delegationVersion: Math.max(0, input.proposal.authorizationDelegationVersion),
       policyVersion: "v1"
     }
   };

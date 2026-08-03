@@ -71,6 +71,7 @@ type ResearchProposalRecord = {
   submittedById: string | null;
   authorizationRelationshipVersion: number;
   authorizationConflictVersion: number;
+  authorizationDelegationVersion: number;
   authorizationContextUpdatedAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -310,9 +311,10 @@ export class ResearchProposalsService {
     return this.computeReadiness(proposal);
   }
 
-  async submitProposal(actor: SafeUserContext, proposalId: string) {
+  async submitProposal(actor: SafeUserContext, proposalId: string, delegatedInput: { delegationId?: string; contextVersion?: unknown } = {}) {
     const proposal = await this.findProposal(proposalId);
-    const pi = this.assertCanMutateProposalDraft(actor, proposal);
+    const delegated = delegatedInput.delegationId ? await this.resolveDelegatedAction(actor, proposal, delegatedInput.delegationId, "proposal.submit", delegatedInput.contextVersion) : false;
+    const pi = delegated ? actor : this.assertCanMutateProposalDraft(actor, proposal);
 
     const intake = await this.findIntakePeriod(proposal.intakePeriodId);
     this.assertIntakeEligibleForProposal(pi, intake);
@@ -328,6 +330,7 @@ export class ResearchProposalsService {
 
     const submittedAt = new Date();
     const submitted = (await this.prisma.$transaction(async (tx) => {
+      if (delegated) await this.resolveDelegatedAction(actor, proposal, delegatedInput.delegationId!, "proposal.submit", delegatedInput.contextVersion, tx);
       const updated = (await tx.researchProposal.update({
         where: { id: proposalId },
         data: {
@@ -344,7 +347,7 @@ export class ResearchProposalsService {
           fromStatus: proposal.status,
           toStatus: "submitted",
           submittedAt,
-          note: "PI nộp hồ sơ chính thức"
+          note: delegated ? "Nộp hồ sơ theo ủy quyền hành động" : "PI nộp hồ sơ chính thức"
         } as never
       });
 
@@ -370,6 +373,20 @@ export class ResearchProposalsService {
     })) as unknown as ResearchProposalRecord;
 
     return this.toProposalDetailResponse(submitted, actor);
+  }
+
+  private async resolveDelegatedAction(actor: SafeUserContext, proposal: ResearchProposalRecord, delegationId: string, action: string, expectedContext: unknown, client: any = this.prisma) {
+    if (!expectedContext || typeof expectedContext !== "object") throw new ForbiddenException({ message: "Thiếu contextVersion cho hành động được ủy quyền.", code: "CONTEXT_VERSION_MISMATCH" });
+    assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
+    const grant = await client.proposalDelegation.findUnique({ where: { id: delegationId }, include: { grantor: true } });
+    const now = new Date();
+    const actions = Array.isArray(grant?.actionIds) ? grant.actionIds : [];
+    const sourceActive = grant?.grantor.status === "active" && grant.grantorUserId === proposal.ownerId;
+    const valid = Boolean(grant && grant.proposalId === proposal.id && grant.delegateUserId === actor.id && grant.status === "ACTIVE" && grant.approverUserId && actions.length === 1 && actions[0] === action && grant.startsAt <= now && (!grant.endsAt || now < grant.endsAt) && sourceActive);
+    if (!valid) throw new ForbiddenException({ message: "Ủy quyền cho hành động này không hợp lệ.", code: "DELEGATION_INVALID" });
+    const current = { domain: "proposal", recordId: proposal.id, aggregateVersion: proposal.updatedAt.getTime(), relationshipVersion: proposal.authorizationRelationshipVersion, conflictVersion: proposal.authorizationConflictVersion, delegationVersion: proposal.authorizationDelegationVersion, policyVersion: "v1" };
+    if (JSON.stringify(expectedContext) !== JSON.stringify(current)) throw new ForbiddenException({ message: "Dữ liệu phân quyền đã thay đổi. Vui lòng tải lại trước khi thử lại.", code: "CONTEXT_VERSION_MISMATCH" });
+    return true;
   }
 
   async requestSupplement(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>) {
@@ -653,6 +670,7 @@ export class ResearchProposalsService {
           },
           data: {
             authorizationRelationshipVersion: { increment: 1 },
+            authorizationDelegationVersion: { increment: 1 },
             authorizationConflictVersion: { increment: 1 },
             authorizationContextUpdatedAt: changedAt
           } as never

@@ -147,6 +147,7 @@ export class ProposalReviewAssignmentsService {
           where: { id: proposalId },
           data: {
             authorizationRelationshipVersion: { increment: 1 },
+            authorizationDelegationVersion: { increment: 1 },
             authorizationContextUpdatedAt: assignedAt
           } as never
         });
@@ -224,6 +225,7 @@ export class ProposalReviewAssignmentsService {
         where: { id: proposalId },
         data: {
           authorizationRelationshipVersion: { increment: 1 },
+          authorizationDelegationVersion: { increment: 1 },
           authorizationContextUpdatedAt: revokedAt
         } as never
       });

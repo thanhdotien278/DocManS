@@ -35,13 +35,36 @@ export const PERMISSION_ACTION_IDS_V1 = [
   "proposal.decision.approve",
   "proposal.decision.reject",
   "file.read",
-  "file.upload"
+  "file.upload",
+  "delegation.grant.approve"
 ] as const;
 
 export type AuthorizationDecisionCodeV1 = (typeof AUTHORIZATION_DECISION_CODE_ORDER_V1)[number];
 export type PermissionActionV1 = (typeof PERMISSION_ACTION_IDS_V1)[number];
 export type AuthorizationResolutionV1 = "RESOLVED_VALUE" | "RESOLVED_EMPTY" | "NOT_APPLICABLE" | "UNRESOLVED" | "STALE" | "AMBIGUOUS";
 export type AuthorizationDimensionV1 = "systemRole" | "organizationScope" | "relationship" | "assignment" | "delegation" | "workflowState" | "conflict";
+
+export const DELEGATION_GRANT_STATUSES_V1 = ["PENDING_APPROVAL", "ACTIVE", "REVOKED", "EXPIRED", "REJECTED"] as const;
+export type DelegationGrantStatusV1 = (typeof DELEGATION_GRANT_STATUSES_V1)[number];
+export const DELEGABLE_PERMISSION_ACTION_IDS_V1 = ["proposal.submit"] as const satisfies readonly PermissionActionV1[];
+export type DelegationGrantV1 = {
+  schemaVersion: "v1";
+  grantId: string;
+  grantorUserId: string;
+  delegateUserId: string;
+  approverUserId: string | null;
+  targetDomain: string;
+  targetRecordId: string;
+  targetOrganizationId: string;
+  actionIds: PermissionActionV1[];
+  sourceAuthorityVersion: ContextVersionTokenV1;
+  startsAt: string;
+  endsAt: string | null;
+  status: DelegationGrantStatusV1;
+  approvedAt: string | null;
+  revokedAt: string | null;
+  reason: string;
+};
 
 export type ContextVersionTokenV1 = {
   domain: string;
@@ -145,6 +168,26 @@ export function isAuthorizationDecisionCodeV1(value: unknown): value is Authoriz
 
 export function isPermissionActionV1(value: unknown): value is PermissionActionV1 {
   return typeof value === "string" && PERMISSION_ACTION_IDS_V1.includes(value as PermissionActionV1);
+}
+
+export function isDelegablePermissionActionV1(value: unknown): value is PermissionActionV1 {
+  return typeof value === "string" && DELEGABLE_PERMISSION_ACTION_IDS_V1.includes(value as (typeof DELEGABLE_PERMISSION_ACTION_IDS_V1)[number]);
+}
+
+export function isDelegationGrantV1(value: unknown): value is DelegationGrantV1 {
+  if (!value || typeof value !== "object") return false;
+  const grant = value as DelegationGrantV1;
+  const startsAt = Date.parse(grant.startsAt);
+  const endsAt = grant.endsAt === null ? null : Date.parse(grant.endsAt);
+  return grant.schemaVersion === AUTHORIZATION_SCHEMA_VERSION_V1 &&
+    [grant.grantId, grant.grantorUserId, grant.delegateUserId, grant.targetDomain, grant.targetRecordId, grant.targetOrganizationId, grant.reason].every((field) => typeof field === "string" && field.length > 0) &&
+    grant.grantorUserId !== grant.delegateUserId &&
+    (grant.approverUserId === null || (typeof grant.approverUserId === "string" && grant.approverUserId.length > 0 && grant.approverUserId !== grant.grantorUserId)) &&
+    Array.isArray(grant.actionIds) && grant.actionIds.length > 0 && new Set(grant.actionIds).size === grant.actionIds.length && grant.actionIds.every(isDelegablePermissionActionV1) &&
+    isContextVersionTokenV1(grant.sourceAuthorityVersion) && Number.isFinite(startsAt) && (endsAt === null || (Number.isFinite(endsAt) && startsAt < endsAt)) &&
+    DELEGATION_GRANT_STATUSES_V1.includes(grant.status) &&
+    (grant.approvedAt === null || Number.isFinite(Date.parse(grant.approvedAt))) &&
+    (grant.revokedAt === null || Number.isFinite(Date.parse(grant.revokedAt)));
 }
 
 export function isAuthorizationResolutionV1(value: unknown): value is AuthorizationResolutionV1 {

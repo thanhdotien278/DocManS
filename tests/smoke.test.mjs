@@ -86,6 +86,7 @@ describe("workspace smoke checks", () => {
       "NotificationTemplate",
       "ProposalIntakePeriod",
       "ResearchProposal",
+      "ProposalDelegation",
       "ProposalMember",
       "ProposalAttachment",
       "FileRecord",
