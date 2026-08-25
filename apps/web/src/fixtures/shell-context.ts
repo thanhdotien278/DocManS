@@ -18,6 +18,7 @@ import {
   NotebookPen,
   Settings2,
   ShieldCheck,
+  UserRoundSearch,
   Users
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -261,6 +262,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
   SCIENTIFIC_MANAGEMENT_STAFF: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/proposals", label: "Quản lý đề tài", icon: Files },
+    { href: "/researcher-profiles", label: "Hồ sơ nhà khoa học", icon: UserRoundSearch },
     { href: "/intakes", label: "Đợt tiếp nhận", icon: CalendarRange },
     { href: "/reviews", label: "Đánh giá hồ sơ", icon: FileSearch },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },

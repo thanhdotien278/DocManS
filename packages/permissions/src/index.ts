@@ -36,6 +36,11 @@ export const PERMISSION_ACTION_IDS_V1 = [
   "proposal.decision.reject",
   "file.read",
   "file.upload",
+  "researcher-profile.activate",
+  "researcher-profile.create",
+  "researcher-profile.deactivate",
+  "researcher-profile.read",
+  "researcher-profile.update",
   "delegation.grant.approve"
 ] as const;
 

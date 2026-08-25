@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import type { AuditAction, AuditLogRecord, AuditResult } from "./auth.types.js";
 
@@ -12,37 +13,12 @@ type AuditLogInput = {
   ip?: string;
   userAgent?: string;
   reason?: string;
+  correlationId?: string;
+  beforeFacts?: Record<string, unknown>;
+  afterFacts?: Record<string, unknown>;
 };
 
-type AuditLogClient = {
-  auditLog: {
-    create(args: {
-      data: {
-        action: AuditAction;
-        actorId?: string;
-        targetEntity?: string;
-        targetEntityId?: string;
-        username?: string;
-        result: AuditResult;
-        ip?: string;
-        userAgent?: string;
-        reason?: string;
-      };
-    }): Promise<{
-      id: string;
-      action: string;
-      actorId: string | null;
-      targetEntity: string | null;
-      targetEntityId: string | null;
-      username: string | null;
-      timestamp: Date;
-      result: string;
-      ip: string | null;
-      userAgent: string | null;
-      reason: string | null;
-    }>;
-  };
-};
+type AuditLogClient = { auditLog: { create: Prisma.TransactionClient["auditLog"]["create"] } };
 
 @Injectable()
 export class AuditLogService {
@@ -59,8 +35,11 @@ export class AuditLogService {
         result: input.result,
         ip: input.ip,
         userAgent: input.userAgent,
-        reason: input.reason
-      }
+        reason: input.reason,
+        correlationId: input.correlationId,
+        beforeFacts: input.beforeFacts,
+        afterFacts: input.afterFacts
+      } as never
     });
 
     return {

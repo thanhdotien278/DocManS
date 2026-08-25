@@ -82,6 +82,9 @@ describe("workspace smoke checks", () => {
       "PasswordResetToken",
       "AuditLog",
       "CatalogItem",
+      "ResearcherProfile",
+      "ResearcherProfileField",
+      "ResearcherProfileExpertiseKeyword",
       "SystemParameter",
       "NotificationTemplate",
       "ProposalIntakePeriod",
@@ -105,6 +108,9 @@ describe("workspace smoke checks", () => {
     assert.match(schemaSource, /@@map\("sessions"\)/);
     assert.match(schemaSource, /@@map\("audit_logs"\)/);
     assert.match(schemaSource, /@@map\("catalog_items"\)/);
+    assert.match(schemaSource, /@@map\("researcher_profiles"\)/);
+    assert.match(schemaSource, /@@map\("researcher_profile_fields"\)/);
+    assert.match(schemaSource, /@@map\("researcher_profile_expertise_keywords"\)/);
     assert.match(schemaSource, /@@map\("system_parameters"\)/);
     assert.match(schemaSource, /@@map\("notification_templates"\)/);
     assert.match(schemaSource, /@@map\("proposal_intake_periods"\)/);
