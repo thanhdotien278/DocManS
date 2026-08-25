@@ -41,6 +41,8 @@ model User {
   grantedProposalDelegations ProposalDelegation[] @relation("ProposalDelegationGrantor")
   receivedProposalDelegations ProposalDelegation[] @relation("ProposalDelegationDelegate")
   approvedProposalDelegations ProposalDelegation[] @relation("ProposalDelegationApprover")
+  createdResearcherProfiles ResearcherProfile[] @relation("ResearcherProfileCreator")
+  updatedResearcherProfiles ResearcherProfile[] @relation("ResearcherProfileUpdater")
 
   @@map("users")
 }
@@ -69,6 +71,7 @@ model OrganizationUnit {
   userScopes UserOrganizationScope[]
   proposalIntakePeriods ProposalIntakePeriod[]
   hostedResearchProposals ResearchProposal[]
+  researcherProfiles ResearcherProfile[]
 
   @@index([parentId])
   @@map("organization_units")
@@ -129,6 +132,9 @@ model AuditLog {
   ip        String?
   userAgent String?  @map("user_agent")
   reason    String?
+  correlationId String? @map("correlation_id")
+  beforeFacts Json? @map("before_facts")
+  afterFacts Json? @map("after_facts")
 
   @@index([action])
   @@index([actorId])
@@ -147,11 +153,74 @@ model CatalogItem {
   deletedAt   DateTime? @map("deleted_at")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
+  researcherProfileAcademicRanks ResearcherProfile[] @relation("ResearcherProfileAcademicRank")
+  researcherProfileAcademicDegrees ResearcherProfile[] @relation("ResearcherProfileAcademicDegree")
+  researcherProfileFields ResearcherProfileField[] @relation("ResearcherProfileResearchField")
 
   @@unique([type, code])
   @@index([type])
   @@index([deletedAt])
   @@map("catalog_items")
+}
+
+model ResearcherProfile {
+  id                         String        @id @default(uuid())
+  managementOrganizationUnitId String      @map("management_organization_unit_id")
+  managementOrganizationUnit OrganizationUnit @relation(fields: [managementOrganizationUnitId], references: [id])
+  externalAffiliation        String?       @map("external_affiliation")
+  fullName                   String        @map("full_name")
+  fullNameKey                String        @map("full_name_key")
+  academicRankCatalogItemId  String?       @map("academic_rank_catalog_item_id")
+  academicRankCatalogItem    CatalogItem?  @relation("ResearcherProfileAcademicRank", fields: [academicRankCatalogItemId], references: [id])
+  academicDegreeCatalogItemId String?      @map("academic_degree_catalog_item_id")
+  academicDegreeCatalogItem  CatalogItem?  @relation("ResearcherProfileAcademicDegree", fields: [academicDegreeCatalogItemId], references: [id])
+  title                      String?
+  contactEmail               String?       @map("contact_email")
+  contactEmailKey            String?       @map("contact_email_key")
+  contactPhone               String?       @map("contact_phone")
+  contactPhoneKey            String?       @map("contact_phone_key")
+  contactNote                String?       @map("contact_note")
+  status                     String        @default("ACTIVE")
+  aggregateVersion           Int           @default(0) @map("aggregate_version")
+  createdById                String        @map("created_by_id")
+  createdBy                  User          @relation("ResearcherProfileCreator", fields: [createdById], references: [id])
+  updatedById                String        @map("updated_by_id")
+  updatedBy                  User          @relation("ResearcherProfileUpdater", fields: [updatedById], references: [id])
+  createdAt                  DateTime      @default(now()) @map("created_at")
+  updatedAt                  DateTime      @updatedAt @map("updated_at")
+  researchFields             ResearcherProfileField[]
+  expertiseKeywords          ResearcherProfileExpertiseKeyword[]
+
+  @@index([managementOrganizationUnitId, status, fullNameKey])
+  @@index([contactEmailKey])
+  @@index([contactPhoneKey])
+  @@map("researcher_profiles")
+}
+
+model ResearcherProfileField {
+  id                 String          @id @default(uuid())
+  researcherProfileId String         @map("researcher_profile_id")
+  researcherProfile  ResearcherProfile @relation(fields: [researcherProfileId], references: [id], onDelete: Cascade)
+  catalogItemId      String          @map("catalog_item_id")
+  catalogItem        CatalogItem     @relation("ResearcherProfileResearchField", fields: [catalogItemId], references: [id])
+  createdAt          DateTime        @default(now()) @map("created_at")
+
+  @@unique([researcherProfileId, catalogItemId])
+  @@index([catalogItemId])
+  @@map("researcher_profile_fields")
+}
+
+model ResearcherProfileExpertiseKeyword {
+  id                 String          @id @default(uuid())
+  researcherProfileId String         @map("researcher_profile_id")
+  researcherProfile  ResearcherProfile @relation(fields: [researcherProfileId], references: [id], onDelete: Cascade)
+  keyword            String
+  keywordKey         String          @map("keyword_key")
+  createdAt          DateTime        @default(now()) @map("created_at")
+
+  @@unique([researcherProfileId, keywordKey])
+  @@index([keywordKey])
+  @@map("researcher_profile_expertise_keywords")
 }
 
 model SystemParameter {

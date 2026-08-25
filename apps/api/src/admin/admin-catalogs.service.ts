@@ -4,7 +4,7 @@ import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { readCode, readOptionalText, readText } from "./admin-access.js";
 
-const CATALOG_TYPES = ["research-field", "proposal-type", "priority", "report-type", "scoring-criterion"] as const;
+const CATALOG_TYPES = ["research-field", "academic-rank", "academic-degree", "proposal-type", "priority", "report-type", "scoring-criterion"] as const;
 
 type CatalogInput = {
   type?: unknown;

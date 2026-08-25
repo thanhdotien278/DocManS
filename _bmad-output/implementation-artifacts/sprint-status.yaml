@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-08-03T00:00:00+07:00
+last_updated: 2026-08-23T00:00:00+07:00
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -37,13 +37,13 @@ development_status:
   1-9-vong-doi-quan-he-theo-ho-so-va-gioi-han-thu-ky-khoa-hoc: done
   1-10-vong-doi-uy-quyen-theo-hanh-dong-va-ho-so: review
   epic-1-retrospective: optional
-  epic-2: backlog
-  2-1-tao-va-duy-tri-ho-so-nha-khoa-hoc: backlog
-  2-2-lien-ket-ho-so-nha-khoa-hoc-voi-tai-khoan: backlog
-  2-3-lich-su-tham-gia-tu-nguon-nghiep-vu-co-tham-quyen: backlog
-  2-4-kiem-tra-xung-dot-loi-ich-truoc-khi-phan-cong: backlog
-  2-5-tim-kiem-va-xem-danh-ba-nha-khoa-hoc-theo-pham-vi: backlog
-  2-6-timeline-va-audit-ho-so-nha-khoa-hoc: backlog
+  epic-2: in-progress
+  2-1-tao-va-duy-tri-ho-so-nha-khoa-hoc: review
+  2-2-lien-ket-ho-so-nha-khoa-hoc-voi-tai-khoan: ready-for-dev
+  2-3-lich-su-tham-gia-tu-nguon-nghiep-vu-co-tham-quyen: ready-for-dev
+  2-4-kiem-tra-xung-dot-loi-ich-truoc-khi-phan-cong: ready-for-dev
+  2-5-tim-kiem-va-xem-danh-ba-nha-khoa-hoc-theo-pham-vi: ready-for-dev
+  2-6-timeline-va-audit-ho-so-nha-khoa-hoc: ready-for-dev
   epic-2-retrospective: optional
   epic-3: backlog
   3-1-tai-len-va-truy-cap-tep-qua-ho-so-nguon: backlog

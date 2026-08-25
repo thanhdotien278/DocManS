@@ -12,3 +12,5 @@ __pycache__/
 apps/web/.next/
 .agents/
 .claude/
+.codegraph/
+users.md
