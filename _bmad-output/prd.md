@@ -28,7 +28,7 @@ documentCounts:
   projectDocs: 2
 outputFile: "/Users/Super/DocManS/_bmad-output/prd.md"
 created: "2026-04-27T22:31:49+0700"
-updated: "2026-07-29T00:00:00+0700"
+updated: "2026-08-26T00:00:00+0700"
 releaseMode: "single-release"
 classification:
   projectType: "web_app"
@@ -41,13 +41,13 @@ classification:
 
 **Author:** ThanhDaika
 **Created:** 2026-04-27
-**Updated:** 2026-07-29
+**Updated:** 2026-08-26
 
 ## Executive Summary
 
 DocManSystem, also referred to as RTMS, is a greenfield internal web application for the Military Medical Academy to manage the full lifecycle of university-level research topics and scientific project workflows. The product replaces fragmented handling through spreadsheets, email, disconnected files, and manual coordination with a single role-aware system that supports proposal intake, evaluation, approval, approved-project tracking, task execution, notifications, reminders, and executive reporting. The core business goal is not superficial digitization; it is to make workflow state, accountability, deadlines, and decision bottlenecks visible and controllable across the academy’s scientific management process.
 
-Phase 1 targets four account-level system roles—system administrator, scientific management staff, leadership or approval authority, and researcher/internal user—plus record-scoped participant and assignment contexts such as principal investigator, co-investigator, project member, scientific secretary, reviewer, and council member. The product must preserve complex internal workflows rather than flatten them. It must support controlled state transitions, organization-scoped data access, role-based and state-based permissions, mandatory audit logging for critical actions, file traceability, and dashboard views filtered by the current user’s authority. The first release scope must cover the seven work items listed in `detaiHVQY.md` section 2.1 through 2.7: OMS proposal management, approved-project tracking, seminar and student research tracking, task management, executive dashboard, related-document management, and council/ethics management.
+Phase 1 targets five account-level system roles—system administrator, scientific management staff, leadership or approval authority, researcher/internal user, and external researcher user—plus record-scoped participant and assignment contexts such as principal investigator, co-investigator, project member, scientific secretary, reviewer, and council member. The product must preserve complex internal workflows rather than flatten them. It must support controlled state transitions, organization-scoped data access, role-based and state-based permissions, mandatory audit logging for critical actions, file traceability, and dashboard views filtered by the current user’s authority. The first release scope must cover the seven work items listed in `detaiHVQY.md` section 2.1 through 2.7: OMS proposal management, approved-project tracking, seminar and student research tracking, task management, executive dashboard, related-document management, and council/ethics management.
 
 This PRD assumes a modular-monolith phase 1 architecture and a strict implementation boundary: no microservices, no external identity integration in phase 1, no workflow engine, no deep financial subsystem, and no public submission portal. The expected operational outcome is a measurable reduction in incomplete proposal records, a strong increase in overdue visibility, faster reporting preparation, and a more auditable and disciplined research administration process.
 
@@ -69,12 +69,20 @@ The core insight is that the academy’s main pain is not lack of data entry too
 - **System role:** The account-level role that controls module/navigation
   access. Phase 1 values are `SYSTEM_ADMIN`,
   `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, and
-  `RESEARCHER_INTERNAL_USER`; an account has exactly one active value.
+  `RESEARCHER_INTERNAL_USER`, and `EXTERNAL_RESEARCHER_USER`; an account has
+  exactly one active value. `SYSTEM_ADMIN` has no implicit business-data
+  access; `SCIENTIFIC_MANAGEMENT_STAFF` operates business workflows across the
+  Academy, subject to record state, assignment, conflict, and disclosure rules.
 - **Record participation role:** A relationship to one proposal, project, or
   activity, such as principal investigator, co-investigator, project member,
   or scientific secretary. Co-investigator is a distinct label and may receive
   a distinct responsibility set, but it receives no broader default authority
   than project member unless policy explicitly grants it.
+- **External researcher user:** An account managed by scoped scientific
+  management or scientific-secretary authority. It may work only on explicitly
+  assigned draft contributions or reviews and can never create or formally
+  submit a proposal, change its PI/member/budget/objective/status, assign, or
+  make a final decision.
 - **Assignment role:** A scoped responsibility for one review, council,
   ethics dossier, or task, such as reviewer, council member, ethics reviewer,
   or task assignee.
@@ -91,6 +99,16 @@ The core insight is that the academy’s main pain is not lack of data entry too
 - **Capability response:** Backend-derived record relationships, allowed
   actions, blocked actions, stable denial codes, and plain-language denial
   reasons returned for authorized UI rendering.
+
+## Authorization Source Of Truth
+
+`docs/authorization-core-business-baseline.md` and
+`docs/permission-matrix.md` govern role, scope, workflow, disclosure, and
+audit requirements in this PRD. The baseline is the latest approved product
+decision when a legacy PRD, architecture, story, or matrix cell conflicts with
+it. Backend authorization is authoritative and is applied before every
+business-record detail, list, search, count, facet, dashboard, export,
+notification, file-metadata, and file-content disclosure.
 
 ## Success Criteria
 
@@ -375,14 +393,14 @@ RTMS is a browser-based internal administrative web application optimized for mu
 ### Identity, Users, Roles, And Organizations
 
 - FR1: System administrators can create, update, activate, deactivate, and lock user accounts.
-- FR2: System administrators can assign exactly one active account-level system role (`SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, or `RESEARCHER_INTERNAL_USER`) to a user; principal investigator, co-investigator, project member, scientific secretary, reviewer, council member, and ethics reviewer permissions are assigned through record-scoped participation or assignment relationships instead of additional global roles.
+- FR2: System administrators can assign exactly one active account-level system role (`SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`) to a user; principal investigator, co-investigator, project member, scientific secretary, reviewer, council member, and ethics reviewer permissions are assigned through record-scoped participation or assignment relationships instead of additional global roles.
 - FR3: System administrators can associate users with an organizational unit and other scope-defining organizational attributes.
 - FR4: The system can authenticate users and establish a role-aware session for authorized access.
 - FR4a: Authenticated users can change their own password, and authorized administrators can initiate a controlled password reset flow for internal users.
 - FR5: The system can enforce role-based access rules across all protected capabilities.
-- FR6: The system can enforce organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports.
+- FR6: The system can enforce explicit organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports; scientific management staff have Academy-wide business scope, while a parent/child unit relationship never implies scope unless explicitly granted.
 - FR6a: The system can distinguish account-level system roles from record-scoped participation or assignment roles, including principal investigator, co-investigator, project member, scientific secretary, reviewer, council member, and ethics reviewer, so those roles only grant permissions within the specific proposal, project, council, review, ethics dossier, task, or related record context.
-- FR6b: Authorized scientific management staff can approve, revoke, and inspect explicit record-scoped delegation grants initiated by an actor who currently holds the delegated action; each grant identifies the delegate, target record, permitted actions, validity period, grantor, approver, and status, and no delegated permission is inferred when a valid grant is absent.
+- FR6b: Authorized scientific management staff can approve, revoke, and inspect an explicit record-scoped delegation of `proposal.submit` initiated by its current holder; each grant identifies the delegate, target record, action, validity period, grantor, approver, reason, and status, and no delegated permission is inferred when a valid grant is absent.
 - FR6c: Protected record responses can state the current user's record-scoped relationships, allowed actions, blocked actions, and plain-language denial reasons as calculated by backend authorization policy.
 - FR6d: A record-scoped scientific secretary can perform only the explicitly authorized administrative, meeting, minutes, document, task, tracking, and draft-summary actions for the assigned proposal, project, council, or ethics record; the secretary relationship alone never grants reviewer scoring or final approval/rejection authority.
 - FR6e: Proposal participation, project participation, council membership, reviewer assignment, task assignment, and ethics assignment relationships can be activated, suspended, ended, or revoked with effective dates and status, and an inactive relationship immediately stops granting access or capabilities.
@@ -394,12 +412,12 @@ RTMS is a browser-based internal administrative web application optimized for mu
 
 ### Research Proposal Intake And Submission
 
-- FR9: Scientific management staff can create and manage proposal intake periods with dates, applicability rules, and required submission packages.
-- FR10: Principal investigators can create a proposal draft, save progress, and submit a proposal formally within an applicable intake period.
+- FR9: Scientific management staff can create and manage proposal intake periods with dates, required submission packages, and either Academy-wide scope (the default) or an explicit selected-unit scope.
+- FR10: An internal-researcher PI with applicable unit scope can create a proposal draft, save progress, and submit a proposal formally within an applicable intake period; external researchers cannot create or submit proposals.
 - FR11: Principal investigators can enter structured proposal information including title, field, host unit, participants, timeline, objectives, content summary, and proposed budget metadata.
 - FR12: Principal investigators can upload required proposal attachments and supporting documents to a proposal record.
 - FR13: The system can validate required proposal data and required file conditions before formal submission.
-- FR14: The system can record proposal submission history, including timestamps and submission state changes.
+- FR14: The system can record immutable proposal submission history, including timestamps, submission state changes, actor/delegation context, and locked versions; post-submission edits, withdrawal, and reopening use explicit requests/actions rather than overwriting a submitted version.
 
 ### Proposal Review, Supplement, And Approval Workflow
 
@@ -420,7 +438,7 @@ RTMS is a browser-based internal administrative web application optimized for mu
 - FR26: Scientific management staff can review project progress reports, request follow-up where needed, and track unresolved issues.
 - FR27: Principal investigators can submit adjustment or extension requests for approved projects.
 - FR27a: Principal investigators can prepare and submit acceptance or final-review dossiers with required structured data, files, and readiness validation when the approved-project workflow requires a formal dossier before the authority decision.
-- FR28: Leadership or authorized staff can review and decide on adjustment, extension, acceptance, and final-review actions according to workflow rules.
+- FR28: Scientific management staff can review and prepare adjustment, extension, acceptance, and final-review actions; leadership or approval authority makes the final decision when required by workflow.
 - FR29: The system can identify delayed projects, upcoming deadlines, and projects waiting for administrative action.
 - FR30: The system can treat approved-project workflow states as controlled states and restrict actions based on current project state.
 - FR30a: Project members can view approved projects they participate in, including assigned responsibilities, relevant milestones, and permitted supporting files.
@@ -555,12 +573,12 @@ Accesses assigned proposals, ethics dossiers, council records, or review records
   grantor, delegate, approving staff actor, status, and validity period; it
   must be revocable, auditable, and denied when expired, revoked, ambiguous,
   or conflicting.
-- Phase 1 may delegate proposal draft creation/editing, file upload, formal
-  proposal submission, progress-report preparation/submission, and
-  adjustment/extension or acceptance-dossier submission only when the
-  current action holder initiates the grant and authorized scientific
-  management staff approves it. Reviewer assignment, scoring, membership
-  changes, approval, rejection, and final decisions are non-delegable.
+- Only `proposal.submit` may be delegated, on one proposal, when its current
+  holder initiates the grant and authorized scientific management staff
+  independently approves it. Draft editing, files, resubmission, project
+  reporting, adjustment/extension, acceptance dossiers, reviewer assignment,
+  scoring, membership changes, approval, rejection, reopening, and final
+  decisions are non-delegable.
 - A grantor must retain the delegated action for the entire grant validity
   period. Suspending or ending the grantor's source relationship immediately
   invalidates the delegation.
@@ -572,6 +590,9 @@ Accesses assigned proposals, ethics dossiers, council records, or review records
 - Search results, dashboard counts, exports, notification targets, and history views must respect the same data-scope rules as detail pages.
 - Cross-unit visibility must be explicit and rule-driven, never implicit.
 - Effective permission must be calculated from system role, organization scope, record participation role, assignment scope, workflow state, and conflict policy; missing or ambiguous context must fail closed.
+- `SYSTEM_ADMIN` receives no business-data access merely from its system role;
+  `SCIENTIFIC_MANAGEMENT_STAFF` receives Academy-wide business scope but never
+  bypasses workflow, assignment, conflict, or disclosure checks.
 - Delegation grants may narrow or add only the explicitly listed record actions
   and must not widen organization scope, bypass workflow state, or override a
   conflict-of-interest prohibition.
@@ -696,8 +717,8 @@ Accesses assigned proposals, ethics dossiers, council records, or review records
 - AC-PERM-08: Given the same person is reviewer or secretary on a different unrelated
   record, when authorization is evaluated, then that relationship does not
   restrict or widen permissions on the current record.
-- AC-PERM-09: Given a delegation is valid for a listed action and record, when the delegate
-  performs that action within the validity period and allowed state, then the
+- AC-PERM-09: Given a `proposal.submit` delegation is valid for its one proposal, when the delegate
+  submits within the validity period and allowed intake state, then the
   action succeeds and records grantor, delegate, target, and outcome; expired,
   revoked, wrong-record, wrong-action, or conflicting grants are denied.
 - AC-PERM-10: Given participation, assignment, delegation, workflow state, or conflict
@@ -713,9 +734,9 @@ Accesses assigned proposals, ethics dossiers, council records, or review records
   is produced, then reviewer identities, raw scores, reviewer comments, and
   consolidated outcomes are omitted; after the final decision only the
   policy-approved summary becomes visible by default.
-- AC-PERM-13: Given an actor who currently holds a delegable action initiates
-  an action-specific grant and authorized scientific management staff approves
-  it, when the delegate acts on the correct record within the validity period,
+- AC-PERM-13: Given a PI who currently holds `proposal.submit` initiates its
+  one-proposal grant and authorized scientific management staff approves it,
+  when the delegate submits the correct proposal within the validity period,
   then the action succeeds and is audited; a self-granted, unapproved,
   non-delegable, or source-authority-lost grant is denied.
 
