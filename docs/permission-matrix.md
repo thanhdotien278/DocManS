@@ -1,10 +1,18 @@
 # Permission Matrix - DocManSystem / RTMS
 
+> **Approved decision baseline:** [`docs/authorization-core-business-baseline.md`](./authorization-core-business-baseline.md)
+> is the latest product decision record for system roles, record-scoped roles,
+> workflow and core business behavior. This matrix remains the detailed
+> implementation matrix; any conflicting assumption must be reconciled against
+> the baseline before coding.
+
 ## 1. Purpose
 
-This document is the canonical phase 1 permission matrix for DocManSystem / RTMS.
+This document is the detailed phase 1 permission matrix for DocManSystem / RTMS.
 It defines role-based, data-scope, state-based, and audit expectations for
-implementation, review, testing, and QA.
+implementation, review, testing, and QA. The approved product decisions are
+maintained in the linked baseline so that future UX and code work has one
+explicit decision source.
 
 Use this document as the source of truth when implementing backend policies,
 API guards, UI action visibility, dashboard queries, export queries, file access

@@ -5,7 +5,7 @@ stepsCompleted:
   - 3
   - 4
 status: complete
-updated: 2026-07-29
+updated: 2026-08-26
 inputDocuments:
   - "/Users/Super/DocManS/_bmad-output/prd.md"
   - "/Users/Super/DocManS/_bmad-output/architecture.md"
@@ -16,6 +16,8 @@ inputDocuments:
   - "/Users/Super/DocManS/docs/ux-design-guidelines.md"
   - "/Users/Super/DocManS/_bmad-output/epics-and-stories.md"
   - "/Users/Super/DocManS/docs/stories-notes-vi/epics-and-stories.md"
+  - "/Users/Super/DocManS/docs/authorization-core-business-baseline.md"
+  - "/Users/Super/DocManS/docs/permission-matrix.md"
 ---
 
 # DocManSystem - Epic Breakdown
@@ -24,33 +26,56 @@ inputDocuments:
 
 This document provides the complete epic and story breakdown for DocManSystem,
 decomposing the requirements from the PRD, UX design, architecture, the
-scientist-permission policy, and the existing backlog into implementable
+approved authorization baseline and permission matrix, and the existing backlog into implementable
 stories.
+
+## Authorization Baseline Alignment
+
+`docs/authorization-core-business-baseline.md` and
+`docs/permission-matrix.md` are binding inputs for every story. Where an older
+PRD, architecture, or story statement conflicts, the approved baseline wins.
+Every protected action requires backend authorization before detail, list,
+search, count, facet, dashboard, export, notification, or file-metadata
+disclosure; unresolved context fails closed and important changes are audited.
+
+- `SYSTEM_ADMIN` manages platform data only and has no implicit business-data,
+  review, approval, or reopen access.
+- `SCIENTIFIC_MANAGEMENT_STAFF` has Academy-wide business scope, but still
+  obeys workflow state, assignment, conflict, and disclosure rules. Scope is
+  never inherited from an organization tree unless granted explicitly.
+- Each account has one active role from `SYSTEM_ADMIN`,
+  `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
+  `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`. All PI, member,
+  secretary, reviewer, council, ethics, and task authority remains record
+  scoped.
+- The only delegable action is approved `proposal.submit` on one proposal.
+  Assignment, scoring, membership, disclosure, approval/rejection, reopening,
+  and all other actions are non-delegable.
 
 ## Requirements Inventory
 
 ### Functional Requirements
 
 - FR1: System administrators can create, update, activate, deactivate, and lock user accounts.
-- FR2: System administrators can assign exactly one active account-level system role (`SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, or `RESEARCHER_INTERNAL_USER`) to a user; principal investigator, co-investigator, project member, scientific secretary, reviewer, council member, and ethics reviewer permissions are assigned through record-scoped participation or assignment relationships instead of additional global roles.
+- FR2: System administrators can assign exactly one active account-level system role (`SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`) to a user; principal investigator, co-investigator, project member, scientific secretary, reviewer, council member, and ethics reviewer permissions are assigned through record-scoped participation or assignment relationships instead of additional global roles.
 - FR3: System administrators can associate users with an organizational unit and other scope-defining organizational attributes.
 - FR4: The system can authenticate users and establish a role-aware session for authorized access.
 - FR4a: Authenticated users can change their own password, and authorized administrators can initiate a controlled password reset flow for internal users.
 - FR5: The system can enforce role-based access rules across all protected capabilities.
-- FR6: The system can enforce organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports.
+- FR6: The system can enforce explicit organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports; scientific management staff have Academy-wide business scope, while a parent/child unit relationship never implies scope unless explicitly granted.
 - FR6a: The system can distinguish account-level system roles from record-scoped participation or assignment roles, including principal investigator, co-investigator, project member, scientific secretary, reviewer, council member, and ethics reviewer, so those roles only grant permissions within the specific proposal, project, council, review, ethics dossier, task, or related record context.
-- FR6b: Authorized scientific management staff can approve, revoke, and inspect explicit record-scoped delegation grants initiated by an actor who currently holds the delegated action; each grant identifies the delegate, target record, permitted actions, validity period, grantor, approver, and status, and no delegated permission is inferred when a valid grant is absent.
+- FR6b: Authorized scientific management staff can approve, revoke, and inspect an explicit record-scoped delegation of `proposal.submit` initiated by its current holder; each grant identifies the delegate, target record, action, validity period, grantor, approver, reason, and status, and no delegated permission is inferred when a valid grant is absent.
 - FR6c: Protected record responses can state the current user's record-scoped relationships, allowed actions, blocked actions, and plain-language denial reasons as calculated by backend authorization policy.
 - FR6d: A record-scoped scientific secretary can perform only the explicitly authorized administrative, meeting, minutes, document, task, tracking, and draft-summary actions for the assigned proposal, project, council, or ethics record; the secretary relationship alone never grants reviewer scoring or final approval/rejection authority.
 - FR6e: Proposal participation, project participation, council membership, reviewer assignment, task assignment, and ethics assignment relationships can be activated, suspended, ended, or revoked with effective dates and status, and an inactive relationship immediately stops granting access or capabilities.
 - FR7: System administrators can manage shared catalogs required by business workflows, including organizational units, research fields, proposal types, statuses, priorities, report types, product types, forms, checklists, and scoring criteria.
 - FR8: System administrators can configure system parameters, notification templates, and selected workflow-supporting settings required for phase 1 operations.
-- FR9: Scientific management staff can create and manage proposal intake periods with dates, applicability rules, and required submission packages.
-- FR10: Principal investigators can create a proposal draft, save progress, and submit a proposal formally within an applicable intake period.
+- FR9: Scientific management staff can create and manage proposal intake periods with dates, required submission packages, and either Academy-wide scope (the default) or an explicit selected-unit scope.
+- FR10: An internal-researcher PI with applicable unit scope can create a proposal draft, save progress, and submit a proposal formally within an applicable intake period; external researchers cannot create or submit proposals.
 - FR11: Principal investigators can enter structured proposal information including title, field, host unit, participants, timeline, objectives, content summary, and proposed budget metadata.
 - FR12: Principal investigators can upload required proposal attachments and supporting documents to a proposal record.
 - FR13: The system can validate required proposal data and required file conditions before formal submission.
-- FR14: The system can record proposal submission history, including timestamps and submission state changes.
+- FR14: The system can record immutable proposal submission history, including timestamps, submission state changes, actor/delegation context, and locked versions; post-submission edits, withdrawal, and reopening use explicit requests/actions rather than overwriting a submitted version.
 - FR15: Scientific management staff can review proposal completeness and request supplements with a stated reason and due date.
 - FR16: Principal investigators can view supplement requests, revise proposal content or attachments, and resubmit the proposal.
 - FR17: Scientific management staff can assign reviewers or committee participants to proposals according to the workflow.
@@ -65,7 +90,7 @@ stories.
 - FR26: Scientific management staff can review project progress reports, request follow-up where needed, and track unresolved issues.
 - FR27: Principal investigators can submit adjustment or extension requests for approved projects.
 - FR27a: Principal investigators can prepare and submit acceptance or final-review dossiers with required structured data, files, and readiness validation when the approved-project workflow requires a formal dossier before the authority decision.
-- FR28: Leadership or authorized staff can review and decide on adjustment, extension, acceptance, and final-review actions according to workflow rules.
+- FR28: Scientific management staff can review and prepare adjustment, extension, acceptance, and final-review actions; leadership or approval authority makes the final decision when required by workflow.
 - FR29: The system can identify delayed projects, upcoming deadlines, and projects waiting for administrative action.
 - FR30: The system can treat approved-project workflow states as controlled states and restrict actions based on current project state.
 - FR30a: Project members can view approved projects they participate in, including assigned responsibilities, relevant milestones, and permitted supporting files.
@@ -450,7 +475,7 @@ So that quyền toàn hệ thống không bị cộng dồn với vai trò nghi�
 
 **Given** một tài khoản được tạo hoặc cập nhật
 **When** quản trị viên gán vai trò hệ thống
-**Then** chỉ một trong bốn giá trị `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER` được hoạt động
+**Then** chỉ một trong năm giá trị `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, `EXTERNAL_RESEARCHER_USER` được hoạt động
 **And** persistence và service boundary đều ngăn nhiều vai trò hệ thống đồng thời.
 
 **Given** dữ liệu cũ chứa global PI, reviewer, council member hoặc nhiều role assignment
@@ -462,6 +487,12 @@ So that quyền toàn hệ thống không bị cộng dồn với vai trò nghi�
 **When** backend đánh giá organization scope
 **Then** chỉ giao của tập organization ID của actor với organization ID của target hoặc cross-unit grant rõ ràng mới được chấp nhận
 **And** hệ thống không tự suy diễn quyền theo cây đơn vị.
+
+**Given** actor là `SYSTEM_ADMIN` hoặc `SCIENTIFIC_MANAGEMENT_STAFF`
+**When** actor yêu cầu dữ liệu nghiệp vụ
+**Then** `SYSTEM_ADMIN` không được cấp quyền ngầm
+**And** chuyên viên được đánh giá theo scope toàn Học viện cùng state, assignment,
+conflict và disclosure của bản ghi.
 
 **Given** migration hoặc dữ liệu vai trò không thể giải quyết đơn nghĩa
 **When** tài khoản thực hiện hành động được bảo vệ
@@ -606,8 +637,8 @@ So that công việc được tiếp tục mà không mở rộng thẩm quyền
 
 **Acceptance Criteria:**
 
-**Given** grantor hiện đang giữ một action có thể ủy quyền trên một record
-**When** họ tạo đề nghị với delegate, target domain/record/organization, exact action, thời hạn và lý do
+**Given** grantor hiện đang giữ `proposal.submit` trên một proposal
+**When** họ tạo đề nghị với delegate, target proposal, exact action, thời hạn và lý do
 **Then** grant ở trạng thái `PENDING_APPROVAL`
 **And** không cấp quyền trước khi được chuyên viên quản lý khoa học đúng phạm vi phê duyệt.
 
@@ -621,7 +652,7 @@ So that công việc được tiếp tục mà không mở rộng thẩm quyền
 **Then** policy có thể cho phép sau khi tiếp tục kiểm tra scope, state và conflict
 **And** grant không áp dụng cho record khác, action khác, wildcard hoặc chuỗi tái ủy quyền.
 
-**Given** action thuộc registry không được ủy quyền hoặc source authority/account/grant hết hiệu lực
+**Given** action khác `proposal.submit` hoặc source authority/account/grant hết hiệu lực
 **When** delegate thực hiện action
 **Then** backend trả `DELEGATION_INVALID` hoặc denial có ưu tiên cao hơn
 **And** mutation không xảy ra, capability được cập nhật và audit lưu đầy đủ context.
@@ -1047,11 +1078,6 @@ So that bộ hồ sơ có đủ tài liệu và vẫn được bảo vệ theo q
 **Then** upload thành công
 **And** replace/delete/submit action không tự động được cộng thêm.
 
-**Given** PI có delegation đã phê duyệt cho exact proposal file action
-**When** delegate thao tác trên đúng proposal và grant còn hiệu lực
-**Then** policy có thể cho phép sau scope/state/conflict checks
-**And** grant không áp dụng cho proposal hoặc action khác.
-
 **Given** actor không liên quan, quan hệ hết hạn hoặc context unresolved
 **When** họ biết file ID và gọi metadata/download trực tiếp
 **Then** backend fail closed
@@ -1080,7 +1106,7 @@ So that tôi có thể hoàn thiện dữ liệu trước khi nộp chính thứ
 **Then** hệ thống dùng version cấu hình hiện hành phù hợp với quy tắc đợt
 **And** không dựa vào kết quả readiness đã cache quá hạn.
 
-**Given** delegate chỉ có quyền sửa/tệp nhưng không có `proposal.submit`
+**Given** actor chỉ có quyền sửa/tệp nhưng không có `proposal.submit`
 **When** họ chạy readiness hoặc cố nộp
 **Then** họ có thể xem lỗi trong phạm vi tệp/dữ liệu được phép nhưng không thể submit
 **And** UI hiển thị submit bị chặn với lý do backend.
@@ -1159,17 +1185,17 @@ So that đề xuất có thể tiếp tục quy trình đánh giá.
 **Then** họ thấy lý do, hạn, section/tệp cần bổ sung và các action được backend cho phép
 **And** không thấy reviewer identity, review content hoặc consolidation nội bộ.
 
-**Given** PI hoặc delegate có exact edit/file action hợp lệ
+**Given** PI có action edit/file hợp lệ
 **When** họ cập nhật nội dung hoặc version tệp được yêu cầu
 **Then** thay đổi được lưu với history và audit
 **And** không mở quyền sửa các phần bị khóa bởi workflow.
 
-**Given** hồ sơ đáp ứng yêu cầu và actor có `proposal.resubmit`
-**When** actor xác nhận nộp lại
+**Given** hồ sơ đáp ứng yêu cầu và PI có `proposal.resubmit`
+**When** PI xác nhận nộp lại
 **Then** state chuyển atomically sang trạng thái tiếp nhận/kiểm tra tiếp theo
-**And** submission history ghi actor, grant context nếu có và version bộ hồ sơ.
+**And** submission history ghi actor và version bộ hồ sơ.
 
-**Given** quá hạn hoặc grant/relationship hết hiệu lực
+**Given** quá hạn hoặc relationship hết hiệu lực
 **When** actor cố sửa hoặc nộp lại
 **Then** backend đánh giá chính sách hiện hành và từ chối nếu không còn action
 **And** không dựa vào capability cũ đã hiển thị trên client.
@@ -1417,7 +1443,7 @@ So that đơn vị quản lý có thể đánh giá tình hình thực hiện.
 **Then** backend validate dữ liệu theo checkpoint
 **And** lưu draft trong đúng project context.
 
-**Given** PI hoặc delegate có exact progress-file action
+**Given** PI có exact progress-file action
 **When** họ upload evidence
 **Then** shared files module tạo project/report association và version metadata
 **And** grant không mở quyền cho file type hoặc project khác.
@@ -1453,7 +1479,7 @@ So that tôi hỗ trợ đề tài mà không có toàn quyền của chủ nhi�
 **Given** member có contribution file của mình
 **When** họ chỉnh sửa trước khi PI chốt report theo state cho phép
 **Then** capability chỉ mở action đã đăng ký
-**And** member không thể submit progress report, adjustment hoặc acceptance dossier thay PI nếu không có delegation hợp lệ.
+**And** member không thể submit progress report, adjustment hoặc acceptance dossier thay PI.
 
 **Given** member relationship bị đình chỉ/kết thúc
 **When** họ truy cập project/file
@@ -1502,11 +1528,11 @@ So that thay đổi kế hoạch được xem xét chính thức.
 **And** không thay đổi project plan hiện hành trước quyết định.
 
 **Given** request đạt readiness và actor có exact submit action
-**When** PI hoặc delegate hợp lệ nộp
-**Then** request chuyển state atomically và ghi actor/grant context
+**When** PI hợp lệ nộp
+**Then** request chuyển state atomically và ghi actor context
 **And** source project phát history/audit/notification event.
 
-**Given** member hoặc secretary không có delegation submit
+**Given** member hoặc secretary cố gửi request
 **When** họ cố gửi request
 **Then** backend từ chối với blocked reason
 **And** quyền đóng góp tệp/draft được cấp không tự biến thành submit.
@@ -1560,7 +1586,7 @@ So that đề tài có thể được xem xét kết thúc theo quy trình.
 **Given** member có responsibility/action đóng góp
 **When** họ cung cấp product/evidence
 **Then** đóng góp được lưu và truy vết
-**And** chỉ PI hoặc delegate có exact submit action mới được nộp dossier.
+**And** chỉ PI có exact submit action mới được nộp dossier.
 
 **Given** readiness check phát hiện milestone, dữ liệu hoặc tệp còn thiếu
 **When** PI cố nộp
@@ -1568,7 +1594,7 @@ So that đề tài có thể được xem xét kết thúc theo quy trình.
 **And** project/dossier không chuyển state một phần.
 
 **Given** hồ sơ đầy đủ và actor có quyền
-**When** PI/delegate xác nhận nộp
+**When** PI xác nhận nộp
 **Then** dossier chuyển state atomically, khóa submitted version và tạo history/audit
 **And** không tạo bất kỳ approval/final-decision authority cho PI.
 
@@ -2171,7 +2197,7 @@ So that chỉ hồ sơ hợp lệ được đưa vào đánh giá.
 **Then** dossier chuyển state atomically
 **And** PI nhận notification tối thiểu, history và audit.
 
-**Given** PI/delegate cập nhật và resubmit đúng state
+**Given** PI cập nhật và resubmit đúng state
 **When** readiness đạt
 **Then** version mới được khóa và route lại completeness review
 **And** prior submitted/supplement versions vẫn truy vết được.
