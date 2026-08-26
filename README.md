@@ -38,6 +38,11 @@ NX_DAEMON=false npx nx show projects
 
 DocManS is an RTMS workspace for the Vietnam Military Medical University context. It currently contains:
 
+## Open source
+
+DocManS is licensed under the [Apache License 2.0](LICENSE). You may use,
+modify, and distribute it under that license's terms.
+
 - A `Next.js` web application in `apps/web`
 - A `NestJS` API placeholder in `apps/api`
 - Shared workspace packages in `packages/*`
