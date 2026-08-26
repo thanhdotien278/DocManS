@@ -2,7 +2,7 @@
 
 **DocManS** is an open-source platform for managing research and scientific projects. It gives universities, hospitals, research institutes, and academic organizations a practical foundation for managing proposals, reviews, workflow decisions, research teams, files, permissions, and administration in one place.
 
-Originally shaped by real university workflows, DocManS is designed to be adapted by any institution that needs transparent, accountable research administration. It is free to use, inspect, modify, and contribute to under the Apache License 2.0.
+Originally shaped by real university workflows, DocManS is designed to be adapted by any institution that needs transparent, accountable research administration. It is free to use, inspect, modify, and contribute to under the MIT License.
 
 ## Why DocManS?
 
@@ -12,7 +12,7 @@ DocManS brings these activities into a single, self-hosted application. It helps
 
 ### Open Source Commitment
 
-DocManS is intended to be a useful community project, not institution-specific software. The source code is public under Apache-2.0, and the project welcomes feedback, deployments, documentation improvements, and code contributions from research organizations and individual contributors.
+DocManS is intended to be a useful community project, not institution-specific software. The source code is public under the MIT License, and the project welcomes feedback, deployments, documentation improvements, and code contributions from research organizations and individual contributors.
 
 ## Features
 
@@ -212,7 +212,7 @@ Do not report security vulnerabilities in a public issue. Please use [GitHub's p
 
 ## License
 
-DocManS is licensed under the [Apache License 2.0](LICENSE). You may use, modify, and distribute the project under its terms. Third-party dependencies remain subject to their own licenses.
+DocManS is licensed under the [MIT License](LICENSE). You may use, modify, and distribute the project under its terms. Third-party dependencies remain subject to their own licenses.
 
 ## Acknowledgements
 
