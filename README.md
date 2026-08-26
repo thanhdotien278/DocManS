@@ -1,137 +1,140 @@
-# DocManSystem
-
-DocManSystem is an Nx workspace for the RTMS internal research-management platform.
-
-
-## Verification
-
-Use the root scripts for checks:
-
-```bash
-npm test
-npm run lint
-npm run build
-```
-
-`npm run lint` currently runs TypeScript static checks for the workspace. ESLint can be introduced in a later quality/tooling story if the team wants rule-based linting beyond strict TypeScript.
-
-Nx project files are present, but some sandboxed environments may block the Nx daemon socket. If direct Nx CLI commands fail with daemon `EPERM`, rerun them with daemon disabled, for example:
-
-```bash
-NX_DAEMON=false npx nx show projects
-```
 # DocManS
 
-DocManS is an RTMS workspace for the Vietnam Military Medical University context. It currently contains:
+**DocManS** is an open-source platform for managing research and scientific projects. It gives universities, hospitals, research institutes, and academic organizations a practical foundation for managing proposals, reviews, workflow decisions, research teams, files, permissions, and administration in one place.
 
-## Open source
+Originally shaped by real university workflows, DocManS is designed to be adapted by any institution that needs transparent, accountable research administration. It is free to use, inspect, modify, and contribute to under the Apache License 2.0.
 
-DocManS is licensed under the [Apache License 2.0](LICENSE). You may use,
-modify, and distribute it under that license's terms.
+## Why DocManS?
 
-- A `Next.js` web application in `apps/web`
-- A `NestJS` API placeholder in `apps/api`
-- Shared workspace packages in `packages/*`
-- BMAD project artifacts and configuration in `_bmad` and `_bmad-output`
+Research administration often depends on disconnected spreadsheets, email threads, shared folders, and informal approval processes. That makes it harder to understand a proposal's status, maintain a reliable review trail, apply access rules consistently, and hand work over when staff roles change.
 
-At this stage, the web app is the primary deliverable. The API currently exposes a simple health endpoint and does not require a database.
+DocManS brings these activities into a single, self-hosted application. It helps institutions model their own intake periods and workflow while keeping access decisions tied to organizational scope, project participation, reviewer assignment, and delegated authority.
 
-## Tech Stack
+### Open Source Commitment
 
-- `Node.js 22`
-- `npm`
-- `Nx`
-- `Next.js 15`
-- `React 19`
-- `NestJS 11`
-- `TypeScript`
+DocManS is intended to be a useful community project, not institution-specific software. The source code is public under Apache-2.0, and the project welcomes feedback, deployments, documentation improvements, and code contributions from research organizations and individual contributors.
 
-## Project Structure
+## Features
+
+- **Research proposal lifecycle** — create drafts, validate readiness, submit, request supplements, resubmit, and retain workflow history.
+- **Review and decision support** — assign reviewers, collect evaluations, and support structured proposal decisions.
+- **Role- and scope-aware access** — authorize actions using system roles, organization scope, ownership, project participation, reviewer assignments, and workflow state.
+- **Delegated actions** — support controlled, time-bounded delegation for eligible proposal actions.
+- **Researcher profiles and teams** — manage researcher-facing information and proposal participation.
+- **Files and object storage** — attach approved file types to research records using S3-compatible MinIO storage.
+- **Administration** — manage users, organization structures, catalogs, and configuration through the API and web application.
+- **Auditability** — record important authentication and workflow actions for traceability.
+- **Local development support** — provide seeded development data, Docker Compose services, Prisma migrations, and repeatable scripts.
+
+## Architecture Overview
+
+DocManS is an Nx workspace with separate web and API applications. The web application communicates with the API over HTTP. The API applies authentication, authorization, validation, workflow rules, and audit logging before it accesses PostgreSQL or object storage.
 
 ```text
-apps/
-  web/        Next.js frontend
-  api/        NestJS API
-packages/     Shared packages
-tests/        Workspace smoke tests
-_bmad/        BMAD configuration
-docs/         Project documentation
-reports/      Reference files and screenshots
+Browser
+  │
+  ├── Next.js web application
+  │       │
+  │       └── NestJS API
+  │              ├── PostgreSQL via Prisma
+  │              ├── MinIO object storage
+  │              └── Session, authorization, workflow, and audit services
+  │
+  └── Optional Nginx reverse proxy
 ```
 
-## Prerequisites
+The authorization model is intentionally record-aware: a broad platform role alone does not automatically grant access to institutional research data.
 
-- `Node.js >= 22`
-- `npm >= 10`
+## Technology Stack
 
-Check your versions:
+| Area | Technology |
+| --- | --- |
+| Frontend | Next.js 15, React 19, TypeScript |
+| Backend | NestJS 11, TypeScript |
+| Database | PostgreSQL 16, Prisma |
+| Object storage | MinIO (S3-compatible) |
+| Infrastructure | Docker Compose, Nginx, Node.js 22 |
+| Workspace | Nx, npm |
+
+## Screenshots
+
+Screenshots and workflow examples are welcome. Add images here that show the dashboard, proposal workspace, review queue, and administrative views without exposing sensitive research or personal data.
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 22 or later
+- npm 10 or later
+- Docker Desktop or Docker Engine
+
+### Installation
+
+Clone the repository and install dependencies:
 
 ```bash
-node -v
-npm -v
-```
-
-## Environment Setup
-
-Copy the example environment file:
-
-```bash
+git clone https://github.com/thanhdotien278/DocManS.git
+cd DocManS
+npm install
 cp .env.example .env
 ```
 
-Default values:
+### Environment variables
 
-```env
-NEXT_PUBLIC_APP_NAME="RTMS"
-NEXT_PUBLIC_API_BASE_URL="http://localhost:4000/api/v1"
-API_PORT=4000
-```
+Start with [`.env.example`](.env.example). The local configuration includes these common settings:
 
-## Install Dependencies
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_API_BASE_URL` | API URL used by the web application |
+| `API_PORT` | API listener port |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `WEB_ORIGIN` | Allowed web origin for the API |
+| `MINIO_ENDPOINT`, `MINIO_PORT` | MinIO connection details |
+| `MINIO_BUCKET_NAME` | Bucket used for uploaded files |
+| `FILE_MAX_UPLOAD_BYTES` | Maximum upload size |
+| `FILE_ALLOWED_EXTENSIONS` | Allowed file extensions |
 
-If dependencies are not installed yet:
+The example values are for local development only. Use institution-managed secrets and secure infrastructure settings in shared or production environments.
+
+### Running locally
+
+1. Start PostgreSQL and MinIO:
+
+   ```bash
+   docker compose up -d postgres minio
+   ```
+
+2. Apply database migrations and seed local development data:
+
+   ```bash
+   npm run db:setup
+   ```
+
+3. In separate terminals, start the API and web application:
+
+   ```bash
+   npm run dev:api
+   ```
+
+   ```bash
+   npm run dev:web
+   ```
+
+Open <http://localhost:3000>. The API health endpoint is available at <http://localhost:4000/api/v1/health>.
+
+Development accounts and local troubleshooting notes are documented in [docs/development/auth-seed-users.md](docs/development/auth-seed-users.md). Never use these accounts or their default credentials outside a local development environment.
+
+### Verification
 
 ```bash
-npm install
+npm run typecheck
+npm test
+npm run build
 ```
 
-## Run the Project Locally
+## Docker Deployment
 
-Open two terminals.
-
-Terminal 1: start the API
-
-```bash
-npm run dev:api
-```
-
-The API listens on:
-
-```text
-http://localhost:4000
-```
-
-Health check:
-
-```text
-http://localhost:4000/api/v1/health
-```
-
-Terminal 2: start the web app
-
-```bash
-npm run dev:web
-```
-
-The web app runs at:
-
-```text
-http://localhost:3000
-```
-
-## Run with Docker Compose
-
-Start all services:
+For a complete local Docker environment with PostgreSQL, MinIO, API, web application, and Nginx:
 
 ```bash
 docker compose up
@@ -139,96 +142,78 @@ docker compose up
 
 Available endpoints:
 
-- `http://localhost:3000` for the web app
-- `http://localhost:4000/api/v1/health` for the API
-- `http://localhost:8080` through Nginx
+- <http://localhost:3000> — web application
+- <http://localhost:4000/api/v1/health> — API health check
+- <http://localhost:8080> — web application through Nginx
+- <http://localhost:9001> — MinIO Console
 
-Stop services:
+Stop the environment with:
 
 ```bash
 docker compose down
 ```
 
-## Build
+The provided Compose configuration is a development starting point. Before a production deployment, review secrets, TLS termination, database backups, storage retention, trusted proxy settings, and institution-specific access policies.
 
-Build both applications:
-
-```bash
-npm run build
-```
-
-Or build them separately:
-
-```bash
-npm run build:web
-npm run build:api
-```
-
-## Test and Type Check
-
-Run smoke tests:
-
-```bash
-npm test
-```
-
-Run type checks:
-
-```bash
-npm run typecheck
-```
-
-## Demo Login
-
-The web app authenticates against the API (`POST /api/v1/auth/login`) using Prisma-seeded
-accounts, so the **API and database must be running** (see [Environment Setup](#environment-setup)
-and `npm run db:setup`).
-
-Open:
+## Project Structure
 
 ```text
-http://localhost:3000/login
+apps/
+  web/                    Next.js application
+  api/                    NestJS API and Prisma schema
+packages/
+  contracts/              Shared API contracts
+  permissions/            Shared permission types
+  validation/             Shared validation utilities
+  ui-tokens/              Shared UI tokens
+docs/                     Project and contributor documentation
+_bmad-output/             Planning and implementation artifacts
+tests/                    Node.js test suites
+docker-compose.yml        Local Docker services
 ```
 
-Sign in with a username below. **All seeded accounts share the password `1234`** (local development only).
+## Roadmap
 
-| Role | Username | Password |
-| --- | --- | --- |
-| System admin | `admin` | `1234` |
-| Leadership (Giám Đốc) | `tvtien` | `1234` |
-| Scientific management | `nmphuong` | `1234` |
-| Principal investigator | `patuan` | `1234` |
-| Reviewer | `nmtrung` | `1234` |
-| Staff | `hdtien1`, `hdtien2` | `1234` |
+The roadmap is maintained in the repository's planning artifacts and GitHub issues. Current areas of work include:
 
-See [`docs/development/auth-seed-users.md`](docs/development/auth-seed-users.md) for the full list and troubleshooting.
+- Strengthening proposal intake, review, decision, and project lifecycle workflows.
+- Expanding user-facing administration and institutional configuration.
+- Improving reporting, search, and operational dashboards.
+- Increasing test coverage, documentation, accessibility, and deployment guidance.
+- Supporting adoption by more research organizations through community feedback.
 
-## Main Routes
+If your institution has a workflow or integration need, please open an issue before starting a large change so the community can discuss the best shared approach.
 
-- `/login`
-- `/dashboard`
-- `/proposals`
-- `/proposals/[id]`
-- `/tasks`
+## Community and Contributions Welcome
 
-Additional routes are role-aware and are driven by the authenticated session (`apps/web/src/lib/session.ts`, backed by the API `/auth` endpoints).
+DocManS benefits from the experience of research administrators, clinicians, investigators, reviewers, designers, and software contributors. You do not need to write code to help: workflow feedback, documentation corrections, reproducible bug reports, accessibility reviews, translations, and deployment notes are all valuable contributions.
 
-## Available Scripts
+## Contributing
 
-```bash
-npm run dev
-npm run dev:web
-npm run dev:api
-npm run build
-npm run build:web
-npm run build:api
-npm run lint
-npm run typecheck
-npm test
-```
+Contributions are welcome.
 
-## Notes
+1. Search existing issues and discussions before opening a new one.
+2. Open an issue for bugs, feature proposals, or questions, including the relevant institutional workflow and expected outcome.
+3. For a code change, create a focused branch and keep the pull request scoped to one concern.
+4. Run the relevant checks before submitting:
 
-- The API (NestJS) exposes auth/session, admin, and research-proposal endpoints backed by PostgreSQL via Prisma.
-- Authentication uses server-side sessions (HTTP-only cookie) validated by the API against seeded accounts.
-- The repository also contains BMAD documentation and planning artifacts for product and UX work.
+   ```bash
+   npm run typecheck
+   npm test
+   ```
+
+5. Explain what changed, why it is needed, and how you verified it.
+
+Please keep contributions respectful, evidence-based, and mindful of the security and privacy expectations of research organizations.
+
+## Security
+
+Do not report security vulnerabilities in a public issue. Please use [GitHub's private security advisory reporting](https://github.com/thanhdotien278/DocManS/security/advisories/new) when it is available for this repository. Include a clear description, impact assessment, reproduction steps, and any suggested mitigation.
+
+## License
+
+DocManS is licensed under the [Apache License 2.0](LICENSE). You may use, modify, and distribute the project under its terms. Third-party dependencies remain subject to their own licenses.
+
+## Acknowledgements
+
+DocManS is informed by the everyday work of research administration teams, investigators, reviewers, and technical staff in academic and healthcare settings. Thank you to everyone who shares workflow feedback, tests the software, improves the documentation, and contributes code.
