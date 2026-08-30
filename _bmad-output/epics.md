@@ -5,7 +5,7 @@ stepsCompleted:
   - 3
   - 4
 status: complete
-updated: 2026-08-26
+updated: 2026-08-30
 inputDocuments:
   - "/Users/Super/DocManS/_bmad-output/prd.md"
   - "/Users/Super/DocManS/_bmad-output/architecture.md"
@@ -14,6 +14,7 @@ inputDocuments:
   - "/Users/Super/DocManS/phan-quyen-trong-de-tai-khoa-hoc.md"
   - "/Users/Super/DocManS/_bmad-output/project-context.md"
   - "/Users/Super/DocManS/docs/ux-design-guidelines.md"
+  - "/Users/Super/DocManS/docs/ux-ui-spec.md"
   - "/Users/Super/DocManS/_bmad-output/epics-and-stories.md"
   - "/Users/Super/DocManS/docs/stories-notes-vi/epics-and-stories.md"
   - "/Users/Super/DocManS/docs/authorization-core-business-baseline.md"
@@ -285,7 +286,897 @@ disclosure; unresolved context fails closed and important changes are audited.
 - FR68: Epic 2 — Tìm kiếm hồ sơ nhà khoa học.
 - FR69: Epic 2 — Lịch sử và audit hồ sơ nhà khoa học.
 
-## Epic List
+## Canonical UX/UI Delivery Epics
+
+This section is the implementation-ready delivery view derived from
+`docs/ux-ui-spec.md`. The repository has no root `epics.md`; therefore this
+file remains the canonical planning location. The original 12-Epic FR/story
+decomposition is retained below as a traceability source and is not removed.
+
+### Delivery rules
+
+- Priority labels are `[MVP]`, `[Should have]`, and `[Later / non-MVP]`.
+- Every protected read, list, count, facet, dashboard, search, export,
+  notification, history, and file operation is backend-authorized. The UI
+  consumes `ViewerAuthorizationV1`, keeps `contextVersion`, and never infers a
+  transition or a "highest" record role.
+- Workflow mutations are named backend operations with validation, atomic
+  authorization/context checks, audit, and notification hooks where required.
+- PostgreSQL is the source of truth. Background reminders use the existing
+  PostgreSQL-backed Scheduled Job / Background Worker; no Redis task is added.
+- Every screen task below includes loading, empty/no-match, error, forbidden,
+  blocked-with-reason, stale-context, success, and locked/read-only behavior as
+  applicable. Hidden data is omitted rather than returned as placeholders.
+
+### Consolidation and scope-preservation map
+
+| Canonical epic | Existing backlog retained | Delivery intent |
+| --- | --- | --- |
+| 1. Foundation, authentication, app shell, navigation | Epic 1 stories 1.1-1.2, 1.5, 1.8 | Establish one authenticated responsive workspace and route boundary. |
+| 2. User, role, organization, catalog administration | Epic 1 stories 1.3-1.10; Epic 2 stories 2.1-2.6 | Keep account, five system roles, scope, researcher profiles, relationships, conflicts, delegation, and catalogs. |
+| 3. Proposal / research topic management | Epic 4 stories 4.1-4.6 | Convert intake, draft, structured form, files, readiness, submit, and resubmit into UX-backed delivery slices. |
+| 4. Review, evaluation, aggregation, approval | Epic 5 stories 5.1-5.8 | Preserve supplement, reviewer assignment, evaluation, aggregation, decision, disclosure, and state controls. |
+| 5. Project tracking after approval | Epic 6 stories 6.1-6.10 | Preserve explicit project creation, milestones, reports, adjustment, acceptance, member scope, and final decision. |
+| 6. Task management | Epic 7 stories 7.1-7.5 | Preserve standalone/linked tasks, assignment, evidence, due dates, and controlled task states. |
+| 7. File management and document history | Epic 3 stories 3.1-3.3; Epic 9 stories 9.1-9.5 | Unify shared files, related documents, versioning, history, and effective-date traceability. |
+| 8. Dashboard and operational alerts | Epic 11 stories 11.3-11.5; Epic 12 stories 12.2-12.3 | Deliver role-aware dashboard, My Work, queues, due/overdue alerts, and drill-down. |
+| 9. Search, filtering, reports, exports | Epic 12 stories 12.1, 12.4-12.5; Epic 9 story 9.4 | Keep server-side scoped search, reports, Excel/PDF export, and source/version consistency. |
+| 10. Audit log, notifications, accessibility, hardening | Epic 3 stories 3.4-3.5; Epic 11 stories 11.1-11.2; Epic 8; Epic 10 | Preserve audit and notification delivery plus accessibility/security hardening and the existing seminar, student research, council, and ethics scope as supporting tracks. |
+
+## Epic 1: Foundation, authentication, app shell, navigation
+
+### Goal
+
+Give every authenticated user one responsive workspace whose navigation and
+actions are driven by backend-resolved capability, not by a client-side role
+switcher.
+
+### Business value
+
+Users reach their next valid action quickly, while unauthenticated and
+unauthorized requests remain outside the protected data boundary.
+
+### Primary users / roles
+
+Unauthenticated users; all five active system roles; record-scoped PI, member,
+reviewer, secretary, and task assignee relationships.
+
+### In scope
+
+Login, controlled session handling, change password, app shell, sidebar,
+header, breadcrumbs, responsive navigation, route guards, capability-aware
+action rendering, and shared loading/empty/error/forbidden states.
+
+### Out of scope / later
+
+`[Later / non-MVP]` SSO/LDAP/OIDC/MFA, public registration, native mobile app,
+role impersonation, and a new design system.
+
+### Dependencies
+
+Existing session/auth API, `packages/permissions`, UI tokens/shared components,
+authorization baseline, and API/web route structure.
+
+### UX screens involved
+
+Login, change password, controlled reset, dashboard shell, My Work shell,
+notifications entry, all protected detail/list routes.
+
+### Backend/API needs
+
+`POST /auth/login`, `POST /auth/change-password`, controlled reset endpoints,
+`GET /auth/me`, route-scoped capability response, session expiry, and safe
+error codes. The browser never accesses PostgreSQL or MinIO directly.
+
+### Permission and security notes
+
+Use server-side `Authenticated Session`; fail closed on missing/expired context;
+do not expose secrets; re-authorize every mutation and direct route; show the
+current system role separately from record relationships.
+
+### Acceptance criteria
+
+- Login establishes the correct session/account context, audits the result, and
+  gives no partial access for invalid, locked, or inactive accounts.
+- At 360, 390, 430, 768, 1024, and 1440px the shell has no full-page horizontal
+  scroll; mobile uses a labeled drawer and long forms use a full-screen surface.
+- Navigation and actions vary by backend capability; direct URL access receives
+  a safe denied/not-found response, not hidden data.
+- Loading, empty, error, stale, forbidden, and success states are accessible and
+  distinguishable without color alone.
+
+### Suggested stories / tasks
+
+| ID | Priority | Story/task |
+| --- | --- | --- |
+| 1.1 | MVP | Implement login, session expiry, logout, change password, and controlled reset. |
+| 1.2 | MVP | Implement app shell, sidebar, header, breadcrumbs, responsive drawer, and account context. |
+| 1.3 | MVP | Bind route/list/detail actions to `ViewerAuthorizationV1`, `contextVersion`, and safe denial states. |
+| 1.4 | MVP | Add shared async, error, forbidden, stale-context, confirmation, and toast behavior. |
+| 1.5 | Later / non-MVP | Integrate external identity or MFA only after an explicit product decision. |
+
+## Epic 2: User, role, organization, catalog administration
+
+### Goal
+
+Provide a safe administrative foundation for accounts, exactly one active
+system role, organization scope, researcher profiles, record relationships,
+conflict checks, delegation, catalogs, and shared configuration.
+
+### Business value
+
+Correct identity and scope facts prevent accidental over-permission and make
+reviewer/approval decisions auditable.
+
+### Primary users / roles
+
+`SYSTEM_ADMIN`; `SCIENTIFIC_MANAGEMENT_STAFF` for permitted business operations;
+authorized profile managers; read-only users of catalog values.
+
+### In scope
+
+Users, five system roles, units/scope, researcher profiles and account links,
+participation history, reviewer/secretary relationships, conflict preflight,
+`proposal.submit` delegation, catalogs, forms, checklists, score criteria,
+notification templates, and configuration.
+
+### Out of scope / later
+
+`[Later / non-MVP]` Arbitrary policy wildcards, automatic role inference,
+organization-tree inheritance, self-service external onboarding, and workflow
+engine configuration.
+
+### Dependencies
+
+Epic 1 session/shell; `packages/permissions`; source-domain fact-provider
+contracts; Prisma migrations; authorization baseline and conflict policy.
+
+### UX screens involved
+
+Users, roles/permissions, organization units, catalogs, researcher profiles,
+intake configuration, reviewer candidate search, and account reset.
+
+### Backend/API needs
+
+Admin user/role/unit/catalog endpoints; researcher profile CRUD/link/history;
+relationship lifecycle and conflict preflight endpoints; exact delegation
+grant/revoke/approve operations; DTO validation, versions, audit, and scoped
+queries.
+
+### Permission and security notes
+
+`SYSTEM_ADMIN` has no implicit proposal/project/review/approval access. Every
+relationship has status/effective dates. Conflict denial wins over role grants.
+Only exact, record-scoped `proposal.submit` delegation is allowed and never
+self-approved or chained.
+
+### Acceptance criteria
+
+- An account has exactly one active system role from the five canonical values;
+  invalid legacy ambiguity fails closed and is reported for migration.
+- Admin screens do not disclose business data merely because the viewer is an
+  admin; scope, relationship, assignment, state, delegation, and conflict are
+  independently evaluated.
+- Researcher profile and relationship history is retained, searchable only in
+  scope, and never used as an unverified authorization shortcut.
+- Candidate assignment is blocked by PI/member/secretary conflict with a safe
+  reason; protected conflict source is not disclosed.
+
+### Suggested stories / tasks
+
+| ID | Priority | Story/task |
+| --- | --- | --- |
+| 2.1 | MVP | Manage users, one active system role, status/lock, unit scope, and controlled reset. |
+| 2.2 | MVP | Manage organizations, catalogs, forms, checklists, priorities, and score criteria with soft lifecycle. |
+| 2.3 | MVP | Manage researcher profiles, account links, participation history, and record relationships. |
+| 2.4 | MVP | Run conflict/separation-of-duty preflight before reviewer, secretary, or approval assignment. |
+| 2.5 | Should have | Implement exact `proposal.submit` delegation lifecycle and impact warning. |
+
+## Epic 3: Proposal / research topic management
+
+### Goal
+
+Let an eligible internal PI create, complete, save, submit, and resubmit a
+research proposal through a controlled intake without overwriting submitted
+versions.
+
+### Business value
+
+Proposal intake becomes complete, visible, and traceable from opening an intake
+through the next staff action.
+
+### Primary users / roles
+
+Scientific management staff/assigned secretary; internal PI; permitted members
+and `EXTERNAL_RESEARCHER_USER` for assigned draft fields only.
+
+### In scope
+
+Intake periods, proposal list/detail, create/edit form, readiness checklist,
+submit confirmation, supplement response, resubmission, proposal files, status
+badges, timeline, and next-action presentation.
+
+### Out of scope / later
+
+`[Later / non-MVP]` Public proposal portal, digital signature, full external
+portal, and arbitrary workflow editing.
+
+### Dependencies
+
+Epics 1-2; shared files from Epic 7; catalogs/checklists; proposal state machine;
+audit and notification hooks from Epic 10.
+
+### UX screens involved
+
+Intake periods, proposal list, proposal detail, create/edit proposal, submit
+confirmation, supplement request, and staff check.
+
+### Backend/API needs
+
+`/proposal-intake-periods`, `/research-proposals`, readiness/check endpoints,
+named submit/resubmit/supplement operations, immutable versions, field/file
+validation, scoped list/detail/count/facet, and `ViewerAuthorizationV1`.
+
+### Permission and security notes
+
+PI edit/submit is limited to applicable intake and scope. Submitted versions
+lock. External users edit only assigned draft sections and cannot create/submit
+or change protected fields. No direct status PATCH.
+
+### Acceptance criteria
+
+- Draft save permits incomplete sections; submit requires backend readiness,
+  active intake, scope, relationship, conflict, deadline, and context version.
+- Submitted, supplement-requested, resubmitted, eligible, and rejected versions
+  show the canonical state and immutable history with allowed next action.
+- Closed intake, stale context, denied capability, invalid field/file, and
+  failed upload preserve user input and provide a corrective message.
+- Lists, detail, counts, facets, files, history, and exports disclose only
+  authorized proposal data.
+
+### Suggested stories / tasks
+
+| ID | Priority | Story/task |
+| --- | --- | --- |
+| 3.1 | MVP | Create/manage intake periods and required submission packages. |
+| 3.2 | MVP | Build proposal list/detail and sectioned create/edit form with server validation. |
+| 3.3 | MVP | Add readiness, submit confirmation, immutable submission, supplement, and resubmit flow. |
+| 3.4 | MVP | Implement state badges, next-action strip, version/history, and capability-aware controls. |
+| 3.5 | Should have | Add richer draft collaboration for assigned member/external sections after core PI intake is stable. |
+
+## Epic 4: Review, evaluation, aggregation, and approval
+
+### Goal
+
+Move eligible proposals through conflict-safe reviewer assignment, independent
+evaluation, result aggregation, and leadership approval/rejection.
+
+### Business value
+
+Decisions are evidence-based, separated by duty, and reproducible from the
+submitted package and audit trail.
+
+### Primary users / roles
+
+Scientific management staff/secretary for scoped administration; assigned
+reviewer/council/ethics evaluator; leadership approval authority; PI/member as
+disclosure-limited viewers.
+
+### In scope
+
+Staff check, supplement, reviewer assignment, evaluation form, aggregation,
+decision package, approve/reject confirmation, disclosure, decision history,
+and proposal state transitions.
+
+### Out of scope / later
+
+`[Later / non-MVP]` Automatic reviewer selection, delegated approval, public
+review disclosure, and arbitrary multi-stage approval builder.
+
+### Dependencies
+
+Epics 1-3; researcher/conflict facts from Epic 2; shared files/history; audit,
+notifications, and state transition contracts from Epic 10.
+
+### UX screens involved
+
+Staff check, reviewer assignment, reviewer evaluation, result aggregation,
+leadership decision, proposal detail review/history tabs.
+
+### Backend/API needs
+
+Check, supplement, reviewer assignment, evaluation, aggregation, decision
+package, approve/reject endpoints; server-calculated totals; disclosure-filtered
+DTOs; atomic state/version/conflict checks.
+
+### Permission and security notes
+
+Reviewer sees only assigned package and own evaluation. PI/member/secretary do
+not see protected raw review data before disclosure. Reviewer cannot decide a
+record they reviewed; PI/member cannot review or approve their own record.
+
+### Acceptance criteria
+
+- Assignment cannot be confirmed until active candidate, scope, dates, conflict,
+  and required context checks pass.
+- Evaluation validates every required criterion, calculates totals on the
+  backend, and locks the submitted version.
+- Aggregation cannot move to pending approval until required reviews and summary
+  conditions pass; missing/late review is actionable only for authorized staff.
+- Leadership approve/reject rechecks authority, scope, conflict, state, version,
+  and disclosure; rejection requires a reason and creates an immutable audit.
+
+### Suggested stories / tasks
+
+| ID | Priority | Story/task |
+| --- | --- | --- |
+| 4.1 | MVP | Implement staff completeness check and supplement request. |
+| 4.2 | MVP | Implement candidate search, conflict preflight, reviewer assignment/change/revoke. |
+| 4.3 | MVP | Implement reviewer score form, save draft, submit-once lock, and disclosure. |
+| 4.4 | MVP | Implement staff aggregation with backend totals and readiness gate. |
+| 4.5 | MVP | Implement leadership decision package and approve/reject action. |
+| 4.6 | Should have | Add council/ethics evaluator variants using the same assignment/evaluation contracts. |
+
+## Epic 5: Project tracking after approval
+
+### Goal
+
+Create a tracked project explicitly from an approved proposal and manage
+milestones, reports, adjustments, acceptance, and completion without silently
+changing the source proposal.
+
+### Business value
+
+Approved work has a visible owner, schedule, evidence, risk state, and final
+acceptance path.
+
+### Primary users / roles
+
+Scientific management staff; leadership; project PI, members, secretary,
+assigned evaluators, and permitted delegates.
+
+### In scope
+
+Project creation/setup, overview/detail, milestones, periodic reports,
+delayed/risk flags, adjustment/extension, acceptance/final review, project
+states, member scope, files, tasks, and history.
+
+### Out of scope / later
+
+`[Later / non-MVP]` Deep accounting/financial integration, automatic project
+creation, automatic pause/reject on overdue, and mobile-native workflows.
+
+### Dependencies
+
+Approved proposal from Epic 4; files/history from Epic 7; tasks from Epic 6;
+notifications/alerts from Epic 8/10; report/export services from Epic 9.
+
+### UX screens involved
+
+Project overview/detail, progress milestones, periodic reports,
+adjustment/extension, acceptance/final review.
+
+### Backend/API needs
+
+Approved-project creation operation; milestones, progress reports, adjustment,
+acceptance, state transition, and scoped list/detail endpoints; explicit copied
+relationship/source link; aggregate/context version and audit.
+
+### Permission and security notes
+
+Members see only related project information and permitted files/tasks. Project
+state does not imply proposal authority. Overdue is a derived flag/reminder,
+not a hidden state mutation.
+
+### Acceptance criteria
+
+- Approval does not create a project automatically; staff explicitly confirms
+  source, copied relationships, code, dates, milestones, and report calendar.
+- Project state badges cover tracking initialized, in progress, report due,
+  delayed, under adjustment, pending/under acceptance, paused, and completed.
+- Submitted reports and acceptance dossiers lock versions; adjustment and final
+  decisions use separate operations and retain history.
+- Project member access, file access, task access, dashboard counts, and exports
+  all use the same record scope and disclosure rules.
+
+### Suggested stories / tasks
+
+| ID | Priority | Story/task |
+| --- | --- | --- |
+| 5.1 | MVP | Create/confirm project from approved proposal with explicit setup. |
+| 5.2 | MVP | Implement project overview/detail, milestones, progress, report due and delayed flags. |
+| 5.3 | MVP | Implement PI periodic report draft/submit and staff follow-up. |
+| 5.4 | MVP | Implement adjustment/extension request and authority decision. |
+| 5.5 | MVP | Implement acceptance dossier, evaluation, aggregation, final decision, and completed state. |
+| 5.6 | Should have | Carry forward seminar/student research tracking as a related activity track using the same milestone/file/history patterns. |
+
+## Epic 6: Task management
+
+### Goal
+
+Let authorized users create, assign, update, evidence, and complete standalone
+or linked tasks without exceeding the linked record's permission.
+
+### Business value
+
+Operational work becomes visible with clear ownership, due dates, evidence, and
+follow-up rather than remaining in email or spreadsheets.
+
+### Primary users / roles
+
+Task creator/manager; assignee; collaborators; staff and leadership for scoped
+oversight; any authorized linked-record participant.
+
+### In scope
+
+Task list/detail/create-edit, assignment, collaborators, priority, due date,
+progress, notes, evidence, reminders, overdue flag, and controlled task states.
+
+### Out of scope / later
+
+`[Later / non-MVP]` Full project-management suite, arbitrary automation rules,
+chat, and external task integrations.
+
+### Dependencies
+
+Epic 1 authorization; linked records from Epics 3-5/7; files from Epic 7;
+alerts from Epic 8/10.
+
+### UX screens involved
+
+Task list, task detail, create/edit task, task evidence/file section, My Work.
+
+### Backend/API needs
+
+Scoped `/tasks` list/detail, create/update, assignment, status transition,
+evidence/file operations, due/overdue query, audit, and linked-record access
+check.
+
+### Permission and security notes
+
+Task permission never widens linked-record permission. Assignee updates are
+limited to allowed fields; manager-only reassign/cancel/approve rules are
+backend-enforced.
+
+### Acceptance criteria
+
+- Task states New, Accepted, In progress, Waiting for response, Waiting for
+  result approval, Completed, Overdue, and Cancelled have explicit transitions.
+- Create/assign/status/evidence changes validate actor, linked record, dates,
+  state, conflict/separation rules, and context version.
+- Overdue is visible and actionable but does not auto-cancel or mutate the linked
+  proposal/project workflow.
+- Cancelled/completed tasks retain traceable history and authorized evidence.
+
+### Suggested stories / tasks
+
+| ID | Priority | Story/task |
+| --- | --- | --- |
+| 6.1 | MVP | Build task list/detail/create-edit with linked-record authorization. |
+| 6.2 | MVP | Add assignment, collaborators, priority, due dates, and state transitions. |
+| 6.3 | MVP | Add progress, notes, evidence, completion, overdue flag, and audit. |
+| 6.4 | Should have | Add task views embedded in project/proposal/report workspaces. |
+
+## Epic 7: File management and document history
+
+### Goal
+
+Provide one private, versioned, API-authorized file and related-document
+experience for proposals, projects, tasks, reports, councils, ethics dossiers,
+and other business records.
+
+### Business value
+
+Evidence remains findable, current versions are clear, and restricted files do
+not become an accidental bypass around record authorization.
+
+### Primary users / roles
+
+Authorized record participants, PI/members, staff, leadership, reviewers, and
+document administrators according to each record's disclosure policy.
+
+### In scope
+
+Upload, validation, scan/status, metadata, preview/download where supported,
+replace/version, soft delete, related documents, effective dates, file history,
+and business timeline.
+
+### Out of scope / later
+
+`[Later / non-MVP]` Preview for every format, public object URLs, full document
+management integration, OCR, digital signature, and arbitrary retention
+automation.
+
+### Dependencies
+
+Record-owner authorization contracts; private MinIO; PostgreSQL metadata;
+Epics 3-6 source records; audit from Epic 10.
+
+### UX screens involved
+
+File upload, file preview/download row, file history, related documents,
+detail-page files/history tabs.
+
+### Backend/API needs
+
+Shared `/files` and related-document endpoints; API-mediated MinIO access;
+extension/MIME/size/name validation; version/replacement/soft-delete; source
+record authorization on every metadata/content request.
+
+### Permission and security notes
+
+Object keys and URLs are never permission tokens. Review disclosure applies to
+file name, metadata, content, history, search, notifications, and export.
+
+### Acceptance criteria
+
+- Upload stores PostgreSQL metadata and private MinIO content only after source
+  authorization and validation; failure leaves no usable orphan association.
+- Download/preview re-authorizes at request time; replace creates a new version;
+  soft delete preserves required history.
+- Current/superseded/deleted/scanning/failed states are text-readable and
+  accessible; unsupported preview falls back to authorized download.
+- Related documents preserve owner, effective date, version, source links, and
+  audit history without hard deletion of required evidence.
+
+### Suggested stories / tasks
+
+| ID | Priority | Story/task |
+| --- | --- | --- |
+| 7.1 | MVP | Implement upload/download with source-record authorization and safe validation. |
+| 7.2 | MVP | Implement metadata, replacement/version history, soft delete, and file states. |
+| 7.3 | MVP | Add file/history tabs and timeline to proposal/project/task/report details. |
+| 7.4 | Should have | Implement related-document registration, linking, effective dates, and scoped retrieval. |
+| 7.5 | Later / non-MVP | Add broad file preview coverage only when supported formats and security scanning are proven. |
+
+## Epic 8: Dashboard and operational alerts
+
+### Goal
+
+Give every authenticated user a scoped dashboard and My Work view that expose
+only actionable queues, risks, due dates, and permitted drill-downs.
+
+### Business value
+
+Staff and leadership can prioritize work; researchers and reviewers know what
+they owe; counts do not leak records outside scope.
+
+### Primary users / roles
+
+All authenticated users, with role/persona-specific cards and queues.
+
+### In scope
+
+Role-aware dashboard, My Work, KPI cards, alert list, due/overdue queues,
+source-list drill-down, relationship labels, blocked-with-reason items, and
+scoped operational summaries.
+
+### Out of scope / later
+
+`[Later / non-MVP]` Complex charts, saved filters, predictive risk scoring,
+cross-institution benchmarking, and decorative dashboards.
+
+### Dependencies
+
+Source contracts from Epics 2-7; search/filter from Epic 9; scheduled jobs and
+notifications from Epic 10; shared components from Epic 1.
+
+### UX screens involved
+
+Role-aware dashboard `/dashboard`, My Work `/my-work`, alert list, notification
+entry, filtered source lists, and record next-action strips.
+
+### Backend/API needs
+
+Scoped `GET /dashboard`, `GET /me/work`, due/overdue source queries, KPI-to-source
+filter tokens, `asOf`/source versions, and fail-closed composite aggregation.
+
+### Permission and security notes
+
+Counts, tooltips, facets, queues, and drill-down use the same authorization as
+detail. Conflict-blocked known records can be non-actionable with safe fields;
+hidden records remain undiscoverable.
+
+### Acceptance criteria
+
+- Each persona sees only relevant KPI cards, queues, and quick actions; admin
+  does not gain business-data visibility by default.
+- Every actionable card drills to the same scoped filter/source version and
+  re-authorizes on detail open.
+- Composite source failure shows unavailable/fail-closed rather than partial
+  totals presented as complete.
+- My Work is available to all roles, de-duplicates entries, preserves all
+  viewer relationships, and excludes blocked items from actionable counts.
+
+### Suggested stories / tasks
+
+| ID | Priority | Story/task |
+| --- | --- | --- |
+| 8.1 | MVP | Implement role-aware dashboard KPIs, urgent queue, scope line, and source links. |
+| 8.2 | MVP | Implement My Work aggregation for proposals, projects, reports, tasks, and assignments. |
+| 8.3 | MVP | Add due/overdue flags and operational alert list with safe disclosure. |
+| 8.4 | MVP | Add KPI drill-down with filter/asOf/source-version consistency. |
+| 8.5 | Later / non-MVP | Add complex charts, saved filters, or predictive risk indicators. |
+
+## Epic 9: Search, filtering, reports, and exports
+
+### Goal
+
+Make core records discoverable and reportable with server-side filters,
+authorization-scoped facets, and traceable Excel/PDF exports.
+
+### Business value
+
+Users find the right record quickly and can reuse operational data without
+creating a second, ungoverned data access path.
+
+### Primary users / roles
+
+All authenticated users for authorized search; staff and leadership for report
+and export capabilities; admin only for explicitly permitted operational data.
+
+### In scope
+
+Global/local search, filters, sort, pagination/cursors, proposals/projects/
+tasks/reports/documents/researcher/activity/council/ethics result tabs, report
+catalog, parameterized report run, preview, Excel/PDF generation, export status,
+and export audit.
+
+### Out of scope / later
+
+`[Later / non-MVP]` Elasticsearch/OpenSearch, advanced report builder, saved
+filters, scheduled external distribution, and unrestricted bulk export.
+
+### Dependencies
+
+Authorized source query contracts; dashboard source versions from Epic 8;
+files/history and audit; existing PostgreSQL indexes and export tooling.
+
+### UX screens involved
+
+Global search, core list filter bars, reports catalog, report parameters/preview,
+export history/result.
+
+### Backend/API needs
+
+Server-side `/search`, scoped facets/counts/suggestions, report definitions and
+run/export jobs, cursor/version snapshot, `AuthorizationJobEnvelopeV1`, and
+download re-authorization.
+
+### Permission and security notes
+
+Apply authorization before result/count/facet/suggestion/export. Redact hidden
+reviewer identity/raw score/comment and protected personnel fields. Export does
+not become an access grant.
+
+### Acceptance criteria
+
+- Search/list filters persist in the URL where safe, are cancellable/server-side,
+  and distinguish no-match from no-access.
+- 95% of normal core search/list interactions meet the 2-second Phase 1 target
+  under measured conditions.
+- Report preview/export uses the same scope/filter/source version as the source
+  list; required source failure does not show partial totals as complete.
+- Export jobs show queued/progress/completion/error states, are retry-safe, have
+  expiry, and append an audit event.
+
+### Suggested stories / tasks
+
+| ID | Priority | Story/task |
+| --- | --- | --- |
+| 9.1 | MVP | Implement server-side search/filter/sort/pagination for proposal, project, task, and researcher core lists. |
+| 9.2 | MVP | Implement scoped report catalog, parameters, preview, and source drill-down. |
+| 9.3 | MVP | Implement controlled Excel/PDF export, progress, expiry, re-authorization, and audit. |
+| 9.4 | Should have | Add cross-module tabs for documents, seminars/student research, councils, and ethics. |
+| 9.5 | Later / non-MVP | Add advanced report builder, saved filters, and search-engine infrastructure. |
+
+## Epic 10: Audit log, notifications, accessibility, and hardening
+
+### Goal
+
+Make consequential work traceable and safely communicated while enforcing the
+UX security/accessibility floor across all modules; carry forward supporting
+seminar, student research, council, and ethics workflows without creating a
+second authorization model.
+
+### Business value
+
+The institution can explain what happened, notify the right person, meet core
+accessibility expectations, and operate supporting research-governance flows
+with consistent controls.
+
+### Primary users / roles
+
+All users for notifications; system admin and authorized audit viewers for logs;
+staff/leadership/researchers/reviewers/council/ethics participants for their
+scoped supporting workflows; QA and operations for hardening.
+
+### In scope
+
+Append-only audit, in-app notifications, configured email/reminder hooks,
+accessibility and responsive QA, security/error hardening, retry/idempotency,
+and supporting seminar/student research, council, and ethics state/assignment/
+evaluation/decision slices retained from the legacy backlog.
+
+### Out of scope / later
+
+`[Later / non-MVP]` SMS, digital signature, external integrations, mobile-native
+flows, full notification orchestration, and arbitrary workflow engine.
+
+### Dependencies
+
+All workflow epics; `AuthorizationAuditV1`, `AuthorizationJobEnvelopeV1`,
+scheduled worker, notification templates/config, component library, and QA
+acceptance matrix.
+
+### UX screens involved
+
+Audit log, notifications, alert/toast surfaces, seminar/student research,
+council/ethics screens, and accessibility states on every screen.
+
+### Backend/API needs
+
+Append-only audit capture in the same transaction as critical mutation;
+notification/delivery records, retry-safe reminders, source contracts for
+supporting domains, redacted audit query/export, and correlation IDs.
+
+### Permission and security notes
+
+Audit access is itself authorized. Notifications contain minimum disclosure and
+never grant access. Every supporting domain must pass resolver, disclosure,
+mutation re-authorization, state, and fixture integration gates before being
+advertised as covered.
+
+### Acceptance criteria
+
+- Critical submit, supplement, assignment, evaluation, aggregation, decision,
+  project, report, task, file, account, and policy actions have actor, target,
+  action, UTC time, outcome, context/policy version, and redacted changes.
+- Notification/reminder retry does not duplicate business outcomes and cancels
+  effects when authority or state is no longer valid.
+- Core flows meet WCAG 2.2 AA floor: landmarks, headings, labels, visible focus,
+  keyboard access, live regions, semantic status, paste support, and responsive
+  breakpoints.
+- Seminar/student research and council/ethics supporting stories retain their
+  existing business scope and use the same backend authorization, files,
+  states, audit, notification, and disclosure contracts.
+
+### Suggested stories / tasks
+
+| ID | Priority | Story/task |
+| --- | --- | --- |
+| 10.1 | MVP | Implement append-only audit capture/query, redaction, correlation, and retention-safe history. |
+| 10.2 | MVP | Implement in-app notifications, configured email for required events, and safe reminders. |
+| 10.3 | MVP | Run accessibility/responsive/security hardening across core MVP screens and mutations. |
+| 10.4 | Should have | Carry forward seminar/student research workflow slices and integration contracts. |
+| 10.5 | Should have | Carry forward council/ethics intake, supplement, assignment, evaluation, aggregation, and decision slices. |
+| 10.6 | Later / non-MVP | Add SMS, digital signature, external integrations, or workflow-engine capabilities. |
+
+## Cross-epic screen implementation tasks
+
+The following rows are the screen-level task register. They are intentionally
+specific enough to create frontend/backend stories without inventing routes or
+behavior outside `docs/ux-ui-spec.md`.
+
+| Task | Description | Roles | Route / UI | Data needed | API/backend dependency | Permission rules | Main states | Acceptance criteria |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| S01 Login | Authenticate and establish safe session. | Unauthenticated | `/login` | Username, password, account-state message. | `POST /auth/login`. | Generic credential failure; no secret in URL/logs. | Loading, invalid, locked/inactive, network error, success. | Successful login lands on scoped dashboard; duplicate submit is prevented; audit is written. |
+| S02 Password | Change password or complete admin-issued reset. | Authenticated; reset-context user | `/change-password`, `/password-reset` | Current/new/confirm password, reset expiry. | Change/reset endpoints. | No credential-detail leakage; token single-use. | Loading, validation, expired token, error, success. | Policy and confirmation are validated; success invalidates old reset/session context as required. |
+| S03 Dashboard/My Work | Show scoped KPIs and action-needed records. | All authenticated roles | `/dashboard`, `/my-work` | KPI, queue, relationship, state, due/risk, route. | `GET /dashboard`, `GET /me/work`. | Same scope for cards/counts/drill-down; conflict items non-actionable. | Loading, empty, unavailable source, error, success. | Every card links to an authorized filtered source list; no global counts. |
+| S04 Intake/proposal list | Browse intake/proposal queues. | Staff, secretary, PI, related participants. | `/intakes`, `/proposals`, `/my-proposals` | Code/title/PI/unit/field/intake/state/due. | Intake/proposal list APIs. | Server-side scope, counts, facets, filters. | Loading, no records, no match, error, denied. | URL filters restore; desktop table/mobile cards preserve code, state, due, owner, action. |
+| S05 Proposal detail | Canonical proposal detail workspace. | Authorized relationship/scope/assignment. | `/proposals/:id` | Header, relationship, tabs, files, timeline, capabilities. | Scoped detail API. | Disclosure-filtered DTO; stale context retained. | Loading, safe not-found/denied, stale, read-only, success. | Viewer relationship and next valid action are visible; hidden tabs/data are omitted. |
+| S06 Create/edit proposal | Create/edit structured draft. | Internal PI; assigned member/external fields. | `/proposals/new`, `/proposals/:id/edit` | Intake, participants, dates, objectives, budget, files, readiness. | Create/update proposal, catalogs, files. | Field capability, scope, state; submitted version locked. | Loading, incomplete, field/server error, locked, saved. | Save draft preserves values; invalid required fields focus first error; external cannot edit protected fields. |
+| S07 Submit confirmation / supplement request / staff check | Confirm submit, request supplement, or perform staff check. | PI/delegate; staff/secretary. | Proposal action panels. | Readiness, version, reasons, due date, checklist. | Submit/resubmit/check/supplement operations. | Atomic state/context/conflict checks; exact delegate only. | Loading, blocked, stale, validation error, success. | Submit locks version; supplement reason/due date is immutable history; no direct status edit. |
+| S08 Reviewer assignment / reviewer evaluation | Assign reviewers and collect own evaluation. | Staff; assigned reviewer/council/ethics evaluator. | `/proposals/:id/assignments`, `/reviews/:assignmentId` | Candidate, conflict result, rubric, score, recommendation, due. | Assignment/evaluation APIs. | No self-review; own assignment only; one submit/lock. | Loading, empty candidates, conflict-blocked, incomplete, submitted, error. | Conflict blocks confirmation; total is backend-calculated; other reviews remain hidden. |
+| S09 Result aggregation / leadership decision | Consolidate evidence and decide. | Staff; leadership authority. | `/proposals/:id/aggregation`, `/proposals/:id/decision` | Review counts, summary, package, history, conflict indicator. | Aggregation/decision package and decision APIs. | Staff cannot approve; conflicted authority cannot decide. | Loading, not-ready, blocked, confirm, error, immutable success. | Pending approval requires conditions; reject requires reason; decision is audited and read-only. |
+| S10 Project tracking overview | Operate approved project lifecycle. | Staff, leadership, PI, members, secretary. | `/projects`, `/projects/:id` | Source proposal, relationships, state, progress, risks, tabs. | Project detail/list and explicit create API. | Member scope; no automatic project creation; state-based actions. | Loading, empty, denied tab, delayed, read-only, success. | Project setup clearly separates copied data from source proposal and exposes next action. |
+| S11 Progress milestone / periodic report / adjustment-extension / acceptance-evaluation | Manage progress evidence and final review. | PI, staff, leadership, assigned evaluators. | Project subroutes. | Dates, progress, report period, evidence, request impact, dossier. | Milestone/report/adjustment/acceptance APIs. | Submitted versions lock; authority decisions separate. | Loading, due, overdue, invalid, blocked, success. | Overdue never silently changes project state; all decisions and evidence are traceable. |
+| S12 Task list / task detail / create-edit task | Create and update linked/standalone work. | Creators, managers, assignees, collaborators. | `/tasks`, `/tasks/:id`, `/tasks/new` | Linked record, owner, collaborators, priority, due, state, evidence. | Task APIs and linked-record authorization. | Task cannot widen linked-record access. | Loading, empty/no-match, validation, denied, overdue, success. | All task states use named transitions; completion/cancellation requires permitted action and audit. |
+| S13 File upload / file preview-download / file history | Upload, view/download, replace, and inspect history. | Authorized record viewers/managers. | `/records/:id/files` and detail tabs. | Name/type/size/uploader/time/version/status/effective date. | Files/related-documents APIs; private MinIO. | Reauthorize metadata/content; no direct object URL. | Selecting, validating, uploading/scanning, retry, denied, superseded, deleted. | Replace creates a version; download is audited where required; protected review files remain hidden. |
+| S14 Global search | Search core and supporting records. | All authenticated users in scope. | `/search` and local list filters. | Query, tabs, facets, state/unit/person/date, cursor. | Scoped search endpoint. | Auth before result/count/facet/suggestion. | Idle, typing, loading, no match, error, success. | Unauthorized records never affect count/facet/suggestion; result detail re-authorizes. |
+| S15 Reports and export | Preview and export scoped operational data. | Staff/leadership; explicitly authorized admin. | `/reports`, report result/history. | Definition, parameters, filters, source versions, job status. | Report/run/export job APIs. | Exact export action; reauthorize job/download. | Parameter error, queued, progress, unavailable, error, success. | Excel/PDF result has expiry and audit; required source failure is not shown as complete. |
+| S16 User management / roles and permissions / catalog management / audit log | Manage platform and inspect authorized audit. | System admin; authorized audit viewer. | `/users`, `/roles`, `/catalogs`, `/system-logs` | Accounts, role/scope, catalog values, actor/action/time/outcome. | Admin and audit APIs. | Admin business-data boundary; redacted immutable audit. | Loading, empty, validation, denied, success. | Exactly one role; changes are audited; secrets/conflict sources/raw tokens never display. |
+
+## Reusable component implementation tasks
+
+| Component task | Purpose | Used by | Required states | Accessibility and permission/security behavior |
+| --- | --- | --- | --- | --- |
+| C01 App shell | Stable responsive workspace. | All authenticated screens. | Loading, route pending, session expired, error. | Landmarks/skip link/focus; route guard is not the only security boundary. |
+| C02 Sidebar navigation | Role/module navigation. | All screens. | Expanded, collapsed, drawer, active, scoped badge. | Labeled icons and keyboard access; items reflect capability but direct route remains protected. |
+| C03 Header | Search, notifications, account/system role/scope. | All authenticated screens. | Loading, notification count, menu, session expiry. | Current system role is not record role; no protected data in badges. |
+| C04 Breadcrumb/page header | Context and next action. | Detail/list/form screens. | Parent missing, long label, loading. | Semantic navigation and one `h1`; route is not an access grant. |
+| C05 Data table | Dense desktop list. | Proposals, projects, tasks, users, reports, audit. | Skeleton, empty, error, sort, selected, pagination, mobile card. | Semantic headers/keyboard actions; rows/counts are scoped. |
+| C06 Filter bar | Query and filter records. | Lists, search, reports. | Draft, applied, clear, loading, invalid, mobile drawer. | Labels, URL state, Apply/Clear; cannot widen backend scope. |
+| C07 Search input | Search global/local records. | Search, lists, header. | Idle, typing, debounced/loading, no results, error, clear, keyboard submit. | `type=search`, accessible name, live result count; suggestions are scoped. |
+| C08 Status badge | Consistent state/risk display. | All record lists/details. | Known, unknown fallback, overdue/risk, compact. | Text+icon, never color only; unknown is not guessed. |
+| C09 Permission-aware action button | Render primary workflow action. | All mutation screens. | Allowed, loading, success, disabled reason, stale retry, confirm. | Native button and described reason; backend rechecks every mutation. |
+| C10 Action menu | Render secondary actions. | Detail/list rows, export/history/file actions. | Open/close, disabled reason, destructive confirmation. | Keyboard menu semantics; hide only when disclosure/security requires it. |
+| C11 Form section | Group long structured input. | Proposal, project, report, task, dossier. | Expanded/collapsed, complete/incomplete, locked, field/server error. | Heading/label/error association; field lock follows capability, not inferred role. |
+| C12 Stepper | Show lifecycle/readiness progress. | Proposal, project, dossier. | Current, completed, blocked, skipped/not applicable. | Announces current step; completion never implies backend transition. |
+| C13 File upload | Attach evidence through shared files module. | Proposal/project/task/report/document. | Idle, selecting, validating, uploading, scanning, success, retry, rejected, locked. | Touch/keyboard upload; no MinIO URL; API checks upload/download. |
+| C14 File preview/download row | Show safe file metadata/action. | Record files and history. | Preview supported/unavailable, download, denied, superseded, deleted. | Accessible filename/type/size; download is authorized and audited. |
+| C15 Timeline/activity log | Trace workflow/business history. | Record details, profiles, audit. | Loading, empty, ordered, redacted, paginated. | Semantic list/localized time; disclosure-safe actor/details. |
+| C16 Comment/note box | Capture reasons, comments, and notes. | Supplement, review, decision, task. | Draft, count, validation, read-only, server error. | Labeled input/error; state/role controls editability. |
+| C17 Approval decision panel | Safe authority decision. | Proposal/project/acceptance decisions. | Eligible, blocked, confirm, processing, success, error. | Reject reason required; focus-safe confirmation; no stale decision. |
+| C18 Reviewer score form | Structured rubric. | Reviewer/council/ethics evaluation. | Draft, calculated, incomplete, locked, deadline warning, error. | Numeric constraints, criterion labels, own-assignment disclosure only. |
+| C19 KPI card | Show one scoped metric. | Dashboard/My Work. | Loading, value, zero, unavailable, stale, error. | Label/value relation; link announces destination/filter; no hidden count. |
+| C20 Alert list | Show urgent/due/overdue signals. | Dashboard/My Work/notifications. | Empty, loading, severity, dismiss only if policy allows. | Icon plus text/severity; no protected review details. |
+| C21 Empty state | Explain no data and one valid next action. | Lists, sections, dashboards. | No records, no match, not applicable, awaiting upstream action. | Clear explanation; action is capability-controlled. |
+| C22 Error state | Explain recovery path. | All lists/forms/sections. | Retry, validation correction, forbidden, stale, unavailable. | `role=alert`; no raw exception or sensitive identifier. |
+| C23 Confirmation dialog | Confirm consequential action. | Submit, approve, reject, file/task/intake actions. | Open/focus, cancel, confirm/loading, success/error. | Focus trap/return and explicit consequence; full-screen on long mobile content. |
+| C24 Toast/notification | Communicate completed result. | All mutations and notifications. | Success, warning, error, dismiss, persistent link. | `aria-live`; not sole error explanation; no sensitive data. |
+| C25 Pagination | Navigate scoped result pages. | Lists, audit, reports. | First/next/previous/last, disabled/loading, context mismatch. | Labeled navigation/current page; cursor retains scope/asOf/version. |
+| C26 Tabs | Separate detail sections. | Overview, files, workflow, history, reviews, reports. | Active, loading, error, hidden by disclosure, unsaved guard. | Keyboard tab semantics; existence follows disclosure. |
+| C27 Drawer/modal | Filters, contextual details, short forms. | Mobile filters, action details, confirmations. | Open/close, loading, validation, unsaved changes. | Escape/focus trap/one modal level; scroll containment. |
+
+## Workflow-state implementation matrix
+
+The canonical persisted/derived state names below must be implemented as status
+metadata, allowed/blocked action rules, validation, audit events, and required
+notification hooks. Overdue is a flag/reminder unless explicitly listed as a
+state.
+
+### Proposal states
+
+| State | UI/backend task | Allowed/disabled action work | Audit/notification/edge cases |
+| --- | --- | --- | --- |
+| Draft | Editable sections, readiness, version badge. | PI edits/submits; assigned fields only for member/external; review/approval disabled. | Create/update audit; empty required fields permitted only for save draft. |
+| Submitted | Locked snapshot and pending-check queue. | Staff checks/supplements; PI read-only. | Submit/check audit; no post-submit overwrite. |
+| Pending check | Staff queue/checklist and next-owner strip. | Check complete or supplement; assignment/approval disabled. | Checklist version/audit; stale, conflict, closed-intake edge cases. |
+| Needs supplement | Missing items, reason, due date, response CTA. | PI revises working version/resubmits; final actions disabled. | Immutable request, reminder, overdue response flag. |
+| Eligible | Derived readiness/eligibility display. | Staff may assign when policy permits; PI/leadership cannot decide. | Checklist result audit; never a bypass state. |
+| In review | Assignment progress and reviewer own work. | Assigned evaluator submits; staff monitors/aggregates when ready; raw reviews hidden. | Assignment/evaluation/conflict audit; inactive assignment edge case. |
+| Pending result aggregation | Counts/missing/late reviews and summary form. | Staff aggregates/marks ready; leadership decision disabled. | Backend totals and readiness audit; source failure blocks completion. |
+| Pending approval | Decision package and due date. | Eligible leadership approves/rejects; all others disabled with reason. | Decision confirmation; conflict, stale version, and wrong-state rejection. |
+| Approved | Final decision and project-creation-pending cue. | Staff explicitly creates project; proposal read-only. | Approval and project creation are separate events. |
+| Rejected | Final read-only package and permitted reason/history. | No edit/submit/approve unless explicit future policy. | Immutable decision; no hidden reopen button. |
+
+### Project tracking states
+
+| State | UI/backend task | Allowed/disabled action work | Audit/notification/edge cases |
+| --- | --- | --- | --- |
+| Tracking initialized | Setup checklist and source link. | Staff confirms code/milestones/report calendar; progress/acceptance waits. | Explicit creation/copy audit. |
+| In progress | Progress, milestones, reports, tasks, files. | Participants update assigned work; members cannot change authority/membership/final state. | Changes and evidence audited. |
+| Report due | Due banner and report CTA/queue. | PI submits; staff reviews/follows up. | Reminder/submission audit; does not imply acceptance. |
+| Delayed | Missed item, owner, risk, next action. | Reminder/escalate/update/request adjustment. | Derived overdue flag; never auto-pause/reject/close. |
+| Under adjustment | Request impact/assessment/decision. | PI submits; staff assesses; authority decides. | Direct date/budget/state mutation disabled; request retained. |
+| Pending acceptance | Dossier readiness and assignment progress. | PI submits; staff prepares; evaluator evaluates; aggregation required. | Version/assignment audit; missing evidence blocks. |
+| Under acceptance | Evaluation/aggregation/decision workspace. | Assigned evaluator/staff/authority actions by capability. | Conflict/disclosure checks; no completion before decision. |
+| Completed | Final outputs and closed timeline. | Read/report/export; normal edits disabled. | Completion decision immutable; formal reopen only if later policy exists. |
+| Paused | Reason, effective date, next review date. | Authorized resume/policy action; normal progress may be limited. | Pause/resume reason audited; no silent deadline reset. |
+
+### Task states
+
+| State | UI/backend task | Allowed/disabled action work | Audit/notification/edge cases |
+| --- | --- | --- | --- |
+| New | Owner, due, linked record, unstarted indicator. | Creator assigns; assignee accepts where supported. | Create/assign audit; no premature completion evidence. |
+| Accepted | Acknowledgement and due date. | Assignee updates progress/status; manager controls reassign/cancel. | Acceptance audit. |
+| In progress | Progress and latest update. | Assignee updates work/evidence; linked workflow unchanged. | Status/evidence audit. |
+| Waiting for response | Waiting-on person/source and follow-up date. | Follow-up note/reminder; completion blocked until required response. | Reminder/follow-up audit. |
+| Waiting for result approval | Submitted result and approver. | Authorized approver reviews; assignee cannot self-approve where separated. | Review audit and disclosure. |
+| Completed | Completion date/evidence/history. | Read; reopen only explicit policy action. | Completion audit; normal edit disabled. |
+| Overdue | Danger flag plus original due date/owner. | Update/complete/request extension/reassign where allowed. | Reminder/overdue event; no auto-cancel or linked transition. |
+| Cancelled | Reason and history. | Read; restore only explicit policy action. | Cancellation reason/audit required. |
+
+## MVP prioritization and dependency order
+
+1. `[MVP]` Epic 1 foundation and Epic 2 identity/authorization facts.
+2. `[MVP]` Epic 3 intake/proposal and Epic 4 check, assignment, evaluation,
+   aggregation, approval.
+3. `[MVP]` Epic 5 project initialization/tracking, Epic 6 basic tasks, Epic 7
+   permission-checked files/history.
+4. `[MVP]` Epic 8 role-aware dashboard/My Work/core alerts and Epic 9 core
+   search/filter/report/export.
+5. `[MVP]` Epic 10 important audit, in-app notifications, reminder hooks, and
+   accessibility/security hardening for the core flows.
+6. `[Should have]` Supporting seminar/student research and council/ethics
+   slices, richer related documents, and broader cross-module reporting remain
+   in the Phase 1 business scope and use the same contracts.
+7. `[Later / non-MVP]` Advanced report builder, saved filters, complex charts,
+   every-format preview, delegated approval, public portal, SSO/LDAP/OIDC/MFA,
+   SMS, external integrations, digital signature, and native mobile workflows.
+
+## Legacy FR decomposition retained for traceability
 
 ### Epic 1: Truy cập hệ thống và quản trị phân quyền hợp nhất
 
