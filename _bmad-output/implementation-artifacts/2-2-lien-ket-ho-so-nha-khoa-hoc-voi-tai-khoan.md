@@ -18,6 +18,7 @@ so that quan hệ nghiệp vụ có thể tham chiếu một định danh thốn
 2. **Reject overlap and ambiguity atomically.** Given either side already has an overlapping non-ended link, or identity/scope context is unresolved, stale, or ambiguous, when a create/correct operation is attempted, then the backend returns the appropriate V1 denial or stable business conflict code, creates no replacement, and exposes no hidden account/profile facts.
 3. **Preserve lifecycle history.** Given an existing link, when an authorized actor suspends, ends, or corrects it, then a named lifecycle operation closes the old row and, for a correction, creates a successor linked to its predecessor in one transaction. Physical deletion and in-place rewriting of historical identity linkage are forbidden; all boundaries use database UTC and `effectiveFrom <= asOf < effectiveUntil`.
 4. **Do not grant authority.** Given a link becomes active, when account/session/capability data is resolved, then `User.systemRole`, organization scopes, proposal/project relationships, assignments, and allowed actions remain unchanged. A link only resolves identity; every record action still requires its owning source relationship and the complete authorization contract.
+5. **Keep external identity separate from authority.** Given the linked account has `EXTERNAL_RESEARCHER_USER`, when the link is resolved, then it may support an explicitly assigned draft/review relationship but cannot create/submit proposals, change protected fields, assign, or decide; the profile link itself grants none of those actions.
 5. **Handle account and profile status independently.** Given the user is disabled, when the profile is queried by an authorized viewer, then the academic profile remains available with only the permitted account-status projection, while the disabled account cannot act. Given the profile is inactive, the link history remains but new business association/assignment flows follow their explicit eligibility rule rather than silently reactivating it.
 6. **Protect concurrent lifecycle mutation.** Given a manager submits an expected profile/link context version, when another transaction has changed either side or the interval, then the write returns `CONTEXT_VERSION_MISMATCH` and leaves every link, version, and audit row unchanged. Successful lifecycle mutation increments the profile link/context version.
 7. **Audit with minimum disclosure.** Given any successful or denied link lifecycle operation, when the response is produced, then redaction-safe audit records capture actor, target profile, account/link identifiers as policy permits, interval/status, reason, correlation ID, and before/after lifecycle facts. A required success audit append is in the same transaction as the link mutation.
@@ -45,7 +46,7 @@ so that quan hệ nghiệp vụ có thể tham chiếu một định danh thốn
 
 - [ ] Task 5: Add database, API, policy, and regression tests (AC: 1-7)
   - [ ] Test one-to-one active cardinality in both directions, future/current intervals, exact start/end boundaries, overlap, suspend/end/correct successor history, and concurrent writers.
-  - [ ] Test inactive account/profile behavior, cross-scope denial, unresolved/ambiguous identity, hidden target non-disclosure, no role/scope/action side effects, audit redaction, and audit rollback.
+  - [ ] Test inactive account/profile behavior, external-role identity-only behavior, cross-scope denial, unresolved/ambiguous identity, hidden target non-disclosure, no role/scope/action side effects, audit redaction, and audit rollback.
   - [ ] Run focused PostgreSQL tests, `npm run typecheck`, `npm test`, and `git diff --check`.
 
 ## Dev Notes
@@ -56,6 +57,7 @@ so that quan hệ nghiệp vụ có thể tham chiếu một định danh thốn
 - Phase 1 cardinality is explicitly one active link per profile and per account at any instant. Changing this is a product/architecture change, not an implementation choice.
 - Grant account-link lifecycle actions explicitly to in-scope `SCIENTIFIC_MANAGEMENT_STAFF` and `SYSTEM_ADMIN`; both still require exact scope over the profile and target account. Neither role receives an implicit bypass.
 - Link rows are identity resolution facts, not global roles or source-domain authority. Proposal/project/council/task modules continue to own their typed relationships.
+- Linking an `EXTERNAL_RESEARCHER_USER` account to a profile does not make it a PI, member, reviewer, or secretary; those capabilities require an active relationship/assignment on the target record.
 - Do not backfill by matching a name, username, email, or free-text `ProposalMember.name`. A later source migration may backfill only through an exact active profile-account link; ambiguity remains unresolved and reportable.
 
 ### Existing seams to preserve

@@ -18,6 +18,7 @@ so that a past relationship or scientific-secretary title cannot grant authority
 2. Given a source domain supplies relationships to policy, when shared authorization invokes a fact-provider port, then the source domain retains ownership of its data, version, and lifecycle; shared policy neither reads domain persistence directly nor stores a replacement generic authority table.
 3. Given an actor has multiple valid relationship types on one record, when policy and UI process that record, then every relationship is preserved and actions are additive only after all denials apply; overlapping same-type relationships are rejected according to registry multiplicity.
 4. Given an actor is an active scientific secretary of a record, when they perform granted meeting-material, minutes, file, task, tracking, or draft-summary work, then the backend permits the corresponding administrative action; reviewer assignment, scoring, membership change, approval, rejection, and final decision remain denied.
+5. Given an actor has system role `EXTERNAL_RESEARCHER_USER`, when they access a record, then only an active explicit relationship/assignment can contribute permission; the role alone grants no PI, member, secretary, reviewer, submission, or decision authority.
 
 ## Tasks / Subtasks
 
@@ -46,6 +47,7 @@ so that a past relationship or scientific-secretary title cannot grant authority
   - [x] Test source-port isolation and fail-closed behavior for unavailable, invalid, stale, and ambiguous facts. Prove the same `asOf` is passed to every resolver in an authorization evaluation.
   - [x] Test multiple distinct active types are preserved, duplicate/overlapping same types are rejected including the persistence/concurrency path, and no inactive row grants a capability.
   - [x] Test secretary actions are limited to implemented administrative actions and are record-scoped; explicitly deny reviewer assignment, scoring, membership change, approval, rejection, and final decision, including when the secretary also has a staff system role.
+  - [x] Test external accounts without an active record relationship, and external users with assigned draft/review actions, for fail-closed access and protected-field denial.
   - [x] Run `npm run typecheck`, `npm test`, and `git diff --check`.
 
 ## Dev Notes
@@ -72,7 +74,7 @@ so that a past relationship or scientific-secretary title cannot grant authority
 
 - Mutating a relationship lifecycle is security-relevant: validate DTO input at the API boundary, enforce scientific-management organization scope and conflict policy, audit actor/target/from-to status/effective interval/context version, and never log secrets.
 - A failed overlap/conflict/version check must persist neither a relationship mutation nor an authorization counter increment. Protect concurrent writers at the database/service transaction boundary.
-- Do not disclose reviewer identity, raw scores/comments, or conflict sources to PI, member, or secretary audiences. Account system roles remain exactly the four canonical roles; a record relationship never becomes a global role.
+- Do not disclose reviewer identity, raw scores/comments, or conflict sources to PI, member, or secretary audiences. Account system roles remain exactly the five canonical roles, including `EXTERNAL_RESEARCHER_USER`; a record relationship never becomes a global role.
 
 ### Testing requirements
 

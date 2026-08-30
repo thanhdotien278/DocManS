@@ -20,7 +20,8 @@ Phong cách thiết kế bắt buộc:
 - Institutional admin dashboard.
 - Professional, official, data-first.
 - Gọn, rõ, dễ quét mắt, không trang trí quá mức.
-- Phù hợp vai trò quản trị, chuyên viên, lãnh đạo, chủ nhiệm đề tài, thành viên hội đồng và reviewer.
+- Phù hợp vai trò quản trị, chuyên viên, lãnh đạo, nhà nghiên cứu nội bộ,
+  external researcher, chủ nhiệm đề tài, thành viên hội đồng và reviewer.
 
 Cần tránh:
 

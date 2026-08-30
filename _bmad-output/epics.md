@@ -411,7 +411,8 @@ reviewer/approval decisions auditable.
 ### Primary users / roles
 
 `SYSTEM_ADMIN`; `SCIENTIFIC_MANAGEMENT_STAFF` for permitted business operations;
-authorized profile managers; read-only users of catalog values.
+authorized profile managers; `EXTERNAL_RESEARCHER_USER` as a managed account
+with no administrative authority; read-only users of catalog values.
 
 ### In scope
 
@@ -454,6 +455,9 @@ self-approved or chained.
 
 - An account has exactly one active system role from the five canonical values;
   invalid legacy ambiguity fails closed and is reported for migration.
+- An active `EXTERNAL_RESEARCHER_USER` can sign in and receive only explicitly
+  related/assigned record capabilities; it cannot manage accounts, roles,
+  scopes, profiles, or configuration.
 - Admin screens do not disclose business data merely because the viewer is an
   admin; scope, relationship, assignment, state, delegation, and conflict are
   independently evaluated.
@@ -527,6 +531,9 @@ or change protected fields. No direct status PATCH.
 
 - Draft save permits incomplete sections; submit requires backend readiness,
   active intake, scope, relationship, conflict, deadline, and context version.
+- An external researcher can open a related draft and edit only assigned
+  sections/contribution files; external access cannot create/submit or change
+  PI, members, objective, budget, status, or other protected fields.
 - Submitted, supplement-requested, resubmitted, eligible, and rejected versions
   show the canonical state and immutable history with allowed next action.
 - Closed intake, stale context, denied capability, invalid field/file, and
@@ -559,8 +566,9 @@ submitted package and audit trail.
 ### Primary users / roles
 
 Scientific management staff/secretary for scoped administration; assigned
-reviewer/council/ethics evaluator; leadership approval authority; PI/member as
-disclosure-limited viewers.
+reviewer/council/ethics evaluator, including an external researcher when
+explicitly assigned; leadership approval authority; PI/member/external
+researcher as disclosure-limited viewers.
 
 ### In scope
 
@@ -599,6 +607,9 @@ record they reviewed; PI/member cannot review or approve their own record.
 
 - Assignment cannot be confirmed until active candidate, scope, dates, conflict,
   and required context checks pass.
+- An external researcher may review only an explicitly assigned review package;
+  the account role alone grants no reviewer access, assignment authority, or
+  final decision capability.
 - Evaluation validates every required criterion, calculates totals on the
   backend, and locks the submitted version.
 - Aggregation cannot move to pending approval until required reviews and summary
@@ -633,7 +644,8 @@ acceptance path.
 ### Primary users / roles
 
 Scientific management staff; leadership; project PI, members, secretary,
-assigned evaluators, and permitted delegates.
+assigned evaluators, permitted delegates, and external researchers only where
+an explicit project/review relationship grants access.
 
 ### In scope
 
@@ -676,8 +688,9 @@ not a hidden state mutation.
   delayed, under adjustment, pending/under acceptance, paused, and completed.
 - Submitted reports and acceptance dossiers lock versions; adjustment and final
   decisions use separate operations and retain history.
-- Project member access, file access, task access, dashboard counts, and exports
-  all use the same record scope and disclosure rules.
+- Project member and external-researcher access, file access, task access,
+  dashboard counts, and exports all use the same record scope and disclosure
+  rules; external access never widens the linked-record permission.
 
 ### Suggested stories / tasks
 
@@ -705,7 +718,8 @@ follow-up rather than remaining in email or spreadsheets.
 ### Primary users / roles
 
 Task creator/manager; assignee; collaborators; staff and leadership for scoped
-oversight; any authorized linked-record participant.
+oversight; any authorized linked-record participant, including an external
+researcher only when explicitly assigned.
 
 ### In scope
 
@@ -772,8 +786,9 @@ not become an accidental bypass around record authorization.
 
 ### Primary users / roles
 
-Authorized record participants, PI/members, staff, leadership, reviewers, and
-document administrators according to each record's disclosure policy.
+Authorized record participants, PI/members, external researchers, staff,
+leadership, reviewers, and document administrators according to each record's
+disclosure policy.
 
 ### In scope
 
@@ -843,7 +858,8 @@ they owe; counts do not leak records outside scope.
 
 ### Primary users / roles
 
-All authenticated users, with role/persona-specific cards and queues.
+All authenticated users, with role/persona-specific cards and queues; external
+researchers see only queues and cards derived from their explicit assignments.
 
 ### In scope
 
@@ -886,7 +902,8 @@ hidden records remain undiscoverable.
 - Composite source failure shows unavailable/fail-closed rather than partial
   totals presented as complete.
 - My Work is available to all roles, de-duplicates entries, preserves all
-  viewer relationships, and excludes blocked items from actionable counts.
+  viewer relationships, and excludes blocked items from actionable counts;
+  external researchers receive only explicitly assigned work.
 
 ### Suggested stories / tasks
 
@@ -912,8 +929,9 @@ creating a second, ungoverned data access path.
 
 ### Primary users / roles
 
-All authenticated users for authorized search; staff and leadership for report
-and export capabilities; admin only for explicitly permitted operational data.
+All authenticated users for authorized search; external researchers only for
+related/assigned records; staff and leadership for report and export
+capabilities; admin only for explicitly permitted operational data.
 
 ### In scope
 
@@ -946,8 +964,9 @@ download re-authorization.
 ### Permission and security notes
 
 Apply authorization before result/count/facet/suggestion/export. Redact hidden
-reviewer identity/raw score/comment and protected personnel fields. Export does
-not become an access grant.
+reviewer identity/raw score/comment and protected personnel fields. External
+researchers receive only related/assigned results and export does not become an
+access grant.
 
 ### Acceptance criteria
 
@@ -988,8 +1007,9 @@ with consistent controls.
 ### Primary users / roles
 
 All users for notifications; system admin and authorized audit viewers for logs;
-staff/leadership/researchers/reviewers/council/ethics participants for their
-scoped supporting workflows; QA and operations for hardening.
+staff/leadership/researchers/reviewers/council/ethics participants, including
+external researchers only for their scoped supporting workflows; QA and
+operations for hardening.
 
 ### In scope
 
@@ -1323,6 +1343,10 @@ So that tôi có một phiên làm việc an toàn trong hệ thống.
 **Then** hệ thống tạo phiên gắn với đúng user ID và vai trò hệ thống hiện hành
 **And** ghi audit đăng nhập thành công mà không lưu mật khẩu hoặc token.
 
+**Given** tài khoản có system role `EXTERNAL_RESEARCHER_USER`
+**When** đăng nhập thành công
+**Then** session giữ đúng role external và không tự tạo PI, member, reviewer hoặc secretary relationship.
+
 **Given** thông tin đăng nhập sai, tài khoản bị khóa hoặc bị vô hiệu hóa
 **When** người dùng đăng nhập
 **Then** hệ thống từ chối mà không tiết lộ chi tiết có thể dùng để dò tài khoản
@@ -1355,6 +1379,15 @@ So that chỉ người dùng nội bộ hợp lệ có thể truy cập RTMS.
 **When** quản trị viên khóa hoặc vô hiệu hóa tài khoản
 **Then** các request được bảo vệ sau đó bị từ chối
 **And** tác vụ chạy nền thay mặt tài khoản đó bị hủy theo hợp đồng công việc nền.
+
+**Given** quản trị viên cấp `EXTERNAL_RESEARCHER_USER`
+**When** tài khoản được lưu
+**Then** tài khoản chỉ nhận quyền external theo policy và không xuất hiện các capability quản trị hoặc quyết định cuối.
+
+**Given** Quản lý khoa học hoặc Thư ký khoa học có scope được cấp
+**When** họ tạo hoặc quản lý một external researcher account
+**Then** account chỉ được dùng trong các record/assignment được cấp
+**And** thao tác quản trị này không cấp quyền PI, reviewer, secretary hoặc approval ngoài context.
 
 ### Story 1.4: Một vai trò hệ thống, phạm vi tổ chức và chuyển đổi dữ liệu cũ [FR2, FR3, FR6]
 
@@ -1389,6 +1422,11 @@ conflict và disclosure của bản ghi.
 **When** tài khoản thực hiện hành động được bảo vệ
 **Then** request fail closed với mã context phù hợp
 **And** migration tạo báo cáo các bản ghi cần xử lý thay vì chọn vai trò tùy ý.
+
+**Given** tài khoản có `EXTERNAL_RESEARCHER_USER`
+**When** policy đánh giá một proposal/project/review
+**Then** chỉ relationship hoặc assignment đang hoạt động trên đúng record mới có thể đóng góp quyền
+**And** system role external không thay thế context đó.
 
 ### Story 1.5: Đổi mật khẩu và đặt lại mật khẩu có kiểm soát [FR4a]
 
@@ -1492,6 +1530,10 @@ So that tôi hiểu mình có thể hoặc không thể làm gì trên hồ sơ 
 **Then** nhãn quan hệ, allowed actions và blocked actions nhất quán
 **And** trạng thái không dựa riêng vào màu.
 
+**Given** actor là `EXTERNAL_RESEARCHER_USER` có một draft section được phân công
+**When** capability được dựng
+**Then** chỉ action trên section/file được cấp là allowed và PI, member, objective, budget, status, submit cùng action quyết định là blocked với lý do backend.
+
 ### Story 1.9: Vòng đời quan hệ theo hồ sơ và giới hạn thư ký khoa học [FR6a, FR6d, FR6e]
 
 As a người dùng được phân công trên hồ sơ,
@@ -1520,6 +1562,10 @@ So that quan hệ cũ hoặc chức danh thư ký không cấp quyền ngoài nh
 **Then** backend cho phép action hành chính tương ứng
 **And** reviewer assignment, scoring, membership change, approval, rejection và final decision vẫn bị chặn.
 
+**Given** actor chỉ có system role `EXTERNAL_RESEARCHER_USER` nhưng không có relationship/assignment trên record
+**When** họ gọi detail, file hoặc mutation endpoint
+**Then** backend fail closed và không lộ metadata của record.
+
 ### Story 1.10: Vòng đời ủy quyền theo hành động và hồ sơ [FR6b]
 
 As a người đang nắm giữ một hành động có thể ủy quyền,
@@ -1547,6 +1593,11 @@ So that công việc được tiếp tục mà không mở rộng thẩm quyền
 **When** delegate thực hiện action
 **Then** backend trả `DELEGATION_INVALID` hoặc denial có ưu tiên cao hơn
 **And** mutation không xảy ra, capability được cập nhật và audit lưu đầy đủ context.
+
+**Given** actor là `EXTERNAL_RESEARCHER_USER`
+**When** actor tạo delegation hoặc dùng system role external để nộp thay
+**Then** backend từ chối vì external không tự giữ `proposal.submit`
+**And** không tạo grant hoặc submission side effect.
 
 ## Epic 2: Hồ sơ nhà khoa học và định danh quan hệ
 
@@ -1908,6 +1959,11 @@ So that trách nhiệm và quyền của từng người được xác định t
 **Then** proposal được tạo với actor là `PROPOSAL_PI` đang hoạt động
 **And** capability cho phép PI tiếp tục chỉnh sửa trong trạng thái nháp.
 
+**Given** actor chỉ có system role `EXTERNAL_RESEARCHER_USER`
+**When** họ cố tạo proposal draft
+**Then** backend từ chối vì external không có quyền tạo proposal
+**And** không tạo proposal, relationship hoặc file side effect.
+
 **Given** PI thêm co-investigator, member hoặc scientific secretary hợp lệ
 **When** quan hệ được lưu
 **Then** source proposal sở hữu type, status, effective interval và relationship version
@@ -1941,6 +1997,11 @@ So that hồ sơ có thể được hoàn thiện dần trước khi nộp.
 **Then** backend chỉ cho phép các field/section nằm trong action đó
 **And** từ chối thay đổi ngoài phạm vi mà không ảnh hưởng phần hợp lệ đã lưu trước đó.
 
+**Given** external researcher có draft contribution được phân công
+**When** họ sửa proposal
+**Then** backend chỉ lưu section/field được giao và file đóng góp được phép
+**And** PI, roster, objective, budget, status và submit vẫn bị chặn.
+
 **Given** scientific secretary đang hoạt động
 **When** họ cập nhật dữ liệu hành chính, meeting material, tracking hoặc draft summary được cấp
 **Then** action hợp lệ được lưu và audit
@@ -1968,6 +2029,11 @@ So that bộ hồ sơ có đủ tài liệu và vẫn được bảo vệ theo q
 **When** họ tải tệp minh chứng vào loại được phép
 **Then** upload thành công
 **And** replace/delete/submit action không tự động được cộng thêm.
+
+**Given** external researcher có contribution-file action được cấp trên draft
+**When** họ tải file
+**Then** upload chỉ được phép trong association/type đã cấp
+**And** file action không mở rộng quyền đọc/sửa proposal hoặc quyền submit.
 
 **Given** actor không liên quan, quan hệ hết hạn hoặc context unresolved
 **When** họ biết file ID và gọi metadata/download trực tiếp
@@ -2002,6 +2068,11 @@ So that tôi có thể hoàn thiện dữ liệu trước khi nộp chính thứ
 **Then** họ có thể xem lỗi trong phạm vi tệp/dữ liệu được phép nhưng không thể submit
 **And** UI hiển thị submit bị chặn với lý do backend.
 
+**Given** actor là `EXTERNAL_RESEARCHER_USER`
+**When** họ chạy readiness hoặc cố submit proposal
+**Then** chỉ phần readiness được disclosure cho section được giao nếu policy cho phép
+**And** action submit luôn bị chặn vì external không có `proposal.submit`.
+
 ### Story 4.6: Nộp chính thức và xem lịch sử nộp đề xuất [FR14]
 
 As a chủ nhiệm đề xuất,
@@ -2029,6 +2100,11 @@ So that tôi biết hồ sơ đã vào quy trình tiếp nhận.
 **When** PI hoặc người tham gia được phép xem detail
 **Then** timeline hiển thị trạng thái, thời điểm và phiên bản nộp
 **And** edit/submit actions bị khóa hoặc mở lại chỉ theo state machine và capability backend.
+
+**Given** actor là `EXTERNAL_RESEARCHER_USER`
+**When** họ cố submit hoặc resubmit proposal
+**Then** backend từ chối dù actor có profile link, cùng đơn vị hoặc draft relationship
+**And** không tạo submission history hoặc đổi trạng thái.
 
 ## Epic 5: Kiểm tra, đánh giá và phê duyệt đề xuất
 
@@ -2114,6 +2190,11 @@ So that đánh giá độc lập và không có xung đột lợi ích.
 **Then** source review domain tạo `REVIEWER_ASSIGNMENT` có lifecycle và context version
 **And** gửi notification tối thiểu cho reviewer, ghi audit và không công bố danh tính cho participant.
 
+**Given** candidate có system role `EXTERNAL_RESEARCHER_USER`
+**When** chuyên viên muốn giao review
+**Then** chỉ profile/account và assignment cụ thể, còn hiệu lực, mới làm candidate đủ điều kiện
+**And** system role external tự nó không cấp quyền review hoặc quyền quyết định.
+
 **Given** actor là scientific secretary hoặc grant delegate
 **When** họ cố phân công reviewer
 **Then** action bị chặn vì nằm trong non-delegable registry
@@ -2136,6 +2217,11 @@ So that tôi hoàn thành nhiệm vụ đánh giá độc lập.
 **When** họ lưu nháp hoặc submit
 **Then** owning service validate scoring criteria và state transition
 **And** submit tạo immutable submission version, history và audit.
+
+**Given** reviewer là `EXTERNAL_RESEARCHER_USER` với assignment đang hoạt động
+**When** họ mở và gửi review
+**Then** họ chỉ thấy package được disclosure cho assignment đó và review của chính mình
+**And** không thấy hồ sơ ngoài assignment, review khác hoặc action quyết định.
 
 **Given** assignment hết hạn, bị thu hồi, conflict phát sinh hoặc state đã đóng
 **When** reviewer cố xem hoặc sửa
@@ -2174,6 +2260,11 @@ So that hồ sơ sẵn sàng được trình người có thẩm quyền.
 **When** consolidation chưa được disclosure
 **Then** response chỉ cho biết trạng thái quy trình tổng quát
 **And** không trả raw score, comment, reviewer identity hoặc consolidation fields qua API, export, timeline hay notification.
+
+**Given** external researcher là participant/viewer của proposal
+**When** consolidation chưa được disclosure
+**Then** response cũng không trả raw score, reviewer identity, conflict source hoặc review nội bộ
+**And** chỉ thông tin được phép cho relationship/assignment của external được hiển thị.
 
 ### Story 5.6: Thư ký khoa học hỗ trợ hành chính cho quy trình đánh giá [FR6d]
 
@@ -2226,6 +2317,11 @@ So that tôi có đủ căn cứ trước khi ra quyết định.
 **Then** backend từ chối nhất quán
 **And** dashboard count không bao gồm proposal đó.
 
+**Given** actor là `EXTERNAL_RESEARCHER_USER`
+**When** họ mở decision package hoặc gọi approval action
+**Then** họ chỉ nhận phần disclosure được phép nếu có relationship/assignment
+**And** không thể approve, reject hoặc thay đổi decision data.
+
 **Given** hồ sơ/consolidation version thay đổi sau khi trang được tải
 **When** actor chuẩn bị quyết định
 **Then** UI yêu cầu tải lại context
@@ -2253,6 +2349,11 @@ So that proposal kết thúc quy trình minh bạch mà không lộ phản biệ
 **When** PI, co-investigator, member hoặc secretary xem kết quả
 **Then** họ nhận `PublishedReviewSummaryV1` gồm decision status/date, public summary và required follow-up
 **And** reviewer identity, raw score/comment và internal consolidation tiếp tục bị ẩn.
+
+**Given** external researcher có quan hệ được phép xem kết quả
+**When** final decision đã có
+**Then** họ chỉ nhận `PublishedReviewSummaryV1` hoặc disclosure tương đương
+**And** không nhận raw review, conflict source hoặc capability quyết định.
 
 **Given** quyết định thành công
 **When** hệ thống phát history, notification hoặc export
