@@ -14,7 +14,7 @@ so that platform authority cannot accumulate with record-scoped business relatio
 
 ## Acceptance Criteria
 
-1. Given an administrator creates or updates an account, when assigning its system role, exactly one of `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, or `RESEARCHER_INTERNAL_USER` is active. Persistence and service boundaries prevent multiple active system roles.
+1. Given an administrator creates or updates an account, when assigning its system role, exactly one of `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER` is active. Persistence and service boundaries prevent multiple active system roles.
 2. Given legacy data contains global PI, reviewer, council-member, or multiple role assignments, when the migration runs, each unambiguous account maps to a valid system role and record relationships remain the source of business authority. The Prisma migration is tested and no legacy global role grants authority in parallel.
 3. Given a target record belongs to an organization, when the backend evaluates organization scope, it permits only an explicit intersection between actor and target organization IDs. It must not infer access through the organization tree. No cross-unit grant model exists in this story, so no intersection denies access.
 4. Given migration data or role context is ambiguous, when the account requests protected access, it fails closed. The migration records an actionable issue instead of choosing a role arbitrarily.
@@ -26,10 +26,10 @@ so that platform authority cannot accumulate with record-scoped business relatio
   - [x] Replace the many-role account assignment source of truth with one nullable `systemRole` field; active accounts require a canonical role, while unresolved migrated accounts remain disabled and have no role.
   - [x] Preserve proposal ownership, proposal participation, and review assignments as their existing record-owned sources; do not create generic relationship tables or council data not present in this repository.
 - [x] Task 2: Migrate authentication, admin account management, seed data, and permission primitives to one system role (AC: 1, 2, 4)
-  - [x] Define the four system-role constants/types in the shared permission package and consume them from API auth/admin code.
+  - [x] Define the five system-role constants/types in the shared permission package and consume them from API auth/admin code.
   - [x] Make authentication fail closed for inactive, unresolved, or invalid-role accounts and remove `roles[]` from current-user context.
-  - [x] Restrict user create/update inputs to the four canonical roles and make role updates transactional; remove arbitrary role CRUD/assignment behavior.
-  - [x] Convert seeded PI/reviewer accounts to `RESEARCHER_INTERNAL_USER`; retain only their existing proposal/review record relationships as business authority.
+  - [x] Restrict user create/update inputs to the five canonical roles and make role updates transactional; remove arbitrary role CRUD/assignment behavior.
+  - [x] Convert seeded PI/reviewer accounts to `RESEARCHER_INTERNAL_USER`; retain only their existing proposal/review record relationships as business authority. Support `EXTERNAL_RESEARCHER_USER` as a distinct account role without granting it a global PI/member/reviewer role.
 - [x] Task 3: Enforce explicit organization-scope intersection at shared proposal access seams (AC: 3)
   - [x] Reuse the existing organization scope IDs and require exact target-ID membership; do not traverse `OrganizationUnit.parentId`.
   - [x] Keep any currently required explicit multi-unit scope assignments; do not add a cross-unit-grant table or implied hierarchy behavior.
@@ -58,7 +58,7 @@ so that platform authority cannot accumulate with record-scoped business relatio
 
 ### Canonical decisions
 
-- `User.systemRole` is the sole account-level authority source. Accepted persisted values are `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, and `RESEARCHER_INTERNAL_USER`.
+- `User.systemRole` is the sole account-level authority source. Accepted persisted values are `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, and `EXTERNAL_RESEARCHER_USER`.
 - Legacy mappings are deterministic: `system-admin` → `SYSTEM_ADMIN`, `scientific-management` → `SCIENTIFIC_MANAGEMENT_STAFF`, `leadership` → `LEADERSHIP_APPROVAL_AUTHORITY`, and `principal-investigator`/`reviewer`/`council-member` → `RESEARCHER_INTERNAL_USER` only when no conflicting active legacy assignment exists.
 - Multiple distinct active legacy assignments, unknown legacy roles, or a council-member account without a record-owned council source are unresolved. Record a migration issue with safe role evidence, disable the account, and leave `systemRole` null. Authentication must deny it.
 - This story does not implement Story 1.7 policy/capability contracts, Story 1.9 relationship lifecycle, Story 1.10 delegation, a cross-unit-grant model, or a council relationship model. Do not create placeholders for them.
@@ -71,6 +71,7 @@ so that platform authority cannot accumulate with record-scoped business relatio
 - `apps/api/src/admin/admin-users.service.ts` and its controller currently allow arbitrary role records and assignments. Keep user lifecycle management but restrict it to the canonical system-role enum.
 - `packages/permissions/src/index.ts` and `apps/api/src/permissions/permission-policy.ts` duplicate a legacy global-role model. Consolidate on the shared package; do not create another authorization seam.
 - Proposal authority already has record-owned sources: proposal owner/`ProposalMember` and `ProposalReviewAssignment`. Preserve them; do not represent PI or reviewer as a system role.
+- An external account may authenticate, but it receives proposal/project/review authority only from an explicit active record relationship or assignment; same-unit membership, profile linkage, or another record never widens access.
 
 ### Testing requirements
 

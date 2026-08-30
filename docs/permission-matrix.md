@@ -36,7 +36,8 @@ document must be updated in the same change set.
 - Main responsibility: operate proposal intake, completeness review, reviewer
   coordination, evaluation consolidation, approved-project follow-up, reminders,
   and operational reporting.
-- Default data scope: organization, unit, assigned staff, or workflow scope.
+- Default data scope: Academy-wide business scope, subject to record state,
+  assignment, conflict, and disclosure rules.
 - Important limits: cannot make leadership approval decisions unless explicitly
   authorized for that decision type.
 
@@ -49,7 +50,22 @@ document must be updated in the same change set.
 - Important limits: approval actions must follow workflow state rules and cannot
   bypass required review, consolidation, or history.
 
-### Principal Investigator / Chu nhiem de tai
+### External Researcher User / Nha nghien cuu ben ngoai
+
+- Main responsibility: work only on explicitly related records, assigned draft
+  contributions, or assigned review work.
+- Default data scope: explicit record relationship or assignment scope only.
+- Important limits: cannot create or formally submit proposals, edit submitted
+  versions, change PI/members/objective/budget/status, assign users, or make a
+  final decision. This account-level role never replaces a record relationship.
+
+### Record-scoped business personas
+
+The following headings are business relationships/personas, not account-level
+system roles. A user with one of the five system roles may hold one or more of
+these relationships on different records.
+
+#### Principal Investigator / Chu nhiem de tai
 
 - Main responsibility: create proposal drafts, submit proposals, respond to
   supplement requests, track approved projects, submit progress reports, and
@@ -59,7 +75,7 @@ document must be updated in the same change set.
 - Important limits: cannot edit submitted proposals unless the workflow state
   allows supplement, resubmission, or another explicit domain action.
 
-### Project Member / Thanh vien de tai
+#### Project Member / Thanh vien de tai
 
 - Main responsibility: participate in approved-project work, view permitted
   project information, update assigned work, and contribute evidence or files.
@@ -68,7 +84,7 @@ document must be updated in the same change set.
 - Important limits: cannot access projects, files, reports, or tasks outside
   participation or assignment scope.
 
-### Reviewer / Committee Member / Reviewer / Hoi dong
+#### Reviewer / Committee Member / Reviewer / Hoi dong
 
 - Main responsibility: access assigned proposal/review records, submit scores,
   comments, recommendations, and participate in controlled evaluation or
@@ -79,8 +95,8 @@ document must be updated in the same change set.
 
 ### Record-Scoped Participation And Assignment Roles
 
-The canonical roles above are account-level system roles or broad personas for
-planning and UX. Scientific work roles such as principal investigator, project
+The five roles above are account-level system roles. Scientific work roles such
+as principal investigator, project
 member, scientific secretary, reviewer, council chair, council secretary,
 council member, and ethics reviewer must be resolved in the context of a
 specific proposal, project, council, ethics dossier, review, task, or related
@@ -103,7 +119,28 @@ Common record-scoped roles:
 | Council membership | Chair, secretary, member, reviewer | One council | Council secretary cannot approve/reject unless separately authorized by policy. |
 | Task assignment | Owner, assignee, collaborator | One task and linked record | Task access still depends on linked-record permission. |
 
-## 3. Permission Legend
+## 3. External Researcher User Overlay
+
+The detailed matrices below retain PI, project-member, and reviewer columns as
+compact record-context shorthand. Apply this overlay to every row in addition
+to the five account-level system roles:
+
+| Capability | `EXTERNAL_RESEARCHER_USER` rule |
+| --- | --- |
+| Authentication and account context | May sign in only while active; the session exposes the external system role and never invents PI/member/reviewer authority. |
+| Profile and account administration | No user, role, scope, profile, account-link, catalog, or configuration management. A profile may exist independently of login. |
+| Proposal discovery and detail | Read only proposals with an explicit active relationship or assignment, using the record disclosure rules. Same unit, name, or another record relationship does not grant access. |
+| Draft collaboration | Update only explicitly assigned draft sections/contribution fields and permitted files while editable. PI, member roster, objective, budget, status, and other protected fields remain blocked. |
+| Submission and decisions | No proposal creation, formal submission, resubmission, reviewer assignment, consolidation, approval, rejection, reopen, or final decision. The role is not a `proposal.submit` grant. |
+| Review work | Read and submit only an explicitly assigned review package, subject to assignment lifecycle and disclosure. No unassigned records, other reviewers' work, reviewer assignment, or same-record decision. |
+| Project, task, and file work | Read or contribute only where a separate active record relationship/assignment grants the exact action. Task/file access never widens linked-record scope. |
+| Dashboard, search, export, notification, and history | Include only records already visible through the same relationship/assignment policy; no privileged audit, hidden conflict source, reviewer identity, raw review, or out-of-scope metadata. |
+
+The backend rechecks role, scope, relationship/assignment, workflow state,
+delegation, and conflict at mutation time. UI capability data never grants an
+action by itself.
+
+## 4. Permission Legend
 
 | Permission | Meaning |
 | --- | --- |
@@ -119,7 +156,7 @@ Common record-scoped roles:
 | Export | Generate or download report/export output within allowed scope. |
 | Audit/View History | View workflow history, audit logs, or timeline records where allowed. |
 
-## 4. Scope Rules
+## 5. Scope Rules
 
 | Scope Rule | Definition |
 | --- | --- |
@@ -135,7 +172,7 @@ Common record-scoped roles:
 | Task assignee/collaborator scope | Access is limited to tasks where the user is owner, assignee, collaborator, creator, or otherwise explicitly authorized. |
 | Conflict policy scope | Access or assignment is denied when the actor has a conflicting role on the same business record, such as PI self-review or authority self-approval. |
 
-## 5. State Rules
+## 6. State Rules
 
 | State Rule | Authorization Meaning |
 | --- | --- |
@@ -156,7 +193,7 @@ Common record-scoped roles:
 | Completed/accepted | Records are mostly read-only except history, reporting, and explicitly allowed archival actions. |
 | Task open/in progress/completed/cancelled | Task action availability depends on current task state, assignee/collaborator scope, and linked-record permission. |
 
-## 6. High-Level Role Matrix
+## 7. High-Level Role Matrix
 
 | Capability Group | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -193,9 +230,9 @@ Common record-scoped roles:
 | Search/filter | Read scoped | Read scoped | Read scoped | Read own | Read participating | Read assigned | Role and data scope | Any | No for read |
 | Report export Excel/PDF | Export all allowed reports | Export scoped reports | Export authority reports | Export own/project reports if allowed | Export assigned data if allowed | Export assigned reviews if allowed | Role and data scope | Any | Yes for export |
 
-## 7. Detailed Module Permission Matrix
+## 8. Detailed Module Permission Matrix
 
-### 7.1 Identity, Roles, Organizations
+### 8.1 Identity, Roles, Organizations
 
 | Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -206,7 +243,7 @@ Common record-scoped roles:
 | Assign organization/unit scope | Manage | None | None | None | None | None | All system scope | Any | Yes | FR3, FR6, Story 1.3 |
 | Load role-aware session context | Manage | Read own context | Read own context | Read own context | Read own context | Read own context | Current user scope | Any | No | FR4, FR5, FR6 |
 
-### 7.2 Catalogs And Configuration
+### 8.2 Catalogs And Configuration
 
 | Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -217,7 +254,7 @@ Common record-scoped roles:
 | Configure notification templates | Manage | None | None | None | None | None | All system scope | Any | Yes | FR8, FR41-FR43, Story 1.4 |
 | Evaluate permission primitive | Manage | Read policy result | Read policy result | Read policy result | Read policy result | Read policy result | Role, scope, and state context | Any | No | FR6, FR6a, NFR7, NFR8, Story 1.4 |
 
-### 7.3 Proposal Intake And Submission
+### 8.3 Proposal Intake And Submission
 
 | Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -234,7 +271,7 @@ Common record-scoped roles:
 | Submit proposal formally | None | None | None | Submit own | Submit if delegated | None | Own proposal/project scope | Draft, open intake | Yes | FR14, FR22, Story 2.4 |
 | View submission history | Audit/View History scoped | Audit/View History scoped | Audit/View History scoped | Read own | Read if participating | Read assigned if policy allows | Same as proposal scope | Submitted or later | No | FR14, FR38, Story 2.4 |
 
-### 7.4 Proposal Review, Supplement And Approval
+### 8.4 Proposal Review, Supplement And Approval
 
 | Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -249,7 +286,7 @@ Common record-scoped roles:
 | View evaluation output before decision | None | Read scoped | Read authority scoped | None unless policy allows result view | None unless participating view is allowed | Read own submitted review | Approval authority scope, reviewer assignment scope | Ready for approval | No | FR20, Story 3.5 |
 | Approve/reject proposal | None | None | Approve/Reject with conflict check | Read result | Read result if participating | None | Approval authority scope, conflict policy scope | Ready for approval | Yes | FR21, FR22, FR67a, Story 3.5 |
 
-#### 7.4.1 Implemented Read-Scope Decisions (EP-03)
+#### 8.4.1 Implemented Read-Scope Decisions (EP-03)
 
 These resolve the "read scoped" cells above into the concrete rules the backend enforces. They are
 recorded here because each one widens who may read a proposal, and the rule must be reviewable next
@@ -269,7 +306,7 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 (leadership decision). The allowed states per action are declared once in
 `apps/api/src/proposals-shared/proposal-workflow.ts`.
 
-### 7.5 Approved Project Tracking
+### 8.5 Approved Project Tracking
 
 | Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -284,7 +321,7 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 | Decide adjustment, extension, acceptance, or final review | None | Review/Prepare | Approve/Reject with conflict check | Read result | Read result if participating | Review if assigned | Approval authority scope, conflict policy scope | Waiting decision, completed/accepted | Yes | FR28, FR67a, Story 4.5 |
 | Identify delayed projects and deadlines | Read scoped | Read/Review scoped | Read authority scoped | Read own | Read participating | None | Role and data scope | Delayed project, waiting report | No | FR29 |
 
-### 7.6 Tasks
+### 8.6 Tasks
 
 | Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -295,7 +332,7 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 | Attach task completion evidence | Read scoped | Update scoped | Read scoped | Update own/assigned | Update assigned | None unless task assigned | Task assignee/collaborator scope | Task open/in progress | Yes for important files | FR33, FR36, Story 5.2 |
 | View overdue/upcoming tasks | Read scoped | Read scoped | Read authority scoped | Read own/assigned | Read assigned | Read assigned if applicable | Role and data scope | Task open/in progress | No | FR34 |
 
-### 7.7 Files
+### 8.7 Files
 
 | Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -305,7 +342,7 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 | Download important business file | Read scoped | Read scoped | Read scoped | Read own | Read participating | Read assigned | Record-level scope | Any allowed source state | Yes | FR36, File Attachment Requirements |
 | Soft delete file | Manage if policy allows | Update scoped if policy allows | None unless authority action allows | Update own allowed files | None unless delegated | None | Record-level scope | State-dependent | Yes | FR36, FR37 |
 
-### 7.8 Audit Logs And Workflow History
+### 8.8 Audit Logs And Workflow History
 
 | Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -314,7 +351,7 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 | Export audit logs | Export | Export if authorized | Export if authorized | None | None | None | All system scope, organization/unit scope | Any | Yes or operational trace | FR39, FR40 |
 | Create audit record from domain action | System generated | System generated | System generated | System generated | System generated | System generated | Same as source action | Same as source action | Yes | Audit-Log Requirements |
 
-### 7.9 Notifications, Reminders And Work Queues
+### 8.9 Notifications, Reminders And Work Queues
 
 | Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -324,7 +361,7 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 | Generate reminders | Manage configuration | Manage scoped reminders | Read/act scoped reminders | Read own reminders | Read own reminders | Read own reminders | Role and data scope | Waiting report, delayed project, task open/in progress | Operational trace recommended | FR43 |
 | View work queue | Read scoped | Read scoped | Read authority scoped | Read own | Read own/assigned | Read assigned review queue | Role, scope, assignment | Any | No | FR44 |
 
-### 7.10 Dashboard, Search, Reports And Export
+### 8.10 Dashboard, Search, Reports And Export
 
 | Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -334,10 +371,16 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 | View report | Read scoped | Read scoped | Read authority scoped | Read own if report supports it | Read assigned if report supports it | Read assigned if report supports it | Role and data scope | Any | No | FR49, Story 7.3 |
 | Export Excel/PDF | Export scoped | Export scoped | Export authority scoped | Export own if allowed | Export assigned if allowed | Export assigned if allowed | Role and data scope | Any | Yes | FR48, Story 7.3 |
 
-## 8. Critical Negative Rules
+## 9. Critical Negative Rules
 
 - Frontend-only authorization is not sufficient.
 - Backend must enforce every protected action.
+- `EXTERNAL_RESEARCHER_USER` is an account-level role, not a substitute for a
+  proposal/project/review relationship. It is never a global PI, member,
+  reviewer, secretary, or approval role.
+- External researchers may edit only explicitly assigned draft sections and
+  may review only explicitly assigned review work; they cannot create/submit
+  proposals, alter protected fields, assign, or decide finally.
 - Users must not see cross-unit data unless explicitly permitted.
 - Reviewer / Committee Member must not access unassigned proposals.
 - Reviewer, committee member, or council member assignment must be denied when
@@ -362,7 +405,7 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 - Search results, dashboard totals, export files, notifications, audit views, and
   file metadata must not leak unauthorized records.
 
-## 9. Audit Requirements By Action
+## 10. Audit Requirements By Action
 
 | Action | Audit Required | Minimum Context |
 | --- | --- | --- |
@@ -389,7 +432,7 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 | update task status | Yes | actor, task id, from/to status, timestamp |
 | export report | Yes | actor, report type, filters, scope, export format, timestamp |
 
-## 10. Implementation Notes
+## 11. Implementation Notes
 
 - This file is the source of truth for phase 1 permission implementation.
 - Backend policies must combine system role, organization/unit scope, record
@@ -420,4 +463,5 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 - Permission checks should return a fail-closed result when context is missing or
   ambiguous.
 - Legacy roles removed: ADM, LD, VT, TBP, CB, HD, BC. These are replaced by the
-  six canonical roles in section 2.
+  five canonical system roles in section 2; PI, member, secretary, reviewer,
+  council, ethics, and task roles remain record-scoped relationships.

@@ -68,7 +68,7 @@ The core insight is that the academy’s main pain is not lack of data entry too
 
 - **System role:** The account-level role that controls module/navigation
   access. Phase 1 values are `SYSTEM_ADMIN`,
-  `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, and
+  `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
   `RESEARCHER_INTERNAL_USER`, and `EXTERNAL_RESEARCHER_USER`; an account has
   exactly one active value. `SYSTEM_ADMIN` has no implicit business-data
   access; `SCIENTIFIC_MANAGEMENT_STAFF` operates business workflows across the
@@ -512,7 +512,7 @@ RTMS is a browser-based internal administrative web application optimized for mu
 
 The personas below describe people and journeys, not additional account-level
 system roles. Their business permissions come from record-scoped participation
-or assignment unless the persona is one of the four system roles listed in the
+or assignment unless the persona is one of the five system roles listed in the
 Authorization Glossary.
 
 ### System Administrator
@@ -539,6 +539,14 @@ Participates in approved-project work, receives assigned tasks, contributes evid
 
 Accesses assigned proposals, ethics dossiers, council records, or review records, submits scores and comments, and participates in controlled evaluation or acceptance workflows.
 
+### External Researcher User
+
+Works only on explicitly related records: assigned draft sections/contributions
+or assigned review packages. Cannot create or formally submit proposals, edit
+submitted versions, change PI/members/objective/budget/status, assign users, or
+make a final decision. This is one account-level system role; PI, member,
+reviewer, and secretary authority remains record-scoped.
+
 ## Role-Based Access Requirements
 
 - Each protected capability must be explicitly mapped to one or more roles.
@@ -547,6 +555,10 @@ Accesses assigned proposals, ethics dossiers, council records, or review records
   council membership, task assignment, or delegation records, not by stacking
   global roles.
 - Business actions such as proposal submission, supplement request handling, review submission, approval decisions, project follow-up, seminar/student research updates, document registration, ethics dossier submission, council decisions, and report export must be restricted by role.
+- `EXTERNAL_RESEARCHER_USER` may read only explicitly related records, update
+  only assigned editable draft sections/contribution files, and submit only an
+  explicitly assigned review. It never receives authority from same-unit
+  membership, another record, a profile link, or a UI capability hint.
 - Administrator permissions must remain distinct from business-decision permissions.
 - Reviewer, council member, and committee access must be limited to assigned items and required supporting context.
 - A reviewer may access only the supporting files required for the assigned
