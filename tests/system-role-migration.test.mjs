@@ -76,6 +76,32 @@ describe("Story 1.4 system-role migration", () => {
 
       await executeMigration(client, "20260729000000_ep01_single_system_role");
       await executeMigration(client, "20260730000000_archive_legacy_role_authority");
+      for (const migration of [
+        "20260730010000_password_reset_tokens",
+        "20260731000000_st_18_authorization_context_versions",
+        "20260731000100_st_19_proposal_relationship_lifecycle",
+        "20260803000000_st_110_proposal_delegations",
+        "20260823000000_st_21_researcher_profiles",
+        "20260901000000_add_external_researcher_system_role"
+      ]) {
+        await executeMigration(client, migration);
+      }
+      await client.query(
+        `INSERT INTO "users" ("id", "username", "username_key", "display_name", "password_hash", "status", "legacy_role", "legacy_role_label", "system_role", "unit", "updated_at")
+         VALUES ('external-researcher', 'external.researcher', 'external.researcher', 'External Researcher', 'hash', 'active', NULL, NULL, 'EXTERNAL_RESEARCHER_USER', 'Đơn vị ngoài', CURRENT_TIMESTAMP)`
+      );
+      await client.query(
+        `INSERT INTO "user_organization_scopes" ("id", "user_id", "organization_unit_id", "is_primary")
+         VALUES ('uos-external-researcher', 'external-researcher', 'org-hvqy', true)`
+      );
+      await assert.rejects(() => client.query(
+        `INSERT INTO "users" ("id", "username", "username_key", "display_name", "password_hash", "status", "legacy_role", "legacy_role_label", "system_role", "unit", "updated_at")
+         VALUES ('active-null-role', 'active.null.role', 'active.null.role', 'Active Null Role', 'hash', 'active', NULL, NULL, NULL, 'Học viện Quân y', CURRENT_TIMESTAMP)`
+      ));
+      await assert.rejects(() => client.query(
+        `INSERT INTO "users" ("id", "username", "username_key", "display_name", "password_hash", "status", "legacy_role", "legacy_role_label", "system_role", "unit", "updated_at")
+         VALUES ('unknown-role-value', 'unknown.role.value', 'unknown.role.value', 'Unknown Role Value', 'hash', 'active', NULL, NULL, 'UNKNOWN_ROLE', 'Học viện Quân y', CURRENT_TIMESTAMP)`
+      ));
 
       const { rows: users } = await client.query(
         `SELECT "id", "status", "system_role", "legacy_role" FROM "users" ORDER BY "id"`
@@ -83,6 +109,7 @@ describe("Story 1.4 system-role migration", () => {
       assert.deepEqual(users, [
         { id: "council-member", status: "disabled", system_role: null, legacy_role: "council-member" },
         { id: "disabled-reviewer", status: "disabled", system_role: "RESEARCHER_INTERNAL_USER", legacy_role: "reviewer" },
+        { id: "external-researcher", status: "active", system_role: "EXTERNAL_RESEARCHER_USER", legacy_role: null },
         { id: "inactive-assignment", status: "disabled", system_role: null, legacy_role: "system-admin" },
         { id: "legacy-pi", status: "active", system_role: "RESEARCHER_INTERNAL_USER", legacy_role: "principal-investigator" },
         { id: "multiple-roles", status: "disabled", system_role: null, legacy_role: "reviewer" },
@@ -132,6 +159,48 @@ describe("Story 1.4 system-role migration", () => {
         () => authService.login({ username: "disabled.reviewer", password: "correct-password" }, {}),
         UnauthorizedException
       );
+
+      const externalAuthStore = new AuthStore({
+        user: {
+          async findUnique() {
+            return {
+              id: "external-researcher",
+              username: "external.researcher",
+              displayName: "External Researcher",
+              passwordHash: "hash",
+              status: "active",
+              systemRole: "EXTERNAL_RESEARCHER_USER",
+              unit: "Học viện Quân y",
+              organizationScopes: [
+                {
+                  isPrimary: true,
+                  organizationUnit: { id: "org-hvqy", code: "HVQY", name: "Học viện Quân y", status: "active" }
+                }
+              ]
+            };
+          }
+        },
+        session: {
+          async create() {
+            return {
+              id: "session-external",
+              userId: "external-researcher",
+              createdAt: new Date(),
+              expiresAt: new Date(Date.now() + 60_000),
+              revokedAt: null
+            };
+          }
+        }
+      });
+      const externalAuthService = new AuthService(
+        { async record() {} },
+        new AuthRateLimitService(),
+        externalAuthStore,
+        { async verifyPassword() { return true; } }
+      );
+      const externalLogin = await externalAuthService.login({ username: "external.researcher", password: "correct-password" }, {});
+      assert.equal(externalLogin.user.systemRole, "EXTERNAL_RESEARCHER_USER");
+      assert.deepEqual(externalLogin.user.organizationScopes, [{ id: "org-hvqy", code: "HVQY", name: "Học viện Quân y" }]);
     } finally {
       await client.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
       await client.end();

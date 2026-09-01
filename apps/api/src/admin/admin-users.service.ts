@@ -347,7 +347,9 @@ export class AdminUsersService {
         ? "Chuyên viên quản lý khoa học"
         : systemRole === "LEADERSHIP_APPROVAL_AUTHORITY"
           ? "Lãnh đạo phê duyệt"
-          : "Người dùng nghiên cứu nội bộ";
+          : systemRole === "RESEARCHER_INTERNAL_USER"
+            ? "Người dùng nghiên cứu nội bộ"
+            : "Nhà nghiên cứu bên ngoài";
   }
 
   private async findActiveOrganizationUnit(id: string) {
