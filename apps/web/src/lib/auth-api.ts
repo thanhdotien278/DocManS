@@ -1,4 +1,5 @@
 import { getApiBaseUrl, type CurrentUser } from "@/lib/session";
+import { SYSTEM_ROLES } from "@rtms/permissions";
 
 export type LoginResult =
   | {
@@ -23,6 +24,7 @@ function isCurrentUser(value: unknown): value is CurrentUser {
     typeof user.username === "string" &&
     typeof user.displayName === "string" &&
     typeof user.systemRole === "string" &&
+    SYSTEM_ROLES.includes(user.systemRole as (typeof SYSTEM_ROLES)[number]) &&
     typeof user.unit === "string"
   );
 }

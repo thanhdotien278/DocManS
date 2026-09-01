@@ -44,6 +44,13 @@ const staffUser = {
   ]
 };
 
+const outOfScopeStaffUser = {
+  ...staffUser,
+  id: "user-staff-other",
+  username: "staff-other",
+  organizationScopes: [{ id: "org-other", code: "OTHER", name: "Đơn vị khác" }]
+};
+
 const piUser = {
   ...adminUser,
   id: "user-pi",
@@ -526,6 +533,37 @@ describe("EP-02 proposal intake and submission behavior", () => {
       ForbiddenException
     );
     assert.deepEqual(await service.listPeriods(piUser), []);
+  });
+
+  it("SYSTEM_ADMIN cannot list or mutate proposal intake periods", async () => {
+    const prisma = createEp02Prisma();
+    const service = new ProposalIntakePeriodsService(prisma, createAuditLog());
+    const intake = await service.createPeriod(staffUser, {
+      code: "INTAKE-ADMIN-BOUNDARY",
+      title: "Đợt tiếp nhận kiểm tra phân quyền",
+      startsAt: futureDate(-1),
+      endsAt: futureDate(15),
+      applicableOrganizationUnitId: "org-khti",
+      requiredPackage: [{ code: "proposal-form", label: "Thuyết minh đề tài" }]
+    });
+
+    await assert.rejects(() => service.listPeriods(adminUser), ForbiddenException);
+    await assert.rejects(
+      () => service.createPeriod(adminUser, {
+        code: "INTAKE-ADMIN-CREATE",
+        title: "Không được phép",
+        startsAt: futureDate(-1),
+        endsAt: futureDate(15),
+        requiredPackage: []
+      }),
+      ForbiddenException
+    );
+    await assert.rejects(() => service.updatePeriod(adminUser, intake.id, { title: "Không được phép" }), ForbiddenException);
+    await assert.rejects(() => service.openPeriod(adminUser, intake.id), ForbiddenException);
+    await assert.rejects(() => service.closePeriod(adminUser, intake.id), ForbiddenException);
+    await assert.rejects(() => service.updatePeriod(outOfScopeStaffUser, intake.id, { title: "Ngoài phạm vi" }), ForbiddenException);
+    await assert.rejects(() => service.openPeriod(outOfScopeStaffUser, intake.id), ForbiddenException);
+    await assert.rejects(() => service.closePeriod(outOfScopeStaffUser, intake.id), ForbiddenException);
   });
 
   it("PI can create and update only their editable proposal draft in an eligible intake period", async () => {

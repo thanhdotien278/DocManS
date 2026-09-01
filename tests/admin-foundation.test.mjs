@@ -330,7 +330,8 @@ describe("admin foundation API behavior", () => {
       "SYSTEM_ADMIN",
       "SCIENTIFIC_MANAGEMENT_STAFF",
       "LEADERSHIP_APPROVAL_AUTHORITY",
-      "RESEARCHER_INTERNAL_USER"
+      "RESEARCHER_INTERNAL_USER",
+      "EXTERNAL_RESEARCHER_USER"
     ].entries()) {
       const result = await service.createUser(adminUser, {
         username: `new.user.${index}`,
@@ -345,8 +346,8 @@ describe("admin foundation API behavior", () => {
       assert.equal(prisma.store.users[index].systemRole, systemRole);
     }
 
-    assert.equal(prisma.store.organizationScopes.length, 4);
-    assert.deepEqual(auditLog.records.map((record) => record.action), ["AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01"]);
+    assert.equal(prisma.store.organizationScopes.length, 5);
+    assert.deepEqual(auditLog.records.map((record) => record.action), ["AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01"]);
   });
 
   it("Story 1.4: rolls back user creation when the initial organization scope cannot be written", async () => {
@@ -519,14 +520,14 @@ describe("admin foundation API behavior", () => {
 
     await service.updateUser(adminUser, "target-user", {
       displayName: "Updated Target",
-      systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
+      systemRole: "EXTERNAL_RESEARCHER_USER",
       organizationUnitId: "org-child"
     });
     await service.setUserStatus(adminUser, "target-user", "locked");
     await service.setUserStatus(adminUser, "target-user", "active");
 
     assert.equal(prisma.store.users[0].displayName, "Updated Target");
-    assert.equal(prisma.store.users[0].systemRole, "SCIENTIFIC_MANAGEMENT_STAFF");
+    assert.equal(prisma.store.users[0].systemRole, "EXTERNAL_RESEARCHER_USER");
     assert.equal(prisma.store.users[0].unit, "Khoa chuyên môn");
     assert.equal(prisma.store.users[0].status, "active");
     assert.deepEqual(
@@ -742,7 +743,7 @@ describe("admin foundation API behavior", () => {
     );
   });
 
-  it("lists exactly the four immutable system roles and still manages organization units", async () => {
+  it("lists exactly the five immutable system roles and still manages organization units", async () => {
     const prisma = createAdminPrisma();
     const auditLog = createAuditLog();
     const service = new AdminUsersService(prisma, auditLog, createPasswordService());
@@ -755,7 +756,8 @@ describe("admin foundation API behavior", () => {
       "SYSTEM_ADMIN",
       "SCIENTIFIC_MANAGEMENT_STAFF",
       "LEADERSHIP_APPROVAL_AUTHORITY",
-      "RESEARCHER_INTERNAL_USER"
+      "RESEARCHER_INTERNAL_USER",
+      "EXTERNAL_RESEARCHER_USER"
     ]);
     assert.equal(updatedUnit.status, "inactive");
     assert.deepEqual(

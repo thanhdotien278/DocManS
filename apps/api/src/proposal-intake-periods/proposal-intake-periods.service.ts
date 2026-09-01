@@ -9,7 +9,6 @@ import {
   isIntakeOpenForSubmission,
   isResearcherInternalUser,
   isScientificManagement,
-  isSystemAdmin
 } from "../proposals-shared/proposal-access.js";
 import type { IntakeStatus } from "../proposals-shared/proposal-types.js";
 import {
@@ -44,12 +43,16 @@ export class ProposalIntakePeriodsService {
   ) {}
 
   async listPeriods(actor: SafeUserContext, filters: Record<string, unknown> = {}) {
+    if (!isScientificManagement(actor) && !isResearcherInternalUser(actor)) {
+      throw new ForbiddenException({ message: "Không có quyền xem đợt tiếp nhận." });
+    }
+
     const records = (await this.prisma.proposalIntakePeriod.findMany({
       orderBy: { startsAt: "desc" }
     })) as IntakePeriodRecord[];
     const statusFilter = typeof filters.status === "string" ? filters.status : "";
 
-    if (isSystemAdmin(actor) || isScientificManagement(actor)) {
+    if (isScientificManagement(actor)) {
       return records
         .filter((record) => intakeAppliesToUser(record, actor))
         .filter((record) => !statusFilter || this.effectiveStatus(record) === statusFilter || record.status === statusFilter)
@@ -105,6 +108,7 @@ export class ProposalIntakePeriodsService {
     assertCanManageIntakePeriods(actor);
 
     const existing = await this.findPeriod(periodId);
+    this.assertIntakeScope(actor, existing);
     const data: Record<string, unknown> = {};
 
     if (input.code !== undefined) {
@@ -157,6 +161,7 @@ export class ProposalIntakePeriodsService {
   async openPeriod(actor: SafeUserContext, periodId: string) {
     assertCanManageIntakePeriods(actor);
     const existing = await this.findPeriod(periodId);
+    this.assertIntakeScope(actor, existing);
     assertDateRange(existing.startsAt, existing.endsAt);
 
     if (normalizeRequiredPackage(existing.requiredPackage).length === 0) {
@@ -182,7 +187,8 @@ export class ProposalIntakePeriodsService {
 
   async closePeriod(actor: SafeUserContext, periodId: string) {
     assertCanManageIntakePeriods(actor);
-    await this.findPeriod(periodId);
+    const existing = await this.findPeriod(periodId);
+    this.assertIntakeScope(actor, existing);
 
     const period = (await this.prisma.proposalIntakePeriod.update({
       where: { id: periodId },
@@ -221,6 +227,12 @@ export class ProposalIntakePeriodsService {
     }
 
     return period;
+  }
+
+  private assertIntakeScope(actor: SafeUserContext, period: IntakePeriodRecord) {
+    if (!intakeAppliesToUser(period, actor)) {
+      throw new ForbiddenException({ message: "Không có quyền thao tác trong phạm vi đơn vị này." });
+    }
   }
 
   private effectiveStatus(period: IntakePeriodRecord): IntakeStatus {

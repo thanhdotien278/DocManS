@@ -1,10 +1,12 @@
+import type { SystemRole } from "@rtms/permissions";
+
 export const AUTH_SESSION_COOKIE = "rtms_session";
 
 export type CurrentUser = {
   id: string;
   username: string;
   displayName: string;
-  systemRole: "SYSTEM_ADMIN" | "SCIENTIFIC_MANAGEMENT_STAFF" | "LEADERSHIP_APPROVAL_AUTHORITY" | "RESEARCHER_INTERNAL_USER";
+  systemRole: SystemRole;
   unit: string;
   organizationScopes?: Array<{
     id: string;
@@ -49,5 +51,7 @@ export function getSystemRoleLabel(systemRole: CurrentUser["systemRole"]) {
       ? "Chuyên viên quản lý khoa học"
       : systemRole === "LEADERSHIP_APPROVAL_AUTHORITY"
         ? "Lãnh đạo phê duyệt"
-        : "Người dùng nghiên cứu nội bộ";
+        : systemRole === "RESEARCHER_INTERNAL_USER"
+          ? "Người dùng nghiên cứu nội bộ"
+          : "Nhà nghiên cứu bên ngoài";
 }

@@ -69,6 +69,17 @@ describe("workspace smoke checks", () => {
     assert.match(passwordServiceSource, /scrypt/);
   });
 
+  it("keeps the external researcher role safe across the browser session boundary", () => {
+    const sessionSource = readFileSync("apps/web/src/lib/session.ts", "utf8");
+    const authApiSource = readFileSync("apps/web/src/lib/auth-api.ts", "utf8");
+    const shellSource = readFileSync("apps/web/src/fixtures/shell-context.ts", "utf8");
+
+    assert.match(sessionSource, /SystemRole/);
+    assert.match(sessionSource, /Nhà nghiên cứu bên ngoài/);
+    assert.match(authApiSource, /SYSTEM_ROLES\.includes/);
+    assert.match(shellSource, /EXTERNAL_RESEARCHER_USER:\s*\[\]/);
+  });
+
   it("keeps database scope focused on auth, access, catalogs, config, audit, and the EP-02/EP-03 proposal models", () => {
     const schemaSource = readFileSync("apps/api/prisma/schema.prisma", "utf8");
     const models = [...schemaSource.matchAll(/^model\s+(\w+)/gm)].map((match) => match[1]);

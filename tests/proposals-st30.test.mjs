@@ -28,6 +28,16 @@ const staffUser = {
   ]
 };
 
+const adminUser = {
+  ...staffUser,
+  id: "user-admin",
+  username: "admin",
+  displayName: "Quản trị hệ thống",
+  role: "system-admin",
+  systemRole: "SYSTEM_ADMIN",
+  roleLabel: "Quản trị hệ thống"
+};
+
 const piUser = {
   ...staffUser,
   id: "user-pi",
@@ -83,7 +93,7 @@ const legacyPiUser = {
   username: "pi.khong-quan-he"
 };
 
-const ACCOUNTS = [staffUser, piUser, memberUser, secretaryUser, outsiderUser];
+const ACCOUNTS = [adminUser, staffUser, piUser, memberUser, secretaryUser, outsiderUser];
 
 function futureDate(days) {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
@@ -480,6 +490,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
       () => services.filesService.listFiles(outsiderUser, { relatedEntityType: "research_proposal", relatedEntityId: created.id }),
       ForbiddenException
     );
+    await assert.rejects(() => services.filesService.downloadFile(adminUser, uploaded.id), ForbiddenException);
 
     // Participation grants read only: the participant cannot upload to someone else's draft.
     await assert.rejects(
@@ -525,6 +536,8 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     assert.equal(staffView.viewerParticipation.role, "none");
     assert.equal(staffView.viewerParticipation.isParticipant, false);
     assert.equal(staffView.viewerParticipation.conflict.conflicted, false);
+    await assert.rejects(() => services.proposalService.getProposal(adminUser, created.id), ForbiddenException);
+    assert.deepEqual(await services.proposalService.listProposals(adminUser), []);
   });
 
   it("AUTH-ST-3.0-02: participation grants record-scoped read only and never widens account authority", async () => {

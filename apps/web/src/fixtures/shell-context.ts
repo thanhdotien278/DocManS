@@ -22,12 +22,9 @@ import {
   Users
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { SystemRole } from "@rtms/permissions";
 
-export type UserRole =
-  | "SYSTEM_ADMIN"
-  | "SCIENTIFIC_MANAGEMENT_STAFF"
-  | "LEADERSHIP_APPROVAL_AUTHORITY"
-  | "RESEARCHER_INTERNAL_USER";
+export type UserRole = SystemRole;
 
 export type AccountProfile = {
   id: string;
@@ -285,7 +282,8 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/catalogs", label: "Danh mục", icon: BookCopy },
     { href: "/system-settings", label: "Cấu hình hệ thống", icon: Settings2 },
     { href: "/system-logs", label: "Nhật ký hệ thống", icon: History }
-  ]
+  ],
+  EXTERNAL_RESEARCHER_USER: []
 };
 
 export function getAccountById(accountId?: string | null) {

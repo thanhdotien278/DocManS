@@ -34,7 +34,7 @@ export function isLeadership(user?: SafeUserContext) {
 }
 
 export function assertCanManageIntakePeriods(user?: SafeUserContext) {
-  if (!user || (!isSystemAdmin(user) && !isScientificManagement(user))) {
+  if (!user || !isScientificManagement(user)) {
     throw new ForbiddenException({ message: "Không có quyền quản lý đợt tiếp nhận." });
   }
 
@@ -92,7 +92,7 @@ export function canReadProposal(
     return false;
   }
 
-  if (isSystemAdmin(user) || isScientificManagement(user)) {
+  if (isScientificManagement(user)) {
     return true;
   }
 
