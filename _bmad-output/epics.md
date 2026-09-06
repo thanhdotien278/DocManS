@@ -5,7 +5,7 @@ stepsCompleted:
   - 3
   - 4
 status: complete
-updated: 2026-08-30
+updated: 2026-09-02
 inputDocuments:
   - "/Users/Super/DocManS/_bmad-output/prd.md"
   - "/Users/Super/DocManS/_bmad-output/architecture.md"
@@ -1195,6 +1195,45 @@ state.
 7. `[Later / non-MVP]` Advanced report builder, saved filters, complex charts,
    every-format preview, delegated approval, public portal, SSO/LDAP/OIDC/MFA,
    SMS, external integrations, digital signature, and native mobile workflows.
+
+## Open Questions / Product Decisions Needed
+
+- What exact organization level may exercise each approval authority, and how
+  is an authority's organization scope granted or revoked?
+- Is leadership approval ever delegable? The current baseline permits delegation
+  only for `proposal.submit`; approval delegation therefore remains out of MVP
+  unless this rule is explicitly changed.
+- Is preview required for any specific file format in MVP, or is authorized
+  upload/download sufficient?
+- Are saved filters required in MVP for any named operational queue?
+- Must reports run synchronously within the request, or asynchronously with a
+  status/expiry lifecycle for larger exports?
+- Which notification channels apply to each event: in-app only, email, or both?
+- Which dashboard charts, if any, are MVP-critical beyond KPI cards and action
+  queues?
+- Which named screens require mobile optimization beyond responsive desktop-first
+  behavior in MVP?
+- Is the audit log visible to every system administrator, or only to a narrower
+  explicitly authorized audit-viewer capability?
+
+## Traceability
+
+| Requirement area | UX screen/component | Epic | Story/task | MVP priority |
+| --- | --- | --- | --- | --- |
+| Authentication | S01 Login, S02 Password, C01 App shell | Epic 1 | 1.1, S01-S02 | MVP |
+| Dashboard | S03 Dashboard/My Work, C19 KPI card, C20 Alert list | Epic 8 | 8.1-8.4, S03 | MVP |
+| Proposal intake | S04-S07, C11 Form section, C12 Stepper | Epic 3 | 3.1-3.4, S04-S07 | MVP |
+| Staff check | S07 Submit confirmation / supplement request / staff check | Epic 4 | 4.1, S07 | MVP |
+| Supplement request | S07, C16 Comment/note box, C23 Confirmation dialog | Epics 3-4 | 3.3, 4.1, S07 | MVP |
+| Reviewer assignment | S08 Reviewer assignment / reviewer evaluation, C18 Reviewer score form | Epic 4 | 4.2, S08 | MVP |
+| Reviewer evaluation | S08, C18 Reviewer score form | Epic 4 | 4.3, S08 | MVP |
+| Approval | S09 Result aggregation / leadership decision, C17 Approval decision panel | Epic 4 | 4.4-4.5, S09 | MVP |
+| Project tracking | S10-S11, C08 Status badge, C15 Timeline/activity log | Epic 5 | 5.1-5.5, S10-S11 | MVP |
+| Task management | S12 Task list / task detail / create-edit task | Epic 6 | 6.1-6.3, S12 | MVP |
+| File management | S13 File upload / file preview-download / file history, C13-C14 | Epic 7 | 7.1-7.3, S13 | MVP |
+| Search/reporting | S14 Global search, S15 Reports and export, C06-C07, C25 | Epic 9 | 9.1-9.3, S14-S15 | MVP |
+| Administration | S16 User management / roles and permissions / catalog management / audit log, C05 | Epic 2 | 2.1-2.4, S16 | MVP |
+| Audit log | S16, C15 Timeline/activity log | Epic 10 | 10.1, S16 | MVP |
 
 ## Legacy FR decomposition retained for traceability
 
