@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>01 Login — Đăng nhập | DocManS · Học viện Quân y</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800;900&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "outline-variant": "#bfc9bf",
+            "inverse-surface": "#20352a",
+            "on-primary-fixed": "#002110",
+            "error": "#ba1a1a",
+            "on-primary": "#ffffff",
+            "surface": "#e8ffef",
+            "on-error-container": "#93000a",
+            "surface-dim": "#c7e0d0",
+            "on-tertiary-container": "#edb934",
+            "surface-container-low": "#e1fae9",
+            "inverse-primary": "#92d5a8",
+            "on-secondary-fixed": "#0c1f16",
+            "surface-container-highest": "#d0e8d8",
+            "surface-container-lowest": "#ffffff",
+            "background": "#e8ffef",
+            "tertiary-fixed-dim": "#f3bf3a",
+            "surface-container-high": "#d5eede",
+            "on-tertiary-fixed": "#251a00",
+            "on-tertiary": "#ffffff",
+            "surface-container": "#dbf4e4",
+            "on-secondary-fixed-variant": "#384b40",
+            "secondary-fixed": "#d2e8d9",
+            "surface-tint": "#286a46",
+            "primary-container": "#145a37",
+            "inverse-on-surface": "#def7e6",
+            "surface-bright": "#e8ffef",
+            "on-secondary": "#ffffff",
+            "on-error": "#ffffff",
+            "on-surface": "#0a1f16",
+            "on-primary-container": "#8ccfa3",
+            "tertiary": "#483500",
+            "primary": "#004124",
+            "tertiary-fixed": "#ffdf9b",
+            "on-secondary-container": "#53675b",
+            "secondary-container": "#cfe5d6",
+            "outline": "#707971",
+            "on-background": "#0a1f16",
+            "on-tertiary-fixed-variant": "#5b4300",
+            "error-container": "#ffdad6",
+            "primary-fixed-dim": "#92d5a8",
+            "tertiary-container": "#644b00",
+            "secondary": "#4f6357",
+            "primary-fixed": "#adf2c3",
+            "secondary-fixed-dim": "#b6ccbd",
+            "on-primary-fixed-variant": "#065230",
+            "surface-variant": "#d0e8d8",
+            "on-surface-variant": "#404942"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "unit-xs": "0.25rem",
+            "margin-page-mobile": "1rem",
+            "unit-md": "0.75rem",
+            "unit-3xl": "2rem",
+            "topbar-height": "4.375rem",
+            "unit-2xl": "1.5rem",
+            "gutter-mobile": "1rem",
+            "sidebar-collapsed": "4.5rem",
+            "unit-sm": "0.5rem",
+            "unit-lg": "1rem",
+            "margin-page-desktop": "1.75rem",
+            "unit-xl": "1.25rem",
+            "unit-4xl": "2.5rem",
+            "sidebar-desktop": "17.25rem",
+            "unit-5xl": "3rem",
+            "gutter-desktop": "1.5rem"
+          },
+          "fontFamily": {
+            "display-xl": ["Noto Sans"],
+            "display-lg-mobile": ["Noto Sans"],
+            "body-base": ["Noto Sans"],
+            "body-bold": ["Noto Sans"],
+            "display-lg": ["Noto Sans"],
+            "stat-num": ["Noto Sans"],
+            "label-meta": ["\"Source Sans 3\""],
+            "label-caps": ["\"Source Sans 3\""],
+            "badge-text": ["\"Source Sans 3\""],
+            "headline-md": ["Noto Sans"],
+            "headline-sm": ["Noto Sans"]
+          },
+          "fontSize": {
+            "display-xl": ["38px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+            "display-lg-mobile": ["24px", { "lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "800" }],
+            "body-base": ["15px", { "lineHeight": "22px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "body-bold": ["15px", { "lineHeight": "22px", "letterSpacing": "0em", "fontWeight": "700" }],
+            "display-lg": ["32px", { "lineHeight": "38px", "letterSpacing": "-0.015em", "fontWeight": "800" }],
+            "stat-num": ["32px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "900" }],
+            "label-meta": ["13px", { "lineHeight": "18px", "letterSpacing": "0em", "fontWeight": "600" }],
+            "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "700" }],
+            "badge-text": ["12px", { "lineHeight": "12px", "letterSpacing": "0.01em", "fontWeight": "700" }],
+            "headline-md": ["24px", { "lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "800" }],
+            "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "800" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+</head>
+<body class="h-full bg-surface-container-low text-on-surface font-body-base text-body-base flex flex-col min-h-screen antialiased selection:bg-primary-container selection:text-on-primary">
+<!-- Watermark / Draft Label -->
+<div class="fixed top-2 right-3 z-50 pointer-events-none">
+<span class="inline-flex items-center px-2 py-0.5 rounded border border-outline-variant bg-surface-container-lowest/90 text-on-surface-variant font-label-caps text-label-caps tracking-wider shadow-sm">
+      [Dữ liệu minh họa / Bản thảo rà soát]
+    </span>
+</div>
+<!-- Shared Component: TopNavBar (Unauthenticated Semantic Presentation) -->
+<header class="w-full bg-surface-container-lowest border-b border-outline-variant shadow-sm z-40 sticky top-0">
+<div class="flex justify-between items-center w-full px-6 md:px-10 h-topbar-height max-w-7xl mx-auto">
+<!-- Brand & Sub-institution -->
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-on-primary shadow-sm ring-1 ring-outline-variant">
+<span class="material-symbols-outlined" data-icon="security">security</span>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm font-extrabold text-primary tracking-tight">
+            DocManS · Học viện Quân y
+          </div>
+<div class="font-label-meta text-label-meta text-on-surface-variant hidden sm:block">
+            Hệ thống Quản trị Văn bản &amp; Hồ sơ Nghiên cứu Khoa học
+          </div>
+</div>
+</div>
+<!-- Institutional Secondary Actions (No logged-in user context) -->
+<div class="flex items-center gap-4">
+<div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container text-secondary font-label-meta text-label-meta border border-outline-variant">
+<span class="material-symbols-outlined text-[16px]" data-icon="shield">shield</span>
+<span>Phân hệ Bảo mật Cấp 3</span>
+</div>
+<a class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:text-primary hover:bg-surface-container text-label-meta font-label-meta transition-colors duration-150" href="#support-section">
+<span class="material-symbols-outlined text-[18px]" data-icon="help">help</span>
+<span>Trợ giúp kỹ thuật</span>
+</a>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas: Centered Institutional Workspace -->
+<main class="flex-1 flex items-center justify-center p-4 sm:p-6 md:py-12">
+<div class="w-full max-w-[440px] flex flex-col gap-6">
+<!-- Formal Sign-in Dossier Panel -->
+<section aria-labelledby="login-heading" class="bg-surface-container-lowest rounded-lg border border-outline-variant p-6 sm:p-8 shadow-sm relative overflow-hidden">
+<!-- Top institutional accent line: Heraldic Pine & Gold bar -->
+<div class="absolute top-0 left-0 right-0 h-1.5 bg-primary-container flex">
+<div class="w-1/3 bg-tertiary-fixed-dim"></div>
+</div>
+<div class="mb-6 pt-1">
+<div class="inline-flex items-center gap-1.5 text-primary font-label-caps text-label-caps uppercase tracking-wider mb-2">
+<span class="material-symbols-outlined text-[14px]" data-icon="verified_user">verified_user</span>
+<span>Cổng xác thực tập trung</span>
+</div>
+<h1 class="font-headline-md text-headline-md text-on-surface mb-2" id="login-heading">
+            Đăng nhập
+          </h1>
+<p class="font-body-base text-body-base text-on-surface-variant leading-relaxed">
+            Sử dụng tài khoản định danh do Học viện Quân y cấp để truy cập hệ thống.
+          </p>
+</div>
+<!-- Authentication Form -->
+<form class="flex flex-col gap-4" id="auth-form" onsubmit="handleLoginSubmit(event)">
+<!-- Username / Cadre ID -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label-meta text-label-meta text-on-surface font-semibold flex items-center justify-between" for="username">
+<span>Tên đăng nhập <span aria-hidden="true" class="text-error">*</span></span>
+<span class="text-on-surface-variant font-normal text-[11px]">Mã định danh cán bộ</span>
+</label>
+<div class="relative flex items-center">
+<span class="absolute left-3 text-outline pointer-events-none flex items-center">
+<span class="material-symbols-outlined text-[18px]" data-icon="badge">badge</span>
+</span>
+<input autocomplete="username" class="w-full h-[42px] pl-10 pr-3 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-outline font-body-base text-body-base focus:border-primary-container focus:ring-2 focus:ring-tertiary-fixed-dim focus:outline-none transition-all duration-150" id="username" name="username" placeholder="Nhập mã cán bộ hoặc tên đăng nhập" required="" type="text"/>
+</div>
+<!-- Reserved validation container -->
+<div aria-live="polite" class="min-h-[18px] text-[12px] text-error font-label-meta leading-tight" id="username-error" role="alert"></div>
+</div>
+<!-- Password Field with Show/Hide Toggle -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label-meta text-label-meta text-on-surface font-semibold flex items-center justify-between" for="password">
+<span>Mật khẩu <span aria-hidden="true" class="text-error">*</span></span>
+<span class="text-on-surface-variant font-normal text-[11px]">Bảo mật cá nhân</span>
+</label>
+<div class="relative flex items-center">
+<span class="absolute left-3 text-outline pointer-events-none flex items-center">
+<span class="material-symbols-outlined text-[18px]" data-icon="lock">lock</span>
+</span>
+<input autocomplete="current-password" class="w-full h-[42px] pl-10 pr-11 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-outline font-body-base text-body-base focus:border-primary-container focus:ring-2 focus:ring-tertiary-fixed-dim focus:outline-none transition-all duration-150" id="password" name="password" placeholder="Nhập mật khẩu" required="" type="password"/>
+<button aria-label="Hiển thị hoặc ẩn mật khẩu" class="absolute right-1.5 p-1.5 rounded text-outline hover:text-on-surface hover:bg-surface-container transition-colors focus:outline-none focus:ring-1 focus:ring-primary" id="toggle-password-btn" onclick="togglePasswordVisibility()" type="button">
+<span class="material-symbols-outlined text-[20px]" data-icon="visibility" id="password-toggle-icon">visibility</span>
+</button>
+</div>
+<!-- Reserved validation container -->
+<div aria-live="polite" class="min-h-[18px] text-[12px] text-error font-label-meta leading-tight" id="password-error" role="alert"></div>
+</div>
+<!-- Primary Submit Action -->
+<div class="pt-1">
+<button class="w-full min-h-[44px] px-4 py-2.5 rounded-lg bg-primary-container text-on-primary font-body-bold text-body-bold hover:bg-primary active:scale-[0.98] transition-all duration-150 shadow-sm flex items-center justify-center gap-2 focus:outline-none focus:ring-4 focus:ring-tertiary-fixed-dim/40 cursor-pointer" type="submit">
+<span>Đăng nhập</span>
+<span class="material-symbols-outlined text-[18px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</form>
+<!-- Contextual Readiness / Session Advisory inside panel -->
+<div class="mt-6 pt-4 border-t border-outline-variant">
+<div class="flex items-start gap-2.5 text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5" data-icon="lock_clock">lock_clock</span>
+<p class="font-label-meta text-label-meta leading-relaxed">
+<strong class="text-on-surface font-semibold">Lưu ý bảo mật:</strong> Phiên làm việc tự động kết thúc sau thời gian không tương tác nhằm bảo vệ an toàn thông tin theo quy chế an toàn dữ liệu Học viện.
+            </p>
+</div>
+</div>
+</section>
+<!-- Institutional Support & Administrative Governance Card -->
+<section class="bg-surface-container-lowest/80 rounded-lg border border-outline-variant p-4 text-on-surface shadow-sm" id="support-section">
+<div class="flex items-start gap-3">
+<div class="p-1.5 rounded-md bg-surface-container text-primary shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]" data-icon="contact_support">contact_support</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-label-caps text-label-caps uppercase tracking-wider text-secondary">
+              Hỗ trợ tài khoản
+            </span>
+<p class="font-body-base text-body-base text-[13px] leading-relaxed text-on-surface-variant">
+              Cán bộ, giảng viên, nghiên cứu viên chưa có tài khoản hoặc cần cấp lại mật khẩu vui lòng liên hệ <span class="font-semibold text-on-surface">Ban Khoa học Quân sự</span> hoặc <span class="font-semibold text-on-surface">Quản trị viên hệ thống</span> của đơn vị.
+            </p>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Shared Component: Footer -->
+<footer class="bg-surface-container-low border-t border-outline-variant mt-auto">
+<div class="flex flex-col md:flex-row justify-between items-center w-full px-6 md:px-10 py-4 max-w-7xl mx-auto gap-4">
+<div class="text-on-surface-variant font-label-meta text-label-meta text-center md:text-left leading-relaxed">
+        © 2024 Học viện Quân y - Hệ thống Quản trị Văn bản &amp; Hồ sơ Điện tử DocManS. Bảo lưu mọi quyền.
+      </div>
+<nav aria-label="Footer Links" class="flex flex-wrap items-center justify-center gap-6">
+<a class="font-label-meta text-label-meta text-on-surface-variant hover:text-primary hover:underline transition-colors duration-150" href="#quy-che">
+          Quy chế an toàn thông tin
+        </a>
+<a class="font-label-meta text-label-meta text-on-surface-variant hover:text-primary hover:underline transition-colors duration-150" href="#tieu-chuan">
+          Tiêu chuẩn bảo mật
+        </a>
+<a class="font-label-meta text-label-meta text-on-surface-variant hover:text-primary hover:underline transition-colors duration-150" href="#dau-moi">
+          Đầu mối hỗ trợ kỹ thuật
+        </a>
+</nav>
+</div>
+</footer>
+<!-- Micro-interaction Script for Login Form -->
+<script>
+    function togglePasswordVisibility() {
+      const passwordInput = document.getElementById('password');
+      const toggleIcon = document.getElementById('password-toggle-icon');
+      
+      if (!passwordInput || !toggleIcon) return;
+
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.textContent = 'visibility_off';
+        toggleIcon.setAttribute('data-icon', 'visibility_off');
+      } else {
+        passwordInput.type = 'password';
+        toggleIcon.textContent = 'visibility';
+        toggleIcon.setAttribute('data-icon', 'visibility');
+      }
+    }
+
+    function handleLoginSubmit(event) {
+      event.preventDefault();
+      
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+      const usernameError = document.getElementById('username-error');
+      const passwordError = document.getElementById('password-error');
+
+      let isValid = true;
+      
+      // Reset errors
+      usernameError.textContent = '';
+      passwordError.textContent = '';
+
+      if (!usernameInput.value.trim()) {
+        usernameError.textContent = 'Vui lòng nhập tên đăng nhập hoặc mã cán bộ.';
+        usernameInput.focus();
+        isValid = false;
+      }
+
+      if (!passwordInput.value.trim()) {
+        passwordError.textContent = 'Vui lòng nhập mật khẩu định danh.';
+        if (isValid) passwordInput.focus();
+        isValid = false;
+      }
+
+      if (isValid) {
+        // Visual feedback for interaction in demo state
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        const originalHtml = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `
+          <span class="material-symbols-outlined animate-spin text-[18px]" data-icon="progress_activity">progress_activity</span>
+          <span>Đang xác thực thông tin...</span>
+        `;
+        
+        setTimeout(() => {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalHtml;
+          // Demonstration message
+          usernameError.textContent = 'Môi trường rà soát bản thảo: Tính năng đăng nhập đang được cấu hình tới cổng IAM nội bộ.';
+        }, 1200);
+      }
+    }
+  </script>
+</body></html>

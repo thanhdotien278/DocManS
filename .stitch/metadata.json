@@ -1,0 +1,34 @@
+{
+  "projectId": "3965040673492764594",
+  "title": "DocManS Design System",
+  "designSystem": {
+    "assetId": "c957155014ff4a7b8a36f601db08d4cc",
+    "status": "existing canonical asset; controlled in-place synchronization attempted via update_design_system on 2026-09-07 but rejected by Stitch with invalid argument; no second design system created"
+  },
+  "screens": {
+    "proposalList": {
+      "id": "ef758e8acce84c449b13b0a26b599224",
+      "deviceType": "DESKTOP",
+      "title": "Danh sách hồ sơ đề xuất - DocManS",
+      "supersedes": "e5f0fbf43b174a238d6162a81c0446e2"
+    },
+    "proposalListMobile": {
+      "id": "9f28a985b51a42ab9e24d6de8b66f90d",
+      "deviceType": "MOBILE",
+      "title": "Hồ sơ đề xuất - Mobile Refined",
+      "supersedes": "4559a95924b4461f8da58ef728457103"
+    },
+    "proposalDetailWorkspace": null,
+    "createEditProposal": null,
+    "submitConfirmation": null
+  },
+  "responsiveTargets": [1440, 1024, 768, 430, 390],
+  "continuation": {
+    "verifiedOn": "2026-09-08",
+    "canonicalAssetVersion": "1",
+    "status": "blocked_before_proposal_detail",
+    "reason": "MCP update remains rejected. Signed-in canonical project access confirmed in Brave; existing DESIGN.md editor available. No changes saved. Browser editing paused when the foreground page changed; needs an uninterrupted Stitch session. Codex separate browser still redirects to sign-in.",
+    "nextScreen": "proposalDetailWorkspace",
+    "proposalListReviewStatus": "NEEDS_REVISION: historical PASS lacks artifact-level verification"
+  }
+}

@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-[#f7faf8]" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>04 Document detail — Chi tiết hồ sơ · DocManS - Học viện Quân y</title>
+<!-- Google Fonts: Noto Sans & Source Sans 3 -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&amp;family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS with Forms and Container Queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config as specified in design system -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-surface-variant": "#404942",
+            "on-primary-container": "#8ccfa3",
+            "secondary-fixed-dim": "#b6ccbd",
+            "outline": "#707971",
+            "on-secondary-fixed-variant": "#384b40",
+            "on-background": "#0a1f16",
+            "tertiary-fixed-dim": "#f3bf3a",
+            "on-tertiary-fixed": "#251a00",
+            "on-tertiary-fixed-variant": "#5b4300",
+            "secondary": "#4f6357",
+            "on-secondary": "#ffffff",
+            "on-tertiary-container": "#edb934",
+            "secondary-fixed": "#d2e8d9",
+            "surface-container": "#dbf4e4",
+            "primary": "#004124",
+            "on-surface": "#0a1f16",
+            "surface-variant": "#d0e8d8",
+            "on-secondary-fixed": "#0c1f16",
+            "tertiary-container": "#644b00",
+            "surface-container-low": "#e1fae9",
+            "on-primary-fixed": "#002110",
+            "surface-tint": "#286a46",
+            "secondary-container": "#cfe5d6",
+            "outline-variant": "#bfc9bf",
+            "inverse-on-surface": "#def7e6",
+            "surface-dim": "#c7e0d0",
+            "surface-bright": "#e8ffef",
+            "on-error-container": "#93000a",
+            "tertiary": "#483500",
+            "on-tertiary": "#ffffff",
+            "on-primary": "#ffffff",
+            "primary-fixed": "#adf2c3",
+            "on-error": "#ffffff",
+            "inverse-surface": "#20352a",
+            "primary-fixed-dim": "#92d5a8",
+            "surface-container-high": "#d5eede",
+            "surface-container-lowest": "#ffffff",
+            "error-container": "#ffdad6",
+            "tertiary-fixed": "#ffdf9b",
+            "error": "#ba1a1a",
+            "inverse-primary": "#92d5a8",
+            "surface": "#e8ffef",
+            "primary-container": "#145a37",
+            "on-primary-fixed-variant": "#065230",
+            "surface-container-highest": "#d0e8d8",
+            "background": "#e8ffef",
+            "on-secondary-container": "#53675b"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "margin-page-desktop": "1.75rem",
+            "unit-md": "0.75rem",
+            "margin-page-mobile": "1rem",
+            "unit-xl": "1.25rem",
+            "unit-2xl": "1.5rem",
+            "unit-3xl": "2rem",
+            "sidebar-desktop": "17.25rem",
+            "unit-5xl": "3rem",
+            "unit-4xl": "2.5rem",
+            "sidebar-collapsed": "4.5rem",
+            "gutter-desktop": "1.5rem",
+            "gutter-mobile": "1rem",
+            "topbar-height": "4.375rem",
+            "unit-xs": "0.25rem",
+            "unit-lg": "1rem",
+            "unit-sm": "0.5rem"
+          },
+          "fontFamily": {
+            "headline-md": ["Noto Sans"],
+            "stat-num": ["Noto Sans"],
+            "label-meta": ["\"Source Sans 3\""],
+            "display-lg": ["Noto Sans"],
+            "body-base": ["Noto Sans"],
+            "display-xl": ["Noto Sans"],
+            "label-caps": ["\"Source Sans 3\""],
+            "headline-sm": ["Noto Sans"],
+            "display-lg-mobile": ["Noto Sans"],
+            "body-bold": ["Noto Sans"],
+            "badge-text": ["\"Source Sans 3\""]
+          },
+          "fontSize": {
+            "headline-md": ["24px", { "lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "800" }],
+            "stat-num": ["32px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "900" }],
+            "label-meta": ["13px", { "lineHeight": "18px", "letterSpacing": "0em", "fontWeight": "600" }],
+            "display-lg": ["32px", { "lineHeight": "38px", "letterSpacing": "-0.015em", "fontWeight": "800" }],
+            "body-base": ["15px", { "lineHeight": "22px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "display-xl": ["38px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+            "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "700" }],
+            "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "800" }],
+            "display-lg-mobile": ["24px", { "lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "800" }],
+            "body-bold": ["15px", { "lineHeight": "22px", "letterSpacing": "0em", "fontWeight": "700" }],
+            "badge-text": ["12px", { "lineHeight": "12px", "letterSpacing": "0.01em", "fontWeight": "700" }]
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="h-full font-body-base text-body-base text-on-surface antialiased bg-[#f7faf8]">
+<!-- SHELL CONTAINER: Persistent Institutional Layout -->
+<div class="min-h-full flex flex-col">
+<!-- 1. TOPBAR COMPONENT (Anchored to Shared Components JSON specifications) -->
+<header class="w-full bg-surface-container-lowest border-b border-outline-variant shadow-sm z-30 sticky top-0">
+<div class="flex justify-between items-center w-full px-6 md:px-10 h-topbar-height max-w-[1440px] mx-auto gap-4">
+<!-- Left Brand & Context -->
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-on-primary shadow-sm border border-primary-container">
+<span class="material-symbols-outlined text-[24px]" data-icon="shield">shield</span>
+</div>
+<div>
+<span class="font-headline-sm text-headline-sm font-extrabold text-primary tracking-tight">DocManS · Học viện Quân y</span>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="font-label-caps text-label-caps text-secondary uppercase">Hệ thống quản lý nghiên cứu &amp; văn bản</span>
+<span class="inline-block w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="inline-flex items-center gap-1 font-label-meta text-label-meta text-primary font-bold">
+<span class="material-symbols-outlined text-[13px] text-primary" data-icon="lock">lock</span> Cấp độ 3
+                </span>
+</div>
+</div>
+</div>
+<span class="h-7 w-[1px] bg-outline-variant hidden sm:block mx-1"></span>
+<!-- Sensitive Discretionary Tag -->
+<span class="hidden xl:inline-flex items-center px-2.5 py-1 rounded bg-[#fff5d7] border border-[#ead48c] text-on-tertiary-fixed-variant font-label-meta text-label-meta font-bold">
+<span class="material-symbols-outlined text-[14px] mr-1 text-[#8a6106]" data-icon="verified_user">verified_user</span> [Dữ liệu minh họa / Bản thảo rà soát]
+          </span>
+</div>
+<!-- Center Search Input -->
+<div class="flex-1 max-w-md hidden md:block">
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-secondary text-[18px]" data-icon="search">search</span>
+<input class="w-full h-[40px] pl-10 pr-12 rounded-lg bg-[#f2f7f4] border border-[#dde8e1] font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-tertiary-fixed-dim/40 placeholder:text-secondary text-[13px]" placeholder="Tìm nhanh hồ sơ, đề cương, quyết định (Ctrl+K)..." type="text"/>
+<kbd class="absolute right-3 px-1.5 py-0.5 rounded border border-outline-variant bg-surface-container-lowest font-label-meta text-[11px] text-secondary">⌘K</kbd>
+</div>
+</div>
+<!-- Right Trailing Profile & Actions -->
+<div class="flex items-center gap-3">
+<!-- Notification -->
+<button class="relative w-10 h-10 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors duration-150 border border-transparent hover:border-outline-variant" title="Thông báo hệ thống">
+<span class="material-symbols-outlined text-[20px]" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error ring-2 ring-surface-container-lowest"></span>
+</button>
+<!-- Tech Support -->
+<button class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-150 font-label-caps text-label-caps" title="Trợ giúp kỹ thuật">
+<span class="material-symbols-outlined text-[16px]" data-icon="support_agent">support_agent</span> Trợ giúp kỹ thuật
+          </button>
+<span class="h-6 w-[1px] bg-outline-variant mx-1 hidden lg:block"></span>
+<!-- Profile Badge (Strict Institutional View: PI, No switcher) -->
+<div class="flex items-center gap-3 pl-1">
+<div class="text-right hidden sm:block">
+<div class="font-body-bold text-body-bold text-on-surface leading-tight text-[14px]">Thiếu tá, TS. Lê Hoàng Nam</div>
+<div class="font-label-meta text-label-meta text-secondary flex items-center justify-end gap-1">
+<span class="text-primary font-bold">Chủ nhiệm đề tài (PI)</span> · Khoa Y học quân sự
+              </div>
+</div>
+<div class="w-10 h-10 rounded-lg bg-primary-container text-on-primary flex items-center justify-center font-bold text-headline-sm border border-primary shadow-sm" title="Hồ sơ cá nhân">
+              LN
+            </div>
+</div>
+</div>
+</div>
+</header>
+<!-- 2. WORKSPACE BODY: Sidebar + Main 70% + Right Rail 30% -->
+<div class="flex-1 w-full max-w-[1440px] mx-auto flex flex-row">
+<!-- INSTITUTIONAL SIDEBAR -->
+<aside class="w-[260px] flex-shrink-0 bg-surface-container-lowest border-r border-outline-variant hidden lg:flex flex-col justify-between p-4 py-6">
+<div class="space-y-6">
+<div>
+<div class="px-3 pb-2 font-label-caps text-label-caps text-outline uppercase tracking-wider">Nghiệp vụ khoa học</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low font-body-base text-body-base text-[14px] transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] text-secondary" data-icon="dashboard">dashboard</span>
+<span>Tổng quan (Dashboard)</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary text-on-primary font-body-bold text-body-bold text-[14px] shadow-sm" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="folder_managed">folder_managed</span>
+<span>Hồ sơ đề xuất</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low font-body-base text-body-base text-[14px] transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] text-secondary" data-icon="biotech">biotech</span>
+<span>Đề tài đang thực hiện</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low font-body-base text-body-base text-[14px] transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] text-secondary" data-icon="assignment_turned_in">assignment_turned_in</span>
+<span>Báo cáo &amp; Nghiệm thu</span>
+</a>
+</nav>
+</div>
+<div>
+<div class="px-3 pb-2 font-label-caps text-label-caps text-outline uppercase tracking-wider">Hỗ trợ &amp; Văn bản</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low font-body-base text-body-base text-[14px] transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] text-secondary" data-icon="library_books">library_books</span>
+<span>Kho biểu mẫu &amp; Quy chuẩn</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low font-body-base text-body-base text-[14px] transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] text-secondary" data-icon="manage_accounts">manage_accounts</span>
+<span>Cấu hình cá nhân</span>
+</a>
+</nav>
+</div>
+</div>
+<!-- Sidebar Security Footer -->
+<div class="p-3 bg-[#f2f7f4] border border-[#dde8e1] rounded-lg">
+<div class="flex items-center justify-between text-secondary font-label-meta text-label-meta">
+<span class="font-bold text-primary">DocManS Enterprise</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container-highest text-on-secondary-fixed text-[11px] font-bold">v2.4.1</span>
+</div>
+<div class="mt-2 text-[12px] text-on-surface-variant leading-tight">
+            RBAC Active · Phiên bảo mật cấp độ 3 Học viện Quân y.
+          </div>
+</div>
+</aside>
+<!-- MAIN PAGE CONTENT (Breadcrumb + Header + 70/30 Split Layout) -->
+<main class="flex-1 flex flex-col p-4 md:p-6 lg:p-8 overflow-y-auto space-y-6">
+<!-- BREADCRUMB & REGISTRY METADATA -->
+<div class="space-y-3">
+<div class="flex flex-wrap items-center justify-between gap-2">
+<nav class="flex items-center gap-2 font-label-meta text-label-meta text-secondary">
+<a class="hover:text-primary transition-colors" href="#">Trang chủ</a>
+<span class="material-symbols-outlined text-[14px]" data-icon="chevron_right">chevron_right</span>
+<a class="hover:text-primary transition-colors" href="#">Hồ sơ đề xuất nghiên cứu</a>
+<span class="material-symbols-outlined text-[14px]" data-icon="chevron_right">chevron_right</span>
+<span class="font-bold text-on-surface">DX-2026-014</span>
+</nav>
+<div class="flex items-center gap-2 font-label-meta text-label-meta text-secondary">
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-600"></span> Lưu nháp tự động: 14:28 (Hôm nay)</span>
+<span class="text-outline-variant">|</span>
+<span>Đơn vị: <strong>Khoa Y học quân sự</strong></span>
+</div>
+</div>
+<!-- DOSSIER HERO BANNER -->
+<div class="bg-surface-container-lowest border border-[#dde8e1] rounded-lg p-5 md:p-6 shadow-[0_8px_20px_rgba(15,63,42,0.05)] relative overflow-hidden">
+<div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary-container to-tertiary-fixed-dim"></div>
+<div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-5">
+<div class="space-y-2 max-w-3xl">
+<div class="flex flex-wrap items-center gap-2.5">
+<span class="font-label-caps text-label-caps px-2.5 py-1 rounded bg-surface-container text-primary font-extrabold border border-outline-variant">MÃ HỒ SƠ: DX-2026-014</span>
+<!-- Status Badge: Bản nháp -->
+<span class="h-[26px] inline-flex items-center gap-1.5 px-3 rounded-full bg-[#fff5d7] border border-[#ead48c] text-[#8a6106] font-badge-text text-badge-text">
+<span class="material-symbols-outlined text-[13px]" data-icon="edit_document">edit_document</span>
+                    Bản nháp (Review draft only)
+                  </span>
+<span class="h-[26px] inline-flex items-center gap-1 px-2.5 rounded-full bg-[#f2f7f4] border border-[#dde8e1] text-secondary font-label-meta text-label-meta">
+<span class="material-symbols-outlined text-[13px]" data-icon="person">person</span>
+                    Chủ nhiệm đề tài (PI)
+                  </span>
+<span class="h-[26px] inline-flex items-center gap-1 px-2.5 rounded-full bg-[#f2f7f4] border border-[#dde8e1] text-secondary font-label-meta text-label-meta">
+<span class="material-symbols-outlined text-[13px]" data-icon="event_note">event_note</span>
+                    Đợt tiếp nhận năm 2026
+                  </span>
+</div>
+<h1 class="font-headline-md text-headline-md text-primary tracking-tight">
+                  Nghiên cứu cải thiện phục hồi chức năng sau chấn thương
+                </h1>
+<p class="font-body-base text-body-base text-on-surface-variant text-[14px]">
+                  Bước tiếp theo: <strong class="text-on-surface">Hoàn thiện hồ sơ &amp; bổ sung phê duyệt đạo đức</strong> (Hạn nộp chính thức đợt: <span class="text-error font-bold">15/11/2026</span>)
+                </p>
+</div>
+<!-- Action Bar -->
+<div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+<!-- Chỉnh sửa hồ sơ nháp -->
+<button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 h-[42px] px-4 rounded-lg bg-surface-container-lowest border border-[#dde8e1] text-primary hover:bg-[#eaf5ef] font-body-bold text-body-bold text-[14px] transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span>
+                  Chỉnh sửa hồ sơ nháp
+                </button>
+<!-- Tải bản in đề cương PDF -->
+<button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 h-[42px] px-4 rounded-lg bg-surface-container-lowest border border-[#dde8e1] text-primary hover:bg-[#eaf5ef] font-body-bold text-body-bold text-[14px] transition-colors shadow-sm" title="Xuất bản in đề cương PDF qua bảo mật MinIO">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
+                  Tải bản in đề cương PDF
+                </button>
+<!-- Nộp chính thức: DISABLED with direct explanation -->
+<div class="relative group flex-1 sm:flex-initial">
+<button class="w-full inline-flex items-center justify-center gap-2 h-[42px] px-4 rounded-lg bg-outline-variant/60 text-secondary cursor-not-allowed font-body-bold text-body-bold text-[14px] border border-outline-variant" disabled="">
+<span class="material-symbols-outlined text-[18px]" data-icon="send">send</span>
+                    Nộp chính thức
+                  </button>
+<div class="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-20 w-64 -left-16 sm:left-auto sm:right-0 pointer-events-none">
+<div class="bg-inverse-surface text-inverse-on-surface text-[12px] font-label-meta px-3 py-2 rounded shadow-lg text-center border border-outline">
+<span class="font-bold block text-tertiary-fixed">Chưa đủ điều kiện nộp</span>
+                      Cần hoàn thành đầy đủ 4/4 tiêu chí chuẩn bị (đang thiếu tệp Phê duyệt Đạo đức y sinh).
+                    </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 3. MAIN WORKSPACE ASYMMETRIC 70/30 GRID -->
+<div class="grid grid-cols-1 lg:grid-cols-10 gap-6">
+<!-- ==================== LEFT COLUMN (MAIN WORKSPACE 70% / 7 COLS) ==================== -->
+<div class="lg:col-span-7 space-y-6">
+<!-- SECTION 1: TỔNG QUAN & MỤC TIÊU ĐỀ TÀI -->
+<section class="bg-surface-container-lowest border border-[#dde8e1] rounded-lg shadow-[0_8px_20px_rgba(15,63,42,0.05)] overflow-hidden">
+<div class="px-5 py-3.5 bg-[#f2f7f4] border-b border-[#dde8e1] flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="assignment">assignment</span>
+<h2 class="font-headline-sm text-headline-sm text-primary text-[16px]">1. Tổng quan &amp; Mục tiêu đề tài</h2>
+</div>
+<span class="font-label-caps text-label-caps text-secondary uppercase tracking-wider">Phần I: Thuyết minh</span>
+</div>
+<div class="p-5 md:p-6 space-y-5">
+<!-- Metadata Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-lg bg-[#f7faf8] border border-[#dde8e1]">
+<div>
+<span class="font-label-caps text-label-caps text-secondary block">LOẠI HÌNH NGHIÊN CỨU</span>
+<span class="font-body-bold text-body-bold text-on-surface text-[14px]">Ứng dụng Y học quân sự</span>
+</div>
+<div>
+<span class="font-label-caps text-label-caps text-secondary block">THỜI GIAN THỰC HIỆN</span>
+<span class="font-body-bold text-body-bold text-on-surface text-[14px]">24 tháng (2026 - 2028)</span>
+</div>
+<div>
+<span class="font-label-caps text-label-caps text-secondary block">KINH PHÍ DỰ KIẾN</span>
+<span class="font-body-bold text-body-bold text-on-surface text-[14px]">450.000.000 VNĐ</span>
+</div>
+</div>
+<!-- Descriptive Content -->
+<div class="space-y-4">
+<div>
+<h3 class="font-body-bold text-body-bold text-primary mb-1.5 flex items-center gap-1.5 text-[14px]">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Mục tiêu tổng quát
+                    </h3>
+<p class="font-body-base text-body-base text-on-surface text-[14px] leading-relaxed pl-3 border-l-2 border-primary-container">
+                      Đánh giá hiệu quả lâm sàng và đề xuất quy trình can thiệp phục hồi chức năng sớm kết hợp công nghệ hỗ trợ đối với chấn thương cơ - xương - khớp ở bộ đội trong diễn tập và huấn luyện cường độ cao tại Học viện Quân y.
+                    </p>
+</div>
+<div>
+<h3 class="font-body-bold text-body-bold text-primary mb-1.5 flex items-center gap-1.5 text-[14px]">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Mục tiêu cụ thể
+                    </h3>
+<ul class="list-disc list-inside space-y-1 font-body-base text-body-base text-on-surface text-[14px] pl-3">
+<li>Khảo sát thực trạng và đặc điểm tổn thương cơ xương khớp ở 150 trường hợp chấn thương thực địa.</li>
+<li>Chuẩn hóa phác đồ can thiệp vật lý trị liệu phối hợp thích nghi vận động theo 3 giai đoạn phục hồi.</li>
+<li>Xây dựng tài liệu hướng dẫn kỹ thuật phục hồi chức năng tuyến cơ sở trong lực lượng vũ trang.</li>
+</ul>
+</div>
+<div>
+<h3 class="font-body-bold text-body-bold text-primary mb-1.5 flex items-center gap-1.5 text-[14px]">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Tóm tắt nội dung nghiên cứu (Quy chuẩn Đợt 2026)
+                    </h3>
+<p class="font-body-base text-body-base text-on-surface-variant text-[14px] leading-relaxed">
+                      Đề xuất được xây dựng bám sát khung nghiên cứu trọng điểm của Cục Quân y và Ban Giám đốc Học viện. Sử dụng mẫu đánh giá chức năng quốc tế cải biên theo điều kiện quân ngũ, có đối chứng can thiệp ngẫu nhiên có kiểm soát (RCT).
+                    </p>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 2: NHÂN SỰ THAM GIA NGHIÊN CỨU -->
+<section class="bg-surface-container-lowest border border-[#dde8e1] rounded-lg shadow-[0_8px_20px_rgba(15,63,42,0.05)] overflow-hidden">
+<div class="px-5 py-3.5 bg-[#f2f7f4] border-b border-[#dde8e1] flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="group">group</span>
+<h2 class="font-headline-sm text-headline-sm text-primary text-[16px]">2. Nhân sự tham gia nghiên cứu (Participants)</h2>
+</div>
+<span class="font-label-caps text-label-caps text-secondary">4 Thành viên nòng cốt</span>
+</div>
+<div class="p-5 md:p-6">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-[#dde8e1] bg-[#f7faf8]">
+<th class="p-3 font-label-caps text-label-caps text-secondary">HỌ VÀ TÊN &amp; HỌC VỊ</th>
+<th class="p-3 font-label-caps text-label-caps text-secondary">VAI TRÒ TRONG ĐỀ TÀI</th>
+<th class="p-3 font-label-caps text-label-caps text-secondary">ĐƠN VỊ CÔNG TÁC</th>
+<th class="p-3 font-label-caps text-label-caps text-secondary">XÁC NHẬN SỐ</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#dde8e1] font-body-base text-body-base text-[14px]">
+<tr class="hover:bg-[#eaf5ef] transition-colors">
+<td class="p-3">
+<div class="font-body-bold text-body-bold text-primary">Thiếu tá, TS. Lê Hoàng Nam</div>
+<div class="font-label-meta text-label-meta text-secondary">Mã định danh quân nhân: HVQY-09824</div>
+</td>
+<td class="p-3">
+<span class="px-2.5 py-1 rounded bg-primary-container text-on-primary font-badge-text text-badge-text">Chủ nhiệm đề tài (PI)</span>
+</td>
+<td class="p-3 text-on-surface">Khoa Y học quân sự, Học viện Quân y</td>
+<td class="p-3">
+<span class="inline-flex items-center gap-1 text-primary font-label-meta text-label-meta font-bold">
+<span class="material-symbols-outlined text-[16px] text-primary" data-icon="check_circle">check_circle</span> Đã ký số PKI
+                          </span>
+</td>
+</tr>
+<tr class="hover:bg-[#eaf5ef] transition-colors">
+<td class="p-3">
+<div class="font-body-bold text-body-bold text-on-surface">Đại úy, ThS. Nguyễn Văn Toàn</div>
+<div class="font-label-meta text-label-meta text-secondary">Mã định danh quân nhân: HVQY-11032</div>
+</td>
+<td class="p-3">
+<span class="px-2.5 py-1 rounded bg-[#eaf5ef] text-primary font-badge-text text-badge-text border border-[#dde8e1]">Thư ký khoa học</span>
+</td>
+<td class="p-3 text-on-surface">Bộ môn Phục hồi chức năng, Bệnh viện Quân y 103</td>
+<td class="p-3">
+<span class="inline-flex items-center gap-1 text-primary font-label-meta text-label-meta font-bold">
+<span class="material-symbols-outlined text-[16px] text-primary" data-icon="check_circle">check_circle</span> Đã xác nhận
+                          </span>
+</td>
+</tr>
+<tr class="hover:bg-[#eaf5ef] transition-colors">
+<td class="p-3">
+<div class="font-body-bold text-body-bold text-on-surface">Trung tá, BSCKII. Trần Đình Quân</div>
+<div class="font-label-meta text-label-meta text-secondary">Mã định danh quân nhân: HVQY-06519</div>
+</td>
+<td class="p-3">
+<span class="px-2.5 py-1 rounded bg-[#f2f7f4] text-secondary font-badge-text text-badge-text">Thành viên chính</span>
+</td>
+<td class="p-3 text-on-surface">Khoa Chấn thương chỉnh hình, Bệnh viện Quân y 103</td>
+<td class="p-3">
+<span class="inline-flex items-center gap-1 text-primary font-label-meta text-label-meta font-bold">
+<span class="material-symbols-outlined text-[16px] text-primary" data-icon="check_circle">check_circle</span> Đã xác nhận
+                          </span>
+</td>
+</tr>
+<tr class="hover:bg-[#eaf5ef] transition-colors">
+<td class="p-3">
+<div class="font-body-bold text-body-bold text-on-surface">Thượng úy, ThS. Vũ Thị Mai Lan</div>
+<div class="font-label-meta text-label-meta text-secondary">Mã định danh quân nhân: HVQY-13401</div>
+</td>
+<td class="p-3">
+<span class="px-2.5 py-1 rounded bg-[#f2f7f4] text-secondary font-badge-text text-badge-text">Thành viên nghiên cứu</span>
+</td>
+<td class="p-3 text-on-surface">Viện Nghiên cứu Khoa học Y Dược quân sự</td>
+<td class="p-3">
+<span class="inline-flex items-center gap-1 text-primary font-label-meta text-label-meta font-bold">
+<span class="material-symbols-outlined text-[16px] text-primary" data-icon="check_circle">check_circle</span> Đã xác nhận
+                          </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<!-- SECTION 3: DANH MỤC HỒ SƠ & TỆP ĐÍNH KÈM (FILES & PACKAGE) -->
+<section class="bg-surface-container-lowest border border-[#dde8e1] rounded-lg shadow-[0_8px_20px_rgba(15,63,42,0.05)] overflow-hidden">
+<div class="px-5 py-3.5 bg-[#f2f7f4] border-b border-[#dde8e1] flex flex-wrap items-center justify-between gap-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="folder_open">folder_open</span>
+<h2 class="font-headline-sm text-headline-sm text-primary text-[16px]">3. Danh mục hồ sơ &amp; Tệp đính kèm theo đợt 2026</h2>
+</div>
+<!-- File Upload action -->
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary hover:bg-primary-container font-body-bold text-body-bold text-[13px] transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="upload_file">upload_file</span>
+                  Tải lên tệp bổ sung
+                </button>
+</div>
+<div class="p-5 md:p-6 space-y-3">
+<div class="text-[13px] font-label-meta text-secondary mb-2">
+                  Toàn bộ tệp được lưu trữ mã hóa qua hệ thống MinIO bảo mật nội bộ Học viện Quân y. Chỉ tải về qua API có xác thực phiên token.
+                </div>
+<!-- File 1: Thuyết minh đề cương -->
+<div class="flex items-center justify-between p-3.5 rounded-lg border border-[#dde8e1] bg-surface-container-lowest hover:bg-[#eaf5ef] transition-colors">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-10 h-10 rounded-lg bg-[#fdecec] text-error flex items-center justify-center flex-shrink-0 border border-[#efc0bd]">
+<span class="font-bold text-[12px]">PDF</span>
+</div>
+<div class="truncate">
+<div class="font-body-bold text-body-bold text-on-surface truncate text-[14px]">
+                        Bản thuyết minh đề cương nghiên cứu chi tiết
+                      </div>
+<div class="font-label-meta text-label-meta text-secondary flex items-center gap-2 text-[12px]">
+<span>v1.2 · 2.4 MB</span>
+<span>•</span>
+<span>Cập nhật: 09/10/2026 10:15 bởi Thiếu tá Lê Hoàng Nam</span>
+<span class="px-1.5 py-0.2 rounded bg-surface-container text-primary font-bold text-[10px]">ĐÃ KÝ DUYỆT BỘ MÔN</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2 flex-shrink-0 ml-3">
+<button class="p-2 rounded-lg border border-[#dde8e1] text-secondary hover:text-primary hover:bg-[#ffffff] transition-colors" title="Tải xuống tệp xác thực">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
+</button>
+<button class="p-2 rounded-lg border border-[#dde8e1] text-secondary hover:text-primary hover:bg-[#ffffff] transition-colors" title="Xem trước bản thảo">
+<span class="material-symbols-outlined text-[18px]" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+<!-- File 2: Dự toán kinh phí -->
+<div class="flex items-center justify-between p-3.5 rounded-lg border border-[#dde8e1] bg-surface-container-lowest hover:bg-[#eaf5ef] transition-colors">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-10 h-10 rounded-lg bg-[#eaf5ef] text-primary flex items-center justify-center flex-shrink-0 border border-[#b6ccbd]">
+<span class="font-bold text-[12px]">XLSX</span>
+</div>
+<div class="truncate">
+<div class="font-body-bold text-body-bold text-on-surface truncate text-[14px]">
+                        Thuyết minh dự toán kinh phí sơ bộ theo định mức Quân đội
+                      </div>
+<div class="font-label-meta text-label-meta text-secondary flex items-center gap-2 text-[12px]">
+<span>v1.0 · 1.1 MB</span>
+<span>•</span>
+<span>Cập nhật: 08/10/2026 16:30 bởi ThS. Nguyễn Văn Toàn</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2 flex-shrink-0 ml-3">
+<button class="p-2 rounded-lg border border-[#dde8e1] text-secondary hover:text-primary hover:bg-[#ffffff] transition-colors" title="Tải xuống tệp">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
+</button>
+<button class="p-2 rounded-lg border border-[#dde8e1] text-secondary hover:text-primary hover:bg-[#ffffff] transition-colors" title="Xem chi tiết dự toán">
+<span class="material-symbols-outlined text-[18px]" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+<!-- File 3: THIẾU TỆP BẮT BUỘC (Đơn đề nghị đạo đức) -->
+<div class="flex items-center justify-between p-3.5 rounded-lg border-2 border-dashed border-[#efc0bd] bg-[#fffbfb]">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-10 h-10 rounded-lg bg-[#fdecec] text-error flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]" data-icon="warning">warning</span>
+</div>
+<div>
+<div class="font-body-bold text-body-bold text-error flex items-center gap-2 text-[14px]">
+                        Đơn đề nghị phê duyệt Hội đồng Đạo đức trong nghiên cứu y sinh học
+                        <span class="px-2 py-0.5 rounded bg-error-container text-on-error-container font-badge-text text-[11px]">BẮT BUỘC ĐỢT 2026</span>
+</div>
+<div class="font-label-meta text-label-meta text-secondary text-[12px]">
+                        Chưa có tệp đính kèm. Mẫu số BM-04/HĐĐĐ ban hành kèm thông tri năm 2026.
+                      </div>
+</div>
+</div>
+<div class="flex-shrink-0 ml-3">
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-error text-on-error hover:bg-[#93000a] font-body-bold text-body-bold text-[12px] transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="add_circle">add_circle</span>
+                      Đính kèm tệp ngay
+                    </button>
+</div>
+</div>
+<!-- File 4: Lý lịch khoa học -->
+<div class="flex items-center justify-between p-3.5 rounded-lg border border-[#dde8e1] bg-surface-container-lowest hover:bg-[#eaf5ef] transition-colors">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-10 h-10 rounded-lg bg-[#fdecec] text-error flex items-center justify-center flex-shrink-0 border border-[#efc0bd]">
+<span class="font-bold text-[12px]">PDF</span>
+</div>
+<div class="truncate">
+<div class="font-body-bold text-body-bold text-on-surface truncate text-[14px]">
+                        Hồ sơ lý lịch khoa học chủ nhiệm &amp; các thành viên nghiên cứu chính (Tổng hợp)
+                      </div>
+<div class="font-label-meta text-label-meta text-secondary flex items-center gap-2 text-[12px]">
+<span>v1.0 · 3.8 MB</span>
+<span>•</span>
+<span>Cập nhật: 07/10/2026 09:00 bởi Thiếu tá Lê Hoàng Nam</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2 flex-shrink-0 ml-3">
+<button class="p-2 rounded-lg border border-[#dde8e1] text-secondary hover:text-primary hover:bg-[#ffffff] transition-colors" title="Tải xuống">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
+</button>
+<button class="p-2 rounded-lg border border-[#dde8e1] text-secondary hover:text-primary hover:bg-[#ffffff] transition-colors" title="Xem">
+<span class="material-symbols-outlined text-[18px]" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 4: HỒ SƠ LIÊN QUAN & TIỀN ĐỀ NGHIÊN CỨU -->
+<section class="bg-surface-container-lowest border border-[#dde8e1] rounded-lg shadow-[0_8px_20px_rgba(15,63,42,0.05)] overflow-hidden">
+<div class="px-5 py-3.5 bg-[#f2f7f4] border-b border-[#dde8e1] flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="account_tree">account_tree</span>
+<h2 class="font-headline-sm text-headline-sm text-primary text-[16px]">4. Hồ sơ liên quan &amp; Tiền đề nghiên cứu</h2>
+</div>
+<span class="font-label-caps text-label-caps text-secondary">Liên kết cơ sở dữ liệu</span>
+</div>
+<div class="p-5 md:p-6 space-y-3">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="p-3.5 rounded-lg border border-[#dde8e1] bg-[#f7faf8]">
+<div class="font-label-caps text-label-caps text-secondary">ĐỀ TÀI CƠ SỞ TIỀN ĐỀ (2024 - ĐÃ NGHIỆM THU)</div>
+<div class="font-body-bold text-body-bold text-primary mt-1 text-[14px]">CS-2024-088: Khảo sát dịch tễ tổn thương gân cơ trên thao trường</div>
+<div class="font-label-meta text-label-meta text-secondary mt-1">Kết quả: Xuất sắc · Chủ nhiệm: TS. Lê Hoàng Nam</div>
+</div>
+<div class="p-3.5 rounded-lg border border-[#dde8e1] bg-[#f7faf8]">
+<div class="font-label-caps text-label-caps text-secondary">QUYẾT ĐỊNH PHÊ DUYỆT KHUNG DANH MỤC</div>
+<div class="font-body-bold text-body-bold text-primary mt-1 text-[14px]">QĐ số 1842/QĐ-HVQY ngày 15/08/2026</div>
+<div class="font-label-meta text-label-meta text-secondary mt-1">Ban hành Danh mục đề tài nghiên cứu cấp Học viện định hướng 2026</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 5: QUY TRÌNH & LỊCH SỬ PHIÊN BẢN / KIỂM TOÁN (AUDIT TRAIL) -->
+<section class="bg-surface-container-lowest border border-[#dde8e1] rounded-lg shadow-[0_8px_20px_rgba(15,63,42,0.05)] overflow-hidden">
+<div class="px-5 py-3.5 bg-[#f2f7f4] border-b border-[#dde8e1] flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="history">history</span>
+<h2 class="font-headline-sm text-headline-sm text-primary text-[16px]">5. Quy trình &amp; Lịch sử phiên bản (Audit Trail)</h2>
+</div>
+<span class="font-label-caps text-label-caps text-secondary">Ghi nhận tự động NestJS Audit</span>
+</div>
+<div class="p-5 md:p-6">
+<div class="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[2px] before:bg-outline-variant">
+<!-- Step 1 -->
+<div class="relative">
+<div class="absolute -left-6 top-1 w-3.5 h-3.5 rounded-full bg-primary ring-4 ring-surface-container-lowest"></div>
+<div>
+<div class="flex items-center gap-2 font-body-bold text-body-bold text-primary text-[14px]">
+<span>Cập nhật tệp thuyết minh đề cương lên v1.2</span>
+<span class="font-label-meta text-label-meta text-secondary font-normal">Hôm nay 10:15:22</span>
+</div>
+<p class="font-body-base text-body-base text-on-surface-variant text-[13px] mt-0.5">
+                        Tác nhân: Thiếu tá, TS. Lê Hoàng Nam (IP nội bộ: 10.20.14.88) · Checksum SHA-256 xác thực.
+                      </p>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="relative">
+<div class="absolute -left-6 top-1 w-3.5 h-3.5 rounded-full bg-secondary ring-4 ring-surface-container-lowest"></div>
+<div>
+<div class="flex items-center gap-2 font-body-bold text-body-bold text-on-surface text-[14px]">
+<span>Bổ sung dự toán kinh phí sơ bộ v1.0</span>
+<span class="font-label-meta text-label-meta text-secondary font-normal">08/10/2026 16:30:10</span>
+</div>
+<p class="font-body-base text-body-base text-on-surface-variant text-[13px] mt-0.5">
+                        Tác nhân: Đại úy Nguyễn Văn Toàn (Thư ký khoa học) · Tải lên qua cổng MinIO.
+                      </p>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="relative">
+<div class="absolute -left-6 top-1 w-3.5 h-3.5 rounded-full bg-secondary ring-4 ring-surface-container-lowest"></div>
+<div>
+<div class="flex items-center gap-2 font-body-bold text-body-bold text-on-surface text-[14px]">
+<span>Khởi tạo hồ sơ đề xuất trực tuyến (Mã DX-2026-014)</span>
+<span class="font-label-meta text-label-meta text-secondary font-normal">05/10/2026 08:00:00</span>
+</div>
+<p class="font-body-base text-body-base text-on-surface-variant text-[13px] mt-0.5">
+                        Tác nhân: Thiếu tá, TS. Lê Hoàng Nam · Đăng ký tham gia Đợt tuyển chọn nghiên cứu y học quân sự năm 2026.
+                      </p>
+</div>
+</div>
+</div>
+<div class="mt-5 pt-4 border-t border-[#dde8e1] flex items-center justify-between text-[12px] font-label-meta text-secondary">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="lock_clock">lock_clock</span>
+                    Nhật ký kiểm toán được lưu trữ bất biến (Immutable log).
+                  </span>
+<span class="italic">Chế độ người xem: Chủ nhiệm đề tài (Không hiển thị danh tính hội đồng rà soát).</span>
+</div>
+</div>
+</section>
+</div>
+<!-- ==================== RIGHT COLUMN (READINESS RAIL 30% / 3 COLS) ==================== -->
+<div class="lg:col-span-3 space-y-6">
+<!-- READINESS CHECKLIST CARD -->
+<div class="bg-surface-container-lowest border border-[#dde8e1] rounded-lg shadow-[0_8px_20px_rgba(15,63,42,0.05)] overflow-hidden">
+<div class="h-1.5 bg-tertiary-fixed-dim"></div>
+<div class="p-5 space-y-4">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm text-primary text-[15px] flex items-center gap-1.5">
+<span class="material-symbols-outlined text-tertiary-container text-[18px]" data-icon="fact_check">fact_check</span>
+                    Tiêu chuẩn sẵn sàng nộp
+                  </h2>
+<span class="font-badge-text text-badge-text px-2 py-0.5 rounded-full bg-[#fff5d7] text-[#8a6106] border border-[#ead48c]">
+                    3/4 Điều kiện
+                  </span>
+</div>
+<!-- Progress Bar -->
+<div>
+<div class="flex justify-between font-label-meta text-label-meta text-secondary mb-1">
+<span>Mức độ hoàn thiện</span>
+<span class="font-bold text-primary">75%</span>
+</div>
+<div class="w-full h-2 rounded-full bg-[#f2f7f4] overflow-hidden border border-[#dde8e1]">
+<div class="h-full bg-primary rounded-full transition-all duration-300" style="width: 75%"></div>
+</div>
+</div>
+<!-- Checklist Items -->
+<div class="space-y-3 pt-2">
+<!-- Item 1: Complete -->
+<div class="flex items-start gap-2.5 p-2 rounded bg-[#eaf5ef]/60 border border-[#dde8e1]">
+<span class="material-symbols-outlined text-primary text-[18px] flex-shrink-0 mt-0.5" data-icon="check_circle">check_circle</span>
+<div>
+<div class="font-body-bold text-body-bold text-primary text-[13px]">Thông tin chung &amp; Tóm tắt đề cương</div>
+<div class="font-label-meta text-label-meta text-secondary text-[11px]">Đã nhập đầy đủ mục tiêu &amp; nội dung</div>
+</div>
+</div>
+<!-- Item 2: Complete -->
+<div class="flex items-start gap-2.5 p-2 rounded bg-[#eaf5ef]/60 border border-[#dde8e1]">
+<span class="material-symbols-outlined text-primary text-[18px] flex-shrink-0 mt-0.5" data-icon="check_circle">check_circle</span>
+<div>
+<div class="font-body-bold text-body-bold text-primary text-[13px]">Danh sách nhân sự &amp; Chữ ký số</div>
+<div class="font-label-meta text-label-meta text-secondary text-[11px]">4/4 thành viên đã xác nhận điện tử</div>
+</div>
+</div>
+<!-- Item 3: MISSING / WARNING -->
+<div class="flex items-start gap-2.5 p-2.5 rounded bg-[#fff5d7]/50 border border-[#ead48c]">
+<span class="material-symbols-outlined text-[#8a6106] text-[18px] flex-shrink-0 mt-0.5" data-icon="error">error</span>
+<div>
+<div class="font-body-bold text-body-bold text-[#8a6106] text-[13px]">Phê duyệt Đạo đức y sinh học</div>
+<div class="font-label-meta text-label-meta text-on-surface-variant text-[11px]">Thiếu tệp Đơn đề nghị phê duyệt (Bắt buộc)</div>
+</div>
+</div>
+<!-- Item 4: Complete -->
+<div class="flex items-start gap-2.5 p-2 rounded bg-[#eaf5ef]/60 border border-[#dde8e1]">
+<span class="material-symbols-outlined text-primary text-[18px] flex-shrink-0 mt-0.5" data-icon="check_circle">check_circle</span>
+<div>
+<div class="font-body-bold text-body-bold text-primary text-[13px]">Dự toán kinh phí sơ bộ</div>
+<div class="font-label-meta text-label-meta text-secondary text-[11px]">Đã đính kèm tệp tính toán định mức</div>
+</div>
+</div>
+</div>
+<!-- Explanation Callout -->
+<div class="p-3 bg-[#f7faf8] rounded-lg border border-[#dde8e1] text-[12px] font-body-base text-on-surface-variant leading-relaxed">
+<strong class="text-primary block font-body-bold mb-1">Ghi chú cho Chủ nhiệm (PI):</strong>
+                  Hồ sơ cần bổ sung <em>Đơn đề nghị Hội đồng Đạo đức trong nghiên cứu y sinh học</em> để kích hoạt chức năng <strong>"Nộp chính thức"</strong>. Vui lòng hoàn tất trước ngày 15/11/2026.
+                </div>
+</div>
+</div>
+<!-- ADMINISTRATIVE COORDINATION CARD -->
+<div class="bg-surface-container-lowest border border-[#dde8e1] rounded-lg shadow-[0_8px_20px_rgba(15,63,42,0.05)] p-5 space-y-4">
+<h2 class="font-headline-sm text-headline-sm text-primary text-[15px] flex items-center gap-2 border-b border-[#dde8e1] pb-2">
+<span class="material-symbols-outlined text-secondary text-[18px]" data-icon="corporate_fare">corporate_fare</span>
+                Đơn vị quản lý &amp; Tiếp nhận
+              </h2>
+<div class="space-y-3 font-body-base text-body-base text-[13px]">
+<div>
+<span class="font-label-caps text-label-caps text-secondary block">CƠ QUAN QUẢN LÝ ĐỀ TÀI</span>
+<span class="font-body-bold text-body-bold text-on-surface">Phòng Quản lý Khoa học Quân sự</span>
+<span class="block text-secondary text-[12px]">Học viện Quân y · Tòa nhà Trung tâm S1</span>
+</div>
+<div>
+<span class="font-label-caps text-label-caps text-secondary block">CHUYÊN VIÊN PHỤ TRÁCH ĐỢT</span>
+<span class="font-body-bold text-body-bold text-on-surface">Trung tá, ThS. Nguyễn Đức Long</span>
+<span class="block text-secondary text-[12px]">Email: long.nd@hvqy.edu.vn</span>
+</div>
+<div>
+<span class="font-label-caps text-label-caps text-secondary block">ĐƯỜNG DÂY NÓNG HỖ TRỢ NỘI BỘ</span>
+<span class="font-body-bold text-body-bold text-primary">024.3688.103 (Máy lẻ 402)</span>
+</div>
+</div>
+<div class="pt-2 border-t border-[#dde8e1]">
+<a class="inline-flex items-center gap-1.5 text-primary hover:underline font-label-meta text-label-meta text-[12px] font-bold" href="#">
+<span class="material-symbols-outlined text-[14px]" data-icon="description">description</span>
+                  Tải hướng dẫn lập hồ sơ Đợt 2026 (.PDF)
+                </a>
+</div>
+</div>
+<!-- SECURITY & ACCESS POLICY CARD -->
+<div class="bg-[#f2f7f4] border border-[#dde8e1] rounded-lg p-4 space-y-3">
+<div class="flex items-center gap-2 text-primary font-headline-sm text-[13px]">
+<span class="material-symbols-outlined text-[16px]" data-icon="verified">verified</span>
+                Thông số kiểm soát truy cập
+              </div>
+<ul class="space-y-1.5 font-label-meta text-label-meta text-secondary text-[11px] leading-tight">
+<li>• Vai trò hiện hành: <strong>Chủ nhiệm đề tài (PI)</strong></li>
+<li>• Quyền hạn: Biên tập nháp, tải tệp, ký số đề cương</li>
+<li>• Lưu trữ dữ liệu: Cụm máy chủ nội bộ Học viện Quân y</li>
+<li>• Mã hóa dữ liệu: TLS 1.3 · AES-256 at rest (PostgreSQL &amp; MinIO)</li>
+</ul>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- 3. FOOTER (Anchored strictly to Shared Components JSON) -->
+<footer class="w-full bg-surface-container-low border-t border-outline-variant">
+<div class="flex flex-col md:flex-row justify-between items-center w-full px-6 md:px-10 py-4 max-w-[1440px] mx-auto gap-3 text-secondary font-label-meta text-label-meta">
+<div>
+          © 2024 Học viện Quân y - Hệ thống Quản trị Văn bản &amp; Hồ sơ Điện tử DocManS. Bảo lưu mọi quyền.
+        </div>
+<div class="flex flex-wrap items-center gap-6">
+<a class="hover:underline hover:text-primary transition-colors duration-150" href="#">Quy chế an toàn thông tin</a>
+<a class="hover:underline hover:text-primary transition-colors duration-150" href="#">Tiêu chuẩn bảo mật</a>
+<a class="hover:underline hover:text-primary transition-colors duration-150" href="#">Đầu mối hỗ trợ kỹ thuật</a>
+</div>
+</div>
+</footer>
+</div>
+</body></html>
