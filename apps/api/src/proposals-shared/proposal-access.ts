@@ -5,6 +5,7 @@ import type { ProposalReviewAccess } from "./proposal-review-access.js";
 import { isWorkflowVisibleStatus } from "./proposal-workflow.js";
 
 type IntakeLike = {
+  applicableOrganizationUnitIds?: string[];
   applicableOrganizationUnitId?: string | null;
   status: string;
   startsAt: Date;
@@ -64,6 +65,7 @@ export function isIntakeOpenForSubmission(intake: IntakeLike, now = new Date()) 
 }
 
 export function intakeAppliesToUser(intake: IntakeLike, user: SafeUserContext) {
+  if (intake.applicableOrganizationUnitIds?.length) return intake.applicableOrganizationUnitIds.some((id) => getOrganizationScopeIds(user).includes(id));
   if (!intake.applicableOrganizationUnitId) {
     return true;
   }

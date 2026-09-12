@@ -1,5 +1,6 @@
 "use client";
 
+import type { ViewerAuthorizationV1 } from "@rtms/permissions";
 import { useEffect, useState } from "react";
 import { CheckCircle2, Save, Send, UserMinus, UserPlus } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -7,6 +8,8 @@ import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   assignProposalReviewer,
+  loadReviewerCandidates,
+  type ReviewerCandidates,
   loadProposalReviewProgress,
   revokeProposalReviewAssignment,
   isNotEntitled,
@@ -32,11 +35,16 @@ function formatDueDate(value: string) {
  * Actions are shown whenever the viewer is staff and only disabled by workflow state, so a blocked
  * control explains itself instead of disappearing (UX-DR27). The backend remains authoritative.
  */
-export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssignReviewers, canConsolidate, blockedReason }: { proposalId: string; onWorkflowChange: () => void; canAssignReviewers: boolean; canConsolidate: boolean; blockedReason: string }) {
+export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssignReviewers, canConsolidate, blockedReason, contextVersion }: { proposalId: string; onWorkflowChange: () => void; canAssignReviewers: boolean; canConsolidate: boolean; blockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
   const [progress, setProgress] = useState<ProposalReviewProgress | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
   const [loadError, setLoadError] = useState("");
 
+  const [candidates, setCandidates] = useState<ReviewerCandidates>({ profiles: [], accounts: [] });
+  const [profileId, setProfileId] = useState("");
+  const [candidateQuery, setCandidateQuery] = useState("");
+  const [effectiveFrom, setEffectiveFrom] = useState("");
+  const [effectiveUntil, setEffectiveUntil] = useState("");
   const [reviewerUsername, setReviewerUsername] = useState("");
   const [assignmentRole, setAssignmentRole] = useState<ReviewAssignmentRole>("reviewer");
   const [dueDate, setDueDate] = useState("");
@@ -58,6 +66,7 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
     try {
       const data = await loadProposalReviewProgress(proposalId);
       setProgress(data);
+      if (canAssignReviewers) setCandidates(await loadReviewerCandidates(proposalId, candidateQuery));
       if (!summaryDirty) {
         setSummaryText(data.evaluationSummary?.summary ?? "");
         setRecommendation(data.evaluationSummary?.recommendation ?? "");
@@ -104,14 +113,18 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
       return;
     }
 
+    if (!window.confirm("Xác nhận người đánh giá, hồ sơ nhà khoa học, vai trò và thời hạn phân công?")) return;
     setIsAssigning(true);
     try {
       await assignProposalReviewer(proposalId, {
         reviewerUsername: reviewerUsername.trim(),
+        researcherProfileId: profileId, contextVersion,
+        effectiveFrom: effectiveFrom ? new Date(effectiveFrom).toISOString() : undefined,
+        effectiveUntil: effectiveUntil ? new Date(effectiveUntil).toISOString() : undefined,
         assignmentRole,
-        dueDate: dueDate || undefined
+        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined
       });
-      setReviewerUsername("");
+      setReviewerUsername(""); setProfileId("");
       setDueDate("");
       setMessage("Đã phân công người đánh giá.");
       await refresh();
@@ -130,9 +143,11 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
       return;
     }
 
+    const reason = window.prompt("Lý do thu hồi phân công:");
+    if (!reason?.trim()) return;
     setRevokingId(assignmentId);
     try {
-      await revokeProposalReviewAssignment(proposalId, assignmentId, "Thu hồi phân công đánh giá");
+      await revokeProposalReviewAssignment(proposalId, assignmentId, reason, contextVersion);
       setMessage("Đã thu hồi phân công đánh giá.");
       await refresh();
       onWorkflowChange();
@@ -249,7 +264,7 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
                       )}
                     </td>
                     <td>
-                      {assignment.status === "assigned" ? (
+                      {assignment.status === "assigned" || assignment.status === "completed" ? (
                         <button
                           className="button icon-button danger"
                           type="button"
@@ -278,15 +293,18 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
 
         <form className="admin-form compact-form" onSubmit={(event) => void handleAssign(event)}>
           <div className="section-mini-heading">Phân công mới</div>
+          <label className="field"><span>Tìm hồ sơ nhà khoa học</span><input value={candidateQuery} onChange={(e) => setCandidateQuery(e.target.value)} /></label>
+          <button className="button" type="button" disabled={!canAssign || isAssigning} onClick={() => void loadReviewerCandidates(proposalId, candidateQuery).then(setCandidates).catch((error) => setAssignError(error.message))}>Tìm người đánh giá</button>
+          <label className="field"><span>Hồ sơ nhà khoa học *</span><select required value={profileId} disabled={!canAssign} onChange={(e) => { setProfileId(e.target.value); const profile = candidates.profiles.find((p) => p.id === e.target.value); setReviewerUsername(candidates.accounts.find((a) => a.id === profile?.linkedUserId)?.username ?? ""); }}><option value="">Chọn hồ sơ đang hoạt động</option>{candidates.profiles.map((p) => <option key={p.id} value={p.id}>{p.fullName}{p.linkedUserId ? "" : " — cần liên kết tài khoản"}</option>)}</select></label>
+          <p className="record-meta">Nếu hồ sơ chưa liên kết, phân công sẽ ghi nhận liên kết với tài khoản bạn chọn. <a href="/researcher-profiles">Quản lý hồ sơ nhà khoa học</a></p>
+          <div className="form-grid two"><label className="field"><span>Hiệu lực từ (để trống: ngay lập tức)</span><input type="datetime-local" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} disabled={!canAssign} /></label><label className="field"><span>Hiệu lực đến (tùy chọn)</span><input type="datetime-local" value={effectiveUntil} onChange={(e) => setEffectiveUntil(e.target.value)} disabled={!canAssign} /></label></div>
           <div className="form-grid two">
             <label className="field">
               <span>Tài khoản người đánh giá</span>
-              <input
-                value={reviewerUsername}
-                onChange={(event) => setReviewerUsername(event.target.value)}
-                placeholder="Tên đăng nhập trong hệ thống"
-                disabled={!canAssign}
-              />
+              <select value={reviewerUsername} onChange={(event) => setReviewerUsername(event.target.value)} disabled={!canAssign} required>
+                <option value="">Chọn tài khoản đã kiểm tra xung đột</option>
+                {candidates.accounts.filter((a) => !candidates.profiles.find((p) => p.id === profileId)?.linkedUserId || candidates.profiles.find((p) => p.id === profileId)?.linkedUserId === a.id).map((account) => <option key={account.id} value={account.username}>{account.displayName} ({account.username})</option>)}
+              </select>
             </label>
             <label className="field">
               <span>Vai trò trong vòng đánh giá</span>
@@ -301,7 +319,7 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
             </label>
             <label className="field">
               <span>Hạn đánh giá (tùy chọn)</span>
-              <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={!canAssign} />
+              <input type="datetime-local" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={!canAssign} />
             </label>
           </div>
           <button className="button primary" type="submit" disabled={!canAssign || isAssigning}>

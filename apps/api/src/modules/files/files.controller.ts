@@ -54,6 +54,7 @@ export class FilesController {
     }
     return {
       file: await this.filesService.uploadFile(request.currentUser!, {
+        contextVersion: body.contextVersion,
         relatedEntityType: body.relatedEntityType,
         relatedEntityId: body.relatedEntityId,
         filePurpose: body.filePurpose,
@@ -81,15 +82,16 @@ export class FilesController {
   async updateFile(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body(updateFilePipe) body: UpdateFileDto) {
     return {
       file: await this.filesService.updateFile(request.currentUser!, id, {
+        contextVersion: body.contextVersion,
         description: body.description
       })
     };
   }
 
   @Delete(":id")
-  async deleteFile(@Req() request: RequestWithCurrentUser, @Param("id") id: string) {
+  async deleteFile(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body() body: { contextVersion?: unknown }) {
     return {
-      file: await this.filesService.deleteFile(request.currentUser!, id)
+      file: await this.filesService.deleteFile(request.currentUser!, id, body?.contextVersion)
     };
   }
 

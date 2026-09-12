@@ -6,6 +6,7 @@ import { isViewerAuthorizationV1, type BlockedActionV1, type PermissionActionV1,
 export type ProposalParticipationRole = "principal-investigator" | "secretary" | "member" | "none" | "unknown";
 
 export type ProposalMember = {
+  status?: string;
   id?: string;
   name: string;
   role: string;
@@ -129,6 +130,8 @@ export type ProposalSupplementRequest = {
 };
 
 export type ResearchProposal = {
+  versions?: Array<{ id: string; version: number; submittedAt: string; content: { title: string; objectives: string; summary: string; attachments: ProposalAttachment[] } }>;
+  availableDelegations?: Array<{ id: string }>;
   id: string;
   code: string;
   intakePeriodId: string;
@@ -249,19 +252,21 @@ export async function updateResearchProposalDraft(
 ) {
   return requestJson<{ proposal: ResearchProposal }>(`/research-proposals/${id}`, {
     method: "PATCH",
-    body: JSON.stringify({ ...input, ...(input.members !== undefined ? { contextVersion } : {}) })
+    body: JSON.stringify({ ...input, contextVersion })
   });
 }
 
 export async function uploadProposalAttachment(
   proposalId: string,
   input: {
+    contextVersion?: ViewerAuthorizationV1["contextVersion"];
     requirementCode: string;
     description: string;
     file: File;
   }
 ) {
   const formData = new FormData();
+  formData.set("contextVersion", JSON.stringify(input.contextVersion));
   formData.set("relatedEntityType", "research_proposal");
   formData.set("relatedEntityId", proposalId);
   formData.set("filePurpose", input.requirementCode);
@@ -283,7 +288,7 @@ export async function uploadProposalAttachment(
   return { attachment: body.file };
 }
 
-export async function updateProposalAttachmentMetadata(attachmentId: string, input: { description: string | null }) {
+export async function updateProposalAttachmentMetadata(attachmentId: string, input: { description: string | null; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
   const response = await fetch(`${getApiBaseUrl()}/files/${attachmentId}`, {
     method: "PATCH",
     credentials: "include",
@@ -299,9 +304,11 @@ export async function updateProposalAttachmentMetadata(attachmentId: string, inp
   return body;
 }
 
-export async function deleteProposalAttachment(attachmentId: string) {
+export async function deleteProposalAttachment(attachmentId: string, contextVersion?: ViewerAuthorizationV1["contextVersion"]) {
   const response = await fetch(`${getApiBaseUrl()}/files/${attachmentId}`, {
     method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contextVersion }),
     credentials: "include"
   });
 
@@ -322,21 +329,30 @@ export async function loadProposalReadiness(id: string) {
   return response.readiness;
 }
 
-export async function submitResearchProposal(id: string) {
+export async function submitResearchProposal(id: string, contextVersion?: ViewerAuthorizationV1["contextVersion"], delegationId?: string) {
   return requestJson<{ proposal: ResearchProposal }>(`/research-proposals/${id}/submit`, {
-    method: "POST"
+    method: "POST", body: JSON.stringify({ contextVersion, delegationId })
   });
 }
 
-export async function requestProposalSupplement(id: string, input: { reason: string; dueDate: string }) {
+export async function requestProposalSupplement(id: string, input: { reason: string; dueDate: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
   return requestJson<{ proposal: ResearchProposal }>(`/research-proposals/${id}/supplement-requests`, {
     method: "POST",
     body: JSON.stringify(input)
   });
 }
 
-export async function resubmitResearchProposal(id: string) {
+export async function resubmitResearchProposal(id: string, contextVersion?: ViewerAuthorizationV1["contextVersion"], delegationId?: string) {
   return requestJson<{ proposal: ResearchProposal }>(`/research-proposals/${id}/resubmit`, {
-    method: "POST"
+    method: "POST", body: JSON.stringify({ contextVersion, delegationId })
   });
+}
+
+export function completeProposalCheck(id: string, contextVersion: ViewerAuthorizationV1["contextVersion"]) {
+  return requestJson<{ proposal: ResearchProposal }>(`/research-proposals/${id}/checks/complete`, { method: "POST", body: JSON.stringify({ contextVersion }) });
+}
+
+export async function loadProposalCatalogs() {
+  const response = await requestJson<{ items: import("./admin-api").CatalogItem[] }>("/research-proposals/catalogs");
+  return response.items;
 }

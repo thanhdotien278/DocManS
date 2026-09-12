@@ -32,6 +32,7 @@ const ACTIONS: PermissionActionV1[] = [
   "proposal.review.consolidate",
   "proposal.review.submit",
   "proposal.supplement.request",
+  "proposal.completeness.check",
   "proposal.decision.approve",
   "proposal.decision.reject",
   "file.read",
@@ -106,9 +107,15 @@ function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): {
     if (input.actor.systemRole !== "SCIENTIFIC_MANAGEMENT_STAFF") return blocked("ACTION_NOT_GRANTED");
     return ["under_review", "ready_for_approval"].includes(input.proposal.status) ? null : blocked("WORKFLOW_STATE_DENIED");
   }
-  if (action === "proposal.supplement.request") {
+  if (action === "proposal.completeness.check") {
+    if (input.participation?.isParticipant && !input.participation.roles.includes("secretary")) return blocked("CONFLICT_DENIED");
     if (input.actor.systemRole !== "SCIENTIFIC_MANAGEMENT_STAFF") return blocked("ACTION_NOT_GRANTED");
-    return input.proposal.status === "submitted" ? null : blocked("WORKFLOW_STATE_DENIED");
+    return ["submitted", "resubmitted"].includes(input.proposal.status) ? null : blocked("WORKFLOW_STATE_DENIED");
+  }
+  if (action === "proposal.supplement.request") {
+    if (input.participation?.isParticipant && !input.participation.roles.includes("secretary")) return blocked("CONFLICT_DENIED");
+    if (input.actor.systemRole !== "SCIENTIFIC_MANAGEMENT_STAFF") return blocked("ACTION_NOT_GRANTED");
+    return ["submitted", "resubmitted"].includes(input.proposal.status) ? null : blocked("WORKFLOW_STATE_DENIED");
   }
   if (action === "proposal.review.submit") {
     if (input.participation?.isParticipant) return blocked("CONFLICT_DENIED");

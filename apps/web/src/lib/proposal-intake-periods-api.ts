@@ -8,6 +8,9 @@ export type RequiredPackageItem = {
 };
 
 export type ProposalIntakePeriod = {
+  contextVersion: string;
+  applicableOrganizationUnitIds: string[];
+  capabilities: { canEdit: boolean; canOpen: boolean; canClose: boolean; canCreateProposal: boolean };
   id: string;
   code: string;
   title: string;
@@ -22,6 +25,8 @@ export type ProposalIntakePeriod = {
 };
 
 export type IntakePeriodInput = {
+  contextVersion?: string;
+  applicableOrganizationUnitIds?: string[];
   code: string;
   title: string;
   description?: string;
@@ -69,14 +74,17 @@ export async function updateProposalIntakePeriod(id: string, input: Partial<Inta
   });
 }
 
-export async function openProposalIntakePeriod(id: string) {
+export async function openProposalIntakePeriod(id: string, contextVersion: string) {
   return requestJson<{ intakePeriod: ProposalIntakePeriod }>(`/proposal-intake-periods/${id}/open`, {
-    method: "POST"
+    method: "POST", body: JSON.stringify({ contextVersion })
   });
 }
 
-export async function closeProposalIntakePeriod(id: string) {
+export async function closeProposalIntakePeriod(id: string, contextVersion: string) {
   return requestJson<{ intakePeriod: ProposalIntakePeriod }>(`/proposal-intake-periods/${id}/close`, {
-    method: "POST"
+    method: "POST", body: JSON.stringify({ contextVersion })
   });
 }
+
+export type IntakeOptions = { canCreate: boolean; organizationUnits: Array<{ id: string; name: string; code: string }> };
+export function loadIntakeOptions() { return requestJson<IntakeOptions>("/proposal-intake-periods/options"); }

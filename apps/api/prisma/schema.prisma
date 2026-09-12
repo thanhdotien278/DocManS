@@ -7,6 +7,7 @@ datasource db {
 }
 
 model User {
+  researcherProfile ResearcherProfile? @relation("ResearcherProfileAccount")
   id                 String                  @id @default(uuid())
   username           String                  @unique
   usernameKey        String                  @unique @map("username_key")
@@ -167,6 +168,8 @@ model ResearcherProfile {
   id                         String        @id @default(uuid())
   managementOrganizationUnitId String      @map("management_organization_unit_id")
   managementOrganizationUnit OrganizationUnit @relation(fields: [managementOrganizationUnitId], references: [id])
+  linkedUserId               String?       @unique @map("linked_user_id")
+  linkedUser                 User?         @relation("ResearcherProfileAccount", fields: [linkedUserId], references: [id])
   externalAffiliation        String?       @map("external_affiliation")
   fullName                   String        @map("full_name")
   fullNameKey                String        @map("full_name_key")
@@ -257,6 +260,7 @@ model ProposalIntakePeriod {
   applicableOrganizationUnitId String?           @map("applicable_organization_unit_id")
   applicableOrganizationUnit   OrganizationUnit? @relation(fields: [applicableOrganizationUnitId], references: [id])
   requiredPackage              Json              @map("required_package")
+  applicableOrganizationUnitIds String[]          @default([]) @map("applicable_organization_unit_ids")
   createdAt                    DateTime          @default(now()) @map("created_at")
   updatedAt                    DateTime          @updatedAt @map("updated_at")
   proposals                    ResearchProposal[]
@@ -415,6 +419,7 @@ model ProposalSubmissionEvent {
   toStatus    String           @map("to_status")
   submittedAt DateTime         @default(now()) @map("submitted_at")
   note        String?
+  snapshot    Json?
 
   @@index([proposalId])
   @@index([actorId])
