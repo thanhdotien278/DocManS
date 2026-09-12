@@ -67,6 +67,66 @@ const users = [
     unit: "Ban Quản lý KHQS"
   },
   {
+    id: "user-researcher1",
+    username: "researcher1",
+    passwordHash:
+      "scrypt:user-researcher1:92f9d00035d2de8b73b915edd703fdbad5e80e7ec85a8d340fe8c0d7f422fa19c0f2355193a706ec3efcf89d4308318a4c9f330d6a505d7e61314457ea537901",
+    displayName: "Nhà nghiên cứu nội bộ 1",
+    status: "active",
+    systemRole: "RESEARCHER_INTERNAL_USER",
+    unit: "Khoa Toán - Tin học"
+  },
+  {
+    id: "user-researcher2",
+    username: "researcher2",
+    passwordHash:
+      "scrypt:user-researcher2:8e740d0ffeb3de7b31c9c947c0729cd6599bf5b63af938eb9ab67a1d90dd87c9471bd1c97249e08f1e1cf64af95ccb49741554828017ade8884cce3492cc6650",
+    displayName: "Nhà nghiên cứu nội bộ 2",
+    status: "active",
+    systemRole: "RESEARCHER_INTERNAL_USER",
+    unit: "Khoa Toán - Tin học"
+  },
+  {
+    id: "user-researcher3",
+    username: "researcher3",
+    passwordHash:
+      "scrypt:user-researcher3:302088f55364c04f9a67f05137beb70f53c2a62011912b8e46f10e0e91e5671fdf0a63b46909f88414006dc2b49eb83aba48a126fc858c95323b471ed8246204",
+    displayName: "Nhà nghiên cứu nội bộ 3",
+    status: "active",
+    systemRole: "RESEARCHER_INTERNAL_USER",
+    unit: "Khoa Toán - Tin học"
+  },
+  {
+    id: "user-external1",
+    username: "external1",
+    passwordHash:
+      "scrypt:user-external1:cd7a9b317c30cc69b15b34b309e5751ecd3e3b89aa133de3d7004d0b7434b70f6b4b0c399a10cd7b2b3b0c4c68162dc54a7e05b2318eee70a5806c5885ebc2eb",
+    displayName: "Nhà nghiên cứu bên ngoài 1",
+    status: "active",
+    systemRole: "EXTERNAL_RESEARCHER_USER",
+    unit: "Đơn vị ngoài"
+  },
+  {
+    id: "user-external2",
+    username: "external2",
+    passwordHash:
+      "scrypt:user-external2:512345665da515aa85dfeacdf5ade9d6d37b864b16f981f36ea248033c37185b91787d44fc1e53c8ec28b1512c13f334306060040ee0cd943759c7f85cf84cbc",
+    displayName: "Nhà nghiên cứu bên ngoài 2",
+    status: "active",
+    systemRole: "EXTERNAL_RESEARCHER_USER",
+    unit: "Đơn vị ngoài"
+  },
+  {
+    id: "user-external3",
+    username: "external3",
+    passwordHash:
+      "scrypt:user-external3:b88095f2007342656ee147cb06475f58254a67a78ae71bb02294e4fba4f866106ee03fd46a33d0eefd64bc582428299ae9a478ed634ebc9e2e01a9efbe62a3d3",
+    displayName: "Nhà nghiên cứu bên ngoài 3",
+    status: "active",
+    systemRole: "EXTERNAL_RESEARCHER_USER",
+    unit: "Đơn vị ngoài"
+  },
+  {
     id: "user-staff-hdtien1",
     username: "hdtien1",
     passwordHash:
