@@ -1,5 +1,6 @@
 "use client";
 
+import type { ViewerAuthorizationV1 } from "@rtms/permissions";
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Save, Send } from "lucide-react";
 import { SectionCard } from "@/components/ui/section-card";
@@ -23,7 +24,7 @@ function formatDate(value: string) {
  * never present a criterion the server would reject. A submitted review renders read-only rather
  * than disappearing, so the reviewer can still see what they sent.
  */
-export function ProposalReviewForm({ proposalId, onReviewSubmitted, canSubmitReview, blockedReason }: { proposalId: string; onReviewSubmitted: () => void; canSubmitReview: boolean; blockedReason: string }) {
+export function ProposalReviewForm({ proposalId, onReviewSubmitted, canSubmitReview, blockedReason, contextVersion }: { proposalId: string; onReviewSubmitted: () => void; canSubmitReview: boolean; blockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
   const [review, setReview] = useState<MyProposalReview | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
   const [loadError, setLoadError] = useState("");
@@ -117,7 +118,8 @@ export function ProposalReviewForm({ proposalId, onReviewSubmitted, canSubmitRev
     setMessage("");
     setBusyMode("draft");
     try {
-      applyReview(await saveMyProposalReview(proposalId, { scoreData: collectScores(), comment, recommendation }));
+      applyReview(await saveMyProposalReview(proposalId, { scoreData: collectScores(), comment, recommendation, contextVersion }));
+      onReviewSubmitted();
       setMessage("Đã lưu nháp phiếu đánh giá.");
     } catch (error) {
       handleError(error);
@@ -138,7 +140,7 @@ export function ProposalReviewForm({ proposalId, onReviewSubmitted, canSubmitRev
 
     setBusyMode("submit");
     try {
-      applyReview(await submitMyProposalReview(proposalId, { scoreData: collectScores(), comment, recommendation }));
+      applyReview(await submitMyProposalReview(proposalId, { scoreData: collectScores(), comment, recommendation, contextVersion }));
       setMessage("Đã gửi phiếu đánh giá.");
       onReviewSubmitted();
     } catch (error) {

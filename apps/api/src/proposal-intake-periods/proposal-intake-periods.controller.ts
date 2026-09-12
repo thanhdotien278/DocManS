@@ -16,6 +16,9 @@ import { ProposalIntakePeriodsService } from "./proposal-intake-periods.service.
 export class ProposalIntakePeriodsController {
   constructor(private readonly intakePeriodsService: ProposalIntakePeriodsService) {}
 
+  @Get("options")
+  async options(@Req() request: RequestWithCurrentUser) { return this.intakePeriodsService.options(request.currentUser!); }
+
   @Get()
   async listPeriods(@Req() request: RequestWithCurrentUser, @Query(listProposalIntakePeriodsQueryPipe) query: ListProposalIntakePeriodsQueryDto) {
     return { intakePeriods: await this.intakePeriodsService.listPeriods(request.currentUser!, query) };
@@ -36,12 +39,12 @@ export class ProposalIntakePeriodsController {
   }
 
   @Post(":id/open")
-  async openPeriod(@Req() request: RequestWithCurrentUser, @Param("id") id: string) {
-    return { intakePeriod: await this.intakePeriodsService.openPeriod(request.currentUser!, id) };
+  async openPeriod(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body() body: Record<string, unknown>) {
+    return { intakePeriod: await this.intakePeriodsService.openPeriod(request.currentUser!, id, body ?? {}) };
   }
 
   @Post(":id/close")
-  async closePeriod(@Req() request: RequestWithCurrentUser, @Param("id") id: string) {
-    return { intakePeriod: await this.intakePeriodsService.closePeriod(request.currentUser!, id) };
+  async closePeriod(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body() body: Record<string, unknown>) {
+    return { intakePeriod: await this.intakePeriodsService.closePeriod(request.currentUser!, id, body ?? {}) };
   }
 }

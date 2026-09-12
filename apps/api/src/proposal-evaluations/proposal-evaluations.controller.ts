@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Put, Query, Req, UseGuards } from "@nestjs/common";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
 import { PROPOSAL_DECISIONS, ProposalDecisionsService } from "./proposal-decisions.service.js";
@@ -41,6 +41,11 @@ export class ProposalEvaluationsController {
     return { assignments: await this.assignments.listMyAssignments(request.currentUser!) };
   }
 
+  @Get(":id/assignable-reviewers")
+  async candidates(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Query("q") query?: string) {
+    return this.assignments.candidates(request.currentUser!, id, query);
+  }
+
   @Get(":id/review-assignments")
   async listAssignments(@Req() request: RequestWithCurrentUser, @Param("id") id: string) {
     return { assignments: await this.assignments.listAssignments(request.currentUser!, id) };
@@ -62,7 +67,7 @@ export class ProposalEvaluationsController {
     @Param("assignmentId") assignmentId: string,
     @Body(revokeReviewAssignmentPipe) body: RevokeReviewAssignmentDto
   ) {
-    return { assignment: await this.assignments.revokeAssignment(request.currentUser!, id, assignmentId, { reason: body.note }) };
+    return { assignment: await this.assignments.revokeAssignment(request.currentUser!, id, assignmentId, { reason: body.note, contextVersion: body.contextVersion }) };
   }
 
   @Get(":id/review-package")

@@ -32,6 +32,7 @@ export const PERMISSION_ACTION_IDS_V1 = [
   "proposal.review.consolidate",
   "proposal.review.submit",
   "proposal.supplement.request",
+  "proposal.completeness.check",
   "proposal.decision.approve",
   "proposal.decision.reject",
   "file.read",

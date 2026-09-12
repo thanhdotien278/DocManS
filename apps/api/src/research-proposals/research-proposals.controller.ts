@@ -28,6 +28,11 @@ export class ResearchProposalsController {
     return { proposal: await this.proposalsService.createDraft(request.currentUser!, body) };
   }
 
+  @Get("catalogs")
+  async catalogs() {
+    return { items: await this.proposalsService.listCatalogs() };
+  }
+
   @Get(":id")
   async getProposal(@Req() request: RequestWithCurrentUser, @Param("id") id: string) {
     return { proposal: await this.proposalsService.getProposal(request.currentUser!, id) };
@@ -61,9 +66,14 @@ export class ResearchProposalsController {
     return { proposal: await this.proposalsService.requestSupplement(request.currentUser!, id, body) };
   }
 
+  @Post(":id/checks/complete")
+  async completeCheck(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body() body: Record<string, unknown>) {
+    return { proposal: await this.proposalsService.completeCheck(request.currentUser!, id, body ?? {}) };
+  }
+
   @Post(":id/resubmit")
-  async resubmitProposal(@Req() request: RequestWithCurrentUser, @Param("id") id: string) {
-    return { proposal: await this.proposalsService.resubmitProposal(request.currentUser!, id) };
+  async resubmitProposal(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body(delegatedMutationPipe) body: DelegatedMutationDto) {
+    return { proposal: await this.proposalsService.resubmitProposal(request.currentUser!, id, body) };
   }
 
   @Get(":id/history")

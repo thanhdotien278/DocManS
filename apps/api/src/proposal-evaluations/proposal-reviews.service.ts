@@ -1,3 +1,4 @@
+import { runProposalMutation } from "../proposals-shared/proposal-mutation.js";
 import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
@@ -39,6 +40,18 @@ export class ProposalReviewsService {
     private readonly participation: ProposalParticipationService
   ) {}
 
+  private transactional = false;
+
+  private mutate<T>(actor: SafeUserContext, id: string, context: unknown, work: (service: ProposalReviewsService, actor: SafeUserContext) => Promise<T>): Promise<T> {
+    return runProposalMutation(this.prisma, actor, id, context, async (tx, currentActor) => {
+      const service = new ProposalReviewsService(tx, new AuditLogService(tx), new ProposalReviewAccessService(tx), new ProposalParticipationService(tx));
+      service.transactional = true;
+      const result = await work(service, currentActor);
+      await tx.researchProposal.update({ where: { id }, data: { authorizationContextUpdatedAt: new Date() } });
+      return result;
+    });
+  }
+
   /** The rubric the reviewer form renders. Fixed in code by design — ST-3.3 rules out a builder. */
   getScoreCriteria() {
     return {
@@ -65,7 +78,8 @@ export class ProposalReviewsService {
    * a reviewer can stop halfway. Anything that is present is still range-checked, so a draft can
    * never hold a score the rubric would reject.
    */
-  async saveMyReview(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>) {
+  async saveMyReview(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>): Promise<any> {
+    if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (s, a) => s.saveMyReview(a, proposalId, input));
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
     const assignmentId = await this.assertAssigned(actor, proposalId);
     assertProposalStatus(proposal, REVIEW_SUBMITTABLE_STATUSES, "Hồ sơ không ở trạng thái cho phép nhập kết quả đánh giá.");
@@ -106,7 +120,8 @@ export class ProposalReviewsService {
    * AC-ST-3.3-01 / AC-ST-3.3-03. Submitting completes the assignment and writes the audit entry;
    * a draft save writes none, matching "audit logging must happen on submit, not just on save".
    */
-  async submitMyReview(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>) {
+  async submitMyReview(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>): Promise<any> {
+    if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (s, a) => s.submitMyReview(a, proposalId, input));
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
     const assignmentId = await this.assertAssigned(actor, proposalId);
     assertProposalStatus(proposal, REVIEW_SUBMITTABLE_STATUSES, "Hồ sơ không ở trạng thái cho phép gửi kết quả đánh giá.");
@@ -243,6 +258,8 @@ export class ProposalReviewsService {
       throw new ForbiddenException({ message: "Bạn không được phân công đánh giá hồ sơ này." });
     }
 
+    const proposal = await findEvaluationProposal(this.prisma, proposalId);
+    if (!actor.organizationScopes.some((scope) => scope.id === proposal.hostOrganizationUnitId)) throw new ForbiddenException();
     return access.assignmentId;
   }
 

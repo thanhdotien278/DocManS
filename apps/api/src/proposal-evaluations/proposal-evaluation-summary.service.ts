@@ -54,6 +54,7 @@ export class ProposalEvaluationSummaryService {
   async getReviewProgress(actor: SafeUserContext, proposalId: string) {
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
     assertCanReadEvaluation(actor, proposal);
+    if ((await this.participation.evaluateConflict(actor.id, proposalId)).conflicted) throw new BadRequestException({ message: "Không được xem dữ liệu phản biện của hồ sơ mình tham gia." });
 
     const assignmentRecords = await this.assignments.findAssignments(proposalId);
     const reviewRecords = await this.assignments.findReviews(proposalId);

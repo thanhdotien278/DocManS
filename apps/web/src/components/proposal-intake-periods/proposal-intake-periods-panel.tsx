@@ -7,6 +7,8 @@ import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   closeProposalIntakePeriod,
+  loadIntakeOptions,
+  type IntakeOptions,
   createProposalIntakePeriod,
   loadProposalIntakePeriods,
   openProposalIntakePeriod,
@@ -29,6 +31,7 @@ const emptyForm = {
   startsAt: "",
   endsAt: "",
   applicableOrganizationUnitId: "",
+  applicableOrganizationUnitIds: [] as string[],
   requiredPackage: defaultPackage
 };
 
@@ -37,10 +40,13 @@ function formatDate(value: string) {
 }
 
 function toDateInput(value: string) {
-  return value ? new Date(value).toISOString().slice(0, 10) : "";
+  if (!value) return "";
+  const date = new Date(value);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
 
 export function ProposalIntakePeriodsPanel() {
+  const [options, setOptions] = useState<IntakeOptions>({ canCreate: false, organizationUnits: [] });
   const [state, setState] = useState<LoadState>("loading");
   const [periods, setPeriods] = useState<ProposalIntakePeriod[]>([]);
   const [keyword, setKeyword] = useState("");
@@ -54,7 +60,8 @@ export function ProposalIntakePeriodsPanel() {
   async function refresh() {
     setState("loading");
     try {
-      setPeriods(await loadProposalIntakePeriods());
+      const [periods, available] = await Promise.all([loadProposalIntakePeriods(), loadIntakeOptions()]);
+      setPeriods(periods); setOptions(available);
       setState("ready");
     } catch {
       setState("error");
@@ -101,6 +108,7 @@ export function ProposalIntakePeriodsPanel() {
       startsAt: toDateInput(period.startsAt),
       endsAt: toDateInput(period.endsAt),
       applicableOrganizationUnitId: period.applicableOrganizationUnitId,
+      applicableOrganizationUnitIds: period.applicableOrganizationUnitIds,
       requiredPackage: period.requiredPackage.length ? period.requiredPackage : defaultPackage
     });
     setMessage("");
@@ -126,10 +134,10 @@ export function ProposalIntakePeriodsPanel() {
     setIsSubmitting(true);
     try {
       if (editingId) {
-        await updateProposalIntakePeriod(editingId, form);
+        await updateProposalIntakePeriod(editingId, { ...form, applicableOrganizationUnitId: undefined, startsAt: new Date(form.startsAt).toISOString(), endsAt: new Date(form.endsAt).toISOString(), contextVersion: periods.find((p) => p.id === editingId)?.contextVersion });
         setMessage("Đã cập nhật đợt tiếp nhận.");
       } else {
-        await createProposalIntakePeriod(form);
+        await createProposalIntakePeriod({ ...form, applicableOrganizationUnitId: undefined, startsAt: new Date(form.startsAt).toISOString(), endsAt: new Date(form.endsAt).toISOString() });
         setMessage("Đã tạo đợt tiếp nhận.");
       }
       resetForm();
@@ -142,15 +150,17 @@ export function ProposalIntakePeriodsPanel() {
   }
 
   async function handleStatusAction(period: ProposalIntakePeriod, action: "open" | "close") {
+    if (isSubmitting || !window.confirm(action === "close" ? "Đóng đợt tiếp nhận? Các hồ sơ đã nộp vẫn tiếp tục được xử lý." : "Mở đợt tiếp nhận?")) return;
+    setIsSubmitting(true);
     setMessage("");
     setFormError("");
     try {
-      const result = action === "open" ? await openProposalIntakePeriod(period.id) : await closeProposalIntakePeriod(period.id);
+      const result = action === "open" ? await openProposalIntakePeriod(period.id, period.contextVersion) : await closeProposalIntakePeriod(period.id, period.contextVersion);
       setPeriods((current) => current.map((item) => (item.id === period.id ? result.intakePeriod : item)));
       setMessage(action === "open" ? "Đã mở đợt tiếp nhận." : "Đã đóng đợt tiếp nhận.");
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Không thể cập nhật trạng thái.");
-    }
+    } finally { setIsSubmitting(false); }
   }
 
   return (
@@ -205,24 +215,24 @@ export function ProposalIntakePeriodsPanel() {
                       <td>
                         {formatDate(period.startsAt)} - {formatDate(period.endsAt)}
                       </td>
-                      <td>{period.applicableOrganizationUnitId || "Toàn hệ thống"}</td>
+                      <td>{period.applicableOrganizationUnitIds?.map((id) => options.organizationUnits.find((u) => u.id === id)?.name ?? id).join(", ") || "Toàn Học viện"}</td>
                       <td>{period.requiredPackage.map((item) => item.label).join(", ")}</td>
                       <td>
                         <StatusBadge status={period.status} />
                       </td>
                       <td>
                         <div className="button-row compact-actions">
-                          <button className="button" type="button" onClick={() => startEdit(period)}>
+                          <button className="button" type="button" disabled={isSubmitting || !period.capabilities?.canEdit} onClick={() => startEdit(period)}>
                             <Edit3 size={16} aria-hidden="true" />
                             Sửa
                           </button>
-                          {period.status === "open" ? (
-                            <button className="button danger" type="button" onClick={() => void handleStatusAction(period, "close")}>
+                          {period.capabilities?.canClose ? (
+                            <button className="button danger" type="button" disabled={isSubmitting || !period.capabilities?.canClose} onClick={() => void handleStatusAction(period, "close")}>
                               <Lock size={16} aria-hidden="true" />
                               Đóng
                             </button>
                           ) : (
-                            <button className="button" type="button" onClick={() => void handleStatusAction(period, "open")}>
+                            <button className="button" type="button" disabled={isSubmitting || !period.capabilities?.canOpen} onClick={() => void handleStatusAction(period, "open")}>
                               <Unlock size={16} aria-hidden="true" />
                               Mở
                             </button>
@@ -249,17 +259,18 @@ export function ProposalIntakePeriodsPanel() {
                   </span>
                   <span className="record-meta">{period.requiredPackage.map((item) => item.label).join(", ")}</span>
                   <div className="button-row">
-                    <button className="button" type="button" onClick={() => startEdit(period)}>
+                    <button className="button" type="button" disabled={isSubmitting || !period.capabilities?.canEdit} onClick={() => startEdit(period)}>
                       <Edit3 size={16} aria-hidden="true" />
                       Sửa
                     </button>
                     <button
-                      className={period.status === "open" ? "button danger" : "button"}
+                      className={period.capabilities?.canClose ? "button danger" : "button"}
                       type="button"
-                      onClick={() => void handleStatusAction(period, period.status === "open" ? "close" : "open")}
+                      disabled={isSubmitting || !(period.capabilities?.canClose || period.capabilities?.canOpen)}
+                      onClick={() => void handleStatusAction(period, period.capabilities?.canClose ? "close" : "open")}
                     >
-                      {period.status === "open" ? <Lock size={16} aria-hidden="true" /> : <Unlock size={16} aria-hidden="true" />}
-                      {period.status === "open" ? "Đóng" : "Mở"}
+                      {period.capabilities?.canClose ? <Lock size={16} aria-hidden="true" /> : <Unlock size={16} aria-hidden="true" />}
+                      {period.capabilities?.canClose ? "Đóng" : "Mở"}
                     </button>
                   </div>
                 </article>
@@ -274,6 +285,7 @@ export function ProposalIntakePeriodsPanel() {
         subtitle="Thiết lập thời gian, phạm vi áp dụng và danh sách tệp bắt buộc"
       >
         <form className="admin-form" onSubmit={(event) => void handleSubmit(event)}>
+          <fieldset disabled={!options.canCreate || isSubmitting} style={{ border: 0, padding: 0, minWidth: 0 }}>
           <label className="field">
             <span>Mã đợt</span>
             <input value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} placeholder="INTAKE-2026" />
@@ -289,28 +301,30 @@ export function ProposalIntakePeriodsPanel() {
           <div className="form-grid two">
             <label className="field">
               <span>Ngày bắt đầu</span>
-              <input type="date" value={form.startsAt} onChange={(event) => setForm({ ...form, startsAt: event.target.value })} />
+              <input type="datetime-local" value={form.startsAt} onChange={(event) => setForm({ ...form, startsAt: event.target.value })} />
             </label>
             <label className="field">
               <span>Ngày kết thúc</span>
-              <input type="date" value={form.endsAt} onChange={(event) => setForm({ ...form, endsAt: event.target.value })} />
+              <input type="datetime-local" value={form.endsAt} onChange={(event) => setForm({ ...form, endsAt: event.target.value })} />
             </label>
           </div>
           <label className="field">
             <span>Phạm vi đơn vị áp dụng</span>
-            <input
-              value={form.applicableOrganizationUnitId}
-              onChange={(event) => setForm({ ...form, applicableOrganizationUnitId: event.target.value })}
-              placeholder="Để trống nếu áp dụng toàn hệ thống"
-            />
+            <select multiple value={form.applicableOrganizationUnitIds} onChange={(event) => setForm({ ...form, applicableOrganizationUnitIds: Array.from(event.target.selectedOptions, (option) => option.value) })}>
+              {options.organizationUnits.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
+            </select>
+            <span>Không chọn đơn vị: Toàn Học viện.</span>
+            <button className="button" type="button" onClick={() => setForm({ ...form, applicableOrganizationUnitIds: [] })}>Toàn Học viện</button>
           </label>
           <div className="form-section-inline">
             <div className="section-mini-heading">
               <CalendarClock size={16} aria-hidden="true" />
               Tệp bắt buộc
             </div>
+            <button className="button" type="button" onClick={() => setForm({ ...form, requiredPackage: [...form.requiredPackage, { code: "", label: "", allowedMimeTypes: ["application/pdf"], maxSizeMb: 5 }] })}>Thêm tệp bắt buộc</button>
             {form.requiredPackage.map((item, index) => (
               <div className="package-row" key={index}>
+                <button className="button" type="button" disabled={form.requiredPackage.length === 1} onClick={() => setForm({ ...form, requiredPackage: form.requiredPackage.filter((_, i) => i !== index) })}>Bỏ tệp {index + 1}</button>
                 <label className="field">
                   <span>Mã tệp</span>
                   <input value={item.code} onChange={(event) => updatePackage(index, "code", event.target.value)} />
@@ -349,6 +363,7 @@ export function ProposalIntakePeriodsPanel() {
               </button>
             ) : null}
           </div>
+          </fieldset>
         </form>
       </SectionCard>
     </div>

@@ -1,3 +1,5 @@
+import { runProposalMutation } from "../../proposals-shared/proposal-mutation.js";
+import { ResearchProposalsService } from "../../research-proposals/research-proposals.service.js";
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
@@ -6,7 +8,7 @@ import { AuditLogService } from "../../auth/audit-log.service.js";
 import type { SafeUserContext } from "../../auth/auth.types.js";
 import type { ObjectStorage } from "../../infrastructure/minio/minio-object-storage.service.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { assertCanReadProposal, assertHasOrganizationScope } from "../../proposals-shared/proposal-access.js";
+import { assertHasOrganizationScope } from "../../proposals-shared/proposal-access.js";
 import { ProposalReviewAccessService } from "../../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../../research-proposals/proposal-participation.service.js";
 import { RESEARCH_PROPOSAL_ENTITY_TYPE } from "./files.dto.js";
@@ -55,6 +57,7 @@ export type FileModuleConfig = {
 };
 
 export type FileUploadInput = {
+  contextVersion?: unknown;
   relatedEntityType: string;
   relatedEntityId: string;
   filePurpose: string;
@@ -90,7 +93,25 @@ export class FilesService {
     private readonly config: FileModuleConfig = defaultFileConfig()
   ) {}
 
-  async uploadFile(actor: SafeUserContext, input: FileUploadInput) {
+  private transactional = false;
+  private uploadedObjectKey?: string;
+
+  private async mutate<T>(actor: SafeUserContext, proposalId: string, expected: unknown, work: (service: FilesService, actor: SafeUserContext) => Promise<T>): Promise<T> {
+    let uploadedKey: string | undefined;
+    try {
+      return await runProposalMutation(this.prisma, actor, proposalId, expected, async (tx, currentActor) => {
+        const service = new FilesService(tx, this.objectStorage, new AuditLogService(tx), new ProposalParticipationService(tx), new ProposalReviewAccessService(tx), this.config);
+        service.transactional = true;
+        try { return await work(service, currentActor); } finally { uploadedKey = service.uploadedObjectKey; }
+      });
+    } catch (error) {
+      if (uploadedKey) await this.objectStorage.deleteObject?.(uploadedKey);
+      throw error;
+    }
+  }
+
+  async uploadFile(actor: SafeUserContext, input: FileUploadInput): Promise<any> {
+    if (!this.transactional) return this.mutate(actor, input.relatedEntityId, input.contextVersion, (s, a) => s.uploadFile(a, input));
     this.assertSupportedEntity(input.relatedEntityType);
     const originalFileName = this.readFileName(input.originalFileName ?? input.fileName);
     const description = this.readDescription(input.description);
@@ -106,6 +127,7 @@ export class FilesService {
       sizeBytes: input.sizeBytes
     });
 
+    this.uploadedObjectKey = objectKey;
     let record: FileRecord;
     try {
       record = (await this.prisma.$transaction(async (tx) => {
@@ -154,23 +176,8 @@ export class FilesService {
 
   async listFiles(actor: SafeUserContext, input: { relatedEntityType: string; relatedEntityId: string }) {
     this.assertSupportedEntity(input.relatedEntityType);
-    await this.assertCanRead(actor, input.relatedEntityType, input.relatedEntityId);
-    const canMutate = await this.canMutateEntity(actor, input.relatedEntityType, input.relatedEntityId);
-    const records = (await this.prisma.fileRecord.findMany({
-      where: {
-        relatedEntityType: input.relatedEntityType,
-        relatedEntityId: input.relatedEntityId,
-        status: "active",
-        deletedAt: null
-      },
-      orderBy: { createdAt: "asc" },
-      include: {
-        uploadedBy: {
-          select: { displayName: true }
-        }
-      }
-    })) as FileRecord[];
-    return records.map((record) => this.toFileResponse(record, { canMutate }));
+    const proposal = await new ResearchProposalsService(this.prisma, this.auditLog, this.participation, this.reviewAccess).getProposal(actor, input.relatedEntityId);
+    return proposal.attachments;
   }
 
   async downloadFile(actor: SafeUserContext, fileId: string) {
@@ -200,9 +207,19 @@ export class FilesService {
     };
   }
 
-  async updateFile(actor: SafeUserContext, fileId: string, input: { description: string | null }) {
+  private async assertUnsubmittedFile(record: FileRecord) {
+    const events = await this.prisma.proposalSubmissionEvent.findMany({ where: { proposalId: record.relatedEntityId }, select: { snapshot: true } });
+    if (events.some((event) => {
+      const files = (event.snapshot as { attachments?: Array<{ id: string }> } | null)?.attachments;
+      return files?.some((file) => file.id === record.id);
+    })) throw new BadRequestException({ message: "Tệp thuộc phiên bản đã nộp được giữ nguyên. Hãy tải lên phiên bản mới." });
+  }
+
+  async updateFile(actor: SafeUserContext, fileId: string, input: { description: string | null; contextVersion?: unknown }): Promise<any> {
+    if (!this.transactional) { const file = await this.findActiveFile(fileId); return this.mutate(actor, file.relatedEntityId, input.contextVersion, (s, a) => s.updateFile(a, fileId, input)); }
     const record = await this.findActiveFile(fileId);
     await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId);
+    await this.assertUnsubmittedFile(record);
     const updated = (await this.prisma.fileRecord.update({
       where: { id: fileId },
       data: {
@@ -228,9 +245,11 @@ export class FilesService {
     return this.toFileResponse(updated, { canMutate: true });
   }
 
-  async deleteFile(actor: SafeUserContext, fileId: string) {
+  async deleteFile(actor: SafeUserContext, fileId: string, contextVersion?: unknown): Promise<any> {
+    if (!this.transactional) { const file = await this.findActiveFile(fileId); return this.mutate(actor, file.relatedEntityId, contextVersion, (s, a) => s.deleteFile(a, fileId, contextVersion)); }
     const record = await this.findActiveFile(fileId);
     await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId);
+    await this.assertUnsubmittedFile(record);
     const deleted = (await this.prisma.fileRecord.update({
       where: { id: fileId },
       data: {
@@ -322,15 +341,8 @@ export class FilesService {
   }
 
   private async assertCanRead(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {
-    const proposal = await this.findRelatedProposal(relatedEntityType, relatedEntityId);
-    // File reads must resolve participation and reviewer assignment the same way the proposal read
-    // does (ST-3.0, ST-3.2), otherwise a linked participant or an assigned reviewer sees the
-    // attachment list on the proposal but every download is refused.
-    const [participation, reviewAccess] = await Promise.all([
-      this.participation.resolveForProposal(actor?.id, proposal),
-      this.reviewAccess.resolveForProposal(actor?.id, proposal.id)
-    ]);
-    assertCanReadProposal(actor, proposal, participation, reviewAccess);
+    this.assertSupportedEntity(relatedEntityType);
+    await new ResearchProposalsService(this.prisma, this.auditLog, this.participation, this.reviewAccess).getProposal(actor, relatedEntityId);
   }
 
   private async canMutateEntity(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {

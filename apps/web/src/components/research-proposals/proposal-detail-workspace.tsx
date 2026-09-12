@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import type { CatalogItem } from "@/lib/admin-api";
+import { loadProposalCatalogs } from "@/lib/research-proposals-api";
+import { ProposalMembersEditor } from "@/components/research-proposals/proposal-members-editor";
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Download, FileText, Pencil, Save, Send, Trash2, UploadCloud, X } from "lucide-react";
 import { useSession } from "@/components/auth/session-provider";
@@ -16,6 +19,7 @@ import {
   deleteProposalAttachment,
   blockedProposalAction,
   canPerformProposalAction,
+  completeProposalCheck,
   getProposalCapabilityState,
   loadProposalReadiness,
   loadResearchProposal,
@@ -34,8 +38,6 @@ import {
 } from "@/lib/research-proposals-api";
 
 type LoadState = "loading" | "ready" | "error";
-const ST23A_ALLOWED_FILE_TYPES = ".doc, .docx, .pdf, .xls, .xlsx";
-const ST23A_FILE_ACCEPT = ".doc,.docx,.pdf,.xls,.xlsx";
 const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   "proposal-form": "Thuyết minh đề tài",
   proposalForm: "Thuyết minh đề tài",
@@ -80,13 +82,14 @@ function toDraftInput(proposal: ResearchProposal): ProposalDraftInput {
     summary: proposal.summary,
     budgetMetadata: proposal.budgetMetadata,
     members: proposal.members?.length
-      ? proposal.members.map((member) => ({ ...member, username: "" }))
+      ? proposal.members.filter((member) => !member.status || member.status === "ACTIVE").map((member) => ({ ...member, username: "" }))
       : [{ name: "", role: "Chủ nhiệm", organization: "", username: "" }]
   };
 }
 
 export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) {
   const { account } = useSession();
+  const [catalogs, setCatalogs] = useState<CatalogItem[]>([]);
   const [state, setState] = useState<LoadState>("loading");
   const [proposal, setProposal] = useState<ResearchProposal | null>(null);
   const [readiness, setReadiness] = useState<ProposalReadiness | null>(null);
@@ -140,11 +143,13 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   }
 
   useEffect(() => {
+    void loadProposalCatalogs().then(setCatalogs).catch(() => setMessage("Không tải được danh mục. Vui lòng tải lại."));
     void refresh();
   }, [proposalId]);
 
   const capabilityState = proposal ? getProposalCapabilityState(proposal) : { capability: null, reloadRequired: true, reason: "Đang tải quyền thao tác." };
   const canEdit = canPerformProposalAction(capabilityState, "proposal.draft.update");
+  const unsaved = Boolean(form && proposal && JSON.stringify(form) !== JSON.stringify(toDraftInput(proposal)));
   const canSubmit = canPerformProposalAction(capabilityState, "proposal.submit");
   const canRequestSupplement = canPerformProposalAction(capabilityState, "proposal.supplement.request");
   const canUpload = canPerformProposalAction(capabilityState, "file.upload");
@@ -165,28 +170,6 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   );
   const budgetWords = numberToVietnameseWords(form?.budgetMetadata?.amount);
 
-  function updateMember(field: "name" | "role" | "organization" | "username", value: string) {
-    setForm((current) =>
-      current
-        ? {
-            ...current,
-            members: [
-              {
-                name: "",
-                role: "Chủ nhiệm",
-                organization: "",
-                ...(current.members?.[0] ?? {}),
-                [field]: value,
-                // Editing the account field re-resolves the link. The server-echoed userId has to
-                // go, or the API would keep the old account and silently discard the new username —
-                // and clearing the field could never unlink.
-                ...(field === "username" ? { userId: "" } : {})
-              }
-            ]
-          }
-        : current
-    );
-  }
 
   function getSubmissionActorName(event: NonNullable<ResearchProposal["history"]>[number]) {
     if (event.actorDisplayName) {
@@ -266,6 +249,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
     setIsUploading(true);
     try {
       await uploadProposalAttachment(proposal.id, {
+        contextVersion: proposal.viewerAuthorization?.contextVersion,
         requirementCode,
         description: uploadDescriptions[requirementCode] ?? "",
         file: uploadFile
@@ -296,6 +280,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
     setUpdatingAttachmentId(attachmentId);
     try {
       await updateProposalAttachmentMetadata(attachmentId, {
+        contextVersion: proposal?.viewerAuthorization?.contextVersion,
         description: editDescription
       });
       setEditingAttachmentId("");
@@ -319,7 +304,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
 
     setDeletingAttachmentId(attachmentId);
     try {
-      await deleteProposalAttachment(attachmentId);
+      await deleteProposalAttachment(attachmentId, proposal?.viewerAuthorization?.contextVersion);
       setMessage("Đã xóa tệp khỏi danh sách hồ sơ.");
       await refresh();
     } catch (error) {
@@ -343,7 +328,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
 
     setIsSubmitting(true);
     try {
-      const result = await submitResearchProposal(proposal.id);
+      const result = await submitResearchProposal(proposal.id, proposal.viewerAuthorization?.contextVersion, proposal.availableDelegations?.[0]?.id);
       setProposal(result.proposal);
       setForm(toDraftInput(result.proposal));
       setReadiness(await loadProposalReadiness(proposal.id));
@@ -385,7 +370,8 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
     try {
       const result = await requestProposalSupplement(proposal.id, {
         reason: supplementReason,
-        dueDate: supplementDueDate
+        contextVersion: proposal.viewerAuthorization?.contextVersion,
+        dueDate: new Date(supplementDueDate).toISOString()
       });
       setProposal(result.proposal);
       setForm(toDraftInput(result.proposal));
@@ -414,7 +400,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
 
     setIsResubmitting(true);
     try {
-      const result = await resubmitResearchProposal(proposal.id);
+      const result = await resubmitResearchProposal(proposal.id, proposal.viewerAuthorization?.contextVersion, proposal.availableDelegations?.[0]?.id);
       setProposal(result.proposal);
       setForm(toDraftInput(result.proposal));
       setReadiness(await loadProposalReadiness(proposal.id));
@@ -445,6 +431,10 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   return (
     <div className="grid detail-grid">
       <div className="grid">
+        <button className="button" type="button" disabled={isSaving || isUploading || isSubmitting || isResubmitting} onClick={() => { if (!unsaved || window.confirm("Bỏ thay đổi chưa lưu và tải lại hồ sơ?")) void refresh(); }}>Tải lại hồ sơ</button>
+        {unsaved ? <p role="status" className="state-message">Có thay đổi chưa lưu. Lưu bản nháp trước khi nộp.</p> : null}
+        {canPerformProposalAction(capabilityState, "proposal.completeness.check") ? <SectionCard title="Kiểm tra đầy đủ" subtitle="Ghi nhận kiểm tra trước khi phân công đánh giá"><button className="button primary" type="button" disabled={!readiness?.ready || isSaving} onClick={async () => { if (!proposal.viewerAuthorization || !window.confirm("Xác nhận hồ sơ đầy đủ theo danh sách kiểm tra?")) return; setIsSaving(true); try { await completeProposalCheck(proposal.id, proposal.viewerAuthorization.contextVersion); await refreshWorkflowState(); setMessage("Đã ghi nhận kết quả kiểm tra."); } catch (error) { setMessage(error instanceof Error ? error.message : "Không thể ghi nhận kiểm tra."); } finally { setIsSaving(false); } }}>Xác nhận hồ sơ đầy đủ</button></SectionCard> : null}
+        {proposal.versions?.length ? <SectionCard title="Phiên bản đã nộp" subtitle="Nội dung đã khóa được giữ nguyên"><div>{proposal.versions.map((version) => <details key={version.id}><summary>Phiên bản {version.version} — {formatDate(version.submittedAt)}</summary><h3>{version.content.title}</h3><p style={{ whiteSpace: "pre-wrap" }}>{version.content.objectives}</p><p style={{ whiteSpace: "pre-wrap" }}>{version.content.summary}</p><ul>{version.content.attachments?.map((file) => <li key={file.id}><a href={getProposalAttachmentDownloadUrl(file.id)}>{file.fileName}</a></li>)}</ul></details>)}</div></SectionCard> : null}
         <SectionCard title="Thông tin hồ sơ" subtitle={canEdit ? "Có thể lưu nháp nhiều lần trước khi nộp chính thức" : "Hồ sơ đang ở trạng thái chỉ đọc"}>
           <form className="admin-form" onSubmit={(event) => void handleSave(event)}>
             <div className="meta-grid">
@@ -490,28 +480,23 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               <div className="form-grid two">
                 <label className="field">
                   <span>Lĩnh vực</span>
-                  <input
-                    disabled={!canEdit}
-                    value={form.researchFieldCode}
-                    onChange={(event) => setForm({ ...form, researchFieldCode: event.target.value })}
-                  />
+                  <select disabled={!canEdit} value={form.researchFieldCode} onChange={(event) => setForm({ ...form, researchFieldCode: event.target.value })}>
+                    <option value="">Chọn lĩnh vực</option>{catalogs.filter((item) => item.type === "research-field" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
+                  </select>
                 </label>
                 <label className="field">
                   <span>Loại đề tài</span>
-                  <input
-                    disabled={!canEdit}
-                    value={form.proposalTypeCode}
-                    onChange={(event) => setForm({ ...form, proposalTypeCode: event.target.value })}
-                  />
+                  <select disabled={!canEdit} value={form.proposalTypeCode} onChange={(event) => setForm({ ...form, proposalTypeCode: event.target.value })}>
+                    <option value="">Chọn loại đề tài</option>{catalogs.filter((item) => item.type === "proposal-type" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
+                  </select>
                 </label>
               </div>
               <label className="field">
                 <span>Đơn vị chủ trì</span>
-                <input
-                  disabled={!canEdit}
-                  value={form.hostOrganizationUnitId}
-                  onChange={(event) => setForm({ ...form, hostOrganizationUnitId: event.target.value })}
-                />
+                <select disabled={!canEdit} value={form.hostOrganizationUnitId} onChange={(event) => setForm({ ...form, hostOrganizationUnitId: event.target.value })}>
+                  {!account?.organizationScopes?.some((unit) => unit.id === form.hostOrganizationUnitId) ? <option value={form.hostOrganizationUnitId}>{form.hostOrganizationUnitId}</option> : null}
+                  {account?.organizationScopes?.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
+                </select>
                 {formError.hostOrganizationUnitId ? <span className="field-error">{formError.hostOrganizationUnitId}</span> : null}
               </label>
             </div>
@@ -519,29 +504,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
             <div className="form-section-inline">
               <div className="section-mini-heading">Chủ nhiệm/thành viên và thời gian</div>
               <div className="form-grid two">
-                <label className="field">
-                  <span>Chủ nhiệm/thành viên</span>
-                  <input disabled={!canEdit} value={form.members?.[0]?.name ?? ""} onChange={(event) => updateMember("name", event.target.value)} />
-                </label>
-                <label className="field">
-                  <span>Đơn vị thành viên</span>
-                  <input
-                    disabled={!canEdit}
-                    value={form.members?.[0]?.organization ?? ""}
-                    onChange={(event) => updateMember("organization", event.target.value)}
-                  />
-                </label>
-                <label className="field">
-                  <span>Tài khoản hệ thống (nếu có)</span>
-                  <input
-                    disabled={!canEdit}
-                    value={form.members?.[0]?.username ?? ""}
-                    onChange={(event) => updateMember("username", event.target.value)}
-                    placeholder={
-                      proposal.members?.[0]?.isAccountLinked ? "Đã liên kết tài khoản" : "Tên đăng nhập, để trống nếu là người ngoài hệ thống"
-                    }
-                  />
-                </label>
+                <ProposalMembersEditor members={form.members ?? []} disabled={!canEdit || isSaving} onChange={(members) => setForm({ ...form, members })} />
                 <label className="field">
                   <span>Bắt đầu</span>
                   <input disabled={!canEdit} type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} />
@@ -642,7 +605,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                 </label>
                 <label className="field">
                   <span>Hạn phản hồi</span>
-                  <input disabled={!canRequestSupplement} type="date" value={supplementDueDate} onChange={(event) => setSupplementDueDate(event.target.value)} />
+                  <input disabled={!canRequestSupplement} type="datetime-local" value={supplementDueDate} onChange={(event) => setSupplementDueDate(event.target.value)} />
                 </label>
                 {supplementError ? <p className="form-error">{supplementError}</p> : null}
                 <button className="button primary" type="submit" disabled={!canRequestSupplement || isRequestingSupplement} title={!canRequestSupplement ? blockedProposalAction(capabilityState, "proposal.supplement.request")?.reason ?? capabilityState.reason : undefined}>
@@ -654,10 +617,10 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
           </SectionCard>
         ) : null}
 
-        {showReviewForm ? <ProposalReviewForm proposalId={proposal.id} onReviewSubmitted={() => void refreshWorkflowState()} canSubmitReview={canPerformProposalAction(capabilityState, "proposal.review.submit")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.submit")?.reason ?? capabilityState.reason} /> : null}
+        {showReviewForm ? <ProposalReviewForm contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} onReviewSubmitted={() => void refreshWorkflowState()} canSubmitReview={canPerformProposalAction(capabilityState, "proposal.review.submit")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.submit")?.reason ?? capabilityState.reason} /> : null}
 
         {showEvaluationPanel ? (
-          <ProposalEvaluationPanel proposalId={proposal.id} onWorkflowChange={() => void refreshWorkflowState()} canAssignReviewers={canPerformProposalAction(capabilityState, "proposal.review.assign")} canConsolidate={canPerformProposalAction(capabilityState, "proposal.review.consolidate")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.assign")?.reason ?? capabilityState.reason} />
+          <ProposalEvaluationPanel contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} onWorkflowChange={() => void refreshWorkflowState()} canAssignReviewers={canPerformProposalAction(capabilityState, "proposal.review.assign")} canConsolidate={canPerformProposalAction(capabilityState, "proposal.review.consolidate")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.assign")?.reason ?? capabilityState.reason} />
         ) : null}
 
         {showDecisionPanel ? <ProposalDecisionPanel proposalId={proposal.id} onDecision={() => void refreshWorkflowState()} canDecide={canPerformProposalAction(capabilityState, "proposal.decision.approve")} blockedReason={blockedProposalAction(capabilityState, "proposal.decision.approve")?.reason ?? capabilityState.reason} /> : null}
@@ -673,7 +636,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                   <div>
                     <h3 id={`document-${group.code}`}>{group.label}</h3>
                     <p>
-                      {ST23A_ALLOWED_FILE_TYPES} · tối đa {group.maxSizeMb}MB
+                      {group.allowedMimeTypes.join(", ")} · tối đa {group.maxSizeMb}MB
                     </p>
                   </div>
                   <StatusBadge status={group.attachments.length ? "active" : "draft"} />
@@ -687,7 +650,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                         disabled={!canUpload}
                         key={fileInputKeys[group.code] ?? 0}
                         type="file"
-                        accept={ST23A_FILE_ACCEPT}
+                        accept={group.allowedMimeTypes.join(",")}
                         onChange={(event) => setUploadFiles((current) => ({ ...current, [group.code]: event.target.files?.[0] ?? null }))}
                       />
                     </label>
@@ -701,7 +664,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                         placeholder="Mô tả ngắn cho tệp"
                       />
                     </label>
-                    <button className="button" type="submit" disabled={!canUpload || isUploading} title={!canUpload ? blockedProposalAction(capabilityState, "file.upload")?.reason ?? capabilityState.reason : undefined}>
+                    <button className="button" type="submit" disabled={!canUpload || isUploading || unsaved} title={!canUpload ? blockedProposalAction(capabilityState, "file.upload")?.reason ?? capabilityState.reason : undefined}>
                       <UploadCloud size={16} aria-hidden="true" />
                       {isUploading ? "Đang tải" : "Tải tệp"}
                     </button>
@@ -897,7 +860,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
             <button
               className="button primary submit-button"
               type="button"
-              disabled={!canSubmit || isSubmitting || isResubmitting}
+              disabled={!canSubmit || isSubmitting || isResubmitting || isSaving || isUploading || unsaved || !readiness?.ready}
               onClick={() => void (isSupplementFlow ? handleResubmit() : handleSubmit())}
             >
               <Send size={16} aria-hidden="true" />
@@ -913,8 +876,9 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               <table className="data-table timeline-table">
                 <thead>
                   <tr>
-                    <th>Người nộp</th>
-                    <th>Thời gian nộp</th>
+                    <th>Người thực hiện</th>
+                    <th>Thời gian</th>
+                    <th>Nội dung</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -922,6 +886,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                     <tr key={event.id}>
                       <td>{getSubmissionActorName(event)}</td>
                       <td>{formatDate(event.submittedAt)}</td>
+                      <td>{event.note || event.toStatus}</td>
                     </tr>
                   ))}
                 </tbody>

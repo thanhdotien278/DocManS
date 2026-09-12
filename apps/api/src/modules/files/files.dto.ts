@@ -9,12 +9,14 @@ export class ListFilesDto {
 }
 
 export class UploadFileDto extends ListFilesDto {
+  contextVersion?: unknown;
   filePurpose!: string;
   originalFileName?: string;
   description?: string | null;
 }
 
 export class UpdateFileDto {
+  contextVersion?: unknown;
   description!: string | null;
 }
 
@@ -47,6 +49,7 @@ export const uploadFilePipe: PipeTransform<unknown, UploadFileDto> = {
   transform(value: unknown) {
     const input = assertRecord(value);
     validateRelatedEntity(input);
+    if (typeof input.contextVersion === "string") { try { input.contextVersion = JSON.parse(input.contextVersion); } catch { throw new BadRequestException({ message: "Ngữ cảnh tệp không hợp lệ." }); } }
     readCode(input.filePurpose, "filePurpose");
     return {
       ...input,
@@ -74,6 +77,7 @@ export const updateFilePipe: PipeTransform<unknown, UpdateFileDto> = {
       throw new BadRequestException({ message: "Chưa có metadata tệp cần cập nhật." });
     }
     return {
+      contextVersion: input.contextVersion,
       description: readOptionalDescription(input.description) ?? null
     };
   }

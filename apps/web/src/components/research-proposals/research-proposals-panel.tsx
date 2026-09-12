@@ -1,6 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { CatalogItem } from "@/lib/admin-api";
+import { loadProposalCatalogs } from "@/lib/research-proposals-api";
+import { ProposalMembersEditor } from "@/components/research-proposals/proposal-members-editor";
 import { useEffect, useMemo, useState } from "react";
 import { Eye, FileText, Plus, Save, Search } from "lucide-react";
 import { useSession } from "@/components/auth/session-provider";
@@ -49,8 +53,10 @@ function defaultForm(hostOrganizationUnitId = ""): ProposalDraftInput {
 }
 
 export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }) {
+  const router = useRouter();
   const { account } = useSession();
   const initialHostScope = account?.organizationScopes?.[0]?.id ?? "";
+  const [catalogs, setCatalogs] = useState<CatalogItem[]>([]);
   const [state, setState] = useState<LoadState>("loading");
   const [proposals, setProposals] = useState<ResearchProposal[]>([]);
   const [intakes, setIntakes] = useState<ProposalIntakePeriod[]>([]);
@@ -64,13 +70,13 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
   async function refresh() {
     setState("loading");
     try {
-      const [proposalData, intakeData] = await Promise.all([loadResearchProposals(), loadProposalIntakePeriods()]);
+      const [proposalData, intakeData] = await Promise.all([loadResearchProposals(), allowCreate || account?.systemRole === "SCIENTIFIC_MANAGEMENT_STAFF" ? loadProposalIntakePeriods() : Promise.resolve([])]);
       setProposals(proposalData);
-      setIntakes(intakeData.filter((intake) => intake.status === "open"));
+      setIntakes(intakeData);
       setState("ready");
       setForm((current) => ({
         ...current,
-        intakePeriodId: current.intakePeriodId || intakeData.find((intake) => intake.status === "open")?.id || "",
+        intakePeriodId: current.intakePeriodId || intakeData.find((intake) => intake.capabilities?.canCreateProposal)?.id || "",
         hostOrganizationUnitId: current.hostOrganizationUnitId || initialHostScope
       }));
     } catch {
@@ -79,6 +85,7 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
   }
 
   useEffect(() => {
+    void loadProposalCatalogs().then(setCatalogs).catch(() => setMessage("Không tải được danh mục. Vui lòng tải lại."));
     void refresh();
   }, [initialHostScope]);
 
@@ -94,12 +101,6 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
     });
   }, [keyword, proposals, statusFilter]);
 
-  function updateMember(field: "name" | "role" | "organization" | "username", value: string) {
-    setForm((current) => ({
-      ...current,
-      members: [{ name: "", role: "Chủ nhiệm", organization: "", ...(current.members?.[0] ?? {}), [field]: value }]
-    }));
-  }
 
   function validateForm() {
     const errors: Record<string, string> = {};
@@ -137,6 +138,7 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
         members: form.members?.filter((member) => member.name.trim() && member.role.trim() && member.organization.trim())
       };
       const result = await createResearchProposalDraft(payload);
+      router.push(`/proposals/${result.proposal.id}`);
       setMessage("Đã lưu hồ sơ nháp.");
       setProposals((current) => [result.proposal, ...current]);
       setForm(defaultForm(initialHostScope));
@@ -259,7 +261,7 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
         ) : null}
       </SectionCard>
 
-      {allowCreate ? (
+      {allowCreate && intakes.some((intake) => intake.capabilities?.canCreateProposal) ? (
         <SectionCard title="Tạo hồ sơ nháp" subtitle="Lưu nhiều lần, sau đó hoàn thiện tài liệu và readiness ở màn hình chi tiết">
           <form className="admin-form" onSubmit={(event) => void handleCreateDraft(event)}>
             <div className="form-section-inline">
@@ -271,7 +273,7 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
                 <span>Đợt tiếp nhận</span>
                 <select value={form.intakePeriodId ?? ""} onChange={(event) => setForm({ ...form, intakePeriodId: event.target.value })}>
                   <option value="">Chọn đợt đang mở</option>
-                  {intakes.map((intake) => (
+                  {intakes.filter((intake) => intake.capabilities?.canCreateProposal).map((intake) => (
                     <option key={intake.id} value={intake.id}>
                       {intake.title}
                     </option>
@@ -291,20 +293,22 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
               <div className="form-grid two">
                 <label className="field">
                   <span>Lĩnh vực</span>
-                  <input value={form.researchFieldCode} onChange={(event) => setForm({ ...form, researchFieldCode: event.target.value })} />
+                  <select disabled={isSubmitting} value={form.researchFieldCode} onChange={(event) => setForm({ ...form, researchFieldCode: event.target.value })}>
+                    <option value="">Chọn lĩnh vực</option>{catalogs.filter((item) => item.type === "research-field" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
+                  </select>
                 </label>
                 <label className="field">
                   <span>Loại đề tài</span>
-                  <input value={form.proposalTypeCode} onChange={(event) => setForm({ ...form, proposalTypeCode: event.target.value })} />
+                  <select disabled={isSubmitting} value={form.proposalTypeCode} onChange={(event) => setForm({ ...form, proposalTypeCode: event.target.value })}>
+                    <option value="">Chọn loại đề tài</option>{catalogs.filter((item) => item.type === "proposal-type" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
+                  </select>
                 </label>
               </div>
               <label className="field">
                 <span>Mã đơn vị chủ trì</span>
-                <input
-                  value={form.hostOrganizationUnitId}
-                  onChange={(event) => setForm({ ...form, hostOrganizationUnitId: event.target.value })}
-                  placeholder={account?.organizationScopes?.[0]?.id ?? "org-khti"}
-                />
+                <select value={form.hostOrganizationUnitId} onChange={(e) => setForm({ ...form, hostOrganizationUnitId: e.target.value })}>
+                  <option value="">Chọn đơn vị chủ trì</option>{account?.organizationScopes?.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
+                </select>
                 {formError.hostOrganizationUnitId ? <span className="field-error">{formError.hostOrganizationUnitId}</span> : null}
               </label>
             </div>
@@ -312,22 +316,7 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
             <div className="form-section-inline">
               <div className="section-mini-heading">Chủ nhiệm và thời gian</div>
               <div className="form-grid two">
-                <label className="field">
-                  <span>Chủ nhiệm/thành viên</span>
-                  <input value={form.members?.[0]?.name ?? ""} onChange={(event) => updateMember("name", event.target.value)} />
-                </label>
-                <label className="field">
-                  <span>Đơn vị thành viên</span>
-                  <input value={form.members?.[0]?.organization ?? ""} onChange={(event) => updateMember("organization", event.target.value)} />
-                </label>
-                <label className="field">
-                  <span>Tài khoản hệ thống (nếu có)</span>
-                  <input
-                    value={form.members?.[0]?.username ?? ""}
-                    onChange={(event) => updateMember("username", event.target.value)}
-                    placeholder="Tên đăng nhập, để trống nếu là người ngoài hệ thống"
-                  />
-                </label>
+                <ProposalMembersEditor members={form.members ?? []} disabled={isSubmitting} onChange={(members) => setForm({ ...form, members })} />
                 <label className="field">
                   <span>Bắt đầu</span>
                   <input type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} />
