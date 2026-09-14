@@ -17,6 +17,7 @@ export type ProposalReviewAssignment = {
   id: string;
   proposalId: string;
   reviewerUserId: string;
+  researcherProfileId: string | null;
   reviewerDisplayName: string;
   reviewerUsername: string;
   reviewerUnit: string;
@@ -270,7 +271,7 @@ export async function loadProposalReviewAssignments(proposalId: string) {
 
 export async function assignProposalReviewer(
   proposalId: string,
-  input: { reviewerUsername: string; researcherProfileId: string; assignmentRole: ReviewAssignmentRole; dueDate?: string; effectiveFrom?: string; effectiveUntil?: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }
+  input: { researcherProfileId: string; assignmentRole: ReviewAssignmentRole; dueDate?: string; effectiveFrom?: string; effectiveUntil?: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }
 ) {
   const response = await requestJson<{ assignment: ProposalReviewAssignment }>(`/research-proposals/${proposalId}/review-assignments`, {
     method: "POST",
@@ -357,5 +358,5 @@ export async function decideProposal(proposalId: string, decision: "approve" | "
   );
 }
 
-export type ReviewerCandidates = { profiles: Array<{ id: string; fullName: string; linkedUserId: string | null }>; accounts: Array<{ id: string; username: string; displayName: string }> };
+export type ReviewerCandidates = { profiles: Array<{ id: string; fullName: string; linkedUserId: string; linkedAccountUsername: string; linkedAccountDisplayName: string }> };
 export function loadReviewerCandidates(proposalId: string, query = "") { return requestJson<ReviewerCandidates>(`/research-proposals/${proposalId}/assignable-reviewers?q=${encodeURIComponent(query)}`); }

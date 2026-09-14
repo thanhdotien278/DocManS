@@ -282,3 +282,16 @@ trạng thái. Không dùng cập nhật trạng thái trực tiếp để bypas
   được phân công trong bản nháp.
 - Mọi bản ghi, phiên bản, quan hệ, quyết định và audit được giữ lịch sử; không
   xóa cứng.
+
+### Proposal reviewer / council assignment refinement
+
+Staff opens an eligible, completeness-checked proposal → searches active Scientist
+Profiles → selects an eligible linked profile and reviewer/council-member duty →
+sets optional effective range/deadline → confirms → backend rechecks current
+eligibility and context → records assignment and audit in one transaction.
+No separate account selection or implicit profile linking is performed. An empty
+candidate list directs staff to profile management. A stale/denied request shows
+the server error and requires refresh before retry. Revocation requires a reason,
+retains assignment/review history, and removes access immediately. The normative
+eligibility and disclosure boundary is the Reviewer / Council Assignment section
+of `authorization-core-business-baseline.md`.

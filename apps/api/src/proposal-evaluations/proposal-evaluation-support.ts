@@ -22,6 +22,7 @@ export type ReviewAssignmentRecord = {
   id: string;
   proposalId: string;
   reviewerUserId: string;
+  researcherProfileId: string | null;
   assignmentRole: string;
   status: string;
   assignedById: string;

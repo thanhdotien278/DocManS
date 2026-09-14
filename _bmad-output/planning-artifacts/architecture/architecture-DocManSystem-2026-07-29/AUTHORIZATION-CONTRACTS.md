@@ -278,3 +278,21 @@ Required consumers are the protected record/list APIs, files, exports,
 notifications/reminders, search, dashboard/reporting, personal work, and web
 permission UI. A table, route, or locally passing provider test alone does not
 satisfy the gate.
+
+## 12. Proposal Scientist Profile assignment binding
+
+`GET /research-proposals/:id/assignable-reviewers?q=` returns `{ profiles }` only,
+with eligible `id`, `fullName` and minimal linked-account display context. It is
+restricted to unconflicted, scoped scientific management in assignable states.
+`POST /research-proposals/:id/review-assignments` requires `researcherProfileId`
+and the current proposal `contextVersion`; accepts `assignmentRole` (`reviewer`
+or `committee_member`, default reviewer), optional UTC effective dates/deadline.
+Account ID/username inputs do not select an assignee and are rejected. The backend
+derives the existing linked account from the active profile and rechecks all
+baseline eligibility rules within `runProposalMutation` before creating evidence.
+The revoke endpoint retains its `note` plus `contextVersion` payload.
+
+Persist a nullable source-profile foreign key for legacy compatibility; require
+it for all new application assignments. Do not infer/backfill historical identity.
+Include profile/account/role in operational assignment audit and preserve the
+existing disclosure projections; no new global role/action is introduced.

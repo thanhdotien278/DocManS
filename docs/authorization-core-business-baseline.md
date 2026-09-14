@@ -149,6 +149,40 @@ assignment mới nhưng lịch sử quan hệ cũ vẫn giữ.
 Mọi phiên bản đã nộp, review, quyết định và tệp dùng để thẩm định được giữ
 nguyên. Không ghi đè bản cũ.
 
+
+### Reviewer / Council Assignment from Scientist Profiles
+
+Scientist Profiles are the existing `ResearcherProfile` records, not a new identity model.
+Scientific Management Staff may assign or revoke `reviewer` or `committee_member`
+duties on one eligible proposal in their explicitly granted organization scope.
+The council-member duty is a proposal review assignment; it does not create a
+council aggregate or account-level role.
+
+Candidate selection starts from an `ACTIVE` profile in the staff member's scope.
+For this authenticated review workflow the profile must already link to an active
+internal or external researcher account with explicit scope on the proposal's
+host unit. Unlinked profiles remain ineligible until an authorized account link
+exists; assignment must not create or change profile/account links. The server derives
+the assignee from the selected profile, never from an independent account picker.
+
+Assignment is allowed in `submitted`, `resubmitted`, or `under_review`; the first
+assignment requires completeness evidence for the current submission and opens
+`under_review`. Revocation uses the same state boundary and requires a reason.
+PI, active team secretary/member, self-assignment, unresolved conflict context,
+inactive profile/account, missing scope, and duplicate non-revoked assignment
+are denied. Both duty types use identical checks. The backend rechecks current
+profile/account, role, scope, participation, workflow and proposal context version
+in the mutation transaction; candidate search is advisory and grants no authority.
+
+Each new assignment retains the source profile ID and linked account ID. Existing
+assignments retain their history without guessing a historical profile link.
+Assignment and revocation append actor/time/target/profile/account/role evidence
+to audit atomically with the mutation. Revocation preserves the row and submitted
+reviews, immediately removes its access grant, and permits a later new assignment
+only through the same checks. Profile deactivation prevents new assignments;
+this feature does not rewrite historical assignments or submitted evidence.
+Existing identity/disclosure policy applies to both duty types on every surface.
+
 ### Chỉnh sửa sau nộp
 
 1. PI gửi `Yêu cầu chỉnh sửa sau nộp`.

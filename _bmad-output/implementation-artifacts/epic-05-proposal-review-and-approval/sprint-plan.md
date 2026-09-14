@@ -11,7 +11,7 @@
 |---|---|---|
 | 5.1 | Kiểm tra tính đầy đủ và yêu cầu bổ sung | `backlog` |
 | 5.2 | Chỉnh sửa theo yêu cầu và nộp lại đề xuất | `backlog` |
-| 5.3 | Phân công reviewer với kiểm tra xung đột | `backlog` |
+| 5.3 | Reviewer / Council Assignment from Scientist Profiles | `backlog` |
 | 5.4 | Reviewer truy cập và nộp đánh giá của mình | `backlog` |
 | 5.5 | Theo dõi tiến độ và tổng hợp đánh giá nội bộ | `backlog` |
 | 5.6 | Thư ký khoa học hỗ trợ hành chính cho quy trình đánh giá | `backlog` |
@@ -21,3 +21,5 @@
 ## Execution note
 
 Create the next story specification only after its preceding dependency is understood and the shared authorization, audit, and file rules in the project context remain satisfied.
+
+Current implementation artifact: [Scientist Profile Reviewer / Council Assignment](../spec-scientist-profile-reviewer-council-assignment.md). Its profile-only selection and provenance contract refine Story 5.3; other Epic 5 stories are unchanged.
