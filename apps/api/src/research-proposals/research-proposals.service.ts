@@ -864,7 +864,7 @@ export class ResearchProposalsService {
     const members = (await this.findMembers(proposal.id)).filter((member) => isRelationshipActiveAt(member, new Date()));
     const missingFields = this.getMissingFields(proposal, members);
     const missingFiles = requiredPackage
-      .filter((item) => !attachments.some((attachment) => attachment.requirementCode === item.code && item.allowedMimeTypes.includes(attachment.mimeType) && attachment.sizeBytes <= item.maxSizeMb * 1024 * 1024))
+      .filter((item) => !attachments.some((attachment) => attachment.requirementCode === item.code && item.allowedMimeTypes.includes(attachment.mimeType) && (item.maxSizeMb === null || attachment.sizeBytes <= item.maxSizeMb * 1024 * 1024)))
       .map((item) => ({ code: item.code, label: item.label }));
 
     return {

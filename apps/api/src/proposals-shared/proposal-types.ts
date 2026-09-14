@@ -8,7 +8,10 @@ export type RequiredPackageItem = {
   code: string;
   label: string;
   allowedMimeTypes: string[];
-  maxSizeMb: number;
+  maxSizeMb: number | null;
+  templateFileId?: string;
+  fileName?: string;
+  description?: string;
 };
 
 export type ProposalStatus = "draft" | "submitted";

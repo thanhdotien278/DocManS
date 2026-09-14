@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { MinioObjectStorageService } from "../infrastructure/minio/minio-object-storage.service.js";
 import { runProposalMutation } from "../proposals-shared/proposal-mutation.js";
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditLogService } from "../auth/audit-log.service.js";
@@ -22,6 +24,8 @@ import {
   readText
 } from "../proposals-shared/proposal-validation.js";
 
+export type IntakeTemplateUpload = { originalname: string; mimetype: string; size: number; buffer: Buffer };
+
 type IntakePeriodRecord = {
   id: string;
   code: string;
@@ -41,23 +45,83 @@ type IntakePeriodRecord = {
 export class ProposalIntakePeriodsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly auditLog: AuditLogService
+    private readonly auditLog: AuditLogService,
+    private readonly storage: MinioObjectStorageService = new MinioObjectStorageService()
   ) {}
 
   private transactional = false;
+  private uploadedKeys: string[] = [];
 
-  private mutate<T>(actor: SafeUserContext, periodId: string | null, expected: unknown, work: (service: ProposalIntakePeriodsService, actor: SafeUserContext) => Promise<T>): Promise<T> {
-    return runProposalMutation(this.prisma, actor, null, undefined, async (tx, currentActor) => {
-      if (periodId) {
-        await tx.$queryRaw`SELECT id FROM proposal_intake_periods WHERE id = ${periodId} FOR UPDATE`;
-        const period = await tx.proposalIntakePeriod.findUnique({ where: { id: periodId } });
-        if (!period) throw new NotFoundException({ message: "Không tìm thấy đợt tiếp nhận." });
-        if (expected !== period.updatedAt.toISOString()) throw new ConflictException({ code: "CONTEXT_VERSION_MISMATCH", message: "Đợt tiếp nhận đã thay đổi. Vui lòng tải lại." });
+  private async mutate<T>(actor: SafeUserContext, periodId: string | null, expected: unknown, work: (service: ProposalIntakePeriodsService, actor: SafeUserContext) => Promise<T>): Promise<T> {
+    const uploadedKeys: string[] = [];
+    try {
+      return await runProposalMutation(this.prisma, actor, null, undefined, async (tx, currentActor) => {
+        if (periodId) {
+          await tx.$queryRaw`SELECT id FROM proposal_intake_periods WHERE id = ${periodId} FOR UPDATE`;
+          const period = await tx.proposalIntakePeriod.findUnique({ where: { id: periodId } });
+          if (!period) throw new NotFoundException({ message: "Không tìm thấy đợt tiếp nhận." });
+          if (expected !== period.updatedAt.toISOString()) throw new ConflictException({ code: "CONTEXT_VERSION_MISMATCH", message: "Đợt tiếp nhận đã thay đổi. Vui lòng tải lại." });
+        }
+        const service = new ProposalIntakePeriodsService(tx, new AuditLogService(tx), this.storage);
+        service.transactional = true;
+        service.uploadedKeys = uploadedKeys;
+        return work(service, currentActor);
+      });
+    } catch (error) {
+      await Promise.allSettled(uploadedKeys.map((key) => this.storage.deleteObject(key)));
+      throw error;
+    }
+  }
+
+  private async readTemplatePackage(actor: SafeUserContext, periodId: string, value: unknown, files: IntakeTemplateUpload[]) {
+    const items = readRequiredPackage(value);
+    const raw = value as Record<string, unknown>[];
+    const used = new Set<number>();
+    if (new Set(items.map((item) => item.code)).size !== items.length) throw new BadRequestException({ message: "Mã tệp bị trùng." });
+    for (const [index, item] of items.entries()) {
+      const uploadIndex = raw[index].uploadIndex;
+      if (uploadIndex !== undefined) {
+        if (!Number.isInteger(uploadIndex) || used.has(uploadIndex as number) || !files[uploadIndex as number]) throw new BadRequestException({ message: "File tải lên không hợp lệ." });
+        used.add(uploadIndex as number);
+        const file = files[uploadIndex as number];
+        const name = readText(item.fileName ?? file.originalname, "fileName", 255);
+        const mime = name.toLowerCase().endsWith(".pdf") ? "application/pdf" : name.toLowerCase().endsWith(".docx") ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "";
+        if (!mime || file.mimetype !== mime || !file.size || file.buffer.length !== file.size) throw new BadRequestException({ message: "Vui lòng chọn file DOCX hoặc PDF hợp lệ." });
+        const id = randomUUID();
+        const objectKey = `intake-templates/${periodId}/${id}`;
+        await this.storage.putObject({ objectKey, content: file.buffer, mimeType: mime, sizeBytes: file.size });
+        this.uploadedKeys.push(objectKey);
+        await this.prisma.fileRecord.create({ data: {
+          id, relatedEntityType: "proposal_intake_period", relatedEntityId: periodId, filePurpose: item.code,
+          originalFileName: name, description: item.description, mimeType: mime, sizeBytes: file.size,
+          storageBucket: process.env.MINIO_BUCKET_NAME ?? "rtms-files", storageObjectKey: objectKey,
+          uploadedById: actor.id, status: "active"
+        } });
+        item.templateFileId = id;
+        item.fileName = name;
+      } else if (item.templateFileId) {
+        const file = await this.prisma.fileRecord.findFirst({ where: { id: item.templateFileId, relatedEntityType: "proposal_intake_period", relatedEntityId: periodId, status: "active", deletedAt: null } });
+        if (!file) throw new BadRequestException({ message: "File mẫu không thuộc đợt tiếp nhận này." });
+        item.fileName = file.originalFileName;
       }
-      const service = new ProposalIntakePeriodsService(tx, new AuditLogService(tx));
-      service.transactional = true;
-      return work(service, currentActor);
-    });
+      if (item.templateFileId) {
+        item.allowedMimeTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+        item.maxSizeMb = null;
+      }
+    }
+    if (used.size !== files.length) throw new BadRequestException({ message: "Có file tải lên chưa được gắn với miêu tả." });
+    return items;
+  }
+
+  async downloadTemplate(actor: SafeUserContext, periodId: string, fileId: string) {
+    const periods = await this.listPeriods(actor);
+    const period = periods.find((item) => item.id === periodId);
+    if (!period || !period.requiredPackage.some((item) => item.templateFileId === fileId)) throw new NotFoundException({ message: "Không tìm thấy file mẫu." });
+    const file = await this.prisma.fileRecord.findFirst({ where: { id: fileId, relatedEntityType: "proposal_intake_period", relatedEntityId: periodId, status: "active", deletedAt: null } });
+    if (!file) throw new NotFoundException({ message: "Không tìm thấy file mẫu." });
+    const content = await this.storage.getObject(file.storageObjectKey);
+    await this.auditLog.record({ action: "download-intake-template", result: "success", actorId: actor.id, targetEntity: "file-record", targetEntityId: file.id });
+    return { content, fileName: file.originalFileName, mimeType: file.mimeType };
   }
 
   async options(actor: SafeUserContext) {
@@ -99,8 +163,8 @@ export class ProposalIntakePeriodsService {
     throw new ForbiddenException({ message: "Không có quyền xem đợt tiếp nhận." });
   }
 
-  async createPeriod(actor: SafeUserContext, input: Record<string, unknown>): Promise<any> {
-    if (!this.transactional) return this.mutate(actor, null, undefined, (s, a) => s.createPeriod(a, input));
+  async createPeriod(actor: SafeUserContext, input: Record<string, unknown>, files: IntakeTemplateUpload[] = []): Promise<any> {
+    if (!this.transactional) return this.mutate(actor, null, undefined, (s, a) => s.createPeriod(a, input, files));
     assertCanManageIntakePeriods(actor);
     const applicableOrganizationUnitId = readOptionalText(input.applicableOrganizationUnitId, "applicableOrganizationUnitId", 80);
     if (applicableOrganizationUnitId) {
@@ -111,8 +175,11 @@ export class ProposalIntakePeriodsService {
     const endsAt = readDate(input.endsAt, "endsAt");
     assertDateRange(startsAt, endsAt);
 
+    const periodId = randomUUID();
+    const requiredPackage = await this.readTemplatePackage(actor, periodId, input.requiredPackage, files);
     const period = (await this.prisma.proposalIntakePeriod.create({
       data: {
+        id: periodId,
         code: readCode(input.code, "code"),
         title: readText(input.title, "title", 220),
         description: readOptionalText(input.description, "description", 1000),
@@ -121,7 +188,7 @@ export class ProposalIntakePeriodsService {
         status: "draft",
         applicableOrganizationUnitId,
         applicableOrganizationUnitIds: await this.readUnits(actor, input.applicableOrganizationUnitIds ?? []),
-        requiredPackage: readRequiredPackage(input.requiredPackage)
+        requiredPackage
       }
     })) as IntakePeriodRecord;
 
@@ -137,8 +204,8 @@ export class ProposalIntakePeriodsService {
     return this.toResponse(period, actor);
   }
 
-  async updatePeriod(actor: SafeUserContext, periodId: string, input: Record<string, unknown>): Promise<any> {
-    if (!this.transactional) return this.mutate(actor, periodId, input.contextVersion, (s, a) => s.updatePeriod(a, periodId, input));
+  async updatePeriod(actor: SafeUserContext, periodId: string, input: Record<string, unknown>, files: IntakeTemplateUpload[] = []): Promise<any> {
+    if (!this.transactional) return this.mutate(actor, periodId, input.contextVersion, (s, a) => s.updatePeriod(a, periodId, input, files));
     assertCanManageIntakePeriods(actor);
 
     const existing = await this.findPeriod(periodId);
@@ -170,7 +237,7 @@ export class ProposalIntakePeriodsService {
       data.applicableOrganizationUnitId = applicableOrganizationUnitId ?? null;
     }
     if (input.requiredPackage !== undefined) {
-      data.requiredPackage = readRequiredPackage(input.requiredPackage);
+      data.requiredPackage = await this.readTemplatePackage(actor, periodId, input.requiredPackage, files);
     }
 
     const startsAt = data.startsAt instanceof Date ? data.startsAt : existing.startsAt;

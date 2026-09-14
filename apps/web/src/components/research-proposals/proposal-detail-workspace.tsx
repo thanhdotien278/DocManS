@@ -636,7 +636,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                   <div>
                     <h3 id={`document-${group.code}`}>{group.label}</h3>
                     <p>
-                      {group.allowedMimeTypes.join(", ")} · tối đa {group.maxSizeMb}MB
+                      {group.description || (group.maxSizeMb === null ? "DOCX, PDF" : `${group.allowedMimeTypes.join(", ")} · tối đa ${group.maxSizeMb}MB`)}
                     </p>
                   </div>
                   <StatusBadge status={group.attachments.length ? "active" : "draft"} />

@@ -4,7 +4,11 @@ export type RequiredPackageItem = {
   code: string;
   label: string;
   allowedMimeTypes: string[];
-  maxSizeMb: number;
+  maxSizeMb: number | null;
+  templateFileId?: string;
+  fileName?: string;
+  description?: string;
+  uploadIndex?: number;
 };
 
 export type ProposalIntakePeriod = {
@@ -41,7 +45,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
+      ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...init?.headers
     }
   });
@@ -60,17 +64,28 @@ export async function loadProposalIntakePeriods(status?: string) {
   return response.intakePeriods;
 }
 
-export async function createProposalIntakePeriod(input: IntakePeriodInput) {
+function intakeBody(input: Partial<IntakePeriodInput>, files: File[]) {
+  const body = new FormData();
+  body.append("data", JSON.stringify(input));
+  files.forEach((file) => body.append("files", file));
+  return body;
+}
+
+export function intakeTemplateUrl(periodId: string, fileId: string) {
+  return `${getApiBaseUrl()}/proposal-intake-periods/${periodId}/templates/${fileId}`;
+}
+
+export async function createProposalIntakePeriod(input: IntakePeriodInput, files: File[] = []) {
   return requestJson<{ intakePeriod: ProposalIntakePeriod }>("/proposal-intake-periods", {
     method: "POST",
-    body: JSON.stringify(input)
+    body: intakeBody(input, files)
   });
 }
 
-export async function updateProposalIntakePeriod(id: string, input: Partial<IntakePeriodInput>) {
+export async function updateProposalIntakePeriod(id: string, input: Partial<IntakePeriodInput>, files: File[] = []) {
   return requestJson<{ intakePeriod: ProposalIntakePeriod }>(`/proposal-intake-periods/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(input)
+    body: intakeBody(input, files)
   });
 }
 

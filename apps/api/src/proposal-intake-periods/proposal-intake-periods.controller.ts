@@ -1,4 +1,8 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { FilesInterceptor } from "@nestjs/platform-express";
+import { buildContentDisposition } from "../modules/files/files.controller.js";
+import { streamToBuffer } from "../modules/files/files.service.js";
+import type { IntakeTemplateUpload } from "./proposal-intake-periods.service.js";
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, UploadedFiles, UseInterceptors, UseGuards } from "@nestjs/common";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
 import {
@@ -25,17 +29,28 @@ export class ProposalIntakePeriodsController {
   }
 
   @Post()
-  async createPeriod(@Req() request: RequestWithCurrentUser, @Body(createProposalIntakePeriodPipe) body: CreateProposalIntakePeriodDto) {
-    return { intakePeriod: await this.intakePeriodsService.createPeriod(request.currentUser!, body) };
+  @UseInterceptors(FilesInterceptor("files"))
+  async createPeriod(@Req() request: RequestWithCurrentUser, @Body(createProposalIntakePeriodPipe) body: CreateProposalIntakePeriodDto, @UploadedFiles() files: IntakeTemplateUpload[] = []) {
+    return { intakePeriod: await this.intakePeriodsService.createPeriod(request.currentUser!, body, files) };
   }
 
   @Patch(":id")
+  @UseInterceptors(FilesInterceptor("files"))
   async updatePeriod(
     @Req() request: RequestWithCurrentUser,
     @Param("id") id: string,
-    @Body(updateProposalIntakePeriodPipe) body: UpdateProposalIntakePeriodDto
+    @Body(updateProposalIntakePeriodPipe) body: UpdateProposalIntakePeriodDto,
+    @UploadedFiles() files: IntakeTemplateUpload[] = []
   ) {
-    return { intakePeriod: await this.intakePeriodsService.updatePeriod(request.currentUser!, id, body) };
+    return { intakePeriod: await this.intakePeriodsService.updatePeriod(request.currentUser!, id, body, files) };
+  }
+
+  @Get(":id/templates/:fileId")
+  async downloadTemplate(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Param("fileId") fileId: string, @Res() response: { setHeader(name: string, value: string): void; send(content: Buffer): void }) {
+    const file = await this.intakePeriodsService.downloadTemplate(request.currentUser!, id, fileId);
+    response.setHeader("Content-Type", file.mimeType);
+    response.setHeader("Content-Disposition", buildContentDisposition(file.fileName));
+    response.send(await streamToBuffer(file.content));
   }
 
   @Post(":id/open")

@@ -68,7 +68,7 @@ export function assertDateRange(startsAt: Date, endsAt: Date) {
 }
 
 export function readRequiredPackage(value: unknown) {
-  if (!Array.isArray(value) || value.length === 0 || value.length > 12) {
+  if (!Array.isArray(value) || value.length === 0) {
     throw new BadRequestException({ message: "Danh sách tệp bắt buộc không hợp lệ." });
   }
 
@@ -79,13 +79,16 @@ export function readRequiredPackage(value: unknown) {
 
     const record = item as Record<string, unknown>;
     const allowedMimeTypes = readAllowedMimeTypes(record.allowedMimeTypes);
-    const maxSizeMb = readMaxSizeMb(record.maxSizeMb);
+    const maxSizeMb = record.maxSizeMb === null ? null : readMaxSizeMb(record.maxSizeMb);
 
     return {
       code: readCode(record.code, `requiredPackage[${index}].code`),
       label: readText(record.label, `requiredPackage[${index}].label`, 160),
       allowedMimeTypes,
-      maxSizeMb
+      maxSizeMb,
+      templateFileId: readOptionalText(record.templateFileId, "templateFileId", 80),
+      fileName: readOptionalText(record.fileName, "fileName", 255),
+      description: readOptionalText(record.description, "description", 500)
     };
   });
 }
@@ -103,7 +106,10 @@ export function normalizeRequiredPackage(value: unknown) {
       allowedMimeTypes: Array.isArray(item.allowedMimeTypes)
         ? item.allowedMimeTypes.filter((mimeType): mimeType is string => typeof mimeType === "string" && Boolean(mimeType.trim()))
         : ["application/pdf"],
-      maxSizeMb: typeof item.maxSizeMb === "number" && item.maxSizeMb > 0 ? item.maxSizeMb : 5
+      templateFileId: typeof item.templateFileId === "string" ? item.templateFileId : undefined,
+      fileName: typeof item.fileName === "string" ? item.fileName : undefined,
+      description: typeof item.description === "string" ? item.description : undefined,
+      maxSizeMb: item.maxSizeMb === null ? null : typeof item.maxSizeMb === "number" && item.maxSizeMb > 0 ? item.maxSizeMb : 5
     }))
     .filter((item) => item.code && item.label);
 }
