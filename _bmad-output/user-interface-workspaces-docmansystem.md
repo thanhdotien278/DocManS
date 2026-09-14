@@ -302,7 +302,7 @@ Thành viên đề tài nên có quyền:
 Thành viên đề tài không nên có quyền:
 
 ```text
-- Submit proposal chính thức thay PI nếu không được ủy quyền
+- Submit proposal chính thức thay PI
 - Request adjustment/gia hạn thay PI nếu không được ủy quyền
 - Thay đổi danh sách thành viên chính thức
 - Phê duyệt báo cáo hoặc đề tài

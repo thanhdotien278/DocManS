@@ -49,25 +49,25 @@ disclosure; unresolved context fails closed and important changes are audited.
   `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`. All PI, member,
   secretary, reviewer, council, ethics, and task authority remains record
   scoped.
-- The only delegable action is approved `proposal.submit` on one proposal.
-  Assignment, scoring, membership, disclosure, approval/rejection, reopening,
-  and all other actions are non-delegable.
+- Proposal creation, submission, and resubmission are owner-only actions. No
+  proposal-submit delegation or delegated capability is supported. Any future
+  delegation remains domain-specific and contract-bound.
 
 ## Requirements Inventory
 
 ### Functional Requirements
 
 - FR1: System administrators can create, update, activate, deactivate, and lock user accounts.
-- FR2: System administrators can assign exactly one active account-level system role (`SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`) to a user; principal investigator, co-investigator, project member, scientific secretary, reviewer, council member, and ethics reviewer permissions are assigned through record-scoped participation or assignment relationships instead of additional global roles.
+- FR2: System administrators can assign exactly one active account-level system role (`SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`) to a user; owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer permissions are assigned through record-scoped relationships or assignments instead of additional global roles.
 - FR3: System administrators can associate users with an organizational unit and other scope-defining organizational attributes.
 - FR4: The system can authenticate users and establish a role-aware session for authorized access.
 - FR4a: Authenticated users can change their own password, and authorized administrators can initiate a controlled password reset flow for internal users.
 - FR5: The system can enforce role-based access rules across all protected capabilities.
 - FR6: The system can enforce explicit organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports; scientific management staff have Academy-wide business scope, while a parent/child unit relationship never implies scope unless explicitly granted.
-- FR6a: The system can distinguish account-level system roles from record-scoped participation or assignment roles, including principal investigator, co-investigator, project member, scientific secretary, reviewer, council member, and ethics reviewer, so those roles only grant permissions within the specific proposal, project, council, review, ethics dossier, task, or related record context.
-- FR6b: Authorized scientific management staff can approve, revoke, and inspect an explicit record-scoped delegation of `proposal.submit` initiated by its current holder; each grant identifies the delegate, target record, action, validity period, grantor, approver, reason, and status, and no delegated permission is inferred when a valid grant is absent.
+- FR6a: The system can distinguish account-level system roles from record-scoped relationships or assignments, including owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer, so those relationships only grant permissions within the specific proposal, approved topic, council, review, ethics dossier, task, or related record context.
+- FR6b: Proposal creation, submission, and resubmission require the current owner-derived PI with active `RESEARCHER_INTERNAL_USER`; no proposal-submit delegation or delegated capability is supported.
 - FR6c: Protected record responses can state the current user's record-scoped relationships, allowed actions, blocked actions, and plain-language denial reasons as calculated by backend authorization policy.
-- FR6d: A record-scoped scientific secretary can perform only the explicitly authorized administrative, meeting, minutes, document, task, tracking, and draft-summary actions for the assigned proposal, project, council, or ethics record; the secretary relationship alone never grants reviewer scoring or final approval/rejection authority.
+- FR6d: A record-scoped `TOPIC_SECRETARY` can perform only the explicitly authorized administrative, meeting, minutes, document, task, tracking, and draft-summary actions for the assigned proposal, approved topic, council, or ethics record; the secretary relationship alone never grants reviewer scoring or final approval/rejection authority.
 - FR6e: Proposal participation, project participation, council membership, reviewer assignment, task assignment, and ethics assignment relationships can be activated, suspended, ended, or revoked with effective dates and status, and an inactive relationship immediately stops granting access or capabilities.
 - FR7: System administrators can manage shared catalogs required by business workflows, including organizational units, research fields, proposal types, statuses, priorities, report types, product types, forms, checklists, and scoring criteria.
 - FR8: System administrators can configure system parameters, notification templates, and selected workflow-supporting settings required for phase 1 operations.
@@ -76,7 +76,7 @@ disclosure; unresolved context fails closed and important changes are audited.
 - FR11: Principal investigators can enter structured proposal information including title, field, host unit, participants, timeline, objectives, content summary, and proposed budget metadata.
 - FR12: Principal investigators can upload required proposal attachments and supporting documents to a proposal record.
 - FR13: The system can validate required proposal data and required file conditions before formal submission.
-- FR14: The system can record immutable proposal submission history, including timestamps, submission state changes, actor/delegation context, and locked versions; post-submission edits, withdrawal, and reopening use explicit requests/actions rather than overwriting a submitted version.
+- FR14: The system can record immutable proposal submission history, including timestamps, submission state changes, PI actor context, and locked versions; post-submission edits, withdrawal, and reopening use explicit requests/actions rather than overwriting a submitted version.
 - FR15: Scientific management staff can review proposal completeness and request supplements with a stated reason and due date.
 - FR16: Principal investigators can view supplement requests, revise proposal content or attachments, and resubmit the proposal.
 - FR17: Scientific management staff can assign reviewers or committee participants to proposals according to the workflow.
@@ -165,11 +165,11 @@ disclosure; unresolved context fails closed and important changes are audited.
 - AR1: Treat the authorization architecture as the adopted target, not as current implementation; complete the brownfield migration before dependent permission work.
 - AR2: Migrate legacy global PI/reviewer/council roles and multi-role session/data shapes to one active system role plus typed record relationships without allowing old and new policies to grant in parallel.
 - AR3: Consolidate existing API and proposal permission seams into one shared backend policy; do not build a parallel authorization engine.
-- AR4: Implement the normative `AuthorizationContextV1`, `PermissionActionV1`, `AuthorizationDecisionCodeV1`, `ViewerAuthorizationV1`, `ContextVersionTokenV1`, `DelegationGrantV1`, `PersonalWorkEntryV1`, `AuthorizationJobEnvelopeV1`, and `AuthorizationAuditV1` contracts in `packages/permissions`.
+- AR4: Implement the normative `AuthorizationContextV1`, `PermissionActionV1`, `AuthorizationDecisionCodeV1`, `ViewerAuthorizationV1`, `ContextVersionTokenV1`, `PersonalWorkEntryV1`, `AuthorizationJobEnvelopeV1`, and `AuthorizationAuditV1` contracts in `packages/permissions`.
 - AR5: Use one database-server UTC `asOf` per protected request and half-open relationship/delegation intervals; preserve immutable lifecycle history and deterministic revocation behavior.
 - AR6: Apply the canonical denial order and distinguish resolved-empty/not-applicable from unresolved, stale, ambiguous, version-mismatch, and unknown-contract contexts.
 - AR7: Re-authorize and mutate atomically in the owning service or validate all context-version tokens in the mutation transaction.
-- AR8: Restrict delegation to one target record, exact registered actions, active source authority, organization intersection, current-holder initiation, independent staff approval, no self-approval, no wildcards, and no chains.
+- AR8: When a future domain contract permits delegation, restrict it to one target record, exact registered actions, active source authority, organization intersection, current-holder initiation, independent staff approval, no self-approval, no wildcards, and no chains; proposal create/submit/resubmit remain excluded.
 - AR9: Apply the V1 non-delegable registry to reviewer/council assignment, scoring/evaluation submission, membership changes, disclosure, delegation approval, business approval/rejection, and final decisions.
 - AR10: Apply the binding review-disclosure matrix consistently to APIs, lists, details, files, exports, notifications, search, dashboards, and history.
 - AR11: Build researcher participation history and personal work as authorized query-on-read aggregations; source domains remain authoritative and any enabled-source failure fails the whole aggregation.
@@ -214,7 +214,7 @@ disclosure; unresolved context fails closed and important changes are audited.
 - FR5: Epic 1 — Phân quyền backend cho năng lực được bảo vệ.
 - FR6: Epic 1 — Phạm vi đơn vị/tổ chức.
 - FR6a: Epic 1 — Quan hệ nghiệp vụ theo từng hồ sơ.
-- FR6b: Epic 1 — Quản trị ủy quyền rõ ràng.
+- FR6b: Epic 1 — PI nội bộ duy nhất được tạo, nộp và nộp lại đề xuất; không ủy quyền.
 - FR6c: Epic 1 — Capability response từ backend.
 - FR6d: Epic 1 — Năng lực và giới hạn của thư ký khoa học.
 - FR6e: Epic 1 — Vòng đời quan hệ tham gia/phân công.
@@ -313,7 +313,7 @@ decomposition is retained below as a traceability source and is not removed.
 | Canonical epic | Existing backlog retained | Delivery intent |
 | --- | --- | --- |
 | 1. Foundation, authentication, app shell, navigation | Epic 1 stories 1.1-1.2, 1.5, 1.8 | Establish one authenticated responsive workspace and route boundary. |
-| 2. User, role, organization, catalog administration | Epic 1 stories 1.3-1.10; Epic 2 stories 2.1-2.6 | Keep account, five system roles, scope, researcher profiles, relationships, conflicts, delegation, and catalogs. |
+| 2. User, role, organization, catalog administration | Epic 1 stories 1.3-1.9; Epic 2 stories 2.1-2.6 | Keep account, five system roles, scope, researcher profiles, relationships, conflicts, and catalogs. |
 | 3. Proposal / research topic management | Epic 4 stories 4.1-4.6 | Convert intake, draft, structured form, files, readiness, submit, and resubmit into UX-backed delivery slices. |
 | 4. Review, evaluation, aggregation, approval | Epic 5 stories 5.1-5.8 | Preserve supplement, reviewer assignment, evaluation, aggregation, decision, disclosure, and state controls. |
 | 5. Project tracking after approval | Epic 6 stories 6.1-6.10 | Preserve explicit project creation, milestones, reports, adjustment, acceptance, member scope, and final decision. |
@@ -401,7 +401,8 @@ current system role separately from record relationships.
 
 Provide a safe administrative foundation for accounts, exactly one active
 system role, organization scope, researcher profiles, record relationships,
-conflict checks, delegation, catalogs, and shared configuration.
+conflict checks, catalogs, and shared configuration. Proposal submission is
+owner-only and has no delegated path.
 
 ### Business value
 
@@ -417,9 +418,9 @@ with no administrative authority; read-only users of catalog values.
 ### In scope
 
 Users, five system roles, units/scope, researcher profiles and account links,
-participation history, reviewer/secretary relationships, conflict preflight,
-`proposal.submit` delegation, catalogs, forms, checklists, score criteria,
-notification templates, and configuration.
+participation history, reviewer/team relationships, conflict preflight,
+catalogs, forms, checklists, score criteria, notification templates, and
+configuration.
 
 ### Out of scope / later
 
@@ -440,16 +441,14 @@ intake configuration, reviewer candidate search, and account reset.
 ### Backend/API needs
 
 Admin user/role/unit/catalog endpoints; researcher profile CRUD/link/history;
-relationship lifecycle and conflict preflight endpoints; exact delegation
-grant/revoke/approve operations; DTO validation, versions, audit, and scoped
-queries.
+relationship lifecycle and conflict preflight endpoints; DTO validation,
+versions, audit, and scoped queries.
 
 ### Permission and security notes
 
 `SYSTEM_ADMIN` has no implicit proposal/project/review/approval access. Every
 relationship has status/effective dates. Conflict denial wins over role grants.
-Only exact, record-scoped `proposal.submit` delegation is allowed and never
-self-approved or chained.
+Proposal create/submit/resubmit are PI-only; no proposal delegation is allowed.
 
 ### Acceptance criteria
 
@@ -474,7 +473,6 @@ self-approved or chained.
 | 2.2 | MVP | Manage organizations, catalogs, forms, checklists, priorities, and score criteria with soft lifecycle. |
 | 2.3 | MVP | Manage researcher profiles, account links, participation history, and record relationships. |
 | 2.4 | MVP | Run conflict/separation-of-duty preflight before reviewer, secretary, or approval assignment. |
-| 2.5 | Should have | Implement exact `proposal.submit` delegation lifecycle and impact warning. |
 
 ## Epic 3: Proposal / research topic management
 
@@ -491,8 +489,8 @@ through the next staff action.
 
 ### Primary users / roles
 
-Scientific management staff/assigned secretary; internal PI; permitted members
-and `EXTERNAL_RESEARCHER_USER` for assigned draft fields only.
+Scientific management staff for intake/check operations; current internal PI for
+proposal authoring; related team members and reviewers for permitted read/file work.
 
 ### In scope
 
@@ -524,16 +522,16 @@ validation, scoped list/detail/count/facet, and `ViewerAuthorizationV1`.
 ### Permission and security notes
 
 PI edit/submit is limited to applicable intake and scope. Submitted versions
-lock. External users edit only assigned draft sections and cannot create/submit
-or change protected fields. No direct status PATCH.
+lock. Non-PI users cannot create, edit, submit, or resubmit proposal drafts.
+No direct status PATCH.
 
 ### Acceptance criteria
 
 - Draft save permits incomplete sections; submit requires backend readiness,
   active intake, scope, relationship, conflict, deadline, and context version.
-- An external researcher can open a related draft and edit only assigned
-  sections/contribution files; external access cannot create/submit or change
-  PI, members, objective, budget, status, or other protected fields.
+- An external researcher can open only a related proposal under disclosure rules;
+  external access cannot create, edit, submit, resubmit, or change PI, team,
+  objective, budget, status, or other protected fields.
 - Submitted, supplement-requested, resubmitted, eligible, and rejected versions
   show the canonical state and immutable history with allowed next action.
 - Closed intake, stale context, denied capability, invalid field/file, and
@@ -549,7 +547,7 @@ or change protected fields. No direct status PATCH.
 | 3.2 | MVP | Build proposal list/detail and sectioned create/edit form with server validation. |
 | 3.3 | MVP | Add readiness, submit confirmation, immutable submission, supplement, and resubmit flow. |
 | 3.4 | MVP | Implement state badges, next-action strip, version/history, and capability-aware controls. |
-| 3.5 | Should have | Add richer draft collaboration for assigned member/external sections after core PI intake is stable. |
+| 3.5 | Should have | Add richer read/file contribution guidance for related team members after core PI intake is stable. |
 
 ## Epic 4: Review, evaluation, aggregation, and approval
 
@@ -565,7 +563,7 @@ submitted package and audit trail.
 
 ### Primary users / roles
 
-Scientific management staff/secretary for scoped administration; assigned
+Scientific management staff for proposal checks and scoped administration; assigned
 reviewer/council/ethics evaluator, including an external researcher when
 explicitly assigned; leadership approval authority; PI/member/external
 researcher as disclosure-limited viewers.
@@ -1083,10 +1081,10 @@ behavior outside `docs/ux-ui-spec.md`.
 | S01 Login | Authenticate and establish safe session. | Unauthenticated | `/login` | Username, password, account-state message. | `POST /auth/login`. | Generic credential failure; no secret in URL/logs. | Loading, invalid, locked/inactive, network error, success. | Successful login lands on scoped dashboard; duplicate submit is prevented; audit is written. |
 | S02 Password | Change password or complete admin-issued reset. | Authenticated; reset-context user | `/change-password`, `/password-reset` | Current/new/confirm password, reset expiry. | Change/reset endpoints. | No credential-detail leakage; token single-use. | Loading, validation, expired token, error, success. | Policy and confirmation are validated; success invalidates old reset/session context as required. |
 | S03 Dashboard/My Work | Show scoped KPIs and action-needed records. | All authenticated roles | `/dashboard`, `/my-work` | KPI, queue, relationship, state, due/risk, route. | `GET /dashboard`, `GET /me/work`. | Same scope for cards/counts/drill-down; conflict items non-actionable. | Loading, empty, unavailable source, error, success. | Every card links to an authorized filtered source list; no global counts. |
-| S04 Intake/proposal list | Browse intake/proposal queues. | Staff, secretary, PI, related participants. | `/intakes`, `/proposals`, `/my-proposals` | Code/title/PI/unit/field/intake/state/due. | Intake/proposal list APIs. | Server-side scope, counts, facets, filters. | Loading, no records, no match, error, denied. | URL filters restore; desktop table/mobile cards preserve code, state, due, owner, action. |
+| S04 Intake/proposal list | Browse intake/proposal queues. | Staff/internal researchers for intakes; authorized proposal relationships for proposals. | `/intakes`, `/proposals`, `/my-proposals` | Code/title/PI/unit/field/intake/state/due. | Intake/proposal list APIs. | Server-side scope, counts, facets, filters. | Loading, no records, no match, error, denied. | URL filters restore; desktop table/mobile cards preserve code, state, due, owner, action. |
 | S05 Proposal detail | Canonical proposal detail workspace. | Authorized relationship/scope/assignment. | `/proposals/:id` | Header, relationship, tabs, files, timeline, capabilities. | Scoped detail API. | Disclosure-filtered DTO; stale context retained. | Loading, safe not-found/denied, stale, read-only, success. | Viewer relationship and next valid action are visible; hidden tabs/data are omitted. |
-| S06 Create/edit proposal | Create/edit structured draft. | Internal PI; assigned member/external fields. | `/proposals/new`, `/proposals/:id/edit` | Intake, participants, dates, objectives, budget, files, readiness. | Create/update proposal, catalogs, files. | Field capability, scope, state; submitted version locked. | Loading, incomplete, field/server error, locked, saved. | Save draft preserves values; invalid required fields focus first error; external cannot edit protected fields. |
-| S07 Submit confirmation / supplement request / staff check | Confirm submit, request supplement, or perform staff check. | PI/delegate; staff/secretary. | Proposal action panels. | Readiness, version, reasons, due date, checklist. | Submit/resubmit/check/supplement operations. | Atomic state/context/conflict checks; exact delegate only. | Loading, blocked, stale, validation error, success. | Submit locks version; supplement reason/due date is immutable history; no direct status edit. |
+| S06 Create/edit proposal | Create/edit structured draft. | Current internal PI only. | `/proposals/new`, `/proposals/:id/edit` | Intake, participants, dates, objectives, budget, files, readiness. | Create/update proposal, catalogs, files. | Owner, system role, scope, state; submitted version locked. | Loading, incomplete, field/server error, locked, saved. | Save draft preserves values; invalid required fields focus first error; non-PI users cannot edit or submit. |
+| S07 Submit confirmation / supplement request / staff check | Confirm submit, request supplement, or perform staff check. | Current internal PI for submit/resubmit; scientific management staff for check/supplement. | Proposal action panels. | Readiness, version, reasons, due date, checklist. | Submit/resubmit/check/supplement operations. | Atomic state/context/conflict checks; proposal submit/resubmit are PI-only. | Loading, blocked, stale, validation error, success. | Submit locks version; supplement reason/due date is immutable history; no direct status edit. |
 | S08 Reviewer assignment / reviewer evaluation | Assign reviewers and collect own evaluation. | Staff; assigned reviewer/council/ethics evaluator. | `/proposals/:id/assignments`, `/reviews/:assignmentId` | Candidate, conflict result, rubric, score, recommendation, due. | Assignment/evaluation APIs. | No self-review; own assignment only; one submit/lock. | Loading, empty candidates, conflict-blocked, incomplete, submitted, error. | Conflict blocks confirmation; total is backend-calculated; other reviews remain hidden. |
 | S09 Result aggregation / leadership decision | Consolidate evidence and decide. | Staff; leadership authority. | `/proposals/:id/aggregation`, `/proposals/:id/decision` | Review counts, summary, package, history, conflict indicator. | Aggregation/decision package and decision APIs. | Staff cannot approve; conflicted authority cannot decide. | Loading, not-ready, blocked, confirm, error, immutable success. | Pending approval requires conditions; reject requires reason; decision is audited and read-only. |
 | S10 Project tracking overview | Operate approved project lifecycle. | Staff, leadership, PI, members, secretary. | `/projects`, `/projects/:id` | Source proposal, relationships, state, progress, risks, tabs. | Project detail/list and explicit create API. | Member scope; no automatic project creation; state-based actions. | Loading, empty, denied tab, delayed, read-only, success. | Project setup clearly separates copied data from source proposal and exposes next action. |
@@ -1140,7 +1138,7 @@ state.
 
 | State | UI/backend task | Allowed/disabled action work | Audit/notification/edge cases |
 | --- | --- | --- | --- |
-| Draft | Editable sections, readiness, version badge. | PI edits/submits; assigned fields only for member/external; review/approval disabled. | Create/update audit; empty required fields permitted only for save draft. |
+| Draft | Editable sections, readiness, version badge. | Current internal PI edits/submits; non-PI users are read-only except separately authorized file actions; review/approval disabled. | Create/update audit; empty required fields permitted only for save draft. |
 | Submitted | Locked snapshot and pending-check queue. | Staff checks/supplements; PI read-only. | Submit/check audit; no post-submit overwrite. |
 | Pending check | Staff queue/checklist and next-owner strip. | Check complete or supplement; assignment/approval disabled. | Checklist version/audit; stale, conflict, closed-intake edge cases. |
 | Needs supplement | Missing items, reason, due date, response CTA. | PI revises working version/resubmits; final actions disabled. | Immutable request, reminder, overdue response flag. |
@@ -1200,9 +1198,9 @@ state.
 
 - What exact organization level may exercise each approval authority, and how
   is an authority's organization scope granted or revoked?
-- Is leadership approval ever delegable? The current baseline permits delegation
-  only for `proposal.submit`; approval delegation therefore remains out of MVP
-  unless this rule is explicitly changed.
+- Is leadership approval ever delegable? Approval delegation remains out of MVP
+  unless its own future contract is explicitly approved. Proposal submission
+  is PI-only and has no delegation path.
 - Is preview required for any specific file format in MVP, or is authorized
   upload/download sufficient?
 - Are saved filters required in MVP for any named operational queue?
@@ -1596,7 +1594,7 @@ So that quan hệ cũ hoặc chức danh thư ký không cấp quyền ngoài nh
 **Then** mọi quan hệ được bảo tồn và action chỉ được cộng sau khi áp dụng toàn bộ denial
 **And** quan hệ cùng loại chồng lấn bị từ chối theo registry multiplicity.
 
-**Given** actor là scientific secretary đang hoạt động của record
+**Given** actor là `TOPIC_SECRETARY` đang hoạt động của record
 **When** họ thao tác meeting material, minutes, file, task, tracking hoặc draft summary đã được cấp
 **Then** backend cho phép action hành chính tương ứng
 **And** reviewer assignment, scoring, membership change, approval, rejection và final decision vẫn bị chặn.
@@ -1604,39 +1602,6 @@ So that quan hệ cũ hoặc chức danh thư ký không cấp quyền ngoài nh
 **Given** actor chỉ có system role `EXTERNAL_RESEARCHER_USER` nhưng không có relationship/assignment trên record
 **When** họ gọi detail, file hoặc mutation endpoint
 **Then** backend fail closed và không lộ metadata của record.
-
-### Story 1.10: Vòng đời ủy quyền theo hành động và hồ sơ [FR6b]
-
-As a người đang nắm giữ một hành động có thể ủy quyền,
-I want đề nghị ủy quyền có kiểm soát cho một người khác,
-So that công việc được tiếp tục mà không mở rộng thẩm quyền hoặc phá vỡ phân tách nhiệm vụ.
-
-**Acceptance Criteria:**
-
-**Given** grantor hiện đang giữ `proposal.submit` trên một proposal
-**When** họ tạo đề nghị với delegate, target proposal, exact action, thời hạn và lý do
-**Then** grant ở trạng thái `PENDING_APPROVAL`
-**And** không cấp quyền trước khi được chuyên viên quản lý khoa học đúng phạm vi phê duyệt.
-
-**Given** approver là grantor, ngoài organization scope hoặc không có `delegation.grant.approve`
-**When** họ cố phê duyệt grant
-**Then** backend từ chối và không kích hoạt grant
-**And** tạo audit cho kết quả bị từ chối.
-
-**Given** grant đã được phê duyệt, còn hạn, chưa thu hồi và source authority còn hiệu lực
-**When** delegate thực hiện exact action trên đúng target record
-**Then** policy có thể cho phép sau khi tiếp tục kiểm tra scope, state và conflict
-**And** grant không áp dụng cho record khác, action khác, wildcard hoặc chuỗi tái ủy quyền.
-
-**Given** action khác `proposal.submit` hoặc source authority/account/grant hết hiệu lực
-**When** delegate thực hiện action
-**Then** backend trả `DELEGATION_INVALID` hoặc denial có ưu tiên cao hơn
-**And** mutation không xảy ra, capability được cập nhật và audit lưu đầy đủ context.
-
-**Given** actor là `EXTERNAL_RESEARCHER_USER`
-**When** actor tạo delegation hoặc dùng system role external để nộp thay
-**Then** backend từ chối vì external không tự giữ `proposal.submit`
-**And** không tạo grant hoặc submission side effect.
 
 ## Epic 2: Hồ sơ nhà khoa học và định danh quan hệ
 
@@ -1741,12 +1706,12 @@ So that không xảy ra tự đánh giá, tự phê duyệt hoặc thư ký ra q
 **Then** service đánh giá mọi quan hệ tham gia đang hoạt động của actor trên chính record
 **And** trả decision code, reason và context version mà không chọn một “vai trò cao nhất”.
 
-**Given** actor là PI, co-investigator hoặc member của record
+**Given** actor là PI, `TOPIC_MEMBER` hoặc team secretary của record
 **When** họ được phân công review hoặc approval cho record đó
 **Then** backend từ chối `CONFLICT_DENIED`
 **And** không tạo assignment dù actor có system role hoặc quan hệ khác cho phép.
 
-**Given** actor là scientific secretary của record
+**Given** actor là `TOPIC_SECRETARY` của record
 **When** họ được giao scoring, reviewer assignment, approval, rejection hoặc final decision
 **Then** backend từ chối theo conflict/non-delegable policy
 **And** các action hành chính hợp lệ của thư ký không bị loại bỏ.
@@ -2003,7 +1968,7 @@ So that trách nhiệm và quyền của từng người được xác định t
 **Then** backend từ chối vì external không có quyền tạo proposal
 **And** không tạo proposal, relationship hoặc file side effect.
 
-**Given** PI thêm co-investigator, member hoặc scientific secretary hợp lệ
+**Given** PI thêm `TOPIC_MEMBER` hoặc `TOPIC_SECRETARY` hợp lệ
 **When** quan hệ được lưu
 **Then** source proposal sở hữu type, status, effective interval và relationship version
 **And** không thêm global role hoặc thay đổi system role của người tham gia.
@@ -2031,7 +1996,7 @@ So that hồ sơ có thể được hoàn thiện dần trước khi nộp.
 **Then** backend validate và lưu atomically
 **And** response trả field errors hoặc capability mới theo state hiện hành.
 
-**Given** co-investigator hoặc member có responsibility/action được cấp rõ ràng
+**Given** `TOPIC_MEMBER` có responsibility/action được cấp rõ ràng
 **When** họ sửa phần được giao
 **Then** backend chỉ cho phép các field/section nằm trong action đó
 **And** từ chối thay đổi ngoài phạm vi mà không ảnh hưởng phần hợp lệ đã lưu trước đó.
@@ -2041,10 +2006,10 @@ So that hồ sơ có thể được hoàn thiện dần trước khi nộp.
 **Then** backend chỉ lưu section/field được giao và file đóng góp được phép
 **And** PI, roster, objective, budget, status và submit vẫn bị chặn.
 
-**Given** scientific secretary đang hoạt động
+**Given** `TOPIC_SECRETARY` đang hoạt động
 **When** họ cập nhật dữ liệu hành chính, meeting material, tracking hoặc draft summary được cấp
 **Then** action hợp lệ được lưu và audit
-**And** họ không thể tự thay đổi roster nhạy cảm, nộp thay PI khi không có delegation, đánh giá hoặc quyết định.
+**And** họ không thể tự thay đổi roster nhạy cảm, nộp thay PI, đánh giá hoặc quyết định.
 
 **Given** actor có nhiều quan hệ trên proposal
 **When** detail được tải
@@ -2102,7 +2067,7 @@ So that tôi có thể hoàn thiện dữ liệu trước khi nộp chính thứ
 **Then** hệ thống dùng version cấu hình hiện hành phù hợp với quy tắc đợt
 **And** không dựa vào kết quả readiness đã cache quá hạn.
 
-**Given** actor chỉ có quyền sửa/tệp nhưng không có `proposal.submit`
+**Given** actor chỉ có quyền sửa/tệp nhưng không phải current internal PI
 **When** họ chạy readiness hoặc cố nộp
 **Then** họ có thể xem lỗi trong phạm vi tệp/dữ liệu được phép nhưng không thể submit
 **And** UI hiển thị submit bị chặn với lý do backend.
@@ -2110,7 +2075,7 @@ So that tôi có thể hoàn thiện dữ liệu trước khi nộp chính thứ
 **Given** actor là `EXTERNAL_RESEARCHER_USER`
 **When** họ chạy readiness hoặc cố submit proposal
 **Then** chỉ phần readiness được disclosure cho section được giao nếu policy cho phép
-**And** action submit luôn bị chặn vì external không có `proposal.submit`.
+**And** action submit luôn bị chặn vì external không phải PI hiện tại.
 
 ### Story 4.6: Nộp chính thức và xem lịch sử nộp đề xuất [FR14]
 
@@ -2120,15 +2085,15 @@ So that tôi biết hồ sơ đã vào quy trình tiếp nhận.
 
 **Acceptance Criteria:**
 
-**Given** proposal đạt readiness, đợt đang nhận và actor có `proposal.submit`
+**Given** proposal đạt readiness, đợt đang nhận và actor là current internal PI
 **When** actor xác nhận nộp
 **Then** owning service re-authorize và chuyển state trong cùng transaction
 **And** tạo submission-history event với actor, thời gian, version hồ sơ và bộ tệp.
 
-**Given** delegate có grant `proposal.submit` hợp lệ do PI khởi tạo và chuyên viên phê duyệt
-**When** delegate nộp trong thời hạn grant
-**Then** submission ghi cả delegate và grantor context
-**And** PI vẫn là chủ nhiệm, grant không trở thành quyền quyết định khác.
+**Given** actor là delegate, secretary, member, staff hoặc external researcher
+**When** actor cố nộp proposal
+**Then** backend từ chối trước mutation
+**And** không tạo submission event hoặc delegated capability.
 
 **Given** hai request nộp đồng thời hoặc context/state version đã đổi
 **When** mutation được thực thi
@@ -2219,7 +2184,7 @@ So that đánh giá độc lập và không có xung đột lợi ích.
 **Then** hệ thống kiểm tra organization rule, active participation, prior assignment, conflict và relationship version
 **And** trả allowed/blocked decision có lý do.
 
-**Given** candidate là PI, co-investigator, member hoặc có conflict trên proposal
+**Given** candidate là PI, `TOPIC_MEMBER`, `TOPIC_SECRETARY` hoặc có conflict trên proposal
 **When** chuyên viên cố phân công
 **Then** backend từ chối `CONFLICT_DENIED`
 **And** không tạo reviewer assignment dù candidate có system role cao hơn.
@@ -2234,7 +2199,7 @@ So that đánh giá độc lập và không có xung đột lợi ích.
 **Then** chỉ profile/account và assignment cụ thể, còn hiệu lực, mới làm candidate đủ điều kiện
 **And** system role external tự nó không cấp quyền review hoặc quyền quyết định.
 
-**Given** actor là scientific secretary hoặc grant delegate
+**Given** actor là `TOPIC_SECRETARY` hoặc một người không được phân công reviewer
 **When** họ cố phân công reviewer
 **Then** action bị chặn vì nằm trong non-delegable registry
 **And** không thể vượt chặn bằng API trực tiếp.
@@ -2295,7 +2260,7 @@ So that hồ sơ sẵn sàng được trình người có thẩm quyền.
 **Then** backend từ chối bản tổng hợp cũ và yêu cầu tải lại
 **And** không chuyển proposal sang bước trình duyệt.
 
-**Given** PI, member, co-investigator hoặc secretary mở proposal
+**Given** PI, team member hoặc `TOPIC_SECRETARY` mở proposal
 **When** consolidation chưa được disclosure
 **Then** response chỉ cho biết trạng thái quy trình tổng quát
 **And** không trả raw score, comment, reviewer identity hoặc consolidation fields qua API, export, timeline hay notification.
@@ -2313,7 +2278,7 @@ So that quy trình đánh giá được hỗ trợ mà không trao quyền chuy�
 
 **Acceptance Criteria:**
 
-**Given** `PROPOSAL_SCIENTIFIC_SECRETARY` đang hoạt động
+**Given** `TOPIC_SECRETARY` đang hoạt động
 **When** secretary tạo/cập nhật meeting material, minutes, task, tracking note hoặc draft summary được đăng ký
 **Then** backend cho phép exact administrative action
 **And** history/audit ghi rõ actor và relationship.
@@ -2346,7 +2311,7 @@ So that tôi có đủ căn cứ trước khi ra quyết định.
 **Then** response gồm proposal version, submission history, supporting files, consolidation và decision capability cần thiết
 **And** disclosure chỉ mở dữ liệu đúng duty của actor.
 
-**Given** actor đồng thời là PI, co-investigator, member, reviewer hoặc secretary của proposal
+**Given** actor đồng thời là PI, team member, reviewer hoặc `TOPIC_SECRETARY` của proposal
 **When** policy đánh giá approval action
 **Then** conflict denial thắng system-role/assignment allow
 **And** action vẫn hiển thị bị khóa với lý do, không yêu cầu chuyển vai trò.
@@ -2385,7 +2350,7 @@ So that proposal kết thúc quy trình minh bạch mà không lộ phản biệ
 **And** trả mã state/version rõ ràng để người dùng tải lại.
 
 **Given** final decision đã có
-**When** PI, co-investigator, member hoặc secretary xem kết quả
+**When** PI, team member hoặc `TOPIC_SECRETARY` xem kết quả
 **Then** họ nhận `PublishedReviewSummaryV1` gồm decision status/date, public summary và required follow-up
 **And** reviewer identity, raw score/comment và internal consolidation tiếp tục bị ẩn.
 
@@ -2418,10 +2383,10 @@ So that dữ liệu và trách nhiệm được chuyển sang giai đoạn thự
 **Then** hệ thống sao chép dữ liệu nguồn được quy định và lưu source proposal/version
 **And** tạo project state ban đầu trong một transaction.
 
-**Given** proposal có PI, co-investigator, member và scientific secretary đang hoạt động
+**Given** proposal có owner-derived PI, `TOPIC_MEMBER` và `TOPIC_SECRETARY` đang hoạt động
 **When** project được tạo
 **Then** quan hệ được ánh xạ sang type project tương ứng với lifecycle/version riêng
-**And** không tạo global role hoặc mở rộng quyền mặc định của co-investigator vượt project member.
+**And** không tạo global role hoặc mở rộng quyền ngoài active team responsibility.
 
 **Given** request lặp hoặc source proposal/version không còn hợp lệ
 **When** project initialization được gửi
@@ -2451,12 +2416,12 @@ So that kế hoạch thực hiện có người chịu trách nhiệm và hạn 
 **Then** source project cập nhật status/effective interval bằng successor history
 **And** quyền của actor thay đổi tại request `asOf` tương ứng.
 
-**Given** project member hoặc co-investigator mở detail
+**Given** topic team member mở detail
 **When** relationship đang hoạt động
 **Then** họ xem được trách nhiệm, milestone và file hỗ trợ được cấp
 **And** không nhận manage-membership, approval hoặc final-decision action mặc định.
 
-**Given** scientific secretary đang hoạt động
+**Given** `TOPIC_SECRETARY` đang hoạt động
 **When** họ cập nhật tracking, meeting material, minutes, task hoặc draft summary được cấp
 **Then** action hành chính được phép và audit
 **And** scoring, membership decision, approval/rejection và final decision vẫn bị chặn.
@@ -2497,7 +2462,7 @@ So that tôi hỗ trợ đề tài mà không có toàn quyền của chủ nhi�
 
 **Acceptance Criteria:**
 
-**Given** member/co-investigator có active relationship và responsibility cho milestone
+**Given** topic team member có active relationship và responsibility cho milestone
 **When** họ upload contribution file thuộc loại được phép
 **Then** file gắn với project, responsibility và uploader
 **And** history phân biệt contribution với hồ sơ do PI nộp chính thức.
@@ -2647,7 +2612,7 @@ So that kết quả cuối của đề tài có căn cứ và không bị tự p
 **Then** họ nhận data, file, project history và capability đúng duty
 **And** version thay đổi buộc tải lại trước decision.
 
-**Given** actor là PI, co-investigator, member, secretary hoặc chỉ có delegation
+**Given** actor là PI, topic team member, `TOPIC_SECRETARY` hoặc chỉ có delegation
 **When** họ cố approve/reject/finalize
 **Then** backend từ chối do conflict/non-delegable policy
 **And** không có đường API hoặc UI khác vượt chặn.
@@ -2708,7 +2673,7 @@ So that công việc có mục tiêu, người chịu trách nhiệm và ngữ c
 **Then** owning source xác nhận record tồn tại và actor có quyền tạo task trong context đó
 **And** task không dùng direct foreign identifier như một quyền truy cập.
 
-**Given** scientific secretary có exact administrative task action trên record
+**Given** `TOPIC_SECRETARY` có exact administrative task action trên record
 **When** họ tạo task hành chính trong record đó
 **Then** task được tạo và audit
 **And** action không cấp quyền sửa membership, review hoặc decision của source record.
@@ -3021,7 +2986,7 @@ So that căn cứ và tài liệu liên quan được truy cập từ đúng ng�
 **Then** hệ thống tạo typed association có source/target version
 **And** audit ghi actor, document, target và loại liên kết.
 
-**Given** scientific secretary có action liên kết tài liệu hành chính trên assigned record
+**Given** `TOPIC_SECRETARY` có action liên kết tài liệu hành chính trên assigned record
 **When** họ tạo association được phép
 **Then** link được tạo
 **And** secretary không nhận quyền sửa document master, membership, review hoặc decision.
@@ -3251,7 +3216,7 @@ So that đánh giá độc lập, đúng phạm vi và không có tự đánh gi
 **Then** preflight kiểm tra researcher identity, active council membership/assignment, source participation, organization rule và conflict
 **And** trả allowed/blocked reason cùng context version.
 
-**Given** candidate là PI, co-investigator, member, secretary hoặc approver có conflict trên source record
+**Given** candidate là PI, topic team member, `TOPIC_SECRETARY` hoặc approver có conflict trên source record
 **When** assignment được xác nhận
 **Then** backend từ chối `CONFLICT_DENIED`
 **And** không tạo assignment dù candidate giữ system role khác.

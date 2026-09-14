@@ -47,7 +47,7 @@ classification:
 
 DocManSystem, also referred to as RTMS, is a greenfield internal web application for the Military Medical Academy to manage the full lifecycle of university-level research topics and scientific project workflows. The product replaces fragmented handling through spreadsheets, email, disconnected files, and manual coordination with a single role-aware system that supports proposal intake, evaluation, approval, approved-project tracking, task execution, notifications, reminders, and executive reporting. The core business goal is not superficial digitization; it is to make workflow state, accountability, deadlines, and decision bottlenecks visible and controllable across the academy’s scientific management process.
 
-Phase 1 targets five account-level system roles—system administrator, scientific management staff, leadership or approval authority, researcher/internal user, and external researcher user—plus record-scoped participant and assignment contexts such as principal investigator, co-investigator, project member, scientific secretary, reviewer, and council member. The product must preserve complex internal workflows rather than flatten them. It must support controlled state transitions, organization-scoped data access, role-based and state-based permissions, mandatory audit logging for critical actions, file traceability, and dashboard views filtered by the current user’s authority. The first release scope must cover the seven work items listed in `detaiHVQY.md` section 2.1 through 2.7: OMS proposal management, approved-project tracking, seminar and student research tracking, task management, executive dashboard, related-document management, and council/ethics management.
+Phase 1 targets five account-level system roles—system administrator, scientific management staff, leadership or approval authority, researcher/internal user, and external researcher user—plus record-scoped relationships and assignments. A proposal has one owner-derived `PROPOSAL_PI`; active proposal/topic team rows use only `TOPIC_SECRETARY` and `TOPIC_MEMBER`; an approved topic owner uses `TOPIC_PI`. Reviewer and council duties remain assignments. The product must preserve complex internal workflows rather than flatten them. It must support controlled state transitions, organization-scoped data access, role-based and state-based permissions, mandatory audit logging for critical actions, file traceability, and dashboard views filtered by the current user’s authority. The first release scope must cover the seven work items listed in `detaiHVQY.md` section 2.1 through 2.7: OMS proposal management, approved-project tracking, seminar and student research tracking, task management, executive dashboard, related-document management, and council/ethics management.
 
 This PRD assumes a modular-monolith phase 1 architecture and a strict implementation boundary: no microservices, no external identity integration in phase 1, no workflow engine, no deep financial subsystem, and no public submission portal. The expected operational outcome is a measurable reduction in incomplete proposal records, a strong increase in overdue visibility, faster reporting preparation, and a more auditable and disciplined research administration process.
 
@@ -73,15 +73,14 @@ The core insight is that the academy’s main pain is not lack of data entry too
   exactly one active value. `SYSTEM_ADMIN` has no implicit business-data
   access; `SCIENTIFIC_MANAGEMENT_STAFF` operates business workflows across the
   Academy, subject to record state, assignment, conflict, and disclosure rules.
-- **Record participation role:** A relationship to one proposal, project, or
-  activity, such as principal investigator, co-investigator, project member,
-  or scientific secretary. Co-investigator is a distinct label and may receive
-  a distinct responsibility set, but it receives no broader default authority
-  than project member unless policy explicitly grants it.
+- **Record participation role:** A relationship to one proposal or approved
+  topic. `PROPOSAL_PI`/`TOPIC_PI` is owner-derived; team rows use only
+  `TOPIC_SECRETARY` and `TOPIC_MEMBER`. Reviewer, council, ethics, and task
+  duties are separate assignments.
 - **External researcher user:** An account managed by scoped scientific
   management or scientific-secretary authority. It may work only on explicitly
-  assigned draft contributions or reviews and can never create or formally
-  submit a proposal, change its PI/member/budget/objective/status, assign, or
+  assigned approved-topic/task contributions or reviews and can never create,
+  edit, or formally submit a proposal, change its PI/member/budget/objective/status, assign, or
   make a final decision.
 - **Assignment role:** A scoped responsibility for one review, council,
   ethics dossier, or task, such as reviewer, council member, ethics reviewer,
@@ -163,7 +162,7 @@ notification, file-metadata, and file-content disclosure.
 
 - Richer analytics and longitudinal performance reporting across units, research areas, and academic periods.
 - More advanced administrative configurability for templates, scoring criteria, notification rules, and reporting packs.
-- Broader participation support for project members beyond the minimal phase 1 responsibilities.
+- Broader participation support for topic team members beyond the minimal phase 1 responsibilities.
 - Improved convenience features such as richer previews, bulk operations, and more refined reviewer workload balancing.
 
 ### Vision (Future)
@@ -220,11 +219,11 @@ Mai is a scientific management staff member responsible for records that are adj
 
 In RTMS, she creates or imports approved seminar and student research records, maintains plans and related documents, records adjustments, tracks budget metadata and products, registers official documents with effective status, links documents to the relevant business records, prepares council plans, receives ethics dossiers, assigns council reviewers, consolidates scores, and routes decisions for approval. The journey succeeds when these adjacent research administration records are traceable, permission-controlled, and visible in the same operational reporting surface as proposals, projects, and tasks.
 
-### UJ-7: A Researcher Works As Scientific Secretary Without Receiving Decision Authority
+### UJ-7: A Researcher Works As Topic Secretary Without Receiving Decision Authority
 
-Dr. Binh is the scientific secretary for one approved project and the secretary
+Dr. Binh is `TOPIC_SECRETARY` for one approved topic and the secretary
 of a different council. These are record-scoped assignments, not global system
-roles. On the project, Binh can update the administrative information delegated
+roles. On the topic, Binh can update the administrative information delegated
 to the secretary, prepare meeting schedules and minutes, upload authorized
 documents, maintain assigned tasks, and draft progress or meeting summaries. On
 the council, Binh can prepare the agenda, member-material checklist, meeting
@@ -233,9 +232,11 @@ minutes, and draft consolidated record.
 The system always states which secretary relationship applies to the current
 record. Binh cannot use a secretary assignment from one record to access
 another record and cannot score, approve, reject, or issue the final decision
-for a record merely because Binh is its secretary. If a requested action
-depends on an explicit delegation, the backend verifies the action, record,
-validity period, workflow state, and conflict policy before allowing it. The
+for a record merely because Binh is its secretary. If a requested action in a
+domain with an applicable delegation contract depends on delegation, the
+backend verifies the action, record, validity period, workflow state, and
+conflict policy before allowing it. Proposal creation, submission, and
+resubmission never use delegation. The
 journey succeeds when secretarial work is operationally useful but never
 silently expands into reviewer or decision authority.
 
@@ -393,16 +394,16 @@ RTMS is a browser-based internal administrative web application optimized for mu
 ### Identity, Users, Roles, And Organizations
 
 - FR1: System administrators can create, update, activate, deactivate, and lock user accounts.
-- FR2: System administrators can assign exactly one active account-level system role (`SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`) to a user; principal investigator, co-investigator, project member, scientific secretary, reviewer, council member, and ethics reviewer permissions are assigned through record-scoped participation or assignment relationships instead of additional global roles.
+- FR2: System administrators can assign exactly one active account-level system role (`SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`) to a user; owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer permissions are assigned through record-scoped relationships or assignments instead of additional global roles.
 - FR3: System administrators can associate users with an organizational unit and other scope-defining organizational attributes.
 - FR4: The system can authenticate users and establish a role-aware session for authorized access.
 - FR4a: Authenticated users can change their own password, and authorized administrators can initiate a controlled password reset flow for internal users.
 - FR5: The system can enforce role-based access rules across all protected capabilities.
 - FR6: The system can enforce explicit organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports; scientific management staff have Academy-wide business scope, while a parent/child unit relationship never implies scope unless explicitly granted.
-- FR6a: The system can distinguish account-level system roles from record-scoped participation or assignment roles, including principal investigator, co-investigator, project member, scientific secretary, reviewer, council member, and ethics reviewer, so those roles only grant permissions within the specific proposal, project, council, review, ethics dossier, task, or related record context.
-- FR6b: Authorized scientific management staff can approve, revoke, and inspect an explicit record-scoped delegation of `proposal.submit` initiated by its current holder; each grant identifies the delegate, target record, action, validity period, grantor, approver, reason, and status, and no delegated permission is inferred when a valid grant is absent.
+- FR6a: The system can distinguish account-level system roles from record-scoped relationships or assignments, including owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer, so those relationships only grant permissions within the specific proposal, approved topic, council, review, ethics dossier, task, or related record context.
+- FR6b: Proposal creation, submission, and resubmission are owner-only actions requiring the current PI to be an active `RESEARCHER_INTERNAL_USER`; no proposal-submit delegation or delegated capability is supported.
 - FR6c: Protected record responses can state the current user's record-scoped relationships, allowed actions, blocked actions, and plain-language denial reasons as calculated by backend authorization policy.
-- FR6d: A record-scoped scientific secretary can perform only the explicitly authorized administrative, meeting, minutes, document, task, tracking, and draft-summary actions for the assigned proposal, project, council, or ethics record; the secretary relationship alone never grants reviewer scoring or final approval/rejection authority.
+- FR6d: A record-scoped `TOPIC_SECRETARY` can perform only the explicitly authorized administrative, meeting, minutes, document, task, tracking, and draft-summary actions for the assigned proposal, approved topic, council, or ethics record; the secretary relationship alone never grants reviewer scoring or final approval/rejection authority.
 - FR6e: Proposal participation, project participation, council membership, reviewer assignment, task assignment, and ethics assignment relationships can be activated, suspended, ended, or revoked with effective dates and status, and an inactive relationship immediately stops granting access or capabilities.
 
 ### Shared Catalogs And Configuration
@@ -417,7 +418,7 @@ RTMS is a browser-based internal administrative web application optimized for mu
 - FR11: Principal investigators can enter structured proposal information including title, field, host unit, participants, timeline, objectives, content summary, and proposed budget metadata.
 - FR12: Principal investigators can upload required proposal attachments and supporting documents to a proposal record.
 - FR13: The system can validate required proposal data and required file conditions before formal submission.
-- FR14: The system can record immutable proposal submission history, including timestamps, submission state changes, actor/delegation context, and locked versions; post-submission edits, withdrawal, and reopening use explicit requests/actions rather than overwriting a submitted version.
+- FR14: The system can record immutable proposal submission history, including timestamps, submission state changes, actor/authorization context, and locked versions; post-submission edits, withdrawal, and reopening use explicit requests/actions rather than overwriting a submitted version.
 
 ### Proposal Review, Supplement, And Approval Workflow
 
@@ -441,8 +442,8 @@ RTMS is a browser-based internal administrative web application optimized for mu
 - FR28: Scientific management staff can review and prepare adjustment, extension, acceptance, and final-review actions; leadership or approval authority makes the final decision when required by workflow.
 - FR29: The system can identify delayed projects, upcoming deadlines, and projects waiting for administrative action.
 - FR30: The system can treat approved-project workflow states as controlled states and restrict actions based on current project state.
-- FR30a: Project members can view approved projects they participate in, including assigned responsibilities, relevant milestones, and permitted supporting files.
-- FR30b: Project members can upload permitted contribution files or evidence within the scope granted to them for an approved project.
+- FR30a: `TOPIC_MEMBER` and `TOPIC_SECRETARY` users can view approved topics they participate in, including assigned responsibilities, relevant milestones, and permitted supporting files.
+- FR30b: Topic team users can upload permitted contribution files or evidence within the scope granted to them for an approved topic.
 
 ### Task Management
 
@@ -531,7 +532,7 @@ Needs role-scoped visibility into approvals, overdue items, risky projects, coun
 
 Creates proposals, responds to supplement requests, tracks project progress, submits reports, and requests adjustments or extensions.
 
-### Project Member
+### Topic Team Member
 
 Participates in approved-project work, receives assigned tasks, contributes evidence or files within granted scope, and monitors responsibilities related to the project. May have a researcher profile linked to their system user when they are part of the scientific personnel directory.
 
@@ -541,9 +542,9 @@ Accesses assigned proposals, ethics dossiers, council records, or review records
 
 ### External Researcher User
 
-Works only on explicitly related records: assigned draft sections/contributions
-or assigned review packages. Cannot create or formally submit proposals, edit
-submitted versions, change PI/members/objective/budget/status, assign users, or
+Works only on explicitly related records such as approved-topic/task contributions
+or assigned review packages. Cannot create, edit, or formally submit proposals,
+change PI/members/objective/budget/status, assign users, or
 make a final decision. This is one account-level system role; PI, member,
 reviewer, and secretary authority remains record-scoped.
 
@@ -556,7 +557,7 @@ reviewer, and secretary authority remains record-scoped.
   global roles.
 - Business actions such as proposal submission, supplement request handling, review submission, approval decisions, project follow-up, seminar/student research updates, document registration, ethics dossier submission, council decisions, and report export must be restricted by role.
 - `EXTERNAL_RESEARCHER_USER` may read only explicitly related records, update
-  only assigned editable draft sections/contribution files, and submit only an
+  only assigned approved-topic/task contributions, and submit only an
   explicitly assigned review. It never receives authority from same-unit
   membership, another record, a profile link, or a UI capability hint.
 - Administrator permissions must remain distinct from business-decision permissions.
@@ -564,36 +565,28 @@ reviewer, and secretary authority remains record-scoped.
 - A reviewer may access only the supporting files required for the assigned
   review and may view only their own draft or submitted review unless policy
   explicitly permits broader review visibility.
-- PI, co-investigator, project member, and scientific secretary users cannot
+- PI, team member, and topic secretary users cannot
   view internal reviewer identities, raw scores, reviewer comments, or
   consolidated evaluation material before the configured disclosure state.
   After a final decision, only the policy-approved decision summary is visible
   by default; raw internal reviews remain restricted unless an explicit
   disclosure policy allows them.
 - Leadership actions must be limited to authority-specific approval and visibility rules.
-- Principal investigator, project member, scientific secretary, reviewer, council member, and ethics reviewer status must be treated only as record-scoped participation or assignment context and must not be configured as account-level system roles.
+- `PROPOSAL_PI`, `TOPIC_PI`, `TOPIC_MEMBER`, `TOPIC_SECRETARY`, reviewer, council member, and ethics reviewer status must be treated only as record-scoped relationship or assignment context and must not be configured as account-level system roles.
 - Authorization must evaluate conflict-of-interest rules before sensitive assignments or decisions, including reviewer assignment, council membership assignment, proposal approval, project adjustment decisions, and council or ethics approval.
-- A project member cannot formally submit a proposal, submit an adjustment or
-  extension request, change official membership, approve a report, or make a
-  project decision unless a separate explicit record-scoped grant authorizes
-  the specific action and passes state and conflict checks.
-- A scientific secretary may update only the administrative fields, meeting
-  materials, minutes, files, tasks, tracking information, and draft summaries
-  authorized for the assigned record or council. Secretary status never grants
+- A topic team member cannot formally create, submit, or resubmit a proposal,
+  change official membership, approve a report, or make a project decision.
+- A topic secretary may update only the files, administrative fields, meeting
+  materials, minutes, tasks, tracking information, and summaries explicitly
+  authorized for the assigned record or council. On a proposal, the current
+  implementation permits an internal secretary to upload files but not edit or
+  submit the draft. Secretary status never grants
   scoring, reviewer assignment, approval, rejection, or final-decision power.
-- A record-scoped delegation must identify the target record, allowed actions,
-  grantor, delegate, approving staff actor, status, and validity period; it
-  must be revocable, auditable, and denied when expired, revoked, ambiguous,
-  or conflicting.
-- Only `proposal.submit` may be delegated, on one proposal, when its current
-  holder initiates the grant and authorized scientific management staff
-  independently approves it. Draft editing, files, resubmission, project
-  reporting, adjustment/extension, acceptance dossiers, reviewer assignment,
-  scoring, membership changes, approval, rejection, reopening, and final
-  decisions are non-delegable.
-- A grantor must retain the delegated action for the entire grant validity
-  period. Suspending or ending the grantor's source relationship immediately
-  invalidates the delegation.
+- Any delegation contract in a future/domain-specific capability must identify
+  the target record, allowed actions, grantor, delegate, approving staff actor,
+  status, and validity period; it must be revocable, auditable, and denied when
+  expired, revoked, ambiguous, or conflicting. Proposal creation, submission,
+  and resubmission are explicitly non-delegable.
 
 ## Data-Scope Authorization Requirements
 
@@ -668,10 +661,10 @@ reviewer, and secretary authority remains record-scoped.
   owned records, participating records, secretary assignments, council
   memberships, assigned reviews, assigned tasks, participation history, and
   audit/history.
-- Proposal, project, council, and ethics detail screens must provide an
-  authorized personnel-and-roles view that distinguishes PI, members,
-  scientific secretary, reviewers, chair, council secretary, and council
-  members as applicable.
+- Proposal, approved-topic, council, and ethics detail screens must provide an
+  authorized personnel-and-roles view that distinguishes owner-derived PI,
+  `TOPIC_MEMBER`, `TOPIC_SECRETARY`, reviewers, chair, council secretary, and
+  council members as applicable.
 - Personnel lists must use visible text role badges for every authorized
   relationship and must not rely on color alone.
 - The topbar or account menu must provide authorized summary counts for owned
@@ -685,7 +678,7 @@ reviewer, and secretary authority remains record-scoped.
 
 - Proposal intake, supplement, review, approval, approved-project tracking, seminar/student research tracking, task management, related-document management, council/ethics management, notifications, and dashboard/reporting flows are all demonstrably available in phase 1 through test execution or controlled UAT scenarios.
 - Proposal, approved-project, seminar/student research, council/ethics, and task states are enforced as controlled workflows rather than free-form edits, verified by positive and negative workflow transition scenarios.
-- System administrator, scientific management staff, leadership, principal investigator, project member, reviewer, and council or committee member can each complete at least one primary role journey in verification scenarios without relying on external shadow tracking for the main workflow.
+- System administrator, scientific management staff, leadership, owner-derived PI, topic team member, reviewer, and council or committee member can each complete at least one primary role journey in verification scenarios without relying on external shadow tracking for the main workflow.
 
 ### Governance Acceptance
 
@@ -700,17 +693,18 @@ reviewer, and secretary authority remains record-scoped.
   other records, when the user opens each record, then the backend returns the
   correct relationships and capabilities for that record without changing the
   active system role.
-- AC-PERM-02: Given a PI owns a draft proposal in an applicable intake period, when the PI
-  edits, uploads required files, and submits a complete proposal, then the
-  actions succeed; the same formal-submit action is denied to a project member
-  without a valid action-specific delegation.
-- AC-PERM-03: Given a project member has a granted evidence responsibility, when the member
-  uploads evidence or updates an assigned task, then the action succeeds only
+- AC-PERM-02: Given a current internal PI owns a draft proposal in an applicable
+  intake period, when the PI edits, uploads required files, and submits a
+  complete proposal, then the actions succeed; the same create/submit/resubmit
+  actions are denied to a team member, secretary, staff, external researcher,
+  or delegate before mutation.
+- AC-PERM-03: Given a topic team member has a granted evidence responsibility,
+  when the member uploads evidence or updates an assigned task, then the action succeeds only
   within the granted project/task scope; formal report submission, membership
   changes, adjustment requests, and decisions remain denied.
-- AC-PERM-04: Given a scientific secretary is assigned to a proposal, project, or council,
-  when the secretary maintains an authorized administrative field, meeting
-  schedule, minutes, file, task, or draft summary, then the action succeeds and
+- AC-PERM-04: Given a `TOPIC_SECRETARY` is assigned to a proposal, approved topic, or council,
+  when the secretary performs an explicitly authorized file, administrative,
+  meeting, minutes, task, tracking, or summary action, then the action succeeds and
   is audited; scoring, reviewer assignment, approval, and rejection remain
   denied.
 - AC-PERM-05: Given a reviewer is assigned to a record, when the reviewer opens the
@@ -729,10 +723,10 @@ reviewer, and secretary authority remains record-scoped.
 - AC-PERM-08: Given the same person is reviewer or secretary on a different unrelated
   record, when authorization is evaluated, then that relationship does not
   restrict or widen permissions on the current record.
-- AC-PERM-09: Given a `proposal.submit` delegation is valid for its one proposal, when the delegate
-  submits within the validity period and allowed intake state, then the
-  action succeeds and records grantor, delegate, target, and outcome; expired,
-  revoked, wrong-record, wrong-action, or conflicting grants are denied.
+- AC-PERM-09: Given any actor other than the current internal PI requests
+  proposal creation, submission, or resubmission, when the request reaches the
+  backend, then it is denied before mutation and no delegated capability is
+  accepted.
 - AC-PERM-10: Given participation, assignment, delegation, workflow state, or conflict
   context is missing or ambiguous, when a protected action is requested, then
   the backend fails closed and returns a stable denial code plus a
@@ -741,16 +735,11 @@ reviewer, and secretary authority remains record-scoped.
   its end date, is suspended, or is revoked, when the affected user next
   requests the record or an action, then the relationship grants no access or
   capability and the lifecycle change is auditable.
-- AC-PERM-12: Given a PI, co-investigator, member, or secretary opens an
+- AC-PERM-12: Given a PI, team member, or topic secretary opens an
   evaluation record before the configured disclosure state, when the response
   is produced, then reviewer identities, raw scores, reviewer comments, and
   consolidated outcomes are omitted; after the final decision only the
   policy-approved summary becomes visible by default.
-- AC-PERM-13: Given a PI who currently holds `proposal.submit` initiates its
-  one-proposal grant and authorized scientific management staff approves it,
-  when the delegate submits the correct proposal within the validity period,
-  then the action succeeds and is audited; a self-granted, unapproved,
-  non-delegable, or source-authority-lost grant is denied.
 
 ### UX Acceptance
 

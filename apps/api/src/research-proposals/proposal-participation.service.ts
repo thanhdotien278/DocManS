@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import {
   evaluateProposalConflict,
-  normalizeParticipationRole,
+  readProposalTeamRole,
   resolveProposalParticipation,
   type ProposalConflictDecision,
   type ProposalParticipation
@@ -179,7 +179,7 @@ export class ProposalParticipationService implements ProposalRelationshipFactPro
         role: member.role,
         organization: member.organization,
         userId,
-        participationRole: normalizeParticipationRole(member.participationRole ?? member.role)
+        participationRole: readProposalTeamRole(member.participationRole ?? member.role)
       };
     });
   }

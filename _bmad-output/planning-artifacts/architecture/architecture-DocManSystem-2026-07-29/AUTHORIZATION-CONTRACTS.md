@@ -85,13 +85,9 @@ The following V1 relationship types are canonical:
 | Type | Owner | Same actor + record multiplicity | Composition |
 | --- | --- | --- | --- |
 | `PROPOSAL_PI` | proposal | one | additive subject to denials |
-| `PROPOSAL_CO_INVESTIGATOR` | proposal | one | member-default actions only |
-| `PROPOSAL_MEMBER` | proposal | one | additive subject to denials |
-| `PROPOSAL_SCIENTIFIC_SECRETARY` | proposal | one | administrative actions only |
-| `PROJECT_PI` | project | one | additive subject to denials |
-| `PROJECT_CO_INVESTIGATOR` | project | one | member-default actions only |
-| `PROJECT_MEMBER` | project | one | additive subject to denials |
-| `PROJECT_SCIENTIFIC_SECRETARY` | project | one | administrative actions only |
+| `TOPIC_PI` | approved topic | one | additive subject to denials |
+| `TOPIC_SECRETARY` | proposal or approved topic | at most one active per record | administrative actions only |
+| `TOPIC_MEMBER` | proposal or approved topic | additive subject to denials | member-default actions only |
 | `REVIEWER_ASSIGNMENT` | review owner | one per evaluation assignment | own assignment only |
 | `COUNCIL_MEMBER` | council | one per council | assigned council only |
 | `COUNCIL_SCIENTIFIC_SECRETARY` | council | one per council | administrative actions only |
@@ -102,44 +98,20 @@ All active types are preserved; there is no “highest relationship.” Additive
 actions are unioned only after every denial is evaluated. A future relationship
 type or multiplicity change requires a registry version change and fixtures.
 
-## 4. Exact Action and Delegation Contract
+## 4. Exact Action and Delegation Boundary
 
 `PermissionActionV1` values are lowercase namespaced strings owned by
 `packages/permissions`, for example `project.progress-report.edit`.
-Matching is exact. Wildcards, prefix inheritance, and delegation chains are
-forbidden.
-
-```text
-DelegationGrantV1
-  schemaVersion: "v1"
-  grantId: UUID
-  grantorUserId: UUID
-  delegateUserId: UUID
-  approverUserId: UUID
-  targetDomain: DomainCodeV1
-  targetRecordId: UUID
-  targetOrganizationId: UUID
-  actionIds: non-empty PermissionActionV1[]
-  sourceAuthorityVersion: ContextVersionTokenV1
-  startsAt: UTC instant
-  endsAt: UTC instant | null
-  status: "PENDING_APPROVAL" | "ACTIVE" | "REVOKED" | "EXPIRED" | "REJECTED"
-  approvedAt: UTC instant | null
-  revokedAt: UTC instant | null
-  reason: string
-```
-
-A collection-wide grant is not valid in V1. The grantor must currently hold
-every action on the one target record. Approval requires
-`delegation.grant.approve`, the
-`SCIENTIFIC_MANAGEMENT_STAFF` system role, organization-scope intersection
-with the target, and a different approver from the grantor. Self-approval is
-forbidden. The delegate cannot redelegate.
+Matching is exact. Proposal creation, submission, and resubmission are
+owner-only internal-PI mutations and are not delegation targets. V1 exposes no
+proposal delegation grant or delegable proposal action.
 
 The non-delegable V1 registry includes reviewer/council assignment, evaluation
 submission and scoring, reviewer-identity disclosure, participation/membership
 change, grant approval, business approval/rejection, and all final-decision
-actions. Unknown actions are non-delegable by default.
+actions. Unknown actions are non-delegable by default. Any future delegation in
+another domain requires a separately approved, record-bounded contract with no
+wildcards or delegation chains before executable schemas or endpoints are added.
 
 ## 5. Context Version and Atomic Mutation
 
@@ -188,7 +160,7 @@ another user's assignment, conflict source, or undisclosed review material.
 
 | Audience/state | Identity | Raw score/comment | Consolidation | Allowed response |
 | --- | --- | --- | --- | --- |
-| PI/co-investigator/member/secretary before final disclosure | hidden | hidden | hidden | generic workflow status only |
+| PI/team member/team secretary before final disclosure | hidden | hidden | hidden | generic workflow status only |
 | Same audiences after final decision | hidden | hidden | hidden | `PublishedReviewSummaryV1` only |
 | Assigned reviewer | own identity only | own submitted/draft material only | hidden | own assignment DTO |
 | Assigned scientific-management staff | visible as required | visible as required | visible as required | operational internal DTO |
@@ -291,8 +263,8 @@ canonical fixture suite passes for:
 - resolved-empty versus unresolved context;
 - UTC start/end/revocation boundaries using one `asOf`;
 - overlapping relationships and multiple different relationship types;
-- delegation initiation, self-approval denial, expiry, revocation, scope,
-  non-delegable actions, and source-authority loss;
+- for any future domain delegation contract: initiation, self-approval denial,
+  expiry, revocation, scope, non-delegable actions, and source-authority loss;
 - disclosure for every matrix audience across DTO, file, export,
   notification, search, dashboard, and history;
 - capability schema compatibility and unknown-version/code denial;

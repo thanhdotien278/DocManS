@@ -240,7 +240,7 @@ function createEp02Prisma() {
           id: nextId("member", store.members),
           createdAt: new Date(),
           userId: null,
-          participationRole: "member",
+          participationRole: "TOPIC_MEMBER",
           status: "ACTIVE",
           effectiveFrom: new Date(),
           effectiveUntil: null,
@@ -439,7 +439,7 @@ async function createDraft({ prisma, intakeService, proposalService }) {
     objectives: "Xây dựng mô hình thử nghiệm hỗ trợ phân tích dữ liệu.",
     summary: "Đề tài nghiên cứu ứng dụng AI với phạm vi thử nghiệm nội bộ.",
     budgetMetadata: { amount: 120000000, currency: "VND" },
-    members: [{ name: "TS. Phạm Anh Tuấn", role: "Chủ nhiệm", organization: "Khoa Toán - Tin học" }]
+    members: []
   });
 }
 
@@ -473,7 +473,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
         title: "Nghiên cứu ban đầu",
         hostOrganizationUnitId: "org-khti",
         budgetMetadata: { amount: "15000000" },
-        members: [{ name: "TS. Phạm Anh Tuấn", role: "Chủ nhiệm", organization: "Khoa Toán - Tin học" }]
+        members: [{ name: "ThS. Nguyễn Thị Lan", role: "TOPIC_MEMBER", organization: "Khoa Toán - Tin học" }]
       })
     );
     assert.throws(

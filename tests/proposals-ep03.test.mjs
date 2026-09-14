@@ -144,9 +144,8 @@ const ACCOUNTS = [
 ];
 
 const TEAM = [
-  { name: "TS. Phạm Anh Tuấn", role: "Chủ nhiệm", organization: "Khoa Toán - Tin học", username: "patuan" },
-  { name: "ThS. Nguyễn Thị Lan", role: "Thành viên", organization: "Khoa Toán - Tin học", username: "ntlan" },
-  { name: "ThS. Trần Thanh Minh", role: "Thư ký khoa học", organization: "Phòng KHQS", username: "ttminh" }
+  { name: "ThS. Nguyễn Thị Lan", role: "TOPIC_MEMBER", organization: "Khoa Toán - Tin học", username: "ntlan" },
+  { name: "ThS. Trần Thanh Minh", role: "TOPIC_SECRETARY", organization: "Phòng KHQS", username: "ttminh" }
 ];
 
 const FULL_SCORES = {
@@ -286,7 +285,7 @@ function createPrisma() {
           id: nextId("member", store.members),
           createdAt: new Date(),
           userId: null,
-          participationRole: "member",
+          participationRole: "TOPIC_MEMBER",
           status: "ACTIVE",
           effectiveFrom: new Date(),
           effectiveUntil: null,
@@ -645,7 +644,7 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
   it("Story 1.9: an active staff secretary cannot bypass the capability response to assign a reviewer", async () => {
     const services = createServices();
     const proposal = await createSubmittedProposal(services, {
-      members: [...TEAM, { name: staffUser.displayName, role: "Thư ký khoa học", organization: "Phòng KHQS", username: staffUser.username }]
+      members: [...TEAM.filter((member) => member.role !== "TOPIC_SECRETARY"), { name: staffUser.displayName, role: "TOPIC_SECRETARY", organization: "Phòng KHQS", username: staffUser.username }]
     });
 
     await assert.rejects(
@@ -830,8 +829,8 @@ describe("ST-3.3 reviewer scoring and comments", () => {
       proposalId: proposal.id,
       userId: reviewerUser.id,
       name: reviewerUser.displayName,
-      role: "Thư ký khoa học",
-      participationRole: "secretary",
+      role: "TOPIC_SECRETARY",
+      participationRole: "TOPIC_SECRETARY",
       organization: "Phòng KHQS",
       status: "ACTIVE",
       effectiveFrom: new Date(Date.now() - 1000),
@@ -1222,7 +1221,7 @@ describe("ST-3.5 approval decision", () => {
         ...TEAM,
         {
           name: conflictedLeadershipUser.displayName,
-          role: "Thành viên",
+          role: "TOPIC_MEMBER",
           organization: "Ban Giám Đốc",
           username: conflictedLeadershipUser.username
         }

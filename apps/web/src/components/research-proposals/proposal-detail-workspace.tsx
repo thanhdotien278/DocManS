@@ -67,7 +67,7 @@ function getDocumentTypeLabel(code: string, fallback?: string) {
 }
 
 function relationshipLabel(type: string) {
-  return { PROPOSAL_PI: "Chủ nhiệm", PROPOSAL_MEMBER: "Thành viên", PROPOSAL_SCIENTIFIC_SECRETARY: "Thư ký", REVIEWER_ASSIGNMENT: "Người phản biện" }[type] ?? type;
+  return { PROPOSAL_PI: "Chủ nhiệm", TOPIC_MEMBER: "Thành viên", TOPIC_SECRETARY: "Thư ký", REVIEWER_ASSIGNMENT: "Người phản biện" }[type] ?? type;
 }
 
 function toDraftInput(proposal: ResearchProposal): ProposalDraftInput {
@@ -81,9 +81,7 @@ function toDraftInput(proposal: ResearchProposal): ProposalDraftInput {
     objectives: proposal.objectives,
     summary: proposal.summary,
     budgetMetadata: proposal.budgetMetadata,
-    members: proposal.members?.length
-      ? proposal.members.filter((member) => !member.status || member.status === "ACTIVE").map((member) => ({ ...member, username: "" }))
-      : [{ name: "", role: "Chủ nhiệm", organization: "", username: "" }]
+    members: proposal.members?.filter((member) => !member.status || member.status === "ACTIVE").map((member) => ({ ...member, username: "" })) ?? []
   };
 }
 
@@ -328,7 +326,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
 
     setIsSubmitting(true);
     try {
-      const result = await submitResearchProposal(proposal.id, proposal.viewerAuthorization?.contextVersion, proposal.availableDelegations?.[0]?.id);
+      const result = await submitResearchProposal(proposal.id, proposal.viewerAuthorization?.contextVersion);
       setProposal(result.proposal);
       setForm(toDraftInput(result.proposal));
       setReadiness(await loadProposalReadiness(proposal.id));
@@ -400,7 +398,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
 
     setIsResubmitting(true);
     try {
-      const result = await resubmitResearchProposal(proposal.id, proposal.viewerAuthorization?.contextVersion, proposal.availableDelegations?.[0]?.id);
+      const result = await resubmitResearchProposal(proposal.id, proposal.viewerAuthorization?.contextVersion);
       setProposal(result.proposal);
       setForm(toDraftInput(result.proposal));
       setReadiness(await loadProposalReadiness(proposal.id));
@@ -438,6 +436,12 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
         <SectionCard title="Thông tin hồ sơ" subtitle={canEdit ? "Có thể lưu nháp nhiều lần trước khi nộp chính thức" : "Hồ sơ đang ở trạng thái chỉ đọc"}>
           <form className="admin-form" onSubmit={(event) => void handleSave(event)}>
             <div className="meta-grid">
+              {(proposal.ownerDisplayName || proposal.ownerId) ? (
+                <div className="meta-item">
+                  <span className="meta-label">Chủ nhiệm (PI)</span>
+                  <span className="meta-value">{proposal.ownerDisplayName || proposal.ownerId}</span>
+                </div>
+              ) : null}
               <div className="meta-item">
                 <span className="meta-label">Vai trò của tôi với hồ sơ này</span>
                 <span className="meta-value">
@@ -502,7 +506,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
             </div>
 
             <div className="form-section-inline">
-              <div className="section-mini-heading">Chủ nhiệm/thành viên và thời gian</div>
+              <div className="section-mini-heading">Chủ nhiệm, team và thời gian</div>
               <div className="form-grid two">
                 <ProposalMembersEditor members={form.members ?? []} disabled={!canEdit || isSaving} onChange={(members) => setForm({ ...form, members })} />
                 <label className="field">

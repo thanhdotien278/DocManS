@@ -50,7 +50,7 @@ flowchart LR
   Role["One active system role"] --> Policy
   Scope["Organization scope"] --> Policy
   Domain["Domain relationship resolver"] --> Policy
-  Delegation["Delegation resolver"] --> Policy
+  Delegation["Optional future delegation resolver"] --> Policy
   State["Workflow state"] --> Policy
   Conflict["Conflict policy"] --> Policy
   Policy --> Decision["Allow or deny"]
@@ -74,7 +74,7 @@ flowchart LR
   notification
 - **Prevents:** role-only or scope-only permission decisions
 - **Rule:** evaluate system role, organization scope, active record
-  relationships, assignment scope, valid delegation, workflow state, and
+  relationships, assignment scope, any domain-applicable future delegation, workflow state, and
   conflict policy; each applicable resolver returns `resolved(value)`,
   `resolved(empty)`, or `unresolved/error`, while inapplicable dimensions return
   `not-applicable`; only unresolved, failed, stale, or ambiguous applicable
@@ -100,16 +100,13 @@ flowchart LR
   query-on-read aggregation in phase 1 and is never a mutation or authorization
   source of truth
 
-### AD-5 — Explicit Delegation [ADOPTED]
+### AD-5 — Explicit Delegation Boundary [ADOPTED]
 
 - **Binds:** governance, audit, source-domain action policies
 - **Prevents:** informal act-on-behalf access
-- **Rule:** a valid grant is initiated by the current action holder, approved
-  by authorized scientific-management staff, active, unrevoked, within its
-  validity interval, and backed by current source authority; exact-match
-  versioned action identifiers and the record-bounded `DelegationGrantV1`
-  envelope are required; its organization scope, approval separation, and
-  non-delegable registry are defined by `AUTHORIZATION-CONTRACTS.md`
+- **Rule:** proposal create, submit, and resubmit are owner-derived internal-PI
+  actions and are never delegated; any future delegation in another domain
+  requires its own explicit, record-bounded contract before implementation
 
 ### AD-6 — Server Capability Contract [ADOPTED]
 
@@ -167,8 +164,8 @@ flowchart LR
 - **Binds:** lists, details, files, exports, notifications, dashboards, history,
   proposal, review, council, and ethics modules
 - **Prevents:** leaking reviewer identities or internal evaluation material
-- **Rule:** before the configured disclosure state, PI, co-investigator,
-  members, and secretaries receive no reviewer identity, raw score, comment, or
+- **Rule:** before the configured disclosure state, PI, team members, and team
+  secretaries receive no reviewer identity, raw score, comment, or
   consolidation data; every audience, surface, field response, and
   `PublishedReviewSummaryV1` follows the matrix in
   `AUTHORIZATION-CONTRACTS.md`
@@ -223,7 +220,7 @@ flowchart LR
 
 ```text
 apps/api/src/common/authorization/   # shared policy composition and decision types
-apps/api/src/modules/delegations/    # grant lifecycle and approval
+apps/api/src/modules/delegations/    # future only after a domain contract is approved
 apps/api/src/modules/personal-work/  # authorized cross-module read model
 packages/permissions/                # shared action, decision, and capability contracts
 ```
@@ -241,7 +238,7 @@ direction.
 | Proposal/project participation | owning proposal/project modules | AD-2, AD-4 |
 | Reviewer/council/ethics assignment | owning evaluation/council modules | AD-2, AD-3, AD-4 |
 | Scientific-secretary actions | owning record/council service | AD-2, AD-3 |
-| Delegated action | delegations plus target domain | AD-3, AD-5 |
+| Future delegated action | future delegation module plus target domain | AD-3, AD-5 |
 | Record role/action UI | API DTOs and web feature | AD-6 |
 | Personal work and action queues | personal-work read module | AD-7 |
 | Cross-module integrations | source domain plus consumer | AD-8 |

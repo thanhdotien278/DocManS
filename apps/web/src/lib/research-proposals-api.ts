@@ -2,14 +2,15 @@ import { getApiBaseUrl } from "@/lib/session";
 import type { RequiredPackageItem } from "@/lib/proposal-intake-periods-api";
 import { isViewerAuthorizationV1, type BlockedActionV1, type PermissionActionV1, type ViewerAuthorizationV1 } from "@rtms/permissions";
 
-/** Record-scoped participation role codes returned by the API (ST-3.0). */
-export type ProposalParticipationRole = "principal-investigator" | "secretary" | "member" | "none" | "unknown";
+/** Record-scoped participation role codes returned by the API. */
+export type ProposalParticipationRole = "PROPOSAL_PI" | "TOPIC_SECRETARY" | "TOPIC_MEMBER" | "none" | "unknown";
+export type ProposalTeamRole = "TOPIC_SECRETARY" | "TOPIC_MEMBER";
 
 export type ProposalMember = {
   status?: string;
   id?: string;
   name: string;
-  role: string;
+  role: ProposalTeamRole;
   organization: string;
   /** Set when the participant is linked to a system account; empty for external participants. */
   userId?: string;
@@ -131,11 +132,11 @@ export type ProposalSupplementRequest = {
 
 export type ResearchProposal = {
   versions?: Array<{ id: string; version: number; submittedAt: string; content: { title: string; objectives: string; summary: string; attachments: ProposalAttachment[] } }>;
-  availableDelegations?: Array<{ id: string }>;
   id: string;
   code: string;
   intakePeriodId: string;
   ownerId: string;
+  ownerDisplayName?: string;
   hostOrganizationUnitId: string;
   researchFieldCode: string;
   proposalTypeCode: string;
@@ -329,9 +330,9 @@ export async function loadProposalReadiness(id: string) {
   return response.readiness;
 }
 
-export async function submitResearchProposal(id: string, contextVersion?: ViewerAuthorizationV1["contextVersion"], delegationId?: string) {
+export async function submitResearchProposal(id: string, contextVersion?: ViewerAuthorizationV1["contextVersion"]) {
   return requestJson<{ proposal: ResearchProposal }>(`/research-proposals/${id}/submit`, {
-    method: "POST", body: JSON.stringify({ contextVersion, delegationId })
+    method: "POST", body: JSON.stringify({ contextVersion })
   });
 }
 
@@ -342,9 +343,9 @@ export async function requestProposalSupplement(id: string, input: { reason: str
   });
 }
 
-export async function resubmitResearchProposal(id: string, contextVersion?: ViewerAuthorizationV1["contextVersion"], delegationId?: string) {
+export async function resubmitResearchProposal(id: string, contextVersion?: ViewerAuthorizationV1["contextVersion"]) {
   return requestJson<{ proposal: ResearchProposal }>(`/research-proposals/${id}/resubmit`, {
-    method: "POST", body: JSON.stringify({ contextVersion, delegationId })
+    method: "POST", body: JSON.stringify({ contextVersion })
   });
 }
 

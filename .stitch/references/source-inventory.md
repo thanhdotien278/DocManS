@@ -2,10 +2,10 @@
 
 | Priority | Source | Design use |
 | --- | --- | --- |
-| 1 | `docs/authorization-core-business-baseline.md` | Business invariants, state machine, delegation, audit semantics |
+| 1 | `docs/authorization-core-business-baseline.md` | Business invariants, state machine, PI/team boundaries, audit semantics |
 | 2 | `docs/permission-matrix.md` | Record-scoped roles, scopes, actions, state gating |
 | 3 | `_bmad-output/planning-artifacts/architecture/architecture-DocManSystem-2026-07-29/AUTHORIZATION-CONTRACTS.md` and `_bmad-output/architecture.md` | Capability/denial/context contract |
-| 4 | `docs/user-flows.md` | Proposal and delegation journeys |
+| 4 | `docs/user-flows.md` | Proposal ownership, team, submission, and review journeys |
 | 5 | `docs/ux-design-guidelines.md` | Interaction, accessibility, responsive rules |
 | 6 | `docs/ux-ui-spec.md` | Screen requirements and IA |
 | 7 | `_bmad-output/user-interface-workspaces-docmansystem.md` | Workspace/persona context |

@@ -573,7 +573,7 @@ tôi muốn tạo và lưu bản nháp proposal với dữ liệu có cấu trú
 
 **Ghi chú kỹ thuật:** Bao phủ mạnh UX-DR9, UX-DR10, UX-DR12; ưu tiên section clarity và save draft.
 
-**Yêu cầu phân quyền:** Chỉ PI hoặc người được cấp quyền thay mặt mới tạo/sửa draft của proposal thuộc scope hợp lệ; staff chỉ đọc khi workflow cho phép.
+**Yêu cầu phân quyền:** Chỉ PI hiện tại có system role `RESEARCHER_INTERNAL_USER` mới tạo/sửa draft của proposal thuộc scope hợp lệ; không có đường ủy quyền. Staff chỉ đọc khi workflow cho phép.
 
 **Yêu cầu audit log:** Ghi audit log cho tạo proposal draft và các cập nhật quan trọng nếu đã lưu thay đổi có ý nghĩa nghiệp vụ.
 
@@ -614,7 +614,7 @@ tôi muốn tải lên tệp đính kèm bắt buộc và xem trạng thái sẵ
 
 **Ghi chú kỹ thuật:** Bắt đầu dùng files module theo chiều dọc proposal; enforcement permission cho upload/xem file là bắt buộc.
 
-**Yêu cầu phân quyền:** Chỉ PI hoặc người được ủy quyền mới upload file vào draft của họ; backend luôn kiểm tra liên kết bản ghi và quyền truy cập.
+**Yêu cầu phân quyền:** Chỉ PI nội bộ hiện tại hoặc `TOPIC_SECRETARY` nội bộ của đúng proposal mới upload file vào draft; backend luôn kiểm tra liên kết bản ghi và quyền truy cập. Quyền upload không cấp quyền tạo, sửa hoặc nộp proposal.
 
 **Yêu cầu audit log:** Ghi audit log cho upload file quan trọng.
 
@@ -655,7 +655,7 @@ tôi muốn nộp chính thức proposal đã chuẩn bị và xem lịch sử n
 
 **Ghi chú kỹ thuật:** State transition phải là explicit domain operation; timeline UX cần rõ ràng theo UX-DR13/14.
 
-**Yêu cầu phân quyền:** Chỉ PI/chủ sở hữu proposal được submit; các actor khác chỉ xem hoặc thao tác tùy theo role/state.
+**Yêu cầu phân quyền:** Chỉ PI/chủ sở hữu proposal có system role `RESEARCHER_INTERNAL_USER` được submit; không có đường ủy quyền và mọi actor khác bị từ chối trước mutation.
 
 **Yêu cầu audit log:** Ghi audit log cho `submit proposal` và trạng thái liên quan.
 

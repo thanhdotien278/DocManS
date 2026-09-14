@@ -24,7 +24,7 @@ Proposal state is backend-owned. List, count, facet, sort, and detail discovery 
 
 # Viewer relationship
 
-Render the backend-supplied relationship label per record where disclosed (PI/member/scientific secretary/reviewer assignment); never reinterpret it as a global role.
+Render the backend-supplied relationship label per record where disclosed (`PROPOSAL_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer assignment); never reinterpret it as a global role.
 
 # Required information
 

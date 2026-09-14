@@ -21,9 +21,9 @@ policy and current workflow rules, use the linked normative documents.
 | **Proposal** | A research submission moving through intake, checking, evaluation, and final decision. A proposal is distinct from an approved project. |
 | **Approved project** | A managed research project created by scientific management after approval of a proposal. It receives new project relationships; it does not reuse proposal relationships as mutable shared data. |
 | **Intake period** | The controlled window that determines whether eligible internal researchers may create and submit proposals. Closing it stops new submissions, not processing of submitted proposals. |
-| **Relationship** | A record-scoped participation fact, such as proposal PI/member/secretary or project PI/member/secretary. It has a lifecycle and grants no authority outside its owning record. |
+| **Relationship** | A record-scoped participation fact, such as proposal PI/team secretary/team member or approved-topic PI/team secretary/team member. It has a lifecycle and grants no authority outside its owning record. |
 | **Assignment** | A record-scoped duty, such as reviewer, council member, ethics reviewer, or task assignee. It grants only the actions and disclosure needed for that assignment. |
-| **Delegation** | A time-bounded, approved grant for an exact action on one record. It is not a general substitute for role, relationship, assignment, or decision authority. |
+| **Delegation** | A time-bounded, approved grant for an exact action on one record where the owning contract permits delegation. It is not a general substitute for role, relationship, assignment, or decision authority; proposal submission is PI-only and non-delegable. |
 | **Workflow state** | The controlled lifecycle state of a business record. A state transition is a domain action, not an unrestricted field update. |
 | **Version** | An immutable business or file revision retained as evidence. Replacing or correcting creates a new version rather than overwriting a submitted, reviewed, or decided artifact. |
 | **Related document** | A governed, legal, planning, or supporting document with metadata, effective status, and version context. It is not an authorization bypass for the record it references. |
@@ -33,9 +33,10 @@ policy and current workflow rules, use the linked normative documents.
 
 - An account may hold many relationships and assignments, but each is effective
   only for its own record and validity period.
-- A proposal has one accountable PI. Proposal members, secretaries, reviewers,
-  and council participants are separate relationships or assignments; none is
-  an account-level role.
+- A proposal has one accountable PI derived from `ownerId`. Its active team has
+  only `TOPIC_SECRETARY` and `TOPIC_MEMBER` rows, with at most one secretary;
+  the PI is not duplicated as a team row. Reviewers and council participants
+  are separate assignments; none is an account-level role.
 - An approved project is created deliberately from an approved proposal. Its
   participants are copied or assigned as new project relationships and may
   diverge from the proposal thereafter.
@@ -57,9 +58,11 @@ assignments**. The active system roles are `SYSTEM_ADMIN`,
 System roles describe account-level responsibility; they do not automatically
 grant access to every business record. Record access is derived from the exact
 action, organization scope, active relationship or assignment, workflow state,
-conflict-of-interest rules, delegation where permitted, and disclosure policy.
+conflict-of-interest rules, delegation only where the owning contract permits,
+and disclosure policy. Proposal creation, submission, and resubmission are
+PI-only and never use delegation.
 `SYSTEM_ADMIN` administrative authority is not business approval authority.
-`EXTERNAL_RESEARCHER_USER` is an account role with no implicit PI, member,
+`EXTERNAL_RESEARCHER_USER` is an account role with no implicit PI, team,
 reviewer, or cross-record access.
 
 An authorization decision must use one coherent, current context for the

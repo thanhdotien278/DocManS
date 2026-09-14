@@ -1,3 +1,5 @@
+import { BadRequestException } from "@nestjs/common";
+
 /**
  * ST-3.0 — Proposal participation model and conflict-of-interest primitives.
  *
@@ -7,7 +9,8 @@
  * participation is a property of the record relationship only (AUTH-ST-3.0-02).
  */
 
-export type ProposalParticipationRole = "principal-investigator" | "co-investigator" | "secretary" | "member" | "none" | "unknown";
+export type ProposalTeamRole = "TOPIC_SECRETARY" | "TOPIC_MEMBER";
+export type ProposalParticipationRole = "PROPOSAL_PI" | ProposalTeamRole | "none" | "unknown";
 
 export type ProposalConflictReasonCode = "no-conflict" | "participation" | "unresolved";
 
@@ -44,27 +47,26 @@ export type ProposalConflictDecision = {
 };
 
 export const PROPOSAL_PARTICIPATION_ROLE_LABELS: Record<ProposalParticipationRole, string> = {
-  "principal-investigator": "Chủ nhiệm",
-  "co-investigator": "Đồng chủ nhiệm",
-  secretary: "Thư ký",
-  member: "Thành viên",
+  PROPOSAL_PI: "Chủ nhiệm",
+  TOPIC_SECRETARY: "Thư ký",
+  TOPIC_MEMBER: "Thành viên",
   none: "Không tham gia",
   unknown: "Chưa xác định"
 };
 
-/** Assignable participation roles, ordered by precedence when a user holds several. */
-export const PROPOSAL_PARTICIPATION_ROLES: ProposalParticipationRole[] = ["principal-investigator", "co-investigator", "secretary", "member"];
+/** Owner-derived PI first, followed by the only two assignable team roles. */
+export const PROPOSAL_PARTICIPATION_ROLES: ProposalParticipationRole[] = ["PROPOSAL_PI", "TOPIC_SECRETARY", "TOPIC_MEMBER"];
 
 const CONFLICT_REASONS: Record<string, { reason: string; viewerMessage: string }> = {
-  "principal-investigator": {
+  PROPOSAL_PI: {
     reason: "Người dùng là chủ nhiệm của hồ sơ này.",
     viewerMessage: "Bạn là chủ nhiệm hồ sơ này nên không thể phê duyệt hoặc đánh giá hồ sơ."
   },
-  secretary: {
+  TOPIC_SECRETARY: {
     reason: "Người dùng là thư ký của hồ sơ này.",
     viewerMessage: "Bạn là thư ký của hồ sơ này nên không thể phê duyệt hoặc đánh giá hồ sơ."
   },
-  member: {
+  TOPIC_MEMBER: {
     reason: "Người dùng là thành viên tham gia hồ sơ này.",
     viewerMessage: "Bạn đang tham gia hồ sơ này nên không thể phê duyệt hoặc đánh giá hồ sơ."
   }
@@ -97,34 +99,24 @@ function foldVietnamese(value: string) {
 }
 
 /**
- * Maps a stored or submitted participation role onto a canonical code. Accepts the canonical
- * codes and the Vietnamese descriptive labels the intake form already collects, so proposals
- * created before ST-3.0 still classify. Anything unrecognised falls back to `member`, which is
- * the least-privileged assignable role and still triggers the conflict rule.
+ * Maps a stored participation role onto one of the two canonical team codes. Legacy descriptive
+ * labels are read during the rolling migration; proposal writes use readProposalTeamRole below.
  */
-export function normalizeParticipationRole(value: unknown): ProposalParticipationRole {
-  if (typeof value !== "string") {
-    return "member";
-  }
+export function normalizeParticipationRole(value: unknown): ProposalTeamRole | "unknown" {
+  if (typeof value !== "string") return "unknown";
 
-  const normalized = foldVietnamese(value);
-  if (!normalized) {
-    return "member";
-  }
+  const normalized = foldVietnamese(value).replace(/_/g, "-");
+  if (normalized === "topic-secretary" || normalized === "secretary" || normalized.includes("thu ky")) return "TOPIC_SECRETARY";
+  if (normalized === "topic-member" || normalized === "member" || normalized.includes("thanh vien")) return "TOPIC_MEMBER";
+  return "unknown";
+}
 
-  if (normalized === "co-investigator" || normalized.includes("dong chu nhiem")) {
-    return "co-investigator";
+export function readProposalTeamRole(value: unknown): ProposalTeamRole {
+  const role = normalizeParticipationRole(value);
+  if (role === "unknown") {
+    throw new BadRequestException({ message: "Vai trò nhóm đề tài chỉ được là TOPIC_SECRETARY hoặc TOPIC_MEMBER." });
   }
-
-  if (normalized === "principal-investigator" || normalized.includes("chu nhiem")) {
-    return "principal-investigator";
-  }
-
-  if (normalized === "secretary" || normalized.includes("thu ky")) {
-    return "secretary";
-  }
-
-  return "member";
+  return role;
 }
 
 export function getParticipationRoleLabel(role: ProposalParticipationRole) {
@@ -178,20 +170,20 @@ export function resolveProposalParticipation(input: {
   const relationshipEffectiveFrom: ProposalParticipation["relationshipEffectiveFrom"] = {};
   const relationshipEffectiveUntil: ProposalParticipation["relationshipEffectiveUntil"] = {};
   if (isOwner) {
-    roles.add("principal-investigator");
+    roles.add("PROPOSAL_PI");
     const effectiveFrom = input.proposal.createdAt?.toISOString();
-    if (effectiveFrom) relationshipEffectiveFrom["principal-investigator"] = effectiveFrom;
-    relationshipEffectiveUntil["principal-investigator"] = null;
+    if (effectiveFrom) relationshipEffectiveFrom.PROPOSAL_PI = effectiveFrom;
+    relationshipEffectiveUntil.PROPOSAL_PI = null;
   }
 
   for (const member of input.members) {
-    if (member?.userId && member.userId === userId && isRelationshipActiveAt({
+    if (member?.userId && member.userId === userId && member.userId !== input.proposal.ownerId && isRelationshipActiveAt({
       status: member.status,
       effectiveFrom: member.effectiveFrom,
       effectiveUntil: member.effectiveUntil
     }, asOf)) {
       const role = normalizeParticipationRole(member.participationRole);
-      if (role === "none" || role === "unknown") continue;
+      if (role === "unknown") continue;
       roles.add(role);
       const effectiveFrom = (member.effectiveFrom ?? member.createdAt)?.toISOString();
       if (effectiveFrom && (!relationshipEffectiveFrom[role] || effectiveFrom < relationshipEffectiveFrom[role]!)) {
@@ -228,8 +220,8 @@ export function resolveProposalParticipation(input: {
 }
 
 /**
- * The one shared conflict primitive (AC-ST-3.0-04). Principal investigator, secretary and
- * member all conflict. An unresolved participation context conflicts as well, so a caller that
+ * The one shared conflict primitive (AC-ST-3.0-04). Proposal PI, topic secretary and topic member
+ * all conflict. An unresolved participation context conflicts as well, so a caller that
  * cannot read participation blocks rather than silently permitting the action.
  */
 export function evaluateProposalConflict(participation?: ProposalParticipation | null): ProposalConflictDecision {

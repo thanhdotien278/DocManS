@@ -1,4 +1,4 @@
-import { proposalContextVersion, runProposalMutation } from "../proposals-shared/proposal-mutation.js";
+import { runProposalMutation } from "../proposals-shared/proposal-mutation.js";
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 // @ts-ignore The runtime package is JavaScript; its TypeScript source entry supplies this contract.
 import { isContextVersionTokenV1, type ContextVersionTokenV1 } from "@rtms/permissions";
@@ -77,6 +77,7 @@ type ResearchProposalRecord = {
   authorizationContextUpdatedAt: Date;
   createdAt: Date;
   updatedAt: Date;
+  owner?: { displayName: string } | null;
 };
 
 type ProposalMemberRecord = {
@@ -164,7 +165,8 @@ export class ResearchProposalsService {
   async listProposals(actor: SafeUserContext) {
     const asOf = new Date();
     const records = (await this.prisma.researchProposal.findMany({
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      include: { owner: { select: { displayName: true } } }
     })) as ResearchProposalRecord[];
 
     const [participationByProposal, reviewAccessByProposal] = await Promise.all([
@@ -176,10 +178,8 @@ export class ResearchProposalsService {
       )
     ]);
 
-    const delegatedIds = new Set<string>();
-    for (const proposal of records) if ((await this.availableDelegations(actor, proposal)).length) delegatedIds.add(proposal.id);
     return records
-      .filter((proposal) => delegatedIds.has(proposal.id) || canReadProposal(actor, proposal, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id)))
+      .filter((proposal) => canReadProposal(actor, proposal, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id)))
       .map((proposal) =>
         this.toProposalResponse(proposal, actor, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id))
       );
@@ -192,7 +192,7 @@ export class ResearchProposalsService {
       this.participation.resolveForProposal(actor?.id, proposal, undefined, asOf),
       this.reviewAccess.resolveForProposal(actor?.id, proposalId, asOf)
     ]);
-    if (!(await this.availableDelegations(actor, proposal)).length) assertCanReadProposal(actor, proposal, participation, reviewAccess);
+    assertCanReadProposal(actor, proposal, participation, reviewAccess);
     return this.toProposalDetailResponse(proposal, actor, participation, reviewAccess);
   }
 
@@ -330,12 +330,11 @@ export class ResearchProposalsService {
     return this.computeReadiness(proposal);
   }
 
-  async submitProposal(actor: SafeUserContext, proposalId: string, delegatedInput: { delegationId?: string; contextVersion?: unknown } = {}): Promise<any> {
-    if (!this.transactional) return this.mutate(actor, proposalId, delegatedInput.contextVersion, (service, a) => service.submitProposal(a, proposalId, delegatedInput));
+  async submitProposal(actor: SafeUserContext, proposalId: string, input: { contextVersion?: unknown } = {}): Promise<any> {
+    if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, a) => service.submitProposal(a, proposalId, input));
     const proposal = await this.findProposal(proposalId);
     this.assertEditableDraft(proposal);
-    const delegated = delegatedInput.delegationId ? await this.resolveDelegatedAction(actor, proposal, delegatedInput.delegationId, "proposal.submit", delegatedInput.contextVersion) : false;
-    const pi = delegated ? actor : this.assertCanMutateProposalDraft(actor, proposal);
+    const pi = this.assertCanMutateProposalDraft(actor, proposal);
 
     const intake = await this.findIntakePeriod(proposal.intakePeriodId);
     this.assertIntakeEligibleForProposal(pi, intake);
@@ -351,7 +350,6 @@ export class ResearchProposalsService {
 
     const submittedAt = new Date();
     const submitted = (await this.prisma.$transaction(async (tx) => {
-      if (delegated) await this.resolveDelegatedAction(actor, proposal, delegatedInput.delegationId!, "proposal.submit", delegatedInput.contextVersion, tx);
       const updated = (await tx.researchProposal.update({
         where: { id: proposalId },
         data: {
@@ -369,7 +367,7 @@ export class ResearchProposalsService {
           toStatus: "submitted",
           submittedAt,
           snapshot: await this.submissionSnapshot(proposal),
-          note: delegated ? "Nộp hồ sơ theo ủy quyền hành động" : "PI nộp hồ sơ chính thức"
+          note: "PI nộp hồ sơ chính thức"
         } as never
       });
 
@@ -397,29 +395,6 @@ export class ResearchProposalsService {
     return this.toProposalDetailResponse(submitted, actor);
   }
 
-  private async availableDelegations(actor: SafeUserContext, proposal: ResearchProposalRecord) {
-    if (!["draft", "supplement_requested"].includes(proposal.status) || proposal.ownerId === actor.id) return [];
-    const grants = await this.prisma.proposalDelegation.findMany({ where: { proposalId: proposal.id, delegateUserId: actor.id, status: "ACTIVE" } });
-    const valid: Array<{ id: string }> = [];
-    for (const grant of grants) {
-      try { await this.resolveDelegatedAction(actor, proposal, grant.id, "proposal.submit", proposalContextVersion(proposal)); valid.push({ id: grant.id }); } catch (error) { if (!(error instanceof ForbiddenException)) throw error; }
-    }
-    return valid;
-  }
-
-  private async resolveDelegatedAction(actor: SafeUserContext, proposal: ResearchProposalRecord, delegationId: string, action: string, expectedContext: unknown, client: any = this.prisma) {
-    if (!expectedContext || typeof expectedContext !== "object") throw new ForbiddenException({ message: "Thiếu contextVersion cho hành động được ủy quyền.", code: "CONTEXT_VERSION_MISMATCH" });
-    assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
-    const grant = await client.proposalDelegation.findUnique({ where: { id: delegationId }, include: { grantor: true } });
-    const now = new Date();
-    const actions = Array.isArray(grant?.actionIds) ? grant.actionIds : [];
-    const sourceActive = grant?.grantor.status === "active" && grant.grantor.systemRole === "RESEARCHER_INTERNAL_USER" && actor.systemRole === "RESEARCHER_INTERNAL_USER" && grant.grantorUserId === proposal.ownerId && Boolean(await client.userOrganizationScope.findFirst({ where: { userId: grant.grantorUserId, organizationUnitId: proposal.hostOrganizationUnitId } }));
-    const valid = Boolean(grant && grant.proposalId === proposal.id && grant.delegateUserId === actor.id && grant.status === "ACTIVE" && grant.approvedAt && grant.approverUserId && grant.approverUserId !== grant.grantorUserId && grant.approverUserId !== actor.id && !grant.revokedAt && grant.targetOrganizationUnitId === proposal.hostOrganizationUnitId && actions.length === 1 && actions[0] === action && grant.startsAt <= now && (!grant.endsAt || now < grant.endsAt) && sourceActive);
-    if (!valid) throw new ForbiddenException({ message: "Ủy quyền cho hành động này không hợp lệ.", code: "DELEGATION_INVALID" });
-    const current = { domain: "proposal", recordId: proposal.id, aggregateVersion: proposal.updatedAt.getTime(), relationshipVersion: proposal.authorizationRelationshipVersion, conflictVersion: proposal.authorizationConflictVersion, delegationVersion: proposal.authorizationDelegationVersion, policyVersion: "v1" };
-    if (!Object.entries(current).every(([key, value]) => (expectedContext as Record<string, unknown>)[key] === value)) throw new ForbiddenException({ message: "Dữ liệu phân quyền đã thay đổi. Vui lòng tải lại trước khi thử lại.", code: "CONTEXT_VERSION_MISMATCH" });
-    return true;
-  }
 
   async requestSupplement(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>): Promise<any> {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, a) => service.requestSupplement(a, proposalId, input));
@@ -434,7 +409,7 @@ export class ResearchProposalsService {
     const requestedAt = new Date();
     if (dueDate <= requestedAt) throw new BadRequestException({ message: "Hạn bổ sung phải ở tương lai." });
     const participation = await this.participation.resolveForProposal(actor.id, proposal);
-    if (participation.isParticipant && !participation.roles.includes("secretary")) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được tự kiểm tra hồ sơ." });
+    if (participation.isParticipant && !participation.roles.includes("TOPIC_SECRETARY")) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được tự kiểm tra hồ sơ." });
     const updated = (await this.prisma.$transaction(async (tx) => {
       const record = (await tx.researchProposal.update({
         where: { id: proposalId },
@@ -487,11 +462,11 @@ export class ResearchProposalsService {
     return this.toProposalDetailResponse(updated, actor);
   }
 
-  async resubmitProposal(actor: SafeUserContext, proposalId: string, input: { delegationId?: string; contextVersion?: unknown } = {}): Promise<any> {
+  async resubmitProposal(actor: SafeUserContext, proposalId: string, input: { contextVersion?: unknown } = {}): Promise<any> {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, a) => service.resubmitProposal(a, proposalId, input));
     const proposal = await this.findProposal(proposalId);
     if (proposal.status !== "supplement_requested") throw new BadRequestException({ message: "Hồ sơ không đang chờ bổ sung." });
-    const pi = input.delegationId && await this.resolveDelegatedAction(actor, proposal, input.delegationId, "proposal.submit", input.contextVersion) ? actor : this.assertCanResubmitSupplement(actor, proposal);
+    const pi = this.assertCanResubmitSupplement(actor, proposal);
     const openRequest = await this.findOpenSupplementRequest(proposalId);
     if (!openRequest) {
       throw new BadRequestException({ message: "Không tìm thấy yêu cầu bổ sung đang mở." });
@@ -606,7 +581,7 @@ export class ResearchProposalsService {
     const proposal = await this.findProposal(proposalId);
     this.assertCanRequestSupplement(actor, proposal);
     const participation = await this.participation.resolveForProposal(actor.id, proposal);
-    if (participation.isParticipant && !participation.roles.includes("secretary")) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được tự kiểm tra hồ sơ." });
+    if (participation.isParticipant && !participation.roles.includes("TOPIC_SECRETARY")) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được tự kiểm tra hồ sơ." });
     if (!["submitted", "resubmitted"].includes(proposal.status)) throw new BadRequestException({ message: "Hồ sơ không ở bước kiểm tra đầy đủ." });
     const readiness = await this.computeReadiness(proposal);
     if (!readiness.ready) throw new BadRequestException({ message: "Hồ sơ chưa đầy đủ.", ...readiness });
@@ -618,7 +593,8 @@ export class ResearchProposalsService {
 
   private async findProposal(proposalId: string) {
     const proposal = (await this.prisma.researchProposal.findUnique({
-      where: { id: proposalId }
+      where: { id: proposalId },
+      include: { owner: { select: { displayName: true } } }
     })) as ResearchProposalRecord | null;
 
     if (!proposal) {
@@ -698,8 +674,12 @@ export class ResearchProposalsService {
     expectedContextVersion?: ContextVersionTokenV1
   ) {
     const proposal = await this.findProposal(proposalId);
-    const principalInvestigators = members.filter((member) => normalizeParticipationRole(member.participationRole ?? member.role) === "principal-investigator");
-    if (principalInvestigators.length > 1 || principalInvestigators.some((member) => member.userId && member.userId !== proposal.ownerId)) throw new BadRequestException({ message: "Hồ sơ chỉ có một chủ nhiệm chịu trách nhiệm, là người tạo hồ sơ." });
+    if (members.some((member) => member.userId === proposal.ownerId)) {
+      throw new BadRequestException({ message: "Chủ nhiệm được lấy từ ownerId và không được lưu trong danh sách team." });
+    }
+    if (members.filter((member) => member.participationRole === "TOPIC_SECRETARY").length > 1) {
+      throw new BadRequestException({ message: "Mỗi hồ sơ chỉ được có tối đa một TOPIC_SECRETARY." });
+    }
     let previous: ProposalMemberRecord[] = [];
     const nextUserIds = new Set(members.map((member) => member.userId).filter((value): value is string => Boolean(value)));
     const key = (member: { userId?: string | null; participationRole?: string | null; name: string; role: string; organization: string }) =>
@@ -715,11 +695,16 @@ export class ResearchProposalsService {
       await this.prisma.$transaction(async (tx) => {
         const changedAt = await readTransactionClockV1(tx);
         previous = (await tx.proposalMember.findMany({ where: { proposalId } })) as ProposalMemberRecord[];
-        active = previous.filter((member) => member.status === "ACTIVE" && (!member.effectiveUntil || member.effectiveUntil > changedAt));
+        const isCurrentlyActive = (member: ProposalMemberRecord) =>
+          member.status === "ACTIVE" &&
+          member.effectiveFrom <= changedAt &&
+          (!member.effectiveUntil || member.effectiveUntil > changedAt);
+        active = previous.filter(isCurrentlyActive);
         const activeByKey = new Map(active.map((member) => [key(member), member]));
         const sameMember = (current: ProposalMemberRecord, next: ProposalMemberPersistInput) =>
-          current.name === next.name && current.role === next.role && current.organization === next.organization && current.userId === next.userId;
-        const ending = active.filter((member) => {
+          current.name === next.name && current.role === next.role && current.organization === next.organization && current.userId === next.userId && current.participationRole === next.participationRole;
+        const ending = previous.filter((member) => {
+          if (member.status !== "ACTIVE" || !isCurrentlyActive(member)) return member.status === "ACTIVE";
           const next = desired.get(key(member));
           return !next || !sameMember(member, next);
         });
@@ -732,7 +717,14 @@ export class ResearchProposalsService {
         for (const member of ending) {
           await tx.proposalMember.updateMany({
             where: { id: member.id, status: "ACTIVE" },
-            data: { status: "ENDED", effectiveUntil: changedAt }
+            data: {
+              status: "ENDED",
+              effectiveUntil: member.effectiveUntil && member.effectiveUntil <= changedAt
+                ? member.effectiveUntil
+                : member.effectiveFrom > changedAt
+                  ? member.effectiveFrom
+                  : changedAt
+            }
           } as never);
         }
         if (creating.length) {
@@ -902,10 +894,6 @@ export class ResearchProposalsService {
     if (!budget || typeof budget.amount !== "number" || budget.amount < 0) {
       missing.push({ code: "budget", label: "Kinh phí dự kiến" });
     }
-    if (members.length === 0) {
-      missing.push({ code: "members", label: "Chủ nhiệm/thành viên thực hiện" });
-    }
-
     return missing;
   }
 
@@ -923,18 +911,14 @@ export class ResearchProposalsService {
     const supplementRequests = await this.listSupplementRequestsForProposal(proposal.id);
     const requiredPackage = await this.getRequiredPackageForProposal(proposal);
 
-    const availableDelegations = actor ? await this.availableDelegations(actor, proposal) : [];
     const response = this.toProposalResponse(proposal, actor, participation, reviewAccess);
-    if (availableDelegations.length && response.viewerAuthorization) {
-      response.viewerAuthorization.allowedActions = [...new Set([...response.viewerAuthorization.allowedActions, "proposal.read", "proposal.submit", "file.read"])].sort() as typeof response.viewerAuthorization.allowedActions;
-      response.viewerAuthorization.blockedActions = response.viewerAuthorization.blockedActions.filter((a: { action: string }) => !["proposal.read", "proposal.submit", "file.read"].includes(a.action));
-    }
     const versions = await this.prisma.proposalSubmissionEvent.findMany({ where: { proposalId: proposal.id, toStatus: { in: ["submitted", "resubmitted"] } }, orderBy: { submittedAt: "asc" }, select: { id: true, submittedAt: true, snapshot: true } });
     return {
       ...response,
-      availableDelegations,
       versions: reviewAccess.isAssignedReviewer && !participation.isParticipant ? [] : versions.filter((v) => v.snapshot && !(v.snapshot as { kind?: string }).kind).map((v, index) => ({ id: v.id, version: index + 1, submittedAt: v.submittedAt.toISOString(), content: v.snapshot })),
-      members: members.map((member) => reviewAccess.isAssignedReviewer && !participation.isParticipant ? { id: member.id, name: member.name, role: member.role, organization: member.organization } : this.toMemberResponse(member)),
+      members: members.map((member) => reviewAccess.isAssignedReviewer && !participation.isParticipant
+        ? { id: member.id, name: member.name, role: normalizeParticipationRole(member.participationRole ?? member.role), organization: member.organization }
+        : this.toMemberResponse(member)),
       attachments: reviewAccess.isAssignedReviewer && !participation.isParticipant ? attachments.map(({ uploadedById, uploaderDisplayName, ...file }) => file) : attachments,
       history: reviewAccess.isAssignedReviewer && !participation.isParticipant ? history.map(({ actorId, actorDisplayName, ...event }) => event) : history,
       supplementRequests,
@@ -948,7 +932,7 @@ export class ResearchProposalsService {
     return {
       id: member.id,
       name: member.name,
-      role: member.role,
+      role: participationRole === "unknown" ? member.role : participationRole,
       organization: member.organization,
       userId: member.userId ?? "",
       isAccountLinked: Boolean(member.userId),
@@ -988,7 +972,7 @@ export class ResearchProposalsService {
       this.participation.resolveForProposal(actor?.id, proposal),
       this.reviewAccess.resolveForProposal(actor?.id, proposal.id)
     ]);
-    if (!(await this.availableDelegations(actor, proposal)).length) assertCanReadProposal(actor, proposal, participation, reviewAccess);
+    assertCanReadProposal(actor, proposal, participation, reviewAccess);
     return participation;
   }
 
@@ -1000,7 +984,7 @@ export class ResearchProposalsService {
       return false;
     }
 
-    const isSecretary = participation?.roles.includes("secretary") ?? false;
+    const isSecretary = participation?.roles.includes("TOPIC_SECRETARY") ?? false;
     if (proposal.ownerId !== actor.id && !isSecretary) return false;
 
     try {
@@ -1046,7 +1030,7 @@ export class ResearchProposalsService {
       id: proposal.id,
       code: proposal.code ?? "",
       intakePeriodId: proposal.intakePeriodId,
-      ...(reviewAccess?.isAssignedReviewer && !participation?.isParticipant ? {} : { ownerId: proposal.ownerId }),
+      ...(reviewAccess?.isAssignedReviewer && !participation?.isParticipant ? {} : { ownerId: proposal.ownerId, ownerDisplayName: proposal.owner?.displayName ?? "" }),
       hostOrganizationUnitId: proposal.hostOrganizationUnitId,
       researchFieldCode: proposal.researchFieldCode ?? "",
       proposalTypeCode: proposal.proposalTypeCode ?? "",

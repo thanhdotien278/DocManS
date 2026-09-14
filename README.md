@@ -8,7 +8,7 @@ Originally shaped by real university workflows, DocManS is designed to be adapte
 
 Research administration often depends on disconnected spreadsheets, email threads, shared folders, and informal approval processes. That makes it harder to understand a proposal's status, maintain a reliable review trail, apply access rules consistently, and hand work over when staff roles change.
 
-DocManS brings these activities into a single, self-hosted application. It helps institutions model their own intake periods and workflow while keeping access decisions tied to organizational scope, project participation, reviewer assignment, and delegated authority.
+DocManS brings these activities into a single, self-hosted application. It helps institutions model their own intake periods and workflow while keeping access decisions tied to organizational scope, record ownership, team participation, reviewer assignment, and workflow state.
 
 ### Open Source Commitment
 
@@ -19,7 +19,7 @@ DocManS is intended to be a useful community project, not institution-specific s
 - **Research proposal lifecycle** — create drafts, validate readiness, submit, request supplements, resubmit, and retain workflow history.
 - **Review and decision support** — assign reviewers, collect evaluations, and support structured proposal decisions.
 - **Role- and scope-aware access** — authorize actions using system roles, organization scope, ownership, project participation, reviewer assignments, and workflow state.
-- **Delegated actions** — support controlled, time-bounded delegation for eligible proposal actions.
+- **PI-owned proposal submission** — restrict proposal creation, submission, and resubmission to the internal-researcher PI.
 - **Researcher profiles and teams** — manage researcher-facing information and proposal participation.
 - **Files and object storage** — attach approved file types to research records using S3-compatible MinIO storage.
 - **Administration** — manage users, organization structures, catalogs, and configuration through the API and web application.

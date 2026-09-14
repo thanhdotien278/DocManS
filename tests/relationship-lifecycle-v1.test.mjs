@@ -27,8 +27,8 @@ describe("Story 1.9 proposal relationship lifecycle", () => {
       asOf,
       proposal: { ownerId: "owner", createdAt: new Date("2026-07-01T00:00:00.000Z") },
       members: [
-        { userId: "secretary", participationRole: "secretary", status: "ENDED", effectiveFrom: new Date("2026-07-01T00:00:00.000Z"), effectiveUntil: asOf },
-        { userId: "secretary", participationRole: "secretary", status: "SUSPENDED", effectiveFrom: new Date("2026-07-01T00:00:00.000Z"), effectiveUntil: null }
+        { userId: "secretary", participationRole: "TOPIC_SECRETARY", status: "ENDED", effectiveFrom: new Date("2026-07-01T00:00:00.000Z"), effectiveUntil: asOf },
+        { userId: "secretary", participationRole: "TOPIC_SECRETARY", status: "SUSPENDED", effectiveFrom: new Date("2026-07-01T00:00:00.000Z"), effectiveUntil: null }
       ]
     });
 
@@ -42,7 +42,7 @@ describe("Story 1.9 proposal relationship lifecycle", () => {
       conflictVersion: 3, delegationVersion: 0, policyVersion: "v1"
     };
     const fact = {
-      type: "PROPOSAL_SCIENTIFIC_SECRETARY", actorUserId: "secretary", domain: "proposal", recordId: "proposal-1",
+      type: "TOPIC_SECRETARY", actorUserId: "secretary", domain: "proposal", recordId: "proposal-1",
       status: "ACTIVE", effectiveFrom: "2026-07-31T08:00:00.000Z", effectiveUntil: "2026-07-31T09:00:00.000Z", contextVersion
     };
     assert.equal(isSourceRelationshipFactV1(fact), true);
@@ -61,8 +61,8 @@ describe("Story 1.9 proposal relationship lifecycle", () => {
         authorizationContextUpdatedAt: asOf, authorizationRelationshipVersion: 1, authorizationConflictVersion: 1
       },
       participation: {
-        role: "secretary", label: "Thư ký", roles: ["secretary"], labels: ["Thư ký"], isOwner: false,
-        isParticipant: true, relationshipEffectiveFrom: { secretary: asOf.toISOString() }
+        role: "TOPIC_SECRETARY", label: "Thư ký", roles: ["TOPIC_SECRETARY"], labels: ["Thư ký"], isOwner: false,
+        isParticipant: true, relationshipEffectiveFrom: { TOPIC_SECRETARY: asOf.toISOString() }
       },
       canRead: true, canEdit: false, canManageFiles: true
     });

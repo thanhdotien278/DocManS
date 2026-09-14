@@ -33,7 +33,7 @@ function todayInput(offsetDays = 0) {
 }
 
 function relationshipLabel(type: string) {
-  return { PROPOSAL_PI: "Chủ nhiệm", PROPOSAL_MEMBER: "Thành viên", PROPOSAL_SCIENTIFIC_SECRETARY: "Thư ký", REVIEWER_ASSIGNMENT: "Người phản biện" }[type] ?? type;
+  return { PROPOSAL_PI: "Chủ nhiệm", TOPIC_MEMBER: "Thành viên", TOPIC_SECRETARY: "Thư ký", REVIEWER_ASSIGNMENT: "Người phản biện" }[type] ?? type;
 }
 
 function defaultForm(hostOrganizationUnitId = ""): ProposalDraftInput {
@@ -48,7 +48,7 @@ function defaultForm(hostOrganizationUnitId = ""): ProposalDraftInput {
     objectives: "",
     summary: "",
     budgetMetadata: { currency: "VND" },
-    members: [{ name: "", role: "Chủ nhiệm", organization: "" }]
+    members: []
   };
 }
 
@@ -314,7 +314,7 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
             </div>
 
             <div className="form-section-inline">
-              <div className="section-mini-heading">Chủ nhiệm và thời gian</div>
+              <div className="section-mini-heading">Team đề tài và thời gian</div>
               <div className="form-grid two">
                 <ProposalMembersEditor members={form.members ?? []} disabled={isSubmitting} onChange={(members) => setForm({ ...form, members })} />
                 <label className="field">

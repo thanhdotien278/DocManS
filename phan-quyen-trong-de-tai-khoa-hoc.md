@@ -19,8 +19,8 @@ Sai lầm hay gặp là tạo role kiểu:
 
 ```text
 ROLE_PI
-ROLE_PROJECT_MEMBER
-ROLE_SCIENTIFIC_SECRETARY
+ROLE_TOPIC_MEMBER
+ROLE_TOPIC_SECRETARY
 ```
 
 rồi gán trực tiếp vào user. Cách này nguy hiểm vì nếu user có `ROLE_PI`, hệ thống dễ hiểu nhầm người đó là chủ nhiệm của mọi đề tài.
@@ -34,10 +34,10 @@ System role:
 - Leadership / Approval Authority
 - Researcher / Internal User
 
-Project participation role:
-- Principal Investigator
-- Co-Investigator / Project Member
-- Scientific Secretary
+Proposal/topic participation role:
+- `PROPOSAL_PI` or `TOPIC_PI` (owner-derived)
+- `TOPIC_MEMBER`
+- `TOPIC_SECRETARY`
 - Reviewer
 - Council Member
 - Ethics Reviewer
@@ -83,10 +83,9 @@ project_participations
 - researcher_profile_id
 - user_id nullable
 - participation_role
-  - PRINCIPAL_INVESTIGATOR
-  - PROJECT_MEMBER
-  - SCIENTIFIC_SECRETARY
-  - CO_INVESTIGATOR
+  - TOPIC_PI (owner-derived; never a team row)
+  - TOPIC_MEMBER
+  - TOPIC_SECRETARY
 - responsibility_description
 - start_date
 - end_date
@@ -104,9 +103,9 @@ proposal_participations
 - researcher_profile_id
 - user_id nullable
 - participation_role
-  - PRINCIPAL_INVESTIGATOR
-  - PROPOSAL_MEMBER
-  - SCIENTIFIC_SECRETARY
+  - PROPOSAL_PI (owner-derived; never a team row)
+  - TOPIC_MEMBER
+  - TOPIC_SECRETARY
 ```
 
 Với reviewer/hội đồng nên tách riêng, vì reviewer không đơn thuần là thành viên đề tài:
@@ -157,25 +156,25 @@ effectivePermission =
 Ví dụ user A mở đề tài DT-001:
 
 ```text
-A có system role: Researcher
-A có participation role trong DT-001: PRINCIPAL_INVESTIGATOR
+A có system role: `RESEARCHER_INTERNAL_USER`
+A có owner-derived relationship trong DT-001: `PROPOSAL_PI`
 DT-001 đang ở trạng thái: DRAFT
-=> A được sửa hồ sơ, upload file, submit proposal
+=> A được sửa hồ sơ, upload file, submit proposal; non-PI submit paths are denied
 ```
 
 Nhưng khi A mở đề tài DT-002:
 
 ```text
-A có system role: Researcher
-A có participation role trong DT-002: PROJECT_MEMBER
+A có system role: `RESEARCHER_INTERNAL_USER`
+A có participation role trong DT-002: `TOPIC_MEMBER`
 DT-002 đang approved/active
-=> A được xem phần được phép, upload evidence nếu được giao, không được submit adjustment thay PI
+=> A được xem phần được phép, upload evidence nếu được giao, không được submit thay PI
 ```
 
 Khi A mở đề tài DT-003:
 
 ```text
-A có participation role: SCIENTIFIC_SECRETARY
+A có participation role: `TOPIC_SECRETARY`
 => A được hỗ trợ cập nhật biên bản, tài liệu, task, lịch họp, báo cáo theo quyền được cấp
 => Không được ký quyết định/phê duyệt thay lãnh đạo
 ```
@@ -229,7 +228,7 @@ Không nên cho thành viên:
 
 ```text
 - submit proposal chính thức
-- request adjustment/gia hạn thay PI nếu không được ủy quyền
+- request adjustment/gia hạn thay PI
 - thay đổi danh sách thành viên chính thức
 - phê duyệt báo cáo/đề tài
 ```
@@ -268,7 +267,7 @@ council_memberships.council_role = SECRETARY
 Nếu là thư ký của đề tài thì quản lý qua:
 
 ```text
-project_participations.participation_role = SCIENTIFIC_SECRETARY
+project_participations.participation_role = TOPIC_SECRETARY
 ```
 
 ### 4.4. Reviewer / thành viên hội đồng
@@ -390,13 +389,13 @@ Công việc hiện tại:
 
 | Chức năng | PI | Thành viên | Thư ký khoa học | Reviewer | Staff | Leadership |
 |---|---:|---:|---:|---:|---:|---:|
-| Tạo proposal | Có | Không | Có nếu được ủy quyền | Không | Có nếu nhập thay | Không |
-| Sửa draft proposal | Có | Hạn chế | Có nếu được ủy quyền | Không | Có theo scope | Không |
-| Submit proposal | Có | Không | Có nếu được ủy quyền rõ | Không | Có nếu quy trình cho phép | Không |
+| Tạo proposal | Có, current internal PI | Không | Không | Không | Không | Không |
+| Sửa draft proposal | Có | Hạn chế theo assignment | Hạn chế theo assignment | Không | Có theo scope | Không |
+| Submit proposal | Có, current internal PI | Không | Không | Không | Không | Không |
 | Upload file đề tài | Có | Có giới hạn | Có | Không hoặc chỉ file review | Có | Không thường xuyên |
 | Xem project | Có | Có | Có | Không | Có theo scope | Có theo scope |
-| Nộp báo cáo tiến độ | Có | Không hoặc đóng góp | Có nếu được ủy quyền | Không | Không | Không |
-| Gửi điều chỉnh/gia hạn | Có | Không | Có nếu được ủy quyền | Không | Không hoặc nhập thay | Không |
+| Nộp báo cáo tiến độ | Có | Không hoặc đóng góp | Theo assignment | Không | Không | Không |
+| Gửi điều chỉnh/gia hạn | Có | Không | Theo assignment | Không | Không hoặc nhập thay | Không |
 | Chấm điểm proposal | Không | Không | Không | Có nếu assigned | Không | Không |
 | Tổng hợp đánh giá | Không | Không | Có nếu là thư ký hội đồng/staff được giao | Không | Có | Không |
 | Approve/reject | Không | Không | Không | Không | Tùy quy trình | Có |

@@ -7,8 +7,7 @@ flowchart TD
   account["System: mỗi account có một system role active"]
   staff(["SCIENTIFIC_MANAGEMENT_STAFF: tạo hoặc thu hồi relationship / assignment"])
   record["System: relationship hoặc assignment chỉ có hiệu lực trên record tương ứng"]
-  delegation(["PI: tạo delegation proposal.submit cho một record"])
-  delegation_rules["System: action, thời hạn, lý do, phê duyệt và thu hồi"]
+  delegation_rules["System: delegation chỉ tồn tại khi owning contract cho phép"]
   action(["User: request view, create, edit, download, approve, or delete action"])
   context["System: resolve system role, scope, relationship, assignment, state, delegation và conflict"]
   allowed{"Tất cả điều kiện đạt?"}
@@ -20,7 +19,7 @@ flowchart TD
   admin --> role --> account
   role -. "Data scope" .-> staff
   staff --> record
-  delegation --> delegation_rules --> context
+  delegation_rules --> context
   action --> context --> allowed
   record -. "Context của record" .-> context
   allowed -- "Có" --> permit --> audit

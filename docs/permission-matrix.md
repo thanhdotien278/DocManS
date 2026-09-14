@@ -52,7 +52,7 @@ document must be updated in the same change set.
 
 ### External Researcher User / Nha nghien cuu ben ngoai
 
-- Main responsibility: work only on explicitly related records, assigned draft
+- Main responsibility: work only on explicitly related records, approved-topic/task
   contributions, or assigned review work.
 - Default data scope: explicit record relationship or assignment scope only.
 - Important limits: cannot create or formally submit proposals, edit submitted
@@ -70,16 +70,16 @@ these relationships on different records.
 - Main responsibility: create proposal drafts, submit proposals, respond to
   supplement requests, track approved projects, submit progress reports, and
   request adjustments or extensions.
-- Default data scope: own proposal/project scope and delegated proposal/project
-  scope where explicitly granted.
+- Default data scope: own proposal and approved-topic scope. Proposal creation,
+  submission, and resubmission remain PI-only.
 - Important limits: cannot edit submitted proposals unless the workflow state
   allows supplement, resubmission, or another explicit domain action.
 
-#### Project Member / Thanh vien de tai
+#### Topic Team Member / Thanh vien de tai
 
-- Main responsibility: participate in approved-project work, view permitted
-  project information, update assigned work, and contribute evidence or files.
-- Default data scope: project participation scope and task
+- Main responsibility: participate in proposal or approved-topic work, view
+  permitted information, update assigned work, and contribute evidence/files.
+- Default data scope: `TOPIC_MEMBER` participation scope and task
   assignee/collaborator scope.
 - Important limits: cannot access projects, files, reports, or tasks outside
   participation or assignment scope.
@@ -96,32 +96,32 @@ these relationships on different records.
 ### Record-Scoped Participation And Assignment Roles
 
 The five roles above are account-level system roles. Scientific work roles such
-as principal investigator, project
-member, scientific secretary, reviewer, council chair, council secretary,
-council member, and ethics reviewer must be resolved in the context of a
-specific proposal, project, council, ethics dossier, review, task, or related
-business record.
+as `PROPOSAL_PI`, `TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer,
+council chair, council secretary, council member, and ethics reviewer must be
+resolved in the context of a specific proposal, approved topic, council, ethics
+dossier, review, task, or related business record. A proposal has one
+`PROPOSAL_PI` derived from `ownerId`; its team contains only
+`TOPIC_SECRETARY` and `TOPIC_MEMBER`.
 
-Do not grant global access by assigning `PI`, `PROJECT_MEMBER`,
-`SCIENTIFIC_SECRETARY`, `REVIEWER`, or similar participation labels directly to
-a user account unless a separate system-role policy explicitly defines that
-meaning. Backend authorization must calculate effective permission from system
-role, organization/unit scope, record participation role, assignment scope,
-workflow state, and conflict policy.
+Do not grant global access by assigning `PROPOSAL_PI`, `TOPIC_PI`,
+`TOPIC_MEMBER`, `TOPIC_SECRETARY`, `REVIEWER`, or similar participation labels
+directly to a user account. Backend authorization must calculate effective
+permission from system role, organization/unit scope, record participation
+role, assignment scope, workflow state, and conflict policy.
 
 Common record-scoped roles:
 
 | Role Type | Examples | Scope Boundary | Important Limits |
 | --- | --- | --- | --- |
-| Proposal participation | Principal investigator, proposal member, scientific secretary | One proposal | Does not grant access to unrelated proposals. |
-| Project participation | Principal investigator, co-investigator, project member, scientific secretary | One approved project | Member/secretary permissions depend on delegation and workflow state. |
+| Proposal participation | `PROPOSAL_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | One proposal | Does not grant access to unrelated proposals; PI is derived from `ownerId`. |
+| Approved-topic participation | `TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | One approved topic | Team permissions depend on active relationship and workflow state. |
 | Review assignment | Reviewer, committee reviewer | One proposal, ethics dossier, or review package | Assignment-scoped only; no access to unassigned records. |
 | Council membership | Chair, secretary, member, reviewer | One council | Council secretary cannot approve/reject unless separately authorized by policy. |
 | Task assignment | Owner, assignee, collaborator | One task and linked record | Task access still depends on linked-record permission. |
 
 ## 3. External Researcher User Overlay
 
-The detailed matrices below retain PI, project-member, and reviewer columns as
+The detailed matrices below retain PI, topic-team, and reviewer columns as
 compact record-context shorthand. Apply this overlay to every row in addition
 to the five account-level system roles:
 
@@ -130,15 +130,16 @@ to the five account-level system roles:
 | Authentication and account context | May sign in only while active; the session exposes the external system role and never invents PI/member/reviewer authority. |
 | Profile and account administration | No user, role, scope, profile, account-link, catalog, or configuration management. A profile may exist independently of login. |
 | Proposal discovery and detail | Read only proposals with an explicit active relationship or assignment, using the record disclosure rules. Same unit, name, or another record relationship does not grant access. |
-| Draft collaboration | Update only explicitly assigned draft sections/contribution fields and permitted files while editable. PI, member roster, objective, budget, status, and other protected fields remain blocked. |
-| Submission and decisions | No proposal creation, formal submission, resubmission, reviewer assignment, consolidation, approval, rejection, reopen, or final decision. The role is not a `proposal.submit` grant. |
+| Proposal draft | Read only when an explicit relationship permits; no create, edit, submit, or resubmit authority. |
+| Submission and decisions | No proposal creation, formal submission, resubmission, reviewer assignment, consolidation, approval, rejection, reopen, or final decision. |
 | Review work | Read and submit only an explicitly assigned review package, subject to assignment lifecycle and disclosure. No unassigned records, other reviewers' work, reviewer assignment, or same-record decision. |
 | Project, task, and file work | Read or contribute only where a separate active record relationship/assignment grants the exact action. Task/file access never widens linked-record scope. |
 | Dashboard, search, export, notification, and history | Include only records already visible through the same relationship/assignment policy; no privileged audit, hidden conflict source, reviewer identity, raw review, or out-of-scope metadata. |
 
 The backend rechecks role, scope, relationship/assignment, workflow state,
-delegation, and conflict at mutation time. UI capability data never grants an
-action by itself.
+conflict, and any applicable delegation contract at mutation time. Proposal
+creation, submission, and resubmission never use delegation. UI capability data
+never grants an action by itself.
 
 ## 4. Permission Legend
 
@@ -164,9 +165,9 @@ action by itself.
 | Organization/unit scope | Access is limited to permitted organization or unit boundaries. |
 | Assigned staff scope | Access is limited to records assigned to or operated by the scientific management staff user. |
 | Approval authority scope | Access is limited to records the leadership or approval authority is allowed to decide or inspect. |
-| Own proposal/project scope | Access is limited to proposals or projects owned by the principal investigator. |
-| Proposal participation scope | Access is limited to proposals where the user has a valid proposal participation role such as PI, member, or scientific secretary. |
-| Project participation scope | Access is limited to approved projects where the user participates. |
+| Own proposal/topic scope | Access is limited to proposals or approved topics owned by the principal investigator. |
+| Proposal participation scope | Access is limited to proposals where the user has an active `PROPOSAL_PI`, `TOPIC_MEMBER`, or `TOPIC_SECRETARY` relationship. |
+| Approved-topic participation scope | Access is limited to approved topics where the user has an active `TOPIC_PI`, `TOPIC_MEMBER`, or `TOPIC_SECRETARY` relationship. |
 | Reviewer assignment scope | Access is limited to proposals, reviews, or committee work assigned to the reviewer or committee member. |
 | Council membership scope | Access is limited to councils, council records, or ethics dossiers where the user has a valid council membership or assignment. |
 | Task assignee/collaborator scope | Access is limited to tasks where the user is owner, assignee, collaborator, creator, or otherwise explicitly authorized. |
@@ -176,7 +177,7 @@ action by itself.
 
 | State Rule | Authorization Meaning |
 | --- | --- |
-| Draft | Draft content may be created or updated only by the owner or explicitly authorized delegate. |
+| Draft | Proposal draft content may be created or updated only by the current internal PI; no team member, secretary, staff user, external researcher, or delegate can create or submit it. |
 | Open intake | New proposal drafts or submissions may be accepted when intake rules match user scope. |
 | Closed intake | New submissions are blocked; read access remains scope-controlled. |
 | Submitted | Proposal is locked from normal draft edits and moves into controlled review workflow. |
@@ -195,30 +196,30 @@ action by itself.
 
 ## 7. High-Level Role Matrix
 
-| Capability Group | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required |
+| Capability Group | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | User, role, organization administration | Manage | None | None | None | None | None | All system scope | Any | Yes |
 | Shared catalogs and configuration | Manage | Read | Read | Read where needed | Read where needed | Read where needed | All system scope | Any | Yes for changes |
 | Proposal intake period management | Manage | Manage | Read | Read applicable | None | None | Organization/unit scope | Draft, open intake, closed intake | Yes |
-| Proposal draft creation and editing | None | Read scoped | Read scoped | Create/Update own | Update if delegated participant or secretary | None | Own proposal/project scope, proposal participation scope | Draft | Yes |
-| Proposal attachment upload/view/download | Read scoped | Read scoped | Read scoped | Create/Read own | Create/Read if delegated participant or secretary | Read assigned | Record-level scope | Draft, needs supplement, under review | Yes for important file actions |
-| Proposal formal submission | None | None | None | Submit own | Submit if explicitly delegated by policy | None | Own proposal/project scope, proposal participation scope | Draft, open intake | Yes |
+| Proposal draft creation and editing | None | Read scoped | Read scoped | Create/Update own | None | None | Own proposal scope | Draft | Yes |
+| Proposal attachment upload/view/download | Read scoped | Read scoped | Read scoped | Create/Read own | Secretary: Create/Read; Member: Read | Read assigned | Record-level scope | Draft, needs supplement, under review | Yes for important file actions |
+| Proposal formal submission | None | None | None | Submit own | None | None | Own proposal/topic scope | Draft, open intake | Yes |
 | Proposal completeness review | None | Review | Read | Read own | Read if participating | None | Organization/unit scope | Submitted, resubmitted | Yes when decision affects workflow |
 | Supplement request | None | Submit request | Read | Read/respond | Read if participating | None | Organization/unit scope | Submitted, needs supplement | Yes |
-| Proposal resubmission | None | Read | Read | Submit own | Submit if delegated | None | Own proposal/project scope | Needs supplement | Yes |
+| Proposal resubmission | None | Read | Read | Submit own | None | None | Own proposal/topic scope | Needs supplement | Yes |
 | Reviewer/committee assignment | None | Assign with conflict check | Read | None | None | Read assigned | Organization/unit scope, reviewer assignment scope, conflict policy scope | Submitted, under review | Yes |
 | Reviewer scoring and comments | None | Read/Review | Read | None unless policy allows result view | None | Review/Submit assigned | Reviewer assignment scope | Under review | Yes |
 | Evaluation consolidation | None | Review/Update | Read | None | None | None | Organization/unit scope | Under review, ready for approval | Yes |
 | Approval/rejection decision | None | Prepare/Read | Approve/Reject with conflict check | Read result | Read result if participating | None | Approval authority scope, conflict policy scope | Ready for approval | Yes |
 | Approved project creation | None | Create/Manage | Read | Read own | Read if participating | None | Organization/unit scope | Approved | Yes |
-| Milestone/checkpoint management | None | Manage | Read/Review | Read/Update own allowed items | Read assigned or secretary-delegated items | None | Organization/unit scope, project participation scope | Active project | Yes for changes |
-| Progress report submission | None | Read/Review | Read | Submit own | Submit contribution if permitted or secretary-delegated | None | Own proposal/project scope, project participation scope | Waiting report, active project | Yes |
-| Project evidence upload | Read scoped | Read/Review | Read scoped | Create own | Create assigned or secretary-delegated | None | Project participation scope | Active project, waiting report | Yes |
+| Milestone/checkpoint management | None | Manage | Read/Review | Read/Update own allowed items | Read assigned or team-secretary-scoped items | None | Organization/unit scope, approved-topic participation scope | Active project | Yes for changes |
+| Progress report submission | None | Read/Review | Read | Submit own | Submit contribution if permitted by active team role | None | Own proposal/topic scope, approved-topic participation scope | Waiting report, active project | Yes |
+| Project evidence upload | Read scoped | Read/Review | Read scoped | Create own | Create assigned team evidence | None | Approved-topic participation scope | Active project, waiting report | Yes |
 | Progress report review/follow-up | None | Review/Update | Read/Decide if authorized | Read/respond | Read/respond assigned | None | Organization/unit scope | Waiting decision, delayed project | Yes |
 | Adjustment/extension request | None | Read/Review | Read/Decide if authorized | Create/Submit own | None | None | Own proposal/project scope | Active project, delayed project | Yes |
 | Adjustment/extension decision | None | Review/Prepare | Approve/Reject with conflict check | Read result | Read result if participating | None | Approval authority scope, conflict policy scope | Waiting decision | Yes |
 | Acceptance/final review | None | Review/Prepare | Approve/Reject with conflict check | Read/Submit required context | Read assigned | Review if assigned | Approval authority scope, reviewer assignment scope, conflict policy scope | Waiting decision, completed/accepted | Yes |
-| Task creation and assignment | Read scoped | Create/Assign | Create/Assign in authority scope | Create in own project or secretary-delegated scope | None unless delegated | None | Task assignee/collaborator scope, linked record scope, conflict policy scope | Task open/in progress/completed/cancelled | Yes |
+| Task creation and assignment | Read scoped | Create/Assign | Create/Assign in authority scope | Create in own topic or team-scoped scope | None unless explicitly assigned | None | Task assignee/collaborator scope, linked record scope, conflict policy scope | Task open/in progress/completed/cancelled | Yes |
 | Task status/progress update | Read scoped | Update scoped | Review scoped | Update own/assigned | Update assigned | None | Task assignee/collaborator scope | Task open/in progress/completed/cancelled | Yes |
 | File replace/version history | Read scoped | Update scoped | Read scoped | Update own allowed files | Update assigned allowed files | Read assigned | Record-level scope | State-dependent | Yes |
 | Workflow history/timeline view | Audit/View History | Audit/View History scoped | Audit/View History scoped | Read own | Read participating | Read assigned | Same as source record | Any | No for read unless policy requires |
@@ -234,7 +235,7 @@ action by itself.
 
 ### 8.1 Identity, Roles, Organizations
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
+| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Create user account | Manage | None | None | None | None | None | All system scope | Any | Yes | FR1, Story 1.3 |
 | Update user account | Manage | None | None | None | None | None | All system scope | Any | Yes | FR1, Story 1.3 |
@@ -245,7 +246,7 @@ action by itself.
 
 ### 8.2 Catalogs And Configuration
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
+| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | View shared catalogs | Read | Read | Read | Read where needed | Read where needed | Read where needed | Role and data scope | Any | No | FR7, Story 1.4 |
 | Create/update catalog item | Manage | None | None | None | None | None | All system scope | Any | Yes | FR7, Story 1.4 |
@@ -256,28 +257,28 @@ action by itself.
 
 ### 8.3 Proposal Intake And Submission
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
+| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Create intake period | Manage | Create | Read | None | None | None | Organization/unit scope | Draft | Yes | FR9, Story 2.1 |
 | Update intake period | Manage | Update | Read | None | None | None | Organization/unit scope | Draft, open intake | Yes | FR9, Story 2.1 |
 | Open intake period | Manage | Update | Read | Read applicable | None | None | Organization/unit scope | Draft, open intake | Yes | FR9, Story 2.1 |
 | Close intake period | Manage | Update | Read | Read applicable | None | None | Organization/unit scope | Open intake, closed intake | Yes | FR9, Story 2.1 |
 | List applicable intake periods | Read | Read scoped | Read scoped | Read applicable | None | None | Role and organization/unit scope | Open intake | No | FR9, Story 2.1 |
-| Create proposal draft | None | None | None | Create own | Create if explicitly delegated | None | Own proposal/project scope | Open intake, draft | Yes | FR10, Story 2.2 |
-| Update proposal draft | None | Read scoped | Read scoped | Update own | Update if delegated | None | Own proposal/project scope | Draft | Yes | FR10, FR11, Story 2.2 |
-| Upload proposal attachment | Read scoped | Read scoped | Read scoped | Create own | Create if delegated | None | Own proposal/project scope | Draft, needs supplement | Yes | FR12, FR36, Story 2.3 |
+| Create proposal draft | None | None | None | Create own | None | None | Own proposal scope | Open intake, draft | Yes | FR10, Story 2.2 |
+| Update proposal draft | None | Read scoped | Read scoped | Update own | None | None | Own proposal scope | Draft | Yes | FR10, FR11, Story 2.2 |
+| Upload proposal attachment | Read scoped | Read scoped | Read scoped | Create own | Secretary: Create; Member: None | None | Proposal relationship scope | Draft, needs supplement | Yes | FR12, FR36, Story 2.3 |
 | View/download proposal attachment | Read scoped | Read scoped | Read scoped | Read own | Read if participating | Read assigned | Record-level scope | Any allowed proposal state | Yes for important downloads | FR12, FR36, Story 2.3 |
-| Check submission readiness | None | Read scoped | Read scoped | Read own | Read if delegated | None | Own proposal/project scope | Draft | No | FR13, Story 2.3 |
-| Submit proposal formally | None | None | None | Submit own | Submit if delegated | None | Own proposal/project scope | Draft, open intake | Yes | FR14, FR22, Story 2.4 |
+| Check submission readiness | None | Read scoped | Read scoped | Read own | Read if participating | None | Own proposal/topic scope | Draft | No | FR13, Story 2.3 |
+| Submit proposal formally | None | None | None | Submit own | None | None | Own proposal scope | Draft, open intake | Yes | FR14, FR22, Story 2.4 |
 | View submission history | Audit/View History scoped | Audit/View History scoped | Audit/View History scoped | Read own | Read if participating | Read assigned if policy allows | Same as proposal scope | Submitted or later | No | FR14, FR38, Story 2.4 |
 
 ### 8.4 Proposal Review, Supplement And Approval
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
+| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Review proposal completeness | None | Review | Read scoped | Read own | Read if participating | None | Organization/unit scope | Submitted, resubmitted | Yes when state changes | FR15, Story 3.1 |
 | Request supplement | None | Submit request | Read scoped | Read own request | Read if participating | None | Organization/unit scope | Submitted, needs supplement | Yes | FR15, Story 3.1 |
-| Respond to supplement request | None | Read scoped | Read scoped | Update/Submit own | Update if delegated | None | Own proposal/project scope | Needs supplement | Yes | FR16, Story 3.1 |
+| Respond to supplement request | None | Read scoped | Read scoped | Update/Submit own | None | None | Own proposal scope | Needs supplement | Yes | FR16, Story 3.1 |
 | Assign reviewer or committee member | None | Assign with conflict check | Read scoped | None | None | Read assigned after assignment | Organization/unit scope, reviewer assignment scope, conflict policy scope | Submitted, under review | Yes | FR17, FR67a, Story 3.2 |
 | Change reviewer assignment | None | Assign with conflict check | Read scoped | None | None | Read assigned after assignment | Organization/unit scope, reviewer assignment scope, conflict policy scope | Under review | Yes | FR17, FR67a, Story 3.2 |
 | Access assigned review package | None | Read scoped | Read scoped | None | None | Read assigned | Reviewer assignment scope | Under review | No | FR18, Story 3.2 |
@@ -308,7 +309,7 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 
 ### 8.5 Approved Project Tracking
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
+| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Create approved project from approved proposal | None | Create | Read | Read own | Read if participating | None | Organization/unit scope | Approved | Yes | FR23, Story 4.1 |
 | View approved project detail | Read scoped | Read/Manage scoped | Read authority scoped | Read own | Read participating | Read if explicitly assigned | Organization/unit scope, project participation scope | Active project or later | No | FR30a, Story 4.1 |
@@ -323,7 +324,7 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 
 ### 8.6 Tasks
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
+| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Create standalone task | Read scoped | Create | Create in authority scope | Create in own project scope | None unless delegated | None | Role and data scope | Task open | Yes | FR31, Story 5.1 |
 | Create task linked to proposal/project/report/event | Read scoped | Create | Create in authority scope | Create in own project or secretary-delegated scope | None unless delegated | None unless explicitly assigned workflow | Linked record scope, proposal/project participation scope | Task open | Yes | FR31, Story 5.1 |
@@ -334,7 +335,7 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 
 ### 8.7 Files
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
+| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Upload important business file | Read scoped | Create scoped | Create if workflow allows | Create own | Create assigned | Create assigned review file if workflow allows | Record-level scope | State-dependent | Yes | FR36, FR37 |
 | Replace important business file | Read scoped | Update scoped | Update if workflow allows | Update own allowed files | Update assigned allowed files | Update assigned review file if workflow allows | Record-level scope | State-dependent | Yes | FR36, FR37 |
@@ -344,7 +345,7 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 
 ### 8.8 Audit Logs And Workflow History
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
+| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | View workflow history on business record | Audit/View History scoped | Audit/View History scoped | Audit/View History scoped | Read own | Read participating | Read assigned | Same as source record scope | Any | No | FR38, FR40 |
 | Search audit logs | Audit/View History | Audit/View History if authorized | Audit/View History if authorized | None | None | None | All system scope, organization/unit scope | Any | No for read | FR39, FR40 |
@@ -353,7 +354,7 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 
 ### 8.9 Notifications, Reminders And Work Queues
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
+| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Receive in-app notification | Read own | Read own | Read own | Read own | Read own | Read own | User-specific scope | Any | No | FR41 |
 | Generate workflow notification | Manage templates/config | Trigger by scoped workflow | Trigger by authority workflow | Trigger by own workflow actions | Trigger by assigned workflow actions | Trigger by assigned review workflow | Recipient permission scope | State-dependent | Operational trace recommended | FR41 |
@@ -363,7 +364,7 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 
 ### 8.10 Dashboard, Search, Reports And Export
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Project Member | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
+| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | View role-based dashboard | Read all/admin dashboard | Read scoped dashboard | Read authority dashboard | Read own/project dashboard | Read assigned/project dashboard | Read assigned review dashboard | Role and data scope | Any | No | FR45, Story 7.2 |
 | Drill down from dashboard widget | Read scoped | Read scoped | Read authority scoped | Read own | Read assigned/participating | Read assigned | Same as target record scope | Any | No | FR47, Story 7.2 |
@@ -376,24 +377,24 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 - Frontend-only authorization is not sufficient.
 - Backend must enforce every protected action.
 - `EXTERNAL_RESEARCHER_USER` is an account-level role, not a substitute for a
-  proposal/project/review relationship. It is never a global PI, member,
+  proposal/topic/review relationship. It is never a global PI, team member,
   reviewer, secretary, or approval role.
-- External researchers may edit only explicitly assigned draft sections and
-  may review only explicitly assigned review work; they cannot create/submit
+- External researchers may update only explicitly assigned approved-topic/task work and
+  may review only explicitly assigned review work; they cannot create/edit/submit
   proposals, alter protected fields, assign, or decide finally.
 - Users must not see cross-unit data unless explicitly permitted.
 - Reviewer / Committee Member must not access unassigned proposals.
 - Reviewer, committee member, or council member assignment must be denied when
-  conflict policy identifies the candidate as PI, project/proposal participant,
-  scientific secretary, or another excluded role on the same business record.
+  conflict policy identifies the candidate as PI, proposal/topic participant,
+  `TOPIC_SECRETARY`, or another excluded role on the same business record.
 - Principal Investigator must not edit submitted proposals unless workflow state
   allows supplement, resubmission, or another explicit domain action.
-- Project Member must not access projects they do not participate in.
-- Scientific Secretary must not be treated as a global system role and must not
-  approve/reject proposals, projects, council records, or ethics dossiers unless
-  a separate approval authority rule explicitly grants that decision.
+- Topic team members must not access approved topics they do not participate in.
+- `TOPIC_SECRETARY` must not be treated as a global system role and must not
+  approve/reject proposals, approved topics, council records, or ethics
+  dossiers unless a separate approval authority rule explicitly grants that decision.
 - Approval authority must not self-approve records where the same user is PI,
-  project/proposal participant, scientific secretary, reviewer, council member,
+  topic/proposal participant, `TOPIC_SECRETARY`, reviewer, council member,
   or another conflict role under policy.
 - File access must not be granted by object key alone.
 - Dashboard, search, export, notification, and audit views must respect role and
@@ -436,13 +437,13 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 
 - This file is the source of truth for phase 1 permission implementation.
 - Backend policies must combine system role, organization/unit scope, record
-  participation role, assignment scope, project participation, task
+  participation role, assignment scope, topic participation, task
   participation, workflow state, and conflict policy.
-- Participation roles such as PI, project member, scientific secretary,
-  reviewer, council member, and ethics reviewer should be stored on the relevant
+- Participation roles such as `PROPOSAL_PI`, `TOPIC_PI`, `TOPIC_MEMBER`,
+  `TOPIC_SECRETARY`, reviewer, council member, and ethics reviewer should be stored on the relevant
   business relationship or assignment record, not inferred from a global user
   role alone.
-- Proposal/project participation, review assignment, council membership, ethics
+- Proposal/topic participation, review assignment, council membership, ethics
   reviewer assignment, and task assignment may use separate domain models when
   their validation, conflict policy, lifecycle, or audit requirements differ.
 - UI button visibility may use this matrix for UX hints, but backend checks are
