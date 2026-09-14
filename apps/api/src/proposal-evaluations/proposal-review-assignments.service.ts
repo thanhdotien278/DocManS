@@ -33,6 +33,24 @@ type ReviewerCandidate = {
   displayName: string;
   status: string;
   unit: string;
+  researcherProfileId: string;
+};
+
+type ReviewerProfileCandidate = {
+  id: string;
+  fullName: string;
+  linkedUserId: string | null;
+  status: string;
+  managementOrganizationUnitId: string;
+  managementOrganizationUnit: { status: string };
+  linkedUser: {
+    id: string;
+    username: string;
+    displayName: string;
+    status: string;
+    systemRole: string | null;
+    organizationScopes: Array<{ organizationUnitId: string; organizationUnit: { status: string } }>;
+  } | null;
 };
 
 const ASSIGNMENT_INCLUDE = {
@@ -67,20 +85,65 @@ export class ProposalReviewAssignmentsService {
     });
   }
 
-  async candidates(actor: SafeUserContext, proposalId: string, query = "") {
+  async candidates(actor: SafeUserContext, proposalId: string, query: unknown = "") {
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
     assertScientificManagementScope(actor, proposal);
+    assertProposalStatus(proposal, REVIEWER_ASSIGNABLE_STATUSES, "Hồ sơ không ở trạng thái cho phép phân công đánh giá.");
+    if (typeof query !== "string") {
+      throw new BadRequestException({ message: "Từ khóa tìm kiếm người đánh giá không hợp lệ." });
+    }
     if ((await this.participation.evaluateConflict(actor.id, proposalId)).conflicted) throw new ForbiddenException();
+    await this.assertCompletenessEvidence(proposal);
     const organizationIds = actor.organizationScopes.map((s) => s.id);
-    const profiles = await this.prisma.researcherProfile.findMany({ where: { status: "ACTIVE", managementOrganizationUnitId: { in: organizationIds }, fullName: { contains: query.slice(0, 100), mode: "insensitive" } }, select: { id: true, fullName: true, linkedUserId: true }, orderBy: { fullName: "asc" }, take: 50 });
-    const accounts = await this.prisma.user.findMany({ where: { status: "active", systemRole: { in: ["RESEARCHER_INTERNAL_USER", "EXTERNAL_RESEARCHER_USER"] }, organizationScopes: { some: { organizationUnitId: proposal.hostOrganizationUnitId } } }, select: { id: true, username: true, displayName: true }, orderBy: { displayName: "asc" }, take: 100 });
-    const candidates = [];
-    for (const account of accounts) {
+    const profiles = (await this.prisma.researcherProfile.findMany({
+      where: {
+        status: "ACTIVE",
+        managementOrganizationUnitId: { in: organizationIds },
+        fullName: { contains: query.trim().slice(0, 100), mode: "insensitive" },
+        linkedUserId: { not: null },
+        managementOrganizationUnit: { status: "active" },
+        linkedUser: {
+          is: {
+            status: "active",
+            systemRole: { in: ["RESEARCHER_INTERNAL_USER", "EXTERNAL_RESEARCHER_USER"] },
+            organizationScopes: { some: { organizationUnitId: proposal.hostOrganizationUnitId, organizationUnit: { status: "active" } } }
+          }
+        }
+      },
+      select: {
+        id: true,
+        fullName: true,
+        linkedUserId: true,
+        status: true,
+        managementOrganizationUnitId: true,
+        managementOrganizationUnit: { select: { status: true } },
+        linkedUser: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            status: true,
+            systemRole: true,
+            organizationScopes: { select: { organizationUnitId: true, organizationUnit: { select: { status: true } } } }
+          }
+        }
+      },
+      orderBy: { fullName: "asc" },
+      take: 50
+    } as never)) as unknown as ReviewerProfileCandidate[];
+    const candidates: Array<{ id: string; fullName: string; linkedUserId: string; linkedAccountUsername: string; linkedAccountDisplayName: string }> = [];
+    for (const profile of profiles) {
+      const account = profile.linkedUser;
+      if (!account || !profile.linkedUserId || profile.managementOrganizationUnit.status !== "active" || account.status !== "active" || !["RESEARCHER_INTERNAL_USER", "EXTERNAL_RESEARCHER_USER"].includes(account.systemRole ?? "")) continue;
+      const hasHostScope = account.organizationScopes.some((scope) => scope.organizationUnitId === proposal.hostOrganizationUnitId && scope.organizationUnit.status === "active");
+      if (!hasHostScope || account.id === actor.id) continue;
       const conflict = await this.participation.evaluateConflict(account.id, proposalId);
       const assigned = await this.findLiveAssignment(proposalId, account.id);
-      if (!conflict.conflicted && !assigned && account.id !== actor.id) candidates.push(account);
+      if (!conflict.conflicted && !assigned) {
+        candidates.push({ id: profile.id, fullName: profile.fullName, linkedUserId: account.id, linkedAccountUsername: account.username, linkedAccountDisplayName: account.displayName });
+      }
     }
-    return { profiles, accounts: candidates };
+    return { profiles: candidates };
   }
 
   async listAssignments(actor: SafeUserContext, proposalId: string) {
@@ -93,9 +156,8 @@ export class ProposalReviewAssignmentsService {
   }
 
   /**
-   * AC-ST-3.2-01. The candidate is validated in this order — account, conflict, duplicate — so a
-   * conflicted candidate is reported as a conflict rather than as "already assigned", and no
-   * assignment row, history entry or audit entry is written when any check fails (AC-ST-3.2-04).
+   * AC-ST-3.2-01. The selected profile and its linked account are rechecked in the mutation
+   * transaction before conflict and duplicate checks, so a stale candidate cannot create a grant.
    */
   async assignReviewer(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>): Promise<any> {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (s, a) => s.assignReviewer(a, proposalId, input));
@@ -107,20 +169,9 @@ export class ProposalReviewAssignmentsService {
       throw new ForbiddenException({ message: "Người đang tham gia hồ sơ không thể phân công người đánh giá." });
     }
 
-    if (["submitted", "resubmitted"].includes(proposal.status)) {
-      const check = await this.prisma.proposalSubmissionEvent.findFirst({ where: { proposalId, submittedAt: { gte: proposal.submittedAt ?? new Date(0) }, snapshot: { path: ["kind"], equals: "completeness_check" } }, orderBy: { submittedAt: "desc" } });
-      if (!check) throw new BadRequestException({ message: "Cần xác nhận hồ sơ đầy đủ trước khi phân công đánh giá." });
-    }
-    const candidate = await this.resolveReviewerCandidate(input);
-    if (!(await this.prisma.userOrganizationScope.findFirst({ where: { userId: candidate.id, organizationUnitId: proposal.hostOrganizationUnitId } }))) throw new BadRequestException({ message: "Tài khoản người đánh giá chưa có phạm vi tổ chức phù hợp." });
+    await this.assertCompletenessEvidence(proposal);
+    const candidate = await this.resolveReviewerCandidate(input, actor, proposal);
     if (input.assignmentRole !== undefined && !["reviewer", "committee_member"].includes(String(input.assignmentRole))) throw new BadRequestException({ message: "Vai trò phân công không hợp lệ." });
-    const profileId = typeof input.researcherProfileId === "string" ? input.researcherProfileId : "";
-    const profile = profileId ? await this.prisma.researcherProfile.findUnique({ where: { id: profileId } }) : await this.prisma.researcherProfile.findUnique({ where: { linkedUserId: candidate.id } });
-    if (!profile || profile.status !== "ACTIVE" || !actor.organizationScopes.some((scope) => scope.id === profile.managementOrganizationUnitId) || (profile.linkedUserId && profile.linkedUserId !== candidate.id)) throw new BadRequestException({ message: "Chọn hồ sơ nhà khoa học đang hoạt động, liên kết đúng tài khoản và thuộc phạm vi quản lý." });
-    if (!profile.linkedUserId) {
-      await this.prisma.researcherProfile.update({ where: { id: profile.id }, data: { linkedUserId: candidate.id, aggregateVersion: { increment: 1 }, updatedById: actor.id } });
-      await this.auditLog.record({ action: "link-researcher-account", result: "success", actorId: actor.id, targetEntity: "researcher-profile", targetEntityId: profile.id, reason: JSON.stringify({ userId: candidate.id }) });
-    }
     const assignmentRole = normalizeAssignmentRole(input.assignmentRole);
     const dueDate = this.readOptionalDueDate(input.dueDate);
     const effectiveFrom = input.effectiveFrom ? new Date(String(input.effectiveFrom)) : new Date();
@@ -145,6 +196,8 @@ export class ProposalReviewAssignmentsService {
         reason: JSON.stringify({
           proposalId,
           candidateUserId: candidate.id,
+          researcherProfileId: candidate.researcherProfileId,
+          assignmentRole,
           reasonCode: conflict.reasonCode,
           reason: conflict.reason
         })
@@ -178,6 +231,7 @@ export class ProposalReviewAssignmentsService {
           data: {
             proposalId,
             reviewerUserId: candidate.id,
+            researcherProfileId: candidate.researcherProfileId,
             assignmentRole,
             status: REVIEW_ASSIGNMENT_STATUS.assigned,
             assignedById: actor.id,
@@ -226,6 +280,7 @@ export class ProposalReviewAssignmentsService {
             reason: JSON.stringify({
               proposalId,
               reviewerUserId: candidate.id,
+              researcherProfileId: candidate.researcherProfileId,
               reviewerUsername: candidate.username,
               assignmentRole,
               dueDate: dueDate?.toISOString() ?? null,
@@ -290,6 +345,9 @@ export class ProposalReviewAssignmentsService {
           reason: JSON.stringify({
             proposalId,
             reviewerUserId: assignment.reviewerUserId,
+            researcherProfileId: assignment.researcherProfileId,
+            reviewerUsername: assignment.reviewer?.username ?? null,
+            assignmentRole: normalizeAssignmentRole(assignment.assignmentRole),
             fromStatus: assignment.status,
             toStatus: REVIEW_ASSIGNMENT_STATUS.revoked,
             reason
@@ -509,6 +567,7 @@ export class ProposalReviewAssignmentsService {
       id: assignment.id,
       proposalId: assignment.proposalId,
       reviewerUserId: assignment.reviewerUserId,
+      researcherProfileId: assignment.researcherProfileId ?? null,
       reviewerDisplayName: assignment.reviewer?.displayName ?? "",
       reviewerUsername: assignment.reviewer?.username ?? "",
       reviewerUnit: assignment.reviewer?.unit ?? "",
@@ -579,42 +638,68 @@ export class ProposalReviewAssignmentsService {
     return assignment;
   }
 
-  private async resolveReviewerCandidate(input: Record<string, unknown>): Promise<ReviewerCandidate> {
-    const reviewerUserId = typeof input.reviewerUserId === "string" ? input.reviewerUserId.trim() : "";
-    const username = typeof input.reviewerUsername === "string" ? input.reviewerUsername.trim().toLowerCase() : "";
+  private async assertCompletenessEvidence(proposal: EvaluationProposalRecord) {
+    if (!["submitted", "resubmitted"].includes(proposal.status)) return;
+    if (!proposal.submittedAt) throw new BadRequestException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được lần nộp hiện tại." });
 
-    if (!reviewerUserId && !username) {
-      throw new BadRequestException({
-        message: "Chọn người đánh giá bằng tài khoản hệ thống."
-      });
+    const check = await this.prisma.proposalSubmissionEvent.findFirst({
+      where: {
+        proposalId: proposal.id,
+        submittedAt: { gte: proposal.submittedAt },
+        snapshot: { path: ["kind"], equals: "completeness_check" }
+      },
+      orderBy: { submittedAt: "desc" }
+    });
+    if (!check) throw new BadRequestException({ message: "Cần xác nhận hồ sơ đầy đủ trước khi phân công đánh giá." });
+  }
+
+  private async resolveReviewerCandidate(input: Record<string, unknown>, actor: SafeUserContext, proposal: EvaluationProposalRecord): Promise<ReviewerCandidate> {
+    if (Object.prototype.hasOwnProperty.call(input, "reviewerUserId") || Object.prototype.hasOwnProperty.call(input, "reviewerUsername")) {
+      throw new BadRequestException({ message: "Chọn người đánh giá bằng hồ sơ nhà khoa học đã liên kết tài khoản." });
     }
 
-    const candidate = (await this.prisma.user.findFirst({
-      where: reviewerUserId ? { id: reviewerUserId } : { usernameKey: username },
+    const researcherProfileId = typeof input.researcherProfileId === "string" ? input.researcherProfileId.trim() : "";
+    if (!researcherProfileId) {
+      throw new BadRequestException({ message: "Chọn hồ sơ nhà khoa học đã liên kết tài khoản." });
+    }
+
+    const profile = (await this.prisma.researcherProfile.findFirst({
+      where: {
+        id: researcherProfileId,
+        status: "ACTIVE",
+        managementOrganizationUnitId: { in: actor.organizationScopes.map((scope) => scope.id) },
+        managementOrganizationUnit: { status: "active" },
+        linkedUserId: { not: null },
+        linkedUser: {
+          is: {
+            status: "active",
+            systemRole: { in: ["RESEARCHER_INTERNAL_USER", "EXTERNAL_RESEARCHER_USER"] },
+            organizationScopes: { some: { organizationUnitId: proposal.hostOrganizationUnitId, organizationUnit: { status: "active" } } }
+          }
+        }
+      },
       select: {
         id: true,
-        username: true,
-        displayName: true,
+        fullName: true,
         status: true,
-        unit: true
+        linkedUserId: true,
+        linkedUser: { select: { id: true, username: true, displayName: true, status: true, systemRole: true, unit: true } }
       }
-    })) as ReviewerCandidate | null;
+    } as never)) as {
+      id: string;
+      fullName: string;
+      status: string;
+      linkedUserId: string | null;
+      linkedUser: { id: string; username: string; displayName: string; status: string; systemRole: string | null; unit: string } | null;
+    } | null;
 
-    if (!candidate) {
-      throw new BadRequestException({
-        message: "Không tìm thấy tài khoản người đánh giá."
-      });
-    }
+    if (!profile || !profile.linkedUserId || !profile.linkedUser) throw new BadRequestException({ message: "Hồ sơ nhà khoa học không đủ điều kiện nhận phân công." });
 
-    if (candidate.status !== "active") {
-      throw new BadRequestException({
-        message: `Tài khoản ${candidate.displayName} không còn hoạt động.`
-      });
-    }
+    const account = profile.linkedUser;
+    await this.prisma.$queryRaw`SELECT id FROM researcher_profiles WHERE id = ${profile.id} FOR SHARE`;
+    await this.prisma.$queryRaw`SELECT id FROM users WHERE id = ${account.id} FOR SHARE`;
 
-    const account = await this.prisma.user.findUnique({ where: { id: candidate.id }, select: { systemRole: true } });
-    if (!account || !["RESEARCHER_INTERNAL_USER", "EXTERNAL_RESEARCHER_USER"].includes(account.systemRole ?? "")) throw new BadRequestException({ message: "Tài khoản không đủ điều kiện nhận phân công phản biện." });
-    return candidate;
+    return { ...account, researcherProfileId: profile.id };
   }
 
   private readOptionalDueDate(value: unknown) {

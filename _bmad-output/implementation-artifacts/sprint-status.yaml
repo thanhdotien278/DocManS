@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-09-01T00:00:00+07:00
+last_updated: 2026-09-14
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -59,10 +59,10 @@ development_status:
   4-5-kiem-tra-muc-do-san-sang-truoc-khi-nop: backlog
   4-6-nop-chinh-thuc-va-xem-lich-su-nop-de-xuat: backlog
   epic-4-retrospective: optional
-  epic-5: backlog
+  epic-5: in-progress
   5-1-kiem-tra-tinh-day-du-va-yeu-cau-bo-sung: backlog
   5-2-chinh-sua-theo-yeu-cau-va-nop-lai-de-xuat: backlog
-  5-3-phan-cong-reviewer-voi-kiem-tra-xung-dot: backlog
+  5-3-phan-cong-reviewer-voi-kiem-tra-xung-dot: review
   5-4-reviewer-truy-cap-va-nop-danh-gia-cua-minh: backlog
   5-5-theo-doi-tien-do-va-tong-hop-danh-gia-noi-bo: backlog
   5-6-thu-ky-khoa-hoc-ho-tro-hanh-chinh-cho-quy-trinh-danh-gia: backlog

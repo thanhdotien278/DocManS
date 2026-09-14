@@ -2171,7 +2171,7 @@ So that đề xuất có thể tiếp tục quy trình đánh giá.
 **Then** backend đánh giá chính sách hiện hành và từ chối nếu không còn action
 **And** không dựa vào capability cũ đã hiển thị trên client.
 
-### Story 5.3: Phân công reviewer với kiểm tra xung đột [FR17]
+### Story 5.3: Reviewer / Council Assignment from Scientist Profiles [FR17]
 
 As a chuyên viên quản lý khoa học,
 I want phân công reviewer đủ điều kiện cho đề xuất,
@@ -2203,6 +2203,18 @@ So that đánh giá độc lập và không có xung đột lợi ích.
 **When** họ cố phân công reviewer
 **Then** action bị chặn vì nằm trong non-delegable registry
 **And** không thể vượt chặn bằng API trực tiếp.
+
+**Given** an eligible active Scientist Profile with an existing active linked researcher account
+**When** scoped Scientific Management Staff assigns either `reviewer` or `committee_member`
+**Then** the backend derives the account from the profile, rechecks eligibility atomically, and retains both IDs with append-only audit.
+
+**Given** an inactive/unlinked profile, inactive account, invalid scope/state/context, PI/team conflict, or non-revoked duplicate
+**When** candidate search or direct assignment is requested
+**Then** the candidate is excluded or the mutation denied without creating links or assignments.
+
+**Given** an existing assignment in an eligible workflow state
+**When** authorized staff revokes it with a reason and current context
+**Then** access stops immediately and assignment/review/audit history is preserved.
 
 ### Story 5.4: Reviewer truy cập và nộp đánh giá của mình [FR18]
 

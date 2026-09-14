@@ -466,3 +466,24 @@ assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `appro
 - Legacy roles removed: ADM, LD, VT, TBP, CB, HD, BC. These are replaced by the
   five canonical system roles in section 2; PI, member, secretary, reviewer,
   council, ethics, and task roles remain record-scoped relationships.
+
+## Scientist Profile assignment contract
+
+The [Reviewer / Council Assignment contract](authorization-core-business-baseline.md#reviewer--council-assignment-from-scientist-profiles)
+is normative for `proposal.review.assign`, including revocation. Only scoped,
+unconflicted Scientific Management Staff may search candidates or mutate duties.
+Candidate search and assignment use eligible ACTIVE Scientist Profiles with an
+existing active linked researcher account; independent account selection and
+implicit profile linking are forbidden. Both `reviewer` and `committee_member`
+remain proposal-scoped assignments under the existing disclosure matrix.
+
+| Operation | Required checks | Evidence / disclosure |
+| --- | --- | --- |
+| Search eligible profiles | Staff role, proposal/profile scope, assignable state, current submission completeness, active profile/account, host scope, no participation conflict or live duplicate | Minimum eligible profile data; no independent account list |
+| Assign either duty | Recheck search eligibility, current proposal context, valid effective dates/deadline, no self-assignment | Retain profile/account IDs; assignment and append-only audit commit together |
+| Revoke either duty | Staff role/scope, no actor participation conflict, assignable state, current context, nonblank reason | Retain assignment and submitted reviews; append audit and immediately end the access grant |
+
+`submitted` and `resubmitted` require current completeness evidence before the
+first assignment opens `under_review`. Revocation uses these same assignable
+states. Invalid or unresolved context denies; UI capability/search cannot grant
+permission. Legacy assignment profile IDs remain null rather than being inferred.

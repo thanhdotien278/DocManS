@@ -40,12 +40,11 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
   const [loadError, setLoadError] = useState("");
 
-  const [candidates, setCandidates] = useState<ReviewerCandidates>({ profiles: [], accounts: [] });
+  const [candidates, setCandidates] = useState<ReviewerCandidates>({ profiles: [] });
   const [profileId, setProfileId] = useState("");
   const [candidateQuery, setCandidateQuery] = useState("");
   const [effectiveFrom, setEffectiveFrom] = useState("");
   const [effectiveUntil, setEffectiveUntil] = useState("");
-  const [reviewerUsername, setReviewerUsername] = useState("");
   const [assignmentRole, setAssignmentRole] = useState<ReviewAssignmentRole>("reviewer");
   const [dueDate, setDueDate] = useState("");
   const [assignError, setAssignError] = useState("");
@@ -66,7 +65,17 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
     try {
       const data = await loadProposalReviewProgress(proposalId);
       setProgress(data);
-      if (canAssignReviewers) setCandidates(await loadReviewerCandidates(proposalId, candidateQuery));
+      if (canAssignReviewers) {
+        try {
+          setCandidates(await loadReviewerCandidates(proposalId, candidateQuery));
+          setAssignError("");
+        } catch (error) {
+          setCandidates({ profiles: [] });
+          setAssignError(error instanceof Error ? error.message : "Không tải được người đánh giá.");
+        }
+      } else {
+        setCandidates({ profiles: [] });
+      }
       if (!summaryDirty) {
         setSummaryText(data.evaluationSummary?.summary ?? "");
         setRecommendation(data.evaluationSummary?.recommendation ?? "");
@@ -86,7 +95,7 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
 
   useEffect(() => {
     void refresh();
-  }, [proposalId]);
+  }, [proposalId, canAssignReviewers, contextVersion?.aggregateVersion]);
 
   if (state === "loading") {
     return <p className="state-message">Đang tải tiến độ đánh giá...</p>;
@@ -108,8 +117,8 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
     setAssignError("");
     setMessage("");
 
-    if (!reviewerUsername.trim()) {
-      setAssignError("Nhập tài khoản hệ thống của người đánh giá.");
+    if (!profileId) {
+      setAssignError("Chọn hồ sơ nhà khoa học đã liên kết tài khoản.");
       return;
     }
 
@@ -117,14 +126,13 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
     setIsAssigning(true);
     try {
       await assignProposalReviewer(proposalId, {
-        reviewerUsername: reviewerUsername.trim(),
         researcherProfileId: profileId, contextVersion,
         effectiveFrom: effectiveFrom ? new Date(effectiveFrom).toISOString() : undefined,
         effectiveUntil: effectiveUntil ? new Date(effectiveUntil).toISOString() : undefined,
         assignmentRole,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined
       });
-      setReviewerUsername(""); setProfileId("");
+      setProfileId("");
       setDueDate("");
       setMessage("Đã phân công người đánh giá.");
       await refresh();
@@ -295,17 +303,10 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
           <div className="section-mini-heading">Phân công mới</div>
           <label className="field"><span>Tìm hồ sơ nhà khoa học</span><input value={candidateQuery} onChange={(e) => setCandidateQuery(e.target.value)} /></label>
           <button className="button" type="button" disabled={!canAssign || isAssigning} onClick={() => void loadReviewerCandidates(proposalId, candidateQuery).then(setCandidates).catch((error) => setAssignError(error.message))}>Tìm người đánh giá</button>
-          <label className="field"><span>Hồ sơ nhà khoa học *</span><select required value={profileId} disabled={!canAssign} onChange={(e) => { setProfileId(e.target.value); const profile = candidates.profiles.find((p) => p.id === e.target.value); setReviewerUsername(candidates.accounts.find((a) => a.id === profile?.linkedUserId)?.username ?? ""); }}><option value="">Chọn hồ sơ đang hoạt động</option>{candidates.profiles.map((p) => <option key={p.id} value={p.id}>{p.fullName}{p.linkedUserId ? "" : " — cần liên kết tài khoản"}</option>)}</select></label>
-          <p className="record-meta">Nếu hồ sơ chưa liên kết, phân công sẽ ghi nhận liên kết với tài khoản bạn chọn. <a href="/researcher-profiles">Quản lý hồ sơ nhà khoa học</a></p>
+          <label className="field"><span>Hồ sơ nhà khoa học đã liên kết tài khoản *</span><select required value={profileId} disabled={!canAssign} onChange={(e) => setProfileId(e.target.value)}><option value="">Chọn hồ sơ đủ điều kiện</option>{candidates.profiles.map((p) => <option key={p.id} value={p.id}>{p.fullName} — {p.linkedAccountDisplayName} ({p.linkedAccountUsername})</option>)}</select></label>
+          {!candidates.profiles.length ? <p className="record-meta">Không có hồ sơ đang hoạt động đã liên kết tài khoản và đủ điều kiện trong phạm vi hồ sơ này. <a href="/researcher-profiles">Xem hồ sơ nhà khoa học</a></p> : null}
           <div className="form-grid two"><label className="field"><span>Hiệu lực từ (để trống: ngay lập tức)</span><input type="datetime-local" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} disabled={!canAssign} /></label><label className="field"><span>Hiệu lực đến (tùy chọn)</span><input type="datetime-local" value={effectiveUntil} onChange={(e) => setEffectiveUntil(e.target.value)} disabled={!canAssign} /></label></div>
           <div className="form-grid two">
-            <label className="field">
-              <span>Tài khoản người đánh giá</span>
-              <select value={reviewerUsername} onChange={(event) => setReviewerUsername(event.target.value)} disabled={!canAssign} required>
-                <option value="">Chọn tài khoản đã kiểm tra xung đột</option>
-                {candidates.accounts.filter((a) => !candidates.profiles.find((p) => p.id === profileId)?.linkedUserId || candidates.profiles.find((p) => p.id === profileId)?.linkedUserId === a.id).map((account) => <option key={account.id} value={account.username}>{account.displayName} ({account.username})</option>)}
-              </select>
-            </label>
             <label className="field">
               <span>Vai trò trong vòng đánh giá</span>
               <select

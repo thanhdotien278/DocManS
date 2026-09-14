@@ -1,15 +1,20 @@
 import { BadRequestException, type PipeTransform } from "@nestjs/common";
+// @ts-ignore: runtime package is JavaScript; repository consumers use its TypeScript source contract.
+import { isContextVersionTokenV1, type ContextVersionTokenV1 } from "@rtms/permissions";
 import { REVIEW_RECOMMENDATIONS, type ReviewRecommendation } from "../proposals-shared/proposal-review-access.js";
+import { readOptionalDate } from "../proposals-shared/proposal-validation.js";
 
 const EVALUATION_VALIDATION_MESSAGE = "Dữ liệu đánh giá hồ sơ không hợp lệ.";
 
 export class AssignProposalReviewerDto {
   [key: string]: unknown;
 
-  reviewerUserId?: string;
-  reviewerUsername?: string;
+  researcherProfileId!: string;
   assignmentRole?: string;
   dueDate?: string;
+  effectiveFrom?: string;
+  effectiveUntil?: string;
+  contextVersion!: ContextVersionTokenV1;
 }
 
 export class SaveProposalReviewDto {
@@ -39,6 +44,7 @@ export class RevokeReviewAssignmentDto {
   [key: string]: unknown;
 
   note?: string;
+  contextVersion!: ContextVersionTokenV1;
 }
 
 function assertRecord(value: unknown) {
@@ -59,19 +65,41 @@ function assertOptionalText(value: unknown, field: string, maxLength: number) {
   }
 }
 
+function assertRequiredText(value: unknown, field: string, maxLength: number) {
+  if (typeof value !== "string" || !value.trim() || value.trim().length > maxLength) {
+    throw new BadRequestException({ message: `Trường ${field} không hợp lệ.` });
+  }
+}
+
+function readContextVersion(input: Record<string, unknown>) {
+  if (!isContextVersionTokenV1(input.contextVersion)) {
+    throw new BadRequestException({ message: "Thiếu hoặc không hợp lệ contextVersion của hồ sơ." });
+  }
+
+  return input.contextVersion as ContextVersionTokenV1;
+}
+
 export const assignProposalReviewerPipe: PipeTransform<unknown, AssignProposalReviewerDto> = {
   transform(value: unknown) {
     const input = assertRecord(value);
-    assertOptionalText(input.reviewerUserId, "reviewerUserId", 80);
-    assertOptionalText(input.reviewerUsername, "reviewerUsername", 80);
+    if (Object.prototype.hasOwnProperty.call(input, "reviewerUserId") || Object.prototype.hasOwnProperty.call(input, "reviewerUsername")) {
+      throw new BadRequestException({ message: "Chọn người đánh giá bằng hồ sơ nhà khoa học đã liên kết tài khoản." });
+    }
+    assertRequiredText(input.researcherProfileId, "researcherProfileId", 80);
     assertOptionalText(input.assignmentRole, "assignmentRole", 40);
     assertOptionalText(input.dueDate, "dueDate", 40);
+    assertOptionalText(input.effectiveFrom, "effectiveFrom", 40);
+    assertOptionalText(input.effectiveUntil, "effectiveUntil", 40);
 
-    if (!input.reviewerUserId && !input.reviewerUsername) {
-      throw new BadRequestException({ message: "Chọn người đánh giá bằng tài khoản hệ thống." });
+    if (input.assignmentRole !== undefined && !["reviewer", "committee_member"].includes(String(input.assignmentRole))) {
+      throw new BadRequestException({ message: "Vai trò phân công không hợp lệ." });
     }
 
-    return input as AssignProposalReviewerDto;
+    readOptionalDate(input.dueDate, "dueDate");
+    readOptionalDate(input.effectiveFrom, "effectiveFrom");
+    readOptionalDate(input.effectiveUntil, "effectiveUntil");
+
+    return { ...input, contextVersion: readContextVersion(input) } as AssignProposalReviewerDto;
   }
 };
 
@@ -125,6 +153,6 @@ export const revokeReviewAssignmentPipe: PipeTransform<unknown, RevokeReviewAssi
   transform(value: unknown) {
     const input = value === undefined || value === null || value === "" ? {} : assertRecord(value);
     assertOptionalText(input.note, "note", 2000);
-    return input as RevokeReviewAssignmentDto;
+    return { ...input, contextVersion: readContextVersion(input) } as RevokeReviewAssignmentDto;
   }
 };

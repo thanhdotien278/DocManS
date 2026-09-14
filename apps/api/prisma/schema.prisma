@@ -190,6 +190,7 @@ model ResearcherProfile {
   updatedAt                  DateTime      @updatedAt @map("updated_at")
   researchFields             ResearcherProfileField[]
   expertiseKeywords          ResearcherProfileExpertiseKeyword[]
+  proposalReviewAssignments  ProposalReviewAssignment[] @relation("ReviewAssignmentProfile")
 
   @@index([managementOrganizationUnitId, status, fullNameKey])
   @@index([contactEmailKey])
@@ -421,6 +422,8 @@ model ProposalReviewAssignment {
   proposal       ResearchProposal @relation(fields: [proposalId], references: [id])
   reviewerUserId String           @map("reviewer_user_id")
   reviewer       User             @relation("ReviewAssignmentReviewer", fields: [reviewerUserId], references: [id])
+  researcherProfileId String?     @map("researcher_profile_id")
+  researcherProfile   ResearcherProfile? @relation("ReviewAssignmentProfile", fields: [researcherProfileId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   assignmentRole String           @default("reviewer") @map("assignment_role")
   status         String           @default("assigned")
   assignedById   String           @map("assigned_by_id")
@@ -437,6 +440,7 @@ model ProposalReviewAssignment {
 
   @@index([proposalId])
   @@index([reviewerUserId])
+  @@index([researcherProfileId])
   @@index([status])
   @@map("proposal_review_assignments")
 }
