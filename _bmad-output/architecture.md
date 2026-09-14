@@ -48,8 +48,9 @@ Architecture must satisfy backend-enforced authorization, controlled workflow st
 
 Authorization decisions must use the complete record context: one active
 account-level system role, organization scope, typed record participation
-roles, assignment scope, valid record delegation, workflow state, and conflict
-policy. The architecture must preserve relationship lifecycle and must return
+roles, assignment scope, any future domain-applicable delegation, workflow
+state, and conflict policy. Proposal create/submit/resubmit mark delegation not
+applicable. The architecture must preserve relationship lifecycle and must return
 backend-derived capability and denial-reason data for permission-sensitive UI.
 
 **Scale & Complexity:**
@@ -77,7 +78,7 @@ The project is a high-complexity internal web platform because it combines multi
 - data-scope authorization by unit/organization
 - state-based authorization for workflow actions
 - record-participation and assignment authorization for each business record
-- explicit delegation lifecycle and separation-of-duty conflict enforcement
+- explicit delegation boundaries and separation-of-duty conflict enforcement
 - backend-derived capability responses for record-role UX
 - audit-log capture and queryability for critical business events
 - file permission enforcement and file metadata traceability
@@ -178,7 +179,7 @@ nx add @nx/nest
 - Use Redis for cache, queue, reminder jobs, and notification orchestration
 - Use MinIO as the file object store
 - Enforce role-based, data-scope, and state-based authorization in backend services
-- Enforce record participation, assignment, delegation, relationship
+- Enforce record participation, assignment, any domain-applicable delegation, relationship
   lifecycle, and conflict policy in the same backend authorization decision
 - Model proposal, approved-project, task, seminar/student research, related-document, council, and ethics workflows as explicit state machines
 - Use Docker Compose and Nginx for phase 1 deployment
@@ -217,12 +218,14 @@ nx add @nx/nest
 - **System-role model:** exactly one active account-level role per user:
   `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`,
   `LEADERSHIP_APPROVAL_AUTHORITY`, or `RESEARCHER_INTERNAL_USER`
-- **Record-role model:** PI, co-investigator, project member, scientific
-  secretary, reviewer, council member, ethics reviewer, and task assignee are
-  typed record relationships, never additional global roles
+- **Record-role model:** proposals derive one `PROPOSAL_PI` from `ownerId` and
+  use only `TOPIC_SECRETARY`/`TOPIC_MEMBER` team relationships; approved topics
+  use `TOPIC_PI` plus the same team roles. Reviewer, council, ethics, and task
+  duties remain typed assignments, never additional global roles
 - **Authorization model:** system role plus organization/data scope plus
-  record participation plus assignment scope plus valid delegation plus
-  workflow state plus conflict policy
+  record participation plus assignment scope plus any domain-applicable future
+  delegation plus workflow state plus conflict policy; proposal
+  create/submit/resubmit are PI-only
 - **Session and security strategy:** authenticated web session or token-based app session, but always enforced server-side
 - **Security middleware:** request validation, auth guards, permission checks, audit logging hooks, and rate protection for login-sensitive endpoints
 - **Sensitive file rule:** file metadata visibility and file download access must be permission-checked every time
@@ -253,10 +256,9 @@ personal-work aggregation, and integration fixtures are defined in
    hierarchy.
 3. Resolve all active typed participation, assignment, council-membership, and
    task relationships for the target record.
-4. Resolve an exact-match `PermissionActionV1` delegation grant initiated by
-   the current action holder and approved by authorized scientific-management
-   staff. The grant, grantor, delegate, and source authority must all be active
-   at the database server's authoritative UTC time.
+4. For a future domain that explicitly adopts delegation, resolve its
+   exact-match grant contract. For proposal create/submit/resubmit, return
+   not-applicable and require the owner-derived internal PI.
 5. Evaluate workflow-state guards.
 6. Evaluate conflict and separation-of-duty rules.
 7. Allow only an explicitly permitted action. Otherwise deny with the
@@ -296,15 +298,17 @@ viewer's own relationships and facts needed to explain the result; they never
 reveal another person's hidden assignment or the source of a conflict. Unknown
 schema versions, action IDs, and denial codes fail closed in protected clients.
 
-#### Delegation Contract
+#### Future Delegation Contract
 
-- The current action holder initiates an action-specific grant; authorized
-  scientific management staff approves or revokes it.
+- No current proposal action is delegable. Proposal creation, submission, and
+  resubmission are restricted to the owner-derived internal-researcher PI.
+- If a future domain adopts delegation, the current action holder initiates an
+  action-specific grant and authorized scientific management staff approves or
+  revokes it.
 - Each grant stores grantor, approver, delegate, target type/id, action set,
   start/end, status, revocation metadata, and audit context.
-- Draft/edit/file and PI submission actions may be delegated when listed.
-  Reviewer assignment, scoring, membership changes, approval, rejection, and
-  final decisions are non-delegable.
+- Reviewer assignment, scoring, membership changes, approval, rejection, and
+  final decisions remain non-delegable.
 - Ending the grantor's source relationship invalidates the grant immediately.
 - Action IDs come from `PermissionActionV1`, use exact matching, and do not
   support wildcards or delegation chains.
@@ -330,8 +334,8 @@ schema versions, action IDs, and denial codes fail closed in protected clients.
 
 #### Review Disclosure Contract
 
-Before the configured disclosure state, PI, co-investigator, members, and
-scientific secretaries receive no reviewer identity, raw score, reviewer
+Before the configured disclosure state, PI, team members, and team secretaries
+receive no reviewer identity, raw score, reviewer
 comment, or consolidated evaluation material in lists, details, files, exports,
 notifications, dashboards, or history. After final decision, only the
 policy-approved summary is exposed by default. Any wider institutional
@@ -415,7 +419,7 @@ disclosure requires a separately approved, versioned policy.
 2. Establish shared packages and repository conventions
 3. Build authentication, organizations, roles, and permission primitives
 4. Define Prisma schema foundations, researcher-profile/account linkage,
-   typed participation relations, delegation grants, and the brownfield
+   typed participation relations, the explicit no-proposal-delegation boundary, and the brownfield
    migration that removes global PI/reviewer/council authority, chooses one
    system-role source of truth, and consolidates existing permission seams
 5. Implement the shared authorization decision contract, capability response,
@@ -435,8 +439,8 @@ disclosure requires a separately approved, versioned policy.
 **Cross-Component Dependencies:**
 
 - authorization depends on users, roles, organizations, assignments, and workflow states
-- record authorization additionally depends on active participation,
-  delegation, and conflict context owned by the target domain
+- record authorization additionally depends on active participation, conflict,
+  and any future domain-applicable delegation context owned by the target domain
 - dashboards depend on scope-aware query services across multiple modules
 - notifications and reminders depend on workflow events, deadlines, and Redis-backed jobs
 - file management depends on permission checks, domain ownership, and audit logging
@@ -660,7 +664,8 @@ must complete before dependent stories rely on it.
   exact-action, time-bounded grants are valid; source authority must remain
   active; wildcards and chains are forbidden; reviewer assignment, scoring,
   membership changes, approval, rejection, and final decisions are
-  non-delegable
+  non-delegable; proposal create, submit, and resubmit are owner-only and have
+  no delegation path
 
 ### AD-6 — Server Capability Contract [ADOPTED]
 
@@ -713,8 +718,8 @@ must complete before dependent stories rely on it.
 - **Binds:** lists, details, files, exports, notifications, dashboards, history,
   proposal, review, council, and ethics
 - **Prevents:** leaking reviewer identities or internal evaluation material
-- **Rule:** before disclosure state, PI, co-investigator, members, and
-  secretaries receive no reviewer identity, raw score, comment, or
+- **Rule:** before disclosure state, PI, team members, and team secretaries
+  receive no reviewer identity, raw score, comment, or
   consolidation data; all surfaces and the published summary follow the
   normative disclosure matrix
 
@@ -1040,7 +1045,7 @@ docmansystem/
 │           │   ├── researcher-profiles/
 │           │   ├── tasks/
 │           │   ├── notifications/
-│           │   ├── delegations/
+│           │   ├── delegations/         # future only after a domain contract is approved
 │           │   ├── personal-work/
 │           │   ├── files/
 │           │   ├── audit-logs/
@@ -1129,8 +1134,8 @@ docmansystem/
 - Authentication and sessions → `auth`, shared guards and strategies, frontend auth lib
 - Password change/reset → `auth`, `users`, audit logging, backend credential policy utilities
 - Role and scope permissions → `roles`, `organizations`, shared `permissions` package, backend authorization layer
-- Record participation, assignment, conflict, and delegation → owning domain
-  modules plus `delegations`, shared `permissions`, and the backend
+- Record participation, assignment, conflict, and any future delegation →
+  owning domain modules plus shared `permissions` and the backend
   authorization layer
 - Personal work hub → `personal-work` read module plus authorized query
   contracts from each source domain
@@ -1276,7 +1281,7 @@ erDiagram
 - `organizations`
 - `user_organization_scopes`
 - `password_reset_tokens`
-- `record_delegations`
+- `record_delegations` (future only; no current proposal-delegation table)
 
 **Researcher Profile Ownership:**
 
@@ -1351,9 +1356,9 @@ erDiagram
 - `proposal_members`, `project_members`, `seminar_participants`,
   `student_research_participants`, `council_members`, evaluation assignments,
   and task assignments own their typed role, status, and effective dates.
-- Co-investigator is a distinct participation value with project-member
-  default authority unless an explicit responsibility or delegation grants
-  more.
+- Proposal and approved-topic team rows use only `TOPIC_SECRETARY` and
+  `TOPIC_MEMBER`; `ownerId` supplies the sole `PROPOSAL_PI`/`TOPIC_PI` and is
+  never duplicated as a team row. Proposal create/submit/resubmit are PI-only.
 - `researcher_participation_links`, if retained, is a rebuildable read-only
   directory/history index. Phase-1 authorized history uses query-on-read source
   contracts; the index is never a mutation or authorization source of truth,
@@ -1361,7 +1366,7 @@ erDiagram
 - Each owning domain resolves its active relationships for the shared
   authorization service. Generic polymorphic links must not replace
   domain-specific conflict rules.
-- `record_delegations` is owned by governance, uses exact
+- Any future `record_delegations` model is owned by governance, uses exact
   `PermissionActionV1` identifiers and UTC half-open validity intervals, and is
   authoritatively validated against target scope, both accounts, grant status,
   and the grantor's source action inside every protected mutation.

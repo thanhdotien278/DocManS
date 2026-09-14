@@ -44,15 +44,14 @@ describe("Story 1.8 viewer capability V1", () => {
       canEdit: true,
       canManageFiles: true,
       participation: {
-        role: "principal-investigator",
+        role: "PROPOSAL_PI",
         label: "Chủ nhiệm",
-        roles: ["principal-investigator", "member"],
+        roles: ["PROPOSAL_PI"],
         labels: [],
         isOwner: true,
         isParticipant: true,
         relationshipEffectiveFrom: {
-          "principal-investigator": "2026-07-01T00:00:00.000Z",
-          member: "2026-07-02T00:00:00.000Z"
+          PROPOSAL_PI: "2026-07-01T00:00:00.000Z"
         }
       },
       reviewAccess: {
@@ -63,7 +62,7 @@ describe("Story 1.8 viewer capability V1", () => {
       }
     });
     assert.equal(isViewerAuthorizationV1(capability), true);
-    assert.deepEqual(capability.viewerRelationships.map((relationship) => relationship.type), ["PROPOSAL_MEMBER", "PROPOSAL_PI", "REVIEWER_ASSIGNMENT"]);
+    assert.deepEqual(capability.viewerRelationships.map((relationship) => relationship.type), ["PROPOSAL_PI", "REVIEWER_ASSIGNMENT"]);
     assert.deepEqual(capability.allowedActions, [...capability.allowedActions].sort());
     assert.equal(capability.blockedActions.find((item) => item.action === "proposal.review.submit")?.code, "CONFLICT_DENIED");
     assert.equal(capability.evaluatedAsOf, proposal.authorizationContextUpdatedAt.toISOString());
@@ -71,7 +70,6 @@ describe("Story 1.8 viewer capability V1", () => {
     assert.equal(capability.contextVersion.conflictVersion, 3);
     assert.equal(capability.contextVersion.delegationVersion, 0);
     assert.deepEqual(capability.viewerRelationships.map((relationship) => relationship.effectiveFrom), [
-      "2026-07-02T00:00:00.000Z",
       "2026-07-01T00:00:00.000Z",
       "2026-07-03T00:00:00.000Z"
     ]);
@@ -85,13 +83,13 @@ describe("Story 1.8 viewer capability V1", () => {
       canEdit: true,
       canManageFiles: true,
       participation: {
-        role: "principal-investigator",
+        role: "PROPOSAL_PI",
         label: "Chủ nhiệm",
-        roles: ["principal-investigator"],
+        roles: ["PROPOSAL_PI"],
         labels: [],
         isOwner: true,
         isParticipant: true,
-        relationshipEffectiveFrom: { "principal-investigator": "2026-07-01T00:00:00.000Z" }
+        relationshipEffectiveFrom: { PROPOSAL_PI: "2026-07-01T00:00:00.000Z" }
       }
     });
     assert.equal(isViewerAuthorizationV1({ ...valid, schemaVersion: "v2" }), false);
@@ -113,13 +111,13 @@ describe("Story 1.8 viewer capability V1", () => {
 
   it("projects conflict blocks that match review consolidation, decision, and supplement backend guards", () => {
     const participant = {
-      role: "member",
+      role: "TOPIC_MEMBER",
       label: "Thành viên",
-      roles: ["member"],
+      roles: ["TOPIC_MEMBER"],
       labels: ["Thành viên"],
       isOwner: false,
       isParticipant: true,
-      relationshipEffectiveFrom: { member: "2026-07-01T00:00:00.000Z" }
+      relationshipEffectiveFrom: { TOPIC_MEMBER: "2026-07-01T00:00:00.000Z" }
     };
     const staffCapability = projectProposalViewerAuthorizationV1({
       actor: { ...actor, systemRole: "SCIENTIFIC_MANAGEMENT_STAFF" },
@@ -130,7 +128,7 @@ describe("Story 1.8 viewer capability V1", () => {
       canManageFiles: false
     });
     assert.equal(staffCapability.blockedActions.find((item) => item.action === "proposal.review.consolidate")?.code, "CONFLICT_DENIED");
-    assert.equal(staffCapability.blockedActions.find((item) => item.action === "proposal.supplement.request")?.code, "WORKFLOW_STATE_DENIED");
+    assert.equal(staffCapability.blockedActions.find((item) => item.action === "proposal.supplement.request")?.code, "CONFLICT_DENIED");
 
     const authorityCapability = projectProposalViewerAuthorizationV1({
       actor: { ...actor, systemRole: "LEADERSHIP_APPROVAL_AUTHORITY" },

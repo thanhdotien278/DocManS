@@ -99,18 +99,17 @@ mọi hồ sơ.
 | `SYSTEM_ADMIN` | Tài khoản, role, đơn vị/scope, danh mục nền tảng, cấu hình và truy vết vận hành | Không mặc nhiên xem/sửa dữ liệu nghiệp vụ, đánh giá, phê duyệt hoặc mở lại hồ sơ |
 | `SCIENTIFIC_MANAGEMENT_STAFF` | Vận hành đợt tiếp nhận, kiểm tra, phân công, tổng hợp, đề tài, hồ sơ nhà khoa học, nhắc việc và báo cáo | Không bỏ qua workflow, xung đột lợi ích hoặc quyết định cuối của lãnh đạo |
 | `LEADERSHIP_APPROVAL_AUTHORITY` | Xem hồ sơ được trình và phê duyệt/từ chối theo thẩm quyền | Không sửa nội dung, bỏ qua đánh giá hoặc quyết định hồ sơ mình tham gia |
-| `RESEARCHER_INTERNAL_USER` | Tạo bản nháp, nộp đề xuất, phản hồi bổ sung, tham gia đề tài và nộp báo cáo theo quan hệ | Không xem hồ sơ không liên quan hoặc quyết định cuối |
-| `EXTERNAL_RESEARCHER_USER` | Xem và sửa phần đóng góp được giao trong bản nháp, phản biện hồ sơ liên quan | Không tạo/nộp đề xuất, sửa bản đã nộp, đổi PI/thành viên/kinh phí/mục tiêu/trạng thái hoặc quyết định |
+| `RESEARCHER_INTERNAL_USER` | Khi là PI: tạo/sửa/nộp đề xuất và phản hồi bổ sung; ngoài ra tham gia đề tài hoặc review theo quan hệ | Không xem hồ sơ không liên quan hoặc quyết định cuối |
+| `EXTERNAL_RESEARCHER_USER` | Xem hồ sơ liên quan và thực hiện review hoặc đóng góp đề tài/task khi có assignment rõ ràng | Không tạo/sửa/nộp đề xuất, đổi PI/team/kinh phí/mục tiêu/trạng thái hoặc quyết định |
 
 ### 4.2 Quan hệ theo từng bản ghi
 
 Các vai trò sau không phải system role; chúng chỉ có hiệu lực trong đúng hồ sơ,
 đề tài, hội đồng, assignment hoặc task được ghi nhận:
 
-- PI (`PROPOSAL_PI`, `PROJECT_PI`).
-- Đồng nghiên cứu viên/thành viên (`PROPOSAL_CO_INVESTIGATOR`,
-  `PROPOSAL_MEMBER`, `PROJECT_CO_INVESTIGATOR`, `PROJECT_MEMBER`).
-- Thư ký đề xuất/đề tài/hội đồng.
+- PI (`PROPOSAL_PI` for a proposal, `TOPIC_PI` for an approved topic).
+- Team proposal/topic (`TOPIC_SECRETARY`, `TOPIC_MEMBER`); a proposal PI is
+  derived from `ownerId` and is never duplicated as a team row.
 - Reviewer, thành viên hội đồng, reviewer hồ sơ đạo đức.
 - Người được giao task.
 
@@ -123,7 +122,8 @@ hệ cộng dồn quyền theo từng bản ghi, nhưng không có khái niệm 
 - Backend là nguồn quyết định cuối và kiểm tra quyền trước detail, list, search,
   count, facet, dashboard, export, notification, file metadata và file content.
 - Quyền được quyết định bởi system role, organization scope, quan hệ/assignment,
-  workflow state, delegation và conflict; thiếu hoặc mơ hồ context thì fail closed.
+  workflow state, applicable delegation contract và conflict; thiếu hoặc mơ hồ
+  context thì fail closed.
 - `SCIENTIFIC_MANAGEMENT_STAFF` có phạm vi nghiệp vụ toàn Học viện. Scope cha/con
   không tự động kế thừa nếu chưa được cấp rõ.
 - Mỗi bản ghi có đúng một đơn vị quản lý chính. Cùng đơn vị, cùng chức danh hoặc
@@ -132,9 +132,11 @@ hệ cộng dồn quyền theo từng bản ghi, nhưng không có khái niệm 
   Học viện. Chỉ đơn vị nằm trong phạm vi mới được tạo/nộp đề xuất.
 - PI/thành viên không được phản biện, nghiệm thu hoặc quyết định chính hồ sơ của
   mình. Reviewer không được ra quyết định cuối cho hồ sơ/vòng đã đánh giá.
-- Chỉ được ủy quyền action `proposal.submit`, theo một bản ghi, có người ủy
-  quyền/nhận, người phê duyệt, thời hạn, lý do và trạng thái. Không tự phê duyệt,
-  ủy quyền dây chuyền hoặc ủy quyền các action quyết định/đánh giá/phân công.
+- Tạo, nộp và nộp lại proposal chỉ do PI hiện tại có system role
+  `RESEARCHER_INTERNAL_USER` thực hiện; không có delegation input hoặc
+  capability mở rộng cho các hành động này. Delegation ở domain khác (nếu
+  contract cho phép) vẫn phải bị giới hạn theo record, action, thời hạn, lý do,
+  phê duyệt và thu hồi.
 - Tài khoản inactive/locked và quan hệ inactive/expired/revoked mất quyền ngay;
   lịch sử không bị xóa.
 - Không xóa cứng bản ghi nghiệp vụ, phiên bản, quan hệ, quyết định, tệp dùng để
@@ -160,7 +162,8 @@ phải audit:
 - đăng nhập, đăng xuất, đổi mật khẩu, reset mật khẩu;
 - tạo/cập nhật/xóa mềm và thay đổi tài khoản, role, scope, quan hệ;
 - nộp, nộp lại, yêu cầu bổ sung, rút, chỉnh sửa sau nộp, mở lại hồ sơ;
-- phân công/thu hồi reviewer, hội đồng, task và delegation;
+- phân công/thu hồi reviewer, hội đồng và task; delegation chỉ được audit khi
+  một domain có contract cho phép;
 - chấm điểm, nhận xét, tổng hợp, phê duyệt/từ chối, nghiệm thu;
 - upload, thay thế, xem/tải tệp quan trọng;
 - thay đổi trạng thái và các hành động workflow quan trọng khác.
@@ -188,7 +191,7 @@ phải audit:
   tệp, kiểm tra readiness, lưu nháp và nộp chính thức.
 - Hệ thống kiểm tra trường bắt buộc, điều kiện tệp, ghi thời điểm nộp và khóa
   phiên bản đã nộp.
-- Nhân sự quản lý hoặc thư ký được phân công kiểm tra hồ sơ, yêu cầu bổ sung có
+- Nhân sự quản lý khoa học kiểm tra hồ sơ, yêu cầu bổ sung có
   lý do và hạn; PI xem yêu cầu, sửa và nộp lại.
 - Nhân sự quản lý phân công reviewer/hội đồng sau conflict check; reviewer chỉ
   xem đúng gói được giao, nhập điểm/nhận xét/kiến nghị và gửi để khóa kết quả.
@@ -339,7 +342,7 @@ Phase 1 chỉ được coi là đạt khi controlled UAT hoặc test chứng min
    nghiệm thu có lịch sử, tệp và quyết định.
 3. Seminar, nghiên cứu sinh viên, văn bản, hội đồng và hồ sơ đạo đức được quản
    lý trong phạm vi MVP và hiển thị trong báo cáo phù hợp.
-4. Mỗi system role, quan hệ theo bản ghi, scope, conflict, delegation,
+4. Mỗi system role, quan hệ theo bản ghi, scope, conflict, applicable delegation,
    disclosure và tài khoản inactive được kiểm thử cả đường cho phép và từ chối.
 5. List/search/count/facet/dashboard/export/notification/file không làm lộ dữ
    liệu ngoài quyền; reviewer và dữ liệu đánh giá nội bộ được che đúng policy.

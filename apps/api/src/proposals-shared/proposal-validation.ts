@@ -1,5 +1,5 @@
 import { BadRequestException } from "@nestjs/common";
-import { normalizeParticipationRole } from "./proposal-participation.js";
+import { readProposalTeamRole } from "./proposal-participation.js";
 import type { ProposalMemberInput, RequiredPackageItem } from "./proposal-types.js";
 
 export function readText(value: unknown, field: string, maxLength = 300) {
@@ -129,7 +129,11 @@ export function readMembers(value: unknown): ProposalMemberInput[] | undefined {
     }
 
     const record = item as Record<string, unknown>;
-    const role = readText(record.role, `members[${index}].role`, 120);
+    const role = readProposalTeamRole(readText(record.role, `members[${index}].role`, 120));
+    const participationRole = readProposalTeamRole(record.participationRole ?? role);
+    if (role !== participationRole) {
+      throw new BadRequestException({ message: `members[${index}].role không khớp participationRole.` });
+    }
 
     return {
       name: readText(record.name, `members[${index}].name`, 160),
@@ -137,10 +141,7 @@ export function readMembers(value: unknown): ProposalMemberInput[] | undefined {
       organization: readText(record.organization, `members[${index}].organization`, 160),
       userId: readOptionalText(record.userId, `members[${index}].userId`, 80),
       username: readOptionalText(record.username, `members[${index}].username`, 80),
-      // Falls back to the descriptive Vietnamese label when the client does not send a code.
-      participationRole: normalizeParticipationRole(
-        readOptionalText(record.participationRole, `members[${index}].participationRole`, 80) ?? role
-      )
+      participationRole
     };
   });
 }

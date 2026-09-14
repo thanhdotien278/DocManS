@@ -50,7 +50,7 @@ qua quan hệ theo bản ghi.
 | `SCIENTIFIC_MANAGEMENT_STAFF` | **Toàn Học viện**, gồm mọi khoa, phòng ban, bộ môn | Vận hành đợt tiếp nhận, kiểm tra hồ sơ, yêu cầu bổ sung/chỉnh sửa, phân công, tổng hợp đánh giá, quản lý dự án được duyệt, hồ sơ nhà khoa học, nhắc việc và báo cáo nghiệp vụ | Không bỏ qua workflow, xung đột lợi ích hoặc quyết định lãnh đạo; không tự phê duyệt quyết định cuối nếu policy yêu cầu lãnh đạo |
 | `LEADERSHIP_APPROVAL_AUTHORITY` | Hồ sơ được trình và phạm vi quyết định được cấp; mặc định phù hợp vai trò lãnh đạo Học viện | Xem hồ sơ đủ điều kiện, xem kết quả đánh giá và xác nhận/phê duyệt/từ chối cuối cùng khi quy trình yêu cầu | Không sửa nội dung hồ sơ, không bỏ qua phản biện/tổng hợp, không tự quyết hồ sơ mình là PI/thành viên/phản biện |
 | `RESEARCHER_INTERNAL_USER` | Các bản ghi do chính user tạo hoặc có quan hệ hợp lệ | Tạo bản nháp đề xuất, sửa bản nháp, nộp đề xuất, phản hồi bổ sung, tham gia đề tài và nộp báo cáo theo quan hệ | Không xem bản ghi không liên quan, không tự phân công phản biện/thư ký, không quyết định cuối |
-| `EXTERNAL_RESEARCHER_USER` | Chỉ các bản ghi có quan hệ được cấp | Xem, sửa phần đóng góp được phân công trong bản nháp và phản biện đề tài liên quan | Không tạo/nộp đề xuất, không sửa phiên bản đã nộp, không đổi PI/thành viên/kinh phí/mục tiêu/trạng thái, không phân công hoặc quyết định cuối |
+| `EXTERNAL_RESEARCHER_USER` | Chỉ các bản ghi có quan hệ được cấp | Xem bản ghi liên quan, phản biện được giao hoặc đóng góp đề tài/task theo assignment | Không tạo/sửa/nộp đề xuất, không đổi PI/team/kinh phí/mục tiêu/trạng thái, không phân công hoặc quyết định cuối |
 
 `EXTERNAL_RESEARCHER_USER` được tạo/quản lý bởi Quản lý khoa học hoặc Thư ký
 khoa học có scope. Tài khoản bị khóa thì mất quyền ngay; quan hệ cũ chỉ còn
@@ -65,10 +65,9 @@ thu hồi và audit; quan hệ inactive/expired/revoked mất quyền ngay.
 | Quan hệ | Bản ghi | Quyền cốt lõi | Giới hạn |
 | --- | --- | --- | --- |
 | PI / `PROPOSAL_PI` | Một đề xuất | Sở hữu bản nháp, sửa/nộp, phản hồi bổ sung, yêu cầu rút/chỉnh sửa | Không phản biện, không tự phê duyệt, không sửa phiên bản đã khóa |
-| Co-investigator/member / `PROPOSAL_CO_INVESTIGATOR`, `PROPOSAL_MEMBER` | Một đề xuất | Xem phần được phép, đóng góp theo phân công | Không là người chịu trách nhiệm nộp; không tự đổi thành viên/quyền |
-| Thư ký đề xuất / `PROPOSAL_SCIENTIFIC_SECRETARY` | Một đề xuất | Thao tác hành chính được cấp, xử lý yêu cầu chỉnh sửa sau nộp nếu được giao | Không phản biện chấm điểm, không quyết định cuối |
-| PI/member / `PROJECT_PI`, `PROJECT_CO_INVESTIGATOR`, `PROJECT_MEMBER` | Một đề tài đã duyệt | Xem và thực hiện công việc/báo cáo theo phân công | Không truy cập đề tài ngoài quan hệ; không tự thay đổi quyền |
-| Thư ký đề tài / `PROJECT_SCIENTIFIC_SECRETARY` | Một đề tài | Theo dõi, hồ sơ, biên bản, tác vụ và hành động hành chính được cấp | Không phê duyệt cuối nếu không có authority riêng |
+| Nhóm đề xuất / `TOPIC_SECRETARY`, `TOPIC_MEMBER` | Một đề xuất | Xem hồ sơ; thư ký nội bộ được upload tệp đề xuất khi trạng thái cho phép | Không là PI, không tạo/sửa/nộp/nộp lại, không tự đổi thành viên/quyền |
+| PI đề tài / `TOPIC_PI` | Một đề tài đã duyệt | Sở hữu và thực hiện công việc/báo cáo theo phân công | Không truy cập đề tài ngoài quan hệ; không tự thay đổi quyền |
+| Nhóm đề tài / `TOPIC_SECRETARY`, `TOPIC_MEMBER` | Một đề tài đã duyệt | Theo dõi, hồ sơ, biên bản, tác vụ và hành động được cấp | Không phê duyệt cuối nếu không có authority riêng |
 | Phản biện / `REVIEWER_ASSIGNMENT` | Một assignment/vòng đánh giá | Xem đúng gói được giao, nhập và gửi điểm/nhận xét | Không xem hồ sơ chưa được giao, không sửa bài của phản biện khác, không quyết định cuối |
 | Hội đồng / `COUNCIL_MEMBER` | Một hội đồng/hồ sơ được giao | Tham gia đánh giá trong phạm vi hội đồng | Không truy cập council/hồ sơ ngoài assignment |
 | Thư ký hội đồng / `COUNCIL_SCIENTIFIC_SECRETARY` | Một hội đồng | Hành chính hội đồng, tài liệu và tổng hợp được cấp | Không tự chấm/ra quyết định nếu không có assignment/authority riêng |
@@ -76,7 +75,7 @@ thu hồi và audit; quan hệ inactive/expired/revoked mất quyền ngay.
 | Người được giao việc / `TASK_ASSIGNEE` | Một task gắn bản ghi | Cập nhật task và evidence được giao | Quyền task không vượt quyền trên bản ghi liên kết |
 
 Các quan hệ cộng dồn quyền được phép, nhưng mọi điều kiện từ system role,
-scope, trạng thái, delegation và conflict đều phải đạt. Không có khái niệm
+scope, trạng thái, context và conflict đều phải đạt. Không có khái niệm
 “quan hệ cao nhất” để thay thế hoặc làm mất quan hệ khác.
 
 # 3. Quy tắc scope, xung đột và ủy quyền
@@ -97,14 +96,12 @@ scope, trạng thái, delegation và conflict đều phải đạt. Không có k
   đó là scope được cấp rõ ràng.
 - Không cho người dùng tự cấp quyền cho mình. Người phân công phải có quyền
   quản lý trong phạm vi bản ghi và phải kiểm tra xung đột lợi ích.
-- PI/thành viên không được phản biện, nghiệm thu hoặc quyết định chính hồ sơ
+- PI/team member không được phản biện, nghiệm thu hoặc quyết định chính hồ sơ
   của mình. Người phản biện không được quyết định cuối cùng cùng hồ sơ/vòng.
-- Ủy quyền chỉ theo một bản ghi, có người ủy quyền/nhận, action, thời hạn, lý
-  do, trạng thái, phê duyệt và thu hồi. Chỉ hành động nộp đề xuất được phép
-  ủy quyền; không ủy quyền phân công, chấm điểm, tiết lộ danh tính phản biện,
-  đổi thành viên, phê duyệt/từ chối, mở lại hoặc ủy quyền tiếp.
-- Người nhận chỉ dùng quyền sau khi được Quản lý khoa học có scope phê duyệt;
-  người phê duyệt khác người ủy quyền/nhận.
+- Proposal create, submit và resubmit là hành động riêng của PI nội bộ hiện
+  tại; không có đường ủy quyền, delegate input hoặc capability mở rộng cho
+  các hành động này. Những delegation contract khác (nếu domain tương lai cho
+  phép) vẫn phải nêu rõ action, record, thời hạn, phê duyệt và thu hồi.
 - Tài khoản inactive/locked mất quyền ngay; quan hệ và lịch sử cũ không bị xóa.
 
 # 4. Ma trận quyền theo bản ghi và nghiệp vụ
@@ -126,7 +123,7 @@ assignment mới nhưng lịch sử quan hệ cũ vẫn giữ.
 
 | Hành động | Quyền |
 | --- | --- |
-| Tạo, sửa, mở, đóng đợt | Quản lý khoa học toàn Học viện; Thư ký khoa học được phân công cho đợt |
+| Tạo, sửa, mở, đóng đợt | Quản lý khoa học toàn Học viện |
 | Chọn phạm vi | `Toàn Học viện` hoặc `Chọn đơn vị`; mặc định toàn Học viện |
 | Quá hạn | Chỉ đánh dấu quá hạn và nhắc; không tự từ chối/đóng/chuyển trạng thái |
 | Sau khi đóng | Chặn đề xuất mới; hồ sơ đã nộp tiếp tục xử lý |
@@ -136,17 +133,17 @@ assignment mới nhưng lịch sử quan hệ cũ vẫn giữ.
 | Hành động | Quyền |
 | --- | --- |
 | Tạo bản nháp | PI là `RESEARCHER_INTERNAL_USER` có scope đơn vị; external không được |
-| Sửa bản nháp | PI; external/member chỉ sửa phần đóng góp được phân công trong bản nháp |
+| Sửa bản nháp | Chỉ PI nội bộ hiện tại |
 | Thêm thành viên | PI đề xuất; thay đổi quan hệ phải qua kiểm tra và quyền quản lý |
-| Nộp chính thức | PI chịu trách nhiệm duy nhất về nội dung cuối và việc nộp; delegation `proposal.submit` chỉ có hiệu lực khi được phê duyệt theo contract |
-| Kiểm tra đầy đủ/yêu cầu bổ sung | Quản lý khoa học hoặc Thư ký được giao; yêu cầu phải nêu lý do và hạn |
-| Phản hồi và nộp lại | PI; người được ủy quyền chỉ khi delegation hợp lệ |
+| Nộp chính thức | Chỉ PI hiện tại có system role `RESEARCHER_INTERNAL_USER`; không ủy quyền |
+| Kiểm tra đầy đủ/yêu cầu bổ sung | Quản lý khoa học; yêu cầu phải nêu lý do và hạn |
+| Phản hồi và nộp lại | Chỉ PI hiện tại có system role `RESEARCHER_INTERNAL_USER`; không delegation |
 | Phân công/thay đổi phản biện, hội đồng | Quản lý khoa học, có conflict check |
 | Chấm điểm/nhận xét | Chỉ reviewer được assignment; gửi xong thì khóa; sửa lỗi bằng phiên bản nhận xét mới được duyệt |
 | Tổng hợp đánh giá | Quản lý khoa học |
 | Phê duyệt/từ chối cuối | `LEADERSHIP_APPROVAL_AUTHORITY` khi hồ sơ ở trạng thái đủ điều kiện |
-| Rút hồ sơ | PI chỉ rút khi còn nháp; sau nộp gửi yêu cầu, Quản lý/Thư ký được giao phê duyệt và chuyển `Đã rút` |
-| Chỉnh sửa sau nộp | PI gửi yêu cầu; Quản lý hoặc Thư ký đề xuất được giao phê duyệt; hệ thống tạo bản làm việc mới, giữ bản đã khóa |
+| Rút hồ sơ | PI chỉ rút khi còn nháp; sau nộp gửi yêu cầu, Quản lý khoa học phê duyệt và chuyển `Đã rút` |
+| Chỉnh sửa sau nộp | PI gửi yêu cầu; Quản lý khoa học phê duyệt; hệ thống tạo bản làm việc mới, giữ bản đã khóa |
 | Mở lại | Chỉ Quản lý khoa học; bắt buộc lý do và audit |
 
 Mọi phiên bản đã nộp, review, quyết định và tệp dùng để thẩm định được giữ
@@ -155,7 +152,7 @@ nguyên. Không ghi đè bản cũ.
 ### Chỉnh sửa sau nộp
 
 1. PI gửi `Yêu cầu chỉnh sửa sau nộp`.
-2. Quản lý khoa học có scope hoặc Thư ký khoa học được phân công phê duyệt.
+2. Quản lý khoa học có scope phê duyệt.
 3. Hệ thống tạo revision mới từ bản khóa; PI sửa trong revision.
 4. PI duyệt nội dung cuối và nộp lại; bản cũ vẫn là chứng cứ.
 5. Lỗi câu chữ/định dạng dùng flow này; thay đổi mục tiêu, kinh phí, nhân sự,
@@ -164,7 +161,7 @@ nguyên. Không ghi đè bản cũ.
 ### Ẩn danh phản biện
 
 Mỗi đợt chọn `Không ẩn danh`, `Ẩn danh một chiều` hoặc `Ẩn danh hai chiều`; mặc
-định là **ẩn danh một chiều**. Chỉ Quản lý khoa học và Thư ký được phân công
+định là **ẩn danh một chiều**. Chỉ Quản lý khoa học
 xem danh tính để vận hành. PI/thành viên không xem identity, điểm thô hoặc
 nhận xét nội bộ trước khi chính sách công bố cho phép.
 
@@ -243,7 +240,7 @@ Account bị khóa không xóa profile hoặc lịch sử quan hệ. Profile ina
 Mở đợt tiếp nhận
   → PI tạo bản nháp
   → PI sửa và nộp
-  → Quản lý/Thư ký kiểm tra
+  → Quản lý khoa học kiểm tra
   → (bổ sung/chỉnh sửa sau nộp nếu cần)
   → Phân công phản biện/hội đồng
   → Phản biện chấm và gửi
@@ -269,4 +266,3 @@ disclosure, versioning hoặc retention phải:
 2. cập nhật contract/fixture trong `packages/permissions` nếu chạm authorization;
 3. bổ sung acceptance tests cho đường cho phép và đường bị từ chối;
 4. ghi rõ migration/compatibility impact trước khi code.
-

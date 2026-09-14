@@ -75,13 +75,11 @@ function viewerRelationships(participation: ProposalParticipation | undefined, r
   const relationships: ViewerRelationshipV1[] = [];
   for (const role of participation?.roles ?? []) {
     if (role === "none" || role === "unknown") continue;
-    const type = role === "principal-investigator"
+    const type = role === "PROPOSAL_PI"
       ? "PROPOSAL_PI"
-      : role === "co-investigator"
-        ? "PROPOSAL_CO_INVESTIGATOR"
-        : role === "secretary"
-          ? "PROPOSAL_SCIENTIFIC_SECRETARY"
-          : "PROPOSAL_MEMBER";
+      : role === "TOPIC_SECRETARY"
+        ? "TOPIC_SECRETARY"
+        : "TOPIC_MEMBER";
     const effectiveFrom = participation?.relationshipEffectiveFrom[role];
     if (!effectiveFrom) continue;
     relationships.push({ type, status: "ACTIVE", effectiveFrom, effectiveUntil: participation?.relationshipEffectiveUntil?.[role] ?? null });
@@ -108,12 +106,12 @@ function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): {
     return ["under_review", "ready_for_approval"].includes(input.proposal.status) ? null : blocked("WORKFLOW_STATE_DENIED");
   }
   if (action === "proposal.completeness.check") {
-    if (input.participation?.isParticipant && !input.participation.roles.includes("secretary")) return blocked("CONFLICT_DENIED");
+    if (input.participation?.isParticipant && !input.participation.roles.includes("TOPIC_SECRETARY")) return blocked("CONFLICT_DENIED");
     if (input.actor.systemRole !== "SCIENTIFIC_MANAGEMENT_STAFF") return blocked("ACTION_NOT_GRANTED");
     return ["submitted", "resubmitted"].includes(input.proposal.status) ? null : blocked("WORKFLOW_STATE_DENIED");
   }
   if (action === "proposal.supplement.request") {
-    if (input.participation?.isParticipant && !input.participation.roles.includes("secretary")) return blocked("CONFLICT_DENIED");
+    if (input.participation?.isParticipant && !input.participation.roles.includes("TOPIC_SECRETARY")) return blocked("CONFLICT_DENIED");
     if (input.actor.systemRole !== "SCIENTIFIC_MANAGEMENT_STAFF") return blocked("ACTION_NOT_GRANTED");
     return ["submitted", "resubmitted"].includes(input.proposal.status) ? null : blocked("WORKFLOW_STATE_DENIED");
   }

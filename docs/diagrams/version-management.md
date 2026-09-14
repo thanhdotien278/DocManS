@@ -4,7 +4,7 @@
 flowchart TD
   locked["Bản đã nộp hoặc tệp đã dùng để thẩm định / nghiệm thu"]
   edit_request(["PI: gửi yêu cầu chỉnh sửa sau nộp"])
-  staff_approval(["Quản lý có scope hoặc Thư ký được giao phê duyệt"])
+  staff_approval(["Quản lý khoa học có scope phê duyệt"])
   approved{"Được phê duyệt?"}
   unchanged["Giữ bản khóa và lịch sử"]
   new_revision["System: tạo revision mới từ bản khóa"]

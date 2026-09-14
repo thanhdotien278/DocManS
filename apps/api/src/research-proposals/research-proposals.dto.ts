@@ -48,9 +48,8 @@ export class RequestProposalSupplementDto {
   dueDate!: string;
 }
 
-export class DelegatedMutationDto {
+export class ProposalMutationDto {
   [key: string]: unknown;
-  delegationId?: string;
   contextVersion?: unknown;
 }
 
@@ -132,12 +131,14 @@ export const requestProposalSupplementPipe: PipeTransform<unknown, RequestPropos
   }
 };
 
-export const delegatedMutationPipe: PipeTransform<unknown, DelegatedMutationDto> = {
+export const proposalMutationPipe: PipeTransform<unknown, ProposalMutationDto> = {
   transform(value: unknown) {
     if (value === undefined || value === null) return {};
-    if (!value || typeof value !== "object" || Array.isArray(value)) throw new BadRequestException({ message: "Dữ liệu ủy quyền không hợp lệ." });
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new BadRequestException({ message: PROPOSAL_VALIDATION_MESSAGE });
     const input = value as Record<string, unknown>;
-    if (input.delegationId !== undefined && (typeof input.delegationId !== "string" || !input.delegationId)) throw new BadRequestException({ message: "delegationId không hợp lệ." });
-    return input as DelegatedMutationDto;
+    if (Object.prototype.hasOwnProperty.call(input, "delegationId")) {
+      throw new BadRequestException({ message: "Nộp hồ sơ theo ủy quyền không còn được hỗ trợ." });
+    }
+    return input as ProposalMutationDto;
   }
 };

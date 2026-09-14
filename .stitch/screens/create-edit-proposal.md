@@ -8,7 +8,7 @@ Capture a proposal draft in a controlled intake, support repeat saves, show comp
 
 # Primary users
 
-Internal PI; assigned external/member only for assigned draft sections; a submit delegate only for its eligible submit action. Source: `docs/ux-ui-spec.md` §3.4.
+Current internal PI only. Team members and secretaries may have read/file capabilities elsewhere but cannot edit or submit the proposal draft. Source: `docs/ux-ui-spec.md` §3.4.
 
 # Entry points
 
@@ -32,7 +32,7 @@ Intake; title/type/field; managing unit; PI/members; dates; objectives/content; 
 
 # Allowed actions
 
-Save draft/assigned fields and allowed file actions only when backend returns action capability. The submit button routes to Submit Confirmation, never patches status directly.
+Save the draft and use allowed file actions only when the backend returns the corresponding capability. The submit button routes to Submit Confirmation, never patches status directly.
 
 # Blocked actions and explanation behavior
 
@@ -64,7 +64,7 @@ Read-only lock, section-level restriction, scope/conflict denial, and stale cont
 
 # Validation
 
-Required fields/files, dates, non-negative budget, member/account uniqueness, and PI-protected fields follow backend validation. Client feedback may assist but never replaces it.
+Required fields/files, dates, non-negative budget, team/account uniqueness, and PI-protected fields follow backend validation. Client feedback may assist but never replaces it.
 
 # Responsive behavior
 
@@ -90,6 +90,6 @@ Generate a disciplined sectioned form that foregrounds completion and readiness 
 
 - [ ] Includes only documented proposal fields and required-file/readiness concepts.
 - [ ] Draft save is distinct from formal submission.
-- [ ] External/member restrictions and submitted lock are represented safely.
+- [ ] Non-PI edit/submit restrictions and submitted lock are represented safely.
 - [ ] Validates/explains date, budget, member, file, and readiness failures.
 - [ ] Remains usable at all requested breakpoints.

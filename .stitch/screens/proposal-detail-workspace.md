@@ -24,7 +24,7 @@ The detail response supplies disclosure-filtered data, capability response, cont
 
 # Viewer relationship
 
-Show returned relationship badge(s) and record scope/context line. The account’s system role is not a record role.
+Show returned relationship badge(s), including the owner-derived PI and any team role, plus the record scope/context line. The account’s system role is not a record role.
 
 # Required information
 

@@ -4,11 +4,11 @@ Submit Confirmation (`/proposals/:id/submit`), a consequential final review befo
 
 # Purpose
 
-Let an authorized PI or exact-record approved `proposal.submit` delegate confirm formal submission only after backend-calculated readiness passes. Source: `docs/ux-ui-spec.md` §3.4.
+Let the current internal PI confirm formal submission only after backend-calculated readiness passes. Non-PI and delegate requests are denied before mutation. Source: `docs/ux-ui-spec.md` §3.4.
 
 # Primary users
 
-PI; valid `proposal.submit` delegate only. Source: `docs/authorization-core-business-baseline.md`; `docs/permission-matrix.md` §8.3.
+Current internal PI only. Source: `docs/authorization-core-business-baseline.md`; `docs/permission-matrix.md` §8.3.
 
 # Entry points
 
@@ -20,11 +20,11 @@ Submit action from an eligible draft/edit workspace.
 
 # Business state/context
 
-Submission is a named backend operation, not a status edit. It locks an immutable version and is audited with actor/delegation context. The backend rechecks readiness and context version. Sources: `_bmad-output/architecture.md`; `docs/ux-ui-spec.md`.
+Submission is a named backend operation, not a status edit. It locks an immutable version and is audited with actor context. The backend rechecks readiness and context version. Sources: `_bmad-output/architecture.md`; `docs/ux-ui-spec.md`.
 
 # Viewer relationship
 
-Identify PI or returned delegated submit authority without representing delegation as a global role.
+Identify the current PI and returned viewer relationship without representing a team relationship as a global role.
 
 # Required information
 
@@ -44,7 +44,7 @@ Full-page confirmation on narrow screens; concise confirmation panel or dialog o
 
 # Components
 
-Record identity/status; actor/delegation context; readiness checklist; missing-item correction links; file summary; version/deadline metadata; responsibility acknowledgement if returned/required; Cancel and Confirm controls.
+Record identity/status; PI actor context; readiness checklist; missing-item correction links; file summary; version/deadline metadata; responsibility acknowledgement if returned/required; Cancel and Confirm controls.
 
 # Loading state
 
@@ -64,7 +64,7 @@ Safe unavailable response for inaccessible record; visible denied submit uses di
 
 # Validation
 
-Readiness is backend-calculated. Submit sends the context token; no direct status PATCH. Audit includes actor and applicable delegation context.
+Readiness is backend-calculated. Submit sends the context token; no direct status PATCH. Audit includes the PI actor.
 
 # Responsive behavior
 
@@ -91,5 +91,5 @@ Generate a sober institutional submission review, not a generic success modal. S
 - [ ] Makes formal submission a separate, consequential operation.
 - [ ] Displays only documented confirmation information.
 - [ ] Explains missing readiness/context issues without discarding draft work.
-- [ ] Does not imply delegation beyond exact `proposal.submit` authority.
+- [ ] Does not imply a non-PI or delegated submit path.
 - [ ] Uses full-page/sheet behavior on narrow screens.

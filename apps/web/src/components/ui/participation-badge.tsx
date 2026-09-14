@@ -7,9 +7,9 @@ import type { ProposalParticipationRole } from "@/lib/research-proposals-api";
  * record-scoped resolution — never from the account-level system role.
  */
 const participationMeta: Record<ProposalParticipationRole, { label: string; tone: StatusTone; Icon: typeof UserCheck }> = {
-  "principal-investigator": { label: "Chủ nhiệm", tone: "info", Icon: UserCheck },
-  secretary: { label: "Thư ký", tone: "info", Icon: UserCog },
-  member: { label: "Thành viên", tone: "neutral", Icon: Users },
+  PROPOSAL_PI: { label: "Chủ nhiệm", tone: "info", Icon: UserCheck },
+  TOPIC_SECRETARY: { label: "Thư ký", tone: "info", Icon: UserCog },
+  TOPIC_MEMBER: { label: "Thành viên", tone: "neutral", Icon: Users },
   none: { label: "Không tham gia", tone: "neutral", Icon: Minus },
   unknown: { label: "Chưa xác định", tone: "warning", Icon: HelpCircle }
 };

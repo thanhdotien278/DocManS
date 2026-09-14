@@ -39,9 +39,6 @@ model User {
   createdEvaluationSummaries ProposalEvaluationSummary[] @relation("EvaluationSummaryCreator")
   updatedEvaluationSummaries ProposalEvaluationSummary[] @relation("EvaluationSummaryEditor")
   proposalDecisions ProposalDecision[] @relation("ProposalDecisionAuthority")
-  grantedProposalDelegations ProposalDelegation[] @relation("ProposalDelegationGrantor")
-  receivedProposalDelegations ProposalDelegation[] @relation("ProposalDelegationDelegate")
-  approvedProposalDelegations ProposalDelegation[] @relation("ProposalDelegationApprover")
   createdResearcherProfiles ResearcherProfile[] @relation("ResearcherProfileCreator")
   updatedResearcherProfiles ResearcherProfile[] @relation("ResearcherProfileUpdater")
 
@@ -305,39 +302,12 @@ model ResearchProposal {
   reviews                ProposalReview[]
   evaluationSummary      ProposalEvaluationSummary?
   decisions              ProposalDecision[]
-  delegations            ProposalDelegation[]
 
   @@index([intakePeriodId])
   @@index([ownerId])
   @@index([hostOrganizationUnitId])
   @@index([status])
   @@map("research_proposals")
-}
-
-model ProposalDelegation {
-  id                     String           @id @default(uuid())
-  proposalId             String           @map("proposal_id")
-  proposal               ResearchProposal @relation(fields: [proposalId], references: [id])
-  grantorUserId          String           @map("grantor_user_id")
-  grantor                User             @relation("ProposalDelegationGrantor", fields: [grantorUserId], references: [id])
-  delegateUserId         String           @map("delegate_user_id")
-  delegate               User             @relation("ProposalDelegationDelegate", fields: [delegateUserId], references: [id])
-  approverUserId         String?          @map("approver_user_id")
-  approver               User?            @relation("ProposalDelegationApprover", fields: [approverUserId], references: [id])
-  targetOrganizationUnitId String         @map("target_organization_unit_id")
-  actionIds              Json             @map("action_ids")
-  sourceAuthorityVersion Json             @map("source_authority_version")
-  startsAt               DateTime         @map("starts_at")
-  endsAt                 DateTime?        @map("ends_at")
-  status                 String           @default("PENDING_APPROVAL")
-  approvedAt             DateTime?        @map("approved_at")
-  revokedAt              DateTime?        @map("revoked_at")
-  reason                 String
-  createdAt              DateTime         @default(now()) @map("created_at")
-
-  @@index([proposalId, delegateUserId, status])
-  @@index([proposalId, grantorUserId, status])
-  @@map("proposal_delegations")
 }
 
 model ProposalMember {
@@ -348,7 +318,7 @@ model ProposalMember {
   user              User?            @relation("ProposalParticipant", fields: [userId], references: [id])
   name              String
   role              String
-  participationRole String           @default("member") @map("participation_role")
+  participationRole String           @default("TOPIC_MEMBER") @map("participation_role")
   status            String           @default("ACTIVE")
   effectiveFrom     DateTime         @default(now()) @map("effective_from")
   effectiveUntil    DateTime?        @map("effective_until")

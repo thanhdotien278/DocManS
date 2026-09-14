@@ -14,6 +14,7 @@ import {
   REVIEW_STATUS
 } from "../proposals-shared/proposal-review-access.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
+import { normalizeParticipationRole } from "../proposals-shared/proposal-participation.js";
 import { PROPOSAL_STATUS, PROPOSAL_STATUS_LABELS, REVIEWER_ASSIGNABLE_STATUSES } from "../proposals-shared/proposal-workflow.js";
 import {
   assertCanReadEvaluation,
@@ -44,7 +45,7 @@ const ASSIGNMENT_INCLUDE = {
  *
  * Assignment is the only thing that grants a reviewer access to a proposal: the `reviewer` account
  * role by itself grants nothing (AC-ST-3.2-02). Every assignment runs through the ST-3.0 conflict
- * primitive first, so PI / secretary / participant can never be assigned to their own proposal
+ * primitive first, so the proposal PI / topic secretary / team participant can never be assigned to their own proposal
  * (AC-ST-3.2-04).
  */
 @Injectable()
@@ -435,12 +436,13 @@ export class ProposalReviewAssignmentsService {
           id: string;
           name: string;
           role: string;
+          participationRole?: string | null;
           organization: string;
         }>
       ).map((member) => ({
         id: member.id,
         name: member.name,
-        role: member.role,
+        role: normalizeParticipationRole(member.participationRole ?? member.role),
         organization: member.organization
       })),
       attachments: (

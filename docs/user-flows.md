@@ -27,9 +27,10 @@ thế kiểm tra đó.
 
 ## 1. Mô hình vai trò
 
-Mỗi tài khoản chỉ có một `system role` đang hoạt động. PI, thành viên, thư ký,
-phản biện, hội đồng và người được giao việc là quan hệ/assignment theo đúng
-bản ghi, không phải quyền toàn hệ thống.
+Mỗi tài khoản chỉ có một `system role` đang hoạt động. `PROPOSAL_PI`,
+`TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, phản biện, hội đồng và người
+được giao việc là quan hệ/assignment theo đúng bản ghi, không phải quyền toàn
+hệ thống. Proposal PI luôn được suy ra từ `ownerId`; PI không là team row.
 
 ```mermaid
 flowchart LR
@@ -39,8 +40,8 @@ flowchart LR
   account --> internal["RESEARCHER_INTERNAL_USER<br/>Bản ghi của mình / quan hệ hợp lệ"]
   account --> external["EXTERNAL_RESEARCHER_USER<br/>Chỉ bản ghi được cấp"]
 
-  record["Một proposal / project / review / task"] --> pi["PI / member / co-investigator"]
-  record --> secretary["Scientific secretary"]
+  record["Một proposal / approved topic / review / task"] --> pi["PROPOSAL_PI / TOPIC_PI / TOPIC_MEMBER"]
+  record --> secretary["TOPIC_SECRETARY"]
   record --> reviewer["Reviewer / council member"]
   record --> assignee["Task assignee / collaborator"]
 
@@ -60,7 +61,7 @@ flowchart TD
   start([Người dùng yêu cầu hành động]) --> resolve["Backend resolve context hiện tại"]
   resolve --> role["System role + trạng thái tài khoản"]
   role --> scope["Organization / unit / record scope"]
-  scope --> relation["Participation / assignment / delegation"]
+  scope --> relation["Participation / assignment / applicable context"]
   relation --> state["Workflow state + action hợp lệ"]
   state --> conflict{"Có xung đột lợi ích?"}
   conflict -- "Có" --> deny["Từ chối + nêu lý do nếu phù hợp"]
@@ -107,14 +108,14 @@ flowchart LR
   complete -- "Chưa đủ" --> request["Yêu cầu bổ sung<br/>nêu lý do + hạn"] --> supplement --> resubmit --> check
   complete -- "Đủ" --> assign --> review --> score --> consolidate --> ready["Chờ quyết định"] --> decide
   decide -- "Không phê duyệt" --> rejected["Không phê duyệt<br/>giữ lịch sử"] --> proposal_archive["Đóng / lưu trữ"]
-  decide -- "Phê duyệt" --> approved["Đã phê duyệt"] --> create_project --> project["Đề tài được tạo<br/>PI/thành viên là quan hệ mới"]
+  decide -- "Phê duyệt" --> approved["Đã phê duyệt"] --> create_project --> project["Đề tài được tạo<br/>TOPIC_PI/team là quan hệ mới"]
 ```
 
 Quy tắc cố định trong flow:
 
 - Đợt đóng chặn hồ sơ mới nhưng không dừng hồ sơ đã nộp.
-- PI là người chịu trách nhiệm nội dung và nộp; chỉ delegation `proposal.submit`
-  hợp lệ mới cho phép người nhận nộp thay.
+- PI hiện tại có system role `RESEARCHER_INTERNAL_USER` là người duy nhất được
+  tạo, nộp và nộp lại proposal; không có đường delegation cho các hành động này.
 - Reviewer chỉ thấy proposal/assignment được giao; gửi review xong thì review
   bị khóa, sửa lỗi bằng phiên bản nhận xét mới.
 - Lãnh đạo chỉ quyết định ở trạng thái `Chờ quyết định`/`ready_for_approval`;
@@ -125,7 +126,7 @@ Quy tắc cố định trong flow:
 
 ```mermaid
 flowchart TD
-  approved["Đề xuất đã phê duyệt"] --> prepare["Quản lý tạo đề tài<br/>copy PI/thành viên thành quan hệ mới"]
+  approved["Đề xuất đã phê duyệt"] --> prepare["Quản lý tạo đề tài<br/>copy PI/team thành quan hệ mới"]
   prepare --> active["Chuẩn bị triển khai → Đang thực hiện"]
   active --> work["Mốc / task / evidence / báo cáo<br/>theo participant hoặc assignee scope"]
   work --> report["PI hoặc người được phép<br/>nộp báo cáo / kết quả"]
@@ -153,7 +154,7 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-  pi_req["PI gửi yêu cầu chỉnh sửa sau nộp"] --> staff_approval["Quản lý có scope hoặc<br/>Thư ký đề xuất được giao phê duyệt"]
+  pi_req["PI gửi yêu cầu chỉnh sửa sau nộp"] --> staff_approval["Quản lý khoa học có scope phê duyệt"]
   staff_approval --> approved_edit{"Được phê duyệt?"}
   approved_edit -- "Không" --> keep["Giữ bản đã khóa"]
   approved_edit -- "Có" --> revision["Hệ thống tạo revision mới<br/>từ bản khóa"]
@@ -164,7 +165,7 @@ flowchart LR
   substantive["Đổi mục tiêu / kinh phí / nhân sự /<br/>thời hạn / kết quả"] -. "Không dùng flow này" .-> formal["Yêu cầu điều chỉnh chính thức"]
 ```
 
-### 5.2. Rút hồ sơ và ủy quyền nộp
+### 5.2. Rút hồ sơ và kiểm soát PI-only
 
 ```mermaid
 flowchart TD
@@ -175,17 +176,13 @@ flowchart TD
   withdraw_review --> withdraw_decision{"Phê duyệt?"}
   withdraw_decision -- "Có" --> withdrawn["Đã rút + audit"]
   withdraw_decision -- "Không" --> continue["Tiếp tục workflow"]
-
-  delegate_start["PI tạo delegation<br/>proposal.submit cho một bản ghi"] --> staff_approve["Quản lý khoa học có scope phê duyệt"]
-  staff_approve --> delegate_valid{"Đủ action, thời hạn,<br/>lý do và không xung đột?"}
-  delegate_valid -- "Không" --> delegate_denied["Từ chối / fail closed"]
-  delegate_valid -- "Có" --> delegate_active["Người nhận được nộp thay<br/>trong thời hạn"]
-  delegate_active --> delegate_end["Hết hạn hoặc thu hồi → mất quyền"]
+  non_pi["Secretary / member / staff / external / delegate yêu cầu nộp"] --> denied["Từ chối trước mutation<br/>không tạo submission"]
+  pi_only["Current internal PI"] --> submit_allowed["Cho phép submit/resubmit<br/>sau readiness + context check"]
 ```
 
-Chỉ `proposal.submit` được ủy quyền. Không ủy quyền phân công, chấm điểm,
-tiết lộ danh tính phản biện, đổi thành viên, phê duyệt/từ chối, mở lại hoặc
-ủy quyền tiếp.
+Proposal create, submit và resubmit đều là PI-only. Không có delegation input,
+delegated capability hoặc đường tái-ủy quyền cho các hành động này; mọi actor
+khác bị từ chối fail closed.
 
 ### 5.3. Hồ sơ nhà khoa học, tài khoản và assignment
 
@@ -207,25 +204,25 @@ flowchart LR
   merge_decision -- "Không" --> link
   merge_decision -- "Có" --> merge["Quản lý khoa học phê duyệt gộp<br/>giữ lịch sử"] --> link
   account_admin --> link
-  link --> relation["Gắn quan hệ đúng proposal/project/review/task"]
+  link --> relation["Gắn quan hệ đúng proposal/topic/review/task"]
   external_user --> relation
   relation --> assignment
   account_admin --> locked{"Account bị khóa / inactive?"}
   locked -- "Có" --> revoke["Mất quyền ngay; giữ profile,<br/>quan hệ và lịch sử"]
 ```
 
-`Profile INACTIVE` không nhận assignment mới. Thư ký là `SCIENTIFIC_MANAGEMENT_STAFF`
-ở cấp tài khoản và chỉ có thao tác theo scope/assignment; không có system role
-“scientific secretary” riêng và không có quyền phê duyệt cuối.
+`Profile INACTIVE` không nhận assignment mới. `TOPIC_SECRETARY` là quan hệ
+theo proposal/topic; nó chỉ có thao tác theo scope/assignment và không có quyền
+phê duyệt cuối.
 
 ### 5.4. Xung đột, tệp, thông báo và audit
 
 ```mermaid
 flowchart TD
   action["Assignment / decision / file action"] --> conflict_check{"Actor có vai trò<br/>xung đột trên cùng record?"}
-  conflict_check -- "PI/member tự phản biện hoặc nghiệm thu" --> blocked["Chặn"]
+  conflict_check -- "PI/team member tự phản biện hoặc nghiệm thu" --> blocked["Chặn"]
   conflict_check -- "Reviewer đã chấm tự quyết định" --> blocked
-  conflict_check -- "Authority là PI/member/reviewer" --> blocked
+  conflict_check -- "Authority là PI/team member/reviewer" --> blocked
   conflict_check -- "Không" --> file_check["Kiểm tra quyền trên record<br/>ở mọi lần xem/tải/tải lên/thay"]
   file_check --> action_ok["Thực hiện action"]
   action_ok --> version["Tệp thay thế tạo version mới;<br/>không ghi đè chứng cứ"]

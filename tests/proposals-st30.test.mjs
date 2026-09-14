@@ -236,7 +236,7 @@ function createPrisma() {
           id: nextId("member", store.members),
           createdAt: new Date(),
           userId: null,
-          participationRole: "member",
+          participationRole: "TOPIC_MEMBER",
           status: "ACTIVE",
           effectiveFrom: new Date(),
           effectiveUntil: null,
@@ -393,10 +393,9 @@ async function createProposalWithParticipants(services, members) {
 }
 
 const LINKED_TEAM = [
-  { name: "TS. Phạm Anh Tuấn", role: "Chủ nhiệm", organization: "Khoa Toán - Tin học", username: "patuan" },
-  { name: "ThS. Nguyễn Thị Lan", role: "Thành viên", organization: "Khoa Toán - Tin học", username: "ntlan" },
-  { name: "ThS. Trần Thanh Minh", role: "Thư ký khoa học", organization: "Phòng KHQS", username: "ttminh" },
-  { name: "GS. Đối tác ngoài viện", role: "Thành viên", organization: "Đại học Y Hà Nội" }
+  { name: "ThS. Nguyễn Thị Lan", role: "TOPIC_MEMBER", organization: "Khoa Toán - Tin học", username: "ntlan" },
+  { name: "ThS. Trần Thanh Minh", role: "TOPIC_SECRETARY", organization: "Phòng KHQS", username: "ttminh" },
+  { name: "GS. Đối tác ngoài viện", role: "TOPIC_MEMBER", organization: "Đại học Y Hà Nội" }
 ];
 
 describe("ST-3.0 proposal participation model and conflict primitives", () => {
@@ -413,16 +412,14 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
 
     // The descriptive fields survive so the entry still reads as a person, not just an id.
     assert.equal(byName.get("ThS. Trần Thanh Minh").organization, "Phòng KHQS");
-    assert.equal(byName.get("ThS. Trần Thanh Minh").role, "Thư ký khoa học");
+    assert.equal(byName.get("ThS. Trần Thanh Minh").role, "TOPIC_SECRETARY");
 
     // AC-ST-3.0-01: participants without a system account remain valid descriptive entries.
     assert.equal(byName.get("GS. Đối tác ngoài viện").userId, "");
     assert.equal(byName.get("GS. Đối tác ngoài viện").isAccountLinked, false);
-    assert.equal(byName.get("GS. Đối tác ngoài viện").participationRole, "member");
+    assert.equal(byName.get("GS. Đối tác ngoài viện").participationRole, "TOPIC_MEMBER");
 
-    // The canonical participation role is derived from the Vietnamese label when no code is sent.
-    assert.equal(byName.get("TS. Phạm Anh Tuấn").participationRole, "principal-investigator");
-    assert.equal(byName.get("ThS. Trần Thanh Minh").participationRole, "secretary");
+    assert.equal(byName.get("ThS. Trần Thanh Minh").participationRole, "TOPIC_SECRETARY");
     assert.equal(byName.get("ThS. Trần Thanh Minh").participationRoleLabel, "Thư ký");
   });
 
@@ -432,7 +429,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     await assert.rejects(
       () =>
         createProposalWithParticipants(services, [
-          { name: "Người không tồn tại", role: "Thành viên", organization: "Khoa Toán - Tin học", username: "khong-ton-tai" }
+          { name: "Người không tồn tại", role: "TOPIC_MEMBER", organization: "Khoa Toán - Tin học", username: "khong-ton-tai" }
         ]),
       BadRequestException
     );
@@ -447,7 +444,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     await assert.rejects(
       () =>
         services.proposalService.updateDraft(piUser, created.id, {
-          members: [{ name: "Người không tồn tại", role: "Thành viên", organization: "K1", username: "khong-ton-tai" }]
+          members: [{ name: "Người không tồn tại", role: "TOPIC_MEMBER", organization: "K1", username: "khong-ton-tai" }]
         }),
       BadRequestException
     );
@@ -515,18 +512,18 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
 
     // AC-ST-3.0-02: owner sees the record role, derived from the relationship not the account role.
     const ownerView = await services.proposalService.getProposal(piUser, created.id);
-    assert.equal(ownerView.viewerParticipation.role, "principal-investigator");
+    assert.equal(ownerView.viewerParticipation.role, "PROPOSAL_PI");
     assert.equal(ownerView.viewerParticipation.label, "Chủ nhiệm");
     assert.equal(ownerView.viewerParticipation.isOwner, true);
 
     // A linked member reads the record it participates in and is labelled as a member...
     const memberView = await services.proposalService.getProposal(memberUser, created.id);
-    assert.equal(memberView.viewerParticipation.role, "member");
+    assert.equal(memberView.viewerParticipation.role, "TOPIC_MEMBER");
     assert.equal(memberView.viewerParticipation.label, "Thành viên");
 
     // ...even though the same account-level role grants nothing on an unrelated proposal.
     const secretaryView = await services.proposalService.getProposal(secretaryUser, created.id);
-    assert.equal(secretaryView.viewerParticipation.role, "secretary");
+    assert.equal(secretaryView.viewerParticipation.role, "TOPIC_SECRETARY");
 
     // AC-ST-3.0-03: an unrelated user gets no participation role and no participation-derived read.
     await assert.rejects(() => services.proposalService.getProposal(outsiderUser, created.id), ForbiddenException);
@@ -590,7 +587,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
 
     const memberList = await services.proposalService.listProposals(memberUser);
     assert.equal(memberList.length, 1);
-    assert.equal(memberList[0].viewerParticipation.role, "member");
+    assert.equal(memberList[0].viewerParticipation.role, "TOPIC_MEMBER");
 
     const outsiderList = await services.proposalService.listProposals(outsiderUser);
     assert.equal(outsiderList.length, 0);
@@ -607,7 +604,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     const detailView = await services.proposalService.getProposal(memberUser, created.id);
 
     assert.deepEqual(listView.viewerAuthorization, detailView.viewerAuthorization);
-    assert.deepEqual(detailView.viewerAuthorization.viewerRelationships.map((relationship) => relationship.type), ["PROPOSAL_MEMBER"]);
+    assert.deepEqual(detailView.viewerAuthorization.viewerRelationships.map((relationship) => relationship.type), ["TOPIC_MEMBER"]);
     assert.equal(detailView.viewerAuthorization.blockedActions.find((action) => action.action === "proposal.draft.update").code, "ACTION_NOT_GRANTED");
     assert.doesNotMatch(JSON.stringify(detailView.viewerAuthorization), /patuan|ttminh|Phạm Anh Tuấn|Thanh Minh/);
     assert.equal(detailView.viewerAuthorization.contextVersion.relationshipVersion, 1);
@@ -635,9 +632,9 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     const created = await createProposalWithParticipants(services, LINKED_TEAM);
 
     for (const [user, expectedRole] of [
-      [piUser, "principal-investigator"],
-      [memberUser, "member"],
-      [secretaryUser, "secretary"]
+      [piUser, "PROPOSAL_PI"],
+      [memberUser, "TOPIC_MEMBER"],
+      [secretaryUser, "TOPIC_SECRETARY"]
     ]) {
       const decision = await services.participationService.evaluateConflict(user.id, created.id);
       assert.equal(decision.conflicted, true, `${user.username} must conflict`);
@@ -689,10 +686,10 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     const created = await createProposalWithParticipants(services, LINKED_TEAM);
 
     const links = services.auditLog.find("link-proposal-participant");
-    assert.equal(links.length, 3, "one entry per newly linked account");
+    assert.equal(links.length, 2, "one entry per newly linked team account");
     assert.deepEqual(
       links.map((entry) => JSON.parse(entry.reason).linkedUserId).sort(),
-      [memberUser.id, piUser.id, secretaryUser.id].sort()
+      [memberUser.id, secretaryUser.id].sort()
     );
     for (const entry of links) {
       assert.equal(entry.actorId, piUser.id);
@@ -702,14 +699,14 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
 
     const changes = services.auditLog.find("update-proposal-participation");
     assert.equal(changes.length, 1);
-    assert.equal(JSON.parse(changes[0].reason).nextCount, 4);
+    assert.equal(JSON.parse(changes[0].reason).nextCount, 3);
 
     const initial = await services.proposalService.getProposal(piUser, created.id);
     await assert.rejects(
       () => services.proposalService.updateDraft(piUser, created.id, {
         members: [
-          { name: "TS. Phạm Anh Tuấn", role: "Chủ nhiệm", organization: "Khoa Toán - Tin học", username: "patuan" },
-          { name: "TS. Phạm Anh Tuấn", role: "Chủ nhiệm", organization: "Khoa Toán - Tin học", username: "patuan" }
+          { name: "ThS. Nguyễn Thị Lan", role: "TOPIC_SECRETARY", organization: "Khoa Toán - Tin học", username: "ntlan" },
+          { name: "ThS. Trần Thanh Minh", role: "TOPIC_SECRETARY", organization: "Phòng KHQS", username: "ttminh" }
         ],
         contextVersion: initial.viewerAuthorization.contextVersion
       }),
@@ -719,12 +716,12 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     // Removing a participant is captured as an unlink, not silently dropped.
     const current = await services.proposalService.getProposal(piUser, created.id);
     await services.proposalService.updateDraft(piUser, created.id, {
-      members: [{ name: "TS. Phạm Anh Tuấn", role: "Chủ nhiệm", organization: "Khoa Toán - Tin học", username: "patuan" }],
+      members: [{ name: "GS. Đối tác ngoài viện", role: "TOPIC_MEMBER", organization: "Đại học Y Hà Nội" }],
       contextVersion: current.viewerAuthorization.contextVersion
     });
 
     const latestChange = JSON.parse(services.auditLog.find("update-proposal-participation").at(-1).reason);
-    assert.equal(latestChange.previousCount, 4);
+    assert.equal(latestChange.previousCount, 3);
     assert.equal(latestChange.nextCount, 1);
     assert.deepEqual(latestChange.unlinkedUserIds.sort(), [memberUser.id, secretaryUser.id].sort());
 
@@ -732,34 +729,30 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     await assert.rejects(() => services.proposalService.getProposal(memberUser, created.id), ForbiddenException);
   });
 
-  it("normalizes participation roles from canonical codes and Vietnamese labels", () => {
-    assert.equal(normalizeParticipationRole("principal-investigator"), "principal-investigator");
-    assert.equal(normalizeParticipationRole("Chủ nhiệm"), "principal-investigator");
-    assert.equal(normalizeParticipationRole("Đồng chủ nhiệm đề tài"), "co-investigator");
-    assert.equal(normalizeParticipationRole("secretary"), "secretary");
-    assert.equal(normalizeParticipationRole("Thư ký khoa học"), "secretary");
-    assert.equal(normalizeParticipationRole("THƯ KÝ"), "secretary");
-    assert.equal(normalizeParticipationRole("Thành viên"), "member");
-    // Anything unrecognised falls back to the conflicting `member` role rather than to none.
-    assert.equal(normalizeParticipationRole("Cộng tác viên"), "member");
-    assert.equal(normalizeParticipationRole(undefined), "member");
-    assert.equal(normalizeParticipationRole(42), "member");
+  it("normalizes only canonical team roles and recognized legacy team labels", () => {
+    assert.equal(normalizeParticipationRole("TOPIC_SECRETARY"), "TOPIC_SECRETARY");
+    assert.equal(normalizeParticipationRole("Thư ký khoa học"), "TOPIC_SECRETARY");
+    assert.equal(normalizeParticipationRole("TOPIC_MEMBER"), "TOPIC_MEMBER");
+    assert.equal(normalizeParticipationRole("Thành viên"), "TOPIC_MEMBER");
+    assert.equal(normalizeParticipationRole("PROPOSAL_PI"), "unknown");
+    assert.equal(normalizeParticipationRole("Đồng chủ nhiệm đề tài"), "unknown");
+    assert.equal(normalizeParticipationRole(undefined), "unknown");
   });
 
-  it("reports the highest-precedence role and still lists the others when a user holds several", () => {
+  it("derives the PI only from ownership and ignores owner team rows", () => {
     const participation = resolveProposalParticipation({
       userId: "user-pi",
       proposal: { ownerId: "user-pi" },
       members: [
-        { userId: "user-pi", participationRole: "secretary" },
-        { userId: "user-pi", participationRole: "member" },
-        { userId: "user-other", participationRole: "member" }
+        { userId: "user-pi", participationRole: "TOPIC_SECRETARY" },
+        { userId: "user-pi", participationRole: "TOPIC_MEMBER" },
+        { userId: "user-other", participationRole: "TOPIC_MEMBER" }
       ]
     });
 
-    assert.equal(participation.role, "principal-investigator");
-    assert.deepEqual(participation.roles, ["principal-investigator", "secretary", "member"]);
-    assert.deepEqual(participation.labels, ["Chủ nhiệm", "Thư ký", "Thành viên"]);
+    assert.equal(participation.role, "PROPOSAL_PI");
+    assert.deepEqual(participation.roles, ["PROPOSAL_PI"]);
+    assert.deepEqual(participation.labels, ["Chủ nhiệm"]);
     assert.equal(participation.isOwner, true);
   });
 
@@ -767,7 +760,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     const participation = resolveProposalParticipation({
       userId: "user-outsider",
       proposal: { ownerId: "user-pi" },
-      members: [{ userId: null, participationRole: "member" }]
+      members: [{ userId: null, participationRole: "TOPIC_MEMBER" }]
     });
 
     assert.equal(participation.role, "none");

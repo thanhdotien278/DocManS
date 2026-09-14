@@ -10,7 +10,7 @@ flowchart TD
   save["System: giữ Proposal ở Nháp"]
   submit(["PI: nộp chính thức"])
   request(["PI: gửi yêu cầu chỉnh sửa sau nộp"])
-  approve(["Quản lý có scope hoặc Thư ký được giao phê duyệt"])
+  approve(["Quản lý khoa học có scope phê duyệt"])
   approved{"Được phê duyệt?"}
   keep["Giữ bản đã khóa"]
   revision["System: tạo revision mới từ bản khóa"]

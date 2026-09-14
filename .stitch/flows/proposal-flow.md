@@ -2,7 +2,7 @@
 
 1. An eligible internal PI opens an applicable intake and saves a proposal draft.
 2. The PI completes fields and required package files; the backend returns readiness and missing items.
-3. The PI, or only an approved exact-record `proposal.submit` delegate, reviews the confirmation and submits.
+3. The current internal PI reviews the confirmation and submits; non-PI and delegate requests are denied before mutation.
 4. The submitted version is locked; controlled staff/review work follows.
 5. If staff requests a supplement, the PI corrects the draft and explicitly resubmits after readiness passes.
 

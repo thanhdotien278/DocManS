@@ -328,6 +328,9 @@ export class FilesService {
   }
 
   private async assertCanUpload(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {
+    if (relatedEntityType === RESEARCH_PROPOSAL_ENTITY_TYPE && actor.systemRole !== "RESEARCHER_INTERNAL_USER") {
+      throw new ForbiddenException({ message: "Chỉ PI hoặc thư ký nội bộ được tải tệp cho hồ sơ đề xuất." });
+    }
     const proposal = await this.findRelatedProposal(relatedEntityType, relatedEntityId);
     assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
     if (proposal.status !== "draft" && proposal.status !== "supplement_requested") {
@@ -335,7 +338,7 @@ export class FilesService {
     }
     if (proposal.ownerId === actor.id) return;
     const participation = await this.participation.resolveForProposal(actor.id, proposal);
-    if (!participation.roles.includes("secretary")) {
+    if (!participation.roles.includes("TOPIC_SECRETARY")) {
       throw new ForbiddenException({ message: "Không có quyền tải tệp cho hồ sơ đề xuất này." });
     }
   }

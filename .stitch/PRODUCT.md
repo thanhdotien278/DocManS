@@ -6,7 +6,7 @@ DocManS manages Military Medical Academy research proposals from controlled inta
 
 ## Users and relationships
 
-System roles govern platform functions; record-scoped relationships and assignments govern business-record visibility and actions. Relevant proposal relationships include PI, member, scientific secretary, and reviewer assignment. An external researcher can work only on assigned draft/review material and cannot create or formally submit a proposal. Sources: `docs/permission-matrix.md`, `docs/ux-ui-spec.md`.
+System roles govern platform functions; record-scoped relationships and assignments govern business-record visibility and actions. A proposal has one `PROPOSAL_PI` from `ownerId` and only `TOPIC_SECRETARY`/`TOPIC_MEMBER` team rows; approved topics use `TOPIC_PI` plus the same team roles. An external researcher can work only on related approved-topic/task material or an assigned review and cannot create, edit, or formally submit a proposal. Sources: `docs/permission-matrix.md`, `docs/ux-ui-spec.md`.
 
 ## Authorization philosophy
 
@@ -18,7 +18,7 @@ The shell groups navigation by work: Dashboard/My Work; Proposals/Intake/Review;
 
 ## Proposal workflow
 
-A PI may create and edit a draft in an applicable open intake. The backend calculates readiness; formal submission is an explicit audited operation that creates an immutable submitted version. A supplement request returns the proposal to a controlled correction/resubmission flow. Delegation is exact-record and only for `proposal.submit` once approved. Sources: `docs/authorization-core-business-baseline.md`, `docs/permission-matrix.md`, `docs/user-flows.md`.
+A current internal PI may create and edit a draft in an applicable open intake. The backend calculates readiness; formal submission is an explicit audited operation that creates an immutable submitted version. A supplement request returns the proposal to a controlled correction/resubmission flow. Proposal creation, submission, and resubmission are PI-only and never delegated. Sources: `docs/authorization-core-business-baseline.md`, `docs/permission-matrix.md`, `docs/user-flows.md`.
 
 ## Terms
 

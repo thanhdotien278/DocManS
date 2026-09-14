@@ -30,13 +30,13 @@ are recorded.
 | Role baseline | Five system roles: `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP`, `EXTERNAL_RESEARCHER_USER`, and `RESEARCHER_USER`; record relationships add context but do not replace system roles. |
 | Security boundary | Browser uses the NestJS API only. PostgreSQL/MinIO are private; UI capability data is not authorization. |
 | MVP included | Foundation, identity/scope facts, proposal intake/draft/read, staff check/supplement, assignment/evaluation foundations, proposal result/decision subject to authority gate, project initialization/basic tracking, tasks/files, scoped operational views, and core hardening as each slice lands. |
-| Deferred/non-MVP | SSO/MFA, native mobile, approval delegation, advanced reports/charts, broad exports, SMS/external integrations, complex preview, and any non-proposal domain without its V1 contract. |
+| Deferred/non-MVP | SSO/MFA, native mobile, proposal delegation, approval delegation, advanced reports/charts, broad exports, SMS/external integrations, complex preview, and any non-proposal domain without its V1 contract. |
 
 ### Conditional gates
 
-1. Only `proposal.submit` delegation is currently permitted. Approval/rejection,
-reviewer assignment, review/scoring, participation changes, and final decisions
-are non-delegable unless the baseline is changed explicitly.
+1. Proposal create/submit/resubmit are PI-only and never delegated. Approval/rejection,
+   reviewer assignment, review/scoring, participation changes, and final decisions
+   are non-delegable unless their own domain contract is changed explicitly.
 2. Leadership authority by organization level is required before decision work.
 3. Export processing/preview, notification channel per event, dashboard chart
 scope, mobile-critical screens, and audit-view holders require product decisions.
@@ -58,7 +58,7 @@ particular, canonical **3.2 is not legacy Story 3.2**.
 | 2.2 Catalogs | 1.6 | FR7-8 | S16 | Only values needed for intake/draft are Sprint 1 scope. |
 | 3.1 Intake read/list | 4.1 | FR9; NFR1,3,7 | S04, C06-C07 | Canonical proposal Epic 3 maps to legacy Epic 4. |
 | 3.2 Draft + participation | 4.2, 4.3 | FR10-11; NFR7,10,19 | S05-S06, C11-C12 | Not legacy 3.2 (which is file versioning). |
-| 3.3 Proposal files/readiness/submit | 4.4-4.6, legacy 3.1 | FR12-14; NFR7,10,12 | S06-S07, C13-C14 | Submit delegation only after exact V1 check. |
+| 3.3 Proposal files/readiness/submit | 4.4-4.6, legacy 3.1 | FR12-14; NFR7,10,12 | S06-S07, C13-C14 | Submission is restricted to the internal-researcher PI; no delegation path. |
 | 4.1 Staff check/supplement | 5.1-5.2 | FR15-16; NFR7,10 | S07, C16/C23 | Sprint 3; named transition/audit required. |
 | 4.2-4.3 Assignment/evaluation | 5.3-5.4 | FR17-18, FR68-69 | S08, C18 | Assigned-reviewer-only disclosure and conflict gate. |
 | 4.4-4.5 Aggregation/approval | 5.5-5.8 | FR19-22; NFR4,7-10 | S09, C17 | Leadership authority gate; never a delegated approval. |
@@ -74,7 +74,7 @@ particular, canonical **3.2 is not legacy Story 3.2**.
 | --- | --- | --- | --- | --- | --- | --- |
 | 0 | Planning alignment and readiness fixes | cross-cutting | planning tasks | One authoritative, testable Sprint 1 backlog | Sources reconciled → tracker, capability, NFR, DoD and decision artifacts accepted | None; no feature code. |
 | 1 | Foundation + intake/draft/read slice | 1, 2, 3 | 1.1-1.8; 4.1-4.3 | Login, role-aware shell, scoped intake list/detail, PI draft saved/read | Sprint 0 complete → allow/deny, audit, responsive/keyboard evidence passes | Seed/org/role facts and proposal V1 contract. |
-| 2 | Complete proposal create/edit/submit + scoped list | 3, 7, 10 | 4.2-4.6; 3.1,3.4 | A valid PI submits an immutable proposal version | Sprint 1 stable → draft/readiness/submit transaction and file checks pass | File contract; only `proposal.submit` delegation. |
+| 2 | Complete proposal create/edit/submit + scoped list | 3, 7, 10 | 4.2-4.6; 3.1,3.4 | A valid internal PI submits an immutable proposal version | Sprint 1 stable → draft/readiness/submit transaction and file checks pass | File contract; no proposal delegation. |
 | 3 | Staff check, supplement, resubmission | 4, 10 | 5.1-5.2; 3.4-3.5 | Staff requests supplement; PI repairs and resubmits | Sprint 2 submit path accepted → named transitions/audit/disclosure pass | Supplement notification channel if notifications are included. |
 | 4 | Reviewer assignment and evaluation foundations | 2, 4, 10 | 2.3-2.6; 5.3-5.4 | Staff assigns eligible reviewer; reviewer submits own evaluation | Conflict/relationship contracts and reviewer fixture suite pass | Reviewer disclosure/eligibility contract. |
 | 5 | Aggregation and approval | 4 | 5.5-5.8 | Authorized leadership sees decision-ready proposal | Evaluation flow accepted → authority scope and decision audit pass | Leadership authority; no approval delegation. |
@@ -136,7 +136,7 @@ where data changes; `git diff --check`; and a short demo/evidence link.
 
 | Sprint | Goal / candidate stories | Required decision and V1 contract | Risks / do not begin until |
 | --- | --- | --- | --- |
-| 2 | Proposal files, readiness, immutable submit/history; scoped proposal list refinement. | Proposal file-download authorization, file metadata/disclosure, submission transition/audit, exact `proposal.submit` delegation rules. | Do not expose direct MinIO links or permit any delegation chain. |
+| 2 | Proposal files, readiness, immutable submit/history; scoped proposal list refinement. | Proposal file-download authorization, file metadata/disclosure, PI-only submission transition/audit. | Do not expose direct MinIO links or permit any delegation chain. |
 | 3 | Staff completeness check, supplement request, PI resubmission. | Proposal check/supplement/resubmit actions, state resolver, audit and notification decision. | Do not implement status PATCHes or notification delivery without channel decision. |
 | 4 | Reviewer assignment, conflict check, assigned-reviewer evaluation. | Reviewer assignment/evaluation capability, eligibility/conflict resolver, disclosure fixtures. | Do not reveal reviewer identity/raw scores or give unassigned reviewers access. |
 | 5 | Aggregate results and approval/rejection. | Leadership authority by organization, decision payload/disclosure, decision audit; explicit baseline change if delegation is requested. | Do not start approval until authority is approved; never implement delegated approval by assumption. |

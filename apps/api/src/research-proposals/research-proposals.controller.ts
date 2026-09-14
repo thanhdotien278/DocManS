@@ -4,12 +4,12 @@ import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.
 import {
   createResearchProposalDraftPipe,
   requestProposalSupplementPipe,
+  proposalMutationPipe,
   updateResearchProposalDraftPipe,
-  delegatedMutationPipe,
   type CreateResearchProposalDraftDto,
   type RequestProposalSupplementDto,
-  type UpdateResearchProposalDraftDto
-  ,type DelegatedMutationDto
+  type UpdateResearchProposalDraftDto,
+  type ProposalMutationDto
 } from "./research-proposals.dto.js";
 import { ResearchProposalsService } from "./research-proposals.service.js";
 
@@ -53,7 +53,7 @@ export class ResearchProposalsController {
   }
 
   @Post(":id/submit")
-  async submitProposal(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body(delegatedMutationPipe) body: DelegatedMutationDto) {
+  async submitProposal(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body(proposalMutationPipe) body: ProposalMutationDto) {
     return { proposal: await this.proposalsService.submitProposal(request.currentUser!, id, body) };
   }
 
@@ -72,7 +72,7 @@ export class ResearchProposalsController {
   }
 
   @Post(":id/resubmit")
-  async resubmitProposal(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body(delegatedMutationPipe) body: DelegatedMutationDto) {
+  async resubmitProposal(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body(proposalMutationPipe) body: ProposalMutationDto) {
     return { proposal: await this.proposalsService.resubmitProposal(request.currentUser!, id, body) };
   }
 

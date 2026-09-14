@@ -3,7 +3,7 @@
 ```mermaid
 flowchart TD
   submitted["Proposal: Đã nộp"]
-  completeness(["Quản lý hoặc Thư ký được giao: kiểm tra đầy đủ và thủ tục"])
+  completeness(["Quản lý khoa học: kiểm tra đầy đủ và thủ tục"])
   complete{"Hồ sơ đủ điều kiện?"}
   supplement["Yêu cầu bổ sung; nêu lý do và hạn"]
   pi_correct(["PI: bổ sung hoặc chỉnh sửa"])

@@ -94,6 +94,34 @@ describe("Story 1.4 system-role migration", () => {
         `INSERT INTO "user_organization_scopes" ("id", "user_id", "organization_unit_id", "is_primary")
          VALUES ('uos-external-researcher', 'external-researcher', 'org-hvqy', true)`
       );
+      await client.query(
+        `INSERT INTO "proposal_intake_periods" ("id", "code", "title", "starts_at", "ends_at", "status", "required_package", "updated_at")
+         VALUES ('intake-team-model', 'TEAM-MODEL', 'Team model migration', CURRENT_TIMESTAMP - INTERVAL '1 day', CURRENT_TIMESTAMP + INTERVAL '1 day', 'open', '[]'::jsonb, CURRENT_TIMESTAMP);
+         INSERT INTO "research_proposals" ("id", "intake_period_id", "owner_id", "host_organization_unit_id", "title", "updated_at")
+         VALUES ('proposal-team-model', 'intake-team-model', 'legacy-pi', 'org-hvqy', 'Team model migration', CURRENT_TIMESTAMP);
+         INSERT INTO "proposal_members" ("id", "proposal_id", "name", "role", "organization", "user_id", "participation_role", "status", "effective_from", "effective_until") VALUES
+           ('team-owner', 'proposal-team-model', 'Legacy PI', 'Chủ nhiệm', 'Học viện Quân y', 'legacy-pi', 'principal-investigator', 'ACTIVE', CURRENT_TIMESTAMP - INTERVAL '2 days', NULL),
+           ('team-member', 'proposal-team-model', 'Legacy member', 'Đồng chủ nhiệm', 'Học viện Quân y', 'single-assignment', 'co-investigator', 'ACTIVE', CURRENT_TIMESTAMP - INTERVAL '2 days', NULL),
+           ('team-secretary', 'proposal-team-model', 'Legacy secretary', 'TOPIC_SECRETARY', 'Học viện Quân y', 'disabled-reviewer', 'secretary', 'ACTIVE', CURRENT_TIMESTAMP - INTERVAL '2 days', NULL),
+           ('team-expired-secretary', 'proposal-team-model', 'Expired secretary', 'Thư ký', 'Học viện Quân y', NULL, 'secretary', 'ACTIVE', CURRENT_TIMESTAMP - INTERVAL '2 days', CURRENT_TIMESTAMP - INTERVAL '1 day')`
+      );
+      await executeMigration(client, "20260914000000_finalize_proposal_team_model");
+
+      const { rows: teamRows } = await client.query(
+        `SELECT "id", "role", "participation_role", "status" FROM "proposal_members" ORDER BY "id"`
+      );
+      assert.deepEqual(teamRows, [
+        { id: "team-expired-secretary", role: "TOPIC_SECRETARY", participation_role: "TOPIC_SECRETARY", status: "ENDED" },
+        { id: "team-member", role: "TOPIC_MEMBER", participation_role: "TOPIC_MEMBER", status: "ACTIVE" },
+        { id: "team-owner", role: "TOPIC_MEMBER", participation_role: "TOPIC_MEMBER", status: "ENDED" },
+        { id: "team-secretary", role: "TOPIC_SECRETARY", participation_role: "TOPIC_SECRETARY", status: "ACTIVE" }
+      ]);
+      const { rows: delegationTable } = await client.query("SELECT to_regclass('proposal_delegations') AS name");
+      assert.equal(delegationTable[0].name, null);
+      await assert.rejects(() => client.query(
+        `INSERT INTO "proposal_members" ("id", "proposal_id", "name", "role", "organization", "participation_role")
+         VALUES ('second-secretary', 'proposal-team-model', 'Second secretary', 'TOPIC_SECRETARY', 'Học viện Quân y', 'TOPIC_SECRETARY')`
+      ));
       await assert.rejects(() => client.query(
         `INSERT INTO "users" ("id", "username", "username_key", "display_name", "password_hash", "status", "legacy_role", "legacy_role_label", "system_role", "unit", "updated_at")
          VALUES ('active-null-role', 'active.null.role', 'active.null.role', 'Active Null Role', 'hash', 'active', NULL, NULL, NULL, 'Học viện Quân y', CURRENT_TIMESTAMP)`
