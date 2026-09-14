@@ -44,7 +44,11 @@ function assertRecord(value: unknown) {
     throw new BadRequestException({ message: INTAKE_PERIOD_VALIDATION_MESSAGE });
   }
 
-  return value as Record<string, unknown>;
+  const record = value as Record<string, unknown>;
+  if (typeof record.data === "string") {
+    try { return assertRecord(JSON.parse(record.data)); } catch { throw new BadRequestException({ message: INTAKE_PERIOD_VALIDATION_MESSAGE }); }
+  }
+  return record;
 }
 
 export const listProposalIntakePeriodsQueryPipe: PipeTransform<unknown, ListProposalIntakePeriodsQueryDto> = {

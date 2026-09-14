@@ -5,8 +5,10 @@ import { CalendarClock, Edit3, Lock, Plus, Save, Search, Unlock } from "lucide-r
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { formatIntakeDate as formatDate, toIntakeDateInput as toDateInput, intakeDateToIso } from "@/lib/intake-dates";
 import {
   closeProposalIntakePeriod,
+  intakeTemplateUrl,
   loadIntakeOptions,
   type IntakeOptions,
   createProposalIntakePeriod,
@@ -19,9 +21,9 @@ import {
 
 type LoadState = "loading" | "ready" | "error";
 
-const defaultPackage: RequiredPackageItem[] = [
-  { code: "proposal-form", label: "Thuyết minh đề tài", allowedMimeTypes: ["application/pdf"], maxSizeMb: 5 },
-  { code: "budget-form", label: "Dự toán kinh phí", allowedMimeTypes: ["application/pdf"], maxSizeMb: 5 }
+type TemplateItem = RequiredPackageItem & { file?: File };
+const defaultPackage: TemplateItem[] = [
+  { code: "template-1", label: "", description: "", allowedMimeTypes: ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"], maxSizeMb: null }
 ];
 
 const emptyForm = {
@@ -35,16 +37,6 @@ const emptyForm = {
   requiredPackage: defaultPackage
 };
 
-function formatDate(value: string) {
-  return value ? new Intl.DateTimeFormat("vi-VN").format(new Date(value)) : "Chưa có";
-}
-
-function toDateInput(value: string) {
-  if (!value) return "";
-  const date = new Date(value);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-}
-
 export function ProposalIntakePeriodsPanel() {
   const [options, setOptions] = useState<IntakeOptions>({ canCreate: false, organizationUnits: [] });
   const [state, setState] = useState<LoadState>("loading");
@@ -55,6 +47,7 @@ export function ProposalIntakePeriodsPanel() {
   const [form, setForm] = useState(emptyForm);
   const [message, setMessage] = useState("");
   const [formError, setFormError] = useState("");
+  const [fileInputVersion, setFileInputVersion] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function refresh() {
@@ -84,22 +77,12 @@ export function ProposalIntakePeriodsPanel() {
     });
   }, [keyword, periods, statusFilter]);
 
-  function updatePackage(index: number, field: keyof RequiredPackageItem, value: string) {
-    setForm((current) => ({
-      ...current,
-      requiredPackage: current.requiredPackage.map((item, itemIndex) =>
-        itemIndex === index
-          ? {
-              ...item,
-              [field]: field === "allowedMimeTypes" ? value.split(",").map((mimeType) => mimeType.trim()).filter(Boolean) : value,
-              ...(field === "maxSizeMb" ? { maxSizeMb: Number(value) } : {})
-            }
-          : item
-      )
-    }));
+  function updateTemplate(index: number, changes: Partial<TemplateItem>) {
+    setForm((current) => ({ ...current, requiredPackage: current.requiredPackage.map((item, i) => i === index ? { ...item, ...changes } : item) }));
   }
 
   function startEdit(period: ProposalIntakePeriod) {
+    setFileInputVersion((value) => value + 1);
     setEditingId(period.id);
     setForm({
       code: period.code,
@@ -116,6 +99,7 @@ export function ProposalIntakePeriodsPanel() {
   }
 
   function resetForm() {
+    setFileInputVersion((value) => value + 1);
     setEditingId("");
     setForm(emptyForm);
     setFormError("");
@@ -126,18 +110,23 @@ export function ProposalIntakePeriodsPanel() {
     setMessage("");
     setFormError("");
 
-    if (!form.code || !form.title || !form.startsAt || !form.endsAt || form.requiredPackage.some((item) => !item.code || !item.label)) {
-      setFormError("Vui lòng nhập mã, tên, thời gian và danh sách tệp bắt buộc.");
+    if (!form.code || !form.title || !form.startsAt || !form.endsAt || form.requiredPackage.some((item) => !item.file && !item.templateFileId && !item.label)) {
+      setFormError("Vui lòng nhập mã, tên, ngày tiếp nhận và chọn file mẫu.");
       return;
     }
 
+    const files: File[] = [];
+    const requiredPackage = form.requiredPackage.map(({ file, ...item }) => {
+      const uploadIndex = file ? files.push(file) - 1 : undefined;
+      return { ...item, fileName: file?.name || item.fileName, label: (file?.name || item.fileName || item.label).slice(0, 160), uploadIndex };
+    });
     setIsSubmitting(true);
     try {
       if (editingId) {
-        await updateProposalIntakePeriod(editingId, { ...form, applicableOrganizationUnitId: undefined, startsAt: new Date(form.startsAt).toISOString(), endsAt: new Date(form.endsAt).toISOString(), contextVersion: periods.find((p) => p.id === editingId)?.contextVersion });
+        await updateProposalIntakePeriod(editingId, { ...form, requiredPackage, applicableOrganizationUnitId: undefined, startsAt: intakeDateToIso(form.startsAt), endsAt: intakeDateToIso(form.endsAt, true), contextVersion: periods.find((p) => p.id === editingId)?.contextVersion }, files);
         setMessage("Đã cập nhật đợt tiếp nhận.");
       } else {
-        await createProposalIntakePeriod({ ...form, applicableOrganizationUnitId: undefined, startsAt: new Date(form.startsAt).toISOString(), endsAt: new Date(form.endsAt).toISOString() });
+        await createProposalIntakePeriod({ ...form, requiredPackage, applicableOrganizationUnitId: undefined, startsAt: intakeDateToIso(form.startsAt), endsAt: intakeDateToIso(form.endsAt, true) }, files);
         setMessage("Đã tạo đợt tiếp nhận.");
       }
       resetForm();
@@ -216,7 +205,7 @@ export function ProposalIntakePeriodsPanel() {
                         {formatDate(period.startsAt)} - {formatDate(period.endsAt)}
                       </td>
                       <td>{period.applicableOrganizationUnitIds?.map((id) => options.organizationUnits.find((u) => u.id === id)?.name ?? id).join(", ") || "Toàn Học viện"}</td>
-                      <td>{period.requiredPackage.map((item) => item.label).join(", ")}</td>
+                      <td>{period.requiredPackage.map((item, index) => <span key={item.code}>{index > 0 ? ", " : ""}{item.templateFileId ? <a href={intakeTemplateUrl(period.id, item.templateFileId)} title={item.description}>{item.fileName || item.label}</a> : item.label}</span>)}</td>
                       <td>
                         <StatusBadge status={period.status} />
                       </td>
@@ -257,7 +246,7 @@ export function ProposalIntakePeriodsPanel() {
                   <span className="record-meta">
                     {formatDate(period.startsAt)} - {formatDate(period.endsAt)}
                   </span>
-                  <span className="record-meta">{period.requiredPackage.map((item) => item.label).join(", ")}</span>
+                  <span className="record-meta">{period.requiredPackage.map((item, index) => <span key={item.code}>{index > 0 ? ", " : ""}{item.templateFileId ? <a href={intakeTemplateUrl(period.id, item.templateFileId)} title={item.description}>{item.fileName || item.label}</a> : item.label}</span>)}</span>
                   <div className="button-row">
                     <button className="button" type="button" disabled={isSubmitting || !period.capabilities?.canEdit} onClick={() => startEdit(period)}>
                       <Edit3 size={16} aria-hidden="true" />
@@ -301,11 +290,11 @@ export function ProposalIntakePeriodsPanel() {
           <div className="form-grid two">
             <label className="field">
               <span>Ngày bắt đầu</span>
-              <input type="datetime-local" value={form.startsAt} onChange={(event) => setForm({ ...form, startsAt: event.target.value })} />
+              <input type="date" lang="vi" required value={form.startsAt} onChange={(event) => setForm({ ...form, startsAt: event.target.value })} />
             </label>
             <label className="field">
               <span>Ngày kết thúc</span>
-              <input type="datetime-local" value={form.endsAt} onChange={(event) => setForm({ ...form, endsAt: event.target.value })} />
+              <input type="date" lang="vi" required min={form.startsAt} value={form.endsAt} onChange={(event) => setForm({ ...form, endsAt: event.target.value })} />
             </label>
           </div>
           <label className="field">
@@ -321,34 +310,21 @@ export function ProposalIntakePeriodsPanel() {
               <CalendarClock size={16} aria-hidden="true" />
               Tệp bắt buộc
             </div>
-            <button className="button" type="button" onClick={() => setForm({ ...form, requiredPackage: [...form.requiredPackage, { code: "", label: "", allowedMimeTypes: ["application/pdf"], maxSizeMb: 5 }] })}>Thêm tệp bắt buộc</button>
             {form.requiredPackage.map((item, index) => (
-              <div className="package-row" key={index}>
-                <button className="button" type="button" disabled={form.requiredPackage.length === 1} onClick={() => setForm({ ...form, requiredPackage: form.requiredPackage.filter((_, i) => i !== index) })}>Bỏ tệp {index + 1}</button>
+              <div className="document-box" key={`${fileInputVersion}-${item.code}`}>
                 <label className="field">
-                  <span>Mã tệp</span>
-                  <input value={item.code} onChange={(event) => updatePackage(index, "code", event.target.value)} />
+                  <span>File upload {index + 1}</span>
+                  <input type="file" accept=".docx,.pdf" required={!item.templateFileId && !item.label} onChange={(event) => updateTemplate(index, { file: event.target.files?.[0] })} />
                 </label>
+                {item.templateFileId && editingId ? <a href={intakeTemplateUrl(editingId, item.templateFileId)}>{item.fileName || item.label}</a> : item.label && !item.file ? <span>{item.label} — chưa có file mẫu</span> : null}
                 <label className="field">
-                  <span>Tên tệp</span>
-                  <input value={item.label} onChange={(event) => updatePackage(index, "label", event.target.value)} />
+                  <span>Miêu tả</span>
+                  <textarea rows={2} maxLength={500} value={item.description ?? ""} onChange={(event) => updateTemplate(index, { description: event.target.value })} />
                 </label>
-                <label className="field">
-                  <span>MIME</span>
-                  <input value={item.allowedMimeTypes.join(", ")} onChange={(event) => updatePackage(index, "allowedMimeTypes", event.target.value)} />
-                </label>
-                <label className="field">
-                  <span>MB</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={item.maxSizeMb}
-                    onChange={(event) => updatePackage(index, "maxSizeMb", event.target.value)}
-                  />
-                </label>
+                <button className="button" type="button" disabled={form.requiredPackage.length === 1} onClick={() => setForm({ ...form, requiredPackage: form.requiredPackage.filter((_, i) => i !== index) })}>Bỏ file {index + 1}</button>
               </div>
             ))}
+            <button className="button" type="button" onClick={() => setForm({ ...form, requiredPackage: [...form.requiredPackage, { ...defaultPackage[0], code: `template-${crypto.randomUUID()}` }] })}>Thêm file</button>
           </div>
           {formError ? <p className="form-error">{formError}</p> : null}
           {message ? <p className="state-message success">{message}</p> : null}

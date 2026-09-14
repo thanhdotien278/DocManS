@@ -1,3 +1,4 @@
+import { MinioObjectStorageService } from "../infrastructure/minio/minio-object-storage.service.js";
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module.js";
 import { AuditLogService } from "../auth/audit-log.service.js";
@@ -8,7 +9,7 @@ import { ProposalIntakePeriodsService } from "./proposal-intake-periods.service.
 @Module({
   imports: [AuthModule],
   controllers: [ProposalIntakePeriodsController],
-  providers: [ProposalIntakePeriodsService, AuditLogService, PrismaService],
+  providers: [MinioObjectStorageService, ProposalIntakePeriodsService, AuditLogService, PrismaService],
   exports: [ProposalIntakePeriodsService]
 })
 export class ProposalIntakePeriodsModule {}
