@@ -132,3 +132,8 @@ GPT-5.6
 - 2026-07-30: Created implementation-ready Story 1.5 specification.
 - 2026-07-30: Implemented controlled password change/reset, validated 108 tests, and moved the story to review.
 - 2026-07-30: Addressed six code-review findings; validated 111 tests and completed Story 1.5.
+
+
+## Researcher onboarding extension (2026-09-15)
+
+See [current credential and My Profile contract](../../docs/contracts/researcher-profile-access.md). Account mustChangePassword and credentialVersion gate normal access; first-password-change audit commits with the hash update and session/token revocation. Initial/resend credentials are emailed only through the scoped profile access flow.

@@ -13,6 +13,9 @@ model User {
   usernameKey        String                  @unique @map("username_key")
   displayName        String                  @map("display_name")
   passwordHash       String                  @map("password_hash")
+  credentialEmail     String? @map("credential_email")
+  mustChangePassword  Boolean                 @default(false) @map("must_change_password")
+  credentialVersion   Int                     @default(0) @map("credential_version")
   status             String
   legacyRole         String?                 @map("legacy_role")
   systemRole         String?                 @map("system_role")
@@ -41,6 +44,10 @@ model User {
   proposalDecisions ProposalDecision[] @relation("ProposalDecisionAuthority")
   createdResearcherProfiles ResearcherProfile[] @relation("ResearcherProfileCreator")
   updatedResearcherProfiles ResearcherProfile[] @relation("ResearcherProfileUpdater")
+  researcherProfileAccountLinks ResearcherProfileAccountLink[] @relation("ProfileAccountLinkUser")
+  createdResearcherProfileAccountLinks ResearcherProfileAccountLink[] @relation("ProfileAccountLinkCreator")
+  credentialDeliveries AccountCredentialDelivery[]
+  researcherProfileHistories ResearcherProfileHistory[]
 
   @@map("users")
 }
@@ -90,6 +97,7 @@ model UserOrganizationScope {
 }
 
 model Session {
+  credentialVersion Int @default(0) @map("credential_version")
   id        String    @id @default(uuid())
   userId    String    @map("user_id")
   user      User      @relation(fields: [userId], references: [id])
@@ -103,6 +111,7 @@ model Session {
 }
 
 model PasswordResetToken {
+  credentialVersion Int @default(0) @map("credential_version")
   id          String   @id @default(uuid())
   userId      String   @map("user_id")
   createdById String   @map("created_by_id")
@@ -167,6 +176,7 @@ model ResearcherProfile {
   managementOrganizationUnit OrganizationUnit @relation(fields: [managementOrganizationUnitId], references: [id])
   linkedUserId               String?       @unique @map("linked_user_id")
   linkedUser                 User?         @relation("ResearcherProfileAccount", fields: [linkedUserId], references: [id])
+  profileType                String        @default("INTERNAL") @map("profile_type")
   externalAffiliation        String?       @map("external_affiliation")
   fullName                   String        @map("full_name")
   fullNameKey                String        @map("full_name_key")
@@ -175,6 +185,8 @@ model ResearcherProfile {
   academicDegreeCatalogItemId String?      @map("academic_degree_catalog_item_id")
   academicDegreeCatalogItem  CatalogItem?  @relation("ResearcherProfileAcademicDegree", fields: [academicDegreeCatalogItemId], references: [id])
   title                      String?
+  position                   String?
+  militaryRank               String?       @map("military_rank")
   contactEmail               String?       @map("contact_email")
   contactEmailKey            String?       @map("contact_email_key")
   contactPhone               String?       @map("contact_phone")
@@ -191,11 +203,114 @@ model ResearcherProfile {
   researchFields             ResearcherProfileField[]
   expertiseKeywords          ResearcherProfileExpertiseKeyword[]
   proposalReviewAssignments  ProposalReviewAssignment[] @relation("ReviewAssignmentProfile")
+  accountLinks               ResearcherProfileAccountLink[]
+  publications               ResearcherProfilePublication[]
+  participations             ResearcherProfileParticipation[]
+  history                    ResearcherProfileHistory[]
+  credentialDeliveries       AccountCredentialDelivery[]
 
   @@index([managementOrganizationUnitId, status, fullNameKey])
   @@index([contactEmailKey])
   @@index([contactPhoneKey])
   @@map("researcher_profiles")
+}
+
+model ResearcherProfileAccountLink {
+  id            String           @id @default(uuid())
+  researcherProfileId String     @map("researcher_profile_id")
+  userId        String           @map("user_id")
+  status        String           @default("ACTIVE")
+  effectiveFrom DateTime         @map("effective_from")
+  effectiveUntil DateTime?       @map("effective_until")
+  reason        String?
+  createdById   String           @map("created_by_id")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  researcherProfile ResearcherProfile @relation(fields: [researcherProfileId], references: [id], onDelete: Restrict)
+  user          User             @relation("ProfileAccountLinkUser", fields: [userId], references: [id], onDelete: Restrict)
+  createdBy     User             @relation("ProfileAccountLinkCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([researcherProfileId, status, effectiveUntil])
+  @@index([userId, status, effectiveUntil])
+  @@map("researcher_profile_account_links")
+}
+
+model ResearcherProfilePublication {
+  id                  String           @id @default(uuid())
+  researcherProfileId String           @map("researcher_profile_id")
+  title               String
+  venue               String?
+  publicationYear     Int?             @map("publication_year")
+  doi                 String?
+  authors             String?
+  status              String           @default("ACTIVE")
+  notes               String?
+  createdById         String           @map("created_by_id")
+  updatedById         String           @map("updated_by_id")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  researcherProfile   ResearcherProfile @relation(fields: [researcherProfileId], references: [id], onDelete: Restrict)
+
+  @@index([researcherProfileId, status, publicationYear])
+  @@map("researcher_profile_publications")
+}
+
+model ResearcherProfileParticipation {
+  id                  String           @id @default(uuid())
+  researcherProfileId String           @map("researcher_profile_id")
+  projectTitle        String           @map("project_title")
+  participationRole   String           @map("participation_role")
+  level               String
+  startsOn            DateTime?        @db.Date @map("starts_on")
+  endsOn              DateTime?        @db.Date @map("ends_on")
+  status              String           @default("ACTIVE")
+  notes               String?
+  sourceType          String           @default("SELF_REPORTED") @map("source_type")
+  sourceRecordId      String?          @map("source_record_id")
+  supersedesId        String?          @map("supersedes_id")
+  createdById         String           @map("created_by_id")
+  updatedById         String           @map("updated_by_id")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  researcherProfile   ResearcherProfile @relation(fields: [researcherProfileId], references: [id], onDelete: Restrict)
+
+  @@index([researcherProfileId, status, startsOn])
+  @@index([supersedesId])
+  @@map("researcher_profile_participations")
+}
+
+model ResearcherProfileHistory {
+  id                  String           @id @default(uuid())
+  researcherProfileId String           @map("researcher_profile_id")
+  actorId             String           @map("actor_id")
+  action              String
+  reason              String?
+  beforeFacts         Json?            @map("before_facts")
+  afterFacts          Json?            @map("after_facts")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  researcherProfile   ResearcherProfile @relation(fields: [researcherProfileId], references: [id], onDelete: Restrict)
+  actor               User             @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([researcherProfileId, createdAt])
+  @@map("researcher_profile_history")
+}
+
+model AccountCredentialDelivery {
+  id                  String           @id @default(uuid())
+  researcherProfileId String           @map("researcher_profile_id")
+  userId              String           @map("user_id")
+  recipientEmail      String           @map("recipient_email")
+  templateKey         String           @map("template_key")
+  status              String
+  attempts            Int              @default(0)
+  lastError           String?          @map("last_error")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  researcherProfile   ResearcherProfile @relation(fields: [researcherProfileId], references: [id], onDelete: Restrict)
+  user                User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([researcherProfileId, createdAt])
+  @@index([userId, createdAt])
+  @@map("account_credential_deliveries")
 }
 
 model ResearcherProfileField {

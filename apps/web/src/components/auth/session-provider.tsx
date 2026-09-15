@@ -32,6 +32,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
+    if (user?.mustChangePassword && window.location.pathname !== "/change-password") router.replace("/change-password");
     return shellAccount;
   }
 

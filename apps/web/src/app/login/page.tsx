@@ -11,7 +11,7 @@ export default function LoginPage() {
             <Image src="/logo.png" alt="Học viện Quân y" width={72} height={74} priority />
           </div>
           <div>
-            <p className="login-kicker">Cổng thông tin nội bộ</p>
+            <p className="login-kicker">Cổng thông tin nghiên cứu</p>
             <h1 className="login-title" id="login-title">
               Hệ thống quản lý NCKH, CN và đổi mới sáng tạo
             </h1>
@@ -24,12 +24,12 @@ export default function LoginPage() {
 
       <aside className="login-context">
         <section className="login-summary-card" aria-live="polite">
-          <p className="login-summary-label">Xác thực nội bộ</p>
+          <p className="login-summary-label">Tài khoản được cấp</p>
           <h2>Truy cập hệ thống</h2>
           <dl className="summary-grid">
             <div>
               <dt>Phạm vi</dt>
-              <dd>Người dùng nội bộ được cấp tài khoản</dd>
+              <dd>Người dùng nội bộ và nhà nghiên cứu bên ngoài được cấp tài khoản</dd>
             </div>
             <div>
               <dt>Bảo vệ</dt>

@@ -348,3 +348,32 @@ Use this checklist during PRD writing, architecture, story drafting, implementat
 - Does the UI preserve accessibility basics including labels, focus states, semantic controls, and readable status communication?
 - Does the work include tests or explicit manual verification steps?
 - Does the work avoid scope creep and over-implementation beyond the story?
+
+
+## Researcher Profile completion — 2026-09-15
+
+[Researcher Profile / Account / My Profile contract](../docs/contracts/researcher-profile-access.md) is the current
+source of truth for this feature, including API/data fields, authorization,
+credential delivery, migration compatibility and history retention.
+
+- Scoped SYSTEM_ADMIN and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
+  profiles independently of Accounts, including academic/contact information,
+  position, military rank, expertise, publications and self-reported project
+  history (title, role, Academy/institutional/Ministry/other level, dates, status,
+  notes). Profile activation and account activation remain separate actions.
+- System Account / Access supports optional create-and-link, existing unlinked
+  account selection, unlink and authorized credential reset/resend. Linking is
+  one-to-one across all current links, including inactive records. Staff can
+  provision only matching researcher roles in the profile's explicit scope.
+- Staff confirms the recipient email. The system generates and hashes a temporary
+  password, sends login information by configured SMTP, and requires a different
+  password before any normal authenticated API/UI feature. No plaintext credential
+  is persisted, returned to staff or placed in audit. SMTP acceptance is not proof
+  of inbox delivery; a failed/uncertain send has an explicit new-credential retry.
+- My Profile uses the active Account's current link. Only own personal/scientific
+  fields are editable; type, status, linkage and role/scope remain administrative.
+  Unlink immediately removes self access. Self-reported history grants no access
+  to operational projects/proposals and does not replace source-owned assignments.
+- Profile/link/account/credential/first-password-change audit is preserved with
+  safe transactional change facts. No test files are written or changed for this
+  completion at the user's instruction; verification is recorded in its artifact.

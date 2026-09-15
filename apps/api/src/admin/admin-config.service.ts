@@ -32,6 +32,12 @@ const SYSTEM_PARAMETER_RULES = {
 const NOTIFICATION_TEMPLATE_RULES = {
   user_created: {
     placeholders: new Set(["username", "displayName"])
+  },
+  researcher_account_created: {
+    placeholders: new Set(["username", "displayName", "temporaryPassword", "loginUrl"])
+  },
+  researcher_account_reset: {
+    placeholders: new Set(["username", "displayName", "temporaryPassword", "loginUrl"])
   }
 } as const;
 

@@ -27,3 +27,8 @@ Create the next story specification only after its preceding dependency is under
 - Story 2.4 ships proposal conflict preflight and mutation-time enforcement end to end. Future assignment domains adopt the same contract in their owning stories.
 - Story 2.6 extends the shared audit seam only as needed for researcher-profile projection; Epic 3 retains ownership of broader audit/history platform work.
 - A `ready-for-dev` status means the specification is context-complete. Implementation still honors the dependencies above and must pass each story's evidence gates before changing to `done`.
+
+
+## Profile completion (2026-09-15)
+
+See [completion artifact](../spec-researcher-profile-completion.md). Adds scoped admin/staff management, profile publications and self-reported participation, optional SMTP account onboarding, mandatory password change and My Profile. This does not enable unimplemented operational participation-source providers.

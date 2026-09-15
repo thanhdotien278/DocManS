@@ -1,116 +1,187 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { createResearcherProfile, loadResearcherProfileCatalogs, loadResearcherProfiles, setResearcherProfileStatus, updateResearcherProfile, type ResearcherCatalogItem, type ResearcherProfile, type ResearcherProfileInput, type ResearcherOrganization } from "@/lib/researcher-profiles-api";
+import { createResearcherProfile, getResearcherProfile, loadResearcherProfileCatalogs, loadResearcherProfiles, profileRequest, setResearcherProfileStatus, updateResearcherProfile, type Participation, type ProfileHistory, type Publication, type ResearcherProfile, type ResearcherProfileInput, type ResearcherProfileSummary, type ResearcherOrganization } from "@/lib/researcher-profiles-api";
 
-const emptyForm: ResearcherProfileInput = { fullName: "", managementOrganizationUnitId: "", researchFieldIds: [], expertiseKeywords: [] };
+const emptyForm: ResearcherProfileInput = { fullName: "", profileType: "INTERNAL", managementOrganizationUnitId: "", researchFieldIds: [], expertiseKeywords: [], publications: [], participations: [] };
+const levels = { ACADEMY_INSTITUTIONAL: "Cấp Học viện / cơ sở", MINISTRY: "Cấp Bộ", OTHER: "Cấp khác" };
+const historyActions: Record<string, string> = { CREATE: "Tạo hồ sơ", UPDATE: "Cập nhật hồ sơ", SELF_UPDATE: "Nhà nghiên cứu cập nhật", ACTIVATE: "Kích hoạt", DEACTIVATE: "Ngừng hoạt động", ACCOUNT_CREATED: "Tạo và liên kết tài khoản", ACCOUNT_LINKED: "Liên kết tài khoản", ACCOUNT_UNLINKED: "Hủy liên kết", ACCOUNT_RESET: "Cấp lại mật khẩu tạm thời" };
 
-export function ResearcherProfilesPanel() {
-  const [profiles, setProfiles] = useState<ResearcherProfile[]>([]);
+export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
+  const [profiles, setProfiles] = useState<ResearcherProfileSummary[]>([]);
   const [organizations, setOrganizations] = useState<ResearcherOrganization[]>([]);
-  const [researchFields, setResearchFields] = useState<ResearcherCatalogItem[]>([]);
-  const [academicRanks, setAcademicRanks] = useState<ResearcherCatalogItem[]>([]);
-  const [academicDegrees, setAcademicDegrees] = useState<ResearcherCatalogItem[]>([]);
-  const [form, setForm] = useState<ResearcherProfileInput>(emptyForm);
+  const [catalogs, setCatalogs] = useState<Awaited<ReturnType<typeof loadResearcherProfileCatalogs>>>({ researchFields: [], academicRanks: [], academicDegrees: [] });
   const [editing, setEditing] = useState<ResearcherProfile | null>(null);
-  const [keywordInput, setKeywordInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [message, setMessage] = useState<{ tone: "success" | "error" | "warning"; text: string } | null>(null);
+  const [form, setForm] = useState<ResearcherProfileInput>(emptyForm);
+  const [keywords, setKeywords] = useState("");
+  const [filters, setFilters] = useState({ keyword: "", profileType: "", status: "", organizationUnitId: "", researchFieldId: "", page: "1" });
+  const [total, setTotal] = useState(0);
+  const [canCreate, setCanCreate] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [duplicateCandidates, setDuplicateCandidates] = useState<Array<{ id: string; fullName: string; managementOrganization: ResearcherOrganization }>>([]);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [duplicates, setDuplicates] = useState<Array<{ id: string; fullName: string }>>([]);
+  const [history, setHistory] = useState<ProfileHistory[] | null>(null);
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [reason, setReason] = useState("");
+  const [accountQuery, setAccountQuery] = useState("");
+  const [accounts, setAccounts] = useState<Array<{ id: string; username: string; displayName: string }>>([]);
+  const [selectedAccount, setSelectedAccount] = useState("");
+  const loadVersion = useRef(0);
+
+  const allowed = (action: string) => editing?.viewerAuthorization.allowedActions.some((value) => value === action) ?? false;
+  const editable = editing ? allowed(self ? "researcher-profile.self.update" : "researcher-profile.update") : canCreate;
+
+  function select(profile: ResearcherProfile) {
+    setEditing(profile);
+    setForm({ fullName: profile.fullName, profileType: profile.profileType, managementOrganizationUnitId: profile.managementOrganization.id,
+      externalAffiliation: profile.externalAffiliation, academicRankCatalogItemId: profile.academicRank?.id ?? "", academicDegreeCatalogItemId: profile.academicDegree?.id ?? "",
+      title: profile.title, position: profile.position, militaryRank: profile.militaryRank, contactEmail: profile.contactEmail, contactPhone: profile.contactPhone, contactNote: profile.contactNote,
+      researchFieldIds: profile.researchFields.map((field) => field.id), publications: profile.publications,
+      participations: profile.participations.filter((item) => item.status !== "SUPERSEDED").map(({ id, projectTitle, participationRole, level, startsOn, endsOn, status, notes }) => ({ id, projectTitle, participationRole, level, startsOn, endsOn, status, notes })) });
+    setKeywords(profile.expertiseKeywords.join(", "));
+    setEmail(profile.credentialDelivery?.recipientEmail ?? profile.contactEmail ?? "");
+    setUsername(""); setReason(""); setAccounts([]); setSelectedAccount(""); setHistory(null); setDuplicates([]);
+  }
 
   async function load() {
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
-      const [profileData, catalogs] = await Promise.all([loadResearcherProfiles(search), loadResearcherProfileCatalogs()]);
-      setProfiles(profileData.profiles);
-      setOrganizations(profileData.organizationOptions);
-      setResearchFields(catalogs.researchFields);
-      setAcademicRanks(catalogs.academicRanks);
-      setAcademicDegrees(catalogs.academicDegrees);
-      setForm((current) => ({ ...current, managementOrganizationUnitId: current.managementOrganizationUnitId || profileData.organizationOptions[0]?.id || "" }));
-    } catch (error) {
-      setMessage({ tone: "error", text: error instanceof Error ? error.message : "Không thể tải danh sách hồ sơ." });
-    } finally {
-      setLoading(false);
-    }
+      if (self) {
+        const result = await getResearcherProfile("my-profile");
+        const nextCatalogs = await loadResearcherProfileCatalogs();
+        if (version !== loadVersion.current) return;
+        select(result.profile); setCatalogs(nextCatalogs);
+      } else {
+        const [data, nextCatalogs] = await Promise.all([loadResearcherProfiles(filters), loadResearcherProfileCatalogs()]);
+        if (version !== loadVersion.current) return;
+        setProfiles(data.profiles); setOrganizations(data.organizationOptions); setCatalogs(nextCatalogs); setTotal(data.total); setCanCreate(data.canCreate);
+        setForm((current) => ({ ...current, managementOrganizationUnitId: current.managementOrganizationUnitId || data.organizationOptions[0]?.id || "" }));
+      }
+    } catch (cause) { if (version === loadVersion.current) setError(cause instanceof Error ? cause.message : "Không thể tải hồ sơ."); }
+    finally { if (version === loadVersion.current) setLoading(false); }
   }
+  useEffect(() => { void load(); return () => { loadVersion.current++; }; }, [self, filters]);
 
-  useEffect(() => { void load(); }, [search]);
-
-  function startCreate() {
-    setEditing(null);
-    setForm({ ...emptyForm, managementOrganizationUnitId: organizations[0]?.id ?? "" });
-    setKeywordInput("");
-    setMessage(null);
-    setDuplicateCandidates([]);
-  }
-
-  function startEdit(profile: ResearcherProfile) {
-    setEditing(profile);
-    setForm({ fullName: profile.fullName, managementOrganizationUnitId: profile.managementOrganization.id, externalAffiliation: profile.externalAffiliation ?? "", academicRankCatalogItemId: profile.academicRank?.id, academicDegreeCatalogItemId: profile.academicDegree?.id, title: profile.title ?? "", contactEmail: profile.contactEmail ?? "", contactPhone: profile.contactPhone ?? "", contactNote: profile.contactNote ?? "", researchFieldIds: profile.researchFields.map((field) => field.id), expertiseKeywords: profile.expertiseKeywords });
-    setKeywordInput(profile.expertiseKeywords.join(", "));
-    setMessage(null);
-    setDuplicateCandidates([]);
-  }
-
-  function updateField(field: keyof ResearcherProfileInput, value: string) {
-    setForm((current) => ({ ...current, [field]: value }));
-  }
+  function startCreate() { setEditing(null); setForm({ ...emptyForm, managementOrganizationUnitId: organizations[0]?.id ?? "" }); setKeywords(""); setDuplicates([]); setHistory(null); setMessage(""); setError(""); }
+  function field(key: keyof ResearcherProfileInput, value: string) { setForm((current) => ({ ...current, [key]: value })); }
+  function filter(key: keyof typeof filters, value: string) { setFilters((current) => ({ ...current, [key]: value, ...(key === "page" ? {} : { page: "1" }) })); }
+  async function perform(work: () => Promise<void>) { setBusy(true); setError(""); setMessage(""); try { await work(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể thực hiện thao tác."); } finally { setBusy(false); } }
 
   async function save(confirmDuplicate = false) {
-    setSaving(true);
-    setMessage(null);
-    try {
-      const input = { ...form, expertiseKeywords: keywordInput.split(",").map((item) => item.trim()).filter(Boolean), confirmDuplicate };
+    await perform(async () => {
+      const { managementOrganizationUnitId, profileType, ...personal } = form;
+      const input = { ...personal, expertiseKeywords: keywords.split(",").map((value) => value.trim()).filter(Boolean) };
       if (editing) {
-        await updateResearcherProfile(editing.id, { ...input, contextVersion: editing.viewerAuthorization.contextVersion });
-        setMessage({ tone: "success", text: "Đã cập nhật hồ sơ nhà khoa học." });
+        const result = await updateResearcherProfile(self ? "my-profile" : editing.id, { ...input, ...(!self ? { profileType } : {}), contextVersion: editing.viewerAuthorization.contextVersion });
+        select(result.profile);
       } else {
-        const result = await createResearcherProfile(input);
-        if (result.requiresConfirmation) {
-          setDuplicateCandidates(result.duplicateCandidates);
-          setMessage({ tone: "warning", text: `Có ${result.duplicateCandidates.length} hồ sơ có dấu hiệu trùng. Kiểm tra danh sách rồi bấm xác nhận lưu lần nữa.` });
-          return;
-        }
-        setDuplicateCandidates([]);
-        setMessage({ tone: "success", text: "Đã tạo hồ sơ nhà khoa học." });
+        const result = await createResearcherProfile({ ...input, managementOrganizationUnitId, profileType, confirmDuplicate });
+        if (result.requiresConfirmation) { setDuplicates(result.duplicateCandidates); return; }
+        if (result.profile) select(result.profile);
       }
+      setMessage("Đã lưu hồ sơ.");
+      if (!self) await load();
+    });
+  }
+
+  async function accountAction(action: "" | "/link" | "/unlink" | "/reset") {
+    if (!editing) return;
+    await perform(async () => {
+      const result = await profileRequest<{ delivery?: { status: string } }>(`/${editing.id}/account${action}`, { method: "POST", body: JSON.stringify({ contextVersion: editing.viewerAuthorization.contextVersion, ...(action === "" || action === "/reset" ? { email, username: username || undefined } : {}), ...(action === "/link" ? { userId: selectedAccount } : {}), reason: reason || undefined }) });
+      select((await getResearcherProfile(editing.id)).profile);
+      setMessage(result.delivery ? result.delivery.status === "ACCEPTED" ? "Máy chủ email đã nhận thư. Người nhận cần kiểm tra hộp thư và đổi mật khẩu khi đăng nhập." : "Chưa xác nhận gửi email. Tài khoản đã liên kết; dùng cấp lại mật khẩu tạm thời để thử lại." : "Đã cập nhật liên kết tài khoản.");
       await load();
-      if (!editing) startCreate();
-    } catch (error) {
-      setMessage({ tone: "error", text: error instanceof Error ? error.message : "Không thể lưu hồ sơ." });
-    } finally {
-      setSaving(false);
-    }
+    });
   }
 
-  async function changeStatus(profile: ResearcherProfile) {
-    try {
-      await setResearcherProfileStatus(profile.id, profile.status === "ACTIVE" ? "INACTIVE" : "ACTIVE", profile.viewerAuthorization.contextVersion);
-      setMessage({ tone: "success", text: profile.status === "ACTIVE" ? "Đã ngừng hoạt động hồ sơ." : "Đã kích hoạt hồ sơ." });
-      await load();
-    } catch (error) {
-      setMessage({ tone: "error", text: error instanceof Error ? error.message : "Không thể đổi trạng thái hồ sơ." });
-    }
-  }
+  function publicationField(index: number, key: keyof Publication, value: string | number | null) { setForm((current) => ({ ...current, publications: current.publications?.map((item, i) => i === index ? { ...item, [key]: value } : item) })); }
+  function participationField(index: number, key: keyof Participation, value: string) { setForm((current) => ({ ...current, participations: current.participations?.map((item, i) => i === index ? { ...item, [key]: value } : item) })); }
 
-  function can(profile: ResearcherProfile, action: "researcher-profile.update" | "researcher-profile.activate" | "researcher-profile.deactivate") {
-    return profile.viewerAuthorization.allowedActions.includes(action);
-  }
-
-  return <div className="grid two-column">
-    <section className="section-card">
-      <div className="section-header"><div><h2 className="section-title">Danh sách hồ sơ</h2><p className="section-subtitle">Chỉ hiển thị hồ sơ trong phạm vi tổ chức hiện hành.</p></div><button className="button primary" type="button" onClick={startCreate}>Tạo hồ sơ</button></div>
-      <div className="filter-bar compact"><div className="filter-field"><label htmlFor="researcher-search">Tìm theo tên hoặc chuyên môn</label><input id="researcher-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nhập từ khóa" /></div></div>
-      {message ? <p className={`state-message ${message.tone}`} role="status">{message.text}</p> : null}
-      {duplicateCandidates.length > 0 ? <div className="state-message warning"><strong>Ứng viên trùng trong phạm vi được phép xem</strong><ul>{duplicateCandidates.map((candidate) => <li key={candidate.id}>{candidate.fullName} — {candidate.managementOrganization.name}</li>)}</ul></div> : null}
-      {loading ? <p className="state-message" role="status">Đang tải danh sách hồ sơ...</p> : profiles.length === 0 ? <EmptyState title="Chưa có hồ sơ" message="Tạo hồ sơ độc lập với tài khoản đăng nhập để bắt đầu." /> : <div className="table-wrap"><table className="data-table"><thead><tr><th>Nhà khoa học</th><th>Đơn vị quản lý</th><th>Lĩnh vực</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{profiles.map((profile) => <tr key={profile.id}><td><span className="record-title">{profile.fullName}</span><span className="record-meta">{profile.title || "Chưa có chức danh"}</span></td><td>{profile.managementOrganization.name}</td><td>{profile.researchFields.map((field) => field.name).join(", ") || "—"}</td><td><StatusBadge status={profile.status === "ACTIVE" ? "approved" : "blocked"} /></td><td><div className="row-actions"><button className="button" type="button" disabled={!can(profile, "researcher-profile.update")} onClick={() => startEdit(profile)}>Sửa</button><button className="button" type="button" disabled={!can(profile, profile.status === "ACTIVE" ? "researcher-profile.deactivate" : "researcher-profile.activate")} onClick={() => void changeStatus(profile)}>{profile.status === "ACTIVE" ? "Ngừng hoạt động" : "Kích hoạt"}</button></div></td></tr>)}</tbody></table></div>}
-      <div className="mobile-list">{profiles.map((profile) => <article className="list-card" key={profile.id}><div className="list-card-header"><div><strong>{profile.fullName}</strong><span className="record-meta">{profile.managementOrganization.name}</span></div><StatusBadge status={profile.status === "ACTIVE" ? "approved" : "blocked"} /></div><div className="row-actions"><button className="button" type="button" disabled={!can(profile, "researcher-profile.update")} onClick={() => startEdit(profile)}>Sửa</button><button className="button" type="button" disabled={!can(profile, profile.status === "ACTIVE" ? "researcher-profile.deactivate" : "researcher-profile.activate")} onClick={() => void changeStatus(profile)}>{profile.status === "ACTIVE" ? "Ngừng hoạt động" : "Kích hoạt"}</button></div></article>)}</div>
-    </section>
-    <section className="section-card"><div className="section-header"><div><h2 className="section-title">{editing ? "Cập nhật hồ sơ" : "Tạo hồ sơ độc lập"}</h2><p className="section-subtitle">Không tự tạo hoặc thay đổi tài khoản đăng nhập.</p></div></div><div className="form-grid two"><label className="field"><span>Họ và tên *</span><input value={form.fullName} onChange={(event) => updateField("fullName", event.target.value)} /></label><label className="field"><span>Đơn vị quản lý *</span><select value={form.managementOrganizationUnitId} onChange={(event) => updateField("managementOrganizationUnitId", event.target.value)} disabled={Boolean(editing)}><option value="">Chọn đơn vị</option>{organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}</select></label><label className="field"><span>Học hàm</span><select value={form.academicRankCatalogItemId ?? ""} onChange={(event) => updateField("academicRankCatalogItemId", event.target.value)}><option value="">Chưa chọn</option>{academicRanks.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label className="field"><span>Học vị</span><select value={form.academicDegreeCatalogItemId ?? ""} onChange={(event) => updateField("academicDegreeCatalogItemId", event.target.value)}><option value="">Chưa chọn</option>{academicDegrees.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label className="field"><span>Chức danh</span><input value={form.title ?? ""} onChange={(event) => updateField("title", event.target.value)} /></label><label className="field"><span>Đơn vị công tác ngoài</span><input value={form.externalAffiliation ?? ""} onChange={(event) => updateField("externalAffiliation", event.target.value)} /></label><label className="field"><span>Email liên hệ</span><input type="email" value={form.contactEmail ?? ""} onChange={(event) => updateField("contactEmail", event.target.value)} /></label><label className="field"><span>Điện thoại</span><input value={form.contactPhone ?? ""} onChange={(event) => updateField("contactPhone", event.target.value)} /></label></div><label className="field"><span>Lĩnh vực nghiên cứu *</span><select multiple size={Math.min(Math.max(researchFields.length, 3), 6)} value={form.researchFieldIds} onChange={(event) => setForm((current) => ({ ...current, researchFieldIds: Array.from(event.target.selectedOptions, (option) => option.value) }))}>{researchFields.map((field) => <option key={field.id} value={field.id}>{field.name}</option>)}</select><small className="field-hint">Giữ Ctrl/Cmd để chọn nhiều lĩnh vực.</small></label><label className="field"><span>Từ khóa chuyên môn</span><input value={keywordInput} onChange={(event) => setKeywordInput(event.target.value)} placeholder="Ví dụ: y học quân sự, công nghệ y sinh" /></label><label className="field"><span>Ghi chú liên hệ</span><textarea rows={3} value={form.contactNote ?? ""} onChange={(event) => updateField("contactNote", event.target.value)} /></label><div className="button-row"><button className="button" type="button" onClick={startCreate}>Làm mới</button><button className="button primary" type="button" disabled={saving} onClick={() => void save(false)}>{saving ? "Đang lưu..." : editing ? "Lưu thay đổi" : "Lưu hồ sơ"}</button></div>{!editing && message?.tone === "warning" ? <div className="state-message warning"><p>Hệ thống chỉ hiển thị ứng viên trùng trong phạm vi bạn được xem.</p><button className="button primary" type="button" disabled={saving} onClick={() => void save(true)}>Xác nhận vẫn lưu</button></div> : null}</section>
+  return <div className="grid">
+    {error ? <p className="state-message error" role="alert">{error}</p> : null}
+    {message ? <p className="state-message success" role="status">{message}</p> : null}
+    {loading ? <p role="status">Đang tải hồ sơ…</p> : null}
+    {!self ? <section className="section-card">
+      <div className="section-header"><h2>Hồ sơ nhà khoa học</h2><button className="button primary" disabled={!canCreate || busy} onClick={startCreate}>Tạo hồ sơ</button></div>
+      <div className="form-grid two">
+        <label className="field"><span>Tìm tên, email hoặc chuyên môn</span><input value={filters.keyword} onChange={(event) => filter("keyword", event.target.value)} /></label>
+        <label className="field"><span>Loại nhà nghiên cứu</span><select value={filters.profileType} onChange={(event) => filter("profileType", event.target.value)}><option value="">Tất cả</option><option value="INTERNAL">Nội bộ</option><option value="EXTERNAL">Bên ngoài</option></select></label>
+        <label className="field"><span>Trạng thái hồ sơ</span><select value={filters.status} onChange={(event) => filter("status", event.target.value)}><option value="">Tất cả</option><option value="ACTIVE">Hoạt động</option><option value="INACTIVE">Ngừng hoạt động</option></select></label>
+        <label className="field"><span>Đơn vị quản lý</span><select value={filters.organizationUnitId} onChange={(event) => filter("organizationUnitId", event.target.value)}><option value="">Tất cả đơn vị được cấp</option>{organizations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label className="field"><span>Lĩnh vực</span><select value={filters.researchFieldId} onChange={(event) => filter("researchFieldId", event.target.value)}><option value="">Tất cả</option>{catalogs.researchFields.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+      </div>
+      {!profiles.length && !loading ? <EmptyState title="Không có hồ sơ phù hợp" message="Thay đổi bộ lọc hoặc tạo hồ sơ trong phạm vi được cấp." /> : <div className="table-wrap"><table className="data-table"><thead><tr><th>Họ tên</th><th>Loại / đơn vị</th><th>Trạng thái</th><th>Tài khoản</th><th>Thao tác</th></tr></thead><tbody>{profiles.map((profile) => <tr key={profile.id}><td>{profile.fullName}</td><td>{profile.profileType === "EXTERNAL" ? "Bên ngoài" : "Nội bộ"}<br />{profile.managementOrganization.name}</td><td>{profile.status === "ACTIVE" ? "Hoạt động" : "Ngừng hoạt động"}</td><td>{profile.account?.username ?? "Chưa có tài khoản"}</td><td><button className="button" disabled={busy} onClick={() => void perform(async () => select((await getResearcherProfile(profile.id)).profile))}>Xem / sửa</button></td></tr>)}</tbody></table></div>}
+      <div className="mobile-list">{profiles.map((profile) => <article className="list-card" key={profile.id}><h3>{profile.fullName}</h3><p>{profile.profileType === "EXTERNAL" ? "Bên ngoài" : "Nội bộ"} · {profile.managementOrganization.name}</p><p>{profile.status === "ACTIVE" ? "Hoạt động" : "Ngừng hoạt động"} · {profile.account?.username ?? "Chưa có tài khoản"}</p><button className="button" disabled={busy} onClick={() => void perform(async () => select((await getResearcherProfile(profile.id)).profile))}>Xem / sửa</button></article>)}</div>
+      <div className="button-row"><button className="button" disabled={Number(filters.page) <= 1 || loading} onClick={() => filter("page", String(Number(filters.page) - 1))}>Trang trước</button><span>Trang {filters.page} · {total} hồ sơ</span><button className="button" disabled={Number(filters.page) * 20 >= total || loading} onClick={() => filter("page", String(Number(filters.page) + 1))}>Trang sau</button></div>
+    </section> : null}
+    {self && !editing ? (!loading ? <EmptyState title="Chưa có hồ sơ được liên kết" message="Liên hệ cán bộ quản lý khoa học để kiểm tra liên kết tài khoản." /> : null) : <section className="section-card">
+      <h2>{self ? "Hồ sơ của tôi" : editing ? editing.fullName : "Tạo hồ sơ độc lập"}</h2>
+      <form onSubmit={(event) => { event.preventDefault(); void save(); }}>
+        <fieldset disabled={busy || !editable} style={{ border: 0, padding: 0, minWidth: 0 }}>
+          <div className="form-grid two">
+            <label className="field"><span>Họ và tên *</span><input required maxLength={240} value={form.fullName} onChange={(event) => field("fullName", event.target.value)} /></label>
+            {!self ? <><label className="field"><span>Loại nhà nghiên cứu *</span><select value={form.profileType} disabled={!!editing?.account} onChange={(event) => field("profileType", event.target.value)}><option value="INTERNAL">Nội bộ</option><option value="EXTERNAL">Bên ngoài</option></select></label><label className="field"><span>Đơn vị quản lý *</span><select required value={form.managementOrganizationUnitId} disabled={!!editing} onChange={(event) => field("managementOrganizationUnitId", event.target.value)}><option value="">Chọn đơn vị</option>{organizations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label></> : <p>Đơn vị quản lý: {editing?.managementOrganization.name}</p>}
+            {([['academicRankCatalogItemId', 'Học hàm', catalogs.academicRanks], ['academicDegreeCatalogItemId', 'Học vị', catalogs.academicDegrees]] as const).map(([key, label, options]) => <label className="field" key={key}><span>{label}</span><select value={form[key] ?? ""} onChange={(event) => field(key, event.target.value)}><option value="">Chưa chọn</option>{options.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>)}
+            {([['title', 'Chức danh'], ['position', 'Chức vụ / vị trí công tác'], ['militaryRank', 'Quân hàm'], ['externalAffiliation', 'Đơn vị công tác / tổ chức'], ['contactEmail', 'Email liên hệ'], ['contactPhone', 'Điện thoại']] as const).map(([key, label]) => <label key={key} className="field"><span>{label}</span><input type={key === "contactEmail" ? "email" : key === "contactPhone" ? "tel" : "text"} value={form[key] ?? ""} onChange={(event) => field(key, event.target.value)} /></label>)}
+          </div>
+          <label className="field"><span>Lĩnh vực nghiên cứu *</span><select required multiple size={4} value={form.researchFieldIds} onChange={(event) => setForm((current) => ({ ...current, researchFieldIds: Array.from(event.target.selectedOptions, (option) => option.value) }))}>{catalogs.researchFields.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><small>Giữ Ctrl/Cmd để chọn nhiều lĩnh vực.</small></label>
+          <label className="field"><span>Chuyên môn / từ khóa</span><input value={keywords} onChange={(event) => setKeywords(event.target.value)} placeholder="Phân cách bằng dấu phẩy" /></label>
+          <label className="field"><span>Ghi chú</span><textarea value={form.contactNote ?? ""} onChange={(event) => field("contactNote", event.target.value)} /></label>
+          <h3>Danh sách công bố</h3>
+          {form.publications?.map((item, index) => <fieldset key={item.id ?? `new-${index}`} className="section-card"><legend>Công bố {index + 1}</legend><div className="form-grid two">
+            <label className="field"><span>Tên công bố *</span><input required value={item.title} onChange={(event) => publicationField(index, "title", event.target.value)} /></label>
+            <label className="field"><span>Tạp chí / nơi công bố</span><input value={item.venue ?? ""} onChange={(event) => publicationField(index, "venue", event.target.value)} /></label>
+            <label className="field"><span>Năm công bố</span><input type="number" min={1800} max={2200} value={item.publicationYear ?? ""} onChange={(event) => publicationField(index, "publicationYear", event.target.value ? Number(event.target.value) : null)} /></label>
+            <label className="field"><span>DOI</span><input value={item.doi ?? ""} onChange={(event) => publicationField(index, "doi", event.target.value)} /></label>
+            <label className="field"><span>Tác giả</span><input value={item.authors ?? ""} onChange={(event) => publicationField(index, "authors", event.target.value)} /></label>
+            <label className="field"><span>Trạng thái công bố</span><select value={item.status ?? "ACTIVE"} onChange={(event) => publicationField(index, "status", event.target.value)}><option value="ACTIVE">Hiển thị</option><option value="INACTIVE">Lưu lịch sử</option></select></label>
+            <label className="field"><span>Ghi chú công bố</span><textarea value={item.notes ?? ""} onChange={(event) => publicationField(index, "notes", event.target.value)} /></label>
+          </div>{!item.id ? <button type="button" className="button" onClick={() => setForm((current) => ({ ...current, publications: current.publications?.filter((_, i) => i !== index) }))}>Bỏ mục chưa lưu</button> : null}</fieldset>)}
+          <button type="button" className="button" onClick={() => setForm((current) => ({ ...current, publications: [...(current.publications ?? []), { title: "", status: "ACTIVE" }] }))}>Thêm công bố</button>
+          <h3>Quá trình tham gia nghiên cứu</h3><p className="record-meta">Thông tin tự khai, không cấp quyền trên đề tài. Các phiên bản trước được giữ trong lịch sử.</p>
+          {form.participations?.map((item, index) => <fieldset key={item.id ?? `new-${index}`} className="section-card"><legend>Tham gia {index + 1}</legend><div className="form-grid two">
+            <label className="field"><span>Tên đề tài / dự án *</span><input required value={item.projectTitle} onChange={(event) => participationField(index, "projectTitle", event.target.value)} /></label>
+            <label className="field"><span>Vai trò *</span><input required value={item.participationRole} onChange={(event) => participationField(index, "participationRole", event.target.value)} /></label>
+            <label className="field"><span>Cấp đề tài *</span><select value={item.level} onChange={(event) => participationField(index, "level", event.target.value)}>{Object.entries(levels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+            <label className="field"><span>Trạng thái tham gia</span><select value={item.status ?? "ACTIVE"} onChange={(event) => participationField(index, "status", event.target.value)}><option value="ACTIVE">Đang tham gia</option><option value="INACTIVE">Đã kết thúc</option></select></label>
+            <label className="field"><span>Ngày bắt đầu</span><input type="date" value={item.startsOn ?? ""} onChange={(event) => participationField(index, "startsOn", event.target.value)} /></label>
+            <label className="field"><span>Ngày kết thúc</span><input type="date" value={item.endsOn ?? ""} min={item.startsOn ?? undefined} onChange={(event) => participationField(index, "endsOn", event.target.value)} /></label>
+            <label className="field"><span>Ghi chú tham gia</span><textarea value={item.notes ?? ""} onChange={(event) => participationField(index, "notes", event.target.value)} /></label>
+          </div>{!item.id ? <button type="button" className="button" onClick={() => setForm((current) => ({ ...current, participations: current.participations?.filter((_, i) => i !== index) }))}>Bỏ mục chưa lưu</button> : null}</fieldset>)}
+          <button type="button" className="button" onClick={() => setForm((current) => ({ ...current, participations: [...(current.participations ?? []), { projectTitle: "", participationRole: "", level: "ACADEMY_INSTITUTIONAL", status: "ACTIVE" }] }))}>Thêm quá trình tham gia</button>
+          <div className="button-row"><button className="button primary" type="submit">{busy ? "Đang lưu…" : "Lưu hồ sơ"}</button></div>
+        </fieldset>
+      </form>
+      {duplicates.length ? <div className="state-message warning"><p>Có hồ sơ có thể trùng:</p><ul>{duplicates.map((item) => <li key={item.id}>{item.fullName}</li>)}</ul><button className="button" disabled={busy} onClick={() => void save(true)}>Xác nhận vẫn tạo hồ sơ</button></div> : null}
+      {editing && !self ? <div className="button-row"><button className="button" disabled={busy || !allowed(editing.status === "ACTIVE" ? "researcher-profile.deactivate" : "researcher-profile.activate")} onClick={() => void perform(async () => { select((await setResearcherProfileStatus(editing.id, editing.status === "ACTIVE" ? "INACTIVE" : "ACTIVE", editing.viewerAuthorization.contextVersion)).profile); await load(); })}>{editing.status === "ACTIVE" ? "Ngừng hoạt động hồ sơ" : "Kích hoạt hồ sơ"}</button></div> : null}
+    </section>}
+    {editing && !self ? <section className="section-card"><h2>Tài khoản hệ thống / Quyền truy cập</h2>
+      <p>{editing.account ? `${editing.account.username} — ${editing.account.status === "active" ? "Đang hoạt động" : "Đã khóa"}${editing.account.mustChangePassword ? " · Cần đổi mật khẩu" : ""}` : "Chưa liên kết tài khoản. Hồ sơ vẫn sử dụng được khi không cần truy cập hệ thống."}</p>
+      {editing.credentialDelivery ? <p>Gửi email gần nhất: {editing.credentialDelivery.status === "ACCEPTED" ? "Máy chủ email đã nhận thư" : "Chưa xác nhận gửi — có thể cấp lại mật khẩu tạm thời"}</p> : null}
+      <div className="form-grid two">
+        <label className="field"><span>Email nhận thông tin đăng nhập *</span><input type="email" value={email} disabled={busy} onChange={(event) => setEmail(event.target.value)} /><small>Xác nhận địa chỉ của nhà nghiên cứu trước khi cấp hoặc gửi lại thông tin đăng nhập.</small></label>
+        {!editing.account ? <label className="field"><span>Tên đăng nhập (mặc định là email)</span><input value={username} disabled={busy} onChange={(event) => setUsername(event.target.value)} /></label> : null}
+        <label className="field"><span>Lý do hủy liên kết / cấp lại *</span><input value={reason} disabled={busy} onChange={(event) => setReason(event.target.value)} /></label>
+      </div>
+      <div className="button-row"><button className="button primary" disabled={busy || !email || !allowed("researcher-profile.account.create")} onClick={() => void accountAction("")}>Tạo tài khoản và gửi email</button><button className="button" disabled={busy || !email || !reason || !allowed("researcher-profile.account.reset")} onClick={() => void accountAction("/reset")}>Cấp lại mật khẩu tạm thời / gửi lại</button><button className="button" disabled={busy || !reason || !allowed("researcher-profile.account.unlink")} onClick={() => void accountAction("/unlink")}>Hủy liên kết</button></div>
+      {!editing.account && allowed("researcher-profile.account.link") ? <div><h3>Liên kết tài khoản đã có</h3><label className="field"><span>Tìm tài khoản chưa liên kết</span><input value={accountQuery} onChange={(event) => setAccountQuery(event.target.value)} /></label><button className="button" disabled={busy} onClick={() => void perform(async () => { setAccounts((await profileRequest<{ accounts: typeof accounts }>(`/${editing.id}/account-candidates?keyword=${encodeURIComponent(accountQuery)}`)).accounts); setSelectedAccount(""); })}>Tìm tài khoản</button><label className="field"><span>Tài khoản phù hợp</span><select value={selectedAccount} onChange={(event) => setSelectedAccount(event.target.value)}><option value="">Chọn tài khoản</option>{accounts.map((item) => <option key={item.id} value={item.id}>{item.displayName} ({item.username})</option>)}</select></label><button className="button" disabled={busy || !selectedAccount} onClick={() => void accountAction("/link")}>Liên kết tài khoản</button></div> : null}
+    </section> : null}
+    {editing ? <section className="section-card"><h2>Lịch sử hồ sơ</h2>
+      {editing.participations.filter((item) => item.status === "SUPERSEDED").map((item) => <details key={item.id}><summary>{item.projectTitle} — phiên bản trước</summary><p>{item.participationRole} · {levels[item.level]} · {item.startsOn || "—"} – {item.endsOn || "—"}</p><p>{item.notes}</p></details>)}
+      <button className="button" disabled={busy || !allowed("researcher-profile.history.read")} onClick={() => void perform(async () => setHistory((await profileRequest<{ history: ProfileHistory[] }>(`/${editing.id}/history`)).history))}>Xem lịch sử thay đổi</button>
+      {history?.map((item) => <details key={item.id}><summary>{new Date(item.createdAt).toLocaleString("vi-VN")} · {historyActions[item.action] ?? item.action}</summary><p>{item.reason}</p><HistoryFacts label="Trước" facts={item.beforeFacts} /><HistoryFacts label="Sau" facts={item.afterFacts} /></details>)}
+      {history?.length === 0 ? <p>Chưa có lịch sử thay đổi.</p> : null}
+    </section> : null}
   </div>;
+}
+
+function HistoryFacts({ label, facts }: { label: string; facts?: Record<string, unknown> }) {
+  if (!facts) return null;
+  const names: Record<string, string> = { fullName: "Họ tên", title: "Chức danh", position: "Chức vụ", militaryRank: "Quân hàm", contactEmail: "Email", contactPhone: "Điện thoại", contactNote: "Ghi chú", externalAffiliation: "Đơn vị công tác", linkedUserId: "Tài khoản liên kết", status: "Trạng thái", profileType: "Loại hồ sơ" };
+  return <div><strong>{label}</strong><dl>{Object.entries(names).filter(([key]) => facts[key] != null).map(([key, name]) => <div key={key}><dt>{name}</dt><dd>{String(facts[key])}</dd></div>)}</dl>{Array.isArray(facts.publications) ? <ul>{(facts.publications as Publication[]).map((item, i) => <li key={i}>{item.title} · {item.venue} · {item.publicationYear} · {item.authors} · {item.doi} · {item.status} · {item.notes}</li>)}</ul> : null}{Array.isArray(facts.participations) ? <ul>{(facts.participations as Participation[]).map((item, i) => <li key={i}>{item.projectTitle} · {item.participationRole} · {levels[item.level]} · {item.startsOn?.slice(0, 10)} – {item.endsOn?.slice(0, 10)} · {item.status} · {item.notes}</li>)}</ul> : null}</div>;
 }

@@ -39,7 +39,7 @@ export function LoginForm() {
     }
 
     startTransition(() => {
-      router.replace("/dashboard");
+      router.replace(refreshedAccount.mustChangePassword ? "/change-password" : refreshedAccount.researcherProfileId ? "/my-profile" : "/dashboard");
       router.refresh();
     });
   }
