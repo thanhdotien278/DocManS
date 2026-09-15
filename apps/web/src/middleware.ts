@@ -19,7 +19,7 @@ async function hasValidSession(request: NextRequest) {
       cache: "no-store"
     });
 
-    return response.ok;
+    return response.ok ? (await response.json()).user : null;
   } catch {
     return false;
   }
@@ -34,8 +34,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (hasSessionCookie && !isPublicRoute && !(await hasValidSession(request))) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  if (hasSessionCookie && !isPublicRoute) {
+    const user = await hasValidSession(request);
+    if (!user) return NextResponse.redirect(new URL("/login", request.url));
+    if (user.mustChangePassword && pathname !== "/change-password") return NextResponse.redirect(new URL("/change-password", request.url));
   }
 
   return NextResponse.next();

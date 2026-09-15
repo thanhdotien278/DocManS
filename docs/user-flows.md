@@ -295,3 +295,45 @@ the server error and requires refresh before retry. Revocation requires a reason
 retains assignment/review history, and removes access immediately. The normative
 eligibility and disclosure boundary is the Reviewer / Council Assignment section
 of `authorization-core-business-baseline.md`.
+
+
+## Researcher Profile completion — 2026-09-15
+
+[Researcher Profile / Account / My Profile contract](contracts/researcher-profile-access.md) is the current
+source of truth for this feature, including API/data fields, authorization,
+credential delivery, migration compatibility and history retention.
+
+- Scoped SYSTEM_ADMIN and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
+  profiles independently of Accounts, including academic/contact information,
+  position, military rank, expertise, publications and self-reported project
+  history (title, role, Academy/institutional/Ministry/other level, dates, status,
+  notes). Profile activation and account activation remain separate actions.
+- System Account / Access supports optional create-and-link, existing unlinked
+  account selection, unlink and authorized credential reset/resend. Linking is
+  one-to-one across all current links, including inactive records. Staff can
+  provision only matching researcher roles in the profile's explicit scope.
+- Staff confirms the recipient email. The system generates and hashes a temporary
+  password, sends login information by configured SMTP, and requires a different
+  password before any normal authenticated API/UI feature. No plaintext credential
+  is persisted, returned to staff or placed in audit. SMTP acceptance is not proof
+  of inbox delivery; a failed/uncertain send has an explicit new-credential retry.
+- My Profile uses the active Account's current link. Only own personal/scientific
+  fields are editable; type, status, linkage and role/scope remain administrative.
+  Unlink immediately removes self access. Self-reported history grants no access
+  to operational projects/proposals and does not replace source-owned assignments.
+- Profile/link/account/credential/first-password-change audit is preserved with
+  safe transactional change facts. No test files are written or changed for this
+  completion at the user's instruction; verification is recorded in its artifact.
+
+### Profile onboarding and self completion
+
+`Scoped staff/admin saves profile → confirms recipient email → creates and links
+Account → system sends temporary login credential → researcher logs in → mandatory
+password change → sign in with new password → My Profile completion`.
+
+Accountless branch: save profile and continue directory/history management. No
+account or email is required until access is requested. Existing-account branch:
+select an eligible unlinked matching-role account and link without changing its
+role/scope. Delivery failure branch: inspect pending/unknown status, confirm email
+and reason, issue a new credential. Unlink branch: enter reason, end current link,
+retain history, remove My Profile access immediately.

@@ -91,3 +91,16 @@ GPT-5.6
 - Ultimate context-engine analysis completed; search semantics, no-leak totals/facets, detail composition, and UI verification are explicit.
 
 ### File List
+
+
+## Current completion contract (2026-09-15)
+
+The [completion contract](../../docs/contracts/researcher-profile-access.md) and
+[implementation artifact](spec-researcher-profile-completion.md) supersede this
+original story's field exclusions, account lifecycle endpoint names and delivery
+assumptions. Original task checkboxes above record historical story work, not
+completion evidence for the new feature. Current link actions are create/link/unlink
+and reset, with a unique current link and retained ended rows; scheduled links and
+suspend/correct endpoints are not advertised. Self-reported project history is
+editable and preserved separately from source-owned operational history.
+No tests were added or changed for this completion, per explicit user instruction.

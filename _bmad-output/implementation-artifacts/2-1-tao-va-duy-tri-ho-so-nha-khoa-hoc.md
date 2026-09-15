@@ -64,9 +64,9 @@ so that hệ thống quản lý được cả nhà khoa học đã và chưa có
 
 ### Create authority
 
-- Only an authenticated, active `SCIENTIFIC_MANAGEMENT_STAFF` account may create a profile, and only when the V1 policy explicitly allows `researcher-profile.create` for the selected `managementOrganizationUnitId` within that actor's active organization scopes.
+- Only an authenticated, active `SYSTEM_ADMIN` or `SCIENTIFIC_MANAGEMENT_STAFF` account may create a profile, and only when the V1 policy explicitly allows `researcher-profile.create` for the selected `managementOrganizationUnitId` within that actor's active organization scopes.
 - Creation has no pre-existing profile target; the selected management organization is the authorization target and must be rechecked inside the create transaction. A missing, inactive, unresolved, ambiguous, or out-of-scope organization denies the request before any profile, child row, or audit-success event is written.
-- `SYSTEM_ADMIN` manages platform foundations such as users, roles, organizations, and catalogs; it does not receive researcher-profile business-data access merely from that role. `LEADERSHIP_APPROVAL_AUTHORITY` and `RESEARCHER_INTERNAL_USER` likewise receive no implicit create access.
+- `SYSTEM_ADMIN` also has explicit researcher-profile management permission within granted organization scope; this does not grant other business-record access. `LEADERSHIP_APPROVAL_AUTHORITY` and `RESEARCHER_INTERNAL_USER` likewise receive no implicit create access.
 - The current V1 delegable-action registry contains only `proposal.submit`; therefore `researcher-profile.create` cannot be delegated unless a future policy/story explicitly changes that registry and defines its safeguards.
 
 ### Profile field baseline
@@ -79,7 +79,7 @@ so that hệ thống quản lý được cả nhà khoa học đã và chưa có
 | Optional expertise input | one or more free-text expertise keywords | Preserve display values and store normalized Vietnamese-aware keys for duplicate checks and later scoped search. |
 | System-managed only | stable UUID, `status` (defaults to `ACTIVE`), aggregate/context version, normalized comparison keys, timestamps, creator/updater, audit correlation facts | The client must not set these as arbitrary profile fields; status changes use named `activate`/`deactivate` operations. |
 
-Do not add an account link, participation history, assignment, CV, certificate, publication, identity document, or generic attachment to this model. Account linkage belongs to Story 2.2; participation/history belongs to Stories 2.3 and 2.6; file binaries and metadata belong to the shared files module introduced by Epic 3.
+The completion adds account-link history, publications and self-reported participation to the profile feature. Authentication remains on Account; assignments and file binaries remain in their owning domains.
 
 ### Existing seams to reuse
 
@@ -148,3 +148,16 @@ GPT-5.6
 ### Change Log
 
 - 2026-08-23: Implemented Story 2.1 and moved status to `review` after all validation gates passed.
+
+
+## Current completion contract (2026-09-15)
+
+The [completion contract](../../docs/contracts/researcher-profile-access.md) and
+[implementation artifact](spec-researcher-profile-completion.md) supersede this
+original story's field exclusions, account lifecycle endpoint names and delivery
+assumptions. Original task checkboxes above record historical story work, not
+completion evidence for the new feature. Current link actions are create/link/unlink
+and reset, with a unique current link and retained ended rows; scheduled links and
+suspend/correct endpoints are not advertised. Self-reported project history is
+editable and preserved separately from source-owned operational history.
+No tests were added or changed for this completion, per explicit user instruction.

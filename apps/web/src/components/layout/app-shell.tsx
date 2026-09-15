@@ -24,6 +24,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
+  if (account.mustChangePassword) return <main className="content" id="main-content"><p role="status">Bạn phải đổi mật khẩu tạm thời trước khi tiếp tục.</p>{pathname === "/change-password" ? children : <a href="/change-password">Đổi mật khẩu</a>}<LogoutButton /></main>;
+
   return (
     <div className="app-shell">
       <Sidebar />
@@ -61,6 +63,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <p className="user-menu-meta">
                   {account.systemRoleLabel} - {account.unit}
                 </p>
+                {account.researcherProfileId ? <a className="button" href="/my-profile">Hồ sơ của tôi</a> : null}
                 <a className="button" href="/change-password">Đổi mật khẩu</a>
                 <LogoutButton />
               </div>

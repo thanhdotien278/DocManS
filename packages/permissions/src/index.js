@@ -38,7 +38,16 @@ export const PERMISSION_ACTION_IDS_V1 = [
     "researcher-profile.create",
     "researcher-profile.deactivate",
     "researcher-profile.read",
-    "researcher-profile.update"
+    "researcher-profile.update",
+    "researcher-profile.account.create",
+    "researcher-profile.account.link",
+    "researcher-profile.account.unlink",
+    "researcher-profile.account.reset",
+    "researcher-profile.history.read",
+    "researcher-profile.publication.manage",
+    "researcher-profile.participation.manage",
+    "researcher-profile.self.read",
+    "researcher-profile.self.update"
 ];
 export const VIEWER_RELATIONSHIP_TYPES_V1 = [
     "PROPOSAL_PI",

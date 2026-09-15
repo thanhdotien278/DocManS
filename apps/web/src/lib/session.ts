@@ -3,6 +3,8 @@ import type { SystemRole } from "@rtms/permissions";
 export const AUTH_SESSION_COOKIE = "rtms_session";
 
 export type CurrentUser = {
+  mustChangePassword?: boolean;
+  researcherProfileId?: string;
   id: string;
   username: string;
   displayName: string;
@@ -16,6 +18,8 @@ export type CurrentUser = {
 };
 
 export type ShellAccount = {
+  mustChangePassword?: boolean;
+  researcherProfileId?: string;
   id: string;
   username: string;
   name: string;
@@ -33,6 +37,8 @@ export function getApiBaseUrl() {
 
 export function toShellAccount(user: CurrentUser): ShellAccount {
   return {
+    mustChangePassword: user.mustChangePassword,
+    researcherProfileId: user.researcherProfileId,
     id: user.id,
     username: user.username,
     name: user.displayName,

@@ -3,70 +3,33 @@ import type { ContextVersionTokenV1, ViewerAuthorizationV1 } from "@rtms/permiss
 
 export type ResearcherCatalogItem = { id: string; code: string; name: string; type: string };
 export type ResearcherOrganization = { id: string; code: string; name: string };
-export type ResearcherProfile = {
-  id: string;
-  fullName: string;
-  externalAffiliation?: string | null;
-  academicRank?: ResearcherCatalogItem | null;
-  academicDegree?: ResearcherCatalogItem | null;
-  title?: string | null;
-  contactEmail?: string | null;
-  contactPhone?: string | null;
-  contactNote?: string | null;
-  managementOrganization: ResearcherOrganization;
-  researchFields: ResearcherCatalogItem[];
-  expertiseKeywords: string[];
-  status: string;
-  aggregateVersion: number;
-  createdAt: string;
-  updatedAt: string;
-  viewerAuthorization: ViewerAuthorizationV1;
-};
-
+export type Publication = { id?: string; title: string; venue?: string | null; publicationYear?: number | null; doi?: string | null; authors?: string | null; status?: "ACTIVE" | "INACTIVE"; notes?: string | null };
+export type Participation = { id?: string; projectTitle: string; participationRole: string; level: "ACADEMY_INSTITUTIONAL" | "MINISTRY" | "OTHER"; startsOn?: string | null; endsOn?: string | null; status?: "ACTIVE" | "INACTIVE" | "SUPERSEDED"; notes?: string | null; supersedesId?: string | null };
 export type ResearcherProfileInput = {
-  fullName: string;
-  managementOrganizationUnitId: string;
-  externalAffiliation?: string;
-  academicRankCatalogItemId?: string;
-  academicDegreeCatalogItemId?: string;
-  title?: string;
-  contactEmail?: string;
-  contactPhone?: string;
-  contactNote?: string;
-  researchFieldIds: string[];
-  expertiseKeywords?: string[];
-  confirmDuplicate?: boolean;
+  fullName: string; managementOrganizationUnitId: string; profileType?: "INTERNAL" | "EXTERNAL";
+  externalAffiliation?: string | null; academicRankCatalogItemId?: string | null; academicDegreeCatalogItemId?: string | null;
+  title?: string | null; position?: string | null; militaryRank?: string | null; contactEmail?: string | null; contactPhone?: string | null; contactNote?: string | null;
+  researchFieldIds: string[]; expertiseKeywords?: string[]; publications?: Publication[]; participations?: Participation[]; confirmDuplicate?: boolean;
 };
+export type ResearcherProfile = Omit<ResearcherProfileInput, "managementOrganizationUnitId" | "researchFieldIds"> & {
+  id: string; managementOrganization: ResearcherOrganization; academicRank?: ResearcherCatalogItem | null; academicDegree?: ResearcherCatalogItem | null;
+  researchFields: ResearcherCatalogItem[]; expertiseKeywords: string[]; publications: Publication[]; participations: Participation[];
+  status: "ACTIVE" | "INACTIVE"; aggregateVersion: number; createdAt: string; updatedAt: string; viewerAuthorization: ViewerAuthorizationV1;
+  account: { id: string; username: string; displayName: string; status: string; systemRole: string; mustChangePassword: boolean } | null;
+  credentialDelivery?: { id: string; status: string; recipientEmail: string } | null;
+};
+export type ResearcherProfileSummary = Pick<ResearcherProfile, "id" | "fullName" | "profileType" | "status" | "managementOrganization" | "account" | "viewerAuthorization">;
+export type ProfileHistory = { id: string; action: string; createdAt: string; reason?: string; beforeFacts?: Record<string, unknown>; afterFacts?: Record<string, unknown> };
 
-async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${getApiBaseUrl()}${path}`, { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...init?.headers } });
+export async function profileRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${getApiBaseUrl()}/researcher-profiles${path}`, { ...init, credentials: "include", cache: "no-store", headers: { "Content-Type": "application/json", ...init?.headers } });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(typeof body.message === "string" ? body.message : "Không thể xử lý hồ sơ nhà khoa học.");
   return body as T;
 }
-
-export async function loadResearcherProfiles(keyword?: string) {
-  const query = keyword ? `?keyword=${encodeURIComponent(keyword)}` : "";
-  return requestJson<{ profiles: ResearcherProfile[]; organizationOptions: ResearcherOrganization[]; total: number }>(`/researcher-profiles${query}`);
-}
-
-export async function loadResearcherProfileCatalogs() {
-  return requestJson<{ researchFields: ResearcherCatalogItem[]; academicRanks: ResearcherCatalogItem[]; academicDegrees: ResearcherCatalogItem[] }>("/researcher-profiles/catalogs");
-}
-
-export async function createResearcherProfile(input: ResearcherProfileInput) {
-  return requestJson<{
-    profile: ResearcherProfile | null;
-    duplicateWarning: boolean;
-    requiresConfirmation: boolean;
-    duplicateCandidates: Array<{ id: string; fullName: string; managementOrganization: ResearcherOrganization }>;
-  }>("/researcher-profiles", { method: "POST", body: JSON.stringify(input) });
-}
-
-export async function updateResearcherProfile(id: string, input: Partial<ResearcherProfileInput> & { contextVersion: ContextVersionTokenV1 }) {
-  return requestJson<{ profile: ResearcherProfile }>(`/researcher-profiles/${id}`, { method: "PATCH", body: JSON.stringify(input) });
-}
-
-export async function setResearcherProfileStatus(id: string, status: "ACTIVE" | "INACTIVE", contextVersion: ContextVersionTokenV1) {
-  return requestJson<{ profile: ResearcherProfile }>(`/researcher-profiles/${id}/${status === "ACTIVE" ? "activate" : "deactivate"}`, { method: "POST", body: JSON.stringify({ contextVersion }) });
-}
+export const loadResearcherProfiles = (query: Record<string, string>) => profileRequest<{ profiles: ResearcherProfileSummary[]; organizationOptions: ResearcherOrganization[]; total: number; pageSize: number; canCreate: boolean }>(`?${new URLSearchParams(query)}`);
+export const loadResearcherProfileCatalogs = () => profileRequest<{ researchFields: ResearcherCatalogItem[]; academicRanks: ResearcherCatalogItem[]; academicDegrees: ResearcherCatalogItem[] }>("/catalogs");
+export const getResearcherProfile = (id: string) => profileRequest<{ profile: ResearcherProfile }>(`/${id}`);
+export const createResearcherProfile = (input: ResearcherProfileInput) => profileRequest<{ profile: ResearcherProfile | null; requiresConfirmation: boolean; duplicateCandidates: Array<{ id: string; fullName: string; managementOrganization: ResearcherOrganization }> }>("", { method: "POST", body: JSON.stringify(input) });
+export const updateResearcherProfile = (id: string, input: Partial<ResearcherProfileInput> & { contextVersion: ContextVersionTokenV1 }) => profileRequest<{ profile: ResearcherProfile }>(`/${id}`, { method: "PATCH", body: JSON.stringify(input) });
+export const setResearcherProfileStatus = (id: string, status: string, contextVersion: ContextVersionTokenV1) => profileRequest<{ profile: ResearcherProfile }>(`/${id}/${status === "ACTIVE" ? "activate" : "deactivate"}`, { method: "POST", body: JSON.stringify({ contextVersion }) });

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { AuditLogService } from "./audit-log.service.js";
 import { AuthRateLimitService } from "./auth-rate-limit.service.js";
 import { AuthStore } from "./auth.store.js";
@@ -50,7 +50,7 @@ export class AuthService {
     }
 
     this.rateLimit.reset(rateLimitKey);
-    const session = await this.authStore.createSession(user.id);
+    const session = await this.authStore.createSession(user.id, user.credentialVersion);
     const safeUser = this.authStore.toSafeUser(user);
 
     await this.auditLog.record({
@@ -94,7 +94,7 @@ export class AuthService {
     const session = await this.authStore.getActiveSession(sessionId);
     const user = session ? await this.authStore.findUserById(session.userId) : null;
 
-    return user?.status === "active" ? this.authStore.toSafeUser(user) : null;
+    return user?.status === "active" && session?.credentialVersion === user.credentialVersion ? this.authStore.toSafeUser(user) : null;
   }
 
   async listAuditLogs() {
@@ -103,7 +103,7 @@ export class AuthService {
 
   async changePassword(userId: string, input: { currentPassword: string; newPassword: string }, context: RequestContext) {
     const user = await this.authStore.findUserById(userId);
-    if (!user || !(await this.passwordService.verifyPassword(input.currentPassword, user.passwordHash))) {
+    if (!user || user.status !== "active" || !(await this.passwordService.verifyPassword(input.currentPassword, user.passwordHash))) {
       await this.auditLog.record({ action: "change-password", result: "failure", actorId: userId, targetEntity: "user", targetEntityId: userId, ip: context.ip, userAgent: context.userAgent, reason: "current_password_invalid" });
       throw new BadRequestException({ message: "Mật khẩu hiện tại không chính xác." });
     }
@@ -113,8 +113,12 @@ export class AuthService {
       await this.recordPasswordChangeFailure(user.id, context, "new_password_policy_invalid");
       throw error;
     }
-    await this.authStore.changePassword(user.id, await this.passwordService.hashPassword(input.newPassword));
-    await this.auditLog.record({ action: "change-password", result: "success", actorId: user.id, targetEntity: "user", targetEntityId: user.id, username: user.username, ip: context.ip, userAgent: context.userAgent });
+    if (await this.passwordService.verifyPassword(input.newPassword, user.passwordHash)) throw new BadRequestException({ message: "Mật khẩu mới phải khác mật khẩu hiện tại." });
+    const changed = await this.authStore.changePassword(user.id, await this.passwordService.hashPassword(input.newPassword), user.credentialVersion, { action: user.mustChangePassword ? "first-password-change" : "change-password", username: user.username, ip: context.ip, userAgent: context.userAgent });
+    if (!changed) {
+      await this.recordPasswordChangeFailure(user.id, context, "credential_version_mismatch");
+      throw new ConflictException({ message: "Thông tin xác thực đã thay đổi. Vui lòng đăng nhập lại." });
+    }
   }
 
   async initiatePasswordReset(actor: { id: string; username: string }, userId: string, context: RequestContext) {

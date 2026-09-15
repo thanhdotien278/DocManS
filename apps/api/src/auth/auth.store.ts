@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { SYSTEM_ROLES, type AuthSession, type InternalUser, type SafeUserContext, type SystemRole } from "./auth.types.js";
 
@@ -12,7 +12,8 @@ export class AuthStore {
     const user = await this.prisma.user.findUnique({
       where: { usernameKey: username.trim().toLowerCase() },
       include: {
-        organizationScopes: { include: { organizationUnit: true } }
+        organizationScopes: { include: { organizationUnit: true } },
+        researcherProfile: { select: { id: true, status: true } }
       }
     });
 
@@ -23,7 +24,8 @@ export class AuthStore {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
-        organizationScopes: { include: { organizationUnit: true } }
+        organizationScopes: { include: { organizationUnit: true } },
+        researcherProfile: { select: { id: true, status: true } }
       }
     });
 
@@ -37,19 +39,20 @@ export class AuthStore {
       displayName: user.displayName,
       systemRole: user.systemRole,
       unit: user.unit,
-      organizationScopes: user.organizationScopes
+      organizationScopes: user.organizationScopes,
+      mustChangePassword: user.mustChangePassword,
+      researcherProfileId: user.researcherProfileId
     };
   }
 
-  async createSession(userId: string) {
-    const session = await this.prisma.session.create({
-      data: {
-        userId,
-        expiresAt: new Date(Date.now() + SESSION_TTL_MS)
-      }
+  async createSession(userId: string, credentialVersion: number) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+      const user = await tx.user.findUnique({ where: { id: userId } });
+      if (!user || user.status !== "active" || user.credentialVersion !== credentialVersion) throw new UnauthorizedException();
+      const session = await tx.session.create({ data: { userId, credentialVersion, expiresAt: new Date(Date.now() + SESSION_TTL_MS) } });
+      return this.toAuthSession(session);
     });
-
-    return this.toAuthSession(session);
   }
 
   async revokeSession(sessionId: string) {
@@ -69,18 +72,26 @@ export class AuthStore {
     return this.toAuthSession(revokedSession);
   }
 
-  async changePassword(userId: string, passwordHash: string) {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.user.update({ where: { id: userId }, data: { passwordHash } });
+  async changePassword(userId: string, passwordHash: string, expectedCredentialVersion: number, audit: { action: string; username: string; ip?: string; userAgent?: string }) {
+    return this.prisma.$transaction(async (tx) => {
+      const changed = await tx.user.updateMany({
+        where: { id: userId, status: "active", credentialVersion: expectedCredentialVersion },
+        data: { passwordHash, mustChangePassword: false, credentialVersion: { increment: 1 } }
+      });
+      if (changed.count !== 1) return false;
       await tx.session.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
       await tx.passwordResetToken.updateMany({ where: { userId, usedAt: null }, data: { usedAt: new Date() } });
+      await tx.auditLog.create({ data: { ...audit, actorId: userId, targetEntity: "user", targetEntityId: userId, result: "success" } });
+      return true;
     });
   }
 
   async createPasswordResetToken(userId: string, createdById: string, tokenHash: string, expiresAt: Date) {
     return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+      const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
       await tx.passwordResetToken.updateMany({ where: { userId, usedAt: null }, data: { usedAt: new Date() } });
-      return tx.passwordResetToken.create({ data: { userId, createdById, tokenHash, expiresAt } });
+      return tx.passwordResetToken.create({ data: { userId, createdById, tokenHash, expiresAt, credentialVersion: user.credentialVersion } });
     });
   }
 
@@ -92,6 +103,9 @@ export class AuthStore {
       if (!token) {
         return null;
       }
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${token.userId} FOR UPDATE`;
+      const user = await tx.user.findUnique({ where: { id: token.userId } });
+      if (!user || user.status !== "active" || user.credentialVersion !== token.credentialVersion) return null;
       const consumed = await tx.passwordResetToken.updateMany({
         where: { id: token.id, usedAt: null, expiresAt: { gt: new Date() } },
         data: { usedAt: new Date() }
@@ -99,7 +113,7 @@ export class AuthStore {
       if (consumed.count !== 1) {
         return null;
       }
-      await tx.user.update({ where: { id: token.userId }, data: { passwordHash } });
+      await tx.user.update({ where: { id: token.userId }, data: { passwordHash, mustChangePassword: false, credentialVersion: { increment: 1 } } });
       await tx.session.updateMany({ where: { userId: token.userId, revokedAt: null }, data: { revokedAt: new Date() } });
       await tx.passwordResetToken.updateMany({ where: { userId: token.userId, usedAt: null }, data: { usedAt: new Date() } });
       return token.userId;
@@ -132,6 +146,9 @@ export class AuthStore {
     status: string;
     systemRole: string | null;
     unit: string;
+    mustChangePassword?: boolean;
+    credentialVersion?: number;
+    researcherProfile?: { id: string; status: string } | null;
     organizationScopes?: Array<{
       isPrimary: boolean;
       organizationUnit: {
@@ -167,7 +184,10 @@ export class AuthStore {
       status: user.status === "active" ? "active" : "disabled",
       systemRole,
       unit: organizationScopes[0].name,
-      organizationScopes
+      organizationScopes,
+      mustChangePassword: user.mustChangePassword ?? false,
+      credentialVersion: user.credentialVersion ?? 0,
+      researcherProfileId: user.researcherProfile?.status === "ACTIVE" ? user.researcherProfile.id : undefined
     };
   }
 
@@ -177,8 +197,10 @@ export class AuthStore {
     createdAt: Date;
     expiresAt: Date;
     revokedAt: Date | null;
+    credentialVersion: number;
   }): AuthSession {
     return {
+      credentialVersion: session.credentialVersion,
       id: session.id,
       userId: session.userId,
       createdAt: session.createdAt.toISOString(),

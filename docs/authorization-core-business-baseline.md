@@ -110,9 +110,9 @@ scope, trạng thái, context và conflict đều phải đạt. Không có khá
 
 | Hành động | Quyền |
 | --- | --- |
-| Tạo/cập nhật/kích hoạt/ngừng hoạt động | `SCIENTIFIC_MANAGEMENT_STAFF` toàn Học viện; Thư ký khoa học có scope đơn vị và assignment chức năng phù hợp |
+| Tạo/cập nhật/kích hoạt/ngừng hoạt động | `SYSTEM_ADMIN` và `SCIENTIFIC_MANAGEMENT_STAFF` trong scope tổ chức được cấp rõ ràng |
 | Xác minh/gộp hồ sơ trùng | Quản lý hoặc Thư ký có scope cảnh báo/xác minh; chỉ Quản lý khoa học phê duyệt gộp |
-| Liên kết tài khoản | Quản lý/Thư ký có scope; một hồ sơ chỉ một account active tại một thời điểm và một account không liên kết nhiều hồ sơ |
+| Liên kết tài khoản | `SYSTEM_ADMIN` và `SCIENTIFIC_MANAGEMENT_STAFF` có scope; một hồ sơ chỉ một liên kết account hiện hành, kể cả khi inactive và một account không liên kết nhiều hồ sơ |
 | Xem dữ liệu định danh/liên hệ | Chỉ người có scope quản lý hoặc quan hệ nghiệp vụ cần thiết; danh sách/search/notification dùng dữ liệu tối thiểu |
 | Tham gia đề tài/phản biện | Chỉ qua quan hệ/assignment riêng trên từng bản ghi |
 
@@ -300,3 +300,32 @@ disclosure, versioning hoặc retention phải:
 2. cập nhật contract/fixture trong `packages/permissions` nếu chạm authorization;
 3. bổ sung acceptance tests cho đường cho phép và đường bị từ chối;
 4. ghi rõ migration/compatibility impact trước khi code.
+
+
+## Researcher Profile completion — 2026-09-15
+
+[Researcher Profile / Account / My Profile contract](contracts/researcher-profile-access.md) is the current
+source of truth for this feature, including API/data fields, authorization,
+credential delivery, migration compatibility and history retention.
+
+- Scoped SYSTEM_ADMIN and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
+  profiles independently of Accounts, including academic/contact information,
+  position, military rank, expertise, publications and self-reported project
+  history (title, role, Academy/institutional/Ministry/other level, dates, status,
+  notes). Profile activation and account activation remain separate actions.
+- System Account / Access supports optional create-and-link, existing unlinked
+  account selection, unlink and authorized credential reset/resend. Linking is
+  one-to-one across all current links, including inactive records. Staff can
+  provision only matching researcher roles in the profile's explicit scope.
+- Staff confirms the recipient email. The system generates and hashes a temporary
+  password, sends login information by configured SMTP, and requires a different
+  password before any normal authenticated API/UI feature. No plaintext credential
+  is persisted, returned to staff or placed in audit. SMTP acceptance is not proof
+  of inbox delivery; a failed/uncertain send has an explicit new-credential retry.
+- My Profile uses the active Account's current link. Only own personal/scientific
+  fields are editable; type, status, linkage and role/scope remain administrative.
+  Unlink immediately removes self access. Self-reported history grants no access
+  to operational projects/proposals and does not replace source-owned assignments.
+- Profile/link/account/credential/first-password-change audit is preserved with
+  safe transactional change facts. No test files are written or changed for this
+  completion at the user's instruction; verification is recorded in its artifact.

@@ -16,6 +16,9 @@ export type InternalUser = {
   systemRole: SystemRole;
   unit: string;
   organizationScopes: OrganizationScope[];
+  mustChangePassword?: boolean;
+  credentialVersion: number;
+  researcherProfileId?: string;
 };
 
 export type OrganizationScope = {
@@ -31,6 +34,8 @@ export type SafeUserContext = {
   systemRole: SystemRole;
   unit: string;
   organizationScopes: OrganizationScope[];
+  mustChangePassword?: boolean;
+  researcherProfileId?: string;
 };
 
 export type AuthSession = {
@@ -39,6 +44,7 @@ export type AuthSession = {
   createdAt: string;
   expiresAt: string;
   revokedAt?: string;
+  credentialVersion: number;
 };
 
 export type AuditAction = string;

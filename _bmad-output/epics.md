@@ -144,7 +144,7 @@ disclosure; unresolved context fails closed and important changes are audited.
 - NFR3: Search and filter interactions on primary administrative lists complete within 2 seconds for at least 95 percent of measured requests under normal phase 1 conditions.
 - NFR4: Exports, reminder batches, and derived reporting workloads provide queued/progress/completion feedback and do not block normal interactive requests.
 - NFR5: All authenticated traffic requires encrypted transport in deployment environments.
-- NFR6: Passwords, credentials, and session-related secrets are never stored or transmitted in plaintext application flows.
+- NFR6: Passwords and session secrets are never persisted in plaintext or returned in ordinary application responses. Only initial/replacement temporary credentials may be delivered through the protected credential-email flow.
 - NFR7: Backend authorization protects dashboards, reports, search, exports, workflow actions, files, and history with allowed and denied tests.
 - NFR8: Authorization fails closed when scope, participation, assignment, conflict, delegation, or state context cannot be resolved safely.
 - NFR9: Critical-action audit logs are queryable by authorized users or operational support tooling.
@@ -3644,3 +3644,32 @@ So that tôi sử dụng số liệu ngoài hệ thống mà vẫn đúng phạm
 **When** idempotency key đã có outcome
 **Then** hệ thống không tạo duplicate business export ngoài quy tắc
 **And** trạng thái success/failure/cancel cùng correlation ID có thể truy vết.
+
+
+## Researcher Profile completion — 2026-09-15
+
+[Researcher Profile / Account / My Profile contract](../docs/contracts/researcher-profile-access.md) is the current
+source of truth for this feature, including API/data fields, authorization,
+credential delivery, migration compatibility and history retention.
+
+- Scoped SYSTEM_ADMIN and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
+  profiles independently of Accounts, including academic/contact information,
+  position, military rank, expertise, publications and self-reported project
+  history (title, role, Academy/institutional/Ministry/other level, dates, status,
+  notes). Profile activation and account activation remain separate actions.
+- System Account / Access supports optional create-and-link, existing unlinked
+  account selection, unlink and authorized credential reset/resend. Linking is
+  one-to-one across all current links, including inactive records. Staff can
+  provision only matching researcher roles in the profile's explicit scope.
+- Staff confirms the recipient email. The system generates and hashes a temporary
+  password, sends login information by configured SMTP, and requires a different
+  password before any normal authenticated API/UI feature. No plaintext credential
+  is persisted, returned to staff or placed in audit. SMTP acceptance is not proof
+  of inbox delivery; a failed/uncertain send has an explicit new-credential retry.
+- My Profile uses the active Account's current link. Only own personal/scientific
+  fields are editable; type, status, linkage and role/scope remain administrative.
+  Unlink immediately removes self access. Self-reported history grants no access
+  to operational projects/proposals and does not replace source-owned assignments.
+- Profile/link/account/credential/first-password-change audit is preserved with
+  safe transactional change facts. No test files are written or changed for this
+  completion at the user's instruction; verification is recorded in its artifact.
