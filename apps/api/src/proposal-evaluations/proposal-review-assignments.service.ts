@@ -160,7 +160,12 @@ export class ProposalReviewAssignmentsService {
    * transaction before conflict and duplicate checks, so a stale candidate cannot create a grant.
    */
   async assignReviewer(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>): Promise<any> {
-    if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (s, a) => s.assignReviewer(a, proposalId, input));
+    if (!this.transactional) {
+      const result = await this.mutate(actor, proposalId, input.contextVersion, (s, a) => s.assignReviewer(a, proposalId, input));
+      // A conflict rejection commits only its failure audit; throw after that transaction commits.
+      if (result instanceof BadRequestException) throw result;
+      return result;
+    }
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
     assertScientificManagementScope(actor, proposal);
     assertProposalStatus(proposal, REVIEWER_ASSIGNABLE_STATUSES, "Chỉ hồ sơ đã nộp hoặc đang đánh giá mới được phân công người đánh giá.");
@@ -203,7 +208,7 @@ export class ProposalReviewAssignmentsService {
         })
       });
 
-      throw new BadRequestException({
+      return new BadRequestException({
         message: `Không thể phân công ${candidate.displayName}: ${conflict.reason}`,
         reasonCode: conflict.reasonCode
       });

@@ -242,6 +242,7 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
                   <th>Người đánh giá</th>
                   <th>Vai trò</th>
                   <th>Hạn đánh giá</th>
+                  <th>Trạng thái phân công</th>
                   <th>Tình trạng phiếu</th>
                   <th>Thao tác</th>
                 </tr>
@@ -254,13 +255,19 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
                       <span className="record-meta">
                         {assignment.reviewerUnit} · Phân công {formatDate(assignment.assignedAt)}
                       </span>
+                      <span className="record-meta">Người phân công: {assignment.assignedByDisplayName}</span>
                     </td>
                     <td>{assignment.assignmentRoleLabel}</td>
                     <td>{formatDueDate(assignment.dueDate)}</td>
                     <td>
-                      {assignment.status === "revoked" ? (
-                        <span className="record-meta">{assignment.statusLabel}</span>
-                      ) : assignment.reviewStatus === "submitted" ? (
+                      <span className="record-title">{assignment.statusLabel}</span>
+                      <span className="record-meta">Hiệu lực từ {formatDate(assignment.effectiveFrom)}</span>
+                      {assignment.effectiveUntil ? <span className="record-meta">Đến {formatDate(assignment.effectiveUntil)}</span> : null}
+                      {assignment.completedAt ? <span className="record-meta">Hoàn thành {formatDate(assignment.completedAt)}</span> : null}
+                      {assignment.revokedAt ? <span className="record-meta">Thu hồi {formatDate(assignment.revokedAt)}</span> : null}
+                    </td>
+                    <td>
+                      {assignment.reviewStatus === "submitted" ? (
                         <>
                           <span className="record-title">
                             Đã gửi · {assignment.reviewTotalScore}/{progress.maxTotalScore}

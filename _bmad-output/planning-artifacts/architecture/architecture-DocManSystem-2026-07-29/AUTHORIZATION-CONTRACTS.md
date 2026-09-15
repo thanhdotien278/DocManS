@@ -290,7 +290,10 @@ or `committee_member`, default reviewer), optional UTC effective dates/deadline.
 Account ID/username inputs do not select an assignee and are rejected. The backend
 derives the existing linked account from the active profile and rechecks all
 baseline eligibility rules within `runProposalMutation` before creating evidence.
-The revoke endpoint retains its `note` plus `contextVersion` payload.
+The revoke endpoint retains its `note` plus `contextVersion` payload; `note` is
+required, nonblank, and at most 2000 trimmed characters. Candidate conflict
+rejection commits only its failure audit before returning the rejection response;
+no assignment or workflow change is committed.
 
 Persist a nullable source-profile foreign key for legacy compatibility; require
 it for all new application assignments. Do not infer/backfill historical identity.

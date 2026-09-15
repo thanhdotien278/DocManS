@@ -521,6 +521,10 @@ not allow another request.
 
 Changing or revoking an assignment uses the same explicit operation and keeps
 the prior assignment in history.
+The assignment table shows its lifecycle status separately from review status,
+the assigning staff member, effective period, and completion/revocation time.
+Revoked rows still show whether a review was submitted. These fields use the
+existing authorized assignment response; reviewer access still ends on revocation.
 
 ### Flow 6 — Reviewer submits evaluation
 
