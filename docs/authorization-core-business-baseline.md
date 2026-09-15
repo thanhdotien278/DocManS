@@ -182,6 +182,9 @@ reviews, immediately removes its access grant, and permits a later new assignmen
 only through the same checks. Profile deactivation prevents new assignments;
 this feature does not rewrite historical assignments or submitted evidence.
 Existing identity/disclosure policy applies to both duty types on every surface.
+Candidate conflict-rejected assignment attempts retain a failure audit without creating an
+assignment or changing workflow state. The rejection must not roll back its own
+audit evidence. Successful assignment/revocation and their audit remain atomic.
 
 ### Chỉnh sửa sau nộp
 

@@ -39,11 +39,11 @@ export class ProposalDecisionDto {
   note?: string;
 }
 
-/** Same shape as a decision note: an optional free-text reason, bounded at 2000 characters. */
+/** Revocation requires a nonblank reason, bounded at 2000 characters. */
 export class RevokeReviewAssignmentDto {
   [key: string]: unknown;
 
-  note?: string;
+  note!: string;
   contextVersion!: ContextVersionTokenV1;
 }
 
@@ -152,7 +152,7 @@ export const proposalDecisionPipe: PipeTransform<unknown, ProposalDecisionDto> =
 export const revokeReviewAssignmentPipe: PipeTransform<unknown, RevokeReviewAssignmentDto> = {
   transform(value: unknown) {
     const input = value === undefined || value === null || value === "" ? {} : assertRecord(value);
-    assertOptionalText(input.note, "note", 2000);
+    assertRequiredText(input.note, "note", 2000);
     return { ...input, contextVersion: readContextVersion(input) } as RevokeReviewAssignmentDto;
   }
 };

@@ -28,6 +28,8 @@ export type ProposalReviewAssignment = {
   assignedById: string;
   assignedByDisplayName: string;
   assignedAt: string;
+  effectiveFrom: string;
+  effectiveUntil: string;
   dueDate: string;
   revokedAt: string;
   completedAt: string;
