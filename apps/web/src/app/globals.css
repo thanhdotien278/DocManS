@@ -70,6 +70,7 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 select:focus-visible,
+textarea:focus-visible,
 summary:focus-visible {
   outline: 3px solid rgba(214, 165, 30, 0.42);
   outline-offset: 2px;
@@ -1266,6 +1267,86 @@ summary:focus-visible {
 
 .field textarea {
   resize: vertical;
+}
+
+.multi-select-control {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 6px;
+}
+
+.multi-select-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.multi-select-chip {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  color: var(--text-primary);
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.field .multi-select-control input {
+  min-height: 30px;
+  flex: 1 1 180px;
+  border: 0;
+  padding: 4px 6px;
+}
+
+.field .multi-select-control input:focus-visible {
+  outline-offset: 0;
+}
+
+.multi-select-toggle {
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  color: var(--text-primary);
+  padding: 4px 10px;
+}
+
+.multi-select-menu {
+  display: grid;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 6px;
+  box-shadow: var(--shadow);
+}
+
+.multi-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius);
+  padding: 8px;
+}
+
+.multi-select-option:hover,
+.multi-select-option:focus-within {
+  background: var(--surface-muted);
+}
+
+.field .multi-select-option input {
+  width: auto;
+  min-height: auto;
 }
 
 .state-message {
