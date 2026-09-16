@@ -129,7 +129,7 @@ Nguyên tắc form:
 
 - Form mobile dùng một cột, input rộng toàn hàng.
 - Các section dài cần có tiêu đề rõ và có thể thu gọn nếu phù hợp.
-- Action chính như Lưu nháp, Nộp chính thức, Phê duyệt nên nằm trong sticky action bar khi form dài.
+- Action chính như Lưu nháp, Nộp chính thức, Trình phê duyệt hoặc Phê duyệt nên nằm trong sticky action bar khi form dài; nhãn phải phân biệt rõ gửi trình và quyết định cuối.
 - Không đặt quá nhiều nút ngang hàng trên mobile; dùng menu phụ cho hành động ít dùng.
 - Vùng bấm của nút, tab, checkbox, radio, menu tối thiểu gần `44px`.
 
@@ -295,8 +295,9 @@ Trong màn hình chi tiết hồ sơ:
 
 Chống xung đột lợi ích:
 
-- Trên hồ sơ mà người dùng là chủ nhiệm hoặc thành viên, các nút phê duyệt và đánh giá phải hiển thị nhưng bị vô hiệu hóa, kèm lý do bằng ngôn ngữ dễ hiểu.
-- Không ẩn nút một cách im lặng, vì người dùng sẽ không hiểu vì sao mình không làm được.
+- Trên proposal mà người dùng có context workflow nhưng bị conflict hoặc state chặn, action liên quan phải hiển thị disabled kèm lý do bằng ngôn ngữ dễ hiểu.
+- Nếu backend không cấp action vì người dùng không liên quan, UI bỏ toàn bộ section; không dựng thẻ workflow toàn cục trên trang hồ sơ nhà khoa học.
+- `Phiếu đánh giá của tôi` chỉ hiện với assignment đang hiệu lực trên đúng proposal/vòng đánh giá; `Phân công đánh giá` chỉ hiện với capability staff; `Trình phê duyệt` là action staff, còn `Phê duyệt`/`Từ chối` chỉ dành cho approval authority.
 - Danh sách việc chờ xử lý phải loại sẵn các hồ sơ mà người dùng bị loại trừ, và nói rõ đã loại trừ.
 
 Cần tránh:

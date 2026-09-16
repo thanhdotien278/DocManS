@@ -427,6 +427,7 @@ RTMS is a browser-based internal administrative web application optimized for mu
 - FR17: Scientific management staff can assign/revoke proposal reviewers or council members from eligible ACTIVE Scientist Profiles, deriving the existing linked account, enforcing current record scope, workflow, conflict and context checks, and preserving append-only audit and disclosure. See the Reviewer / Council Assignment section of `docs/authorization-core-business-baseline.md`.
 - FR18: Reviewers and committee members can access assigned proposals and submit scores, comments, and recommendations.
 - FR19: Scientific management staff can monitor review progress and consolidate evaluation outcomes.
+- FR19a: Scientific management staff can submit a completed, consolidated proposal dossier to the leadership approval authority; this action is labelled "Trình phê duyệt" / "Gửi lãnh đạo phê duyệt" and never grants final approve/reject authority.
 - FR20: Leadership or approval authority can review proposal history, evaluation outputs, and supporting files before making an approval decision.
 - FR21: Leadership or approval authority can approve, reject, or otherwise disposition a proposal according to workflow rules.
 - FR22: The system can treat proposal statuses as controlled states and restrict actions based on current proposal state.
@@ -712,6 +713,20 @@ reviewer, and secretary authority remains record-scoped.
   files, and the reviewer's own review are available; unassigned records and
   other reviewers' reviews remain unavailable unless policy explicitly allows
   them.
+- AC-PERM-05a: Given a user has no active assignment on the current proposal,
+  when capabilities are evaluated, then `proposal.review.submit` is not allowed
+  and the evaluation section is omitted; an inactive, revoked, expired, or
+  missing assignment also denies the evaluation API.
+- AC-PERM-05b: Given a scientific management staff user is viewing a proposal,
+  when the proposal is in an assignable state, then reviewer assignment and
+  `Trình phê duyệt` capabilities are evaluated for that proposal only; other
+  users receive no such capability, and staff never receive final approval.
+- AC-PERM-05c: Given a leadership approval authority is viewing a proposal,
+  when it is ready for approval and no conflict exists, then approve/reject are
+  available; conflict or state denial remains disabled with a reason.
+- AC-PERM-05d: Given a user opens a researcher profile page, when the profile is
+  not a proposal detail context, then evaluation, assignment, and approval
+  sections are absent regardless of system role or other-record assignments.
 - AC-PERM-06: Given a candidate is PI, member, secretary, or another disqualified
   participant on a record, when staff attempts to assign an independent
   reviewer or conflicting council role, then the assignment is rejected and no

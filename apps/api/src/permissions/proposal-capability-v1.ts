@@ -96,13 +96,16 @@ function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): {
     return (action === "file.upload" ? input.canManageFiles : input.canEdit) ? null : blocked(input.proposal.status === "draft" || input.proposal.status === "supplement_requested" ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");
   }
   if (action === "proposal.review.assign") {
-    if (input.participation?.isParticipant) return blocked("CONFLICT_DENIED");
     if (input.actor.systemRole !== "SCIENTIFIC_MANAGEMENT_STAFF") return blocked("ACTION_NOT_GRANTED");
+    if (!input.participation) return blocked("CONTEXT_UNRESOLVED");
+    if (input.participation?.isParticipant) return blocked("CONFLICT_DENIED");
     return ["submitted", "resubmitted", "under_review"].includes(input.proposal.status) ? null : blocked("WORKFLOW_STATE_DENIED");
   }
   if (action === "proposal.review.consolidate") {
-    if (input.participation?.isParticipant || input.reviewAccess?.isAssignedReviewer) return blocked("CONFLICT_DENIED");
     if (input.actor.systemRole !== "SCIENTIFIC_MANAGEMENT_STAFF") return blocked("ACTION_NOT_GRANTED");
+    if (input.participation?.isParticipant || input.reviewAccess?.isAssignedReviewer) return blocked("CONFLICT_DENIED");
+    if (!input.participation) return blocked("CONTEXT_UNRESOLVED");
+    if (!input.reviewAccess) return blocked("CONTEXT_UNRESOLVED");
     return ["under_review", "ready_for_approval"].includes(input.proposal.status) ? null : blocked("WORKFLOW_STATE_DENIED");
   }
   if (action === "proposal.completeness.check") {
@@ -120,8 +123,10 @@ function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): {
     if (!input.reviewAccess?.isAssignedReviewer) return blocked("ACTION_NOT_GRANTED");
     return input.proposal.status === "under_review" ? null : blocked("WORKFLOW_STATE_DENIED");
   }
-  if (input.participation?.isParticipant || input.reviewAccess?.isAssignedReviewer) return blocked("CONFLICT_DENIED");
   if (input.actor.systemRole !== "LEADERSHIP_APPROVAL_AUTHORITY") return blocked("ACTION_NOT_GRANTED");
+  if (input.participation?.isParticipant || input.reviewAccess?.isAssignedReviewer) return blocked("CONFLICT_DENIED");
+  if (!input.participation) return blocked("CONTEXT_UNRESOLVED");
+  if (!input.reviewAccess) return blocked("CONTEXT_UNRESOLVED");
   return input.proposal.status === "ready_for_approval" ? null : blocked("WORKFLOW_STATE_DENIED");
 }
 

@@ -156,6 +156,20 @@ Arrays are sorted by canonical ID. The DTO contains only the viewer's own
 relationships and minimum facts needed to explain the result. It never exposes
 another user's assignment, conflict source, or undisclosed review material.
 
+For proposal workflow projections, `allowedActions` and `blockedActions` are
+record-scoped and fail closed. A blocked action with `ACTION_NOT_GRANTED` is
+irrelevant to the viewer and the client must omit its entire workflow section.
+`CONFLICT_DENIED` and `WORKFLOW_STATE_DENIED` describe a relevant action that
+must remain disabled with the server reason. `proposal.review.submit` requires
+an active `ProposalReviewAssignment` for the exact proposal and current review
+round; account role or an assignment on another proposal is insufficient.
+`proposal.review.assign` and staff consolidation/routing require
+`SCIENTIFIC_MANAGEMENT_STAFF` capability on that proposal. Final
+`proposal.decision.approve`/`proposal.decision.reject` require
+`LEADERSHIP_APPROVAL_AUTHORITY` and the ready-for-approval state with no conflict;
+`SYSTEM_ADMIN` has no implicit business workflow capability. Researcher profile
+responses never embed proposal review/assignment/approval sections.
+
 ## 7. Review Disclosure Matrix
 
 | Audience/state | Identity | Raw score/comment | Consolidation | Allowed response |
