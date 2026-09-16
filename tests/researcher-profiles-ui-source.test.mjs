@@ -6,11 +6,12 @@ describe("Story 2.1 researcher profile UI source", () => {
   it("provides labelled management states, capability-driven actions, and duplicate confirmation", async () => {
     const source = await readFile("apps/web/src/components/researcher-profiles/researcher-profiles-panel.tsx", "utf8");
     assert.match(source, /Họ và tên \*/);
-    assert.match(source, /Đang tải danh sách hồ sơ/);
+    assert.match(source, /Đang tải hồ sơ/);
     assert.match(source, /role="status"/);
     assert.match(source, /viewerAuthorization\.allowedActions/);
-    assert.match(source, /Xác nhận vẫn lưu/);
-    assert.match(source, /select multiple/);
+    assert.match(source, /Xác nhận vẫn tạo hồ sơ/);
+    assert.match(source, /multi-select-chip/);
+    assert.match(source, /type="search"/);
   });
 
   it("registers a mobile-accessible route and scoped navigation entry", async () => {

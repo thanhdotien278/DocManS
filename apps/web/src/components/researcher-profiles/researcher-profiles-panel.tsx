@@ -14,6 +14,8 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
   const [catalogs, setCatalogs] = useState<Awaited<ReturnType<typeof loadResearcherProfileCatalogs>>>({ researchFields: [], academicRanks: [], academicDegrees: [] });
   const [editing, setEditing] = useState<ResearcherProfile | null>(null);
   const [form, setForm] = useState<ResearcherProfileInput>(emptyForm);
+  const [researchFieldQuery, setResearchFieldQuery] = useState("");
+  const [researchFieldOpen, setResearchFieldOpen] = useState(false);
   const [keywords, setKeywords] = useState("");
   const [filters, setFilters] = useState({ keyword: "", profileType: "", status: "", organizationUnitId: "", researchFieldId: "", page: "1" });
   const [total, setTotal] = useState(0);
@@ -34,6 +36,8 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
 
   const allowed = (action: string) => editing?.viewerAuthorization.allowedActions.some((value) => value === action) ?? false;
   const editable = editing ? allowed(self ? "researcher-profile.self.update" : "researcher-profile.update") : canCreate;
+  const selectedResearchFields = catalogs.researchFields.filter((item) => form.researchFieldIds.includes(item.id));
+  const visibleResearchFields = catalogs.researchFields.filter((item) => item.name.toLowerCase().includes(researchFieldQuery.trim().toLowerCase()));
 
   function select(profile: ResearcherProfile) {
     setEditing(profile);
@@ -43,6 +47,7 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
       researchFieldIds: profile.researchFields.map((field) => field.id), publications: profile.publications,
       participations: profile.participations.filter((item) => item.status !== "SUPERSEDED").map(({ id, projectTitle, participationRole, level, startsOn, endsOn, status, notes }) => ({ id, projectTitle, participationRole, level, startsOn, endsOn, status, notes })) });
     setKeywords(profile.expertiseKeywords.join(", "));
+    setResearchFieldQuery(""); setResearchFieldOpen(false);
     setEmail(profile.credentialDelivery?.recipientEmail ?? profile.contactEmail ?? "");
     setUsername(""); setReason(""); setAccounts([]); setSelectedAccount(""); setHistory(null); setDuplicates([]);
   }
@@ -67,12 +72,16 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
   }
   useEffect(() => { void load(); return () => { loadVersion.current++; }; }, [self, filters]);
 
-  function startCreate() { setEditing(null); setForm({ ...emptyForm, managementOrganizationUnitId: organizations[0]?.id ?? "" }); setKeywords(""); setDuplicates([]); setHistory(null); setMessage(""); setError(""); }
+  function startCreate() { setEditing(null); setForm({ ...emptyForm, managementOrganizationUnitId: organizations[0]?.id ?? "" }); setKeywords(""); setResearchFieldQuery(""); setResearchFieldOpen(false); setDuplicates([]); setHistory(null); setMessage(""); setError(""); }
   function field(key: keyof ResearcherProfileInput, value: string) { setForm((current) => ({ ...current, [key]: value })); }
   function filter(key: keyof typeof filters, value: string) { setFilters((current) => ({ ...current, [key]: value, ...(key === "page" ? {} : { page: "1" }) })); }
   async function perform(work: () => Promise<void>) { setBusy(true); setError(""); setMessage(""); try { await work(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể thực hiện thao tác."); } finally { setBusy(false); } }
+  function toggleResearchField(id: string) {
+    setForm((current) => ({ ...current, researchFieldIds: current.researchFieldIds.includes(id) ? current.researchFieldIds.filter((value) => value !== id) : [...current.researchFieldIds, id] }));
+  }
 
   async function save(confirmDuplicate = false) {
+    if (form.researchFieldIds.length === 0) { setError("Cần chọn ít nhất một lĩnh vực nghiên cứu."); return; }
     await perform(async () => {
       const { managementOrganizationUnitId, profileType, ...personal } = form;
       const input = { ...personal, expertiseKeywords: keywords.split(",").map((value) => value.trim()).filter(Boolean) };
@@ -129,7 +138,18 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
             {([['academicRankCatalogItemId', 'Học hàm', catalogs.academicRanks], ['academicDegreeCatalogItemId', 'Học vị', catalogs.academicDegrees]] as const).map(([key, label, options]) => <label className="field" key={key}><span>{label}</span><select value={form[key] ?? ""} onChange={(event) => field(key, event.target.value)}><option value="">Chưa chọn</option>{options.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>)}
             {([['title', 'Chức danh'], ['position', 'Chức vụ / vị trí công tác'], ['militaryRank', 'Quân hàm'], ['externalAffiliation', 'Đơn vị công tác / tổ chức'], ['contactEmail', 'Email liên hệ'], ['contactPhone', 'Điện thoại']] as const).map(([key, label]) => <label key={key} className="field"><span>{label}</span><input type={key === "contactEmail" ? "email" : key === "contactPhone" ? "tel" : "text"} value={form[key] ?? ""} onChange={(event) => field(key, event.target.value)} /></label>)}
           </div>
-          <label className="field"><span>Lĩnh vực nghiên cứu *</span><select required multiple size={4} value={form.researchFieldIds} onChange={(event) => setForm((current) => ({ ...current, researchFieldIds: Array.from(event.target.selectedOptions, (option) => option.value) }))}>{catalogs.researchFields.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><small>Giữ Ctrl/Cmd để chọn nhiều lĩnh vực.</small></label>
+          <div className="field researcher-field-picker">
+            <span id="research-fields-label">Lĩnh vực nghiên cứu *</span>
+            <div className="multi-select-control" role="group" aria-labelledby="research-fields-label">
+              {selectedResearchFields.length ? <div className="multi-select-chips" aria-label="Lĩnh vực đã chọn">{selectedResearchFields.map((item) => <button key={item.id} type="button" className="multi-select-chip" onClick={() => toggleResearchField(item.id)} aria-label={`Bỏ ${item.name}`}>{item.name}<span aria-hidden="true">×</span></button>)}</div> : null}
+              <input type="search" value={researchFieldQuery} placeholder={selectedResearchFields.length ? "Tìm lĩnh vực" : "Chưa chọn"} onFocus={() => setResearchFieldOpen(true)} onChange={(event) => { setResearchFieldQuery(event.target.value); setResearchFieldOpen(true); }} onKeyDown={(event) => { if (event.key === "Escape") setResearchFieldOpen(false); }} aria-controls="research-fields-options" aria-expanded={researchFieldOpen} aria-labelledby="research-fields-label" />
+              <button type="button" className="multi-select-toggle" onClick={() => setResearchFieldOpen((value) => !value)} aria-expanded={researchFieldOpen} aria-controls="research-fields-options">Chọn</button>
+            </div>
+            {researchFieldOpen ? <div id="research-fields-options" className="multi-select-menu" role="group" aria-label="Chọn lĩnh vực nghiên cứu">
+              {visibleResearchFields.length ? visibleResearchFields.map((item) => <label key={item.id} className="multi-select-option"><input type="checkbox" checked={form.researchFieldIds.includes(item.id)} onChange={() => toggleResearchField(item.id)} />{item.name}</label>) : <p className="field-hint">Không có lĩnh vực phù hợp.</p>}
+            </div> : null}
+            <small className="field-hint">Có thể tìm và chọn nhiều lĩnh vực.</small>
+          </div>
           <label className="field"><span>Chuyên môn / từ khóa</span><input value={keywords} onChange={(event) => setKeywords(event.target.value)} placeholder="Phân cách bằng dấu phẩy" /></label>
           <label className="field"><span>Ghi chú</span><textarea value={form.contactNote ?? ""} onChange={(event) => field("contactNote", event.target.value)} /></label>
           <h3>Danh sách công bố</h3>

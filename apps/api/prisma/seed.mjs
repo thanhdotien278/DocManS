@@ -153,7 +153,12 @@ const organizationUnits = [
   ["org-bgq", "BGD", "Ban Giám Đốc"],
   ["org-khti", "KHTI", "Khoa Toán - Tin học"],
   ["org-khqs", "KHQS", "Phòng KHQS"],
-  ["org-bqlkhqs", "BQLKHQS", "Ban Quản lý KHQS"]
+  ["org-bqlkhqs", "BQLKHQS", "Ban Quản lý KHQS"],
+  ["org-k30", "K30", "Công tác Đảng, Công tác Chính trị"],
+  ["org-k81", "K81", "Vật lý"],
+  ["org-k82", "K82", "Hóa học"],
+  ["org-k84", "K84", "Ngoại ngữ"],
+  ["org-external", "EXT", "Đơn vị ngoài"]
 ];
 
 // Scientific management staff operate the intake, supplement, assignment and consolidation flows
@@ -162,11 +167,11 @@ const organizationUnits = [
 // scope-checked staff action (ST-3.1 supplement, ST-3.2 assignment, ST-3.4 consolidation) is
 // refused and the demo cannot reach the approval step.
 const additionalOrganizationScopes = {
-  "user-admin": ["org-bgq", "org-khqs", "org-bqlkhqs"],
-  "user-leadership": ["org-hvqy", "org-khti", "org-khqs", "org-bqlkhqs"],
-  "user-staff": ["org-khti", "org-bqlkhqs"],
-  "user-staff-hdtien1": ["org-khti", "org-bqlkhqs"],
-  "user-staff-hdtien2": ["org-khti", "org-bqlkhqs"]
+  "user-admin": ["org-bgq", "org-khqs", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
+  "user-leadership": ["org-hvqy", "org-khti", "org-khqs", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
+  "user-staff": ["org-khti", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
+  "user-staff-hdtien1": ["org-khti", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
+  "user-staff-hdtien2": ["org-khti", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"]
 };
 
 for (const [id, code, name] of organizationUnits) {
@@ -223,7 +228,25 @@ for (const user of users) {
 
 const catalogs = [
   ["research-field", "military-medicine", "Y học quân sự"],
+  ["research-field", "basic-medicine", "Y học cơ sở"],
+  ["research-field", "clinical-medicine", "Y học lâm sàng"],
+  ["research-field", "preventive-medicine", "Y học dự phòng"],
+  ["research-field", "public-health", "Y tế công cộng"],
+  ["research-field", "pharmacy", "Dược học"],
+  ["research-field", "biotechnology", "Công nghệ sinh học"],
+  ["research-field", "life-sciences", "Khoa học sự sống"],
   ["research-field", "biomedical-tech", "Công nghệ y sinh"],
+  ["research-field", "chemistry", "Hóa học"],
+  ["research-field", "physics", "Vật lý"],
+  ["research-field", "information-technology", "Công nghệ thông tin"],
+  ["research-field", "social-humanities", "Khoa học xã hội và nhân văn"],
+  ["academic-rank", "professor", "Giáo sư"],
+  ["academic-rank", "associate-professor", "Phó giáo sư"],
+  ["academic-degree", "doctor", "Tiến sĩ"],
+  ["academic-degree", "master", "Thạc sĩ"],
+  ["academic-degree", "bscki", "BSCKI"],
+  ["academic-degree", "bsckii", "BSCKII"],
+  ["academic-degree", "other", "Khác"],
   ["proposal-type", "academy-level", "Đề tài cấp Học viện"],
   ["priority", "high", "Ưu tiên cao"],
   ["report-type", "periodic", "Báo cáo định kỳ"],
