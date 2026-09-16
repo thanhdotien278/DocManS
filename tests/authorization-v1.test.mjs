@@ -140,6 +140,20 @@ describe("Story 1.8 viewer capability V1", () => {
     });
     assert.equal(authorityCapability.blockedActions.find((item) => item.action === "proposal.decision.approve")?.code, "CONFLICT_DENIED");
   });
+
+  it("keeps PI submission record-scoped and blocks a repeated completeness check", () => {
+    const staffCapability = projectProposalViewerAuthorizationV1({
+      actor: { ...actor, systemRole: "SCIENTIFIC_MANAGEMENT_STAFF" },
+      proposal: { ...proposal, status: "submitted" },
+      participation: { role: "none", label: "Không tham gia", roles: [], labels: [], isOwner: false, isParticipant: false, relationshipEffectiveFrom: {}, relationshipEffectiveUntil: {} },
+      canRead: true,
+      canEdit: false,
+      canManageFiles: false,
+      completenessCheckCompleted: true
+    });
+    assert.equal(staffCapability.blockedActions.find((item) => item.action === "proposal.submit")?.code, "ACTION_NOT_GRANTED");
+    assert.equal(staffCapability.blockedActions.find((item) => item.action === "proposal.completeness.check")?.code, "WORKFLOW_STATE_DENIED");
+  });
 });
 
 describe("Story 1.7 authorization V1", () => {

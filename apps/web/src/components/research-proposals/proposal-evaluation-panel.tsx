@@ -6,6 +6,7 @@ import { CheckCircle2, Save, Send, UserMinus, UserPlus } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { formatIntakeDate, intakeDateToIso } from "@/lib/intake-dates";
 import {
   assignProposalReviewer,
   loadReviewerCandidates,
@@ -127,10 +128,10 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
     try {
       await assignProposalReviewer(proposalId, {
         researcherProfileId: profileId, contextVersion,
-        effectiveFrom: effectiveFrom ? new Date(effectiveFrom).toISOString() : undefined,
-        effectiveUntil: effectiveUntil ? new Date(effectiveUntil).toISOString() : undefined,
+        effectiveFrom: effectiveFrom ? intakeDateToIso(effectiveFrom) : undefined,
+        effectiveUntil: effectiveUntil ? intakeDateToIso(effectiveUntil, true) : undefined,
         assignmentRole,
-        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined
+        dueDate: dueDate ? intakeDateToIso(dueDate, true) : undefined
       });
       setProfileId("");
       setDueDate("");
@@ -261,8 +262,8 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
                     <td>{formatDueDate(assignment.dueDate)}</td>
                     <td>
                       <span className="record-title">{assignment.statusLabel}</span>
-                      <span className="record-meta">Hiệu lực từ {formatDate(assignment.effectiveFrom)}</span>
-                      {assignment.effectiveUntil ? <span className="record-meta">Đến {formatDate(assignment.effectiveUntil)}</span> : null}
+                      <span className="record-meta">Hiệu lực từ {formatIntakeDate(assignment.effectiveFrom)}</span>
+                      {assignment.effectiveUntil ? <span className="record-meta">Đến {formatIntakeDate(assignment.effectiveUntil)}</span> : null}
                       {assignment.completedAt ? <span className="record-meta">Hoàn thành {formatDate(assignment.completedAt)}</span> : null}
                       {assignment.revokedAt ? <span className="record-meta">Thu hồi {formatDate(assignment.revokedAt)}</span> : null}
                     </td>
@@ -312,7 +313,7 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
           <button className="button" type="button" disabled={!canAssign || isAssigning} onClick={() => void loadReviewerCandidates(proposalId, candidateQuery).then(setCandidates).catch((error) => setAssignError(error.message))}>Tìm người đánh giá</button>
           <label className="field"><span>Hồ sơ nhà khoa học đã liên kết tài khoản *</span><select required value={profileId} disabled={!canAssign} onChange={(e) => setProfileId(e.target.value)}><option value="">Chọn hồ sơ đủ điều kiện</option>{candidates.profiles.map((p) => <option key={p.id} value={p.id}>{p.fullName} — {p.linkedAccountDisplayName} ({p.linkedAccountUsername})</option>)}</select></label>
           {!candidates.profiles.length ? <p className="record-meta">Không có hồ sơ đang hoạt động đã liên kết tài khoản và đủ điều kiện trong phạm vi hồ sơ này. <a href="/researcher-profiles">Xem hồ sơ nhà khoa học</a></p> : null}
-          <div className="form-grid two"><label className="field"><span>Hiệu lực từ (để trống: ngay lập tức)</span><input type="datetime-local" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} disabled={!canAssign} /></label><label className="field"><span>Hiệu lực đến (tùy chọn)</span><input type="datetime-local" value={effectiveUntil} onChange={(e) => setEffectiveUntil(e.target.value)} disabled={!canAssign} /></label></div>
+          <div className="form-grid two"><label className="field"><span>Hiệu lực từ (để trống: ngay lập tức)</span><input type="date" lang="vi" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} disabled={!canAssign} /></label><label className="field"><span>Hiệu lực đến (tùy chọn)</span><input type="date" lang="vi" value={effectiveUntil} onChange={(e) => setEffectiveUntil(e.target.value)} disabled={!canAssign} /></label></div>
           <div className="form-grid two">
             <label className="field">
               <span>Vai trò trong vòng đánh giá</span>
@@ -327,7 +328,7 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
             </label>
             <label className="field">
               <span>Hạn đánh giá (tùy chọn)</span>
-              <input type="datetime-local" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={!canAssign} />
+              <input type="date" lang="vi" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={!canAssign} />
             </label>
           </div>
           <button className="button primary" type="submit" disabled={!canAssign || isAssigning}>

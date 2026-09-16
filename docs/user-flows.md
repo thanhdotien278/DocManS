@@ -111,6 +111,8 @@ flowchart LR
   decide -- "Phê duyệt" --> approved["Đã phê duyệt"] --> create_project --> project["Đề tài được tạo<br/>TOPIC_PI/team là quan hệ mới"]
 ```
 
+Trong chi tiết proposal, section `Nộp chính thức` chỉ thuộc lane PI. Chuyên viên quản lý khoa học xem bảng tóm tắt chỉ đọc gồm thông tin đề tài, team, thời gian và kinh phí; họ không nhận form sửa/nộp của PI. Mỗi phiên bản nộp hoặc nộp lại chỉ được xác nhận đầy đủ một lần; sau lần xác nhận, action giữ nguyên ngữ cảnh nhưng bị disabled và backend từ chối gửi lặp. Hạn bổ sung và các mốc hiệu lực/hạn đánh giá được nhập theo ngày Việt Nam, không nhập giờ phút.
+
 Quy tắc cố định trong flow:
 
 - Đợt đóng chặn hồ sơ mới nhưng không dừng hồ sơ đã nộp.

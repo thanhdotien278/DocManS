@@ -269,15 +269,15 @@ never grants an action by itself.
 | Upload proposal attachment | Read scoped | Read scoped | Read scoped | Create own | Secretary: Create; Member: None | None | Proposal relationship scope | Draft, needs supplement | Yes | FR12, FR36, Story 2.3 |
 | View/download proposal attachment | Read scoped | Read scoped | Read scoped | Read own | Read if participating | Read assigned | Record-level scope | Any allowed proposal state | Yes for important downloads | FR12, FR36, Story 2.3 |
 | Check submission readiness | None | Read scoped | Read scoped | Read own | Read if participating | None | Own proposal/topic scope | Draft | No | FR13, Story 2.3 |
-| Submit proposal formally | None | None | None | Submit own | None | None | Own proposal scope | Draft, open intake | Yes | FR14, FR22, Story 2.4 |
+| Submit proposal formally | None | None | None | Submit own | None | None | Own proposal scope; omit the submit section for non-PI viewers | Draft, open intake | Yes | FR14, FR22, Story 2.4 |
 | View submission history | Audit/View History scoped | Audit/View History scoped | Audit/View History scoped | Read own | Read if participating | Read assigned if policy allows | Same as proposal scope | Submitted or later | No | FR14, FR38, Story 2.4 |
 
 ### 8.4 Proposal Review, Supplement And Approval
 
 | Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Review proposal completeness | None | Review | Read scoped | Read own | Read if participating | None | Organization/unit scope | Submitted, resubmitted | Yes when state changes | FR15, Story 3.1 |
-| Request supplement | None | Submit request | Read scoped | Read own request | Read if participating | None | Organization/unit scope | Submitted, needs supplement | Yes | FR15, Story 3.1 |
+| Review proposal completeness | None | Review | Read scoped | Read own | Read if participating | None | Organization/unit scope | Submitted, resubmitted; once per current submitted version | Yes when state changes | FR15, Story 3.1 |
+| Request supplement | None | Submit request | Read scoped | Read own request | Read if participating | None | Organization/unit scope | Submitted, needs supplement; due date is a whole calendar day | Yes | FR15, Story 3.1 |
 | Respond to supplement request | None | Read scoped | Read scoped | Update/Submit own | None | None | Own proposal scope | Needs supplement | Yes | FR16, Story 3.1 |
 | Assign reviewer or committee member | None | Assign with conflict check | Read scoped | None | None | Read assigned after assignment | Organization/unit scope, reviewer assignment scope, conflict policy scope | Submitted, under review | Yes | FR17, FR67a, Story 3.2 |
 | Change reviewer assignment | None | Assign with conflict check | Read scoped | None | None | Read assigned after assignment | Organization/unit scope, reviewer assignment scope, conflict policy scope | Under review | Yes | FR17, FR67a, Story 3.2 |
@@ -301,6 +301,8 @@ to the matrix it implements.
 | Approval authority | The `leadership` role only. A system administrator role does not imply business approval authority, per section 2. | `assertApprovalAuthority` |
 | Staff evaluation actions | `scientific-management` **and** an organization scope covering the proposal's host unit, re-checked on every assignment and consolidation action. | `assertScientificManagementScope` |
 | Decision conflict | The shared ST-3.0 participation primitive, plus a reviewer assignment on the same proposal — an authority who scored the proposal cannot then decide it. | `ProposalDecisionsService.resolveDecisionConflict` |
+
+Proposal-detail presentation follows the same projection: the PI receives the edit/submission workspace, while scientific-management staff receive a read-only summary of the proposal, team, schedule, and expected budget. Supplement deadlines and reviewer-assignment effective/deadline values are entered as whole Vietnam calendar days; no hour/minute control is exposed.
 
 Workflow states used by EP-03: `submitted` / `resubmitted` -> `under_review` (first reviewer
 assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `approved` | `rejected`
