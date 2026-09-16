@@ -47,7 +47,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
   }, [proposalId]);
 
   if (state === "loading") {
-    return <p className="state-message">Đang tải hồ sơ trình phê duyệt...</p>;
+    return <p className="state-message">Đang tải hồ sơ chờ quyết định...</p>;
   }
 
   if (state === "error") {
@@ -55,7 +55,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
   }
 
   if (state === "forbidden" || !decisionPackage) {
-    return <SectionCard title="Hồ sơ trình phê duyệt" subtitle="Quyết định phê duyệt hoặc từ chối"><button className="button primary" type="button" disabled title={blockedReason}>Phê duyệt</button><p className="record-meta">{blockedReason}</p></SectionCard>;
+    return <SectionCard title="Quyết định phê duyệt" subtitle="Lãnh đạo phê duyệt hoặc từ chối hồ sơ"><button className="button primary" type="button" disabled title={blockedReason}>Phê duyệt</button><p className="record-meta">{blockedReason}</p></SectionCard>;
   }
 
   const { conflict, evaluationSummary, progress } = decisionPackage;
@@ -93,7 +93,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
 
   return (
     <SectionCard
-      title="Hồ sơ trình phê duyệt"
+      title="Quyết định phê duyệt"
       subtitle="Kết quả đánh giá, tổng hợp của chuyên viên và quyết định của lãnh đạo"
       action={<StatusBadge status={decisionPackage.proposalStatus} />}
     >

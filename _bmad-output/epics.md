@@ -571,8 +571,8 @@ researcher as disclosure-limited viewers.
 ### In scope
 
 Staff check, supplement, reviewer assignment, evaluation form, aggregation,
-decision package, approve/reject confirmation, disclosure, decision history,
-and proposal state transitions.
+staff `Trình phê duyệt` routing, decision package, leadership approve/reject
+confirmation, disclosure, decision history, and proposal state transitions.
 
 ### Out of scope / later
 
@@ -600,6 +600,11 @@ DTOs; atomic state/version/conflict checks.
 Reviewer sees only assigned package and own evaluation. PI/member/secretary do
 not see protected raw review data before disclosure. Reviewer cannot decide a
 record they reviewed; PI/member cannot review or approve their own record.
+Researcher-profile pages never render proposal review/assignment/approval cards;
+proposal detail renders them only from backend capability and exact assignment
+context. `ACTION_NOT_GRANTED` omits a section; conflict/state blocks keep the
+relevant section disabled with its denial reason. Staff routing is not final
+approval, and `SYSTEM_ADMIN` gains no implicit proposal workflow action.
 
 ### Acceptance criteria
 
@@ -612,6 +617,8 @@ record they reviewed; PI/member cannot review or approve their own record.
   backend, and locks the submitted version.
 - Aggregation cannot move to pending approval until required reviews and summary
   conditions pass; missing/late review is actionable only for authorized staff.
+- Staff can send a completed dossier to leadership through `Trình phê duyệt`,
+  but cannot invoke final approve/reject actions.
 - Leadership approve/reject rechecks authority, scope, conflict, state, version,
   and disclosure; rejection requires a reason and creates an immutable audit.
 

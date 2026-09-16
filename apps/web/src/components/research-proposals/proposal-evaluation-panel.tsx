@@ -35,7 +35,7 @@ function formatDueDate(value: string) {
  * Actions are shown whenever the viewer is staff and only disabled by workflow state, so a blocked
  * control explains itself instead of disappearing (UX-DR27). The backend remains authoritative.
  */
-export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssignReviewers, canConsolidate, blockedReason, contextVersion }: { proposalId: string; onWorkflowChange: () => void; canAssignReviewers: boolean; canConsolidate: boolean; blockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
+export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssignReviewers, canConsolidate, blockedReason, consolidateBlockedReason, contextVersion }: { proposalId: string; onWorkflowChange: () => void; canAssignReviewers: boolean; canConsolidate: boolean; blockedReason: string; consolidateBlockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
   const [progress, setProgress] = useState<ProposalReviewProgress | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
   const [loadError, setLoadError] = useState("");
@@ -179,7 +179,7 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
       setSummaryError("Chọn kết luận tổng hợp.");
       return;
     }
-    if (markReady && !window.confirm("Chuyển hồ sơ sang trạng thái chờ phê duyệt? Vòng đánh giá sẽ được đóng lại.")) {
+    if (markReady && !window.confirm("Gửi lãnh đạo phê duyệt? Vòng đánh giá sẽ được đóng lại.")) {
       return;
     }
 
@@ -187,7 +187,7 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
     try {
       await saveProposalEvaluationSummary(proposalId, { summary: summaryText, recommendation, markReady });
       setSummaryDirty(false);
-      setMessage(markReady ? "Đã chuyển hồ sơ sang chờ phê duyệt." : "Đã lưu bản nháp tổng hợp.");
+      setMessage(markReady ? "Đã gửi hồ sơ tới lãnh đạo phê duyệt." : "Đã lưu bản nháp tổng hợp.");
       await refresh();
       onWorkflowChange();
     } catch (error) {
@@ -342,7 +342,7 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
         </form>
       </SectionCard>
 
-      <SectionCard title="Tổng hợp kết quả đánh giá" subtitle="Kết luận của chuyên viên trước khi trình lãnh đạo phê duyệt">
+      <SectionCard title="Tổng hợp và trình phê duyệt" subtitle="Kết luận của chuyên viên trước khi gửi lãnh đạo phê duyệt">
         {progress.reviews.length ? (
           <div className="timeline">
             {progress.reviews.map((review) => (
@@ -430,11 +430,11 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
               onClick={() => void handleSaveSummary(true)}
             >
               <Send size={16} aria-hidden="true" />
-              {savingMode === "ready" ? "Đang chuyển" : "Chuyển chờ phê duyệt"}
+              {savingMode === "ready" ? "Đang gửi" : "Gửi lãnh đạo phê duyệt"}
             </button>
           </div>
           {!canConsolidate ? (
-            <p className="record-meta">Chỉ hồ sơ đang đánh giá hoặc chờ phê duyệt mới được tổng hợp kết quả.</p>
+            <p className="record-meta">{consolidateBlockedReason || "Chỉ hồ sơ đang đánh giá hoặc chờ phê duyệt mới được tổng hợp kết quả."}</p>
           ) : !progress.allReviewsSubmitted && !isReadyForApproval ? (
             <p className="record-meta">
               {progress.activeAssignmentCount === 0

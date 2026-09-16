@@ -14,6 +14,9 @@ describe("Story 1.8 proposal capability UI source behavior", () => {
     assert.match(source, /canPerformProposalAction\(capabilityState, "proposal\.decision\.approve"\)/);
     assert.match(source, /canAssignReviewers=\{canPerformProposalAction\(capabilityState, "proposal\.review\.assign"\)\}/);
     assert.match(source, /blockedReason=\{blockedProposalAction/);
+    assert.match(source, /shouldRenderAction/);
+    assert.match(source, /blocked\?\.code === "CONFLICT_DENIED"/);
+    assert.match(source, /blocked\?\.code === "WORKFLOW_STATE_DENIED"/);
     assert.doesNotMatch(source, /account\?\.systemRole/);
   });
 
@@ -33,6 +36,8 @@ describe("Story 1.8 proposal capability UI source behavior", () => {
       assert.match(source, /blockedReason/);
       assert.match(source, /disabled/);
     }
+    const evaluationSource = await readFile(new URL("../apps/web/src/components/research-proposals/proposal-evaluation-panel.tsx", import.meta.url), "utf8");
+    assert.match(evaluationSource, /Gửi lãnh đạo phê duyệt/);
   });
 
   it("fails closed with a reload/support message for an invalid capability contract", async () => {

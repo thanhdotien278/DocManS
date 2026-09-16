@@ -69,7 +69,7 @@ describe("Story 1.9 proposal relationship lifecycle", () => {
 
     assert.equal(decision.allowedActions.includes("file.upload"), true);
     assert.equal(decision.blockedActions.find((item) => item.action === "proposal.review.assign")?.code, "CONFLICT_DENIED");
-    assert.equal(decision.blockedActions.find((item) => item.action === "proposal.decision.approve")?.code, "CONFLICT_DENIED");
-    assert.equal(decision.blockedActions.find((item) => item.action === "proposal.decision.reject")?.code, "CONFLICT_DENIED");
+    assert.equal(decision.blockedActions.find((item) => item.action === "proposal.decision.approve")?.code, "ACTION_NOT_GRANTED");
+    assert.equal(decision.blockedActions.find((item) => item.action === "proposal.decision.reject")?.code, "ACTION_NOT_GRANTED");
   });
 });

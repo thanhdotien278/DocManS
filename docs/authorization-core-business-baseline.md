@@ -141,6 +141,7 @@ assignment mới nhưng lịch sử quan hệ cũ vẫn giữ.
 | Phân công/thay đổi phản biện, hội đồng | Quản lý khoa học, có conflict check |
 | Chấm điểm/nhận xét | Chỉ reviewer được assignment; gửi xong thì khóa; sửa lỗi bằng phiên bản nhận xét mới được duyệt |
 | Tổng hợp đánh giá | Quản lý khoa học |
+| Trình phê duyệt | Quản lý khoa học khi vòng đánh giá hoàn tất và hồ sơ ở trạng thái cho phép; chỉ gửi hồ sơ tới lãnh đạo, không phải quyết định cuối |
 | Phê duyệt/từ chối cuối | `LEADERSHIP_APPROVAL_AUTHORITY` khi hồ sơ ở trạng thái đủ điều kiện |
 | Rút hồ sơ | PI chỉ rút khi còn nháp; sau nộp gửi yêu cầu, Quản lý khoa học phê duyệt và chuyển `Đã rút` |
 | Chỉnh sửa sau nộp | PI gửi yêu cầu; Quản lý khoa học phê duyệt; hệ thống tạo bản làm việc mới, giữ bản đã khóa |
@@ -185,6 +186,23 @@ Existing identity/disclosure policy applies to both duty types on every surface.
 Candidate conflict-rejected assignment attempts retain a failure audit without creating an
 assignment or changing workflow state. The rejection must not roll back its own
 audit evidence. Successful assignment/revocation and their audit remain atomic.
+
+### Hiển thị workflow theo bản ghi
+
+`Phiếu đánh giá của tôi`, `Phân công đánh giá` và `Hồ sơ trình phê duyệt` không
+phải là nội dung toàn cục của trang hồ sơ nhà khoa học. Chúng chỉ được dựng
+trong chi tiết proposal có context tương ứng. `Phiếu đánh giá của tôi` cần
+assignment reviewer/council đang còn hiệu lực trên đúng proposal và vòng đánh
+giá; role researcher, council hoặc assignment ở proposal khác không thay thế
+điều kiện này. `Phân công đánh giá` cần capability của
+`SCIENTIFIC_MANAGEMENT_STAFF` trên proposal và state cho phép. `Trình phê
+duyệt` là action staff để chuyển hồ sơ hoàn tất sang lãnh đạo; action cuối
+`Phê duyệt`/`Từ chối` chỉ thuộc `LEADERSHIP_APPROVAL_AUTHORITY`.
+
+Backend capability là nguồn sự thật: action không được cấp (`ACTION_NOT_GRANTED`)
+thì bỏ toàn bộ section; action bị chặn bởi conflict hoặc workflow state vẫn có
+thể hiện dưới dạng disabled kèm lý do. Thiếu proposal/assignment context phải
+fail closed. `SYSTEM_ADMIN` không được suy diễn quyền review hoặc approval.
 
 ### Chỉnh sửa sau nộp
 

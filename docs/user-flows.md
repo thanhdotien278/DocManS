@@ -106,7 +106,7 @@ flowchart LR
   open --> draft --> edit --> submit --> check
   check --> complete{"Hồ sơ đủ điều kiện?"}
   complete -- "Chưa đủ" --> request["Yêu cầu bổ sung<br/>nêu lý do + hạn"] --> supplement --> resubmit --> check
-  complete -- "Đủ" --> assign --> review --> score --> consolidate --> ready["Chờ quyết định"] --> decide
+  complete -- "Đủ" --> assign --> review --> score --> consolidate --> submit_for_approval["Trình phê duyệt / Gửi lãnh đạo phê duyệt"] --> ready["Chờ quyết định"] --> decide
   decide -- "Không phê duyệt" --> rejected["Không phê duyệt<br/>giữ lịch sử"] --> proposal_archive["Đóng / lưu trữ"]
   decide -- "Phê duyệt" --> approved["Đã phê duyệt"] --> create_project --> project["Đề tài được tạo<br/>TOPIC_PI/team là quan hệ mới"]
 ```
@@ -118,6 +118,12 @@ Quy tắc cố định trong flow:
   tạo, nộp và nộp lại proposal; không có đường delegation cho các hành động này.
 - Reviewer chỉ thấy proposal/assignment được giao; gửi review xong thì review
   bị khóa, sửa lỗi bằng phiên bản nhận xét mới.
+- `Phiếu đánh giá của tôi` chỉ xuất hiện trong proposal có assignment đang hiệu
+  lực của chính người xem; assignment ở proposal khác, role researcher/council
+  hoặc system role rộng không mở rộng context.
+- `Phân công đánh giá` chỉ dành cho `SCIENTIFIC_MANAGEMENT_STAFF` khi
+  capability và state của proposal cho phép. Staff dùng `Trình phê duyệt` để
+  gửi hồ sơ đã tổng hợp tới lãnh đạo; staff không nhận action `Phê duyệt` cuối.
 - Lãnh đạo chỉ quyết định ở trạng thái `Chờ quyết định`/`ready_for_approval`;
   không sửa nội dung và không tự quyết bản ghi có xung đột.
 - Phê duyệt không tự động sinh project; Quản lý khoa học phải tạo và xác nhận.
@@ -215,6 +221,11 @@ flowchart LR
 theo proposal/topic; nó chỉ có thao tác theo scope/assignment và không có quyền
 phê duyệt cuối.
 
+Trang hồ sơ nhà khoa học chỉ hiển thị dữ liệu và action của profile. Ba section
+workflow proposal (`Phiếu đánh giá của tôi`, `Phân công đánh giá`, `Hồ sơ trình
+phê duyệt`) không được dựng toàn cục trên profile; chúng chỉ nằm trong proposal
+detail sau khi capability backend trả về context tương ứng.
+
 ### 5.4. Xung đột, tệp, thông báo và audit
 
 ```mermaid
@@ -275,6 +286,8 @@ trạng thái. Không dùng cập nhật trạng thái trực tiếp để bypas
 
 - `SYSTEM_ADMIN` không mặc nhiên xem/sửa dữ liệu nghiệp vụ, phản biện, phê
   duyệt hoặc mở lại hồ sơ.
+- Capability không cấp (`ACTION_NOT_GRANTED`) thì UI bỏ cả section; conflict
+  hoặc workflow-state denial của action liên quan vẫn hiển thị disabled cùng lý do.
 - Có cùng đơn vị, có chức danh hiển thị hoặc có quan hệ ở bản ghi khác không
   tự cấp quyền cho bản ghi hiện tại.
 - Nhà nghiên cứu không tham gia không thấy hồ sơ chỉ vì cùng đơn vị.

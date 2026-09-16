@@ -207,10 +207,10 @@ never grants an action by itself.
 | Proposal completeness review | None | Review | Read | Read own | Read if participating | None | Organization/unit scope | Submitted, resubmitted | Yes when decision affects workflow |
 | Supplement request | None | Submit request | Read | Read/respond | Read if participating | None | Organization/unit scope | Submitted, needs supplement | Yes |
 | Proposal resubmission | None | Read | Read | Submit own | None | None | Own proposal/topic scope | Needs supplement | Yes |
-| Reviewer/committee assignment | None | Assign with conflict check | Read | None | None | Read assigned | Organization/unit scope, reviewer assignment scope, conflict policy scope | Submitted, under review | Yes |
+| Reviewer/committee assignment | None | Assign with conflict check | Read | None | None | Read assigned | Proposal capability, organization/unit scope, reviewer assignment scope, conflict policy scope | Submitted, resubmitted, under review | Yes |
 | Reviewer scoring and comments | None | Read/Review | Read | None unless policy allows result view | None | Review/Submit assigned | Reviewer assignment scope | Under review | Yes |
-| Evaluation consolidation | None | Review/Update | Read | None | None | None | Organization/unit scope | Under review, ready for approval | Yes |
-| Approval/rejection decision | None | Prepare/Read | Approve/Reject with conflict check | Read result | Read result if participating | None | Approval authority scope, conflict policy scope | Ready for approval | Yes |
+| Evaluation consolidation / Trình phê duyệt | None | Review/Update and send completed dossier to leadership | Read | None | None | None | Proposal capability, organization/unit scope, conflict policy scope | Under review, ready for approval | Yes |
+| Approval/rejection decision | None | Read only; no final decision action | Approve/Reject with conflict check | Read result | Read result if participating | None | Approval authority scope, conflict policy scope | Ready for approval | Yes |
 | Approved project creation | None | Create/Manage | Read | Read own | Read if participating | None | Organization/unit scope | Approved | Yes |
 | Milestone/checkpoint management | None | Manage | Read/Review | Read/Update own allowed items | Read assigned or team-secretary-scoped items | None | Organization/unit scope, approved-topic participation scope | Active project | Yes for changes |
 | Progress report submission | None | Read/Review | Read | Submit own | Submit contribution if permitted by active team role | None | Own proposal/topic scope, approved-topic participation scope | Waiting report, active project | Yes |
@@ -305,7 +305,11 @@ to the matrix it implements.
 Workflow states used by EP-03: `submitted` / `resubmitted` -> `under_review` (first reviewer
 assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `approved` | `rejected`
 (leadership decision). The allowed states per action are declared once in
-`apps/api/src/proposals-shared/proposal-workflow.ts`.
+`apps/api/src/proposals-shared/proposal-workflow.ts`. The proposal detail UI
+renders the three review/approval sections only from the current proposal's
+capability/assignment result: an `ACTION_NOT_GRANTED` action omits the section,
+while conflict/state denials remain visible and disabled with the backend reason.
+Researcher profile pages never host these proposal workflow sections.
 
 ### 8.5 Approved Project Tracking
 
