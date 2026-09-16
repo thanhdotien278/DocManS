@@ -45,3 +45,18 @@ export class CompletePasswordResetRequestPipe implements PipeTransform {
     return { token: input.token, newPassword: validateNewPassword(input.newPassword) };
   }
 }
+
+@Injectable()
+export class CompleteAccountActivationRequestPipe implements PipeTransform {
+  transform(value: unknown) {
+    const input = objectInput(value);
+    if (typeof input.token !== "string" || !input.token || input.token.length > 256) {
+      throw new BadRequestException({ message: "Liên kết kích hoạt không hợp lệ hoặc đã hết hạn." });
+    }
+    const password = validateNewPassword(input.password);
+    if (password !== input.passwordConfirmation) {
+      throw new BadRequestException({ message: "Mật khẩu xác nhận không khớp." });
+    }
+    return { token: input.token, password };
+  }
+}

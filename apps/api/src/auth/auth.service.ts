@@ -156,12 +156,38 @@ export class AuthService {
     await this.auditLog.record({ action: "complete-password-reset", result: "success", actorId: userId, targetEntity: "user", targetEntityId: userId, ip: context.ip, userAgent: context.userAgent });
   }
 
+  async completeAccountActivation(input: { token: string; password: string }, context: RequestContext) {
+    const rateLimitKey = `account-activation:${context.ip ?? "unknown"}`;
+    this.rateLimit.assertCanAttempt(rateLimitKey);
+    try {
+      validateNewPassword(input.password);
+    } catch (error) {
+      await this.recordAccountActivationFailure(context, "new_password_policy_invalid");
+      throw error;
+    }
+    const userId = await this.authStore.completeAccountActivation(
+      this.passwordService.hashResetToken(input.token),
+      await this.passwordService.hashPassword(input.password)
+    );
+    if (!userId) {
+      this.rateLimit.recordFailure(rateLimitKey);
+      await this.recordAccountActivationFailure(context, "invalid_or_expired");
+      throw new BadRequestException({ message: "Liên kết kích hoạt không hợp lệ hoặc đã hết hạn." });
+    }
+    this.rateLimit.reset(rateLimitKey);
+    await this.auditLog.record({ action: "complete-account-activation", result: "success", actorId: userId, targetEntity: "user", targetEntityId: userId, ip: context.ip, userAgent: context.userAgent });
+  }
+
   async recordPasswordChangeFailure(userId: string, context: RequestContext, reason: string) {
     await this.auditLog.record({ action: "change-password", result: "failure", actorId: userId, targetEntity: "user", targetEntityId: userId, ip: context.ip, userAgent: context.userAgent, reason });
   }
 
   async recordPasswordResetFailure(context: RequestContext, reason: string) {
     await this.auditLog.record({ action: "complete-password-reset", result: "failure", targetEntity: "password-reset", targetEntityId: "unknown", ip: context.ip, userAgent: context.userAgent, reason });
+  }
+
+  async recordAccountActivationFailure(context: RequestContext, reason: string) {
+    await this.auditLog.record({ action: "complete-account-activation", result: "failure", targetEntity: "account-activation", targetEntityId: "unknown", ip: context.ip, userAgent: context.userAgent, reason });
   }
 
   private createRateLimitKey(username: string, ip?: string) {

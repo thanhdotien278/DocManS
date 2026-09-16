@@ -144,7 +144,7 @@ disclosure; unresolved context fails closed and important changes are audited.
 - NFR3: Search and filter interactions on primary administrative lists complete within 2 seconds for at least 95 percent of measured requests under normal phase 1 conditions.
 - NFR4: Exports, reminder batches, and derived reporting workloads provide queued/progress/completion feedback and do not block normal interactive requests.
 - NFR5: All authenticated traffic requires encrypted transport in deployment environments.
-- NFR6: Passwords and session secrets are never persisted in plaintext or returned in ordinary application responses. Only initial/replacement temporary credentials may be delivered through the protected credential-email flow.
+- NFR6: Passwords, activation tokens and session secrets are never persisted in plaintext or returned in ordinary application responses. Researcher account activation emails carry only single-use setup links, never temporary passwords.
 - NFR7: Backend authorization protects dashboards, reports, search, exports, workflow actions, files, and history with allowed and denied tests.
 - NFR8: Authorization fails closed when scope, participation, assignment, conflict, delegation, or state context cannot be resolved safely.
 - NFR9: Critical-action audit logs are queryable by authorized users or operational support tooling.
@@ -1387,6 +1387,10 @@ So that tôi có một phiên làm việc an toàn trong hệ thống.
 **Then** hệ thống tạo phiên gắn với đúng user ID và vai trò hệ thống hiện hành
 **And** ghi audit đăng nhập thành công mà không lưu mật khẩu hoặc token.
 
+**Given** tài khoản đã kích hoạt có email hợp lệ và chưa có username
+**When** người dùng đăng nhập bằng email và mật khẩu
+**Then** hệ thống tạo phiên bình thường cho tài khoản đó.
+
 **Given** tài khoản có system role `EXTERNAL_RESEARCHER_USER`
 **When** đăng nhập thành công
 **Then** session giữ đúng role external và không tự tạo PI, member, reviewer hoặc secretary relationship.
@@ -1494,6 +1498,10 @@ So that tôi có thể khôi phục truy cập mà không làm lộ bí mật.
 **When** người dùng dùng token hợp lệ trước khi hết hạn
 **Then** họ đặt được mật khẩu mới đúng một lần
 **And** token không được lưu plaintext, không thể tái sử dụng và mọi bước quan trọng đều được audit.
+
+**Given** tài khoản researcher ở trạng thái `PENDING_ACTIVATION`
+**When** người dùng mở link kích hoạt còn hạn 48 giờ và thiết lập mật khẩu khớp xác nhận
+**Then** token được đánh dấu đã dùng, tài khoản chuyển `ACTIVE`, và token không thể tái sử dụng.
 
 ### Story 1.6: Quản lý danh mục và cấu hình vận hành dùng chung [FR7, FR8]
 
@@ -1629,6 +1637,19 @@ So that hệ thống quản lý được cả nhà khoa học đã và chưa có
 **Then** hệ thống lưu một researcher profile có trạng thái hoạt động
 **And** không bắt buộc phải tạo user account.
 
+**Given** người dùng tạo hồ sơ INTERNAL
+**When** họ lưu với email hợp lệ
+**Then** hệ thống mặc định tạo và liên kết tài khoản `PENDING_ACTIVATION` với role `RESEARCHER_INTERNAL_USER`
+**And** gửi email kích hoạt mà không tạo hoặc gửi mật khẩu tạm thời.
+
+**Given** người dùng tạo hồ sơ EXTERNAL
+**When** checkbox `Tạo tài khoản truy cập hệ thống` không được chọn
+**Then** hệ thống chỉ lưu ResearcherProfile và không tạo UserAccount.
+
+**Given** người dùng tạo hồ sơ EXTERNAL
+**When** checkbox `Tạo tài khoản truy cập hệ thống` được chọn
+**Then** email trở thành bắt buộc và hệ thống tạo/liên kết tài khoản `PENDING_ACTIVATION` với role `EXTERNAL_RESEARCHER_USER`.
+
 **Given** hồ sơ có dấu hiệu trùng định danh hoặc thông tin nhân thân quan trọng
 **When** người dùng lưu hồ sơ
 **Then** hệ thống cảnh báo các ứng viên trùng trong phạm vi họ được xem
@@ -1661,6 +1682,14 @@ So that quan hệ nghiệp vụ có thể tham chiếu một định danh thốn
 **When** người quản lý cố tạo liên kết trùng
 **Then** backend từ chối bằng lỗi nghiệp vụ rõ ràng
 **And** không tự động thay thế liên kết hiện có.
+
+**Given** tài khoản liên kết đang `PENDING_ACTIVATION`
+**When** người quản lý gửi lại kích hoạt
+**Then** token chưa dùng trước đó bị vô hiệu hóa và email kích hoạt mới có hạn đúng 48 giờ được phát hành.
+
+**Given** nhà nghiên cứu đã kích hoạt tài khoản
+**When** họ đặt username duy nhất trong My Profile
+**Then** username được lưu cho tài khoản đang liên kết và có thể dùng để đăng nhập cùng mật khẩu như email.
 
 **Given** liên kết bị đình chỉ, kết thúc hoặc sửa sai
 **When** operation vòng đời được thực hiện
@@ -3669,19 +3698,17 @@ credential delivery, migration compatibility and history retention.
   position, military rank, expertise, publications and self-reported project
   history (title, role, Academy/institutional/Ministry/other level, dates, status,
   notes). Profile activation and account activation remain separate actions.
-- System Account / Access supports optional create-and-link, existing unlinked
-  account selection, unlink and authorized credential reset/resend. Linking is
-  one-to-one across all current links, including inactive records. Staff can
-  provision only matching researcher roles in the profile's explicit scope.
-- Staff confirms the recipient email. The system generates and hashes a temporary
-  password, sends login information by configured SMTP, and requires a different
-  password before any normal authenticated API/UI feature. No plaintext credential
-  is persisted, returned to staff or placed in audit. SMTP acceptance is not proof
-  of inbox delivery; a failed/uncertain send has an explicit new-credential retry.
+- Account provisioning creates linked `PENDING_ACTIVATION` researcher accounts:
+  INTERNAL profiles provision by default with required email; EXTERNAL profiles
+  provision only when staff/admin checks `Tạo tài khoản truy cập hệ thống`.
+- Activation uses hashed single-use tokens, expires exactly after 48 hours and
+  sends only a setup-password link. No temporary password is generated, emailed,
+  persisted, returned to staff or placed in audit.
+- Login accepts either configured username or account email. Username is optional
+  at provisioning, unique when set later by the linked researcher in My Profile,
+  and never inferred from email.
 - My Profile uses the active Account's current link. Only own personal/scientific
-  fields are editable; type, status, linkage and role/scope remain administrative.
-  Unlink immediately removes self access. Self-reported history grants no access
-  to operational projects/proposals and does not replace source-owned assignments.
-- Profile/link/account/credential/first-password-change audit is preserved with
-  safe transactional change facts. No test files are written or changed for this
-  completion at the user's instruction; verification is recorded in its artifact.
+  fields and own username are editable; type, status, linkage, email credential
+  destination and role/scope remain administrative.
+- Profile/link/account/activation/username/account-status audit is preserved with
+  safe transactional change facts.

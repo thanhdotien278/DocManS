@@ -39,9 +39,9 @@ type ProfileWithRelations = {
   academicDegreeCatalogItem: { id: string; code: string; name: string; type: string } | null;
   researchFields: Array<{ catalogItem: { id: string; code: string; name: string; type: string } }>;
   expertiseKeywords: Array<{ keyword: string; keywordKey: string }>;
-  credentialDeliveries: Array<{ id: string; status: string; recipientEmail: string; createdAt: Date }>;
+  credentialDeliveries: Array<{ id: string; status: string; recipientEmail: string; expiresAt: Date | null; createdAt: Date }>;
   linkedUserId: string | null;
-  linkedUser: { id: string; username: string; displayName: string; status: string; systemRole: string | null; mustChangePassword: boolean } | null;
+  linkedUser: { id: string; username: string | null; displayName: string; status: string; systemRole: string | null; mustChangePassword: boolean; credentialEmail: string | null } | null;
   publications: Array<{ id: string; title: string; venue: string | null; publicationYear: number | null; doi: string | null; authors: string | null; status: string; notes: string | null; createdAt: Date; updatedAt: Date }>;
   participations: Array<{ id: string; projectTitle: string; participationRole: string; level: string; startsOn: Date | null; endsOn: Date | null; status: string; notes: string | null; sourceType: string; sourceRecordId: string | null; supersedesId: string | null; createdAt: Date; updatedAt: Date }>;
 };
@@ -52,11 +52,13 @@ const profileInclude = {
   academicDegreeCatalogItem: { select: { id: true, code: true, name: true, type: true } },
   researchFields: { include: { catalogItem: { select: { id: true, code: true, name: true, type: true } } }, orderBy: { catalogItem: { name: "asc" } } },
   expertiseKeywords: { orderBy: { keywordKey: "asc" } },
-  credentialDeliveries: { select: { id: true, status: true, recipientEmail: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 },
-  linkedUser: { select: { id: true, username: true, displayName: true, status: true, systemRole: true, mustChangePassword: true } },
+  credentialDeliveries: { select: { id: true, status: true, recipientEmail: true, expiresAt: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 },
+  linkedUser: { select: { id: true, username: true, displayName: true, status: true, systemRole: true, mustChangePassword: true, credentialEmail: true } },
   publications: { orderBy: [{ publicationYear: "desc" }, { title: "asc" }] },
   participations: { orderBy: [{ startsOn: "desc" }, { projectTitle: "asc" }] }
 } satisfies Prisma.ResearcherProfileInclude;
+
+const ACTIVATION_TTL_MS = 48 * 60 * 60 * 1000;
 
 export function normalizeResearcherKey(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLocaleLowerCase("vi").replace(/\s+/g, " ").trim();
@@ -137,8 +139,12 @@ export class ResearcherProfilesService {
 
   async createProfile(actor: SafeUserContext, input: CreateResearcherProfileDto) {
     assertResearcherProfileAction(actor, "researcher-profile.create", input.managementOrganizationUnitId);
+    const provisionAccount = this.shouldProvisionAccount(input);
+    const email = normalizeEmail(input.contactEmail);
+    if (provisionAccount && !email) throw new BadRequestException({ message: "Email là bắt buộc khi tạo tài khoản truy cập." });
+    if (provisionAccount) this.mailService.configuration();
     const correlationId = randomUUID();
-    const profile = await this.prisma.$transaction(async (tx) => {
+    const result = await this.accountTransaction(async (tx) => {
       await this.assertCurrentManager(tx, actor, input.managementOrganizationUnitId, "researcher-profile.create");
       const organization = await tx.organizationUnit.findFirst({ where: { id: input.managementOrganizationUnitId, status: "active" } });
       if (!organization) throw new BadRequestException({ message: "Đơn vị quản lý không hợp lệ." });
@@ -162,13 +168,27 @@ export class ResearcherProfilesService {
         afterFacts: this.auditFacts(created)
       }, tx);
       await this.writeProfileHistory(tx, created.id, actor.id, "CREATE", undefined, this.auditFacts(created));
-      return { profile: created, duplicateCandidates };
+      if (!provisionAccount) return { profile: created, duplicateCandidates };
+      await this.assertUniqueCredentialEmail(tx, email!);
+      const systemRole = created.profileType === "EXTERNAL" ? "EXTERNAL_RESEARCHER_USER" : "RESEARCHER_INTERNAL_USER";
+      const passwordHash = await this.passwordService.hashPassword(randomBytes(32).toString("base64url"));
+      const user = await tx.user.create({ data: { username: null, usernameKey: null, displayName: created.fullName, passwordHash, credentialEmail: email!, mustChangePassword: false, status: "pending_activation", systemRole, unit: organization.name,
+        organizationScopes: { create: { organizationUnitId: created.managementOrganizationUnitId, isPrimary: true } } } });
+      await tx.researcherProfile.update({ where: { id: created.id }, data: { linkedUserId: user.id, aggregateVersion: { increment: 1 }, updatedById: actor.id } });
+      await tx.researcherProfileAccountLink.create({ data: { researcherProfileId: created.id, userId: user.id, effectiveFrom: new Date(), reason: "profile-account-activation", createdById: actor.id } });
+      const activation = await this.issueActivationToken(tx, user, actor.id);
+      const delivery = await tx.accountCredentialDelivery.create({ data: { researcherProfileId: created.id, userId: user.id, recipientEmail: email!, templateKey: "researcher_account_activation", status: "PENDING", expiresAt: activation.expiresAt } });
+      for (const action of ["provision-researcher-account", "link-researcher-account", "issue-researcher-activation"]) await this.auditLog.record({ action, result: "success", actorId: actor.id, targetEntity: "researcher-profile", targetEntityId: created.id, correlationId, afterFacts: { userId: user.id, systemRole, organizationUnitId: created.managementOrganizationUnitId, deliveryId: delivery.id, expiresAt: activation.expiresAt.toISOString() } }, tx);
+      await this.writeProfileHistory(tx, created.id, actor.id, "ACCOUNT_CREATED", { linkedUserId: null }, { linkedUserId: user.id });
+      const withAccount = (await tx.researcherProfile.findUnique({ where: { id: created.id }, include: profileInclude } as never)) as unknown as ProfileWithRelations;
+      return { profile: withAccount, duplicateCandidates, activation: { deliveryId: delivery.id, email: email!, displayName: user.displayName, token: activation.token, expiresAt: activation.expiresAt } };
     });
+    if (result.activation) await this.deliverActivation(result.activation.deliveryId, result.activation.email, result.activation.displayName, result.activation.token, result.activation.expiresAt, actor, correlationId);
     return {
-      profile: profile.profile ? this.toResponse(actor, profile.profile) : null,
-      duplicateWarning: profile.duplicateCandidates.length > 0,
-      requiresConfirmation: !profile.profile,
-      duplicateCandidates: profile.duplicateCandidates,
+      profile: result.profile ? this.toResponse(actor, result.profile) : null,
+      duplicateWarning: result.duplicateCandidates.length > 0,
+      requiresConfirmation: !result.profile,
+      duplicateCandidates: result.duplicateCandidates,
       correlationId
     };
   }
@@ -268,6 +288,7 @@ export class ResearcherProfilesService {
       publications: input.publications,
       participations: input.participations
     };
+    const hasProfileChanges = Object.entries(safeInput).some(([key, value]) => key !== "contextVersion" && value !== undefined);
     const updated = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM researcher_profiles WHERE id = ${current.id} FOR UPDATE`;
       await tx.$queryRaw`SELECT id FROM users WHERE id = ${actor.id} FOR SHARE`;
@@ -277,14 +298,26 @@ export class ResearcherProfilesService {
       if (!profile || profile.linkedUserId !== actor.id || profile.status !== "ACTIVE") throw new ForbiddenException({ message: "Hồ sơ liên kết không tồn tại, đã ngừng hoạt động hoặc không còn hợp lệ." });
       this.assertProfileVersion(input.contextVersion, profile);
       await this.validateCatalogs(tx, safeInput);
-      const result = await tx.researcherProfile.updateMany({ where: { id: profile.id, linkedUserId: actor.id, aggregateVersion: input.contextVersion.aggregateVersion }, data: { ...this.updateData(safeInput), aggregateVersion: { increment: 1 }, updatedById: actor.id } });
-      if (result.count !== 1) throw new ConflictException({ message: "Dữ liệu hồ sơ đã thay đổi. Vui lòng tải lại trước khi thử lại.", code: "CONTEXT_VERSION_MISMATCH", correlationId });
-      if (Object.keys(this.childData(safeInput)).length > 0) await tx.researcherProfile.update({ where: { id: profile.id }, data: this.childData(safeInput) as never });
-      await this.syncPublications(tx, profile.id, safeInput.publications, actor.id);
-      await this.syncParticipations(tx, profile.id, safeInput.participations, actor.id);
+      if (hasProfileChanges) {
+        const result = await tx.researcherProfile.updateMany({ where: { id: profile.id, linkedUserId: actor.id, aggregateVersion: input.contextVersion.aggregateVersion }, data: { ...this.updateData(safeInput), aggregateVersion: { increment: 1 }, updatedById: actor.id } });
+        if (result.count !== 1) throw new ConflictException({ message: "Dữ liệu hồ sơ đã thay đổi. Vui lòng tải lại trước khi thử lại.", code: "CONTEXT_VERSION_MISMATCH", correlationId });
+        if (Object.keys(this.childData(safeInput)).length > 0) await tx.researcherProfile.update({ where: { id: profile.id }, data: this.childData(safeInput) as never });
+        await this.syncPublications(tx, profile.id, safeInput.publications, actor.id);
+        await this.syncParticipations(tx, profile.id, safeInput.participations, actor.id);
+      }
+      if (input.username !== undefined && input.username !== activeUser.username) {
+        if (input.username) {
+          const existing = await tx.user.findUnique({ where: { usernameKey: input.username } });
+          if (existing && existing.id !== actor.id) throw new ConflictException({ message: "Tên đăng nhập đã tồn tại." });
+        }
+        await tx.user.update({ where: { id: actor.id }, data: { username: input.username, usernameKey: input.username } });
+        await this.auditLog.record({ action: "change-username", result: "success", actorId: actor.id, targetEntity: "user", targetEntityId: actor.id, username: input.username ?? undefined, correlationId, beforeFacts: { username: activeUser.username }, afterFacts: { username: input.username } }, tx);
+      }
       const next = (await tx.researcherProfile.findUnique({ where: { id: profile.id }, include: profileInclude } as never)) as unknown as ProfileWithRelations;
-      await this.auditLog.record({ action: "update-my-researcher-profile", result: "success", actorId: actor.id, targetEntity: "researcher-profile", targetEntityId: profile.id, username: actor.username, correlationId, beforeFacts: this.auditFacts(profile), afterFacts: this.auditFacts(next) }, tx);
-      await this.writeProfileHistory(tx, profile.id, actor.id, "SELF_UPDATE", this.auditFacts(profile), this.auditFacts(next));
+      if (hasProfileChanges) {
+        await this.auditLog.record({ action: "update-my-researcher-profile", result: "success", actorId: actor.id, targetEntity: "researcher-profile", targetEntityId: profile.id, username: actor.username, correlationId, beforeFacts: this.auditFacts(profile), afterFacts: this.auditFacts(next) }, tx);
+        await this.writeProfileHistory(tx, profile.id, actor.id, "SELF_UPDATE", this.auditFacts(profile), this.auditFacts(next));
+      }
       return next;
     });
     return { profile: this.toResponse(actor, updated), correlationId };
@@ -307,6 +340,23 @@ export class ResearcherProfilesService {
     assertResearcherProfileAction(actor, action, organizationId);
   }
 
+  private shouldProvisionAccount(input: CreateResearcherProfileDto) {
+    return (input.profileType ?? "INTERNAL") === "INTERNAL" || input.provisionAccount === true;
+  }
+
+  private async assertUniqueCredentialEmail(tx: Prisma.TransactionClient, email: string) {
+    const existing = await tx.user.findUnique({ where: { credentialEmail: email } });
+    if (existing) throw new ConflictException({ message: "Email đã thuộc tài khoản khác. Vui lòng dùng luồng liên kết tài khoản đã có." });
+  }
+
+  private async issueActivationToken(tx: Prisma.TransactionClient, user: { id: string; credentialVersion: number }, actorId: string) {
+    const activation = this.passwordService.createResetToken();
+    const expiresAt = new Date(Date.now() + ACTIVATION_TTL_MS);
+    await tx.accountActivationToken.updateMany({ where: { userId: user.id, usedAt: null }, data: { usedAt: new Date() } });
+    await tx.accountActivationToken.create({ data: { userId: user.id, createdById: actorId, tokenHash: activation.tokenHash, expiresAt, credentialVersion: user.credentialVersion } });
+    return { token: activation.token, expiresAt };
+  }
+
   async accountCandidates(actor: SafeUserContext, profileId: string, keyword = "") {
     if (typeof keyword !== "string") throw new BadRequestException();
     const profile = await this.findProfile(profileId);
@@ -321,27 +371,27 @@ export class ResearcherProfilesService {
   }
 
   async createResearcherAccount(actor: SafeUserContext, profileId: string, input: ResearcherAccountInput) {
-    const email = input.email;
+    const email = normalizeEmail(input.email);
     if (!email) throw new BadRequestException({ message: "Cần nhập email nhận thông tin tài khoản." });
     await this.checkMailConfiguration(actor, profileId, "researcher-profile.account.create");
-    const temporaryPassword = `Aa1!${randomBytes(24).toString("base64url")}`;
     const correlationId = randomUUID();
     const result = await this.accountTransaction(async (tx) => {
       const profile = await this.lockedProfile(tx, actor, profileId, "researcher-profile.account.create", input.contextVersion);
       if (profile.status !== "ACTIVE" || profile.linkedUserId) throw new ConflictException({ message: "Hồ sơ phải đang hoạt động và chưa liên kết tài khoản." });
-      const username = this.accountUsername(input.username, email);
+      await this.assertUniqueCredentialEmail(tx, email);
       const systemRole = profile.profileType === "EXTERNAL" ? "EXTERNAL_RESEARCHER_USER" : "RESEARCHER_INTERNAL_USER";
-      const passwordHash = await this.passwordService.hashPassword(temporaryPassword);
-      const user = await tx.user.create({ data: { username, usernameKey: username, displayName: profile.fullName, passwordHash, credentialEmail: email, mustChangePassword: true, status: "active", systemRole, unit: profile.managementOrganizationUnit.name,
+      const passwordHash = await this.passwordService.hashPassword(randomBytes(32).toString("base64url"));
+      const user = await tx.user.create({ data: { username: null, usernameKey: null, displayName: profile.fullName, passwordHash, credentialEmail: email, mustChangePassword: false, status: "pending_activation", systemRole, unit: profile.managementOrganizationUnit.name,
         organizationScopes: { create: { organizationUnitId: profile.managementOrganizationUnitId, isPrimary: true } } } });
       await tx.researcherProfile.update({ where: { id: profileId }, data: { linkedUserId: user.id, aggregateVersion: { increment: 1 }, updatedById: actor.id } });
-      await tx.researcherProfileAccountLink.create({ data: { researcherProfileId: profileId, userId: user.id, effectiveFrom: new Date(), reason: "profile-account-creation", createdById: actor.id } });
-      const delivery = await tx.accountCredentialDelivery.create({ data: { researcherProfileId: profileId, userId: user.id, recipientEmail: email, templateKey: "researcher_account_created", status: "PENDING" } });
-      for (const action of ["create-researcher-account", "link-researcher-account", "issue-researcher-credential"]) await this.auditLog.record({ action, result: "success", actorId: actor.id, targetEntity: "researcher-profile", targetEntityId: profileId, correlationId, afterFacts: { userId: user.id, systemRole, organizationUnitId: profile.managementOrganizationUnitId, deliveryId: delivery.id } }, tx);
+      await tx.researcherProfileAccountLink.create({ data: { researcherProfileId: profileId, userId: user.id, effectiveFrom: new Date(), reason: "profile-account-activation", createdById: actor.id } });
+      const activation = await this.issueActivationToken(tx, user, actor.id);
+      const delivery = await tx.accountCredentialDelivery.create({ data: { researcherProfileId: profileId, userId: user.id, recipientEmail: email, templateKey: "researcher_account_activation", status: "PENDING", expiresAt: activation.expiresAt } });
+      for (const action of ["provision-researcher-account", "link-researcher-account", "issue-researcher-activation"]) await this.auditLog.record({ action, result: "success", actorId: actor.id, targetEntity: "researcher-profile", targetEntityId: profileId, correlationId, afterFacts: { userId: user.id, systemRole, organizationUnitId: profile.managementOrganizationUnitId, deliveryId: delivery.id, expiresAt: activation.expiresAt.toISOString() } }, tx);
       await this.writeProfileHistory(tx, profileId, actor.id, "ACCOUNT_CREATED", { linkedUserId: null }, { linkedUserId: user.id });
-      return { user, delivery };
+      return { user, delivery, activation };
     });
-    const delivery = await this.deliverCredential(result.delivery.id, email, result.user.username, result.user.displayName, temporaryPassword, actor, correlationId);
+    const delivery = await this.deliverActivation(result.delivery.id, email, result.user.displayName, result.activation.token, result.activation.expiresAt, actor, correlationId);
     return { account: this.safeAccount(result.user), delivery, correlationId };
   }
 
@@ -378,63 +428,62 @@ export class ResearcherProfilesService {
   }
 
   async resetResearcherAccount(actor: SafeUserContext, profileId: string, input: ResearcherAccountInput) {
-    if (!input.reason || !input.email) throw new BadRequestException({ message: "Cần nhập lý do và xác nhận email nhận mật khẩu tạm thời mới." });
+    const email = normalizeEmail(input.email);
+    if (!email) throw new BadRequestException({ message: "Cần nhập email nhận liên kết kích hoạt." });
     await this.checkMailConfiguration(actor, profileId, "researcher-profile.account.reset");
-    const temporaryPassword = `Aa1!${randomBytes(24).toString("base64url")}`;
     const correlationId = randomUUID();
     const result = await this.accountTransaction(async (tx) => {
       const profile = await this.lockedProfile(tx, actor, profileId, "researcher-profile.account.reset", input.contextVersion);
       if (!profile.linkedUserId || profile.linkedUserId === actor.id || profile.status !== "ACTIVE") throw new ForbiddenException();
       await tx.$queryRaw`SELECT id FROM users WHERE id = ${profile.linkedUserId} FOR UPDATE`;
       const user = await tx.user.findUnique({ where: { id: profile.linkedUserId }, include: { organizationScopes: { include: { organizationUnit: true } } } });
-      if (!user || user.status !== "active" || user.systemRole !== (profile.profileType === "EXTERNAL" ? "EXTERNAL_RESEARCHER_USER" : "RESEARCHER_INTERNAL_USER") || !user.organizationScopes.some((scope) => scope.organizationUnitId === profile.managementOrganizationUnitId && scope.organizationUnit.status === "active")) throw new ForbiddenException();
-      const passwordHash = await this.passwordService.hashPassword(temporaryPassword);
-      await tx.user.update({ where: { id: user.id }, data: { passwordHash, credentialEmail: input.email, mustChangePassword: true, credentialVersion: { increment: 1 } } });
-      await tx.session.updateMany({ where: { userId: user.id, revokedAt: null }, data: { revokedAt: new Date() } });
-      await tx.passwordResetToken.updateMany({ where: { userId: user.id, usedAt: null }, data: { usedAt: new Date() } });
+      if (!user || user.status !== "pending_activation" || user.systemRole !== (profile.profileType === "EXTERNAL" ? "EXTERNAL_RESEARCHER_USER" : "RESEARCHER_INTERNAL_USER") || user.credentialEmail !== email || !user.organizationScopes.some((scope) => scope.organizationUnitId === profile.managementOrganizationUnitId && scope.organizationUnit.status === "active")) throw new ForbiddenException();
+      const activation = await this.issueActivationToken(tx, user, actor.id);
       await tx.researcherProfile.update({ where: { id: profileId }, data: { aggregateVersion: { increment: 1 }, updatedById: actor.id } });
-      const delivery = await tx.accountCredentialDelivery.create({ data: { researcherProfileId: profileId, userId: user.id, recipientEmail: input.email!, templateKey: "researcher_account_reset", status: "PENDING" } });
-      await this.auditLog.record({ action: "reset-researcher-account", result: "success", actorId: actor.id, targetEntity: "researcher-profile", targetEntityId: profileId, correlationId, reason: input.reason, afterFacts: { userId: user.id, deliveryId: delivery.id } }, tx);
-      await this.writeProfileHistory(tx, profileId, actor.id, "ACCOUNT_RESET", undefined, { userId: user.id, deliveryId: delivery.id }, input.reason);
-      return { user, delivery };
+      const delivery = await tx.accountCredentialDelivery.create({ data: { researcherProfileId: profileId, userId: user.id, recipientEmail: email, templateKey: "researcher_account_activation", status: "PENDING", expiresAt: activation.expiresAt } });
+      await this.auditLog.record({ action: "resend-researcher-activation", result: "success", actorId: actor.id, targetEntity: "researcher-profile", targetEntityId: profileId, correlationId, reason: input.reason, afterFacts: { userId: user.id, deliveryId: delivery.id, expiresAt: activation.expiresAt.toISOString() } }, tx);
+      await this.writeProfileHistory(tx, profileId, actor.id, "ACCOUNT_RESET", undefined, { userId: user.id, deliveryId: delivery.id, expiresAt: activation.expiresAt.toISOString() }, input.reason);
+      return { user, delivery, activation };
     });
-    return { delivery: await this.deliverCredential(result.delivery.id, input.email, result.user.username, result.user.displayName, temporaryPassword, actor, correlationId, "researcher_account_reset"), correlationId };
+    return { delivery: await this.deliverActivation(result.delivery.id, email, result.user.displayName, result.activation.token, result.activation.expiresAt, actor, correlationId), correlationId };
   }
 
   private async checkMailConfiguration(actor: SafeUserContext, profileId: string, action: "researcher-profile.account.create" | "researcher-profile.account.reset") {
     const profile = await this.findProfile(profileId);
     assertResearcherProfileAction(actor, action, profile.managementOrganizationUnitId);
     try { this.mailService.configuration(); } catch (error) {
-      await this.auditLog.record({ action: "issue-researcher-credential", result: "failure", actorId: actor.id, targetEntity: "researcher-profile", targetEntityId: profileId, reason: "MAIL_NOT_CONFIGURED" });
+      await this.auditLog.record({ action: "issue-researcher-activation", result: "failure", actorId: actor.id, targetEntity: "researcher-profile", targetEntityId: profileId, reason: "MAIL_NOT_CONFIGURED" });
       throw error;
     }
   }
 
   private async accountTransaction<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>) {
     try { return await this.prisma.$transaction(operation); } catch (error) {
-      if (error && typeof error === "object" && "code" in error && ["P2002", "P2034"].includes(String(error.code))) throw new ConflictException({ message: "Tài khoản hoặc liên kết đã thay đổi. Vui lòng tải lại." });
+      if (error && typeof error === "object" && "code" in error && ["P2002", "P2034"].includes(String(error.code))) throw new ConflictException({ message: "Email, tên đăng nhập hoặc liên kết tài khoản đã tồn tại. Vui lòng tải lại và dùng luồng liên kết tài khoản đã có nếu phù hợp." });
       throw error;
     }
   }
 
-  private accountUsername(input: string | undefined, email: string) {
-    const value = (input?.trim() || email).toLowerCase();
-    if (!/^[a-z0-9][a-z0-9_.@+-]{2,127}$/.test(value)) throw new BadRequestException({ message: "Tên đăng nhập không hợp lệ." });
-    return value;
+  private safeAccount(user: { id: string; username: string | null; displayName: string; status: string; systemRole: string | null; mustChangePassword: boolean; credentialEmail?: string | null }) {
+    return { id: user.id, username: user.username, email: user.credentialEmail ?? null, displayName: user.displayName, status: user.status, systemRole: user.systemRole, mustChangePassword: user.mustChangePassword };
   }
 
-  private safeAccount(user: { id: string; username: string; displayName: string; status: string; systemRole: string | null; mustChangePassword: boolean }) {
-    return { id: user.id, username: user.username, displayName: user.displayName, status: user.status, systemRole: user.systemRole, mustChangePassword: user.mustChangePassword };
+  private activationUrl(token: string) {
+    const { loginUrl } = this.mailService.configuration();
+    const url = new URL("/password-reset", loginUrl);
+    url.searchParams.set("mode", "activation");
+    url.searchParams.set("token", token);
+    return url.toString();
   }
 
-  private async deliverCredential(deliveryId: string, email: string, username: string, displayName: string, temporaryPassword: string, actor: SafeUserContext, correlationId: string, templateKey = "researcher_account_created") {
+  private async deliverActivation(deliveryId: string, email: string, displayName: string, token: string, expiresAt: Date, actor: SafeUserContext, correlationId: string) {
     let status = "ACCEPTED";
-    try { await this.mailService.sendTemporaryCredential({ to: email, username, displayName, temporaryPassword, templateKey }); } catch { status = "UNKNOWN"; }
+    try { await this.mailService.sendAccountActivation({ to: email, displayName, activationUrl: this.activationUrl(token), expiresAt, templateKey: "researcher_account_activation" }); } catch { status = "UNKNOWN"; }
     await this.prisma.$transaction(async (tx) => {
       await tx.accountCredentialDelivery.update({ where: { id: deliveryId }, data: { status, attempts: { increment: 1 }, lastError: status === "UNKNOWN" ? "MAIL_DELIVERY_UNCONFIRMED" : null } });
-      await this.auditLog.record({ action: "deliver-researcher-credential", result: status === "ACCEPTED" ? "success" : "failure", actorId: actor.id, targetEntity: "credential-delivery", targetEntityId: deliveryId, correlationId, reason: status === "UNKNOWN" ? "MAIL_DELIVERY_UNCONFIRMED" : undefined }, tx);
+      await this.auditLog.record({ action: "deliver-researcher-activation", result: status === "ACCEPTED" ? "success" : "failure", actorId: actor.id, targetEntity: "credential-delivery", targetEntityId: deliveryId, correlationId, reason: status === "UNKNOWN" ? "MAIL_DELIVERY_UNCONFIRMED" : undefined }, tx);
     });
-    return { id: deliveryId, status };
+    return { id: deliveryId, status, expiresAt: expiresAt.toISOString() };
   }
 
   private async findProfile(id: string) {
@@ -608,8 +657,8 @@ export class ResearcherProfilesService {
       expertiseKeywords: profile.expertiseKeywords.map((keyword) => keyword.keyword),
       publications: profile.publications.map((publication) => ({ ...publication, createdAt: publication.createdAt.toISOString(), updatedAt: publication.updatedAt.toISOString() })),
       participations: profile.participations.map((participation) => ({ ...participation, startsOn: participation.startsOn?.toISOString().slice(0, 10) ?? null, endsOn: participation.endsOn?.toISOString().slice(0, 10) ?? null, createdAt: participation.createdAt.toISOString(), updatedAt: participation.updatedAt.toISOString(), authority: participation.sourceType === "SELF_REPORTED" ? "SELF_REPORTED_NO_AUTHORITY" : "SOURCE_RECORD" })),
-      account: profile.linkedUser ? { id: profile.linkedUser.id, username: profile.linkedUser.username, displayName: profile.linkedUser.displayName, status: profile.linkedUser.status, systemRole: profile.linkedUser.systemRole, mustChangePassword: profile.linkedUser.mustChangePassword } : null,
-      ...(canManageResearcherProfiles(actor) ? { credentialDelivery: profile.credentialDeliveries[0] ?? null } : {}),
+      account: profile.linkedUser ? this.safeAccount(profile.linkedUser) : null,
+      ...(canManageResearcherProfiles(actor) ? { credentialDelivery: profile.credentialDeliveries[0] ? { ...profile.credentialDeliveries[0], expiresAt: profile.credentialDeliveries[0].expiresAt?.toISOString() ?? null, createdAt: profile.credentialDeliveries[0].createdAt.toISOString() } : null } : {}),
       status: profile.status,
       aggregateVersion: profile.aggregateVersion,
       createdAt: profile.createdAt.toISOString(),

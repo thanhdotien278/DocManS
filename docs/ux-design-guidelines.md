@@ -292,6 +292,15 @@ Trong màn hình chi tiết hồ sơ:
 - Hiển thị rõ vai trò của người đang xem với hồ sơ này, ngay đầu trang.
 - Mở hoặc khóa hành động theo quan hệ với hồ sơ, không theo vai trò hệ thống.
 - Nếu một người có nhiều quan hệ trên cùng hồ sơ, hiển thị quan hệ có quyền cao nhất và nêu các quan hệ còn lại.
+- Với hồ sơ nhà khoa học, section tài khoản phải ưu tiên happy path kích hoạt:
+  INTERNAL hiển thị email bắt buộc và thông báo tài khoản truy cập sẽ được tạo,
+  EXTERNAL chỉ hiển thị email/tạo account khi checkbox `Tạo tài khoản truy cập hệ thống`
+  được chọn; không hiển thị lý do hủy liên kết/cấp lại trong form tạo mới.
+- Hồ sơ chưa có tài khoản hiển thị `Nhà khoa học này chưa có quyền truy cập DocManS.`
+  và nút `Tạo tài khoản và gửi email kích hoạt`. Tài khoản chờ kích hoạt hiển thị
+  email, trạng thái `Chờ kích hoạt`, hạn kích hoạt và nút `Gửi lại email kích hoạt`.
+  Tài khoản active hiển thị email, username nếu đã cấu hình, role, trạng thái và
+  hành động quản trị phù hợp. `Liên kết tài khoản đã có` là hành động phụ/nâng cao.
 - Form chỉnh sửa và section `Nộp chính thức` chỉ hiển thị cho PI hiện tại. Chuyên viên quản lý khoa học xem một bảng chỉ đọc riêng gồm thông tin đề tài, team, ngày bắt đầu/kết thúc và kinh phí dự kiến.
 - Sau khi phiên bản nộp hiện tại đã được xác nhận đầy đủ, nút xác nhận vẫn hiện trong đúng workflow context nhưng bị disabled với lý do; không cho thao tác lặp.
 - Hạn phản hồi bổ sung, hiệu lực phân công và hạn đánh giá dùng native date input, hiển thị ngày/tháng/năm và không yêu cầu giờ phút.

@@ -52,7 +52,7 @@ export function projectResearcherProfileAuthorization(actor: SafeUserContext, pr
     if (!canManageResearcherProfile(actor, action, profile.managementOrganizationUnitId)) return false;
     if (action === "researcher-profile.account.create" || action === "researcher-profile.account.link") return profile.status === "ACTIVE" && !profile.linkedUserId;
     if (action === "researcher-profile.account.unlink") return !!profile.linkedUserId && profile.linkedUserId !== actor.id && (actor.systemRole === "SYSTEM_ADMIN" || ["RESEARCHER_INTERNAL_USER", "EXTERNAL_RESEARCHER_USER"].includes(profile.linkedUser?.systemRole ?? ""));
-    if (action === "researcher-profile.account.reset") return profile.status === "ACTIVE" && !!profile.linkedUserId && profile.linkedUserId !== actor.id && profile.linkedUser?.status === "active" && profile.linkedUser?.systemRole === (profile.profileType === "EXTERNAL" ? "EXTERNAL_RESEARCHER_USER" : "RESEARCHER_INTERNAL_USER");
+    if (action === "researcher-profile.account.reset") return profile.status === "ACTIVE" && !!profile.linkedUserId && profile.linkedUserId !== actor.id && profile.linkedUser?.status === "pending_activation" && profile.linkedUser?.systemRole === (profile.profileType === "EXTERNAL" ? "EXTERNAL_RESEARCHER_USER" : "RESEARCHER_INTERNAL_USER");
     return true;
   }).sort();
   const blockedActions = RESEARCHER_PROFILE_ACTIONS.filter((action) => !allowedActions.includes(action)).map((action) => ({

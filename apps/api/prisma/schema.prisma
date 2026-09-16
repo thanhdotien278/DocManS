@@ -9,11 +9,11 @@ datasource db {
 model User {
   researcherProfile ResearcherProfile? @relation("ResearcherProfileAccount")
   id                 String                  @id @default(uuid())
-  username           String                  @unique
-  usernameKey        String                  @unique @map("username_key")
+  username           String?                 @unique
+  usernameKey        String?                 @unique @map("username_key")
   displayName        String                  @map("display_name")
   passwordHash       String                  @map("password_hash")
-  credentialEmail     String? @map("credential_email")
+  credentialEmail     String? @unique @map("credential_email")
   mustChangePassword  Boolean                 @default(false) @map("must_change_password")
   credentialVersion   Int                     @default(0) @map("credential_version")
   status             String
@@ -26,6 +26,8 @@ model User {
   sessions           Session[]
   passwordResetTokens PasswordResetToken[] @relation("PasswordResetTarget")
   issuedPasswordResetTokens PasswordResetToken[] @relation("PasswordResetIssuer")
+  activationTokens AccountActivationToken[] @relation("AccountActivationTarget")
+  issuedActivationTokens AccountActivationToken[] @relation("AccountActivationIssuer")
   auditLogs          AuditLog[]
   systemRoleMigrationIssues SystemRoleMigrationIssue[]
   organizationScopes UserOrganizationScope[]
@@ -124,6 +126,22 @@ model PasswordResetToken {
 
   @@index([userId, usedAt, expiresAt])
   @@map("password_reset_tokens")
+}
+
+model AccountActivationToken {
+  credentialVersion Int @default(0) @map("credential_version")
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  createdById String   @map("created_by_id")
+  tokenHash   String   @unique @map("token_hash")
+  expiresAt   DateTime @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  user        User     @relation("AccountActivationTarget", fields: [userId], references: [id])
+  createdBy   User     @relation("AccountActivationIssuer", fields: [createdById], references: [id])
+
+  @@index([userId, usedAt, expiresAt])
+  @@map("account_activation_tokens")
 }
 
 model AuditLog {
@@ -302,6 +320,7 @@ model AccountCredentialDelivery {
   templateKey         String           @map("template_key")
   status              String
   attempts            Int              @default(0)
+  expiresAt           DateTime?        @map("expires_at")
   lastError           String?          @map("last_error")
   createdAt           DateTime         @default(now()) @map("created_at")
   updatedAt           DateTime         @updatedAt @map("updated_at")

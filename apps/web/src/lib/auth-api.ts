@@ -89,6 +89,16 @@ export async function completePasswordReset(token: string, newPassword: string) 
   if (!response.ok) throw new Error(body.message ?? "Không thể đặt lại mật khẩu.");
 }
 
+export async function completeAccountActivation(token: string, password: string, passwordConfirmation: string) {
+  const response = await fetch(`${getApiBaseUrl()}/auth/account-activation/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password, passwordConfirmation })
+  });
+  const body = (await response.json().catch(() => ({}))) as { message?: string };
+  if (!response.ok) throw new Error(body.message ?? "Không thể kích hoạt tài khoản.");
+}
+
 export async function getCurrentUser() {
   try {
     const response = await fetch(`${getApiBaseUrl()}/auth/me`, {

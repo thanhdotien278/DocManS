@@ -33,11 +33,8 @@ const NOTIFICATION_TEMPLATE_RULES = {
   user_created: {
     placeholders: new Set(["username", "displayName"])
   },
-  researcher_account_created: {
-    placeholders: new Set(["username", "displayName", "temporaryPassword", "loginUrl"])
-  },
-  researcher_account_reset: {
-    placeholders: new Set(["username", "displayName", "temporaryPassword", "loginUrl"])
+  researcher_account_activation: {
+    placeholders: new Set(["displayName", "activationUrl", "expiresAt"])
   }
 } as const;
 

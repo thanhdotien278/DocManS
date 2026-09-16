@@ -9,8 +9,9 @@ export class AuthStore {
   constructor(private readonly prisma: PrismaService) {}
 
   async findUserByUsername(username: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { usernameKey: username.trim().toLowerCase() },
+    const identifier = username.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: { OR: [{ usernameKey: identifier }, { credentialEmail: identifier }] },
       include: {
         organizationScopes: { include: { organizationUnit: true } },
         researcherProfile: { select: { id: true, status: true } }
@@ -95,6 +96,15 @@ export class AuthStore {
     });
   }
 
+  async createAccountActivationToken(userId: string, createdById: string, tokenHash: string, expiresAt: Date) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+      const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
+      await tx.accountActivationToken.updateMany({ where: { userId, usedAt: null }, data: { usedAt: new Date() } });
+      return tx.accountActivationToken.create({ data: { userId, createdById, tokenHash, expiresAt, credentialVersion: user.credentialVersion } });
+    });
+  }
+
   async completePasswordReset(tokenHash: string, passwordHash: string) {
     return this.prisma.$transaction(async (tx) => {
       const token = await tx.passwordResetToken.findFirst({
@@ -120,6 +130,28 @@ export class AuthStore {
     });
   }
 
+  async completeAccountActivation(tokenHash: string, passwordHash: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const token = await tx.accountActivationToken.findFirst({
+        where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } }
+      });
+      if (!token) return null;
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${token.userId} FOR UPDATE`;
+      const user = await tx.user.findUnique({ where: { id: token.userId } });
+      if (!user || user.status !== "pending_activation" || user.credentialVersion !== token.credentialVersion) return null;
+      const consumed = await tx.accountActivationToken.updateMany({
+        where: { id: token.id, usedAt: null, expiresAt: { gt: new Date() } },
+        data: { usedAt: new Date() }
+      });
+      if (consumed.count !== 1) return null;
+      await tx.user.update({ where: { id: token.userId }, data: { passwordHash, status: "active", mustChangePassword: false, credentialVersion: { increment: 1 } } });
+      await tx.session.updateMany({ where: { userId: token.userId, revokedAt: null }, data: { revokedAt: new Date() } });
+      await tx.passwordResetToken.updateMany({ where: { userId: token.userId, usedAt: null }, data: { usedAt: new Date() } });
+      await tx.accountActivationToken.updateMany({ where: { userId: token.userId, usedAt: null }, data: { usedAt: new Date() } });
+      return token.userId;
+    });
+  }
+
   async getActiveSession(sessionId: string) {
     const session = await this.prisma.session.findFirst({
       where: {
@@ -140,7 +172,7 @@ export class AuthStore {
 
   private toInternalUser(user: {
     id: string;
-    username: string;
+    username: string | null;
     displayName: string;
     passwordHash: string;
     status: string;
@@ -178,7 +210,7 @@ export class AuthStore {
 
     return {
       id: user.id,
-      username: user.username,
+      username: user.username ?? "",
       displayName: user.displayName,
       passwordHash: user.passwordHash,
       status: user.status === "active" ? "active" : "disabled",

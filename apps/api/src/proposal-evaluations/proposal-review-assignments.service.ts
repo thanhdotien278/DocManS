@@ -140,7 +140,7 @@ export class ProposalReviewAssignmentsService {
       const conflict = await this.participation.evaluateConflict(account.id, proposalId);
       const assigned = await this.findLiveAssignment(proposalId, account.id);
       if (!conflict.conflicted && !assigned) {
-        candidates.push({ id: profile.id, fullName: profile.fullName, linkedUserId: account.id, linkedAccountUsername: account.username, linkedAccountDisplayName: account.displayName });
+        candidates.push({ id: profile.id, fullName: profile.fullName, linkedUserId: account.id, linkedAccountUsername: account.username ?? "", linkedAccountDisplayName: account.displayName });
       }
     }
     return { profiles: candidates };

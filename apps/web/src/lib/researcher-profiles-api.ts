@@ -9,14 +9,14 @@ export type ResearcherProfileInput = {
   fullName: string; managementOrganizationUnitId: string; profileType?: "INTERNAL" | "EXTERNAL";
   externalAffiliation?: string | null; academicRankCatalogItemId?: string | null; academicDegreeCatalogItemId?: string | null;
   title?: string | null; position?: string | null; militaryRank?: string | null; contactEmail?: string | null; contactPhone?: string | null; contactNote?: string | null;
-  researchFieldIds: string[]; expertiseKeywords?: string[]; publications?: Publication[]; participations?: Participation[]; confirmDuplicate?: boolean;
+  researchFieldIds: string[]; expertiseKeywords?: string[]; publications?: Publication[]; participations?: Participation[]; confirmDuplicate?: boolean; provisionAccount?: boolean; username?: string | null;
 };
 export type ResearcherProfile = Omit<ResearcherProfileInput, "managementOrganizationUnitId" | "researchFieldIds"> & {
   id: string; managementOrganization: ResearcherOrganization; academicRank?: ResearcherCatalogItem | null; academicDegree?: ResearcherCatalogItem | null;
   researchFields: ResearcherCatalogItem[]; expertiseKeywords: string[]; publications: Publication[]; participations: Participation[];
   status: "ACTIVE" | "INACTIVE"; aggregateVersion: number; createdAt: string; updatedAt: string; viewerAuthorization: ViewerAuthorizationV1;
-  account: { id: string; username: string; displayName: string; status: string; systemRole: string; mustChangePassword: boolean } | null;
-  credentialDelivery?: { id: string; status: string; recipientEmail: string } | null;
+  account: { id: string; username: string | null; email?: string | null; displayName: string; status: string; systemRole: string; mustChangePassword: boolean } | null;
+  credentialDelivery?: { id: string; status: string; recipientEmail: string; expiresAt?: string | null; createdAt?: string } | null;
 };
 export type ResearcherProfileSummary = Pick<ResearcherProfile, "id" | "fullName" | "profileType" | "status" | "managementOrganization" | "account" | "viewerAuthorization">;
 export type ProfileHistory = { id: string; action: string; createdAt: string; reason?: string; beforeFacts?: Record<string, unknown>; afterFacts?: Record<string, unknown> };

@@ -338,4 +338,19 @@ await prisma.notificationTemplate.upsert({
   }
 });
 
+await prisma.notificationTemplate.upsert({
+  where: { key: "researcher_account_activation" },
+  update: {
+    subject: "Kích hoạt tài khoản DocManS",
+    body: "Xin chào {{displayName}}, vui lòng thiết lập mật khẩu để kích hoạt tài khoản DocManS.",
+    status: "active"
+  },
+  create: {
+    key: "researcher_account_activation",
+    subject: "Kích hoạt tài khoản DocManS",
+    body: "Xin chào {{displayName}}, vui lòng thiết lập mật khẩu để kích hoạt tài khoản DocManS.",
+    status: "active"
+  }
+});
+
 await prisma.$disconnect();

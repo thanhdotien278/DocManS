@@ -20,6 +20,7 @@ export type CreateResearcherProfileDto = {
   publications?: ResearcherProfilePublicationInput[];
   participations?: ResearcherProfileParticipationInput[];
   confirmDuplicate?: boolean;
+  provisionAccount?: boolean;
 };
 
 export type ResearcherProfilePublicationInput = {
@@ -48,6 +49,7 @@ export type ResearcherProfileParticipationInput = {
 
 export type UpdateResearcherProfileDto = Partial<Omit<CreateResearcherProfileDto, "managementOrganizationUnitId" | "confirmDuplicate" | "externalAffiliation" | "academicRankCatalogItemId" | "academicDegreeCatalogItemId" | "title" | "position" | "militaryRank" | "contactEmail" | "contactPhone" | "contactNote">> & {
   externalAffiliation?: string | null; academicRankCatalogItemId?: string | null; academicDegreeCatalogItemId?: string | null; title?: string | null; position?: string | null; militaryRank?: string | null; contactEmail?: string | null; contactPhone?: string | null; contactNote?: string | null;
+  username?: string | null;
   contextVersion: ContextVersionTokenV1;
 };
 
@@ -87,6 +89,16 @@ function optionalPhone(input: Record<string, unknown>) {
   const value = text(input, "contactPhone", 40);
   if (value && !/^\+?[0-9 ()-]{7,40}$/.test(value)) invalid(["contactPhone"]);
   return value;
+}
+
+function optionalUsername(input: Record<string, unknown>) {
+  if (!("username" in input)) return undefined;
+  const value = input.username;
+  if (value === null || value === "") return null;
+  if (typeof value !== "string") invalid(["username"]);
+  const normalized = value.normalize("NFC").trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9_.+-]{2,79}$/.test(normalized)) invalid(["username"]);
+  return normalized;
 }
 
 function ids(input: Record<string, unknown>, field: string, required: boolean) {
@@ -187,6 +199,11 @@ function confirmDuplicate(input: Record<string, unknown>) {
   return input.confirmDuplicate === true;
 }
 
+function provisionAccount(input: Record<string, unknown>) {
+  if (input.provisionAccount !== undefined && typeof input.provisionAccount !== "boolean") invalid(["provisionAccount"]);
+  return input.provisionAccount === true;
+}
+
 function record(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) invalid(["body"]);
   return value as Record<string, unknown>;
@@ -215,7 +232,8 @@ export const createResearcherProfilePipe: PipeTransform<unknown, CreateResearche
       expertiseKeywords: keywords(input),
       publications: publications(input),
       participations: participations(input),
-      confirmDuplicate: confirmDuplicate(input)
+      confirmDuplicate: confirmDuplicate(input),
+      provisionAccount: provisionAccount(input)
     };
   }
 };
@@ -250,9 +268,11 @@ export const researcherProfileMutationPipe: PipeTransform<unknown, { contextVers
 export const updateMyProfilePipe: PipeTransform<unknown, UpdateResearcherProfileDto> = {
   transform(value) {
     const input = record(value);
-    const allowed = new Set(["contextVersion", "fullName", "externalAffiliation", "academicRankCatalogItemId", "academicDegreeCatalogItemId", "title", "position", "militaryRank", "contactEmail", "contactPhone", "contactNote", "researchFieldIds", "expertiseKeywords", "publications", "participations"]);
+    const allowed = new Set(["contextVersion", "fullName", "externalAffiliation", "academicRankCatalogItemId", "academicDegreeCatalogItemId", "title", "position", "militaryRank", "contactEmail", "contactPhone", "contactNote", "researchFieldIds", "expertiseKeywords", "publications", "participations", "username"]);
     if (Object.keys(input).some((key) => !allowed.has(key))) invalid(["administrativeFields"]);
-    return updateResearcherProfilePipe.transform(input, { type: "body" });
+    const profileKeys = Object.keys(input).filter((key) => key !== "contextVersion" && key !== "username");
+    const base = profileKeys.length ? updateResearcherProfilePipe.transform(input, { type: "body" }) : researcherProfileMutationPipe.transform(input, { type: "body" });
+    return { ...base, username: optionalUsername(input) };
   }
 };
 
