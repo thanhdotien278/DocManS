@@ -8,7 +8,7 @@ import { AuthService } from "../dist/apps/api/auth/auth.service.js";
 import { AuthStore } from "../dist/apps/api/auth/auth.store.js";
 import { LoginRequestPipe } from "../dist/apps/api/auth/login-request.pipe.js";
 import { PasswordService } from "../dist/apps/api/auth/password.service.js";
-import { ChangePasswordRequestPipe, CompletePasswordResetRequestPipe } from "../dist/apps/api/auth/password-request.pipe.js";
+import { ChangePasswordRequestPipe, CompleteAccountActivationRequestPipe, CompletePasswordResetRequestPipe } from "../dist/apps/api/auth/password-request.pipe.js";
 import { SessionAuthGuard } from "../dist/apps/api/auth/session-auth.guard.js";
 import { readSessionCookie } from "../dist/apps/api/auth/session-cookie.js";
 
@@ -41,6 +41,7 @@ function createAuthStore({ user = activeUser, activeSession = { id: "session-1",
     createdSessions: [],
     revokedSessions: [],
     passwordChanges: [],
+    auditRecords: [],
     resetTokens: [],
     findUserByUsernameCalls: 0,
     async findUserByUsername(username) {
@@ -62,13 +63,18 @@ function createAuthStore({ user = activeUser, activeSession = { id: "session-1",
     async getActiveSession(sessionId) {
       return sessionId === activeSession?.id ? activeSession : null;
     },
-    async changePassword(userId, passwordHash) {
+    async changePassword(userId, passwordHash, _expectedCredentialVersion, audit) {
       this.passwordChanges.push({ userId, passwordHash });
+      this.auditRecords.push(audit);
+      return true;
     },
     async createPasswordResetToken(userId, createdById, tokenHash, expiresAt) {
       this.resetTokens.push({ userId, createdById, tokenHash, expiresAt });
     },
     async completePasswordReset() {
+      return "user-1";
+    },
+    async completeAccountActivation() {
       return "user-1";
     },
     toSafeUser: safeUser
@@ -91,9 +97,9 @@ function createAuditLog() {
 function createPasswordService(isValid = true) {
   return {
     verifyPasswordCalls: 0,
-    async verifyPassword() {
+    async verifyPassword(password) {
       this.verifyPasswordCalls += 1;
-      return isValid;
+      return isValid && password !== "ValidPassword1" && password !== "ActivationPassword1";
     },
     async hashPassword(password) {
       return `hash:${password}`;
@@ -376,7 +382,7 @@ describe("auth API behavior", () => {
     const { service, store, auditLog } = createService();
     await service.changePassword("user-1", { currentPassword: "correct", newPassword: "ValidPassword1" }, {});
     assert.deepEqual(store.passwordChanges, [{ userId: "user-1", passwordHash: "hash:ValidPassword1" }]);
-    const record = auditLog.records.at(-1);
+    const record = store.auditRecords.at(-1);
     assert.equal(record.action, "change-password");
     assert.equal(JSON.stringify(record).includes("ValidPassword1"), false);
   });
@@ -406,6 +412,15 @@ describe("auth API behavior", () => {
     assert.equal(JSON.stringify(auditLog.records.at(-1)).includes("raw-reset-token"), false);
   });
 
+  it("account activation completion validates confirmation, consumes a digest, and audits without secrets", async () => {
+    const pipe = new CompleteAccountActivationRequestPipe();
+    assert.throws(() => pipe.transform({ token: "raw-token", password: "ValidPassword1", passwordConfirmation: "Mismatch1" }), { name: "BadRequestException" });
+    const { service, auditLog } = createService();
+    await service.completeAccountActivation({ token: "raw-activation-token", password: "ActivationPassword1" }, {});
+    assert.equal(auditLog.records.at(-1).action, "complete-account-activation");
+    assert.equal(JSON.stringify(auditLog.records.at(-1)).includes("raw-activation-token"), false);
+  });
+
   it("admin reset initiation stores only a digest with a 30-minute expiry and does not audit secrets", async () => {
     const { service, store, auditLog } = createService();
     const result = await service.initiatePasswordReset({ id: "admin-1", username: "admin" }, "user-1", {});
@@ -420,11 +435,15 @@ describe("auth API behavior", () => {
     let used = false;
     const writes = [];
     const tx = {
+      async $queryRaw() {},
       passwordResetToken: {
-        async findFirst() { return used ? null : { id: "reset-1", userId: "user-1" }; },
+        async findFirst() { return used ? null : { id: "reset-1", userId: "user-1", credentialVersion: 0 }; },
         async updateMany({ data }) { if (data.usedAt && !used) { used = true; return { count: 1 }; } return { count: 0 }; }
       },
-      user: { async update(input) { writes.push(input); } },
+      user: {
+        async findUnique() { return { id: "user-1", status: "active", credentialVersion: 0 }; },
+        async update(input) { writes.push(input); }
+      },
       session: { async updateMany(input) { writes.push(input); } }
     };
     const store = new AuthStore({ $transaction: async (callback) => callback(tx) });
@@ -433,16 +452,46 @@ describe("auth API behavior", () => {
     assert.equal(writes.length, 2);
   });
 
-  it("auth store revokes all sessions and outstanding reset tokens when a password changes", async () => {
+  it("auth store activates a pending account once and revokes stale credentials", async () => {
+    let used = false;
     const writes = [];
     const tx = {
-      user: { async update(input) { writes.push(input); } },
+      async $queryRaw() {},
+      accountActivationToken: {
+        async findFirst() { return used ? null : { id: "activation-1", userId: "user-1", credentialVersion: 0 }; },
+        async updateMany({ where, data }) {
+          writes.push({ activationWhere: where, data });
+          if (where.id === "activation-1" && data.usedAt && !used) {
+            used = true;
+            return { count: 1 };
+          }
+          return { count: 0 };
+        }
+      },
+      user: {
+        async findUnique() { return { id: "user-1", status: "pending_activation", credentialVersion: 0 }; },
+        async update(input) { writes.push(input); }
+      },
       session: { async updateMany(input) { writes.push(input); } },
       passwordResetToken: { async updateMany(input) { writes.push(input); } }
     };
     const store = new AuthStore({ $transaction: async (callback) => callback(tx) });
-    await store.changePassword("user-1", "new-hash");
-    assert.deepEqual(writes[0], { where: { id: "user-1" }, data: { passwordHash: "new-hash" } });
+    assert.equal(await store.completeAccountActivation("digest", "new-hash"), "user-1");
+    assert.equal(await store.completeAccountActivation("digest", "new-hash"), null);
+    assert.deepEqual(writes.find((write) => write.data?.status === "active").data, { passwordHash: "new-hash", status: "active", mustChangePassword: false, credentialVersion: { increment: 1 } });
+  });
+
+  it("auth store revokes all sessions and outstanding reset tokens when a password changes", async () => {
+    const writes = [];
+    const tx = {
+      user: { async updateMany(input) { writes.push(input); return { count: 1 }; } },
+      session: { async updateMany(input) { writes.push(input); } },
+      passwordResetToken: { async updateMany(input) { writes.push(input); } },
+      auditLog: { async create(input) { writes.push(input); } }
+    };
+    const store = new AuthStore({ $transaction: async (callback) => callback(tx) });
+    assert.equal(await store.changePassword("user-1", "new-hash", 0, { action: "change-password", username: "admin" }), true);
+    assert.deepEqual(writes[0], { where: { id: "user-1", status: "active", credentialVersion: 0 }, data: { passwordHash: "new-hash", mustChangePassword: false, credentialVersion: { increment: 1 } } });
     assert.deepEqual(writes[1].where, { userId: "user-1", revokedAt: null });
     assert.deepEqual(writes[2].where, { userId: "user-1", usedAt: null });
   });

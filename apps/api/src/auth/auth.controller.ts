@@ -3,7 +3,7 @@ import { AuthService } from "./auth.service.js";
 import type { LoginRequest } from "./auth.types.js";
 import { LoginRequestPipe } from "./login-request.pipe.js";
 import { SessionAuthGuard } from "./session-auth.guard.js";
-import { ChangePasswordRequestPipe, CompletePasswordResetRequestPipe } from "./password-request.pipe.js";
+import { ChangePasswordRequestPipe, CompleteAccountActivationRequestPipe, CompletePasswordResetRequestPipe } from "./password-request.pipe.js";
 import {
   createExpiredSessionCookie,
   createSessionCookie,
@@ -73,6 +73,19 @@ export class AuthController {
       throw error;
     }
     await this.authService.completePasswordReset(input, requestContext(request));
+    return { success: true };
+  }
+
+  @Post("account-activation/complete")
+  async completeAccountActivation(@Body() body: unknown, @Req() request: any) {
+    let input: { token: string; password: string };
+    try {
+      input = new CompleteAccountActivationRequestPipe().transform(body);
+    } catch (error) {
+      await this.authService.recordAccountActivationFailure(requestContext(request), "request_invalid");
+      throw error;
+    }
+    await this.authService.completeAccountActivation(input, requestContext(request));
     return { success: true };
   }
 

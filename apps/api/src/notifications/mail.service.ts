@@ -2,7 +2,8 @@ import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 import nodemailer from "nodemailer";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 
-type TemporaryCredentialInput = { to: string; username: string; displayName: string; temporaryPassword: string; templateKey: string };
+type ActivationLinkInput = { to: string; displayName: string; activationUrl: string; expiresAt: Date; templateKey: string };
+type ActivationTemplateInput = Omit<ActivationLinkInput, "expiresAt"> & { expiresAt: string };
 
 @Injectable()
 export class MailService {
@@ -22,14 +23,13 @@ export class MailService {
     return { host, port, from, loginUrl: loginUrl!, localHost };
   }
 
-  async sendTemporaryCredential(input: TemporaryCredentialInput) {
-    const { host, port, from, loginUrl, localHost } = this.configuration();
+  async sendAccountActivation(input: ActivationLinkInput) {
+    const { host, port, from, localHost } = this.configuration();
     const template = await this.prisma.notificationTemplate.findUnique({ where: { key: input.templateKey } });
-    const values = { ...input, loginUrl };
-    const subject = render(template?.status === "active" ? template.subject : "Tài khoản DocManS của {{displayName}}", values);
-    // Required login information is appended independently of editable notification prose.
-    const introduction = template?.status === "active" ? render(template.body, values) : `Xin chào ${input.displayName},`;
-    const text = `${introduction}\n\nĐăng nhập: ${loginUrl}\nTên đăng nhập: ${input.username}\nMật khẩu tạm thời: ${input.temporaryPassword}\n\nBạn phải đổi mật khẩu trước khi sử dụng hệ thống. Không chia sẻ thông tin này.`;
+    const values = { ...input, expiresAt: input.expiresAt.toISOString() };
+    const subject = renderActivation(template?.status === "active" ? template.subject : "Kích hoạt tài khoản DocManS của {{displayName}}", values);
+    const introduction = template?.status === "active" ? renderActivation(template.body, values) : `Xin chào ${input.displayName},`;
+    const text = `${introduction}\n\nThiết lập mật khẩu: ${input.activationUrl}\nLiên kết hết hạn: ${values.expiresAt}\n\nKhông chia sẻ liên kết này.`;
     const transporter = nodemailer.createTransport({ host, port, secure: process.env.SMTP_SECURE === "true" || port === 465, requireTLS: !localHost,
       auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD ?? "" } : undefined,
       connectionTimeout: 5000, greetingTimeout: 5000, socketTimeout: 10000, disableFileAccess: true, disableUrlAccess: true });
@@ -40,6 +40,6 @@ export class MailService {
   }
 }
 
-function render(template: string, input: TemporaryCredentialInput & { loginUrl: string }) {
-  return template.replace(/\{\{\s*(displayName|username|temporaryPassword|loginUrl)\s*\}\}/g, (_match, key: "displayName" | "username" | "temporaryPassword" | "loginUrl") => input[key]);
+function renderActivation(template: string, input: ActivationTemplateInput) {
+  return template.replace(/\{\{\s*(displayName|activationUrl|expiresAt)\s*\}\}/g, (_match, key: "displayName" | "activationUrl" | "expiresAt") => input[key]);
 }

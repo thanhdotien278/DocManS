@@ -254,7 +254,7 @@ export class ResearchProposalsService {
       actorId: pi.id,
       targetEntity: "research-proposal",
       targetEntityId: proposal.id,
-      username: pi.username
+      username: pi.username || undefined
     });
 
     return this.toProposalDetailResponse(proposal, pi);
@@ -527,7 +527,7 @@ export class ResearchProposalsService {
           actorId: pi.id,
           targetEntity: "research-proposal",
           targetEntityId: proposalId,
-          username: pi.username,
+          username: pi.username || undefined,
           reason: JSON.stringify({
             fromStatus: proposal.status,
             toStatus: "resubmitted",

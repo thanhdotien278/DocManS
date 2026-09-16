@@ -158,6 +158,23 @@ describe("Story 1.4 system-role migration", () => {
       const disabledUser = users.find((user) => user.id === "disabled-reviewer");
       const authStore = new AuthStore({
         user: {
+          async findFirst() {
+            return {
+              id: disabledUser.id,
+              username: "disabled.reviewer",
+              displayName: "Disabled Reviewer",
+              passwordHash: "hash",
+              status: disabledUser.status,
+              systemRole: disabledUser.system_role,
+              unit: "Học viện Quân y",
+              organizationScopes: [
+                {
+                  isPrimary: true,
+                  organizationUnit: { id: "org-hvqy", code: "HVQY", name: "Học viện Quân y", status: "active" }
+                }
+              ]
+            };
+          },
           async findUnique() {
             return {
               id: disabledUser.id,
@@ -188,35 +205,50 @@ describe("Story 1.4 system-role migration", () => {
         UnauthorizedException
       );
 
+      const externalUser = {
+        id: "external-researcher",
+        username: "external.researcher",
+        displayName: "External Researcher",
+        passwordHash: "hash",
+        status: "active",
+        credentialVersion: 0,
+        systemRole: "EXTERNAL_RESEARCHER_USER",
+        unit: "Học viện Quân y",
+        organizationScopes: [
+          {
+            isPrimary: true,
+            organizationUnitId: "org-hvqy",
+            organizationUnit: { id: "org-hvqy", code: "HVQY", name: "Học viện Quân y", status: "active" }
+          }
+        ]
+      };
+      const externalSession = {
+        id: "session-external",
+        userId: "external-researcher",
+        credentialVersion: 0,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: null
+      };
       const externalAuthStore = new AuthStore({
+        async $transaction(callback) {
+          return callback({
+            async $queryRaw() {},
+            user: { async findUnique() { return externalUser; } },
+            session: { async create() { return externalSession; } }
+          });
+        },
         user: {
+          async findFirst() {
+            return externalUser;
+          },
           async findUnique() {
-            return {
-              id: "external-researcher",
-              username: "external.researcher",
-              displayName: "External Researcher",
-              passwordHash: "hash",
-              status: "active",
-              systemRole: "EXTERNAL_RESEARCHER_USER",
-              unit: "Học viện Quân y",
-              organizationScopes: [
-                {
-                  isPrimary: true,
-                  organizationUnit: { id: "org-hvqy", code: "HVQY", name: "Học viện Quân y", status: "active" }
-                }
-              ]
-            };
+            return externalUser;
           }
         },
         session: {
           async create() {
-            return {
-              id: "session-external",
-              userId: "external-researcher",
-              createdAt: new Date(),
-              expiresAt: new Date(Date.now() + 60_000),
-              revokedAt: null
-            };
+            return externalSession;
           }
         }
       });

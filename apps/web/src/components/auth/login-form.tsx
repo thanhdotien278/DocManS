@@ -19,7 +19,7 @@ export function LoginForm() {
     setError("");
 
     if (!username.trim() || !password) {
-      setError("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.");
+      setError("Vui lòng nhập đầy đủ tên đăng nhập/email và mật khẩu.");
       return;
     }
 
@@ -47,14 +47,14 @@ export function LoginForm() {
   return (
     <form className="login-form" onSubmit={handleSubmit}>
       <div className="field">
-        <label htmlFor="username">Tên đăng nhập</label>
+        <label htmlFor="username">Tên đăng nhập hoặc email</label>
         <div className="field-input with-icon">
           <UserRound size={18} aria-hidden="true" />
           <input
             autoComplete="username"
             id="username"
             onChange={(event) => setUsername(event.target.value)}
-            placeholder="Nhập tên đăng nhập"
+            placeholder="Nhập tên đăng nhập hoặc email"
             type="text"
             value={username}
           />

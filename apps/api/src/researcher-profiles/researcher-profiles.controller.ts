@@ -83,4 +83,9 @@ export class ResearcherProfilesController {
   async resetAccount(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body(researcherAccountPipe) body: ResearcherAccountInput) {
     return this.profilesService.resetResearcherAccount(request.currentUser!, id, body);
   }
+
+  @Post(":id/account/resend-activation")
+  async resendActivation(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body(researcherAccountPipe) body: ResearcherAccountInput) {
+    return this.profilesService.resetResearcherAccount(request.currentUser!, id, body);
+  }
 }

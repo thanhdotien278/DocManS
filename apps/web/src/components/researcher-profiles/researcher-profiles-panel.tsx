@@ -6,7 +6,7 @@ import { createResearcherProfile, getResearcherProfile, loadResearcherProfileCat
 
 const emptyForm: ResearcherProfileInput = { fullName: "", profileType: "INTERNAL", managementOrganizationUnitId: "", researchFieldIds: [], expertiseKeywords: [], publications: [], participations: [] };
 const levels = { ACADEMY_INSTITUTIONAL: "Cấp Học viện / cơ sở", MINISTRY: "Cấp Bộ", OTHER: "Cấp khác" };
-const historyActions: Record<string, string> = { CREATE: "Tạo hồ sơ", UPDATE: "Cập nhật hồ sơ", SELF_UPDATE: "Nhà nghiên cứu cập nhật", ACTIVATE: "Kích hoạt", DEACTIVATE: "Ngừng hoạt động", ACCOUNT_CREATED: "Tạo và liên kết tài khoản", ACCOUNT_LINKED: "Liên kết tài khoản", ACCOUNT_UNLINKED: "Hủy liên kết", ACCOUNT_RESET: "Cấp lại mật khẩu tạm thời" };
+const historyActions: Record<string, string> = { CREATE: "Tạo hồ sơ", UPDATE: "Cập nhật hồ sơ", SELF_UPDATE: "Nhà nghiên cứu cập nhật", ACTIVATE: "Kích hoạt", DEACTIVATE: "Ngừng hoạt động", ACCOUNT_CREATED: "Tạo và liên kết tài khoản", ACCOUNT_LINKED: "Liên kết tài khoản", ACCOUNT_UNLINKED: "Hủy liên kết", ACCOUNT_RESET: "Gửi lại email kích hoạt" };
 
 export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
   const [profiles, setProfiles] = useState<ResearcherProfileSummary[]>([]);
@@ -27,7 +27,6 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
   const [duplicates, setDuplicates] = useState<Array<{ id: string; fullName: string }>>([]);
   const [history, setHistory] = useState<ProfileHistory[] | null>(null);
   const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
   const [reason, setReason] = useState("");
   const [accountQuery, setAccountQuery] = useState("");
   const [accounts, setAccounts] = useState<Array<{ id: string; username: string; displayName: string }>>([]);
@@ -38,6 +37,7 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
   const editable = editing ? allowed(self ? "researcher-profile.self.update" : "researcher-profile.update") : canCreate;
   const selectedResearchFields = catalogs.researchFields.filter((item) => form.researchFieldIds.includes(item.id));
   const visibleResearchFields = catalogs.researchFields.filter((item) => item.name.toLowerCase().includes(researchFieldQuery.trim().toLowerCase()));
+  const accountProvisionOnCreate = !editing && !self && ((form.profileType ?? "INTERNAL") === "INTERNAL" || form.provisionAccount === true);
 
   function select(profile: ResearcherProfile) {
     setEditing(profile);
@@ -45,11 +45,11 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
       externalAffiliation: profile.externalAffiliation, academicRankCatalogItemId: profile.academicRank?.id ?? "", academicDegreeCatalogItemId: profile.academicDegree?.id ?? "",
       title: profile.title, position: profile.position, militaryRank: profile.militaryRank, contactEmail: profile.contactEmail, contactPhone: profile.contactPhone, contactNote: profile.contactNote,
       researchFieldIds: profile.researchFields.map((field) => field.id), publications: profile.publications,
-      participations: profile.participations.filter((item) => item.status !== "SUPERSEDED").map(({ id, projectTitle, participationRole, level, startsOn, endsOn, status, notes }) => ({ id, projectTitle, participationRole, level, startsOn, endsOn, status, notes })) });
+      participations: profile.participations.filter((item) => item.status !== "SUPERSEDED").map(({ id, projectTitle, participationRole, level, startsOn, endsOn, status, notes }) => ({ id, projectTitle, participationRole, level, startsOn, endsOn, status, notes })), username: profile.account?.username ?? "" });
     setKeywords(profile.expertiseKeywords.join(", "));
     setResearchFieldQuery(""); setResearchFieldOpen(false);
-    setEmail(profile.credentialDelivery?.recipientEmail ?? profile.contactEmail ?? "");
-    setUsername(""); setReason(""); setAccounts([]); setSelectedAccount(""); setHistory(null); setDuplicates([]);
+    setEmail(profile.credentialDelivery?.recipientEmail ?? profile.account?.email ?? profile.contactEmail ?? "");
+    setReason(""); setAccounts([]); setSelectedAccount(""); setHistory(null); setDuplicates([]);
   }
 
   async function load() {
@@ -72,7 +72,7 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
   }
   useEffect(() => { void load(); return () => { loadVersion.current++; }; }, [self, filters]);
 
-  function startCreate() { setEditing(null); setForm({ ...emptyForm, managementOrganizationUnitId: organizations[0]?.id ?? "" }); setKeywords(""); setResearchFieldQuery(""); setResearchFieldOpen(false); setDuplicates([]); setHistory(null); setMessage(""); setError(""); }
+  function startCreate() { setEditing(null); setForm({ ...emptyForm, managementOrganizationUnitId: organizations[0]?.id ?? "", provisionAccount: false }); setKeywords(""); setResearchFieldQuery(""); setResearchFieldOpen(false); setDuplicates([]); setHistory(null); setMessage(""); setError(""); }
   function field(key: keyof ResearcherProfileInput, value: string) { setForm((current) => ({ ...current, [key]: value })); }
   function filter(key: keyof typeof filters, value: string) { setFilters((current) => ({ ...current, [key]: value, ...(key === "page" ? {} : { page: "1" }) })); }
   async function perform(work: () => Promise<void>) { setBusy(true); setError(""); setMessage(""); try { await work(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể thực hiện thao tác."); } finally { setBusy(false); } }
@@ -83,13 +83,13 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
   async function save(confirmDuplicate = false) {
     if (form.researchFieldIds.length === 0) { setError("Cần chọn ít nhất một lĩnh vực nghiên cứu."); return; }
     await perform(async () => {
-      const { managementOrganizationUnitId, profileType, ...personal } = form;
+      const { managementOrganizationUnitId, profileType, provisionAccount, username: nextUsername, ...personal } = form;
       const input = { ...personal, expertiseKeywords: keywords.split(",").map((value) => value.trim()).filter(Boolean) };
       if (editing) {
-        const result = await updateResearcherProfile(self ? "my-profile" : editing.id, { ...input, ...(!self ? { profileType } : {}), contextVersion: editing.viewerAuthorization.contextVersion });
+        const result = await updateResearcherProfile(self ? "my-profile" : editing.id, { ...input, ...(self ? { username: nextUsername } : { profileType }), contextVersion: editing.viewerAuthorization.contextVersion });
         select(result.profile);
       } else {
-        const result = await createResearcherProfile({ ...input, managementOrganizationUnitId, profileType, confirmDuplicate });
+        const result = await createResearcherProfile({ ...input, managementOrganizationUnitId, profileType, provisionAccount, confirmDuplicate });
         if (result.requiresConfirmation) { setDuplicates(result.duplicateCandidates); return; }
         if (result.profile) select(result.profile);
       }
@@ -98,12 +98,12 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
     });
   }
 
-  async function accountAction(action: "" | "/link" | "/unlink" | "/reset") {
+  async function accountAction(action: "" | "/link" | "/unlink" | "/resend-activation") {
     if (!editing) return;
     await perform(async () => {
-      const result = await profileRequest<{ delivery?: { status: string } }>(`/${editing.id}/account${action}`, { method: "POST", body: JSON.stringify({ contextVersion: editing.viewerAuthorization.contextVersion, ...(action === "" || action === "/reset" ? { email, username: username || undefined } : {}), ...(action === "/link" ? { userId: selectedAccount } : {}), reason: reason || undefined }) });
+      const result = await profileRequest<{ delivery?: { status: string; expiresAt?: string } }>(`/${editing.id}/account${action}`, { method: "POST", body: JSON.stringify({ contextVersion: editing.viewerAuthorization.contextVersion, ...(action === "" || action === "/resend-activation" ? { email } : {}), ...(action === "/link" ? { userId: selectedAccount } : {}), reason: reason || undefined }) });
       select((await getResearcherProfile(editing.id)).profile);
-      setMessage(result.delivery ? result.delivery.status === "ACCEPTED" ? "Máy chủ email đã nhận thư. Người nhận cần kiểm tra hộp thư và đổi mật khẩu khi đăng nhập." : "Chưa xác nhận gửi email. Tài khoản đã liên kết; dùng cấp lại mật khẩu tạm thời để thử lại." : "Đã cập nhật liên kết tài khoản.");
+      setMessage(result.delivery ? result.delivery.status === "ACCEPTED" ? "Máy chủ email đã nhận thư kích hoạt." : "Chưa xác nhận gửi email. Có thể gửi lại email kích hoạt." : "Đã cập nhật liên kết tài khoản.");
       await load();
     });
   }
@@ -124,8 +124,8 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
         <label className="field"><span>Đơn vị quản lý</span><select value={filters.organizationUnitId} onChange={(event) => filter("organizationUnitId", event.target.value)}><option value="">Tất cả đơn vị được cấp</option>{organizations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <label className="field"><span>Lĩnh vực</span><select value={filters.researchFieldId} onChange={(event) => filter("researchFieldId", event.target.value)}><option value="">Tất cả</option>{catalogs.researchFields.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       </div>
-      {!profiles.length && !loading ? <EmptyState title="Không có hồ sơ phù hợp" message="Thay đổi bộ lọc hoặc tạo hồ sơ trong phạm vi được cấp." /> : <div className="table-wrap"><table className="data-table"><thead><tr><th>Họ tên</th><th>Loại / đơn vị</th><th>Trạng thái</th><th>Tài khoản</th><th>Thao tác</th></tr></thead><tbody>{profiles.map((profile) => <tr key={profile.id}><td>{profile.fullName}</td><td>{profile.profileType === "EXTERNAL" ? "Bên ngoài" : "Nội bộ"}<br />{profile.managementOrganization.name}</td><td>{profile.status === "ACTIVE" ? "Hoạt động" : "Ngừng hoạt động"}</td><td>{profile.account?.username ?? "Chưa có tài khoản"}</td><td><button className="button" disabled={busy} onClick={() => void perform(async () => select((await getResearcherProfile(profile.id)).profile))}>Xem / sửa</button></td></tr>)}</tbody></table></div>}
-      <div className="mobile-list">{profiles.map((profile) => <article className="list-card" key={profile.id}><h3>{profile.fullName}</h3><p>{profile.profileType === "EXTERNAL" ? "Bên ngoài" : "Nội bộ"} · {profile.managementOrganization.name}</p><p>{profile.status === "ACTIVE" ? "Hoạt động" : "Ngừng hoạt động"} · {profile.account?.username ?? "Chưa có tài khoản"}</p><button className="button" disabled={busy} onClick={() => void perform(async () => select((await getResearcherProfile(profile.id)).profile))}>Xem / sửa</button></article>)}</div>
+      {!profiles.length && !loading ? <EmptyState title="Không có hồ sơ phù hợp" message="Thay đổi bộ lọc hoặc tạo hồ sơ trong phạm vi được cấp." /> : <div className="table-wrap"><table className="data-table"><thead><tr><th>Họ tên</th><th>Loại / đơn vị</th><th>Trạng thái</th><th>Tài khoản</th><th>Thao tác</th></tr></thead><tbody>{profiles.map((profile) => <tr key={profile.id}><td>{profile.fullName}</td><td>{profile.profileType === "EXTERNAL" ? "Bên ngoài" : "Nội bộ"}<br />{profile.managementOrganization.name}</td><td>{profile.status === "ACTIVE" ? "Hoạt động" : "Ngừng hoạt động"}</td><td>{accountLabel(profile.account)}</td><td><button className="button" disabled={busy} onClick={() => void perform(async () => select((await getResearcherProfile(profile.id)).profile))}>Xem / sửa</button></td></tr>)}</tbody></table></div>}
+      <div className="mobile-list">{profiles.map((profile) => <article className="list-card" key={profile.id}><h3>{profile.fullName}</h3><p>{profile.profileType === "EXTERNAL" ? "Bên ngoài" : "Nội bộ"} · {profile.managementOrganization.name}</p><p>{profile.status === "ACTIVE" ? "Hoạt động" : "Ngừng hoạt động"} · {accountLabel(profile.account)}</p><button className="button" disabled={busy} onClick={() => void perform(async () => select((await getResearcherProfile(profile.id)).profile))}>Xem / sửa</button></article>)}</div>
       <div className="button-row"><button className="button" disabled={Number(filters.page) <= 1 || loading} onClick={() => filter("page", String(Number(filters.page) - 1))}>Trang trước</button><span>Trang {filters.page} · {total} hồ sơ</span><button className="button" disabled={Number(filters.page) * 20 >= total || loading} onClick={() => filter("page", String(Number(filters.page) + 1))}>Trang sau</button></div>
     </section> : null}
     {self && !editing ? (!loading ? <EmptyState title="Chưa có hồ sơ được liên kết" message="Liên hệ cán bộ quản lý khoa học để kiểm tra liên kết tài khoản." /> : null) : <section className="section-card">
@@ -134,10 +134,13 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
         <fieldset disabled={busy || !editable} style={{ border: 0, padding: 0, minWidth: 0 }}>
           <div className="form-grid two">
             <label className="field"><span>Họ và tên *</span><input required maxLength={240} value={form.fullName} onChange={(event) => field("fullName", event.target.value)} /></label>
-            {!self ? <><label className="field"><span>Loại nhà nghiên cứu *</span><select value={form.profileType} disabled={!!editing?.account} onChange={(event) => field("profileType", event.target.value)}><option value="INTERNAL">Nội bộ</option><option value="EXTERNAL">Bên ngoài</option></select></label><label className="field"><span>Đơn vị quản lý *</span><select required value={form.managementOrganizationUnitId} disabled={!!editing} onChange={(event) => field("managementOrganizationUnitId", event.target.value)}><option value="">Chọn đơn vị</option>{organizations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label></> : <p>Đơn vị quản lý: {editing?.managementOrganization.name}</p>}
+            {!self ? <><label className="field"><span>Loại nhà nghiên cứu *</span><select value={form.profileType} disabled={!!editing?.account} onChange={(event) => setForm((current) => ({ ...current, profileType: event.target.value as "INTERNAL" | "EXTERNAL", provisionAccount: event.target.value === "EXTERNAL" ? false : current.provisionAccount }))}><option value="INTERNAL">Nội bộ</option><option value="EXTERNAL">Bên ngoài</option></select></label><label className="field"><span>Đơn vị quản lý *</span><select required value={form.managementOrganizationUnitId} disabled={!!editing} onChange={(event) => field("managementOrganizationUnitId", event.target.value)}><option value="">Chọn đơn vị</option>{organizations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label></> : <p>Đơn vị quản lý: {editing?.managementOrganization.name}</p>}
             {([['academicRankCatalogItemId', 'Học hàm', catalogs.academicRanks], ['academicDegreeCatalogItemId', 'Học vị', catalogs.academicDegrees]] as const).map(([key, label, options]) => <label className="field" key={key}><span>{label}</span><select value={form[key] ?? ""} onChange={(event) => field(key, event.target.value)}><option value="">Chưa chọn</option>{options.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>)}
-            {([['title', 'Chức danh'], ['position', 'Chức vụ / vị trí công tác'], ['militaryRank', 'Quân hàm'], ['externalAffiliation', 'Đơn vị công tác / tổ chức'], ['contactEmail', 'Email liên hệ'], ['contactPhone', 'Điện thoại']] as const).map(([key, label]) => <label key={key} className="field"><span>{label}</span><input type={key === "contactEmail" ? "email" : key === "contactPhone" ? "tel" : "text"} value={form[key] ?? ""} onChange={(event) => field(key, event.target.value)} /></label>)}
+            {self ? <label className="field"><span>Tên đăng nhập</span><input value={form.username ?? ""} onChange={(event) => field("username", event.target.value)} /></label> : null}
+            {([['title', 'Chức danh'], ['position', 'Chức vụ / vị trí công tác'], ['militaryRank', 'Quân hàm'], ['externalAffiliation', 'Đơn vị công tác / tổ chức'], ['contactEmail', accountProvisionOnCreate ? 'Email *' : 'Email liên hệ'], ['contactPhone', 'Điện thoại']] as const).map(([key, label]) => <label key={key} className="field"><span>{label}</span><input required={key === "contactEmail" && accountProvisionOnCreate} type={key === "contactEmail" ? "email" : key === "contactPhone" ? "tel" : "text"} value={form[key] ?? ""} onChange={(event) => field(key, event.target.value)} /></label>)}
           </div>
+          {!editing && !self && form.profileType === "INTERNAL" ? <p className="record-meta">Tài khoản truy cập sẽ được tạo và email kích hoạt sẽ được gửi sau khi lưu.</p> : null}
+          {!editing && !self && form.profileType === "EXTERNAL" ? <label className="field"><span><input type="checkbox" checked={form.provisionAccount === true} onChange={(event) => setForm((current) => ({ ...current, provisionAccount: event.target.checked }))} /> Tạo tài khoản truy cập hệ thống</span></label> : null}
           <div className="field researcher-field-picker">
             <span id="research-fields-label">Lĩnh vực nghiên cứu *</span>
             <div className="multi-select-control" role="group" aria-labelledby="research-fields-label">
@@ -181,14 +184,13 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
       {editing && !self ? <div className="button-row"><button className="button" disabled={busy || !allowed(editing.status === "ACTIVE" ? "researcher-profile.deactivate" : "researcher-profile.activate")} onClick={() => void perform(async () => { select((await setResearcherProfileStatus(editing.id, editing.status === "ACTIVE" ? "INACTIVE" : "ACTIVE", editing.viewerAuthorization.contextVersion)).profile); await load(); })}>{editing.status === "ACTIVE" ? "Ngừng hoạt động hồ sơ" : "Kích hoạt hồ sơ"}</button></div> : null}
     </section>}
     {editing && !self ? <section className="section-card"><h2>Tài khoản hệ thống / Quyền truy cập</h2>
-      <p>{editing.account ? `${editing.account.username} — ${editing.account.status === "active" ? "Đang hoạt động" : "Đã khóa"}${editing.account.mustChangePassword ? " · Cần đổi mật khẩu" : ""}` : "Chưa liên kết tài khoản. Hồ sơ vẫn sử dụng được khi không cần truy cập hệ thống."}</p>
-      {editing.credentialDelivery ? <p>Gửi email gần nhất: {editing.credentialDelivery.status === "ACCEPTED" ? "Máy chủ email đã nhận thư" : "Chưa xác nhận gửi — có thể cấp lại mật khẩu tạm thời"}</p> : null}
+      <p>{editing.account ? `${editing.account.email ?? "Chưa có email"} — ${accountStatusLabel(editing.account.status)}${editing.account.username ? ` · ${editing.account.username}` : ""}` : "Nhà khoa học này chưa có quyền truy cập DocManS."}</p>
+      {editing.credentialDelivery ? <p>Gửi email gần nhất: {editing.credentialDelivery.status === "ACCEPTED" ? "Máy chủ email đã nhận thư" : "Chưa xác nhận gửi"}{editing.credentialDelivery.expiresAt ? ` · Hết hạn ${new Date(editing.credentialDelivery.expiresAt).toLocaleString("vi-VN")}` : ""}</p> : null}
       <div className="form-grid two">
-        <label className="field"><span>Email nhận thông tin đăng nhập *</span><input type="email" value={email} disabled={busy} onChange={(event) => setEmail(event.target.value)} /><small>Xác nhận địa chỉ của nhà nghiên cứu trước khi cấp hoặc gửi lại thông tin đăng nhập.</small></label>
-        {!editing.account ? <label className="field"><span>Tên đăng nhập (mặc định là email)</span><input value={username} disabled={busy} onChange={(event) => setUsername(event.target.value)} /></label> : null}
-        <label className="field"><span>Lý do hủy liên kết / cấp lại *</span><input value={reason} disabled={busy} onChange={(event) => setReason(event.target.value)} /></label>
+        <label className="field"><span>Email kích hoạt *</span><input type="email" value={email} disabled={busy || !!editing.account} onChange={(event) => setEmail(event.target.value)} /><small>Xác nhận địa chỉ của nhà nghiên cứu trước khi tạo hoặc gửi lại kích hoạt.</small></label>
+        {editing.account ? <label className="field"><span>Lý do hủy liên kết</span><input value={reason} disabled={busy} onChange={(event) => setReason(event.target.value)} /></label> : null}
       </div>
-      <div className="button-row"><button className="button primary" disabled={busy || !email || !allowed("researcher-profile.account.create")} onClick={() => void accountAction("")}>Tạo tài khoản và gửi email</button><button className="button" disabled={busy || !email || !reason || !allowed("researcher-profile.account.reset")} onClick={() => void accountAction("/reset")}>Cấp lại mật khẩu tạm thời / gửi lại</button><button className="button" disabled={busy || !reason || !allowed("researcher-profile.account.unlink")} onClick={() => void accountAction("/unlink")}>Hủy liên kết</button></div>
+      <div className="button-row"><button className="button primary" disabled={busy || !email || !allowed("researcher-profile.account.create")} onClick={() => void accountAction("")}>Tạo tài khoản và gửi email kích hoạt</button><button className="button" disabled={busy || !email || !allowed("researcher-profile.account.reset")} onClick={() => void accountAction("/resend-activation")}>Gửi lại email kích hoạt</button><button className="button" disabled={busy || !reason || !allowed("researcher-profile.account.unlink")} onClick={() => void accountAction("/unlink")}>Hủy liên kết</button></div>
       {!editing.account && allowed("researcher-profile.account.link") ? <div><h3>Liên kết tài khoản đã có</h3><label className="field"><span>Tìm tài khoản chưa liên kết</span><input value={accountQuery} onChange={(event) => setAccountQuery(event.target.value)} /></label><button className="button" disabled={busy} onClick={() => void perform(async () => { setAccounts((await profileRequest<{ accounts: typeof accounts }>(`/${editing.id}/account-candidates?keyword=${encodeURIComponent(accountQuery)}`)).accounts); setSelectedAccount(""); })}>Tìm tài khoản</button><label className="field"><span>Tài khoản phù hợp</span><select value={selectedAccount} onChange={(event) => setSelectedAccount(event.target.value)}><option value="">Chọn tài khoản</option>{accounts.map((item) => <option key={item.id} value={item.id}>{item.displayName} ({item.username})</option>)}</select></label><button className="button" disabled={busy || !selectedAccount} onClick={() => void accountAction("/link")}>Liên kết tài khoản</button></div> : null}
     </section> : null}
     {editing ? <section className="section-card"><h2>Lịch sử hồ sơ</h2>
@@ -198,6 +200,14 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
       {history?.length === 0 ? <p>Chưa có lịch sử thay đổi.</p> : null}
     </section> : null}
   </div>;
+}
+
+function accountLabel(account: ResearcherProfile["account"]) {
+  return account ? account.username || account.email || "Đã liên kết tài khoản" : "Chưa có tài khoản";
+}
+
+function accountStatusLabel(status: string) {
+  return status === "active" ? "Đang hoạt động" : status === "pending_activation" ? "Chờ kích hoạt" : "Đã khóa";
 }
 
 function HistoryFacts({ label, facts }: { label: string; facts?: Record<string, unknown> }) {

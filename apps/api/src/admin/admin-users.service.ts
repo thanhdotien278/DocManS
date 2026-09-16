@@ -381,7 +381,7 @@ export class AdminUsersService {
 
   private toUserResponse(user: {
     id: string;
-    username: string;
+    username: string | null;
     displayName: string;
     status: string;
     systemRole: string | null;
@@ -398,7 +398,7 @@ export class AdminUsersService {
 
     return {
       id: user.id,
-      username: user.username,
+      username: user.username ?? "",
       displayName: user.displayName,
       status: user.status,
       systemRole: user.systemRole,

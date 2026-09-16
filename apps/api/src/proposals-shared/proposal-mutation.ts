@@ -28,7 +28,7 @@ export async function runProposalMutation<T>(prisma: PrismaService, actor: SafeU
       await tx.$queryRaw`SELECT id FROM users WHERE id = ${actor.id} FOR SHARE`;
       const user = await tx.user.findUnique({ where: { id: actor.id }, include: { organizationScopes: { include: { organizationUnit: true } } } });
       if (!user || user.status !== "active") throw new ForbiddenException({ code: "ACCOUNT_INACTIVE", message: "Tài khoản hiện không hoạt động." });
-      const currentActor: SafeUserContext = { id: user.id, username: user.username, displayName: user.displayName, systemRole: user.systemRole as SafeUserContext["systemRole"], unit: user.unit, organizationScopes: user.organizationScopes.filter((s) => s.organizationUnit.status === "active").map((s) => ({ id: s.organizationUnit.id, code: s.organizationUnit.code, name: s.organizationUnit.name })) };
+      const currentActor: SafeUserContext = { id: user.id, username: user.username ?? "", displayName: user.displayName, systemRole: user.systemRole as SafeUserContext["systemRole"], unit: user.unit, organizationScopes: user.organizationScopes.filter((s) => s.organizationUnit.status === "active").map((s) => ({ id: s.organizationUnit.id, code: s.organizationUnit.code, name: s.organizationUnit.name })) };
       if (proposalId) {
         await tx.$queryRaw`SELECT id FROM research_proposals WHERE id = ${proposalId} FOR UPDATE`;
         const proposal = await tx.researchProposal.findUnique({ where: { id: proposalId } });

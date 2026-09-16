@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { changePassword, completePasswordReset } from "@/lib/auth-api";
+import { changePassword, completeAccountActivation, completePasswordReset } from "@/lib/auth-api";
 
 export function ChangePasswordForm() {
   const router = useRouter(); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
@@ -22,20 +22,22 @@ export function ChangePasswordForm() {
 }
 
 export function ResetPasswordForm() {
-  const router = useRouter(); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  const router = useRouter(); const [activationToken, setActivationToken] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  useEffect(() => { const params = new URLSearchParams(window.location.search); setActivationToken(params.get("mode") === "activation" ? params.get("token") ?? "" : ""); }, []);
   return <form className="admin-form" onSubmit={async (event) => {
     event.preventDefault(); const formElement = event.currentTarget; const form = new FormData(formElement);
-    const token = String(form.get("token") ?? "");
+    const token = activationToken || String(form.get("token") ?? "");
     const newPassword = String(form.get("newPassword") ?? "");
+    const confirmPassword = String(form.get("confirmPassword") ?? "");
     if (!token) return setError("Cần mã đặt lại mật khẩu do quản trị viên cung cấp.");
-    if (newPassword !== String(form.get("confirmPassword") ?? "")) return setError("Mật khẩu xác nhận không khớp.");
-    setBusy(true); try { await completePasswordReset(token, newPassword); router.replace("/login"); } catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể đặt lại mật khẩu."); } finally { formElement.reset(); setBusy(false); }
+    if (newPassword !== confirmPassword) return setError("Mật khẩu xác nhận không khớp.");
+    setBusy(true); try { activationToken ? await completeAccountActivation(token, newPassword, confirmPassword) : await completePasswordReset(token, newPassword); router.replace("/login"); } catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể thiết lập mật khẩu."); } finally { formElement.reset(); setBusy(false); }
   }}>
-    <label className="field"><span>Mã đặt lại mật khẩu</span><input name="token" autoComplete="one-time-code" /></label>
+    {activationToken ? null : <label className="field"><span>Mã đặt lại mật khẩu</span><input name="token" autoComplete="one-time-code" /></label>}
     <label className="field"><span>Mật khẩu mới</span><input name="newPassword" type="password" autoComplete="new-password" /></label>
     <label className="field"><span>Xác nhận mật khẩu mới</span><input name="confirmPassword" type="password" autoComplete="new-password" /></label>
     <p className="record-meta">Tối thiểu 12 ký tự, gồm chữ hoa, chữ thường và chữ số; không có khoảng trắng.</p>
     {error ? <p className="form-error" role="alert">{error}</p> : null}
-    <button className="button primary" disabled={busy} type="submit">{busy ? "Đang xử lý" : "Đặt lại mật khẩu"}</button>
+    <button className="button primary" disabled={busy} type="submit">{busy ? "Đang xử lý" : activationToken ? "Thiết lập mật khẩu" : "Đặt lại mật khẩu"}</button>
   </form>;
 }
