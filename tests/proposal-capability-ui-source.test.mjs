@@ -57,4 +57,20 @@ describe("Story 1.8 proposal capability UI source behavior", () => {
     assert.match(source, /disabled=\{!canUpload/);
     assert.match(source, /blockedProposalAction\(capabilityState, "file\.upload"\)/);
   });
+
+  it("keeps PI-only and staff-only proposal views capability-driven and uses date-only workflow inputs", async () => {
+    const source = await readFile(detailPath, "utf8");
+    const evaluationSource = await readFile(new URL("../apps/web/src/components/research-proposals/proposal-evaluation-panel.tsx", import.meta.url), "utf8");
+    assert.match(source, /showSubmitPanel = shouldRenderAction\("proposal\.submit"\)/);
+    assert.match(source, /proposal\.viewerParticipation\?\.isOwner/);
+    assert.match(source, /showStaffProposalSummary = \(\["proposal\.completeness\.check", "proposal\.supplement\.request", "proposal\.review\.assign", "proposal\.review\.consolidate"\] as const\)\.some\(shouldRenderAction\)/);
+    assert.match(source, /type="date" lang="vi" value=\{supplementDueDate\}/);
+    assert.match(source, /intakeDateToIso\(supplementDueDate, true\)/);
+    assert.doesNotMatch(source, /type="datetime-local"/);
+    assert.equal(evaluationSource.match(/type="date" lang="vi"/g)?.length, 3);
+    assert.match(evaluationSource, /intakeDateToIso\(effectiveFrom\)/);
+    assert.match(evaluationSource, /intakeDateToIso\(effectiveUntil, true\)/);
+    assert.match(evaluationSource, /intakeDateToIso\(dueDate, true\)/);
+    assert.doesNotMatch(evaluationSource, /type="datetime-local"/);
+  });
 });

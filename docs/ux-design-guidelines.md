@@ -292,6 +292,9 @@ Trong màn hình chi tiết hồ sơ:
 - Hiển thị rõ vai trò của người đang xem với hồ sơ này, ngay đầu trang.
 - Mở hoặc khóa hành động theo quan hệ với hồ sơ, không theo vai trò hệ thống.
 - Nếu một người có nhiều quan hệ trên cùng hồ sơ, hiển thị quan hệ có quyền cao nhất và nêu các quan hệ còn lại.
+- Form chỉnh sửa và section `Nộp chính thức` chỉ hiển thị cho PI hiện tại. Chuyên viên quản lý khoa học xem một bảng chỉ đọc riêng gồm thông tin đề tài, team, ngày bắt đầu/kết thúc và kinh phí dự kiến.
+- Sau khi phiên bản nộp hiện tại đã được xác nhận đầy đủ, nút xác nhận vẫn hiện trong đúng workflow context nhưng bị disabled với lý do; không cho thao tác lặp.
+- Hạn phản hồi bổ sung, hiệu lực phân công và hạn đánh giá dùng native date input, hiển thị ngày/tháng/năm và không yêu cầu giờ phút.
 
 Chống xung đột lợi ích:
 

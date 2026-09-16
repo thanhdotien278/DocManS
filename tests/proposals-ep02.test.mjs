@@ -332,6 +332,16 @@ function createEp02Prisma() {
         store.submissionEvents.push(record);
         return record;
       },
+      async findFirst({ where }) {
+        return store.submissionEvents
+          .filter((item) => {
+            if (where.proposalId && item.proposalId !== where.proposalId) return false;
+            if (where.submittedAt?.gte && item.submittedAt < where.submittedAt.gte) return false;
+            if (where.snapshot?.path?.[0] === "kind" && item.snapshot?.kind !== where.snapshot.equals) return false;
+            return true;
+          })
+          .sort((left, right) => right.submittedAt.getTime() - left.submittedAt.getTime())[0] ?? null;
+      },
       async findMany({ where }) {
         return store.submissionEvents.filter((item) => item.proposalId === where.proposalId);
       }
@@ -974,6 +984,15 @@ describe("EP-02 proposal intake and submission behavior", () => {
       missingFields: 0,
       missingFiles: 0
     });
+    const checked = await proposalService.completeCheck(staffUser, draft.id, {});
+    assert.equal(checked.viewerAuthorization.blockedActions.find((action) => action.action === "proposal.completeness.check").code, "WORKFLOW_STATE_DENIED");
+    assert.equal(prisma.store.submissionEvents.filter((event) => event.snapshot?.kind === "completeness_check").length, 1);
+    await assert.rejects(() => proposalService.completeCheck(staffUser, draft.id, {}), (error) => {
+      assert.equal(error instanceof BadRequestException, true);
+      assert.equal(error.getResponse().code, "WORKFLOW_STATE_DENIED");
+      return true;
+    });
+    assert.equal(prisma.store.submissionEvents.filter((event) => event.snapshot?.kind === "completeness_check").length, 1);
     await assert.rejects(() => proposalService.submitProposal(piUser, draft.id), BadRequestException);
     await assert.rejects(() => proposalService.updateDraft(piUser, draft.id, { title: "Sửa sau nộp" }), BadRequestException);
     await assert.rejects(

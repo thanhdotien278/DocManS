@@ -422,7 +422,7 @@ RTMS is a browser-based internal administrative web application optimized for mu
 
 ### Proposal Review, Supplement, And Approval Workflow
 
-- FR15: Scientific management staff can review proposal completeness and request supplements with a stated reason and due date.
+- FR15: Scientific management staff can review proposal completeness once per submitted/resubmitted version and request supplements with a stated reason and whole-calendar-day due date; repeat completeness confirmation for the current version is denied.
 - FR16: Principal investigators can view supplement requests, revise proposal content or attachments, and resubmit the proposal.
 - FR17: Scientific management staff can assign/revoke proposal reviewers or council members from eligible ACTIVE Scientist Profiles, deriving the existing linked account, enforcing current record scope, workflow, conflict and context checks, and preserving append-only audit and disclosure. See the Reviewer / Council Assignment section of `docs/authorization-core-business-baseline.md`.
 - FR18: Reviewers and committee members can access assigned proposals and submit scores, comments, and recommendations.

@@ -169,19 +169,27 @@ export class ResearchProposalsService {
       include: { owner: { select: { displayName: true } } }
     })) as ResearchProposalRecord[];
 
-    const [participationByProposal, reviewAccessByProposal] = await Promise.all([
+    const [participationByProposal, reviewAccessByProposal, completenessEvents] = await Promise.all([
       this.participation.resolveForProposals(actor?.id, records, asOf),
       this.reviewAccess.resolveForProposals(
         actor?.id,
         records.map((proposal) => proposal.id),
         asOf
-      )
+      ),
+      this.prisma.proposalSubmissionEvent.findMany({
+        where: { proposalId: { in: records.map((proposal) => proposal.id) }, snapshot: { path: ["kind"], equals: "completeness_check" } },
+        select: { proposalId: true, submittedAt: true }
+      })
     ]);
+    const completenessChecked = new Set(completenessEvents.filter((event) => {
+      const proposal = records.find((record) => record.id === event.proposalId);
+      return proposal?.submittedAt && event.submittedAt >= proposal.submittedAt;
+    }).map((event) => event.proposalId));
 
     return records
       .filter((proposal) => canReadProposal(actor, proposal, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id)))
       .map((proposal) =>
-        this.toProposalResponse(proposal, actor, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id))
+        this.toProposalResponse(proposal, actor, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), completenessChecked.has(proposal.id))
       );
   }
 
@@ -583,6 +591,8 @@ export class ResearchProposalsService {
     const participation = await this.participation.resolveForProposal(actor.id, proposal);
     if (participation.isParticipant && !participation.roles.includes("TOPIC_SECRETARY")) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được tự kiểm tra hồ sơ." });
     if (!["submitted", "resubmitted"].includes(proposal.status)) throw new BadRequestException({ message: "Hồ sơ không ở bước kiểm tra đầy đủ." });
+    if (!proposal.submittedAt) throw new BadRequestException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được lần nộp hiện tại." });
+    if (await this.hasCurrentCompletenessCheck(proposal)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Phiên bản nộp hiện tại đã được xác nhận đầy đủ." });
     const readiness = await this.computeReadiness(proposal);
     if (!readiness.ready) throw new BadRequestException({ message: "Hồ sơ chưa đầy đủ.", ...readiness });
     await this.prisma.proposalSubmissionEvent.create({ data: { proposalId, actorId: actor.id, fromStatus: proposal.status, toStatus: proposal.status, note: "Đã kiểm tra hồ sơ đầy đủ", snapshot: { kind: "completeness_check", readiness, note: readOptionalText(input.note, "note", 2000) ?? "" } } });
@@ -602,6 +612,18 @@ export class ResearchProposalsService {
     }
 
     return proposal;
+  }
+
+  private async hasCurrentCompletenessCheck(proposal: ResearchProposalRecord) {
+    if (!proposal.submittedAt) return false;
+    return Boolean(await this.prisma.proposalSubmissionEvent.findFirst({
+      where: {
+        proposalId: proposal.id,
+        submittedAt: { gte: proposal.submittedAt },
+        snapshot: { path: ["kind"], equals: "completeness_check" }
+      },
+      select: { id: true }
+    }));
   }
 
   private async findIntakePeriod(intakePeriodId: string) {
@@ -910,8 +932,9 @@ export class ResearchProposalsService {
     const history = await this.listHistoryForProposal(proposal.id);
     const supplementRequests = await this.listSupplementRequestsForProposal(proposal.id);
     const requiredPackage = await this.getRequiredPackageForProposal(proposal);
+    const completenessCheckCompleted = await this.hasCurrentCompletenessCheck(proposal);
 
-    const response = this.toProposalResponse(proposal, actor, participation, reviewAccess);
+    const response = this.toProposalResponse(proposal, actor, participation, reviewAccess, completenessCheckCompleted);
     const versions = await this.prisma.proposalSubmissionEvent.findMany({ where: { proposalId: proposal.id, toStatus: { in: ["submitted", "resubmitted"] } }, orderBy: { submittedAt: "asc" }, select: { id: true, submittedAt: true, snapshot: true } });
     return {
       ...response,
@@ -999,7 +1022,8 @@ export class ResearchProposalsService {
     proposal: ResearchProposalRecord,
     actor?: SafeUserContext,
     participation?: ProposalParticipation,
-    reviewAccess?: ProposalReviewAccess
+    reviewAccess?: ProposalReviewAccess,
+    completenessCheckCompleted = false
   ) {
     const canEditDraft = this.canEditProposalDraft(actor, proposal);
     const canRead = canReadProposal(actor, proposal, participation, reviewAccess);
@@ -1011,7 +1035,8 @@ export class ResearchProposalsService {
           reviewAccess,
           canRead,
           canEdit: canEditDraft,
-          canManageFiles: this.canMutateProposalFiles(actor, proposal, participation)
+          canManageFiles: this.canMutateProposalFiles(actor, proposal, participation),
+          completenessCheckCompleted
         })
       : undefined;
 

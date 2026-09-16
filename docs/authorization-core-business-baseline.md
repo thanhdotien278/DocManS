@@ -135,8 +135,8 @@ assignment mới nhưng lịch sử quan hệ cũ vẫn giữ.
 | Tạo bản nháp | PI là `RESEARCHER_INTERNAL_USER` có scope đơn vị; external không được |
 | Sửa bản nháp | Chỉ PI nội bộ hiện tại |
 | Thêm thành viên | PI đề xuất; thay đổi quan hệ phải qua kiểm tra và quyền quản lý |
-| Nộp chính thức | Chỉ PI hiện tại có system role `RESEARCHER_INTERNAL_USER`; không ủy quyền |
-| Kiểm tra đầy đủ/yêu cầu bổ sung | Quản lý khoa học; yêu cầu phải nêu lý do và hạn |
+| Nộp chính thức | Chỉ PI hiện tại có system role `RESEARCHER_INTERNAL_USER`; không ủy quyền; section nộp không hiển thị cho staff hoặc người không phải PI |
+| Kiểm tra đầy đủ/yêu cầu bổ sung | Quản lý khoa học; mỗi phiên bản nộp/nộp lại chỉ được xác nhận đầy đủ một lần; yêu cầu bổ sung phải nêu lý do và hạn theo ngày |
 | Phản hồi và nộp lại | Chỉ PI hiện tại có system role `RESEARCHER_INTERNAL_USER`; không delegation |
 | Phân công/thay đổi phản biện, hội đồng | Quản lý khoa học, có conflict check |
 | Chấm điểm/nhận xét | Chỉ reviewer được assignment; gửi xong thì khóa; sửa lỗi bằng phiên bản nhận xét mới được duyệt |

@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ParticipationBadge } from "@/components/ui/participation-badge";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { formatIntakeDate, intakeDateToIso, toIntakeDateInput } from "@/lib/intake-dates";
 import { formatVndNumber, numberToVietnameseWords, parseVndNumber } from "@/lib/vietnamese-currency";
 import {
   deleteProposalAttachment,
@@ -51,10 +52,6 @@ function formatDate(value: string) {
   return value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "Chưa có";
 }
 
-function toDateInput(value: string) {
-  return value ? new Date(value).toISOString().slice(0, 10) : "";
-}
-
 function formatBytes(value: number) {
   if (value >= 1024 * 1024) {
     return `${(value / (1024 * 1024)).toFixed(1)} MB`;
@@ -76,8 +73,8 @@ function toDraftInput(proposal: ResearchProposal): ProposalDraftInput {
     title: proposal.title,
     researchFieldCode: proposal.researchFieldCode,
     proposalTypeCode: proposal.proposalTypeCode,
-    startDate: toDateInput(proposal.startDate),
-    endDate: toDateInput(proposal.endDate),
+    startDate: toIntakeDateInput(proposal.startDate),
+    endDate: toIntakeDateInput(proposal.endDate),
     objectives: proposal.objectives,
     summary: proposal.summary,
     budgetMetadata: proposal.budgetMetadata,
@@ -160,6 +157,9 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   const showEvaluationPanel = shouldRenderAction("proposal.review.assign");
   const showReviewForm = shouldRenderAction("proposal.review.submit");
   const showDecisionPanel = shouldRenderAction("proposal.decision.approve") || shouldRenderAction("proposal.decision.reject");
+  const showCompletenessCheck = shouldRenderAction("proposal.completeness.check");
+  const showSubmitPanel = shouldRenderAction("proposal.submit");
+  const showStaffProposalSummary = (["proposal.completeness.check", "proposal.supplement.request", "proposal.review.assign", "proposal.review.consolidate"] as const).some(shouldRenderAction);
   const requirementOptions = proposal?.requiredPackage ?? [];
   const documentGroups = useMemo(
     () =>
@@ -172,6 +172,9 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
     [proposal?.attachments, requirementOptions]
   );
   const budgetWords = numberToVietnameseWords(form?.budgetMetadata?.amount);
+  const researchFieldLabel = catalogs.find((item) => item.type === "research-field" && item.code === proposal?.researchFieldCode)?.name ?? proposal?.researchFieldCode ?? "Chưa có";
+  const proposalTypeLabel = catalogs.find((item) => item.type === "proposal-type" && item.code === proposal?.proposalTypeCode)?.name ?? proposal?.proposalTypeCode ?? "Chưa có";
+  const hostOrganizationLabel = account?.organizationScopes?.find((unit) => unit.id === proposal?.hostOrganizationUnitId)?.name ?? proposal?.hostOrganizationUnitId ?? "Chưa có";
 
 
   function getSubmissionActorName(event: NonNullable<ResearchProposal["history"]>[number]) {
@@ -374,7 +377,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
       const result = await requestProposalSupplement(proposal.id, {
         reason: supplementReason,
         contextVersion: proposal.viewerAuthorization?.contextVersion,
-        dueDate: new Date(supplementDueDate).toISOString()
+        dueDate: intakeDateToIso(supplementDueDate, true)
       });
       setProposal(result.proposal);
       setForm(toDraftInput(result.proposal));
@@ -436,8 +439,23 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
       <div className="grid">
         <button className="button" type="button" disabled={isSaving || isUploading || isSubmitting || isResubmitting} onClick={() => { if (!unsaved || window.confirm("Bỏ thay đổi chưa lưu và tải lại hồ sơ?")) void refresh(); }}>Tải lại hồ sơ</button>
         {unsaved ? <p role="status" className="state-message">Có thay đổi chưa lưu. Lưu bản nháp trước khi nộp.</p> : null}
-        {canPerformProposalAction(capabilityState, "proposal.completeness.check") ? <SectionCard title="Kiểm tra đầy đủ" subtitle="Ghi nhận kiểm tra trước khi phân công đánh giá"><button className="button primary" type="button" disabled={!readiness?.ready || isSaving} onClick={async () => { if (!proposal.viewerAuthorization || !window.confirm("Xác nhận hồ sơ đầy đủ theo danh sách kiểm tra?")) return; setIsSaving(true); try { await completeProposalCheck(proposal.id, proposal.viewerAuthorization.contextVersion); await refreshWorkflowState(); setMessage("Đã ghi nhận kết quả kiểm tra."); } catch (error) { setMessage(error instanceof Error ? error.message : "Không thể ghi nhận kiểm tra."); } finally { setIsSaving(false); } }}>Xác nhận hồ sơ đầy đủ</button></SectionCard> : null}
+        {message ? <p className="state-message success" role="status">{message}</p> : null}
+        {showCompletenessCheck ? (
+          <SectionCard title="Kiểm tra đầy đủ" subtitle="Ghi nhận kiểm tra trước khi phân công đánh giá">
+            <button
+              className="button primary"
+              type="button"
+              disabled={!canPerformProposalAction(capabilityState, "proposal.completeness.check") || !readiness?.ready || isSaving}
+              title={blockedProposalAction(capabilityState, "proposal.completeness.check")?.reason}
+              onClick={async () => { if (!proposal.viewerAuthorization || !window.confirm("Xác nhận hồ sơ đầy đủ theo danh sách kiểm tra?")) return; setIsSaving(true); try { await completeProposalCheck(proposal.id, proposal.viewerAuthorization.contextVersion); await refreshWorkflowState(); setMessage("Đã ghi nhận kết quả kiểm tra."); } catch (error) { setMessage(error instanceof Error ? error.message : "Không thể ghi nhận kiểm tra."); } finally { setIsSaving(false); } }}
+            >
+              Xác nhận hồ sơ đầy đủ
+            </button>
+            {!canPerformProposalAction(capabilityState, "proposal.completeness.check") ? <p className="record-meta">{blockedProposalAction(capabilityState, "proposal.completeness.check")?.reason}</p> : null}
+          </SectionCard>
+        ) : null}
         {proposal.versions?.length ? <SectionCard title="Phiên bản đã nộp" subtitle="Nội dung đã khóa được giữ nguyên"><div>{proposal.versions.map((version) => <details key={version.id}><summary>Phiên bản {version.version} — {formatDate(version.submittedAt)}</summary><h3>{version.content.title}</h3><p style={{ whiteSpace: "pre-wrap" }}>{version.content.objectives}</p><p style={{ whiteSpace: "pre-wrap" }}>{version.content.summary}</p><ul>{version.content.attachments?.map((file) => <li key={file.id}><a href={getProposalAttachmentDownloadUrl(file.id)}>{file.fileName}</a></li>)}</ul></details>)}</div></SectionCard> : null}
+        {proposal.viewerParticipation?.isOwner ? (
         <SectionCard title="Thông tin hồ sơ" subtitle={canEdit ? "Có thể lưu nháp nhiều lần trước khi nộp chính thức" : "Hồ sơ đang ở trạng thái chỉ đọc"}>
           <form className="admin-form" onSubmit={(event) => void handleSave(event)}>
             <div className="meta-grid">
@@ -468,7 +486,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               {proposal.supplementRequests?.at(-1) ? (
                 <div className="meta-item">
                   <span className="meta-label">Yêu cầu bổ sung</span>
-                  <span className="meta-value">Hạn phản hồi {formatDate(proposal.supplementRequests.at(-1)?.dueDate ?? "")}</span>
+                  <span className="meta-value">Hạn phản hồi {formatIntakeDate(proposal.supplementRequests.at(-1)?.dueDate ?? "")}</span>
                 </div>
               ) : null}
             </div>
@@ -570,7 +588,6 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
             </div>
 
             {formError.submit ? <p className="form-error">{formError.submit}</p> : null}
-            {message ? <p className="state-message success">{message}</p> : null}
             <div className="button-row">
               <button className="button primary" type="submit" disabled={!canEdit || isSaving}>
                 <Save size={16} aria-hidden="true" />
@@ -582,6 +599,37 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
             </div>
           </form>
         </SectionCard>
+        ) : null}
+
+        {showStaffProposalSummary ? (
+          <SectionCard title="Thông tin đề tài" subtitle="Thông tin chỉ đọc phục vụ kiểm tra và điều phối">
+            <div className="meta-grid">
+              <div className="meta-item"><span className="meta-label">Tên đề tài</span><span className="meta-value">{proposal.title}</span></div>
+              <div className="meta-item"><span className="meta-label">Chủ nhiệm (PI)</span><span className="meta-value">{proposal.ownerDisplayName || proposal.ownerId}</span></div>
+              <div className="meta-item"><span className="meta-label">Lĩnh vực</span><span className="meta-value">{researchFieldLabel}</span></div>
+              <div className="meta-item"><span className="meta-label">Loại đề tài</span><span className="meta-value">{proposalTypeLabel}</span></div>
+              <div className="meta-item"><span className="meta-label">Đơn vị chủ trì</span><span className="meta-value">{hostOrganizationLabel}</span></div>
+              <div className="meta-item"><span className="meta-label">Trạng thái</span><span className="meta-value"><StatusBadge status={proposal.status} /></span></div>
+              <div className="meta-item"><span className="meta-label">Bắt đầu</span><span className="meta-value">{formatIntakeDate(proposal.startDate)}</span></div>
+              <div className="meta-item"><span className="meta-label">Kết thúc</span><span className="meta-value">{formatIntakeDate(proposal.endDate)}</span></div>
+              <div className="meta-item"><span className="meta-label">Kinh phí dự kiến</span><span className="meta-value">{formatVndNumber(proposal.budgetMetadata?.amount)} VND</span></div>
+            </div>
+            <div className="form-section-inline">
+              <div className="section-mini-heading">Team members</div>
+              {proposal.members?.length ? (
+                <ul className="participation-list">
+                  {proposal.members.map((member, index) => (
+                    <li className="participation-item" key={member.id ?? `${member.name}-${index}`}>
+                      <span className="participation-name">{member.name}</span>
+                      <ParticipationBadge role={member.participationRole} label={member.participationRoleLabel} />
+                      <span className="record-meta">{member.organization}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="record-meta">Chưa có thành viên.</p>}
+            </div>
+          </SectionCard>
+        ) : null}
 
         {proposal.supplementRequests?.length || canRequestSupplement || blockedProposalAction(capabilityState, "proposal.supplement.request") ? (
           <SectionCard title="Yêu cầu bổ sung" subtitle="Lý do, hạn phản hồi và trạng thái xử lý của vòng bổ sung">
@@ -593,7 +641,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                     <div>
                       <p className="timeline-title">{request.reason}</p>
                       <p className="timeline-meta">
-                        Người yêu cầu: {request.actorDisplayName || "Không xác định"} · Hạn phản hồi: {formatDate(request.dueDate)}
+                        Người yêu cầu: {request.actorDisplayName || "Không xác định"} · Hạn phản hồi: {formatIntakeDate(request.dueDate)}
                       </p>
                       <p className="timeline-meta">
                         Trạng thái: {request.status === "resolved" ? "Đã xử lý" : "Đang chờ bổ sung"}
@@ -614,7 +662,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                 </label>
                 <label className="field">
                   <span>Hạn phản hồi</span>
-                  <input disabled={!canRequestSupplement} type="datetime-local" value={supplementDueDate} onChange={(event) => setSupplementDueDate(event.target.value)} />
+                  <input disabled={!canRequestSupplement} type="date" lang="vi" value={supplementDueDate} onChange={(event) => setSupplementDueDate(event.target.value)} />
                 </label>
                 {supplementError ? <p className="form-error">{supplementError}</p> : null}
                 <button className="button primary" type="submit" disabled={!canRequestSupplement || isRequestingSupplement} title={!canRequestSupplement ? blockedProposalAction(capabilityState, "proposal.supplement.request")?.reason ?? capabilityState.reason : undefined}>
@@ -846,6 +894,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
       </div>
 
       <div className="grid">
+        {showSubmitPanel ? (
         <SectionCard title="Nộp chính thức" subtitle="Xác nhận khi hồ sơ đã đủ điều kiện">
           <div className="submit-panel">
             {readiness?.ready ? (
@@ -878,6 +927,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
           </div>
           {!canSubmit ? <p className="record-meta">{blockedProposalAction(capabilityState, "proposal.submit")?.reason ?? capabilityState.reason}</p> : null}
         </SectionCard>
+        ) : null}
 
         <SectionCard title="Timeline" subtitle="Lịch sử nộp và thay đổi trạng thái chính">
           {proposal.history?.length ? (

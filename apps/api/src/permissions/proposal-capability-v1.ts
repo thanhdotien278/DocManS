@@ -22,6 +22,7 @@ type ProposalCapabilityInput = {
   canRead: boolean;
   canEdit: boolean;
   canManageFiles: boolean;
+  completenessCheckCompleted?: boolean;
 };
 
 const ACTIONS: PermissionActionV1[] = [
@@ -92,8 +93,12 @@ function viewerRelationships(participation: ProposalParticipation | undefined, r
 
 function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): { code: AuthorizationDecisionCodeV1; reason: string } | null {
   if (action === "proposal.read" || action === "file.read") return input.canRead ? null : blocked("ACTION_NOT_GRANTED");
-  if (action === "proposal.draft.update" || action === "proposal.submit" || action === "file.upload") {
+  if (action === "proposal.draft.update" || action === "file.upload") {
     return (action === "file.upload" ? input.canManageFiles : input.canEdit) ? null : blocked(input.proposal.status === "draft" || input.proposal.status === "supplement_requested" ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");
+  }
+  if (action === "proposal.submit") {
+    if (input.actor.systemRole !== "RESEARCHER_INTERNAL_USER" || !input.participation?.isOwner) return blocked("ACTION_NOT_GRANTED");
+    return input.canEdit ? null : blocked("WORKFLOW_STATE_DENIED");
   }
   if (action === "proposal.review.assign") {
     if (input.actor.systemRole !== "SCIENTIFIC_MANAGEMENT_STAFF") return blocked("ACTION_NOT_GRANTED");
@@ -111,6 +116,7 @@ function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): {
   if (action === "proposal.completeness.check") {
     if (input.participation?.isParticipant && !input.participation.roles.includes("TOPIC_SECRETARY")) return blocked("CONFLICT_DENIED");
     if (input.actor.systemRole !== "SCIENTIFIC_MANAGEMENT_STAFF") return blocked("ACTION_NOT_GRANTED");
+    if (input.completenessCheckCompleted) return blocked("WORKFLOW_STATE_DENIED");
     return ["submitted", "resubmitted"].includes(input.proposal.status) ? null : blocked("WORKFLOW_STATE_DENIED");
   }
   if (action === "proposal.supplement.request") {
