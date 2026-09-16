@@ -293,27 +293,29 @@ notifications/reminders, search, dashboard/reporting, personal work, and web
 permission UI. A table, route, or locally passing provider test alone does not
 satisfy the gate.
 
-## 12. Proposal Scientist Profile assignment binding
+## 12. Proposal User Account assignment binding
 
-`GET /research-proposals/:id/assignable-reviewers?q=` returns `{ profiles }` only,
-with eligible `id`, `fullName` and minimal linked-account display context. It is
-restricted to unconflicted, scoped scientific management in assignable states.
-`POST /research-proposals/:id/review-assignments` requires `researcherProfileId`
-and the current proposal `contextVersion`; accepts `assignmentRole` (`reviewer`
-or `committee_member`, default reviewer), optional UTC effective dates/deadline.
-Account ID/username inputs do not select an assignee and are rejected. The backend
-derives the existing linked account from the active profile and rechecks all
-baseline eligibility rules within `runProposalMutation` before creating evidence.
-The revoke endpoint retains its `note` plus `contextVersion` payload; `note` is
-required, nonblank, and at most 2000 trimmed characters. Candidate conflict
-rejection commits only its failure audit before returning the rejection response;
-no assignment or workflow change is committed.
+`GET /research-proposals/:id/assignable-reviewers?q=` returns `{ users }` with
+eligible account `id`, `displayName`, and `username`. Search matches display name
+or username and is restricted to unconflicted, scoped scientific management in
+assignable states with current completeness evidence. Candidates may have any role,
+any organization scope and no Scientist Profile. PI/active team participants and
+accounts with a live duplicate assignment are excluded.
 
-Persist a nullable source-profile foreign key for legacy compatibility; require
-it for all new application assignments. Do not infer/backfill historical identity.
-Include profile/account/role in operational assignment audit and preserve the
-existing disclosure projections; no new global role/action is introduced.
+`POST /research-proposals/:id/review-assignments` requires `reviewerUserId` and the
+current proposal `contextVersion`; accepts `assignmentRole` (`reviewer` or
+`committee_member`, default reviewer) and optional UTC effective dates/deadline.
+Profile ID and username selectors are rejected. Within `runProposalMutation`, lock
+and reload the selected active account and recheck participation and other baseline
+rules. Store its current linked profile ID if any, otherwise null; never create links.
+Self-selection by an otherwise authorized nonparticipant is allowed.
 
+Review queue, proposal/package/file reads and own review actions rely on the effective
+assignment and conflict checks, without assignee role or host-unit scope requirements.
+Staff assignment/consolidation authority and the leadership decision conflict rule
+remain unchanged. Revoke retains required nonblank `note` (max 2000 trimmed characters)
+and `contextVersion`. Assignment/revocation and audit are atomic; candidate conflict
+rejection commits only its failure audit. Preserve historical profile provenance.
 
 ## Researcher Profile completion — 2026-09-15
 

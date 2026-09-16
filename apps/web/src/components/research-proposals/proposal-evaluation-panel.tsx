@@ -41,8 +41,8 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
   const [loadError, setLoadError] = useState("");
 
-  const [candidates, setCandidates] = useState<ReviewerCandidates>({ profiles: [] });
-  const [profileId, setProfileId] = useState("");
+  const [candidates, setCandidates] = useState<ReviewerCandidates>({ users: [] });
+  const [reviewerUserId, setReviewerUserId] = useState("");
   const [candidateQuery, setCandidateQuery] = useState("");
   const [effectiveFrom, setEffectiveFrom] = useState("");
   const [effectiveUntil, setEffectiveUntil] = useState("");
@@ -71,11 +71,11 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
           setCandidates(await loadReviewerCandidates(proposalId, candidateQuery));
           setAssignError("");
         } catch (error) {
-          setCandidates({ profiles: [] });
+          setCandidates({ users: [] });
           setAssignError(error instanceof Error ? error.message : "Không tải được người đánh giá.");
         }
       } else {
-        setCandidates({ profiles: [] });
+        setCandidates({ users: [] });
       }
       if (!summaryDirty) {
         setSummaryText(data.evaluationSummary?.summary ?? "");
@@ -118,22 +118,22 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
     setAssignError("");
     setMessage("");
 
-    if (!profileId) {
-      setAssignError("Chọn hồ sơ nhà khoa học đã liên kết tài khoản.");
+    if (!reviewerUserId) {
+      setAssignError("Chọn tài khoản người đánh giá.");
       return;
     }
 
-    if (!window.confirm("Xác nhận người đánh giá, hồ sơ nhà khoa học, vai trò và thời hạn phân công?")) return;
+    if (!window.confirm("Xác nhận người đánh giá, vai trò và thời hạn phân công?")) return;
     setIsAssigning(true);
     try {
       await assignProposalReviewer(proposalId, {
-        researcherProfileId: profileId, contextVersion,
+        reviewerUserId, contextVersion,
         effectiveFrom: effectiveFrom ? intakeDateToIso(effectiveFrom) : undefined,
         effectiveUntil: effectiveUntil ? intakeDateToIso(effectiveUntil, true) : undefined,
         assignmentRole,
         dueDate: dueDate ? intakeDateToIso(dueDate, true) : undefined
       });
-      setProfileId("");
+      setReviewerUserId("");
       setDueDate("");
       setMessage("Đã phân công người đánh giá.");
       await refresh();
@@ -309,10 +309,10 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
 
         <form className="admin-form compact-form" onSubmit={(event) => void handleAssign(event)}>
           <div className="section-mini-heading">Phân công mới</div>
-          <label className="field"><span>Tìm hồ sơ nhà khoa học</span><input value={candidateQuery} onChange={(e) => setCandidateQuery(e.target.value)} /></label>
+          <label className="field"><span>Tìm theo tên hoặc tài khoản</span><input value={candidateQuery} onChange={(e) => setCandidateQuery(e.target.value)} /></label>
           <button className="button" type="button" disabled={!canAssign || isAssigning} onClick={() => void loadReviewerCandidates(proposalId, candidateQuery).then(setCandidates).catch((error) => setAssignError(error.message))}>Tìm người đánh giá</button>
-          <label className="field"><span>Hồ sơ nhà khoa học đã liên kết tài khoản *</span><select required value={profileId} disabled={!canAssign} onChange={(e) => setProfileId(e.target.value)}><option value="">Chọn hồ sơ đủ điều kiện</option>{candidates.profiles.map((p) => <option key={p.id} value={p.id}>{p.fullName} — {p.linkedAccountDisplayName} ({p.linkedAccountUsername})</option>)}</select></label>
-          {!candidates.profiles.length ? <p className="record-meta">Không có hồ sơ đang hoạt động đã liên kết tài khoản và đủ điều kiện trong phạm vi hồ sơ này. <a href="/researcher-profiles">Xem hồ sơ nhà khoa học</a></p> : null}
+          <label className="field"><span>Tài khoản người đánh giá *</span><select required value={reviewerUserId} disabled={!canAssign} onChange={(e) => setReviewerUserId(e.target.value)}><option value="">Chọn tài khoản đủ điều kiện</option>{candidates.users.map((p) => <option key={p.id} value={p.id}>{p.displayName} ({p.username ?? "Chưa có tên đăng nhập"})</option>)}</select></label>
+          {!candidates.users.length ? <p className="record-meta">Không có tài khoản đang hoạt động phù hợp. Chủ nhiệm, thành viên đề tài và người đã được phân công không xuất hiện trong danh sách.</p> : null}
           <div className="form-grid two"><label className="field"><span>Hiệu lực từ (để trống: ngay lập tức)</span><input type="date" lang="vi" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} disabled={!canAssign} /></label><label className="field"><span>Hiệu lực đến (tùy chọn)</span><input type="date" lang="vi" value={effectiveUntil} onChange={(e) => setEffectiveUntil(e.target.value)} disabled={!canAssign} /></label></div>
           <div className="form-grid two">
             <label className="field">

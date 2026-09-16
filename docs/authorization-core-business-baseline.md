@@ -151,41 +151,36 @@ Mọi phiên bản đã nộp, review, quyết định và tệp dùng để th�
 nguyên. Không ghi đè bản cũ.
 
 
-### Reviewer / Council Assignment from Scientist Profiles
+### Reviewer / Council Assignment from User Accounts
 
-Scientist Profiles are the existing `ResearcherProfile` records, not a new identity model.
 Scientific Management Staff may assign or revoke `reviewer` or `committee_member`
 duties on one eligible proposal in their explicitly granted organization scope.
-The council-member duty is a proposal review assignment; it does not create a
-council aggregate or account-level role.
+Both duties remain proposal-scoped assignments, not account roles.
 
-Candidate selection starts from an `ACTIVE` profile in the staff member's scope.
-For this authenticated review workflow the profile must already link to an active
-internal or external researcher account with explicit scope on the proposal's
-host unit. Unlinked profiles remain ineligible until an authorized account link
-exists; assignment must not create or change profile/account links. The server derives
-the assignee from the selected profile, never from an independent account picker.
+Any active user account can be selected, regardless of system role, organization
+scope, or whether a Scientist Profile exists or is active. Search exposes only
+account ID, display name and username to authorized, unconflicted staff for this
+proposal. A profile link is optional provenance and is never created by assignment.
+The assignee needs no scope at the proposal's host unit: an effective assignment
+allows the review queue, proposal/package/files and own review actions on that
+proposal, subject to participation conflicts and the existing workflow/disclosure rules.
 
 Assignment is allowed in `submitted`, `resubmitted`, or `under_review`; the first
-assignment requires completeness evidence for the current submission and opens
+assignment requires current submission completeness evidence and opens
 `under_review`. Revocation uses the same state boundary and requires a reason.
-PI, active team secretary/member, self-assignment, unresolved conflict context,
-inactive profile/account, missing scope, and duplicate non-revoked assignment
-are denied. Both duty types use identical checks. The backend rechecks current
-profile/account, role, scope, participation, workflow and proposal context version
-in the mutation transaction; candidate search is advisory and grants no authority.
+PI and active team secretary/member, unresolved conflict context, inactive accounts,
+and duplicate non-revoked assignments are denied. Staff may select themselves if
+not a participant. Staff role/scope for assignment and consolidation is unchanged;
+leadership with a reviewer assignment still cannot decide that proposal.
+Both duty types recheck account status, participation, workflow, dates and proposal
+context version inside the mutation transaction. Search is advisory, not a grant.
 
-Each new assignment retains the source profile ID and linked account ID. Existing
-assignments retain their history without guessing a historical profile link.
-Assignment and revocation append actor/time/target/profile/account/role evidence
-to audit atomically with the mutation. Revocation preserves the row and submitted
-reviews, immediately removes its access grant, and permits a later new assignment
-only through the same checks. Profile deactivation prevents new assignments;
-this feature does not rewrite historical assignments or submitted evidence.
-Existing identity/disclosure policy applies to both duty types on every surface.
-Candidate conflict-rejected assignment attempts retain a failure audit without creating an
-assignment or changing workflow state. The rejection must not roll back its own
-audit evidence. Successful assignment/revocation and their audit remain atomic.
+Each new assignment retains the account ID and the current linked profile ID when
+available, otherwise null. Existing provenance is not inferred or rewritten.
+Assignment and revocation append actor/time/target/profile/account/role audit
+atomically. Revocation preserves the assignment and submitted reviews and immediately
+ends its access grant. Conflict-rejected attempts commit only their failure audit,
+without creating an assignment or changing workflow state.
 
 ### Hiển thị workflow theo bản ghi
 

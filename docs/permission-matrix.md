@@ -473,27 +473,25 @@ Researcher profile pages never host these proposal workflow sections.
   five canonical system roles in section 2; PI, member, secretary, reviewer,
   council, ethics, and task roles remain record-scoped relationships.
 
-## Scientist Profile assignment contract
+## User Account assignment contract
 
-The [Reviewer / Council Assignment contract](authorization-core-business-baseline.md#reviewer--council-assignment-from-scientist-profiles)
+The [Reviewer / Council Assignment contract](authorization-core-business-baseline.md#reviewer--council-assignment-from-user-accounts)
 is normative for `proposal.review.assign`, including revocation. Only scoped,
 unconflicted Scientific Management Staff may search candidates or mutate duties.
-Candidate search and assignment use eligible ACTIVE Scientist Profiles with an
-existing active linked researcher account; independent account selection and
-implicit profile linking are forbidden. Both `reviewer` and `committee_member`
-remain proposal-scoped assignments under the existing disclosure matrix.
+Any active user is eligible independently of account role, host-unit scope or
+Scientist Profile. Both duties remain proposal-scoped; a reviewer assignment grants
+review access across organization boundaries, never final decision authority.
 
 | Operation | Required checks | Evidence / disclosure |
 | --- | --- | --- |
-| Search eligible profiles | Staff role, proposal/profile scope, assignable state, current submission completeness, active profile/account, host scope, no participation conflict or live duplicate | Minimum eligible profile data; no independent account list |
-| Assign either duty | Recheck search eligibility, current proposal context, valid effective dates/deadline, no self-assignment | Retain profile/account IDs; assignment and append-only audit commit together |
-| Revoke either duty | Staff role/scope, no actor participation conflict, assignable state, current context, nonblank reason | Retain assignment and submitted reviews; append audit and immediately end the access grant |
+| Search eligible accounts | Staff role/host scope, assignable state, current completeness evidence, active candidate account, no PI/team conflict or live duplicate | Only account ID, display name, username |
+| Assign either duty | Recheck search eligibility, proposal context, effective dates/deadline; self-selection allowed for nonparticipants | Account ID and optional linked profile ID; atomic assignment and audit |
+| Read package/files or submit own review | Effective assignment, no participation conflict, applicable state and disclosure; no assignee role/host scope/profile restriction | Own assignment and review only |
+| Revoke either duty | Staff role/scope, no actor participation conflict, assignable state, current context, nonblank reason | Retain history and submitted reviews; append audit and immediately end access |
 
 `submitted` and `resubmitted` require current completeness evidence before the
-first assignment opens `under_review`. Revocation uses these same assignable
-states. Invalid or unresolved context denies; UI capability/search cannot grant
-permission. Legacy assignment profile IDs remain null rather than being inferred.
-
+first assignment opens `under_review`. Invalid or unresolved context denies.
+Unlinked accounts store null profile provenance; existing provenance remains intact.
 
 ## Researcher Profile completion — 2026-09-15
 
