@@ -1,6 +1,6 @@
 import { ForbiddenException } from "@nestjs/common";
 import type { SafeUserContext } from "../auth/auth.types.js";
-import type { ProposalParticipation } from "./proposal-participation.js";
+import { evaluateProposalConflict, type ProposalParticipation } from "./proposal-participation.js";
 import type { ProposalReviewAccess } from "./proposal-review-access.js";
 import { isWorkflowVisibleStatus } from "./proposal-workflow.js";
 
@@ -90,6 +90,11 @@ export function canReadProposal(
     return false;
   }
 
+  // An effective assignment grants review reads across units, never participant access.
+  if (reviewAccess?.isAssignedReviewer && isWorkflowVisibleStatus(proposal.status) && !evaluateProposalConflict(participation).conflicted) {
+    return true;
+  }
+
   if (!getOrganizationScopeIds(user).includes(proposal.hostOrganizationUnitId)) {
     return false;
   }
@@ -99,12 +104,6 @@ export function canReadProposal(
   }
 
   if (participation?.isParticipant) {
-    return true;
-  }
-
-  // ST-3.2: assignment-scoped, and only for a proposal that has entered the formal workflow. A
-  // `reviewer` account with no assignment on this proposal reads nothing (AC-ST-3.2-02).
-  if (reviewAccess?.isAssignedReviewer && isWorkflowVisibleStatus(proposal.status)) {
     return true;
   }
 

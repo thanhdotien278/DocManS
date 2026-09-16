@@ -258,8 +258,6 @@ export class ProposalReviewsService {
       throw new ForbiddenException({ message: "Bạn không được phân công đánh giá hồ sơ này." });
     }
 
-    const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    if (!actor.organizationScopes.some((scope) => scope.id === proposal.hostOrganizationUnitId)) throw new ForbiddenException();
     return access.assignmentId;
   }
 

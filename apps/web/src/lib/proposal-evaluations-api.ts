@@ -273,7 +273,7 @@ export async function loadProposalReviewAssignments(proposalId: string) {
 
 export async function assignProposalReviewer(
   proposalId: string,
-  input: { researcherProfileId: string; assignmentRole: ReviewAssignmentRole; dueDate?: string; effectiveFrom?: string; effectiveUntil?: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }
+  input: { reviewerUserId: string; assignmentRole: ReviewAssignmentRole; dueDate?: string; effectiveFrom?: string; effectiveUntil?: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }
 ) {
   const response = await requestJson<{ assignment: ProposalReviewAssignment }>(`/research-proposals/${proposalId}/review-assignments`, {
     method: "POST",
@@ -360,5 +360,5 @@ export async function decideProposal(proposalId: string, decision: "approve" | "
   );
 }
 
-export type ReviewerCandidates = { profiles: Array<{ id: string; fullName: string; linkedUserId: string; linkedAccountUsername: string; linkedAccountDisplayName: string }> };
+export type ReviewerCandidates = { users: Array<{ id: string; displayName: string; username: string | null }> };
 export function loadReviewerCandidates(proposalId: string, query = "") { return requestJson<ReviewerCandidates>(`/research-proposals/${proposalId}/assignable-reviewers?q=${encodeURIComponent(query)}`); }

@@ -9,7 +9,7 @@ const EVALUATION_VALIDATION_MESSAGE = "Dữ liệu đánh giá hồ sơ không h
 export class AssignProposalReviewerDto {
   [key: string]: unknown;
 
-  researcherProfileId!: string;
+  reviewerUserId!: string;
   assignmentRole?: string;
   dueDate?: string;
   effectiveFrom?: string;
@@ -82,10 +82,10 @@ function readContextVersion(input: Record<string, unknown>) {
 export const assignProposalReviewerPipe: PipeTransform<unknown, AssignProposalReviewerDto> = {
   transform(value: unknown) {
     const input = assertRecord(value);
-    if (Object.prototype.hasOwnProperty.call(input, "reviewerUserId") || Object.prototype.hasOwnProperty.call(input, "reviewerUsername")) {
-      throw new BadRequestException({ message: "Chọn người đánh giá bằng hồ sơ nhà khoa học đã liên kết tài khoản." });
+    if (Object.prototype.hasOwnProperty.call(input, "researcherProfileId") || Object.prototype.hasOwnProperty.call(input, "reviewerUsername")) {
+      throw new BadRequestException({ message: "Chọn người đánh giá bằng tài khoản." });
     }
-    assertRequiredText(input.researcherProfileId, "researcherProfileId", 80);
+    assertRequiredText(input.reviewerUserId, "reviewerUserId", 80);
     assertOptionalText(input.assignmentRole, "assignmentRole", 40);
     assertOptionalText(input.dueDate, "dueDate", 40);
     assertOptionalText(input.effectiveFrom, "effectiveFrom", 40);
