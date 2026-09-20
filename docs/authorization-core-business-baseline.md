@@ -2,7 +2,8 @@
 title: "DocManS — Baseline vai trò, quyền theo bản ghi và nghiệp vụ cốt lõi"
 type: normative-product-decision
 status: approved
-version: 1.0
+version: 1.1
+updated: 2026-09-21
 approved: 2026-08-26
 audience:
   - product
@@ -47,7 +48,8 @@ qua quan hệ theo bản ghi.
 | System role | Phạm vi mặc định | Quyền/trách nhiệm chính | Giới hạn bắt buộc |
 | --- | --- | --- | --- |
 | `SYSTEM_ADMIN` | Toàn hệ thống cho dữ liệu nền tảng | Tài khoản, trạng thái tài khoản, system role, đơn vị/scope, danh mục nền tảng, cấu hình kỹ thuật, hỗ trợ truy vết vận hành | Không mặc nhiên xem/sửa dữ liệu nghiệp vụ, không phản biện, không phê duyệt, không mở lại hồ sơ |
-| `SCIENTIFIC_MANAGEMENT_STAFF` | **Toàn Học viện**, gồm mọi khoa, phòng ban, bộ môn | Vận hành đợt tiếp nhận, kiểm tra hồ sơ, yêu cầu bổ sung/chỉnh sửa, phân công, tổng hợp đánh giá, quản lý dự án được duyệt, hồ sơ nhà khoa học, nhắc việc và báo cáo nghiệp vụ | Không bỏ qua workflow, xung đột lợi ích hoặc quyết định lãnh đạo; không tự phê duyệt quyết định cuối nếu policy yêu cầu lãnh đạo |
+| `SCIENTIFIC_MANAGEMENT_HEAD` | Tất cả proposal/project trong phạm vi Quản lý khoa học được cấp rõ ràng | Trưởng phòng: xem hồ sơ, chuyên viên phụ trách, hồ sơ chưa phân công; lọc/nhóm theo chuyên viên, theo dõi khối lượng, trạng thái và hạn | Không phải `LEADERSHIP_APPROVAL_AUTHORITY`; quyền xem không tự cấp hành động quản trị hoặc quyết định cuối |
+| `SCIENTIFIC_MANAGEMENT_STAFF` | Chỉ proposal/project được phân công quản lý đang hiệu lực | Chuyên viên/trợ lý: kiểm tra, yêu cầu bổ sung, phân công đánh giá, tổng hợp và theo dõi trên hồ sơ mình phụ trách; nghiệp vụ không gắn proposal/project theo scope riêng | Không tự có quyền toàn Học viện; quan hệ tham gia không cấp quyền hành chính Quản lý khoa học; không quyết định cuối |
 | `LEADERSHIP_APPROVAL_AUTHORITY` | Hồ sơ được trình và phạm vi quyết định được cấp; mặc định phù hợp vai trò lãnh đạo Học viện | Xem hồ sơ đủ điều kiện, xem kết quả đánh giá và xác nhận/phê duyệt/từ chối cuối cùng khi quy trình yêu cầu | Không sửa nội dung hồ sơ, không bỏ qua phản biện/tổng hợp, không tự quyết hồ sơ mình là PI/thành viên/phản biện |
 | `RESEARCHER_INTERNAL_USER` | Các bản ghi do chính user tạo hoặc có quan hệ hợp lệ | Tạo bản nháp đề xuất, sửa bản nháp, nộp đề xuất, phản hồi bổ sung, tham gia đề tài và nộp báo cáo theo quan hệ | Không xem bản ghi không liên quan, không tự phân công phản biện/thư ký, không quyết định cuối |
 | `EXTERNAL_RESEARCHER_USER` | Chỉ các bản ghi có quan hệ được cấp | Xem bản ghi liên quan, phản biện được giao hoặc đóng góp đề tài/task theo assignment | Không tạo/sửa/nộp đề xuất, không đổi PI/team/kinh phí/mục tiêu/trạng thái, không phân công hoặc quyết định cuối |
@@ -78,10 +80,68 @@ Các quan hệ cộng dồn quyền được phép, nhưng mọi điều kiện 
 scope, trạng thái, context và conflict đều phải đạt. Không có khái niệm
 “quan hệ cao nhất” để thay thế hoặc làm mất quan hệ khác.
 
+## 2.1. Trách nhiệm quản lý proposal/project — quyết định 2026-09-21
+
+| Quan hệ quản lý | Bản ghi sở hữu | Cardinality |
+| --- | --- | --- |
+| `PROPOSAL_MANAGEMENT_OFFICER` | Một proposal | Tối đa một chuyên viên phụ trách chính đang hiệu lực trên mỗi proposal |
+| `PROJECT_MANAGEMENT_OFFICER` | Một project | Tối đa một chuyên viên phụ trách chính đang hiệu lực trên mỗi project |
+
+Không có officer đang hiệu lực nghĩa là **chưa phân công**, không phải context bị lỗi.
+Head được thấy hồ sơ này trong scope; Staff không được nhận management visibility.
+Không phân công mặc định cho mọi Staff, người tạo, đơn vị hoặc officer của proposal
+khi tạo project. Project có quan hệ quản lý riêng, không chia sẻ hàng quan hệ với proposal.
+
+Tạo, chuyển hoặc thu hồi phân công phải kiểm tra actor có capability phân công được
+cấp rõ, candidate là Staff đang hoạt động, scope, conflict và context hiện thời.
+Chuyển phân công kết thúc quan hệ cũ rồi ghi quan hệ mới trong cùng giao dịch;
+không ghi đè lịch sử. Ngăn hai officer chính đồng thời kể cả request cạnh tranh.
+Giữ actor, thời điểm, record, officer cũ/mới, thời gian hiệu lực và lý do thay đổi
+trong history/audit. Thu hồi/hết hiệu lực chấm dứt quyền quản lý ngay.
+
+Staff có thể tham gia hồ sơ khác qua PI, thành viên, thư ký, reviewer, council hoặc
+task assignment hợp lệ. Quyền tham gia chỉ cấp action/disclosure của quan hệ đó;
+không cho kiểm tra hành chính, phân công đánh giá, tổng hợp hoặc quản lý hồ sơ.
+Sau khi mất officer assignment, quan hệ khác vẫn được xét độc lập; không giữ lại
+management capability. Không dùng một “vai trò cao nhất” hay union đọc/ghi để
+biến quyền xem qua participation thành quyền hành chính.
+
+Backend phải phân biệt lý do truy cập: Head trong scope, officer quản lý hiện hành,
+hoặc từng quan hệ tham gia/review/council/task. Conflict và disclosure vẫn giới hạn
+nội dung/action, kể cả Head là participant; Head không được dùng quyền giám sát
+để xem review ẩn hoặc tự xử lý/quyết định hồ sơ có xung đột.
+
+Trong các bảng nghiệp vụ bên dưới, “Quản lý khoa học” trên proposal/project là
+operator có capability quản lý cụ thể; Staff bắt buộc có officer assignment tương
+ứng. Quyền Head được chốt ở đây là visibility/giám sát; không suy ra toàn bộ action
+của Staff hay quyền quyết định lãnh đạo từ system role Head.
+
+Nghiệp vụ độc lập như đợt tiếp nhận và hồ sơ nhà khoa học tiếp tục dùng capability/
+scope riêng đã được quy định. Chúng không cấp quyền proposal/project. Không tạo
+thêm officer relationship cho các domain khác trong thay đổi này.
+
+### Các quyết định cần chốt trước coding
+
+- Ai có capability tạo/chuyển/thu hồi officer (Head, hay actor khác được cấp rõ),
+  và Head có được trực tiếp thực hiện những action vận hành nào? Chưa cấp mặc định
+  bằng chức danh; thiếu policy cụ thể thì deny. Không thêm bước phê duyệt mới.
+- Chốt tập scope Quản lý khoa học thực tế cho từng Head/Staff; không suy ra từ cây đơn vị.
+- Chốt ánh xạ account cũ sang Head/Staff và phân công hồ sơ hiện có từ dữ liệu có căn cứ.
+  Không nâng tất cả Staff thành Head hoặc tự gán officer để bảo toàn quyền rộng cũ.
+- Staff có thể có quan hệ PI và quyền xem tương ứng, nhưng rule hiện hữu vẫn giới hạn
+  proposal create/edit/submit/resubmit ở PI có `RESEARCHER_INTERNAL_USER`. Nếu muốn
+  Staff thực hiện các action này, cần quyết định riêng; không âm thầm mở rộng trong đợt này.
+- Chốt thời điểm phân công proposal/project và actor khởi tạo project. Cho phép trạng thái
+  chưa phân công; không tự copy officer từ proposal hoặc tự cấp quyền cho người tạo.
+
+Đây là target documentation; chưa triển khai role, persistence, migration hoặc API.
+
 # 3. Quy tắc scope, xung đột và ủy quyền
 
-- `SCIENTIFIC_MANAGEMENT_STAFF` có quyền quản lý nghiệp vụ trên toàn bộ khoa,
-  phòng ban và bộ môn thuộc Học viện.
+- `SCIENTIFIC_MANAGEMENT_HEAD` xem tất cả proposal/project trong scope Quản lý khoa học
+  được cấp, có thể là toàn Học viện khi được cấp rõ. `SCIENTIFIC_MANAGEMENT_STAFF`
+  chỉ có management visibility khi có officer assignment hiện hành trên đúng hồ sơ;
+  scope tổ chức, nơi công tác hoặc chức danh không thay thế assignment.
 - Thư ký khoa học chỉ thao tác hồ sơ nhà khoa học trong đơn vị có scope và
   đợt/bản ghi được phân công. Thư ký được cấp quyền hồ sơ nhà khoa học không
   biến thành system role mới.
@@ -96,8 +156,12 @@ scope, trạng thái, context và conflict đều phải đạt. Không có khá
   đó là scope được cấp rõ ràng.
 - Không cho người dùng tự cấp quyền cho mình. Người phân công phải có quyền
   quản lý trong phạm vi bản ghi và phải kiểm tra xung đột lợi ích.
-- PI/team member không được phản biện, nghiệm thu hoặc quyết định chính hồ sơ
-  của mình. Người phản biện không được quyết định cuối cùng cùng hồ sơ/vòng.
+- Participant (PI, team secretary/member) không được đồng thời là management officer,
+  reviewer, người đánh giá/nghiệm thu, thành viên hội đồng đánh giá/nghiệm thu hoặc
+  người quyết định cuối trên cùng hồ sơ. Reviewer không quyết định cuối cùng cùng
+  hồ sơ/vòng. Các vị trí loại trừ nhau trong cùng hội đồng không được kiêm nhiệm.
+  Kiểm tra cả khi tạo/thay đổi mọi phía của quan hệ (kể cả thêm participant) và
+  khi thực thi hành động được bảo vệ; preflight/UI không thay thế kiểm tra hiện thời.
 - Proposal create, submit và resubmit là hành động riêng của PI nội bộ hiện
   tại; không có đường ủy quyền, delegate input hoặc capability mở rộng cho
   các hành động này. Những delegation contract khác (nếu domain tương lai cho
@@ -125,7 +189,7 @@ không. Lịch sử quan hệ cũ vẫn giữ.
 
 | Hành động | Quyền |
 | --- | --- |
-| Tạo, sửa, mở, đóng đợt | Quản lý khoa học toàn Học viện |
+| Tạo, sửa, mở, đóng đợt | Chuyên viên có capability và scope đợt được cấp rõ; không cấp quyền xem proposal/project trong đợt |
 | Chọn phạm vi | `Toàn Học viện` hoặc `Chọn đơn vị`; mặc định toàn Học viện |
 | Quá hạn | Chỉ đánh dấu quá hạn và nhắc; không tự từ chối/đóng/chuyển trạng thái |
 | Sau khi đóng | Chặn đề xuất mới; hồ sơ đã nộp tiếp tục xử lý |
@@ -155,8 +219,9 @@ nguyên. Không ghi đè bản cũ.
 
 ### Reviewer / Council Assignment from User Accounts
 
-Scientific Management Staff may assign or revoke `reviewer` or `committee_member`
-duties on one eligible proposal in their explicitly granted organization scope.
+Scientific Management Staff with an effective `PROPOSAL_MANAGEMENT_OFFICER`
+assignment and explicitly granted scope may assign or revoke `reviewer` or
+`committee_member` duties on that eligible proposal.
 Both duties remain proposal-scoped assignments, not account roles.
 
 Each proposal requires exactly two `reviewer` assignments and at least three
@@ -179,9 +244,9 @@ a new `evaluationContextId`. Missing or ambiguous context fails closed.
 Relationships on another source record, council context or round neither block
 nor grant an assignment.
 
-| Current fact in the same evaluation context | Proposed assignment/action | Result |
+| Current fact on the source record / in the evaluation context | Proposed assignment/action | Result |
 | --- | --- | --- |
-| Active PI (`PROPOSAL_PI` or `TOPIC_PI`), `TOPIC_MEMBER` or `TOPIC_SECRETARY` on the source record | `COUNCIL_CHAIR`, `COUNCIL_SECRETARY`, `COUNCIL_MEMBER`, `REVIEWER` / `COUNCIL_REVIEWER`, or final approval authority | Deny `SOURCE_PARTICIPATION_CONFLICT` |
+| Active PI (`PROPOSAL_PI` or `TOPIC_PI`), `TOPIC_MEMBER` or `TOPIC_SECRETARY` on the source record | `PROPOSAL_MANAGEMENT_OFFICER`, `PROJECT_MANAGEMENT_OFFICER`, `COUNCIL_CHAIR`, `COUNCIL_SECRETARY`, `COUNCIL_MEMBER`, `REVIEWER` / `COUNCIL_REVIEWER`, or final approval authority | Deny `SOURCE_PARTICIPATION_CONFLICT` |
 | An active/scheduled evaluation position | The same position with an overlapping interval for the same person | Deny `DUPLICATE_OR_OVERLAPPING_ASSIGNMENT` |
 | An active/scheduled evaluation position | A different mutually exclusive position with an overlapping interval for the same person | Deny `INCOMPATIBLE_COUNCIL_POSITION` |
 | An active evaluation position, or any persisted draft/submitted evaluation by the person in this round | Consolidation or final approve/reject decision for the same source record and round | Deny `REVIEWER_DECISION_CONFLICT`; persisted evaluation keeps the conflict after the assignment ends or is revoked |
@@ -234,7 +299,8 @@ assignment requires current submission completeness evidence and opens
 `under_review`. Revocation uses the same state boundary and requires a reason.
 PI and active team secretary/member, unresolved conflict context, inactive accounts,
 and incompatible, duplicate or overlapping active assignments are denied. Staff may select themselves if
-not a participant. Staff role/scope for assignment and consolidation is unchanged;
+not a participant. Staff assignment/consolidation additionally requires current management-officer
+authority on that proposal;
 leadership with a reviewer assignment still cannot decide that proposal.
 Both duty types recheck account status, participation, workflow, dates and proposal
 context version inside the mutation transaction. Search is advisory, not a grant.
@@ -254,7 +320,8 @@ trong chi tiết proposal có context tương ứng. `Phiếu đánh giá của 
 assignment reviewer/council đang còn hiệu lực trên đúng proposal và vòng đánh
 giá; role researcher, council hoặc assignment ở proposal khác không thay thế
 điều kiện này. `Phân công đánh giá` cần capability của
-`SCIENTIFIC_MANAGEMENT_STAFF` trên proposal và state cho phép. `Trình phê
+`SCIENTIFIC_MANAGEMENT_STAFF` cùng `PROPOSAL_MANAGEMENT_OFFICER` đang hiệu lực
+trên proposal, scope và state cho phép. `Trình phê
 duyệt` là action staff để chuyển hồ sơ hoàn tất sang lãnh đạo; action cuối
 `Phê duyệt`/`Từ chối` chỉ thuộc `LEADERSHIP_APPROVAL_AUTHORITY`.
 

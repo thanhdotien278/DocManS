@@ -11,6 +11,13 @@ review_loop_iteration: 0
 
 ## Intent
 
+**Authorization applicability — 2026-09-21:** Earlier implementation/demo evidence
+below predates the Head/Staff split. It is not a current permission grant or verification
+of that split. Current baseline §2.1 requires explicit Head scope and an effective
+proposal/project management-officer assignment for Staff management access; neither
+role grants leadership final decisions. No seed, account, migration or test is changed
+by this documentation update.
+
 **Problem:** Reviewer/council selection only permits linked researcher profiles with host-unit scope.
 
 **Approach:** Allow every active account regardless of role, organization scope or profile, except the proposal PI and active team participants. Use the account picker and retain assignment-scoped review access end to end. Preserve staff authority, workflow/completeness, stale-context, duplicate, expiry/revocation and final-decision conflict checks.

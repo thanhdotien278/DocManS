@@ -4,6 +4,13 @@ baseline_commit: ba3b835088b424de62dfae70963226f8c28b9169
 
 # Story 1.9: Record-Scoped Relationship Lifecycle and Scientific Secretary Limits
 
+**Target refinement — 2026-09-21:** Story 1.9 additionally covers
+`PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER`: at most one primary
+active Staff officer per record, concurrent-safe reassignment, preserved history/audit
+and immediate removal of management grants on revocation. Independent participation
+access grants no management actions. Done status and verification below describe the
+prior implementation, not this addition; current acceptance is in `epics.md` Story 1.9.
+
 Status: done
 
 ## Story
@@ -74,7 +81,7 @@ so that a past relationship or scientific-secretary title cannot grant authority
 
 - Mutating a relationship lifecycle is security-relevant: validate DTO input at the API boundary, enforce scientific-management organization scope and conflict policy, audit actor/target/from-to status/effective interval/context version, and never log secrets.
 - A failed overlap/conflict/version check must persist neither a relationship mutation nor an authorization counter increment. Protect concurrent writers at the database/service transaction boundary.
-- Do not disclose reviewer identity, raw scores/comments, or conflict sources to PI, member, or secretary audiences. Account system roles remain exactly the five canonical roles, including `EXTERNAL_RESEARCHER_USER`; a record relationship never becomes a global role.
+- Do not disclose reviewer identity, raw scores/comments, or conflict sources to PI, member, or secretary audiences. Target account system roles are the six canonical roles, including `SCIENTIFIC_MANAGEMENT_HEAD` and `EXTERNAL_RESEARCHER_USER`; a record relationship never becomes a global role.
 
 ### Testing requirements
 

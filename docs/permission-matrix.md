@@ -31,15 +31,27 @@ document must be updated in the same change set.
 - Important limits: administrative power does not automatically grant business
   approval authority unless that authority is explicitly assigned by policy.
 
+### Scientific Management Head / Truong phong quan ly khoa hoc
+
+- System role: `SCIENTIFIC_MANAGEMENT_HEAD`, distinct from leadership authority.
+- Can view all proposals/projects within explicitly authorized Scientific Management
+  scope, including current responsible Staff, unassigned records, workload, status
+  and deadlines; filter/group by responsible Staff.
+- Visibility does not grant final decisions or every operational action. Exact
+  officer-grant authority and Head operational capabilities remain open in baseline §2.1.
+
 ### Scientific Management Staff / Chuyen vien quan ly khoa hoc
 
 - Main responsibility: operate proposal intake, completeness review, reviewer
   coordination, evaluation consolidation, approved-project follow-up, reminders,
   and operational reporting.
-- Default data scope: Academy-wide business scope, subject to record state,
-  assignment, conflict, and disclosure rules.
-- Important limits: cannot make leadership approval decisions unless explicitly
-  authorized for that decision type.
+- Default management scope: only proposals/projects with an effective
+  `PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER` assignment to this
+  Staff account, plus explicitly granted organization scope. Never institution-wide
+  from role alone. Intake/profile operations retain their separate scope rules.
+- Staff can access other records through valid PI/member/secretary/reviewer/council/
+  task relationships, with only that relationship's actions and disclosure.
+- Neither Staff nor Head has final approval/rejection authority from this role.
 
 ### Leadership / Approval Authority / Lanh dao / Nguoi phe duyet
 
@@ -62,7 +74,7 @@ document must be updated in the same change set.
 ### Record-scoped business personas
 
 The following headings are business relationships/personas, not account-level
-system roles. A user with one of the five system roles may hold one or more of
+system roles. A user with one of the six system roles may hold one or more of
 these relationships on different records.
 
 #### Principal Investigator / Chu nhiem de tai
@@ -95,7 +107,9 @@ these relationships on different records.
 
 ### Record-Scoped Participation And Assignment Roles
 
-The five roles above are account-level system roles. Scientific work roles such
+The six canonical account roles are `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`,
+`SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
+`RESEARCHER_INTERNAL_USER`, and `EXTERNAL_RESEARCHER_USER`. Scientific work roles such
 as `PROPOSAL_PI`, `TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer,
 council chair, council secretary, council member, and ethics reviewer must be
 resolved in the context of a specific proposal, approved topic, council, ethics
@@ -113,6 +127,7 @@ Common record-scoped roles:
 
 | Role Type | Examples | Scope Boundary | Important Limits |
 | --- | --- | --- | --- |
+| Management responsibility | `PROPOSAL_MANAGEMENT_OFFICER`, `PROJECT_MANAGEMENT_OFFICER` | One proposal/project | At most one active primary Staff officer per record; history/audit retained on assign/reassign/revoke. |
 | Proposal participation | `PROPOSAL_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | One proposal | Does not grant access to unrelated proposals; PI is derived from `ownerId`. |
 | Approved-topic participation | `TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | One approved topic | Team permissions depend on active relationship and workflow state. |
 | Review assignment | Reviewer, committee reviewer | One proposal, ethics dossier, or review package | Assignment-scoped only; no access to unassigned records. |
@@ -123,7 +138,7 @@ Common record-scoped roles:
 
 The detailed matrices below retain PI, topic-team, and reviewer columns as
 compact record-context shorthand. Apply this overlay to every row in addition
-to the five account-level system roles:
+to the six account-level system roles:
 
 | Capability | `EXTERNAL_RESEARCHER_USER` rule |
 | --- | --- |
@@ -163,7 +178,8 @@ never grants an action by itself.
 | --- | --- |
 | All system scope | The role can access the capability across the system where this does not violate a business-decision boundary. |
 | Organization/unit scope | Access is limited to permitted organization or unit boundaries. |
-| Assigned staff scope | Access is limited to records assigned to or operated by the scientific management staff user. |
+| Assigned staff scope | Management access requires an effective `PROPOSAL_MANAGEMENT_OFFICER` or `PROJECT_MANAGEMENT_OFFICER` on the exact record plus explicit organization scope; operating on a record in the past is not a grant. |
+| Head oversight scope | All proposals/projects within explicitly authorized Scientific Management scope, subject to conflict/disclosure; not final-decision or blanket mutation authority. |
 | Approval authority scope | Access is limited to records the leadership or approval authority is allowed to decide or inspect. |
 | Own proposal/topic scope | Access is limited to proposals or approved topics owned by the principal investigator. |
 | Proposal participation scope | Access is limited to proposals where the user has an active `PROPOSAL_PI`, `TOPIC_MEMBER`, or `TOPIC_SECRETARY` relationship. |
@@ -230,6 +246,40 @@ never grants an action by itself.
 | Dashboard view | Read all/admin dashboard | Read scoped dashboard | Read authority dashboard | Read own/project dashboard | Read assigned/project dashboard | Read assigned review dashboard | Role and data scope | Any | No for read |
 | Search/filter | Read scoped | Read scoped | Read scoped | Read own | Read participating | Read assigned | Role and data scope | Any | No for read |
 | Report export Excel/PDF | Export all allowed reports | Export scoped reports | Export authority reports | Export own/project reports if allowed | Export assigned data if allowed | Export assigned reviews if allowed | Role and data scope | Any | Yes for export |
+
+### Scientific Management rules for every matrix row
+
+The Staff column in sections 7–8 is a conditional operational grant: for a
+proposal/project or its derivatives it always requires the current officer
+assignment and explicit scope. Participation/review/council access uses its own
+column; it cannot satisfy the Staff administrative grant. A revoked officer with
+another valid relationship retains only that relationship's allowed access.
+Independent intake, profile and other-domain actions retain their existing exact
+capability/scope checks and grant no proposal/project visibility. Head does not
+inherit the Staff column; apply this explicit Head/Staff matrix:
+
+| Capability | `SCIENTIFIC_MANAGEMENT_HEAD` | `SCIENTIFIC_MANAGEMENT_STAFF` |
+| --- | --- | --- |
+| Proposal/project list, detail, search | All within authorized Scientific Management scope, with disclosure/conflict limits | Management view only for own active officer assignments; other reads via independent legitimate relationships |
+| Responsible officer / unassigned state | See current responsible Staff or unassigned; filter/group by officer | Own management responsibility only; no unassigned queue or other Staff workload through role alone |
+| Workload, status, deadlines, counts/facets, dashboard, reports/export | Authorized-scope aggregates, same record filters for drill-down/export | Management aggregates only for own assignments; participation/review queues retain their own access basis |
+| Assign/reassign/revoke primary officer | Requires an explicitly decided capability; role alone does not grant it (baseline §2.1) | Same; no implicit self-assignment or assignment of other officers |
+| Completeness, reviewer assignment, consolidation, project administration | Only if a specific operational capability is approved; oversight alone is insufficient | Existing action plus exact effective officer assignment, scope, state and no conflict |
+| Final approve/reject | Deny from Head role; reserved to leadership | Deny from Staff role; reserved to leadership |
+| Notifications, files and workflow/business history | Re-authorize source record and disclosure for every surface | Same; officer revocation ends management access immediately, independent participation remains |
+
+A participant cannot simultaneously be the management officer, reviewer, evaluation/
+acceptance council member or final decision actor on the same record. Reviewer and
+final decision in the same round, and mutually exclusive council positions, are
+also denied. Check on assignment creation/change, participant changes and again on
+protected action execution. Reassignment must atomically end the prior officer,
+preserve history/audit and prevent competing primary officers. Zero officers is a
+valid unassigned state; unresolved officer context is a fail-closed error.
+
+Validation must cover Head in/out of scope, assigned/unassigned/revoked Staff,
+Staff with participation only, both orders of conflicting assignments, concurrent
+reassignment, same-round decision conflict, and identical filtering across all required
+surfaces (including files and workflow/business history).
 
 ## 8. Detailed Module Permission Matrix
 
@@ -397,7 +447,7 @@ Researcher profile pages never host these proposal workflow sections.
   proposals, alter protected fields, assign, or decide finally.
 - Users must not see cross-unit data unless explicitly permitted.
 - Reviewer / Committee Member must not access unassigned proposals.
-- Reviewer, committee member, or council member assignment must be denied when
+- Management officer, reviewer, committee member, or council member assignment must be denied when
   conflict policy identifies the candidate as PI, proposal/topic participant,
   `TOPIC_SECRETARY`, or another excluded role on the same business record.
 - Principal Investigator must not edit submitted proposals unless workflow state
@@ -433,6 +483,7 @@ Researcher profile pages never host these proposal workflow sections.
 | submit proposal | Yes | actor, proposal id, from/to status, timestamp |
 | request supplement | Yes | actor, proposal id, reason, due date, timestamp |
 | resubmit proposal | Yes | actor, proposal id, from/to status, timestamp |
+| assign/reassign/revoke management officer | Yes | actor, proposal/project, old/new officer, effective interval, timestamp, reason, context/policy versions; atomic history and assignment |
 | assign reviewer | Yes | actor, proposal id, reviewer/committee member id, timestamp |
 | submit score/comment | Yes | actor, proposal id, review id, submitted status, timestamp |
 | consolidate evaluation | Yes | actor, proposal id, evaluation summary id, timestamp |
@@ -477,24 +528,25 @@ Researcher profile pages never host these proposal workflow sections.
 - Permission checks should return a fail-closed result when context is missing or
   ambiguous.
 - Legacy roles removed: ADM, LD, VT, TBP, CB, HD, BC. These are replaced by the
-  five canonical system roles in section 2; PI, member, secretary, reviewer,
+  six canonical system roles in section 2; PI, member, secretary, reviewer,
   council, ethics, and task roles remain record-scoped relationships.
 
 ## User Account assignment contract
 
 The [Reviewer / Council Assignment contract](authorization-core-business-baseline.md#reviewer--council-assignment-from-user-accounts)
 is normative for `proposal.review.assign`, including revocation. Only scoped,
-unconflicted Scientific Management Staff may search candidates or mutate duties.
+unconflicted Scientific Management Staff with an effective
+`PROPOSAL_MANAGEMENT_OFFICER` may search candidates or mutate duties.
 Any active user is eligible independently of account role, host-unit scope or
 Scientist Profile. Both duties remain proposal-scoped; a reviewer assignment grants
 review access across organization boundaries, never final decision authority.
 
 | Operation | Required checks | Evidence / disclosure |
 | --- | --- | --- |
-| Search eligible accounts | Staff role/host scope, assignable state, current completeness evidence, active candidate account, no PI/team conflict or live duplicate | Only account ID, display name, username |
+| Search eligible accounts | Staff role/host scope and effective proposal management-officer assignment, assignable state, current completeness evidence, active candidate account, no PI/team conflict or live duplicate | Only account ID, display name, username |
 | Assign either duty | Recheck search eligibility, proposal context, effective dates/deadline; self-selection allowed for nonparticipants | Account ID and optional linked profile ID; atomic assignment and audit |
 | Read package/files or submit own review | Effective assignment, no participation conflict, applicable state and disclosure; no assignee role/host scope/profile restriction | Own assignment and review only |
-| Revoke either duty | Staff role/scope, no actor participation conflict, assignable state, current context, nonblank reason | Retain history and submitted reviews; append audit and immediately end access |
+| Revoke either duty | Staff role/scope and effective proposal management-officer assignment, no actor participation conflict, assignable state, current context, nonblank reason | Retain history and submitted reviews; append audit and immediately end access |
 
 `submitted` and `resubmitted` require current completeness evidence before the
 first assignment opens `under_review`. Invalid or unresolved context denies.

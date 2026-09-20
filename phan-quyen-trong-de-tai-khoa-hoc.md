@@ -1,5 +1,19 @@
 # Phân quyền trong đề tài khoa học khi một nhà khoa học có nhiều vai trò
 
+**Đồng bộ 2026-09-21:** Đây là giải thích domain; baseline và Authorization
+Contracts là nguồn triển khai. Head có visibility proposal/project trong scope
+Quản lý khoa học được cấp, thấy officer/chưa phân công và workload/status/deadlines.
+Staff chỉ quản lý khi có `PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER`
+hiện hành; tối đa một officer chính trên record, chuyển/thu hồi giữ history/audit.
+Trong ma trận bên dưới, cột Staff luôn cần assignment này và scope cho proposal/project;
+không phải toàn đơn vị từ role. Head không kế thừa cột Staff hoặc quyền leadership.
+Staff vẫn tham gia hồ sơ khác qua quan hệ hợp lệ, nhưng không nhận action quản lý.
+Participant không đồng thời là officer/reviewer/evaluation hoặc acceptance council/
+final decision; reviewer không quyết định cùng vòng và các vị trí loại trừ trong hội
+đồng không được kiêm nhiệm. Kiểm tra khi thay đổi cả hai phía quan hệ và tại action;
+mọi surface dùng cùng authorization/disclosure. Quyền phân công officer và action
+vận hành Head còn chờ chốt theo baseline §2.1.
+
 Nên xử lý theo mô hình **một người nhiều vai trò, nhưng vai trò được gắn theo từng ngữ cảnh đề tài**, không gán cứng một người chỉ là “PI” hoặc chỉ là “thành viên”.
 
 Tức là:
@@ -30,9 +44,11 @@ Nên tách thành 2 lớp:
 ```text
 System role:
 - System Admin
-- Scientific Management Staff
+- SCIENTIFIC_MANAGEMENT_HEAD
+- SCIENTIFIC_MANAGEMENT_STAFF
 - Leadership / Approval Authority
-- Researcher / Internal User
+- RESEARCHER_INTERNAL_USER
+- EXTERNAL_RESEARCHER_USER
 
 Proposal/topic participation role:
 - `PROPOSAL_PI` or `TOPIC_PI` (owner-derived)
@@ -400,7 +416,7 @@ Công việc hiện tại:
 | Tổng hợp đánh giá | Không | Không | Có nếu là thư ký hội đồng/staff được giao | Không | Có | Không |
 | Approve/reject | Không | Không | Không | Không | Tùy quy trình | Có |
 | Quản lý hội đồng | Không | Không | Có trong council được phân công | Không | Có | Có theo quyền |
-| Xem dashboard toàn đơn vị | Không | Không | Không | Không | Có theo scope | Có theo scope |
+| Xem dashboard | Không | Không | Không | Không | Chỉ hồ sơ có officer assignment + scope | Có theo authority scope |
 
 ---
 
@@ -413,7 +429,7 @@ User account: để đăng nhập
 Researcher profile: hồ sơ nhà khoa học
 System role: quyền nền của tài khoản
 Participation role: vai trò của nhà khoa học trong từng proposal/project/council
-Assignment: phân công reviewer/task cụ thể
+Assignment: phân công management officer/reviewer/task cụ thể
 Permission policy: tính quyền tại thời điểm thao tác
 Audit log: ghi lại mọi thay đổi quan trọng
 ```

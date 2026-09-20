@@ -36,12 +36,13 @@ administration panels, responsive list patterns, shared status badges, KPI
 cards, filters, breadcrumbs, timelines, and UI tokens. The target UX must reuse
 those patterns.
 
-The product baseline contains five active system roles:
+The target product baseline contains six system roles (one active per account):
 
 | System role | UI meaning |
 | --- | --- |
 | `SYSTEM_ADMIN` | Platform foundation administration only |
-| `SCIENTIFIC_MANAGEMENT_STAFF` | Academy-wide scientific operations within policy and workflow |
+| `SCIENTIFIC_MANAGEMENT_HEAD` | All proposals/projects within authorized Scientific Management scope; responsible Staff/unassigned/workload/status/deadlines |
+| `SCIENTIFIC_MANAGEMENT_STAFF` | Management operations on explicitly assigned proposals/projects only; other access through its own legitimate relationship |
 | `LEADERSHIP_APPROVAL_AUTHORITY` | Decision work for records presented within authority scope |
 | `RESEARCHER_INTERNAL_USER` | Researcher-owned and related records |
 | `EXTERNAL_RESEARCHER_USER` | Only explicitly related approved-topic/task records and assigned review work |
@@ -62,6 +63,33 @@ PostgreSQL/Prisma and private MinIO. The browser never accesses PostgreSQL or
 MinIO directly. Reminders and overdue checks use the PostgreSQL-backed
 Scheduled Job / Background Worker. Redis is not part of the current
 implementation and is intentionally not required by this specification.
+
+### Scientific Management visibility and responsibility — 2026-09-21
+
+All Staff management controls on proposal/project screens below require an effective
+`PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER`, explicit scope and
+backend action capability. Staff opening another record through PI/member/secretary/
+reviewer/council/task sees that relationship's workspace and disclosure, never management
+controls merely because their system role is Staff. Display the backend access basis.
+
+Head sees authorized-scope proposals/projects, current responsible Staff or “Chưa phân
+công”, officer filters/groups and workload/status/deadlines. Counts, facets, dashboard,
+report/export, notifications, files and workflow/business history use the same filters
+and authorization as list/detail. Unassigned is a real state, not an error or a grant to Staff.
+Responsible Staff is operational metadata explicitly visible to Head, not permission to
+expose hidden reviewer/council identities. Head participation conflicts retain disclosure limits.
+
+Officer assignment/reassignment/revocation controls require a separately decided backend
+capability (baseline §2.1); Head visibility alone does not enable them. When authorized,
+show the current/new responsible Staff, reason and effective change; after success refresh
+capabilities and queues. Preserve history/audit and reject stale/concurrent competing
+assignments. No extra approval step. No more than one active primary officer per record.
+
+Recheck conflicts on assignment/participation changes and protected actions: participant
+versus officer/reviewer/evaluation or acceptance council/final decision, reviewer versus
+same-round final decision, and mutually exclusive council positions. Head and Staff never
+receive leadership final approve/reject from their management role. Existing intake/profile
+capabilities remain separately scoped and do not grant proposal/project visibility.
 
 ## 1. Product UX goals
 
@@ -281,7 +309,8 @@ the viewer cannot access.
 | Dashboard persona | KPI cards | Work queue and alerts | Quick actions and summaries | Hide/prohibit |
 | --- | --- | --- | --- | --- |
 | System administrator | Active/locked accounts, pending account changes, catalog/config warnings, audit review queue. | Incomplete account scope, pending activation, failed notification/configuration checks, audit anomalies if authorized. | Manage users, roles, units, catalogs, settings, audit. Small trend of platform operations only. | Proposal/project content, reviewer identity, scores, approval queues, and business data by default. |
-| Scientific management staff | New submissions, pending checks, supplements awaiting response, reviews pending/overdue, ready for approval, delayed projects, reports due. | Prioritize by due date and risk: submitted checks, missing reviewer submissions, aggregation, overdue milestones/reports, adjustment/acceptance preparation. | Open intake, proposal queue, assignment queue, create project from approved proposal, open reports, run operational report. Pipeline summary by intake/unit/field within staff business scope. | Final approval action unless separate authority is returned; conflict source and undisclosed review material outside policy. |
+| Scientific Management Head | Authorized-scope proposals/projects, workload/status/deadlines and unassigned records. | Current responsible Staff or unassigned; filter/group by Staff, status and deadlines. | Drill down to the same authorized records; reports/exports retain officer filters and disclosure. | Final decisions, hidden review data, out-of-scope records, or operational mutations without explicit capability. |
+| Scientific management staff | Only own management assignments: new submissions, pending checks, supplements awaiting response, reviews pending/overdue, ready for approval, delayed projects, reports due. | Prioritize by due date and risk: submitted checks, missing reviewer submissions, aggregation, overdue milestones/reports, adjustment/acceptance preparation. | Open intake, proposal queue, assignment queue, create project from approved proposal, open reports, run operational report. Pipeline summary by intake/unit/field within current officer assignments. Participation/review queues use separate access bases. | Final approval action from either Head or Staff role; conflict source and undisclosed review material outside policy. |
 | Leadership | Ready-for-decision records, overdue decision queue, delayed projects, reports/acceptance needing authority, high-priority risks. | Decision queue with due date, evidence completeness, conflict indicator, previous decision history; alerts are concise and action-oriented. | Open decision package, approve/reject eligible record, open scoped executive report. Trend by unit/field/status/time. | Editing proposal content, assigning reviewers, raw data outside decision disclosure, records not in approval scope, conflicted records. |
 | Principal investigator / internal researcher | Drafts, submitted proposals, supplement requests, active projects, reports due, tasks due/overdue. | “Cần tôi xử lý”: incomplete draft, response deadline, report deadline, adjustment/acceptance request status, assigned tasks. | Create draft when intake allows, open my proposals, submit supplement, submit report, open my tasks. Progress summaries for owned/related projects. | Unrelated proposals/projects, reviewer identity/raw review material before disclosure, staff-only aggregation, decision controls. |
 | Project member | Related projects, assigned milestones, assigned tasks, evidence awaiting upload, contribution deadlines. | Tasks and evidence explicitly assigned to the member; project alerts only at permitted disclosure level. | Open assigned project section, update task, upload permitted evidence. | PI-only submission controls, membership changes, protected files, unrelated records, final decisions. |

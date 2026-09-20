@@ -22,7 +22,7 @@ policy and current workflow rules, use the linked normative documents.
 | **Approved project** | A managed research project created by scientific management after approval of a proposal. It receives new project relationships; it does not reuse proposal relationships as mutable shared data. |
 | **Intake period** | The controlled window that determines whether eligible internal researchers may create and submit proposals. Closing it stops new submissions, not processing of submitted proposals. |
 | **Relationship** | A record-scoped participation fact, such as proposal PI/team secretary/team member or approved-topic PI/team secretary/team member. It has a lifecycle and grants no authority outside its owning record. |
-| **Assignment** | A record-scoped duty, such as reviewer, council member, ethics reviewer, or task assignee. It grants only the actions and disclosure needed for that assignment. |
+| **Assignment** | A record-scoped duty, such as proposal/project management officer, reviewer, council member, ethics reviewer, or task assignee. It grants only the actions and disclosure needed for that assignment. |
 | **Delegation** | A time-bounded, approved grant for an exact action on one record where the owning contract permits delegation. It is not a general substitute for role, relationship, assignment, or decision authority; proposal submission is PI-only and non-delegable. |
 | **Workflow state** | The controlled lifecycle state of a business record. A state transition is a domain action, not an unrestricted field update. |
 | **Version** | An immutable business or file revision retained as evidence. Replacing or correcting creates a new version rather than overwriting a submitted, reviewed, or decided artifact. |
@@ -52,7 +52,7 @@ policy and current workflow rules, use the linked normative documents.
 
 DocManS distinguishes **system roles** from **record-scoped relationships and
 assignments**. The active system roles are `SYSTEM_ADMIN`,
-`SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
+`SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
 `RESEARCHER_INTERNAL_USER`, and `EXTERNAL_RESEARCHER_USER`.
 
 System roles describe account-level responsibility; they do not automatically
@@ -69,6 +69,25 @@ An authorization decision must use one coherent, current context for the
 request and mutation. Missing, stale, ambiguous, inactive, expired, revoked,
 or unsupported context denies access. The backend is authoritative; UI
 capability data is explanatory only and cannot grant an action.
+
+### Scientific Management responsibility
+
+`SCIENTIFIC_MANAGEMENT_HEAD` is the Head of the office, not leadership approval
+qualified by another title. Head sees all proposals/projects in explicitly authorized
+Scientific Management scope, responsible Staff, unassigned records and workload/
+status/deadlines, with officer filtering/grouping. Disclosure and conflict still apply.
+Staff management visibility requires an effective `PROPOSAL_MANAGEMENT_OFFICER` or
+`PROJECT_MANAGEMENT_OFFICER` on the exact record plus explicit scope. Each record
+has at most one active primary officer; assignment/reassignment/revocation preserves
+history and audit. Project management responsibility is independent of its proposal.
+
+Staff may access other records through legitimate participation/review/council/task
+relationships, which grant no Scientific Management administrative actions. Backend
+capabilities must distinguish this access basis; revocation removes only the relevant
+grant. Unassigned is a valid state; missing/ambiguous context fails closed.
+Independent intake/profile scope does not widen proposal/project access. The exact
+officer-grant capability, Head operational actions and migration mapping remain open
+in baseline §2.1. This is a documentation target, not a claim of implementation.
 
 ## Workflow vocabulary
 
@@ -99,9 +118,11 @@ capability data is explanatory only and cannot grant an action.
 2. Enforce every protected operation on the backend at action time. Do not
    infer authority from the client, a display title, organization proximity, or
    access to another record.
-3. Preserve separation of duties and conflicts of interest: participation in a
-   record never authorizes review or final decision on that same matter, and a
-   reviewer does not make its final decision.
+3. Preserve separation of duties: a participant cannot simultaneously manage,
+   review, evaluate, sit on an evaluation/acceptance council, or decide the same
+   record. Reviewers cannot make the final decision for the same round; mutually
+   exclusive council positions cannot overlap. Check both directions of assignment/
+   participation changes and again at every protected action.
 4. Keep workflow transitions explicit, validated, and auditable. A normal
    update must not bypass state, review, approval, disclosure, or reopening
    rules.

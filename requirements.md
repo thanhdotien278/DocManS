@@ -97,7 +97,8 @@ mọi hồ sơ.
 | System role | Trách nhiệm chính | Giới hạn bắt buộc |
 | --- | --- | --- |
 | `SYSTEM_ADMIN` | Tài khoản, role, đơn vị/scope, danh mục nền tảng, cấu hình và truy vết vận hành | Không mặc nhiên xem/sửa dữ liệu nghiệp vụ, đánh giá, phê duyệt hoặc mở lại hồ sơ |
-| `SCIENTIFIC_MANAGEMENT_STAFF` | Vận hành đợt tiếp nhận, kiểm tra, phân công, tổng hợp, đề tài, hồ sơ nhà khoa học, nhắc việc và báo cáo | Không bỏ qua workflow, xung đột lợi ích hoặc quyết định cuối của lãnh đạo |
+| `SCIENTIFIC_MANAGEMENT_HEAD` | Xem tất cả proposal/project trong scope Quản lý khoa học được cấp; theo dõi chuyên viên phụ trách, chưa phân công, khối lượng, trạng thái và hạn | Không đồng nghĩa lãnh đạo phê duyệt; quyền xem không tự cấp action quản trị |
+| `SCIENTIFIC_MANAGEMENT_STAFF` | Vận hành proposal/project được phân công quản lý; đợt và hồ sơ nhà khoa học theo capability/scope riêng | Không có visibility toàn Học viện; không dùng participation để cấp quyền quản lý; không quyết định cuối |
 | `LEADERSHIP_APPROVAL_AUTHORITY` | Xem hồ sơ được trình và phê duyệt/từ chối theo thẩm quyền | Không sửa nội dung, bỏ qua đánh giá hoặc quyết định hồ sơ mình tham gia |
 | `RESEARCHER_INTERNAL_USER` | Khi là PI: tạo/sửa/nộp đề xuất và phản hồi bổ sung; ngoài ra tham gia đề tài hoặc review theo quan hệ | Không xem hồ sơ không liên quan hoặc quyết định cuối |
 | `EXTERNAL_RESEARCHER_USER` | Xem hồ sơ liên quan và thực hiện review hoặc đóng góp đề tài/task khi có assignment rõ ràng | Không tạo/sửa/nộp đề xuất, đổi PI/team/kinh phí/mục tiêu/trạng thái hoặc quyết định |
@@ -112,26 +113,43 @@ Các vai trò sau không phải system role; chúng chỉ có hiệu lực trong
   derived from `ownerId` and is never duplicated as a team row.
 - Reviewer, thành viên hội đồng, reviewer hồ sơ đạo đức.
 - Người được giao task.
+- `PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER`: tối đa một
+  Staff phụ trách chính đang hiệu lực trên mỗi proposal/project; giữ lịch sử và
+  audit khi phân công, chuyển hoặc thu hồi, kiểm soát cả request cạnh tranh.
 
 Quan hệ có trạng thái, thời gian hiệu lực, người tạo/thu hồi và audit. Các quan
 hệ cộng dồn quyền theo từng bản ghi, nhưng không có khái niệm “vai trò cao nhất”
 để thay thế các quan hệ khác.
 
+Staff có thể truy cập hồ sơ không do mình quản lý qua PI/member/secretary/reviewer/
+council/task hợp lệ; backend phải thể hiện lý do truy cập và chỉ cấp capability của
+quan hệ đó. Thu hồi quản lý không thu hồi quan hệ độc lập, nhưng chấm dứt management
+visibility/action. Head có bộ lọc/nhóm theo officer và chưa phân công, chỉ số workload,
+trạng thái/hạn; count, drill-down và export dùng cùng tập hồ sơ được phép.
+
+Quyền phân công officer, quyền vận hành cụ thể của Head, ánh xạ account/dữ liệu cũ
+và giới hạn PI của Staff cần được chốt theo
+[baseline §2.1](docs/authorization-core-business-baseline.md#21-trách-nhiệm-quản-lý-proposalproject--quyết-định-2026-09-21)
+trước coding; không tự cấp quyền còn thiếu.
+
 ## 5. Nguyên tắc phân quyền và quản trị
 
 - Backend là nguồn quyết định cuối và kiểm tra quyền trước detail, list, search,
-  count, facet, dashboard, export, notification, file metadata và file content.
+  count, facet, dashboard, reports/export, notification, files và workflow/business history.
 - Quyền được quyết định bởi system role, organization scope, quan hệ/assignment,
   workflow state, applicable delegation contract và conflict; thiếu hoặc mơ hồ
   context thì fail closed.
-- `SCIENTIFIC_MANAGEMENT_STAFF` có phạm vi nghiệp vụ toàn Học viện. Scope cha/con
-  không tự động kế thừa nếu chưa được cấp rõ.
+- Head xem tất cả proposal/project trong scope được cấp; Staff chỉ có management
+  visibility trên hồ sơ có officer assignment hiện hành. Scope cha/con không tự kế thừa.
 - Mỗi bản ghi có đúng một đơn vị quản lý chính. Cùng đơn vị, cùng chức danh hoặc
   có quan hệ ở bản ghi khác không tự mở quyền.
 - Đợt tiếp nhận có phạm vi `Toàn Học viện` hoặc `Chọn đơn vị`; mặc định là toàn
   Học viện. Chỉ đơn vị nằm trong phạm vi mới được tạo/nộp đề xuất.
-- PI/thành viên không được phản biện, nghiệm thu hoặc quyết định chính hồ sơ của
-  mình. Reviewer không được ra quyết định cuối cho hồ sơ/vòng đã đánh giá.
+- Participant (PI/thành viên/thư ký nhóm) không đồng thời quản lý, phản biện,
+  đánh giá/nghiệm thu, tham gia hội đồng đánh giá/nghiệm thu hoặc quyết định cuối
+  cùng hồ sơ. Reviewer không quyết định cuối cùng vòng; vị trí loại trừ trong cùng
+  hội đồng không được kiêm nhiệm. Kiểm tra khi tạo/thay đổi quan hệ ở cả hai phía
+  và tại protected action.
 - Tạo, nộp và nộp lại proposal chỉ do PI hiện tại có system role
   `RESEARCHER_INTERNAL_USER` thực hiện; không có delegation input hoặc
   capability mở rộng cho các hành động này. Delegation ở domain khác (nếu

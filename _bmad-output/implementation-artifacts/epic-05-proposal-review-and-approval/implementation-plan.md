@@ -19,9 +19,20 @@ review conflict, consolidation and final approval remain in their later slices.
 The source-inspection tables below describe the original planning baseline; the
 linked execution record identifies the subset now implemented and verified.
 
+## Scientific Management target revision — 2026-09-21
+
+The completed slice above is historical evidence, not proof of the new model.
+Before further implementation, align Stories 1.4/1.7–1.9 and baseline §2.1: Head
+oversight within explicit scope; Staff operations only with the current
+`PROPOSAL_MANAGEMENT_OFFICER`; one primary officer with audited assignment history.
+Preserve other participation/review access without management actions. Head may see
+responsible Staff, unassigned records and workload/status/deadlines; this grants no
+leadership decision or unspecified operational action. Officer-grant actors, Head
+operational powers and legacy mapping remain open, fail-closed coding prerequisites.
+
 ## 1. Scope and governing sources
 
-Complete the existing Staff → assigned Reviewer/Committee Member → Staff →
+Complete the assigned Staff → assigned Reviewer/Committee Member → assigned Staff →
 Leadership → published result journey after resubmission and completeness checking.
 Use Stories **5.3, 5.4, 5.5, 5.7, 5.8**. No new epic or story. Story 5.6 secretary
 administration is not a dependency. Approval does not create a project (Epic 6).
@@ -135,10 +146,15 @@ slice; do not claim all three modes supported from field hiding alone.
 
 ## 4. Final workflow and transition contract
 
+Every Staff operational row below additionally requires the actor's current
+`PROPOSAL_MANAGEMENT_OFFICER` and scope. Assignment and participation changes, and
+protected actions, repeat conflict checks. Staff accessing a proposal as a reviewer
+or participant never gains these administrative actions from its account role.
+
 | Action / owner | Before → after | Required evidence and guard |
 | --- | --- | --- |
 | Staff checks resubmission | `resubmitted` → same | Current submission completeness evidence; no reuse of prior check |
-| Staff assigns first duty | `submitted` or `resubmitted` → `under_review` | Active account, completeness, explicit staff scope, no participation/conflict, current context |
+| Staff assigns first duty | `submitted` or `resubmitted` → `under_review` | Active account, completeness, explicit Staff scope and current proposal officer assignment, no participation/conflict, current context |
 | Staff adds/revokes/replaces | `under_review` → same | Unique live account, max two reviewers; revoke reason and preserved history |
 | Assignee saves/submits | `under_review` → same | Effective assignment and permitted package; valid fixed rubric/comment/recommendation; submit locks review and completes duty |
 | Staff saves summary | `under_review` → same | Unconflicted scoped staff; versioned evidence from eligible submitted reviews |
@@ -160,8 +176,8 @@ cycle, an automatic transition, or a third leadership decision in this slice.
 
 Reuse `proposal-evaluations/`, `proposals-shared/proposal-mutation.ts`, participation
 and review-access resolvers, `permissions/proposal-capability-v1.ts`, and the existing
-`packages/permissions` action registry. Do not introduce a workflow engine or a new
-system role. Resolve current actor/account/scope, assignment, historical review conflict,
+`packages/permissions` action registry. Do not introduce a workflow engine. Adopt only the requested
+`SCIENTIFIC_MANAGEMENT_HEAD` / `SCIENTIFIC_MANAGEMENT_STAFF` role split; Resolve current actor/account/scope, assignment, historical review conflict,
 workflow, disclosure and token in one coherent context. Use the same result for list,
 package, files, progress, capabilities and writes. Recheck inside the shared transaction.
 
@@ -219,7 +235,9 @@ Keep the summary row as current projection. Append a snapshot on every summary s
 never expose internal snapshots through the generic participant history/version API.
 Existing snapshot immutability makes a new review-round/version subsystem unnecessary.
 
-No assignment/state/profile migration or historical backfill is planned. If actual
+The previous no-assignment-migration assumption is superseded for management
+responsibility: define its minimal persistence/constraints and audited legacy mapping
+before coding. Do not alter evaluation state/profile data or invent historical officers. If actual
 snapshot constraints cannot support required references/immutability, add only the
 specific field/constraint in a scoped migration and document why before implementation.
 Never reconstruct missing historical review evidence: legacy records without verifiable
@@ -237,7 +255,7 @@ DB; do not reset, deploy unrelated migrations, or touch live records.
 | Audience | Permitted data |
 | --- | --- |
 | Assigned reviewer/committee member | Assignment-required submitted package and own review only; no other assignees, reviews or internal summary |
-| Unconflicted scoped staff | Operational roster, submitted reviews and consolidation as required |
+| Unconflicted Staff with current proposal officer assignment and scope | Operational roster, submitted reviews and consolidation as required |
 | Eligible leadership | Routed decision evidence and summary, with reviewer identity omitted unless a governing duty-specific policy explicitly permits it |
 | PI/team/secretary, including external participants | Generic status before decision; only `PublishedReviewSummaryV1` afterward |
 | Unrelated, revoked/expired assignee without another valid relationship | Deny record/package/file; no counts or existence leaks |
@@ -262,6 +280,10 @@ business state if SMTP fails. No broad reminder scheduler or cross-module My Wor
 
 ## 6. Recommended order and acceptance gate
 
+0. **Management authorization prerequisite:** resolve baseline §2.1 decisions; implement
+   explicit Head/Staff roles and proposal officer lifecycle/query facts before relying on
+   Staff operations. Verify unassigned/assigned/revoked/participation-only access,
+   bidirectional participant conflict, concurrent reassignment and surface parity.
 1. **Shared boundaries for 5.3–5.8:** align exact DTO/capability/readiness/disclosure
    contracts; historical-conflict and authority-scope checks; define typed snapshot
    payloads and minimal Epic 11 delivery dependency. Add focused regression checks

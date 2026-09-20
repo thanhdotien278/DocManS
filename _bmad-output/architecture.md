@@ -216,8 +216,8 @@ nx add @nx/nest
 
 - **Phase 1 authentication:** local application authentication with extensible adapter boundaries for future SSO
 - **System-role model:** exactly one active account-level role per user:
-  `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`,
-  `LEADERSHIP_APPROVAL_AUTHORITY`, or `RESEARCHER_INTERNAL_USER`
+  `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`,
+  `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`
 - **Record-role model:** proposals derive one `PROPOSAL_PI` from `ownerId` and
   use only `TOPIC_SECRETARY`/`TOPIC_MEMBER` team relationships; approved topics
   use `TOPIC_PI` plus the same team roles. Reviewer, council, ethics, and task
@@ -238,6 +238,39 @@ nx add @nx/nest
   `UNAUTHENTICATED`, `ORG_SCOPE_DENIED`, `RELATIONSHIP_INACTIVE`,
   `WORKFLOW_STATE_DENIED`, `CONFLICT_DENIED`, `DELEGATION_INVALID`,
   `ACTION_NOT_GRANTED`. Delegation cannot override a denial.
+
+#### Scientific Management Head / Staff boundary — 2026-09-21
+
+`SCIENTIFIC_MANAGEMENT_HEAD` can read all proposals/projects within explicit
+Scientific Management scope and monitor current officer/unassigned/workload/status/
+deadlines, including officer filters/groups. It is not leadership decision authority
+and visibility alone grants no administrative mutation. Staff management access needs
+an active `PROPOSAL_MANAGEMENT_OFFICER` or `PROJECT_MANAGEMENT_OFFICER` and scope.
+Other Staff relationships grant only their own actions/disclosure, never management.
+
+Proposal/project modules own these management relationships, their lifecycle, current
+officer query projection and audit. At most one primary officer is active per record;
+reassignment ends the old interval and creates the new one atomically under concurrency
+control. Keep immutable history, actor, time and reason; zero officers means unassigned.
+Do not copy authority from the source proposal to a created project automatically.
+
+Extend existing context/version and capability contracts to retain the access basis:
+Head oversight, management officer, or participation/review/council/task. A resolved
+empty management assignment supplies no management allow; it must not deny an
+otherwise valid independent participation/review grant. Current role,
+scope, assignment lifecycle and conflict changes invalidate stale authorization for
+reads, aggregates, exports, notifications, files and workflow/business history. No
+second authorization engine or generic assignment subsystem is required.
+
+Check participant-versus-management/review/evaluation/acceptance-council/final-decision
+conflicts on both directions of relationship changes and at protected actions; retain
+same-round reviewer/decision and mutually exclusive council-position checks. Head
+oversight never bypasses participant disclosure or conflict restrictions.
+
+Before code: decide officer-grant actors and exact Head operational actions, resolve
+legacy role/assignment mapping, and version affected contracts/consumers. Missing
+policy/context fails closed. Existing role-only implementation is not evidence of
+compliance; no schema, code or migration is changed by this documentation revision.
 
 #### Authorization Decision Contract
 
@@ -294,8 +327,9 @@ mutation re-evaluates authoritative context in the owning service's transaction
 or validates the same context versions atomically. Lists may return the
 versioned compact form, but it must preserve security-relevant viewer
 relationships and blocked actions. Capability responses disclose only the
-viewer's own relationships and facts needed to explain the result; they never
-reveal another person's hidden assignment or the source of a conflict. Unknown
+viewer's own relationships and facts needed to explain the result. A separate
+authorized management projection exposes responsible Staff/unassigned state to the
+Head; it never reveals hidden review assignments or the source of a conflict. Unknown
 schema versions, action IDs, and denial codes fail closed in protected clients.
 
 #### Future Delegation Contract

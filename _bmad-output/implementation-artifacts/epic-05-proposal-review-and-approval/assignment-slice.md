@@ -16,6 +16,13 @@ context:
 
 ## Intent
 
+**Authorization applicability — 2026-09-21:** Earlier implementation/demo evidence
+below predates the Head/Staff split. It is not a current permission grant or verification
+of that split. Current baseline §2.1 requires explicit Head scope and an effective
+proposal/project management-officer assignment for Staff management access; neither
+role grants leadership final decisions. No seed, account, migration or test is changed
+by this documentation update.
+
 Implement the user-authorized first vertical slice of the approved plan: scoped
 Scientific Management Staff selects an eligible proposal, assigns eligible active
 accounts, passes authoritative conflict/context checks, persists assignment and audit,

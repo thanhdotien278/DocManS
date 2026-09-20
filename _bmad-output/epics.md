@@ -41,11 +41,12 @@ disclosure; unresolved context fails closed and important changes are audited.
 
 - `SYSTEM_ADMIN` manages platform data only and has no implicit business-data,
   review, approval, or reopen access.
-- `SCIENTIFIC_MANAGEMENT_STAFF` has Academy-wide business scope, but still
-  obeys workflow state, assignment, conflict, and disclosure rules. Scope is
-  never inherited from an organization tree unless granted explicitly.
+- `SCIENTIFIC_MANAGEMENT_HEAD` sees all proposals/projects within authorized
+  Scientific Management scope; Staff management access requires the exact active
+  officer assignment. Head oversight does not grant leadership decisions or all
+  operational actions. State, conflict and disclosure remain enforced; no tree inheritance.
 - Each account has one active role from `SYSTEM_ADMIN`,
-  `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
+  `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
   `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`. All PI, member,
   secretary, reviewer, council, ethics, and task authority remains record
   scoped.
@@ -53,17 +54,40 @@ disclosure; unresolved context fails closed and important changes are audited.
   proposal-submit delegation or delegated capability is supported. Any future
   delegation remains domain-specific and contract-bound.
 
+### Scientific Management scope for all epic descriptions and stories
+
+FR6f–FR6g apply to both the delivery-epic summaries and numbered story backlog below.
+Every Staff proposal/project check, assignment, consolidation, follow-up or administrative
+operation requires the matching active management-officer relationship and explicit scope;
+participation/review access never supplies that authority. Independent intake/profile and
+other-domain capabilities retain their own scope and cannot widen proposal/project access.
+Head sees the authorized portfolio, responsible Staff and unassigned records; exact officer-
+grant authority and Head operational actions remain pre-coding decisions in baseline §2.1.
+This revision changes acceptance targets, not completed implementation evidence or status.
+
+| Requirement | Owning existing stories |
+| --- | --- |
+| FR6f: roles, management lifecycle, one primary officer, audited assignment | 1.4, 1.7–1.9; proposal integration 4.2/5.1; project integration 6.1–6.2 |
+| FR6g: independent access basis, bidirectional/action-time conflict, surface parity | 1.7–1.9, 2.4, 3.1–3.5, 4–7, 10.5–10.8, 11.1–11.5, 12.1–12.5 |
+| FR45a: Head oversight, officer filters, unassigned and workload/status/deadlines | Dashboard delivery Epic 8, reporting delivery Epic 9; Stories 12.1–12.5 |
+
+No new approval workflow, system role beyond the requested Head/Staff split, or generic
+assignment abstraction is introduced. Decide legacy role mapping, existing-record assignment,
+Head operational authority and the existing Staff-PI mutation restriction before coding.
+
 ## Requirements Inventory
 
 ### Functional Requirements
 
 - FR1: System administrators can create, update, activate, deactivate, and lock user accounts.
-- FR2: System administrators can assign exactly one active account-level system role (`SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`) to a user; owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer permissions are assigned through record-scoped relationships or assignments instead of additional global roles.
+- FR2: System administrators can assign exactly one active account-level system role (`SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`) to a user; owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer permissions are assigned through record-scoped relationships or assignments instead of additional global roles.
 - FR3: System administrators can associate users with an organizational unit and other scope-defining organizational attributes.
 - FR4: The system can authenticate users and establish a role-aware session for authorized access.
 - FR4a: Authenticated users can change their own password, and authorized administrators can initiate a controlled password reset flow for internal users.
 - FR5: The system can enforce role-based access rules across all protected capabilities.
-- FR6: The system can enforce explicit organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports; scientific management staff have Academy-wide business scope, while a parent/child unit relationship never implies scope unless explicitly granted.
+- FR6: The system can enforce explicit organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports; Scientific Management Head can view all proposals/projects within explicitly authorized Scientific Management scope; Staff management visibility requires an effective record-level management-officer assignment. Parent/child units never imply scope.
+- FR6f: Distinguish `SCIENTIFIC_MANAGEMENT_HEAD` oversight from `SCIENTIFIC_MANAGEMENT_STAFF` management access. Head sees all proposals/projects in explicit Scientific Management scope; Staff needs an effective `PROPOSAL_MANAGEMENT_OFFICER` or `PROJECT_MANAGEMENT_OFFICER` on the exact record. Each record has at most one active primary officer; assignment, reassignment and revocation preserve history and audit, including concurrent changes. Neither role is final approval authority.
+- FR6g: Preserve independent PI/member/secretary/reviewer/council/task access for Staff on other records without Scientific Management administrative actions. Backend capabilities identify the access basis. Deny participant + management officer/reviewer/evaluation or acceptance council/final decision, reviewer + final decision in the same round, and mutually exclusive council positions; check every relationship creation/change and protected action. Apply the same authorization/disclosure to list, detail, search, counts/facets, dashboards, reports/export, notifications, files and workflow/business history.
 - FR6a: The system can distinguish account-level system roles from record-scoped relationships or assignments, including owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer, so those relationships only grant permissions within the specific proposal, approved topic, council, review, ethics dossier, task, or related record context.
 - FR6b: Proposal creation, submission, and resubmission require the current owner-derived PI with active `RESEARCHER_INTERNAL_USER`; no proposal-submit delegation or delegated capability is supported.
 - FR6c: Protected record responses can state the current user's record-scoped relationships, allowed actions, blocked actions, and plain-language denial reasons as calculated by backend authorization policy.
@@ -77,22 +101,22 @@ disclosure; unresolved context fails closed and important changes are audited.
 - FR12: Principal investigators can upload required proposal attachments and supporting documents to a proposal record.
 - FR13: The system can validate required proposal data and required file conditions before formal submission.
 - FR14: The system can record immutable proposal submission history, including timestamps, submission state changes, PI actor context, and locked versions; post-submission edits, withdrawal, and reopening use explicit requests/actions rather than overwriting a submitted version.
-- FR15: Scientific management staff can review proposal completeness and request supplements with a stated reason and due date.
+- FR15: Scientific management staff assigned as the current proposal management officer can review proposal completeness once per submitted/resubmitted version and request supplements with a stated reason and whole-calendar-day due date; repeat completeness confirmation for the current version is denied.
 - FR16: Principal investigators can view supplement requests, revise proposal content or attachments, and resubmit the proposal.
-- FR17: Scientific management staff can assign/change/revoke proposal evaluation positions under the canonical compatibility, lifecycle, context and audit policy in the authorization baseline.
+- FR17: Scientific management staff can assign, revoke or change proposal reviewer/council evaluation positions for eligible active user accounts, regardless of assignee system role, host-unit scope or profile linkage; retain optional linked-profile provenance and enforce Staff scope and active `PROPOSAL_MANAGEMENT_OFFICER`, workflow, source-participation conflict, one active mutually exclusive evaluation position per person/context, non-overlapping lifecycle, mutation-time context revalidation, append-only history/audit and disclosure. See the authoritative compatibility/multiplicity definition in `docs/authorization-core-business-baseline.md`.
 - FR18: Reviewers and committee members can access assigned proposals and submit scores, comments, and recommendations.
-- FR19: Scientific management staff can monitor review progress and consolidate evaluation outcomes.
-- FR19a: Scientific management staff can submit a completed, consolidated proposal dossier to leadership for approval; routing is not final approval.
+- FR19: Scientific management staff assigned as the current proposal management officer can monitor review progress and consolidate evaluation outcomes.
+- FR19a: Scientific management staff assigned as the current proposal management officer can submit a completed, consolidated proposal dossier to the leadership approval authority; this action is labelled "Trình phê duyệt" / "Gửi lãnh đạo phê duyệt" and never grants final approve/reject authority.
 - FR20: Leadership or approval authority can review proposal history, evaluation outputs, and supporting files before making an approval decision.
 - FR21: Leadership or approval authority can approve, reject, or otherwise disposition a proposal according to workflow rules.
 - FR22: The system can treat proposal statuses as controlled states and restrict actions based on current proposal state.
 - FR23: The system can create an approved-project record from an approved proposal while preserving relevant source data.
-- FR24: Scientific management staff and authorized project participants can define and maintain project milestones and planned reporting checkpoints.
+- FR24: Assigned project management staff and independently authorized project participants can define and maintain project milestones and planned reporting checkpoints.
 - FR25: Principal investigators can submit periodic progress reports and supporting evidence for approved projects.
-- FR26: Scientific management staff can review project progress reports, request follow-up where needed, and track unresolved issues.
+- FR26: Scientific management staff assigned as the current project management officer can review project progress reports, request follow-up where needed, and track unresolved issues.
 - FR27: Principal investigators can submit adjustment or extension requests for approved projects.
 - FR27a: Principal investigators can prepare and submit acceptance or final-review dossiers with required structured data, files, and readiness validation when the approved-project workflow requires a formal dossier before the authority decision.
-- FR28: Scientific management staff can review and prepare adjustment, extension, acceptance, and final-review actions; leadership or approval authority makes the final decision when required by workflow.
+- FR28: Assigned project management staff can review and prepare adjustment, extension, acceptance, and final-review actions; leadership or approval authority makes the final decision when required by workflow.
 - FR29: The system can identify delayed projects, upcoming deadlines, and projects waiting for administrative action.
 - FR30: The system can treat approved-project workflow states as controlled states and restrict actions based on current project state.
 - FR30a: Project members can view approved projects they participate in, including assigned responsibilities, relevant milestones, and permitted supporting files.
@@ -111,8 +135,9 @@ disclosure; unresolved context fails closed and important changes are audited.
 - FR42: The system can send email notifications for important business events and reminders defined in phase 1 scope.
 - FR43: The system can generate reminders for approaching deadlines, overdue reports, overdue tasks, and pending workflow actions.
 - FR44: The system can present user-specific work queues showing items waiting for the current user's attention.
-- FR45: Leadership and scientific management staff can access role-based dashboards showing waiting approvals, delayed projects, overdue tasks, council or ethics queues, seminar or student research milestones, document status gaps, upcoming reports, and summary indicators within authorized scope.
+- FR45: Leadership, Scientific Management Head and Scientific Management Staff can access role-based dashboards showing waiting approvals, delayed projects, overdue tasks, council or ethics queues, seminar or student research milestones, document status gaps, upcoming reports, and summary indicators within authorized scope.
 - FR46: Users can search and filter proposals, projects, seminar records, student research records, council records, document records, tasks, and reports by relevant business attributes such as code, title, unit, field, status, assignee, due date, and intake period.
+- FR45a: Head can identify each proposal/project's current responsible Staff member or unassigned state, filter/group by responsible Staff, and monitor workload, status and deadlines within authorized scope. Staff management dashboards/reports contain only their assigned records; participation/review queues remain separately authorized. Counts, drill-down and exports use the same filters and access basis.
 - FR47: The system can provide traceable detail views that connect dashboard indicators and list results to the underlying workflow records.
 - FR48: Authorized users can export designated lists and reports to Excel or PDF according to business needs and permission rules.
 - FR49: The system can produce role-scoped reporting views and summary outputs by unit, field, status, reporting period, module type, and related administrative dimensions.
@@ -315,7 +340,7 @@ decomposition is retained below as a traceability source and is not removed.
 | Canonical epic | Existing backlog retained | Delivery intent |
 | --- | --- | --- |
 | 1. Foundation, authentication, app shell, navigation | Epic 1 stories 1.1-1.2, 1.5, 1.8 | Establish one authenticated responsive workspace and route boundary. |
-| 2. User, role, organization, catalog administration | Epic 1 stories 1.3-1.9; Epic 2 stories 2.1-2.6 | Keep account, five system roles, scope, researcher profiles, relationships, conflicts, and catalogs. |
+| 2. User, role, organization, catalog administration | Epic 1 stories 1.3-1.9; Epic 2 stories 2.1-2.6 | Keep account, six system roles, scope, researcher profiles, relationships, conflicts, and catalogs. |
 | 3. Proposal / research topic management | Epic 4 stories 4.1-4.6 | Convert intake, draft, structured form, files, readiness, submit, and resubmit into UX-backed delivery slices. |
 | 4. Review, evaluation, aggregation, approval | Epic 5 stories 5.1-5.8 | Preserve supplement, reviewer assignment, evaluation, aggregation, decision, disclosure, and state controls. |
 | 5. Project tracking after approval | Epic 6 stories 6.1-6.10 | Preserve explicit project creation, milestones, reports, adjustment, acceptance, member scope, and final decision. |
@@ -340,7 +365,7 @@ unauthorized requests remain outside the protected data boundary.
 
 ### Primary users / roles
 
-Unauthenticated users; all five active system roles; record-scoped PI, member,
+Unauthenticated users; all six active system roles; record-scoped PI, member,
 reviewer, secretary, and task assignee relationships.
 
 ### In scope
@@ -419,7 +444,7 @@ with no administrative authority; read-only users of catalog values.
 
 ### In scope
 
-Users, five system roles, units/scope, researcher profiles and account links,
+Users, six system roles, units/scope, researcher profiles and account links,
 participation history, reviewer/team relationships, conflict preflight,
 catalogs, forms, checklists, score criteria, notification templates, and
 configuration.
@@ -454,7 +479,7 @@ Proposal create/submit/resubmit are PI-only; no proposal delegation is allowed.
 
 ### Acceptance criteria
 
-- An account has exactly one active system role from the five canonical values;
+- An account has exactly one active system role from the six canonical values;
   invalid legacy ambiguity fails closed and is reported for migration.
 - An active `EXTERNAL_RESEARCHER_USER` can sign in and receive only explicitly
   related/assigned record capabilities; it cannot manage accounts, roles,
@@ -1459,7 +1484,7 @@ So that quyền toàn hệ thống không bị cộng dồn với vai trò nghi�
 
 **Given** một tài khoản được tạo hoặc cập nhật
 **When** quản trị viên gán vai trò hệ thống
-**Then** chỉ một trong năm giá trị `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, `EXTERNAL_RESEARCHER_USER` được hoạt động
+**Then** chỉ một trong sáu giá trị `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, `EXTERNAL_RESEARCHER_USER` được hoạt động
 **And** persistence và service boundary đều ngăn nhiều vai trò hệ thống đồng thời.
 
 **Given** dữ liệu cũ chứa global PI, reviewer, council member hoặc nhiều role assignment
@@ -1472,11 +1497,12 @@ So that quyền toàn hệ thống không bị cộng dồn với vai trò nghi�
 **Then** chỉ giao của tập organization ID của actor với organization ID của target hoặc cross-unit grant rõ ràng mới được chấp nhận
 **And** hệ thống không tự suy diễn quyền theo cây đơn vị.
 
-**Given** actor là `SYSTEM_ADMIN` hoặc `SCIENTIFIC_MANAGEMENT_STAFF`
+**Given** actor là `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD` hoặc `SCIENTIFIC_MANAGEMENT_STAFF`
 **When** actor yêu cầu dữ liệu nghiệp vụ
 **Then** `SYSTEM_ADMIN` không được cấp quyền ngầm
-**And** chuyên viên được đánh giá theo scope toàn Học viện cùng state, assignment,
-conflict và disclosure của bản ghi.
+**And** Head chỉ xem proposal/project trong scope được cấp; Staff cần officer assignment
+hiện hành cho management access, còn participation được xét độc lập; cả hai chịu state,
+conflict/disclosure và không có quyền quyết định cuối từ role quản lý.
 
 **Given** migration hoặc dữ liệu vai trò không thể giải quyết đơn nghĩa
 **When** tài khoản thực hiện hành động được bảo vệ
@@ -1546,6 +1572,11 @@ So that cùng một ngữ cảnh luôn cho cùng một quyết định an toàn.
 
 **Acceptance Criteria:**
 
+**Given** Head oversight, Staff management responsibility or a participation/review/council/task relationship
+**When** policy evaluates the exact record/action
+**Then** the backend retains the access basis and applies role + scope + relationship/assignment + state + applicable delegation + conflict
+**And** a Staff participation read never grants management actions; missing/ambiguous context fails closed.
+
 **Given** một request được bảo vệ
 **When** policy bắt đầu đánh giá
 **Then** một `AuthorizationContextV1` được tạo với duy nhất một `asOf` UTC từ transaction clock
@@ -1573,6 +1604,11 @@ I want giao diện hiển thị các quan hệ và hành động do backend tín
 So that tôi hiểu mình có thể hoặc không thể làm gì trên hồ sơ hiện tại.
 
 **Acceptance Criteria:**
+
+**Given** a Staff actor can view a record only through participation or review
+**When** capabilities are projected
+**Then** the response identifies that relationship and omits Scientific Management administrative grants
+**And** Head oversight shows authorized current responsible Staff/unassigned information without disclosing hidden review assignments.
 
 **Given** backend trả record hoặc list item được bảo vệ
 **When** actor có một hoặc nhiều quan hệ trên record
@@ -1605,6 +1641,16 @@ I want quyền của tôi bắt đầu và kết thúc đúng theo quan hệ th�
 So that quan hệ cũ hoặc chức danh thư ký không cấp quyền ngoài nhiệm vụ.
 
 **Acceptance Criteria:**
+
+**Given** `PROPOSAL_MANAGEMENT_OFFICER` or `PROJECT_MANAGEMENT_OFFICER` changes
+**When** an explicitly authorized actor assigns, reassigns or revokes it
+**Then** at most one active primary Staff officer exists per record, including concurrent requests
+**And** reassignment atomically ends the old relationship and creates its successor with preserved history, actor/time/reason and audit.
+
+**Given** an officer assignment ends but a valid participation/review relationship remains
+**When** access is re-evaluated
+**Then** management visibility/actions end immediately and only the independent relationship may grant access
+**And** zero officers is unassigned, while unresolved context fails closed.
 
 **Given** một quan hệ tham gia hoặc phân công có status và effective interval
 **When** `effectiveFrom <= asOf < effectiveUntil` và status là `ACTIVE`
@@ -1748,6 +1794,11 @@ I want kiểm tra xung đột trước khi gán vai trò nhạy cảm,
 So that không xảy ra tự đánh giá, tự phê duyệt hoặc thư ký ra quyết định trái thẩm quyền.
 
 **Acceptance Criteria:**
+
+**Given** a participant is proposed as management officer, reviewer or evaluation/acceptance council member, or a current holder is proposed as participant
+**When** assignment/participation is created or changed, and again when the protected action executes
+**Then** the same-record conflict denies the mutation; reviewer/final-decision conflict for the same round and mutually exclusive council positions also deny
+**And** an unrelated record's legitimate relationship neither blocks participation nor grants management access.
 
 **Given** actor được đề xuất làm reviewer, council member, ethics reviewer, secretary hoặc approver
 **When** source domain gọi conflict preflight với target record
@@ -1989,6 +2040,10 @@ So that chủ nhiệm biết khi nào và cần nộp những gì.
 
 **Acceptance Criteria:**
 
+**Given** Staff may operate an intake through its separately granted capability/scope
+**When** viewing intake proposals or counts
+**Then** intake authority does not grant management visibility to every submission; proposal visibility and counts use Head oversight or exact officer/participation access.
+
 **Given** chuyên viên có quyền trong organization scope
 **When** họ tạo đợt với tên, thời gian, phạm vi áp dụng, loại đề xuất, checklist và gói tệp bắt buộc
 **Then** backend lưu đợt đã validate
@@ -2016,6 +2071,11 @@ I want tạo một đề xuất nháp và khai báo nhóm tham gia,
 So that trách nhiệm và quyền của từng người được xác định trên đúng hồ sơ.
 
 **Acceptance Criteria:**
+
+**Given** a proposal exists without a management officer
+**When** Head or Staff queries it
+**Then** Head sees it as unassigned within authorized scope; Staff has no management access until explicitly assigned
+**And** legitimate PI/team/review access is evaluated independently; creation never auto-assigns an officer.
 
 **Given** actor có researcher profile liên kết và đợt tiếp nhận đang cho phép lập hồ sơ
 **When** họ tạo proposal draft
@@ -2195,6 +2255,11 @@ So that hồ sơ chỉ vào đánh giá khi đáp ứng điều kiện hành ch�
 
 **Acceptance Criteria:**
 
+**Given** Staff requests completeness checking or a supplement on a proposal
+**When** the action executes
+**Then** an effective `PROPOSAL_MANAGEMENT_OFFICER`, explicit scope, current state/context and no participation conflict are required
+**And** Head visibility or Staff participation alone cannot grant that action.
+
 **Given** proposal ở trạng thái đã nộp và trong organization scope
 **When** chuyên viên mở completeness review
 **Then** họ xem được structured data, submission package, checklist và file được phép
@@ -2255,6 +2320,11 @@ I want phân công tài khoản đủ điều kiện trên đề xuất đã ki�
 So that reviewer nhận đúng công việc và hồ sơ bắt đầu đánh giá độc lập.
 
 **Acceptance Criteria:**
+
+**Given** Staff searches reviewer candidates or assigns/revokes a review duty
+**When** the backend evaluates the request
+**Then** it requires the Staff actor's effective `PROPOSAL_MANAGEMENT_OFFICER` and scope on this proposal, in addition to candidate eligibility and conflict checks
+**And** changing participant relationships also rechecks existing management/evaluation conflicts; a cached preflight is never authority.
 
 **Given** staff có scope rõ ràng trên đơn vị chủ trì, không conflict và proposal ở
 `submitted`, `resubmitted` hoặc `under_review`
@@ -2356,6 +2426,11 @@ I want theo dõi reviewer và tổng hợp kết quả,
 So that hồ sơ sẵn sàng được trình người có thẩm quyền.
 
 **Acceptance Criteria:**
+
+**Given** Staff monitors, consolidates or routes a proposal
+**When** a management read or mutation runs
+**Then** the current proposal officer assignment and scope are required, including after revocation/reassignment
+**And** Head oversight may monitor within authorized scope but does not itself grant consolidation/routing or leadership decision actions.
 
 **Given** proposal có các assignment trong scope
 **When** chuyên viên mở review progress
@@ -2537,6 +2612,11 @@ So that dữ liệu và trách nhiệm được chuyển sang giai đoạn thự
 
 **Acceptance Criteria:**
 
+**Given** an approved proposal becomes a separate project
+**When** project management responsibility is established by an authorized actor
+**Then** use a new `PROJECT_MANAGEMENT_OFFICER`, never shared or automatically copied proposal authority
+**And** the project may be unassigned; Staff project management access waits for an effective project assignment. The project-creation actor and officer-grant capability must be decided before implementation.
+
 **Given** proposal có final decision được phê duyệt và chưa có project tương ứng
 **When** chuyên viên khởi tạo project
 **Then** hệ thống sao chép dữ liệu nguồn được quy định và lưu source proposal/version
@@ -2564,6 +2644,11 @@ I want xác định thành viên, trách nhiệm và các mốc theo dõi,
 So that kế hoạch thực hiện có người chịu trách nhiệm và hạn rõ ràng.
 
 **Acceptance Criteria:**
+
+**Given** project participant or management-officer membership changes
+**When** it is saved
+**Then** deny participant + management officer on the same project, prevent competing primary officers and preserve assignment history/audit
+**And** Staff can still participate on other projects without receiving management actions.
 
 **Given** project ở state cho phép lập kế hoạch
 **When** actor có exact manage-plan action tạo milestone/checkpoint với người phụ trách và hạn
@@ -2761,6 +2846,11 @@ So that kết quả cuối của đề tài có căn cứ và không bị tự p
 
 **Acceptance Criteria:**
 
+**Given** a participant is selected for evaluation/acceptance council or final decision on the same project
+**When** assignment changes or the protected evaluation/decision executes
+**Then** conflict denies; same-round reviewer/final-decision and mutually exclusive council positions are also checked
+**And** Head/Staff management visibility cannot bypass these rules or leadership decision authority.
+
 **Given** dossier đã nộp
 **When** chuyên viên completeness review
 **Then** họ có thể yêu cầu bổ sung hoặc route hồ sơ đủ điều kiện sang bước quyết định
@@ -2788,6 +2878,10 @@ I want danh sách và chi tiết phản ánh đúng trạng thái, vai trò và 
 So that các tích hợp sau có nguồn dữ liệu hoàn chỉnh và an toàn.
 
 **Acceptance Criteria:**
+
+**Given** a Head, assigned Staff, participation-only Staff or revoked officer queries project data
+**When** list/detail/search/count/facets/dashboard/reports/export/notifications/files/history are produced
+**Then** each surface uses the same current access basis, scope and disclosure; denied records contribute no metadata or totals.
 
 **Given** actor truy vấn project list/detail
 **When** source project đánh giá context
@@ -3681,6 +3775,11 @@ So that tôi nhanh chóng đến đúng bản ghi trong phạm vi của mình.
 
 **Acceptance Criteria:**
 
+**Given** Head filters proposals/projects by responsible Staff or unassigned state
+**When** search, counts or facets run
+**Then** they include only the Head's authorized Scientific Management scope
+**And** Staff cannot use these filters to discover other officers' records; participation-only results grant no management actions.
+
 **Given** actor tìm trong proposal, project, activity, council/ethics, document, task hoặc report sources
 **When** query được gửi
 **Then** mỗi enabled source dùng authorized query contract tại cùng request-wide `asOf`
@@ -3708,6 +3807,11 @@ I want xem các chỉ số và hàng chờ quan trọng trong phạm vi,
 So that tôi ưu tiên phê duyệt, đề tài chậm, task quá hạn và rủi ro.
 
 **Acceptance Criteria:**
+
+**Given** Head opens the management dashboard
+**When** workload, status and deadline widgets load
+**Then** Head can see current responsible Staff and unassigned proposals/projects, filter/group by Staff, and drill down within authorized scope
+**And** Staff management widgets include only their active officer assignments; participation/review work uses its separate access basis.
 
 **Given** actor có dashboard action và organization scope
 **When** dashboard được tải
@@ -3765,6 +3869,11 @@ So that tôi đánh giá hoạt động nghiên cứu bằng số liệu có ngu
 
 **Acceptance Criteria:**
 
+**Given** management workload reporting is requested
+**When** Head groups by responsible Staff, unassigned state, workflow status or deadline
+**Then** reports use the same authorized record set as list/dashboard
+**And** Staff reports do not include others' assignments through role alone.
+
 **Given** actor chọn report definition và filter
 **When** report chạy
 **Then** từng source query áp dụng current role/scope/relationship/state/conflict/disclosure
@@ -3792,6 +3901,11 @@ I want tạo và tải Excel/PDF từ danh sách hoặc báo cáo,
 So that tôi sử dụng số liệu ngoài hệ thống mà vẫn đúng phạm vi và có truy vết.
 
 **Acceptance Criteria:**
+
+**Given** management assignment or scope changes after an export request
+**When** export is generated or downloaded
+**Then** current source authorization is rechecked, including officer filters, unassigned scope and disclosure
+**And** stale responsibility does not preserve export access or leak records through totals/history.
 
 **Given** actor có exact export action và filter/report hợp lệ
 **When** họ yêu cầu export

@@ -1,5 +1,7 @@
 # Epic 11: Thông báo, nhắc việc và khu “Của tôi”
 
+**Authorization refinement — 2026-09-21:** Resolve Head oversight, officer management and participation/review access separately. Re-authorize notifications and work queues at dispatch/read; officer revocation removes management items without erasing independent participation. No role-wide Staff recipient set or count leakage. Baseline §2.1 owns officer-grant/Head-action and migration questions before coding; this note does not mark implementation complete.
+
 - **Epic status:** `backlog`
 - **Canonical source:** [epics.md](../../epics.md)
 - **Planning order:** sequential, in the order below

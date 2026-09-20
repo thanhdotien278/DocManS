@@ -10,6 +10,7 @@ alternative path.
 flowchart LR
   subgraph actors["Actors"]
     admin["SYSTEM_ADMIN"]
+    head["SCIENTIFIC_MANAGEMENT_HEAD"]
     staff["SCIENTIFIC_MANAGEMENT_STAFF"]
     leader["LEADERSHIP_APPROVAL_AUTHORITY"]
     internal["RESEARCHER_INTERNAL_USER"]
@@ -53,7 +54,9 @@ flowchart LR
   submitted -. "Yêu cầu rút được phê duyệt" .-> withdrawn --> proposal_archive
 
   admin -. "Tài khoản, role và scope" .-> intake
-  staff -. "Vận hành workflow" .-> intake
+  staff -. "Capability/scope đợt riêng" .-> intake
+  head -. "Scope giám sát + officer/chưa phân công/workload" .-> submitted
+  staff -. "Officer assignment hiện hành + scope" .-> review
   internal -. "PI sở hữu bản nháp" .-> draft
   reviewer -. "Assignment đúng record" .-> review
   leader -. "Quyết định trong thẩm quyền" .-> decision

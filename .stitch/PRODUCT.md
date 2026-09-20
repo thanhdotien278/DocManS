@@ -6,6 +6,15 @@ DocManS manages Military Medical Academy research proposals from controlled inta
 
 ## Users and relationships
 
+`SCIENTIFIC_MANAGEMENT_HEAD` sees all proposals/projects in explicit Scientific
+Management scope, current responsible Staff/unassigned state, officer filters/groups
+and workload/status/deadlines. `SCIENTIFIC_MANAGEMENT_STAFF` management requires the
+exact active `PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER`; other
+PI/member/secretary/reviewer/council/task access supplies no management action. Head
+is not leadership decision authority and oversight does not imply operational powers.
+Use baseline §2.1 for pending officer-grant decisions; preserve conflict/disclosure,
+one active primary officer, audited assignment history and consistent surface filtering.
+
 System roles govern platform functions; record-scoped relationships and assignments govern business-record visibility and actions. A proposal has one `PROPOSAL_PI` from `ownerId` and only `TOPIC_SECRETARY`/`TOPIC_MEMBER` team rows; approved topics use `TOPIC_PI` plus the same team roles. An external researcher can work only on related approved-topic/task material or an assigned review and cannot create, edit, or formally submit a proposal. Sources: `docs/permission-matrix.md`, `docs/ux-ui-spec.md`.
 
 ## Authorization philosophy

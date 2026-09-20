@@ -5,7 +5,8 @@ flowchart TD
   admin(["SYSTEM_ADMIN: tạo hoặc khóa account"])
   role(["SYSTEM_ADMIN: gán system role và scope"])
   account["System: mỗi account có một system role active"]
-  staff(["SCIENTIFIC_MANAGEMENT_STAFF: tạo hoặc thu hồi relationship / assignment"])
+  head(["SCIENTIFIC_MANAGEMENT_HEAD: xem trong scope; officer / chưa phân công / workload"])
+  staff(["SCIENTIFIC_MANAGEMENT_STAFF: management cần officer assignment hiện hành"])
   record["System: relationship hoặc assignment chỉ có hiệu lực trên record tương ứng"]
   delegation_rules["System: delegation chỉ tồn tại khi owning contract cho phép"]
   action(["User: request view, create, edit, download, approve, or delete action"])
@@ -17,8 +18,10 @@ flowchart TD
   audit["Audit action nếu thuộc hành động cần ghi nhận"]
 
   admin --> role --> account
-  role -. "Data scope" .-> staff
+  role -. "Scope giám sát được cấp" .-> head
+  role -. "Scope + officer assignment" .-> staff
   staff --> record
+  head -. "Visibility, không phải final decision" .-> context
   delegation_rules --> context
   action --> context --> allowed
   record -. "Context của record" .-> context
