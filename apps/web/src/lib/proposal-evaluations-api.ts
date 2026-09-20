@@ -114,6 +114,9 @@ export type ProposalEvaluationSummary = {
 };
 
 export type ReviewProgressCounts = {
+  reviewerCount: number;
+  committeeMemberCount: number;
+  assignmentRequirementsMet: boolean;
   activeAssignmentCount: number;
   submittedCount: number;
   pendingCount: number;
