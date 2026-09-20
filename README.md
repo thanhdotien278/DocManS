@@ -64,9 +64,24 @@ Screenshots and workflow examples are welcome. Add images here that show the das
 
 ### Prerequisites
 
-- Node.js 22 or later
-- npm 10 or later
-- Docker Desktop or Docker Engine
+- Git
+- [Node.js 22 LTS](https://nodejs.org/en/download) (22.12 or later in the 22.x series) and npm 10 or later for running the applications on your machine
+- [Docker Desktop](https://docs.docker.com/get-started/get-docker/) for Windows, macOS, or Linux, or Docker Engine with the Compose plugin on Linux
+
+Download Docker for your operating system, complete the installer, and start Docker Desktop before continuing. On Windows, follow the installer's WSL 2 setup instructions and use a WSL terminal for the commands below. On macOS/Linux, use your terminal. Run all project commands from the repository root.
+
+Check that the tools are available and Docker is running:
+
+```bash
+git --version
+node --version
+npm --version
+docker --version
+docker compose version
+docker info
+```
+
+Choose either **Running locally** (Docker for PostgreSQL/MinIO, Node.js on your machine for API/web) or **Docker Deployment** (all services in Docker). Do not run both at once because they use the same ports.
 
 ### Installation
 
@@ -75,9 +90,11 @@ Clone the repository and install dependencies:
 ```bash
 git clone https://github.com/thanhdotien278/DocManS.git
 cd DocManS
-npm install
+npm ci
 cp .env.example .env
 ```
+
+If you already cloned the repository, use the update instructions below instead. Copy `.env.example` only on first setup; keep your existing `.env` when updating. For the all-Docker route, host Node.js/npm and `npm ci` are optional because the containers install dependencies.
 
 ### Environment variables
 
@@ -98,10 +115,12 @@ The example values are for local development only. Use institution-managed secre
 
 ### Running locally
 
-1. Start PostgreSQL and MinIO:
+1. Download the PostgreSQL and MinIO images, then start the services and wait for PostgreSQL to become healthy:
 
    ```bash
-   docker compose up -d postgres minio
+   docker compose pull postgres minio
+   docker compose up -d --wait postgres minio
+   docker compose ps
    ```
 
 2. Apply database migrations and seed local development data:
@@ -109,6 +128,14 @@ The example values are for local development only. Use institution-managed secre
    ```bash
    npm run db:setup
    ```
+
+   This generates the Prisma client, applies pending migrations, and runs the seed script. Use the `localhost` database and MinIO settings from `.env.example` for this route. To rerun only the seed after changing catalogs or development fixtures:
+
+   ```bash
+   npm run prisma:seed
+   ```
+
+   Seed data is intended for local development and can update existing seeded records; it is not a database restore or a production initialization procedure.
 
 3. In separate terminals, start the API and web application:
 
@@ -122,7 +149,23 @@ The example values are for local development only. Use institution-managed secre
 
 Open <http://localhost:3000>. The API health endpoint is available at <http://localhost:4000/api/v1/health>.
 
+Keep both terminals open. The API command builds and starts the server without a file watcher; restart it after API changes. Stop each application with `Ctrl+C`, then stop PostgreSQL and MinIO with `docker compose stop postgres minio`.
+
 Development accounts and local troubleshooting notes are documented in [docs/development/auth-seed-users.md](docs/development/auth-seed-users.md). Never use these accounts or their default credentials outside a local development environment.
+
+### Pulling updates
+
+Stop the local API/web processes before updating. Commit or stash your own changes first, then update your current branch from its configured upstream:
+
+```bash
+git status
+git pull --ff-only
+npm ci
+docker compose up -d --wait postgres minio
+npm run db:setup
+```
+
+Compare `.env.example` with your `.env` for newly added settings, then restart `npm run dev:api` and `npm run dev:web` in separate terminals. If Git reports diverged branches, resolve that before continuing; do not discard local changes to force the pull.
 
 ### Verification
 
@@ -134,10 +177,20 @@ npm run build
 
 ## Docker Deployment
 
-For a complete local Docker environment with PostgreSQL, MinIO, API, web application, and Nginx:
+After cloning the repository and creating `.env`, download the images and start the complete local Docker environment with PostgreSQL, MinIO, API, web application, and Nginx:
 
 ```bash
-docker compose up
+docker compose pull
+docker compose up -d
+docker compose logs -f api web
+```
+
+The API container runs `npm install`, `npm run db:setup` (migrations and seed), and then `npm run dev:api` automatically. The web container installs dependencies and starts Next.js. Wait for both applications to start; the first run can take several minutes. `Ctrl+C` exits the log view while containers keep running.
+
+Compose supplies the internal `postgres` and `minio` hostnames for the API, so you do not need to change your host `.env` connection URLs. To rerun only the seed in this route:
+
+```bash
+docker compose exec api npm run prisma:seed
 ```
 
 Available endpoints:
@@ -152,6 +205,28 @@ Stop the environment with:
 ```bash
 docker compose down
 ```
+
+This keeps the database and uploaded files in Docker volumes. Do not add `-v` unless you intend to delete that local data.
+
+To pull code updates for the all-Docker route, commit or stash local changes, then run:
+
+```bash
+docker compose down
+git pull --ff-only
+docker compose pull
+docker compose up -d
+docker compose logs -f api web
+```
+
+Check `.env.example` for new settings before starting the containers. The API startup applies migrations and reruns the seed.
+
+### Troubleshooting startup
+
+- **Cannot connect to the Docker daemon:** start Docker Desktop or the Docker Engine service, then retry `docker info`.
+- **Port already in use:** stop the conflicting process/container. This setup uses ports `3000`, `4000`, `5432`, `9000`, `9001`, and, for Nginx, `8080`.
+- **Database connection fails:** run `docker compose ps` and `docker compose logs postgres`. Host-run commands use `localhost:5432`; commands inside the API container use `postgres:5432`.
+- **Migration fails or a database column is missing:** inspect `npm run prisma:deploy` output and `npx prisma migrate status --schema apps/api/prisma/schema.prisma` (prefix with `docker compose exec api` for the Docker route). Resolve the reported migration issue before seeding; do not reset a database containing data you need.
+- **Browser shows `Failed to fetch`:** check the API terminal or `docker compose logs api`, then open the API health endpoint above. Confirm `NEXT_PUBLIC_API_BASE_URL` matches the API address.
 
 The provided Compose configuration is a development starting point. Before a production deployment, review secrets, TLS termination, database backups, storage retention, trusted proxy settings, and institution-specific access policies.
 
