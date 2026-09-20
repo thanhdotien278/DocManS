@@ -1,7 +1,7 @@
 // @ts-ignore TS7016: runtime package is JavaScript; API imports its TypeScript source contract.
 import type { AuthorizationDecisionCodeV1, PermissionActionV1, ViewerAuthorizationV1, ViewerRelationshipV1 } from "@rtms/permissions";
 import type { SafeUserContext } from "../auth/auth.types.js";
-import type { ProposalParticipation } from "../proposals-shared/proposal-participation.js";
+import { evaluateProposalConflict, type ProposalParticipation } from "../proposals-shared/proposal-participation.js";
 import type { ProposalReviewAccess } from "../proposals-shared/proposal-review-access.js";
 import { publicAuthorizationReasonV1 } from "./authorization-v1.service.js";
 
@@ -103,8 +103,9 @@ function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): {
   if (action === "proposal.review.assign") {
     if (input.actor.systemRole !== "SCIENTIFIC_MANAGEMENT_STAFF") return blocked("ACTION_NOT_GRANTED");
     if (!input.actor.organizationScopes.some((scope) => scope.id === input.proposal.hostOrganizationUnitId)) return blocked("ORG_SCOPE_DENIED");
-    if (!input.participation) return blocked("CONTEXT_UNRESOLVED");
-    if (input.participation?.isParticipant) return blocked("CONFLICT_DENIED");
+    if (!input.participation || input.participation.role === "unknown") return blocked("CONTEXT_UNRESOLVED");
+    if (evaluateProposalConflict(input.participation).conflicted) return blocked("CONFLICT_DENIED");
+    if (["submitted", "resubmitted"].includes(input.proposal.status) && !input.completenessCheckCompleted) return { code: "WORKFLOW_STATE_DENIED", reason: "Cần xác nhận hồ sơ đầy đủ trước khi phân công đánh giá." };
     return ["submitted", "resubmitted", "under_review"].includes(input.proposal.status) ? null : blocked("WORKFLOW_STATE_DENIED");
   }
   if (action === "proposal.review.consolidate") {

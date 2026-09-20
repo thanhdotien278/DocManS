@@ -509,9 +509,10 @@ not allow another request.
 ### Flow 5 — Staff assigns reviewer
 
 1. Staff opens a checked/eligible proposal and chooses **Phân công**.
-2. Candidate search shows only eligible active Scientist Profiles with an existing
-   active linked researcher account and minimum permitted identity data. No separate
-   account picker or automatic linking is allowed. Empty results link to profile management.
+2. Candidate search shows eligible active user accounts (ID, display name and
+   username), regardless of system role, host-unit scope or profile linkage.
+   Selection uses the account ID; a current profile link is optional provenance,
+   never created by assignment. Empty results explain the current eligibility filters.
 3. Staff selects a candidate, assignment role, effective dates, and deadline.
 4. API runs conflict and scope checks and returns a safe result.
 5. Conflict blocks confirmation and explains the safe denial reason without

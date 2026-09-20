@@ -40,7 +40,7 @@ export type ProposalReviewAssignment = {
   reviewRecommendationLabel: string;
 };
 
-export type ReviewerQueueItem = ProposalReviewAssignment & {
+export type ReviewerQueueItem = Pick<ProposalReviewAssignment, "id" | "proposalId" | "assignmentRole" | "assignmentRoleLabel" | "status" | "statusLabel" | "assignedAt" | "effectiveFrom" | "effectiveUntil" | "dueDate" | "completedAt"> & {
   proposal: {
     id: string;
     code: string;
@@ -219,6 +219,7 @@ export type ProposalReviewPackage = {
 export type EvaluationApiError = Error & {
   /** HTTP status, or 0 when the request never reached the API. */
   status?: number;
+  code?: string;
   fieldErrors?: Record<string, string>;
   pendingReviewers?: Array<{ reviewerDisplayName: string }>;
 };
@@ -251,6 +252,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   const body = (await response.json().catch(() => ({}))) as {
+    code?: string;
     message?: string;
     fieldErrors?: Record<string, string>;
     pendingReviewers?: Array<{ reviewerDisplayName: string }>;
@@ -259,6 +261,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const error = new Error(body.message ?? "Không thể xử lý yêu cầu đánh giá.") as EvaluationApiError;
     error.status = response.status;
+    error.code = body.code;
     error.fieldErrors = body.fieldErrors;
     error.pendingReviewers = body.pendingReviewers;
     throw error;
@@ -276,7 +279,7 @@ export async function loadProposalReviewAssignments(proposalId: string) {
 
 export async function assignProposalReviewer(
   proposalId: string,
-  input: { reviewerUserId: string; assignmentRole: ReviewAssignmentRole; dueDate?: string; effectiveFrom?: string; effectiveUntil?: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }
+  input: { reviewerUserId: string; assignmentRole: ReviewAssignmentRole; dueDate?: string; effectiveFrom?: string; effectiveUntil?: string; contextVersion: ViewerAuthorizationV1["contextVersion"] }
 ) {
   const response = await requestJson<{ assignment: ProposalReviewAssignment }>(`/research-proposals/${proposalId}/review-assignments`, {
     method: "POST",
@@ -285,7 +288,7 @@ export async function assignProposalReviewer(
   return response.assignment;
 }
 
-export async function revokeProposalReviewAssignment(proposalId: string, assignmentId: string, note: string, contextVersion?: ViewerAuthorizationV1["contextVersion"]) {
+export async function revokeProposalReviewAssignment(proposalId: string, assignmentId: string, note: string, contextVersion: ViewerAuthorizationV1["contextVersion"]) {
   const response = await requestJson<{ assignment: ProposalReviewAssignment }>(
     `/research-proposals/${proposalId}/review-assignments/${assignmentId}/revoke`,
     { method: "POST", body: JSON.stringify({ note, contextVersion }) }

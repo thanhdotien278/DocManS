@@ -219,9 +219,10 @@ flowchart LR
   locked -- "Có" --> revoke["Mất quyền ngay; giữ profile,<br/>quan hệ và lịch sử"]
 ```
 
-`Profile INACTIVE` không nhận assignment mới. `TOPIC_SECRETARY` là quan hệ
-theo proposal/topic; nó chỉ có thao tác theo scope/assignment và không có quyền
-phê duyệt cuối.
+Với proposal reviewer/committee assignment, eligibility dựa vào account active
+và conflict trên proposal; trạng thái hoặc sự tồn tại của profile không cấp/chặn
+quyền thay cho account. `TOPIC_SECRETARY` là quan hệ theo proposal/topic; nó chỉ
+có thao tác được cấp và không có quyền phê duyệt cuối.
 
 Trang hồ sơ nhà khoa học chỉ hiển thị dữ liệu và action của profile. Ba section
 workflow proposal (`Phiếu đánh giá của tôi`, `Phân công đánh giá`, `Hồ sơ trình
@@ -300,12 +301,13 @@ trạng thái. Không dùng cập nhật trạng thái trực tiếp để bypas
 
 ### Proposal reviewer / council assignment refinement
 
-Staff opens an eligible, completeness-checked proposal → searches active Scientist
-Profiles → selects an eligible linked profile and reviewer/council-member duty →
+Staff opens an eligible, completeness-checked proposal → searches active user
+accounts → selects an eligible account and reviewer/committee-member duty →
 sets optional effective range/deadline → confirms → backend rechecks current
 eligibility and context → records assignment and audit in one transaction.
-No separate account selection or implicit profile linking is performed. An empty
-candidate list directs staff to profile management. A stale/denied request shows
+Assignee role, host-unit scope and profile linkage do not determine eligibility;
+a linked profile is optional provenance, never created by assignment. An empty
+candidate list explains eligibility filters. A stale/denied request shows
 the server error and requires refresh before retry. Revocation requires a reason,
 retains assignment/review history, and removes access immediately. The normative
 eligibility and disclosure boundary is the Reviewer / Council Assignment section

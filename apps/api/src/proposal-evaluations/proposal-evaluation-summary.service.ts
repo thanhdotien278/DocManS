@@ -6,6 +6,7 @@ import { ProposalReviewAccessService } from "../proposals-shared/proposal-review
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
 import {
   getRecommendationLabel,
+  resolveProposalReviewAccess,
   REVIEW_ASSIGNMENT_STATUS,
   REVIEW_MAX_TOTAL_SCORE,
   REVIEW_RECOMMENDATIONS,
@@ -13,9 +14,8 @@ import {
   REVIEW_STATUS,
   type ReviewRecommendation
 } from "../proposals-shared/proposal-review-access.js";
-import { CONSOLIDATABLE_STATUSES, PROPOSAL_STATUS, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
+import { CONSOLIDATABLE_STATUSES, isWorkflowVisibleStatus, PROPOSAL_STATUS, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import {
-  assertCanReadEvaluation,
   assertProposalStatus,
   assertScientificManagementScope,
   findEvaluationProposal,
@@ -50,13 +50,15 @@ export class ProposalEvaluationSummaryService {
     private readonly reviewAccess: ProposalReviewAccessService
   ) {}
 
-  /** AC-ST-3.4-01. Staff and leadership read; reviewers and PIs never see the panel roster. */
+  /** Operational progress is for scoped staff without a same-proposal review duty. */
   async getReviewProgress(actor: SafeUserContext, proposalId: string) {
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    assertCanReadEvaluation(actor, proposal);
+    assertScientificManagementScope(actor, proposal);
+    if (!isWorkflowVisibleStatus(proposal.status)) throw new ForbiddenException();
     if ((await this.participation.evaluateConflict(actor.id, proposalId)).conflicted) throw new BadRequestException({ message: "Không được xem dữ liệu phản biện của hồ sơ mình tham gia." });
 
     const assignmentRecords = await this.assignments.findAssignments(proposalId);
+    if (resolveProposalReviewAccess(assignmentRecords.filter((assignment) => assignment.reviewerUserId === actor.id)).isAssignedReviewer) throw new ForbiddenException();
     const reviewRecords = await this.assignments.findReviews(proposalId);
     const summary = await this.findSummary(proposalId);
 

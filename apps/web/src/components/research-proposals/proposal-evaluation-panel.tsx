@@ -12,6 +12,8 @@ import {
   loadReviewerCandidates,
   type ReviewerCandidates,
   loadProposalReviewProgress,
+  loadProposalReviewAssignments,
+  type ProposalReviewAssignment,
   revokeProposalReviewAssignment,
   isNotEntitled,
   saveProposalEvaluationSummary,
@@ -33,10 +35,11 @@ function formatDueDate(value: string) {
  * assigned, who has answered, and the consolidated outcome that moves the proposal on to the
  * approval authority.
  *
- * Actions are shown whenever the viewer is staff and only disabled by workflow state, so a blocked
+ * Actions follow the backend record capability, so a blocked
  * control explains itself instead of disappearing (UX-DR27). The backend remains authoritative.
  */
-export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssignReviewers, canConsolidate, blockedReason, consolidateBlockedReason, contextVersion }: { proposalId: string; onWorkflowChange: () => void; canAssignReviewers: boolean; canConsolidate: boolean; blockedReason: string; consolidateBlockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
+export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflowChange, canAssignReviewers, canConsolidate, blockedReason, consolidateBlockedReason, contextVersion }: { proposalId: string; proposalStatus: string; onWorkflowChange: () => Promise<void>; canAssignReviewers: boolean; canConsolidate: boolean; blockedReason: string; consolidateBlockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
+  const [assignments, setAssignments] = useState<ProposalReviewAssignment[]>([]);
   const [progress, setProgress] = useState<ProposalReviewProgress | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
   const [loadError, setLoadError] = useState("");
@@ -64,22 +67,30 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
 
   async function refresh() {
     try {
-      const data = await loadProposalReviewProgress(proposalId);
-      setProgress(data);
+      setAssignments(await loadProposalReviewAssignments(proposalId));
+      setProgress(null);
+      if (canConsolidate) {
+        try {
+          const data = await loadProposalReviewProgress(proposalId);
+          setProgress(data);
+          setSummaryError("");
+          if (!summaryDirty) {
+            setSummaryText(data.evaluationSummary?.summary ?? "");
+            setRecommendation(data.evaluationSummary?.recommendation ?? "");
+          }
+        } catch (error) {
+          setSummaryError(error instanceof Error ? error.message : "Không tải được tiến độ đánh giá.");
+        }
+      }
       if (canAssignReviewers) {
         try {
           setCandidates(await loadReviewerCandidates(proposalId, candidateQuery));
-          setAssignError("");
         } catch (error) {
           setCandidates({ users: [] });
           setAssignError(error instanceof Error ? error.message : "Không tải được người đánh giá.");
         }
       } else {
         setCandidates({ users: [] });
-      }
-      if (!summaryDirty) {
-        setSummaryText(data.evaluationSummary?.summary ?? "");
-        setRecommendation(data.evaluationSummary?.recommendation ?? "");
       }
       setState("ready");
     } catch (error) {
@@ -96,7 +107,7 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
 
   useEffect(() => {
     void refresh();
-  }, [proposalId, canAssignReviewers, contextVersion?.aggregateVersion]);
+  }, [proposalId, canAssignReviewers, canConsolidate, contextVersion?.aggregateVersion]);
 
   if (state === "loading") {
     return <p className="state-message">Đang tải tiến độ đánh giá...</p>;
@@ -106,17 +117,19 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
     return <p className="state-message error">{loadError}</p>;
   }
 
-  if (state === "forbidden" || !progress) {
+  if (state === "forbidden") {
     return <SectionCard title="Phân công đánh giá" subtitle="Người phản biện và thành viên hội đồng"><button className="button primary" type="button" disabled title={blockedReason}>Phân công người đánh giá</button><p className="record-meta">{blockedReason}</p></SectionCard>;
   }
 
-  const canAssign = canAssignReviewers;
-  const isReadyForApproval = progress.evaluationSummary?.status === "ready_for_approval";
+  const canAssign = canAssignReviewers && Boolean(contextVersion) && !isAssigning && !revokingId;
+  const isReadyForApproval = progress?.evaluationSummary?.status === "ready_for_approval";
 
   async function handleAssign(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setAssignError("");
     setMessage("");
+
+    if (!canAssign || !contextVersion) return;
 
     if (!reviewerUserId) {
       setAssignError("Chọn tài khoản người đánh giá.");
@@ -136,16 +149,17 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
       setReviewerUserId("");
       setDueDate("");
       setMessage("Đã phân công người đánh giá.");
-      await refresh();
-      onWorkflowChange();
+      await onWorkflowChange();
     } catch (error) {
       setAssignError(error instanceof Error ? error.message : "Không thể phân công người đánh giá.");
+      if ((error as EvaluationApiError).code === "CONTEXT_VERSION_MISMATCH") await onWorkflowChange();
     } finally {
       setIsAssigning(false);
     }
   }
 
   async function handleRevoke(assignmentId: string, reviewerName: string) {
+    if (!canAssign || !contextVersion) return;
     setAssignError("");
     setMessage("");
     if (!window.confirm(`Thu hồi phân công đánh giá của ${reviewerName}? Lịch sử phân công vẫn được giữ lại.`)) {
@@ -158,10 +172,10 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
     try {
       await revokeProposalReviewAssignment(proposalId, assignmentId, reason, contextVersion);
       setMessage("Đã thu hồi phân công đánh giá.");
-      await refresh();
-      onWorkflowChange();
+      await onWorkflowChange();
     } catch (error) {
       setAssignError(error instanceof Error ? error.message : "Không thể thu hồi phân công.");
+      if ((error as EvaluationApiError).code === "CONTEXT_VERSION_MISMATCH") await onWorkflowChange();
     } finally {
       setRevokingId("");
     }
@@ -190,7 +204,7 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
       setSummaryDirty(false);
       setMessage(markReady ? "Đã gửi hồ sơ tới lãnh đạo phê duyệt." : "Đã lưu bản nháp tổng hợp.");
       await refresh();
-      onWorkflowChange();
+      await onWorkflowChange();
     } catch (error) {
       const evaluationError = error as EvaluationApiError;
       setSummaryError(evaluationError.message);
@@ -205,9 +219,9 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
       <SectionCard
         title="Phân công đánh giá"
         subtitle="Người phản biện và thành viên hội đồng được phân công cho hồ sơ này"
-        action={<StatusBadge status={progress.proposalStatus} />}
+        action={<StatusBadge status={proposalStatus} />}
       >
-        <div className="meta-grid">
+        {progress ? <div className="meta-grid">
           <div className="meta-item">
             <span className="meta-label">Đang phân công</span>
             <span className="meta-value">{progress.activeAssignmentCount}</span>
@@ -226,16 +240,16 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
               {progress.averageTotalScore === null ? "Chưa có" : `${progress.averageTotalScore}/${progress.maxTotalScore}`}
             </span>
           </div>
-        </div>
+        </div> : null}
 
-        {assignError ? <p className="form-error">{assignError}</p> : null}
+        {assignError ? <p className="form-error" role="alert">{assignError}</p> : null}
         {message ? (
           <p className="state-message success" role="status">
             {message}
           </p>
         ) : null}
 
-        {progress.assignments.length ? (
+        {assignments.length ? (
           <div className="table-wrap">
             <table className="data-table">
               <thead>
@@ -244,12 +258,12 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
                   <th>Vai trò</th>
                   <th>Hạn đánh giá</th>
                   <th>Trạng thái phân công</th>
-                  <th>Tình trạng phiếu</th>
+                  {progress ? <th>Tình trạng phiếu</th> : null}
                   <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                {progress.assignments.map((assignment) => (
+                {assignments.map((assignment) => (
                   <tr key={assignment.id}>
                     <td>
                       <span className="record-title">{assignment.reviewerDisplayName}</span>
@@ -267,18 +281,18 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
                       {assignment.completedAt ? <span className="record-meta">Hoàn thành {formatDate(assignment.completedAt)}</span> : null}
                       {assignment.revokedAt ? <span className="record-meta">Thu hồi {formatDate(assignment.revokedAt)}</span> : null}
                     </td>
-                    <td>
+                    {progress ? <td>
                       {assignment.reviewStatus === "submitted" ? (
                         <>
                           <span className="record-title">
-                            Đã gửi · {assignment.reviewTotalScore}/{progress.maxTotalScore}
+                            Đã gửi{progress ? ` · ${assignment.reviewTotalScore}/${progress.maxTotalScore}` : ""}
                           </span>
                           <span className="record-meta">{assignment.reviewRecommendationLabel}</span>
                         </>
                       ) : (
                         <span className="record-meta">Chưa gửi phiếu</span>
                       )}
-                    </td>
+                    </td> : null}
                     <td>
                       {assignment.status === "assigned" || assignment.status === "completed" ? (
                         <button
@@ -337,13 +351,13 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
           </button>
           {!canAssign ? (
             <p className="record-meta">
-              Hồ sơ đang ở trạng thái &quot;{progress.proposalStatusLabel}&quot; nên không thể thay đổi phân công đánh giá.
+              {blockedReason || (!contextVersion ? "Tải lại hồ sơ để cập nhật quyền phân công." : "Đang cập nhật phân công...")}
             </p>
           ) : null}
         </form>
       </SectionCard>
 
-      <SectionCard title="Tổng hợp và trình phê duyệt" subtitle="Kết luận của chuyên viên trước khi gửi lãnh đạo phê duyệt">
+      {progress ? <SectionCard title="Tổng hợp và trình phê duyệt" subtitle="Kết luận của chuyên viên trước khi gửi lãnh đạo phê duyệt">
         {progress.reviews.length ? (
           <div className="timeline">
             {progress.reviews.map((review) => (
@@ -447,7 +461,7 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
             </p>
           ) : null}
         </form>
-      </SectionCard>
+      </SectionCard> : summaryError ? <p className="form-error" role="alert">{summaryError}</p> : null}
     </>
   );
 }
