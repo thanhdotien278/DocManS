@@ -279,28 +279,35 @@ never grants an action by itself.
 | Review proposal completeness | None | Review | Read scoped | Read own | Read if participating | None | Organization/unit scope | Submitted, resubmitted; once per current submitted version | Yes when state changes | FR15, Story 3.1 |
 | Request supplement | None | Submit request | Read scoped | Read own request | Read if participating | None | Organization/unit scope | Submitted, needs supplement; due date is a whole calendar day | Yes | FR15, Story 3.1 |
 | Respond to supplement request | None | Read scoped | Read scoped | Update/Submit own | None | None | Own proposal scope | Needs supplement | Yes | FR16, Story 3.1 |
-| Assign reviewer or committee member | None | Assign with conflict check | Read scoped | None | None | Read assigned after assignment | Organization/unit scope, reviewer assignment scope, conflict policy scope | Submitted, under review | Yes | FR17, FR67a, Story 3.2 |
-| Change reviewer assignment | None | Assign with conflict check | Read scoped | None | None | Read assigned after assignment | Organization/unit scope, reviewer assignment scope, conflict policy scope | Under review | Yes | FR17, FR67a, Story 3.2 |
+| Assign reviewer or committee member | None | Assign with conflict/exclusivity check | Read scoped | None | None | Read assigned after assignment | Organization/unit scope plus source-record/evaluation-context compatibility and multiplicity | Submitted, resubmitted, under review | Yes | FR17, FR67a, Story 3.2 |
+| Change reviewer assignment | None | Revoke/end then assign with conflict/exclusivity check | Read scoped | None | None | Read assigned after assignment | Same owning mutation and non-overlapping interval rules as initial assignment | Under review | Yes | FR17, FR67a, Story 3.2 |
 | Access assigned review package | None | Read scoped | Read scoped | None | None | Read assigned | Reviewer assignment scope | Under review | No | FR18, Story 3.2 |
 | Submit score/comment/recommendation | None | Read/Review | Read scoped | None | None | Review/Submit assigned | Reviewer assignment scope | Under review | Yes | FR18, Story 3.3 |
 | Consolidate evaluation outcome | None | Review/Update | Read scoped | None | None | None | Organization/unit scope | Under review, ready for approval | Yes | FR19, Story 3.4 |
 | View evaluation output before decision | None | Read scoped | Read authority scoped | None unless policy allows result view | None unless participating view is allowed | Read own submitted review | Approval authority scope, reviewer assignment scope | Ready for approval | No | FR20, Story 3.5 |
 | Approve/reject proposal | None | None | Approve/Reject with conflict check | Read result | Read result if participating | None | Approval authority scope, conflict policy scope | Ready for approval | Yes | FR21, FR22, FR67a, Story 3.5 |
 
-#### 8.4.1 Implemented Read-Scope Decisions (EP-03)
+Assignment and decision cells above inherit the single authoritative
+compatibility/multiplicity matrix and stable reason codes from
+`docs/authorization-core-business-baseline.md#evaluation-position-compatibility-and-multiplicity`.
+Candidate filtering is explanatory; single, bulk, import, direct-API and
+administrative writes must re-evaluate that policy inside the owning mutation.
 
-These resolve the "read scoped" cells above into the concrete rules the backend enforces. They are
-recorded here because each one widens who may read a proposal, and the rule must be reviewable next
-to the matrix it implements.
+#### 8.4.1 Read-Scope Contract and Legacy EP-03 Alignment
+
+These resolve the "read scoped" cells against the current authorization baseline.
+Legacy EP-03 code does not yet enforce every rule below; see the
+[Proposal Review & Approval plan](../_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/implementation-plan.md)
+for the implementation gaps. This table is a contract, not a completion claim.
 
 | Rule | Decision | Where |
 | --- | --- | --- |
 | Reviewer read | Granted only by an `assigned` or `completed` `ProposalReviewAssignment` row on that one proposal, and only while the proposal is in the formal workflow. The `reviewer` account role grants nothing by itself; a revoked assignment stops granting immediately. | `canReadProposal`, `ProposalReviewAccessService` |
 | Reviewer file read | Resolved by the same assignment lookup as the proposal read, so the attachment list and the download agree. Upload still requires proposal ownership. | `FilesService.assertCanRead` |
-| Leadership read | Granted for any proposal that has entered the formal workflow, i.e. every state except `draft`. Leadership does not need a matching organization scope; drafts stay private to their owner until formal submission. | `canReadProposal` |
-| Approval authority | The `leadership` role only. A system administrator role does not imply business approval authority, per section 2. | `assertApprovalAuthority` |
+| Leadership decision-package read | Requires explicitly granted authority scope, a routed proposal and no participation/reviewer conflict; role alone is insufficient. Other proposal reads require their own valid record context and disclosure. No implicit Academy-wide or organization-tree bypass. | Shared proposal/evaluation/file authorization; Story 5.7 |
+| Approval authority | `LEADERSHIP_APPROVAL_AUTHORITY` plus explicit decision scope, routed record, current context, ready state and no conflict. System administrator and reviewer/committee assignments grant no final decision authority. | Shared capability and decision mutation; Story 5.8 |
 | Staff evaluation actions | `scientific-management` **and** an organization scope covering the proposal's host unit, re-checked on every assignment and consolidation action. | `assertScientificManagementScope` |
-| Decision conflict | The shared ST-3.0 participation primitive, plus a reviewer assignment on the same proposal — an authority who scored the proposal cannot then decide it. | `ProposalDecisionsService.resolveDecisionConflict` |
+| Decision/consolidation conflict | Participation and reviewer conflicts override role/scope. An active evaluation position blocks the same-round decision; any persisted draft/submitted evaluation retains that conflict after assignment revocation/expiry. An ended assignment with no persisted evaluation creates no lasting conflict. | Shared conflict resolver; Stories 5.5, 5.7, 5.8 |
 
 Proposal-detail presentation follows the same projection: the PI receives the edit/submission workspace, while scientific-management staff receive a read-only summary of the proposal, team, schedule, and expected budget. Supplement deadlines and reviewer-assignment effective/deadline values are entered as whole Vietnam calendar days; no hour/minute control is exposed.
 

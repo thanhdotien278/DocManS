@@ -4,7 +4,7 @@ type: normative-architecture-companion
 schemaVersion: v1
 status: final
 created: 2026-07-29
-updated: 2026-07-29
+updated: 2026-09-20
 owner: packages/permissions
 ---
 
@@ -78,6 +78,27 @@ denial is the primary API/UI code. Unknown versions or codes map to
 `CONTRACT_VERSION_UNSUPPORTED` or `CONTRACT_CODE_UNKNOWN`; clients must not
 guess a fallback permission.
 
+Assignment/conflict responses additionally expose one stable, minimum-disclosure
+`reasonCode`. These reason codes do not replace the primary decision ordering:
+
+| Stable `reasonCode` | Primary decision code | Meaning |
+| --- | --- | --- |
+| `SOURCE_PARTICIPATION_CONFLICT` | `CONFLICT_DENIED` | Candidate is proposal/topic PI, topic member or topic secretary on the source record. |
+| `INCOMPATIBLE_COUNCIL_POSITION` | `CONFLICT_DENIED` | A different mutually exclusive evaluation-position interval would overlap for the candidate in this context. |
+| `DUPLICATE_OR_OVERLAPPING_ASSIGNMENT` | `CONFLICT_DENIED` | A duplicate interval for the same evaluation position would overlap for the candidate in this context. |
+| `REVIEWER_DECISION_CONFLICT` | `CONFLICT_DENIED` | Candidate submitted/recorded an evaluation and therefore cannot make the final decision for that record and round. |
+| `STALE_ASSIGNMENT_CONTEXT` | `CONTEXT_VERSION_MISMATCH` | Candidate, source, council/round or assignment context changed after the evaluated version. |
+
+Public reasons must not identify another protected participant or disclose the
+underlying relationship. Unknown reason codes fail closed under the existing
+contract-version/code rules.
+
+`AuthorizationReasonCodeV1` is the five-value registry above.
+`BlockedActionV1` adds `reasonCode?: AuthorizationReasonCodeV1`; assignment and
+final-decision conflict/staleness responses must populate it, while other V1
+blocked actions may omit it. This additive field does not change primary-code
+precedence; executable schemas and fixtures must reject unknown reason values.
+
 ## 3. Relationship Type Registry
 
 The following V1 relationship types are canonical:
@@ -88,15 +109,52 @@ The following V1 relationship types are canonical:
 | `TOPIC_PI` | approved topic | one | additive subject to denials |
 | `TOPIC_SECRETARY` | proposal or approved topic | at most one active per record | administrative actions only |
 | `TOPIC_MEMBER` | proposal or approved topic | additive subject to denials | member-default actions only |
-| `REVIEWER_ASSIGNMENT` | review owner | one per evaluation assignment | own assignment only |
-| `COUNCIL_MEMBER` | council | one per council | assigned council only |
-| `COUNCIL_SCIENTIFIC_SECRETARY` | council | one per council | administrative actions only |
+| `REVIEWER_ASSIGNMENT` | evaluation context | at most one active mutually exclusive evaluation position per actor + context | own assignment only |
+| `COUNCIL_MEMBER` | evaluation context | at most one active mutually exclusive evaluation position per actor + context | assigned council only |
+| `COUNCIL_SCIENTIFIC_SECRETARY` | evaluation context | at most one active mutually exclusive evaluation position per actor + context | administrative actions only |
 | `ETHICS_REVIEWER_ASSIGNMENT` | ethics | one per assignment | own assignment only |
 | `TASK_ASSIGNEE` | task | one per task | assigned task only |
 
 All active types are preserved; there is no “highest relationship.” Additive
 actions are unioned only after every denial is evaluated. A future relationship
 type or multiplicity change requires a registry version change and fixtures.
+
+`COUNCIL_CHAIR`, `COUNCIL_SECRETARY` / `COUNCIL_SCIENTIFIC_SECRETARY`,
+`COUNCIL_MEMBER`, and `REVIEWER` / `COUNCIL_REVIEWER` form one mutually
+exclusive evaluation-position group. The canonical compatibility matrix,
+context key and lifecycle rules are owned by
+`docs/authorization-core-business-baseline.md#evaluation-position-compatibility-and-multiplicity`;
+source domains map their persisted role names to this group rather than define
+local compatibility rules.
+
+```text
+EvaluationContextKeyV1
+  sourceDomain: DomainCodeV1
+  sourceRecordId: UUID
+  evaluationContextId: UUID
+
+EvaluationPositionV1
+  COUNCIL_CHAIR | COUNCIL_SECRETARY | COUNCIL_MEMBER |
+  REVIEWER
+```
+
+The context key is mandatory and source-owned. Persisted
+`COUNCIL_SCIENTIFIC_SECRETARY` maps to `COUNCIL_SECRETARY`;
+`committee_member` maps to `COUNCIL_MEMBER`; `reviewer` /
+`REVIEWER_ASSIGNMENT` maps to `REVIEWER`; a council-specific reviewer maps to
+`REVIEWER`. `COUNCIL_REVIEWER` is a domain label, not an additional V1
+position. Aliases do not create additional compatible slots. Evaluation
+intervals are half-open `[effectiveFrom, effectiveUntil)`; `assigned` and
+`completed` remain current-round rows for multiplicity until revoked/ended or
+round closure.
+
+For proposal endpoints, the source resolves the current immutable
+`evaluationContextId` and its aggregate/version token from the proposal inside
+the same mutation transaction; the resolved context key is included in the
+authorization audit and compared on write. Council/ethics endpoints must carry
+the explicit context ID and version in their mutation token. A missing or
+changed context ID/version returns `STALE_ASSIGNMENT_CONTEXT` and cannot be
+treated as a valid proposal-context check.
 
 ## 4. Exact Action and Delegation Boundary
 
@@ -309,6 +367,15 @@ Profile ID and username selectors are rejected. Within `runProposalMutation`, lo
 and reload the selected active account and recheck participation and other baseline
 rules. Store its current linked profile ID if any, otherwise null; never create links.
 Self-selection by an otherwise authorized nonparticipant is allowed.
+
+For the current proposal model, `reviewer` maps to `REVIEWER` and
+`committee_member` maps to `COUNCIL_MEMBER` in the shared mutually exclusive
+evaluation-position group. Candidate search/preflight and the authoritative
+mutation apply the same source-participation, position, interval and historical
+review/decision checks. Reassignment ends or revokes the old row before the new
+row becomes effective, retains immutable history, and rejects stale context or
+any concurrent overlap. Bulk/import/admin consumers must call the same owning
+mutation; direct persistence is not a supported assignment path.
 
 Review queue, proposal/package/file reads and own review actions rely on the effective
 assignment and conflict checks, without assignee role or host-unit scope requirements.

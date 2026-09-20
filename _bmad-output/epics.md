@@ -79,9 +79,10 @@ disclosure; unresolved context fails closed and important changes are audited.
 - FR14: The system can record immutable proposal submission history, including timestamps, submission state changes, PI actor context, and locked versions; post-submission edits, withdrawal, and reopening use explicit requests/actions rather than overwriting a submitted version.
 - FR15: Scientific management staff can review proposal completeness and request supplements with a stated reason and due date.
 - FR16: Principal investigators can view supplement requests, revise proposal content or attachments, and resubmit the proposal.
-- FR17: Scientific management staff can assign reviewers or committee participants to proposals according to the workflow.
+- FR17: Scientific management staff can assign/change/revoke proposal evaluation positions under the canonical compatibility, lifecycle, context and audit policy in the authorization baseline.
 - FR18: Reviewers and committee members can access assigned proposals and submit scores, comments, and recommendations.
 - FR19: Scientific management staff can monitor review progress and consolidate evaluation outcomes.
+- FR19a: Scientific management staff can submit a completed, consolidated proposal dossier to leadership for approval; routing is not final approval.
 - FR20: Leadership or approval authority can review proposal history, evaluation outputs, and supporting files before making an approval decision.
 - FR21: Leadership or approval authority can approve, reject, or otherwise disposition a proposal according to workflow rules.
 - FR22: The system can treat proposal statuses as controlled states and restrict actions based on current proposal state.
@@ -133,7 +134,7 @@ disclosure; unresolved context fails closed and important changes are audited.
 - FR65: Authorized users can create and maintain researcher profiles with identity, academic rank or degree, title, contact details, organization, research fields, expertise keywords, and active status.
 - FR66: Authorized users can link researcher profiles to user accounts where applicable while still allowing profile records for researchers who do not yet have system login accounts.
 - FR67: Authorized users can associate researcher profiles with proposals, approved projects, seminars, student research activities, councils, ethics dossiers, reviews, publications, products, and tasks where relevant.
-- FR67a: The system can enforce conflict-of-interest and separation-of-duty rules when assigning participation, reviewer, council, secretary, or approval roles, including blocking self-review, self-approval, and unauthorized secretary decision actions within the same business record.
+- FR67a: The system enforces record/evaluation-context conflict, separation-of-duty and multiplicity policy in preflight and every authoritative assignment/decision mutation; the authorization baseline owns the compatibility matrix and stable reasons.
 - FR68: Users can search and filter researcher profiles by name, unit, field, expertise, status, participation history, and other authorized business attributes.
 - FR69: The system can preserve researcher profile history and audit important profile changes according to role and data-scope permissions.
 
@@ -231,6 +232,7 @@ disclosure; unresolved context fails closed and important changes are audited.
 - FR17: Epic 5 — Phân công người đánh giá.
 - FR18: Epic 5 — Chấm điểm, nhận xét và kiến nghị.
 - FR19: Epic 5 — Theo dõi và tổng hợp đánh giá.
+- FR19a: Epic 5, Story 5.5 — Trình hồ sơ đã tổng hợp tới lãnh đạo.
 - FR20: Epic 5 — Hồ sơ trình người có thẩm quyền.
 - FR21: Epic 5 — Quyết định phê duyệt hoặc từ chối.
 - FR22: Epic 5 — Máy trạng thái đề xuất.
@@ -600,6 +602,12 @@ DTOs; atomic state/version/conflict checks.
 Reviewer sees only assigned package and own evaluation. PI/member/secretary do
 not see protected raw review data before disclosure. Reviewer cannot decide a
 record they reviewed; PI/member cannot review or approve their own record.
+Within one source-record evaluation round/council, chair, council secretary,
+council member and reviewer/council reviewer are mutually exclusive active
+positions for the same person; unrelated records/councils/rounds remain
+independent. Position changes are revoke/end-then-assign with no interval overlap
+and immutable history. The baseline compatibility/multiplicity definition is
+canonical; stories reference it rather than redefine pairwise rules.
 Researcher-profile pages never render proposal review/assignment/approval cards;
 proposal detail renders them only from backend capability and exact assignment
 context. `ACTION_NOT_GRANTED` omits a section; conflict/state blocks keep the
@@ -610,6 +618,10 @@ approval, and `SYSTEM_ADMIN` gains no implicit proposal workflow action.
 
 - Assignment cannot be confirmed until active candidate, scope, dates, conflict,
   and required context checks pass.
+- Candidate preflight and every authoritative single/bulk/import/admin assignment
+  mutation enforce the same source-participation, mutually exclusive position,
+  duplicate/overlap and stale-context rules; concurrent writes cannot create two
+  active evaluation positions for one person/context.
 - An external researcher may review only an explicitly assigned review package;
   the account role alone grants no reviewer access, assignment authority, or
   final decision capability.
@@ -1277,7 +1289,7 @@ Chuyên viên có thể mở đợt tiếp nhận; chủ nhiệm có thể lập
 Đề xuất đã nộp có thể đi trọn luồng bổ sung, đánh giá độc lập, tổng hợp và ra
 quyết định với trạng thái, phân quyền và che giấu thông tin đúng chính sách.
 
-**FRs covered:** FR15, FR16, FR17, FR18, FR19, FR20, FR21, FR22.
+**FRs covered:** FR15, FR16, FR17, FR18, FR19, FR19a, FR20, FR21, FR22.
 
 ### Epic 6: Theo dõi và nghiệm thu đề tài đã phê duyệt
 
@@ -1757,6 +1769,17 @@ So that không xảy ra tự đánh giá, tự phê duyệt hoặc thư ký ra q
 **Then** denial chỉ áp dụng cho record đó
 **And** record còn lại được đánh giá độc lập theo context của chính nó.
 
+**Given** candidate đã có một vị trí active trong nhóm chair, council secretary,
+council member hoặc reviewer/council reviewer của cùng evaluation context
+**When** preflight hoặc mutation đề xuất cùng vị trí hay vị trí khác có thời gian chồng lấn
+**Then** backend từ chối theo compatibility/multiplicity definition chuẩn
+**And** assignment ở record/council/round khác không tạo conflict.
+
+**Given** preflight từng trả allowed
+**When** source participation, vị trí/interval hoặc context version thay đổi trước mutation
+**Then** authoritative mutation đánh giá lại và từ chối stale/current denial, không ghi một phần
+**And** bulk, import, direct API và administrative path không được bỏ qua policy này.
+
 ### Story 2.5: Tìm kiếm và xem danh bạ nhà khoa học theo phạm vi [FR68]
 
 As a người dùng được phép,
@@ -2151,6 +2174,19 @@ So that tôi biết hồ sơ đã vào quy trình tiếp nhận.
 Đề xuất đã nộp có thể đi trọn luồng bổ sung, đánh giá độc lập, tổng hợp và ra
 quyết định với trạng thái, phân quyền và che giấu thông tin đúng chính sách.
 
+**Refinement 2026-09-20:** Proposal Review & Approval uses existing Stories
+5.3 → 5.4 → 5.5 → 5.7 → 5.8, after 5.1–5.2. Story 5.6 is independent and
+not a prerequisite. No new epic/story is required. See the scoped
+[implementation plan](implementation-artifacts/epic-05-proposal-review-and-approval/implementation-plan.md)
+for current-code evidence, dependencies and verification gates.
+`REVIEWER` denotes an effective proposal assignment, never a new system role.
+Canonical persisted states are `submitted` / `resubmitted` → `under_review`
+→ `ready_for_approval` → `approved` | `rejected`; `PENDING_APPROVAL` in older
+planning text means `ready_for_approval`, not another database state.
+All criteria below inherit the authorization baseline and Authorization Contracts V1:
+current actor/context inside the mutation transaction, minimum disclosure on every
+read surface, append-only evidence/audit, and backend-calculated capabilities.
+
 ### Story 5.1: Kiểm tra tính đầy đủ và yêu cầu bổ sung [FR15]
 
 As a chuyên viên quản lý khoa học,
@@ -2212,50 +2248,55 @@ So that đề xuất có thể tiếp tục quy trình đánh giá.
 **Then** backend đánh giá chính sách hiện hành và từ chối nếu không còn action
 **And** không dựa vào capability cũ đã hiển thị trên client.
 
-### Story 5.3: Reviewer / Council Assignment from Scientist Profiles [FR17]
+### Story 5.3: Phân công reviewer / thành viên hội đồng từ tài khoản [FR17, FR67a]
 
 As a chuyên viên quản lý khoa học,
-I want phân công reviewer đủ điều kiện cho đề xuất,
-So that đánh giá độc lập và không có xung đột lợi ích.
+I want phân công tài khoản đủ điều kiện trên đề xuất đã kiểm tra đầy đủ,
+So that reviewer nhận đúng công việc và hồ sơ bắt đầu đánh giá độc lập.
 
 **Acceptance Criteria:**
 
-**Given** proposal ở state cho phép phân công và candidate có researcher identity hợp lệ
-**When** chuyên viên chạy assignment preflight
-**Then** hệ thống kiểm tra organization rule, active participation, prior assignment, conflict và relationship version
-**And** trả allowed/blocked decision có lý do.
+**Given** staff có scope rõ ràng trên đơn vị chủ trì, không conflict và proposal ở
+`submitted`, `resubmitted` hoặc `under_review`
+**When** tìm candidate hoặc xác nhận phân công
+**Then** backend kiểm tra completeness của phiên bản nộp hiện tại, account active,
+participation, duplicate, thời gian hiệu lực và context hiện hành
+**And** search chỉ trả account ID, display name, username; mutation dùng
+`reviewerUserId`, không dùng profile/username selector.
 
-**Given** candidate là PI, `TOPIC_MEMBER`, `TOPIC_SECRETARY` hoặc có conflict trên proposal
-**When** chuyên viên cố phân công
-**Then** backend từ chối `CONFLICT_DENIED`
-**And** không tạo reviewer assignment dù candidate có system role cao hơn.
+**Given** account active bất kể system role, đơn vị hoặc liên kết Scientist Profile
+**When** account không là PI/team secretary/member và không có conflict/duplicate
+**Then** staff có thể giao `reviewer` hoặc `committee_member`, kể cả chính mình
+nếu đủ điều kiện; linked profile chỉ là provenance nullable, không tự tạo link
+**And** assignment cấp quyền đúng proposal dù assignee ngoài scope đơn vị chủ trì.
 
-**Given** candidate đủ điều kiện
-**When** chuyên viên xác nhận phân công với hạn và tiêu chí
-**Then** source review domain tạo `REVIEWER_ASSIGNMENT` có lifecycle và context version
-**And** gửi notification tối thiểu cho reviewer, ghi audit và không công bố danh tính cho participant.
+**Given** phân công đầu tiên hợp lệ
+**When** staff xác nhận người, duty và hạn theo ngày
+**Then** assignment, `submitted` / `resubmitted` → `under_review`, context version,
+history, audit và notification event được lưu atomically
+**And** phân công tiếp theo giữ `under_review`; reviewer nhận link vào công việc của mình.
 
-**Given** candidate có system role `EXTERNAL_RESEARCHER_USER`
-**When** chuyên viên muốn giao review
-**Then** chỉ profile/account và assignment cụ thể, còn hiệu lực, mới làm candidate đủ điều kiện
-**And** system role external tự nó không cấp quyền review hoặc quyền quyết định.
+**Given** roster đang được xây dựng hoặc thay đổi đồng thời
+**When** thêm hoặc thu hồi assignment
+**Then** không cho reviewer thứ ba hoặc account có bất kỳ reviewer/committee
+position active/chồng lấn nào trong cùng evaluation context;
+readiness cần đúng hai reviewer và ít nhất ba committee members từ các account
+khác nhau, cùng đủ submitted reviews (baseline hiện hành)
+**And** roster thiếu vẫn ở `under_review`, không tự trình duyệt.
 
-**Given** actor là `TOPIC_SECRETARY` hoặc một người không được phân công reviewer
-**When** họ cố phân công reviewer
-**Then** action bị chặn vì nằm trong non-delegable registry
-**And** không thể vượt chặn bằng API trực tiếp.
+**Given** assignment cần thay thế trong state cho phép
+**When** staff thu hồi với lý do không rỗng và context mới nhất
+**Then** quyền từ assignment chấm dứt ngay; lịch sử và review đã gửi vẫn giữ;
+thay thế bằng revoke-then-assign, không ghi đè người cũ
+**And** active reviewer hoặc người đã lưu draft/submit evaluation không thể tự
+tổng hợp/quyết định cùng round; persisted evaluation giữ conflict sau thu hồi,
+failed conflict attempt giữ failure audit nhưng không tạo assignment.
 
-**Given** an eligible active Scientist Profile with an existing active linked researcher account
-**When** scoped Scientific Management Staff assigns either `reviewer` or `committee_member`
-**Then** the backend derives the account from the profile, rechecks eligibility atomically, and retains both IDs with append-only audit.
-
-**Given** an inactive/unlinked profile, inactive account, invalid scope/state/context, PI/team conflict, or non-revoked duplicate
-**When** candidate search or direct assignment is requested
-**Then** the candidate is excluded or the mutation denied without creating links or assignments.
-
-**Given** an existing assignment in an eligible workflow state
-**When** authorized staff revokes it with a reason and current context
-**Then** access stops immediately and assignment/review/audit history is preserved.
+**Given** account/context không hợp lệ, staff ngoài scope, participant hoặc secretary
+không có authority
+**When** gọi API trực tiếp hoặc dùng capability cũ
+**Then** backend từ chối, không ghi dữ liệu nghiệp vụ một phần; notification không
+được phát cho mutation thất bại và không tiết lộ roster cho participant.
 
 ### Story 5.4: Reviewer truy cập và nộp đánh giá của mình [FR18]
 
@@ -2290,7 +2331,25 @@ So that tôi hoàn thành nhiệm vụ đánh giá độc lập.
 **Then** backend từ chối hoặc omits resource theo matrix
 **And** không lộ identity, raw score, comment, attachment hoặc existence metadata.
 
-### Story 5.5: Theo dõi tiến độ và tổng hợp đánh giá nội bộ [FR19]
+**Given** user có assignment hiệu lực với một trong hai duty, bất kể system role
+**When** mở “Đánh giá của tôi” từ navigation/My Work rồi mở proposal
+**Then** queue, detail, package, file và own-review cùng một disclosure/authorization policy;
+không gọi staff progress/roster để dựng form; unrelated records không xuất hiện.
+
+**Given** review đang nháp trong `under_review`
+**When** lưu nháp nhiều lần rồi submit với rubric đầy đủ, comment, recommendation
+và `contextVersion` hiện hành
+**Then** mỗi lần lưu trả hoặc tải lại context; submit khóa review, hoàn thành assignment,
+ghi history/audit và event cho staff, proposal vẫn `under_review`
+**And** overdue chỉ là tracking flag; expiry/revocation/conflict mới chặn theo policy;
+`revise` là recommendation, không tự mở vòng bổ sung hoặc chuyển trạng thái.
+
+**Given** cùng account còn có role staff/leadership hoặc biết URL của reviewer khác
+**When** truy cập roster, progress, submitted-review, supplement history hoặc file
+**Then** assignment không nâng disclosure sang dữ liệu nội bộ/phiếu của người khác;
+backend bỏ field bị ẩn và từ chối file ngoài package, không chỉ ẩn UI.
+
+### Story 5.5: Theo dõi, tổng hợp và trình phê duyệt [FR19, FR19a]
 
 As a chuyên viên quản lý khoa học,
 I want theo dõi reviewer và tổng hợp kết quả,
@@ -2322,6 +2381,25 @@ So that hồ sơ sẵn sàng được trình người có thẩm quyền.
 **When** consolidation chưa được disclosure
 **Then** response cũng không trả raw score, reviewer identity, conflict source hoặc review nội bộ
 **And** chỉ thông tin được phép cho relationship/assignment của external được hiển thị.
+
+**Given** staff không tham gia và không tự tổng hợp review của mình
+**When** xem tiến độ hoặc tổng hợp
+**Then** backend dùng cùng tập assignment/review hợp lệ cho counts, pending và average;
+review từ assignment đã thu hồi chỉ thuộc lịch sử, không tính vào kết quả hiện hành.
+
+**Given** đúng hai reviewer, ít nhất ba committee members, tất cả required reviews
+đã gửi hợp lệ và bản tổng hợp có summary/recommendation
+**When** staff xác nhận “Gửi lãnh đạo phê duyệt” với current context
+**Then** transaction recheck roster, nguồn review, authority/conflict và submission version;
+lưu immutable consolidation/package version và chuyển `under_review` → `ready_for_approval`
+**And** tạo history/audit và approval-request event; lưu nháp không chuyển state,
+review submission cuối cùng không tự trình và staff không có final-decision action.
+
+**Given** consolidation được chỉnh ở state matrix cho phép
+**When** lưu với context hợp lệ
+**Then** giữ phiên bản cũ, tạo phiên bản evidence mới và đổi context; nếu đã trình
+thì phải revalidate readiness, không âm thầm thay package mà leadership đã xem
+**And** stale/repeated routing không tạo event hoặc notification trùng.
 
 ### Story 5.6: Thư ký khoa học hỗ trợ hành chính cho quy trình đánh giá [FR6d]
 
@@ -2359,7 +2437,8 @@ So that tôi có đủ căn cứ trước khi ra quyết định.
 
 **Acceptance Criteria:**
 
-**Given** proposal ở `PENDING_APPROVAL` và actor có approval assignment/scope hợp lệ
+**Given** proposal ở `ready_for_approval`, actor có explicit approval authority
+scope hợp lệ và record đã được route
 **When** họ mở hồ sơ trình
 **Then** response gồm proposal version, submission history, supporting files, consolidation và decision capability cần thiết
 **And** disclosure chỉ mở dữ liệu đúng duty của actor.
@@ -2384,6 +2463,19 @@ So that tôi có đủ căn cứ trước khi ra quyết định.
 **Then** UI yêu cầu tải lại context
 **And** mutation sau đó không thể dùng dữ liệu cũ.
 
+**Given** leadership có authority/scope rõ ràng, proposal đã được staff trình và
+không có participation/reviewer conflict
+**When** mở queue hoặc package
+**Then** server lọc queue/count trước khi trả; package dùng đúng submitted proposal,
+file versions, submitted reviews và consolidation version đã trình
+**And** không chỉ trả attachment count hoặc dùng mutable current data thay evidence.
+
+**Given** role leadership nhưng thiếu scope/duty, chưa được trình hoặc có conflict
+**When** gọi decision package, review-progress, file hoặc queue endpoint
+**Then** không trả private package/roster/raw review; route biết trước không vượt quyền;
+trên proposal còn được xem qua quan hệ khác chỉ hiện action liên quan disabled với lý do an toàn
+**And** reviewer/committee assignment không tự trở thành approval assignment.
+
 ### Story 5.8: Phê duyệt, từ chối và công bố kết quả đề xuất [FR21, FR22]
 
 As a người có thẩm quyền phê duyệt,
@@ -2392,7 +2484,7 @@ So that proposal kết thúc quy trình minh bạch mà không lộ phản biệ
 
 **Acceptance Criteria:**
 
-**Given** proposal ở `PENDING_APPROVAL`, actor không conflict và có exact decision action
+**Given** proposal ở `ready_for_approval`, actor không conflict và có exact decision action
 **When** họ approve hoặc reject với dữ liệu bắt buộc
 **Then** state transition, decision record, history và audit hoàn tất atomically
 **And** action không thể được delegation hoặc secretary relationship cấp.
@@ -2416,6 +2508,20 @@ So that proposal kết thúc quy trình minh bạch mà không lộ phản biệ
 **When** hệ thống phát history, notification hoặc export
 **Then** mọi surface dùng cùng disclosure matrix và version quyết định
 **And** dashboard/work queue cập nhật theo source state mà không rò rỉ internal review metadata.
+
+**Given** current package/context và exact `proposal.decision.approve` hoặc
+`proposal.decision.reject` từ backend
+**When** leadership xác nhận approve, hoặc reject với lý do không rỗng
+**Then** transaction recheck current account/scope/conflict, readiness và package version,
+liên kết decision với evidence đã xem và ghi published summary riêng với internal note
+**And** chuyển `ready_for_approval` → `approved` | `rejected` đúng một lần;
+không tự tạo approved project, mở vòng review mới hoặc cho reviewer quyết định.
+
+**Given** decision đã commit
+**When** gửi thông báo cho PI/người có quyền hoặc tải lại kết quả
+**Then** dùng cùng decision version và `PublishedReviewSummaryV1`; public summary/follow-up
+là dữ liệu được duyệt để công bố, không sao chép raw comments/internal consolidation
+**And** notification retries không lặp business event; lỗi delivery không rollback decision.
 
 ## Epic 6: Theo dõi và nghiệm thu đề tài đã phê duyệt
 
@@ -3157,10 +3263,13 @@ So that mỗi hội đồng có phạm vi và trách nhiệm được phê chu�
 **Then** backend validate và tạo council ở controlled initial state
 **And** lưu source record/context versions cho các liên kết.
 
-**Given** researcher profiles được đề xuất cho chair/member/reviewer/secretary roles
+**Given** active user accounts được đề xuất cho chair/member/reviewer/secretary roles
 **When** assignment preflight chạy
-**Then** hệ thống kiểm tra account link khi cần, active participation, organization rule, multiplicity và conflict
-**And** không tạo assignment khi context unresolved hoặc candidate xung đột.
+**Then** hệ thống kiểm tra account status, active participation, organization rule,
+multiplicity và conflict; linked profile nếu có chỉ là provenance
+**And** áp dụng compatibility/multiplicity definition chuẩn cho cùng source record,
+council và evaluation round; không tạo assignment khi context unresolved/stale,
+candidate xung đột hoặc interval trùng/chồng lấn.
 
 **Given** legal/administrative document đã tồn tại trong Epic 9
 **When** chuyên viên có quyền ở cả hai phía tạo council-document association
@@ -3171,6 +3280,11 @@ So that mỗi hội đồng có phạm vi và trách nhiệm được phê chu�
 **When** lifecycle operation hoàn tất
 **Then** capability thay đổi theo UTC interval/status
 **And** history cũ được bảo tồn, không biến role thành global account role.
+
+**Given** một người đổi giữa chair, council secretary, council member và reviewer
+**When** vị trí mới được kích hoạt
+**Then** vị trí cũ được end/revoke trước, interval active không chồng lấn và history bất biến
+**And** hai request đồng thời không thể tạo hai vị trí active trong cùng context.
 
 ### Story 10.2: Thư ký khoa học hỗ trợ vận hành hội đồng [FR6d, FR58, FR64]
 
@@ -3266,7 +3380,8 @@ So that đánh giá độc lập, đúng phạm vi và không có tự đánh gi
 
 **Given** dossier/council ở state cho phép assignment
 **When** chuyên viên chọn candidate
-**Then** preflight kiểm tra researcher identity, active council membership/assignment, source participation, organization rule và conflict
+**Then** preflight kiểm tra active account, active council membership/assignment,
+source participation, organization rule và conflict
 **And** trả allowed/blocked reason cùng context version.
 
 **Given** candidate là PI, topic team member, `TOPIC_SECRETARY` hoặc approver có conflict trên source record
@@ -3279,10 +3394,22 @@ So that đánh giá độc lập, đúng phạm vi và không có tự đánh gi
 **Then** source council/ethics tạo lifecycle assignment
 **And** notification/audit không công bố assignment cho participant audience.
 
+**Given** candidate đã có chair, council secretary, council member hoặc
+reviewer/council reviewer active trong cùng evaluation context
+**When** cùng hoặc khác duty được đề xuất với interval chồng lấn
+**Then** preflight và authoritative mutation từ chối stable backend reason theo
+compatibility/multiplicity definition chuẩn
+**And** role trên source record/council/round không liên quan không bị chặn.
+
+**Given** preflight từng allowed hoặc nhiều assignment được gửi đồng thời
+**When** context/roster thay đổi hoặc request tranh chấp cùng candidate/context
+**Then** mutation recheck/serialize và chỉ tối đa một vị trí active được commit
+**And** position change phải revoke/end assignment cũ trước khi tạo assignment mới.
+
 **Given** assignment action được gọi qua delegation hoặc bởi secretary
 **When** request được gửi
 **Then** backend từ chối vì action non-delegable
-**And** không có bulk/import path bỏ qua preflight.
+**And** bulk, import, direct API hoặc administrative path phải đi qua cùng owning mutation.
 
 ### Story 10.6: Thành viên hội đồng hoặc reviewer nộp đánh giá được phân công [FR61]
 

@@ -116,8 +116,10 @@ scope, trạng thái, context và conflict đều phải đạt. Không có khá
 | Xem dữ liệu định danh/liên hệ | Chỉ người có scope quản lý hoặc quan hệ nghiệp vụ cần thiết; danh sách/search/notification dùng dữ liệu tối thiểu |
 | Tham gia đề tài/phản biện | Chỉ qua quan hệ/assignment riêng trên từng bản ghi |
 
-Hồ sơ có thể tồn tại trước tài khoản. Hồ sơ `INACTIVE` không được chọn cho
-assignment mới nhưng lịch sử quan hệ cũ vẫn giữ.
+Hồ sơ có thể tồn tại trước tài khoản. Hồ sơ `INACTIVE` không được chọn trong
+workflow lấy Scientist Profile làm candidate, nhưng evaluation assignment lấy
+active account làm candidate không phụ thuộc profile có tồn tại hoặc active hay
+không. Lịch sử quan hệ cũ vẫn giữ.
 
 ## 4.2. Đợt tiếp nhận
 
@@ -166,6 +168,59 @@ temporarily leave a vacancy; readiness stays blocked until replacements are
 assigned and all required reviews are submitted. Readiness rechecks the roster
 under the proposal lock so concurrent assignment changes cannot bypass it.
 
+#### Evaluation-position compatibility and multiplicity
+
+This subsection is the authoritative compatibility definition for proposal,
+council and ethics evaluation assignments. An evaluation context key is the
+tuple `(sourceDomain, sourceRecordId, evaluationContextId)`, where the source
+owns a mandatory immutable round/council context ID. A council evaluating two
+source records has two context keys; a later round on the same source record has
+a new `evaluationContextId`. Missing or ambiguous context fails closed.
+Relationships on another source record, council context or round neither block
+nor grant an assignment.
+
+| Current fact in the same evaluation context | Proposed assignment/action | Result |
+| --- | --- | --- |
+| Active PI (`PROPOSAL_PI` or `TOPIC_PI`), `TOPIC_MEMBER` or `TOPIC_SECRETARY` on the source record | `COUNCIL_CHAIR`, `COUNCIL_SECRETARY`, `COUNCIL_MEMBER`, `REVIEWER` / `COUNCIL_REVIEWER`, or final approval authority | Deny `SOURCE_PARTICIPATION_CONFLICT` |
+| An active/scheduled evaluation position | The same position with an overlapping interval for the same person | Deny `DUPLICATE_OR_OVERLAPPING_ASSIGNMENT` |
+| An active/scheduled evaluation position | A different mutually exclusive position with an overlapping interval for the same person | Deny `INCOMPATIBLE_COUNCIL_POSITION` |
+| An active evaluation position, or any persisted draft/submitted evaluation by the person in this round | Consolidation or final approve/reject decision for the same source record and round | Deny `REVIEWER_DECISION_CONFLICT`; persisted evaluation keeps the conflict after the assignment ends or is revoked |
+| A relationship or evaluation position only on another source record, council or round | Otherwise eligible assignment/action in this context | No conflict from that unrelated relationship |
+
+The mutually exclusive evaluation-position set is `COUNCIL_CHAIR`,
+`COUNCIL_SECRETARY`, `COUNCIL_MEMBER`, and `REVIEWER`;
+`COUNCIL_REVIEWER` is a domain label for `REVIEWER`, not a second position.
+One researcher may hold at most one active position from that set in an
+evaluation context. This rejects duplicate active assignments and every pair,
+including chair + member, chair + secretary, chair + reviewer, member +
+reviewer and secretary + reviewer.
+
+Changing position is revoke/end-then-assign. The old row, actor, reason and
+effective interval remain immutable history; its effective end must be no later
+than the new position's effective start. The authoritative mutation must lock
+or otherwise serialize the context and prevent concurrent requests, bulk
+operations, imports, direct APIs or administrative paths from creating
+overlapping active intervals.
+
+Effective intervals are half-open `[effectiveFrom, effectiveUntil)`. `assigned`
+and `completed` rows remain part of the current round for multiplicity until
+revoked/ended or the round closes; completion never permits a second evaluation
+position in that round. A future replacement may be scheduled only when the
+same authoritative mutation records the old end first and proves it is no later
+than the new start.
+
+Candidate search/preflight evaluates the same rules and returns the backend
+decision code, stable reason code and minimum-disclosure reason. The owning
+mutation repeats the evaluation using current account, source participation,
+evaluation-context/round, assignment intervals and context versions. A stale
+preflight is denied as `STALE_ASSIGNMENT_CONTEXT`; it is never an assignment
+grant. UI filtering and disabled states consume these backend results and do
+not reproduce the policy locally.
+
+An ended/revoked assignment with no persisted evaluation creates no lasting
+decision conflict after its interval ends. This does not erase its immutable
+history and does not relax any conflict while the assignment is active.
+
 Any active user account can be selected, regardless of system role, organization
 scope, or whether a Scientist Profile exists or is active. Search exposes only
 account ID, display name and username to authorized, unconflicted staff for this
@@ -178,7 +233,7 @@ Assignment is allowed in `submitted`, `resubmitted`, or `under_review`; the firs
 assignment requires current submission completeness evidence and opens
 `under_review`. Revocation uses the same state boundary and requires a reason.
 PI and active team secretary/member, unresolved conflict context, inactive accounts,
-and duplicate non-revoked assignments are denied. Staff may select themselves if
+and incompatible, duplicate or overlapping active assignments are denied. Staff may select themselves if
 not a participant. Staff role/scope for assignment and consolidation is unchanged;
 leadership with a reviewer assignment still cannot decide that proposal.
 Both duty types recheck account status, participation, workflow, dates and proposal
