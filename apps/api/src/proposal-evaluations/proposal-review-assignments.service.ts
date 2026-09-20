@@ -9,15 +9,15 @@ import {
   getAssignmentRoleLabel,
   getRecommendationLabel,
   normalizeAssignmentRole,
+  resolveProposalReviewAccess,
   REVIEW_ASSIGNMENT_STATUS,
   REVIEW_ASSIGNMENT_STATUS_LABELS,
   REVIEW_STATUS
 } from "../proposals-shared/proposal-review-access.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { normalizeParticipationRole } from "../proposals-shared/proposal-participation.js";
-import { PROPOSAL_STATUS, PROPOSAL_STATUS_LABELS, REVIEWER_ASSIGNABLE_STATUSES } from "../proposals-shared/proposal-workflow.js";
+import { isWorkflowVisibleStatus, PROPOSAL_STATUS, PROPOSAL_STATUS_LABELS, REVIEWER_ASSIGNABLE_STATUSES } from "../proposals-shared/proposal-workflow.js";
 import {
-  assertCanReadEvaluation,
   assertProposalStatus,
   assertScientificManagementScope,
   findEvaluationProposal,
@@ -104,10 +104,12 @@ export class ProposalReviewAssignmentsService {
 
   async listAssignments(actor: SafeUserContext, proposalId: string) {
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    assertCanReadEvaluation(actor, proposal);
+    assertScientificManagementScope(actor, proposal);
+    if (!isWorkflowVisibleStatus(proposal.status)) throw new ForbiddenException();
     if ((await this.participation.evaluateConflict(actor.id, proposalId)).conflicted) throw new ForbiddenException({ message: "Không được xem dữ liệu phản biện của hồ sơ mình tham gia." });
     const assignments = await this.findAssignments(proposalId);
-    const reviews = await this.findReviews(proposalId);
+    const access = resolveProposalReviewAccess(assignments.filter((assignment) => assignment.reviewerUserId === actor.id));
+    const reviews = access.isAssignedReviewer ? [] : await this.findReviews(proposalId);
     return assignments.map((assignment) => this.toAssignmentResponse(assignment, reviews));
   }
 
@@ -158,6 +160,9 @@ export class ProposalReviewAssignmentsService {
           candidateUserId: candidate.id,
           researcherProfileId: candidate.researcherProfileId,
           assignmentRole,
+          contextVersion: input.contextVersion,
+          effectiveFrom: effectiveFrom.toISOString(),
+          effectiveUntil: effectiveUntil?.toISOString() ?? null,
           reasonCode: conflict.reasonCode,
           reason: conflict.reason
         })
@@ -243,6 +248,9 @@ export class ProposalReviewAssignmentsService {
               researcherProfileId: candidate.researcherProfileId,
               reviewerUsername: candidate.username,
               assignmentRole,
+              contextVersion: input.contextVersion,
+              effectiveFrom: effectiveFrom.toISOString(),
+              effectiveUntil: effectiveUntil?.toISOString() ?? null,
               dueDate: dueDate?.toISOString() ?? null,
               fromStatus: proposal.status,
               toStatus: movesToUnderReview ? PROPOSAL_STATUS.underReview : proposal.status
@@ -308,6 +316,9 @@ export class ProposalReviewAssignmentsService {
             researcherProfileId: assignment.researcherProfileId,
             reviewerUsername: assignment.reviewer?.username ?? null,
             assignmentRole: normalizeAssignmentRole(assignment.assignmentRole),
+            contextVersion: input.contextVersion,
+            effectiveFrom: (assignment.effectiveFrom ?? assignment.assignedAt).toISOString(),
+            effectiveUntil: revokedAt.toISOString(),
             fromStatus: assignment.status,
             toStatus: REVIEW_ASSIGNMENT_STATUS.revoked,
             reason
@@ -323,6 +334,7 @@ export class ProposalReviewAssignmentsService {
 
   /** The reviewer queue: assignment rows only, never a scan of all proposals (AC-ST-3.2-01). */
   async listMyAssignments(actor: SafeUserContext) {
+    const asOf = new Date();
     const assignments = (await this.prisma.proposalReviewAssignment.findMany({
       where: {
         reviewerUserId: actor.id,
@@ -358,14 +370,24 @@ export class ProposalReviewAssignmentsService {
 
     const visible = [];
     for (const assignment of assignments) {
-      const access = await this.reviewAccess.resolveForProposal(actor.id, assignment.proposalId);
+      const access = await this.reviewAccess.resolveForProposal(actor.id, assignment.proposalId, asOf);
       const conflict = await this.participation.evaluateConflict(actor.id, assignment.proposalId);
-      if (access.isAssignedReviewer && !conflict.conflicted) visible.push(assignment);
+      if (isWorkflowVisibleStatus(assignment.proposal?.status ?? "") && access.isAssignedReviewer && access.assignmentId === assignment.id && !conflict.conflicted) visible.push(assignment);
     }
     return visible.map((assignment) => {
       const review = reviews.find((item) => item.assignmentId === assignment.id);
       return {
-        ...this.toAssignmentResponse(assignment, reviews),
+        id: assignment.id,
+        proposalId: assignment.proposalId,
+        assignmentRole: normalizeAssignmentRole(assignment.assignmentRole),
+        assignmentRoleLabel: getAssignmentRoleLabel(assignment.assignmentRole),
+        status: assignment.status,
+        statusLabel: REVIEW_ASSIGNMENT_STATUS_LABELS[assignment.status] ?? assignment.status,
+        assignedAt: assignment.assignedAt.toISOString(),
+        effectiveFrom: (assignment.effectiveFrom ?? assignment.assignedAt).toISOString(),
+        effectiveUntil: assignment.effectiveUntil?.toISOString() ?? "",
+        dueDate: assignment.dueDate?.toISOString() ?? "",
+        completedAt: assignment.completedAt?.toISOString() ?? "",
         proposal: {
           id: assignment.proposal?.id ?? assignment.proposalId,
           code: assignment.proposal?.code ?? "",
@@ -565,10 +587,8 @@ export class ProposalReviewAssignmentsService {
   }
 
   /**
-   * The duplicate check above runs before the transaction, so two concurrent assignments for the
-   * same reviewer can both pass it. The partial unique index on `(proposal_id, reviewer_user_id)
-   * WHERE status = 'assigned'` is what actually stops the second one — this turns the resulting
-   * constraint violation into the same 400 the pre-check would have produced, instead of a 500.
+   * The proposal lock serializes the duplicate check and write. The partial unique index is a
+   * second persistence guard; translate its violation into the same safe domain error.
    */
   private async runAssignmentTransaction<T>(candidateName: string, work: () => Promise<T>): Promise<T> {
     try {

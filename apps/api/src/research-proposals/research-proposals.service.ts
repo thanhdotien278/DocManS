@@ -944,7 +944,7 @@ export class ResearchProposalsService {
         : this.toMemberResponse(member)),
       attachments: reviewAccess.isAssignedReviewer && !participation.isParticipant ? attachments.map(({ uploadedById, uploaderDisplayName, ...file }) => file) : attachments,
       history: reviewAccess.isAssignedReviewer && !participation.isParticipant ? history.map(({ actorId, actorDisplayName, ...event }) => event) : history,
-      supplementRequests,
+      supplementRequests: reviewAccess.isAssignedReviewer && !participation.isParticipant ? [] : supplementRequests,
       requiredPackage
     };
   }
