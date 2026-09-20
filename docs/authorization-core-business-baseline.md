@@ -157,6 +157,15 @@ Scientific Management Staff may assign or revoke `reviewer` or `committee_member
 duties on one eligible proposal in their explicitly granted organization scope.
 Both duties remain proposal-scoped assignments, not account roles.
 
+Each proposal requires exactly two `reviewer` assignments and at least three
+`committee_member` assignments before it can move to `ready_for_approval`.
+Count distinct accounts with `assigned` or `completed` assignments; revoked
+assignments do not count. Assignment can be built incrementally, but a third
+reviewer is rejected inside the proposal mutation transaction. Revocation may
+temporarily leave a vacancy; readiness stays blocked until replacements are
+assigned and all required reviews are submitted. Readiness rechecks the roster
+under the proposal lock so concurrent assignment changes cannot bypass it.
+
 Any active user account can be selected, regardless of system role, organization
 scope, or whether a Scientist Profile exists or is active. Search exposes only
 account ID, display name and username to authorized, unconflicted staff for this
