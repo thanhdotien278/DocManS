@@ -134,6 +134,11 @@ export class ProposalReviewAssignmentsService {
     const candidate = await this.resolveReviewerCandidate(input);
     if (input.assignmentRole !== undefined && !["reviewer", "committee_member"].includes(String(input.assignmentRole))) throw new BadRequestException({ message: "Vai trò phân công không hợp lệ." });
     const assignmentRole = normalizeAssignmentRole(input.assignmentRole);
+    if (assignmentRole === "reviewer" && await this.prisma.proposalReviewAssignment.count({
+      where: { proposalId, assignmentRole: "reviewer", status: { in: [REVIEW_ASSIGNMENT_STATUS.assigned, REVIEW_ASSIGNMENT_STATUS.completed] } }
+    }) >= 2) {
+      throw new BadRequestException({ message: "Mỗi đề tài chỉ được phân công 2 người phản biện. Thu hồi phân công cũ trước khi thay thế." });
+    }
     const dueDate = this.readOptionalDueDate(input.dueDate);
     const effectiveFrom = input.effectiveFrom ? new Date(String(input.effectiveFrom)) : new Date();
     const effectiveUntil = input.effectiveUntil ? new Date(String(input.effectiveUntil)) : null;
