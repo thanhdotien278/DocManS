@@ -1,15 +1,22 @@
+# DocManS Project Rules
 
-# Codex.md
+BMAD is the primary methodology for significant feature work.
 
+Existing BMAD requirements, architecture, stories, and specs are authoritative.
+Do not recreate them using Superpowers.
 
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+Use `bmad-build` for meaningful implementation work.
 
-## Agent skills
+Superpowers may support implementation with:
+- systematic-debugging
+- test-driven-development
+- verification-before-completion
+- code review
 
-### Issue tracker
+Do not invoke Superpowers brainstorming or writing-plans when BMAD already
+contains an approved specification or plan.
 
-Issues for this repo are tracked in GitHub Issues for `thanhdotien278/DocManS`. See `docs/agents/issue-tracker.md`.
+Keep changes scoped to the requested task.
+Do not refactor unrelated code.
 
-### Triage labels
-
-This repo uses the default triage label vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+See `docs/agent-policy.md` only when detailed workflow guidance is required.
