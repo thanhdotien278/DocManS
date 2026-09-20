@@ -1,5 +1,16 @@
 # Đề xuất User Interface cho DocManSystem / RTMS
 
+**Cập nhật 2026-09-21:** Cùng một workspace dùng capability backend cho hai system
+role `SCIENTIFIC_MANAGEMENT_HEAD` và `SCIENTIFIC_MANAGEMENT_STAFF`. Head xem tất cả
+proposal/project trong scope được cấp, officer/chưa phân công, nhóm/lọc theo chuyên
+viên và workload/status/deadline; không quyết định cuối thay lãnh đạo. Staff cần
+`PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER` hiện hành để quản lý.
+PI/member/secretary/reviewer/council/task trên hồ sơ khác chỉ cấp action của quan hệ đó.
+Tối đa một officer chính, chuyển/thu hồi giữ history/audit; conflict kiểm tra cả khi
+đổi quan hệ và tại action. Quyền phân công và action vận hành Head chờ chốt baseline
+§2.1. Áp dụng cùng lọc cho list/detail/search/count/dashboard/report/export/notification/
+files/history; không tạo thêm app hoặc bước phê duyệt.
+
 ## 1. Kết luận thiết kế
 
 Hệ thống **không chỉ cần giao diện cho Admin, Leader và Nhà khoa học**. Nếu chỉ chia như vậy thì sẽ thiếu nhóm vận hành quan trọng nhất là **chuyên viên quản lý khoa học / staff** và nhóm **reviewer / hội đồng / y đức**.
@@ -8,7 +19,7 @@ Hệ thống **không chỉ cần giao diện cho Admin, Leader và Nhà khoa h�
 
 ```text
 1. Admin Console
-2. Staff Operations Workspace
+2. Scientific Management Workspace (Head oversight / assigned Staff operations)
 3. Leadership Decision Dashboard
 4. Researcher Workspace
 5. Reviewer / Council / Ethics Workspace
@@ -112,7 +123,8 @@ Dành cho **chuyên viên quản lý khoa học**, ví dụ Ban Quản lý KHQS 
 
 ### 4.2. Mục tiêu giao diện
 
-Giúp staff điều phối toàn bộ quy trình quản lý khoa học:
+Giúp Staff điều phối quy trình trên proposal/project được phân công quản lý;
+nghiệp vụ độc lập dùng capability/scope riêng:
 
 ```text
 - Mở đợt tiếp nhận
@@ -483,7 +495,7 @@ Người dùng không có quyền thì không thấy menu tương ứng. Tuy nhi
 | Nhóm UI | Bắt buộc MVP | Đối tượng | Lý do |
 |---|---:|---|---|
 | Admin Console | Có | System Admin | Quản lý user, role, đơn vị, danh mục, cấu hình |
-| Staff Operations Workspace | Có | Chuyên viên quản lý khoa học | Vận hành toàn bộ quy trình quản lý khoa học |
+| Scientific Management Workspace | Có | Head / Staff | Head giám sát trong scope; Staff vận hành proposal/project được phân công |
 | Leadership Decision Dashboard | Có | Lãnh đạo / approval authority | Phê duyệt, xem dashboard điều hành, xử lý quyết định |
 | Researcher Workspace | Có | Nhà khoa học, PI, thành viên, thư ký khoa học | Nộp hồ sơ, theo dõi đề tài, nộp báo cáo, xử lý task |
 | Reviewer / Council / Ethics Workspace | Có | Reviewer, hội đồng, y đức | Chấm điểm, nhận xét, đánh giá hồ sơ được phân công |
@@ -499,7 +511,7 @@ Giai đoạn hiện tại nên thiết kế **5 workspace chính + 1 màn hình 
 
 ```text
 1. Admin Console
-2. Staff Operations Workspace
+2. Scientific Management Workspace (Head oversight / assigned Staff operations)
 3. Leadership Decision Dashboard
 4. Researcher Workspace
 5. Reviewer / Council / Ethics Workspace

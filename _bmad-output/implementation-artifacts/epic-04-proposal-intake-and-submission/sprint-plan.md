@@ -1,5 +1,7 @@
 # Epic 4: Tiếp nhận và nộp đề xuất nghiên cứu
 
+**Authorization refinement — 2026-09-21:** Intake scope never grants proposal visibility. Story 4.2 must represent unassigned proposals; Head sees them within authorized scope, Staff needs `PROPOSAL_MANAGEMENT_OFFICER` for management. Preserve independent PI/team access and existing PI submission restrictions. Baseline §2.1 owns officer-grant/Head-action and migration questions before coding; this note does not mark implementation complete.
+
 - **Epic status:** `backlog`
 - **Canonical source:** [epics.md](../../epics.md)
 - **Planning order:** sequential, in the order below

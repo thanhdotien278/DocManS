@@ -130,6 +130,28 @@ Primary business roles to preserve across planning and implementation:
 - reviewers
 - council members
 
+# Scientific Management Head and Staff — target model
+
+The six system roles are `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`,
+`SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
+`RESEARCHER_INTERNAL_USER`, and `EXTERNAL_RESEARCHER_USER`; one active per account.
+Head sees all proposals/projects in explicitly authorized Scientific Management scope,
+responsible Staff, unassigned records and workload/status/deadlines, with officer filters/
+groups. Head is not leadership approval authority; oversight is not blanket mutation power.
+Staff management visibility needs the current `PROPOSAL_MANAGEMENT_OFFICER` or
+`PROJECT_MANAGEMENT_OFFICER` plus scope. At most one primary officer per record;
+assignment/reassignment/revocation preserves history and audit under concurrency.
+
+Staff participation/review/council/task access on other records remains independent and
+grants no Scientific Management administrative actions. Backend capabilities retain why
+the record is visible. Check participant-versus-management/review/evaluation/acceptance/
+final-decision, same-round reviewer/decision and council-position conflicts at relationship
+changes and protected actions. Apply identical filtering to every read/derived-data surface,
+including files and workflow/business history. Missing/ambiguous context fails closed.
+
+Baseline §2.1 owns the open officer-grant, Head operational-action, migration and Staff-PI
+questions. Intake/profile scope remains independent; existing code is not target policy.
+
 # Authorization And Security Rules
 
 - Role-based authorization is mandatory.

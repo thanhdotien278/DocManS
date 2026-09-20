@@ -47,7 +47,7 @@ classification:
 
 DocManSystem, also referred to as RTMS, is a greenfield internal web application for the Military Medical Academy to manage the full lifecycle of university-level research topics and scientific project workflows. The product replaces fragmented handling through spreadsheets, email, disconnected files, and manual coordination with a single role-aware system that supports proposal intake, evaluation, approval, approved-project tracking, task execution, notifications, reminders, and executive reporting. The core business goal is not superficial digitization; it is to make workflow state, accountability, deadlines, and decision bottlenecks visible and controllable across the academy’s scientific management process.
 
-Phase 1 targets five account-level system roles—system administrator, scientific management staff, leadership or approval authority, researcher/internal user, and external researcher user—plus record-scoped relationships and assignments. A proposal has one owner-derived `PROPOSAL_PI`; active proposal/topic team rows use only `TOPIC_SECRETARY` and `TOPIC_MEMBER`; an approved topic owner uses `TOPIC_PI`. Reviewer and council duties remain assignments. The product must preserve complex internal workflows rather than flatten them. It must support controlled state transitions, organization-scoped data access, role-based and state-based permissions, mandatory audit logging for critical actions, file traceability, and dashboard views filtered by the current user’s authority. The first release scope must cover the seven work items listed in `detaiHVQY.md` section 2.1 through 2.7: OMS proposal management, approved-project tracking, seminar and student research tracking, task management, executive dashboard, related-document management, and council/ethics management.
+Phase 1 targets six account-level system roles—system administrator, Scientific Management Head, Scientific Management Staff, leadership or approval authority, researcher/internal user, and external researcher user—plus record-scoped relationships and assignments. A proposal has one owner-derived `PROPOSAL_PI`; active proposal/topic team rows use only `TOPIC_SECRETARY` and `TOPIC_MEMBER`; an approved topic owner uses `TOPIC_PI`. Reviewer and council duties remain assignments. The product must preserve complex internal workflows rather than flatten them. It must support controlled state transitions, organization-scoped data access, role-based and state-based permissions, mandatory audit logging for critical actions, file traceability, and dashboard views filtered by the current user’s authority. The first release scope must cover the seven work items listed in `detaiHVQY.md` section 2.1 through 2.7: OMS proposal management, approved-project tracking, seminar and student research tracking, task management, executive dashboard, related-document management, and council/ethics management.
 
 This PRD assumes a modular-monolith phase 1 architecture and a strict implementation boundary: no microservices, no external identity integration in phase 1, no workflow engine, no deep financial subsystem, and no public submission portal. The expected operational outcome is a measurable reduction in incomplete proposal records, a strong increase in overdue visibility, faster reporting preparation, and a more auditable and disciplined research administration process.
 
@@ -64,15 +64,26 @@ The core insight is that the academy’s main pain is not lack of data entry too
 - **Complexity:** High, due to multi-role workflows, approval states, scoped authorization, traceable files, notifications, and executive reporting
 - **Project Context:** Greenfield
 
+## Scientific Management implementation boundary — 2026-09-21
+
+FR6f–FR6g and FR45a describe the target authorization model, not implemented behavior.
+Independent intake/profile capabilities retain their explicit scopes and never grant
+proposal/project access. Officer-grant authority, Head operational capabilities,
+legacy mapping/assignment and Staff PI mutation eligibility remain the explicit
+pre-coding questions in baseline §2.1; missing policy fails closed. Existing PI-only
+proposal creation/submission rules remain unchanged.
+
 ## Authorization Glossary
 
 - **System role:** The account-level role that controls module/navigation
   access. Phase 1 values are `SYSTEM_ADMIN`,
-  `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
+  `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
   `RESEARCHER_INTERNAL_USER`, and `EXTERNAL_RESEARCHER_USER`; an account has
   exactly one active value. `SYSTEM_ADMIN` has no implicit business-data
-  access; `SCIENTIFIC_MANAGEMENT_STAFF` operates business workflows across the
-  Academy, subject to record state, assignment, conflict, and disclosure rules.
+  access. `SCIENTIFIC_MANAGEMENT_HEAD` views proposals/projects across the
+  explicitly authorized Scientific Management scope; `SCIENTIFIC_MANAGEMENT_STAFF`
+  management access requires the current officer assignment on each record.
+  Workflow, conflict and disclosure checks still apply; neither role grants final decisions.
 - **Record participation role:** A relationship to one proposal or approved
   topic. `PROPOSAL_PI`/`TOPIC_PI` is owner-derived; team rows use only
   `TOPIC_SECRETARY` and `TOPIC_MEMBER`. Reviewer, council, ethics, and task
@@ -173,9 +184,18 @@ notification, file-metadata, and file-content disclosure.
 
 ## User Journeys
 
+### Head oversight within the Scientific Management workspace
+
+The Head opens the authorized proposal/project portfolio, checks unassigned records,
+filters/groups by responsible Staff and monitors workload, status and deadlines.
+Drill-down and reports retain the same scope and disclosure. Officer-grant controls
+remain disabled unless the specific capability is approved; final decisions remain
+with leadership. Staff sees only assigned management work plus separately authorized
+participation/review work, with no administrative permissions from that participation.
+
 ### UJ-1: Scientific Management Staff Runs A Proposal Intake Cycle
 
-Lan is a scientific management staff member preparing a new intake period for school-level research proposals. Today she coordinates the process through spreadsheets, email threads, and paper-based follow-up, which makes it hard to know which proposals are complete, who still owes feedback, and which approvals are stuck.
+Lan operates intake under its separately granted capability/scope and manages only proposals where she is the current `PROPOSAL_MANAGEMENT_OFFICER`. She is a scientific management staff member preparing a new intake period for school-level research proposals. Today she coordinates the process through spreadsheets, email threads, and paper-based follow-up, which makes it hard to know which proposals are complete, who still owes feedback, and which approvals are stuck.
 
 In RTMS, she creates an intake period, configures required documents, opens the submission window, and monitors incoming proposals from a single operational view. As submissions arrive, she checks completeness, requests supplements where needed, assigns reviewers by field, monitors review progress, records summary outcomes, and routes qualified proposals to approval. The climax of her journey is not proposal creation; it is operational control. She can see which records are waiting, which are overdue, and which actor owns the next step.
 
@@ -394,12 +414,14 @@ RTMS is a browser-based internal administrative web application optimized for mu
 ### Identity, Users, Roles, And Organizations
 
 - FR1: System administrators can create, update, activate, deactivate, and lock user accounts.
-- FR2: System administrators can assign exactly one active account-level system role (`SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`) to a user; owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer permissions are assigned through record-scoped relationships or assignments instead of additional global roles.
+- FR2: System administrators can assign exactly one active account-level system role (`SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`) to a user; owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer permissions are assigned through record-scoped relationships or assignments instead of additional global roles.
 - FR3: System administrators can associate users with an organizational unit and other scope-defining organizational attributes.
 - FR4: The system can authenticate users and establish a role-aware session for authorized access.
 - FR4a: Authenticated users can change their own password, and authorized administrators can initiate a controlled password reset flow for internal users.
 - FR5: The system can enforce role-based access rules across all protected capabilities.
-- FR6: The system can enforce explicit organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports; scientific management staff have Academy-wide business scope, while a parent/child unit relationship never implies scope unless explicitly granted.
+- FR6: The system can enforce explicit organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports; Scientific Management Head can view all proposals/projects within explicitly authorized Scientific Management scope; Staff management visibility requires an effective record-level management-officer assignment. Parent/child units never imply scope.
+- FR6f: Distinguish `SCIENTIFIC_MANAGEMENT_HEAD` oversight from `SCIENTIFIC_MANAGEMENT_STAFF` management access. Head sees all proposals/projects in explicit Scientific Management scope; Staff needs an effective `PROPOSAL_MANAGEMENT_OFFICER` or `PROJECT_MANAGEMENT_OFFICER` on the exact record. Each record has at most one active primary officer; assignment, reassignment and revocation preserve history and audit, including concurrent changes. Neither role is final approval authority.
+- FR6g: Preserve independent PI/member/secretary/reviewer/council/task access for Staff on other records without Scientific Management administrative actions. Backend capabilities identify the access basis. Deny participant + management officer/reviewer/evaluation or acceptance council/final decision, reviewer + final decision in the same round, and mutually exclusive council positions; check every relationship creation/change and protected action. Apply the same authorization/disclosure to list, detail, search, counts/facets, dashboards, reports/export, notifications, files and workflow/business history.
 - FR6a: The system can distinguish account-level system roles from record-scoped relationships or assignments, including owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer, so those relationships only grant permissions within the specific proposal, approved topic, council, review, ethics dossier, task, or related record context.
 - FR6b: Proposal creation, submission, and resubmission are owner-only actions requiring the current PI to be an active `RESEARCHER_INTERNAL_USER`; no proposal-submit delegation or delegated capability is supported.
 - FR6c: Protected record responses can state the current user's record-scoped relationships, allowed actions, blocked actions, and plain-language denial reasons as calculated by backend authorization policy.
@@ -422,12 +444,12 @@ RTMS is a browser-based internal administrative web application optimized for mu
 
 ### Proposal Review, Supplement, And Approval Workflow
 
-- FR15: Scientific management staff can review proposal completeness once per submitted/resubmitted version and request supplements with a stated reason and whole-calendar-day due date; repeat completeness confirmation for the current version is denied.
+- FR15: Scientific management staff assigned as the current proposal management officer can review proposal completeness once per submitted/resubmitted version and request supplements with a stated reason and whole-calendar-day due date; repeat completeness confirmation for the current version is denied.
 - FR16: Principal investigators can view supplement requests, revise proposal content or attachments, and resubmit the proposal.
-- FR17: Scientific management staff can assign, revoke or change proposal reviewer/council evaluation positions for eligible active user accounts, regardless of assignee system role, host-unit scope or profile linkage; retain optional linked-profile provenance and enforce staff scope, workflow, source-participation conflict, one active mutually exclusive evaluation position per person/context, non-overlapping lifecycle, mutation-time context revalidation, append-only history/audit and disclosure. See the authoritative compatibility/multiplicity definition in `docs/authorization-core-business-baseline.md`.
+- FR17: Scientific management staff can assign, revoke or change proposal reviewer/council evaluation positions for eligible active user accounts, regardless of assignee system role, host-unit scope or profile linkage; retain optional linked-profile provenance and enforce Staff scope and active `PROPOSAL_MANAGEMENT_OFFICER`, workflow, source-participation conflict, one active mutually exclusive evaluation position per person/context, non-overlapping lifecycle, mutation-time context revalidation, append-only history/audit and disclosure. See the authoritative compatibility/multiplicity definition in `docs/authorization-core-business-baseline.md`.
 - FR18: Reviewers and committee members can access assigned proposals and submit scores, comments, and recommendations.
-- FR19: Scientific management staff can monitor review progress and consolidate evaluation outcomes.
-- FR19a: Scientific management staff can submit a completed, consolidated proposal dossier to the leadership approval authority; this action is labelled "Trình phê duyệt" / "Gửi lãnh đạo phê duyệt" and never grants final approve/reject authority.
+- FR19: Scientific management staff assigned as the current proposal management officer can monitor review progress and consolidate evaluation outcomes.
+- FR19a: Scientific management staff assigned as the current proposal management officer can submit a completed, consolidated proposal dossier to the leadership approval authority; this action is labelled "Trình phê duyệt" / "Gửi lãnh đạo phê duyệt" and never grants final approve/reject authority.
 - FR20: Leadership or approval authority can review proposal history, evaluation outputs, and supporting files before making an approval decision.
 - FR21: Leadership or approval authority can approve, reject, or otherwise disposition a proposal according to workflow rules.
 - FR22: The system can treat proposal statuses as controlled states and restrict actions based on current proposal state.
@@ -435,12 +457,12 @@ RTMS is a browser-based internal administrative web application optimized for mu
 ### Approved Project Tracking
 
 - FR23: The system can create an approved-project record from an approved proposal while preserving relevant source data.
-- FR24: Scientific management staff and authorized project participants can define and maintain project milestones and planned reporting checkpoints.
+- FR24: Assigned project management staff and independently authorized project participants can define and maintain project milestones and planned reporting checkpoints.
 - FR25: Principal investigators can submit periodic progress reports and supporting evidence for approved projects.
-- FR26: Scientific management staff can review project progress reports, request follow-up where needed, and track unresolved issues.
+- FR26: Scientific management staff assigned as the current project management officer can review project progress reports, request follow-up where needed, and track unresolved issues.
 - FR27: Principal investigators can submit adjustment or extension requests for approved projects.
 - FR27a: Principal investigators can prepare and submit acceptance or final-review dossiers with required structured data, files, and readiness validation when the approved-project workflow requires a formal dossier before the authority decision.
-- FR28: Scientific management staff can review and prepare adjustment, extension, acceptance, and final-review actions; leadership or approval authority makes the final decision when required by workflow.
+- FR28: Assigned project management staff can review and prepare adjustment, extension, acceptance, and final-review actions; leadership or approval authority makes the final decision when required by workflow.
 - FR29: The system can identify delayed projects, upcoming deadlines, and projects waiting for administrative action.
 - FR30: The system can treat approved-project workflow states as controlled states and restrict actions based on current project state.
 - FR30a: `TOPIC_MEMBER` and `TOPIC_SECRETARY` users can view approved topics they participate in, including assigned responsibilities, relevant milestones, and permitted supporting files.
@@ -471,8 +493,9 @@ RTMS is a browser-based internal administrative web application optimized for mu
 
 ### Dashboard, Search, And Reporting
 
-- FR45: Leadership and scientific management staff can access role-based dashboards showing waiting approvals, delayed projects, overdue tasks, council or ethics queues, seminar or student research milestones, document status gaps, upcoming reports, and summary indicators within authorized scope.
+- FR45: Leadership, Scientific Management Head and Scientific Management Staff can access role-based dashboards showing waiting approvals, delayed projects, overdue tasks, council or ethics queues, seminar or student research milestones, document status gaps, upcoming reports, and summary indicators within authorized scope.
 - FR46: Users can search and filter proposals, projects, seminar records, student research records, council records, document records, tasks, and reports by relevant business attributes such as code, title, unit, field, status, assignee, due date, and intake period.
+- FR45a: Head can identify each proposal/project's current responsible Staff member or unassigned state, filter/group by responsible Staff, and monitor workload, status and deadlines within authorized scope. Staff management dashboards/reports contain only their assigned records; participation/review queues remain separately authorized. Counts, drill-down and exports use the same filters and access basis.
 - FR47: The system can provide traceable detail views that connect dashboard indicators and list results to the underlying workflow records.
 - FR48: Authorized users can export designated lists and reports to Excel or PDF according to business needs and permission rules.
 - FR49: The system can produce role-scoped reporting views and summary outputs by unit, field, status, reporting period, module type, and related administrative dimensions.
@@ -514,16 +537,23 @@ RTMS is a browser-based internal administrative web application optimized for mu
 
 The personas below describe people and journeys, not additional account-level
 system roles. Their business permissions come from record-scoped participation
-or assignment unless the persona is one of the five system roles listed in the
+or assignment unless the persona is one of the six system roles listed in the
 Authorization Glossary.
 
 ### System Administrator
 
 Maintains accounts, roles, organizational mappings, shared catalogs, configuration, and operational traceability. Needs controlled administrative power without bypassing business authority.
 
+### Scientific Management Head
+
+Sees all proposals/projects within authorized Scientific Management scope, current
+responsible Staff and unassigned records; filters/groups workload by officer, status
+and deadline. Oversight is not leadership approval authority or an implicit grant
+of every administrative action.
+
 ### Scientific Management Staff
 
-Runs the end-to-end operational workflow for intake, review coordination, approvals, project follow-up, seminar and student research tracking, related documents, council operations, reminders, and reporting. This is the most workflow-intensive persona in phase 1.
+On explicitly assigned proposals/projects, runs the operational workflow for intake, review coordination, approvals, project follow-up, seminar and student research tracking, related documents, council operations, reminders, and reporting. This is the most workflow-intensive persona in phase 1.
 
 ### Leadership / Approval Authority
 
@@ -597,8 +627,9 @@ reviewer, and secretary authority remains record-scoped.
 - Cross-unit visibility must be explicit and rule-driven, never implicit.
 - Effective permission must be calculated from system role, organization scope, record participation role, assignment scope, workflow state, and conflict policy; missing or ambiguous context must fail closed.
 - `SYSTEM_ADMIN` receives no business-data access merely from its system role;
-  `SCIENTIFIC_MANAGEMENT_STAFF` receives Academy-wide business scope but never
-  bypasses workflow, assignment, conflict, or disclosure checks.
+  `SCIENTIFIC_MANAGEMENT_HEAD` has proposal/project visibility within explicitly
+  authorized scope; Staff requires an effective management-officer assignment.
+  Neither bypasses workflow, conflict, disclosure or leadership decision authority.
 - Delegation grants may narrow or add only the explicitly listed record actions
   and must not widen organization scope, bypass workflow state, or override a
   conflict-of-interest prohibition.

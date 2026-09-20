@@ -4,6 +4,12 @@ baseline_commit: 81e255883e6cf82302cfcd63b05ce776d52f7d4f
 
 # Story 1.4: One System Role, Organization Scope, and Legacy Data Migration
 
+**Target AC revision — 2026-09-21:** The acceptance criteria now require six roles
+and Head/Staff separation. Existing done status, checked tasks, persisted-value/legacy
+mapping notes and test results below describe the earlier five-role implementation;
+they do not verify this revision. Revisit role migration from explicit mapping, never
+promote every Staff account to Head or infer management assignments from old scope.
+
 Status: done
 
 ## Story
@@ -14,11 +20,11 @@ so that platform authority cannot accumulate with record-scoped business relatio
 
 ## Acceptance Criteria
 
-1. Given an administrator creates or updates an account, when assigning its system role, exactly one of `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER` is active. Persistence and service boundaries prevent multiple active system roles.
+1. Given an administrator creates or updates an account, when assigning its system role, exactly one of `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER` is active. Persistence and service boundaries prevent multiple active system roles.
 2. Given legacy data contains global PI, reviewer, council-member, or multiple role assignments, when the migration runs, each unambiguous account maps to a valid system role and record relationships remain the source of business authority. A legacy council-member account is unambiguous only when an existing record-owned council relationship can be verified; otherwise it is recorded as unresolved, disabled, and denied authentication. The Prisma migration is tested and no legacy global role grants authority in parallel.
 3. Given a target record belongs to an organization, when the backend evaluates organization scope, it permits access only when an explicit actor/target organization-ID intersection exists. Without that intersection, access is denied. The system must not infer access through the organization tree, and this story adds no cross-unit grant model.
 4. Given migration data or role context is ambiguous, when the account requests protected access, it fails closed. The migration records an actionable issue instead of choosing a role arbitrarily.
-5. Given the actor has system role `SYSTEM_ADMIN`, when the actor requests proposal, intake, project, review, or other business data, the request is denied unless a separately approved business capability exists. `SCIENTIFIC_MANAGEMENT_STAFF` remains subject to organization scope, workflow state, assignment, conflict, and disclosure rules.
+5. Given the actor has system role `SYSTEM_ADMIN`, when the actor requests proposal, intake, project, review, or other business data, the request is denied unless a separately approved business capability exists. `SCIENTIFIC_MANAGEMENT_HEAD` sees all proposals/projects within explicit Scientific Management scope; `SCIENTIFIC_MANAGEMENT_STAFF` management visibility requires the exact active officer assignment plus scope. Neither grants leadership decisions; state/conflict/disclosure still apply.
 
 ## Tasks / Subtasks
 

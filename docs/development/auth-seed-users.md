@@ -1,5 +1,12 @@
 # Development Auth Accounts
 
+**Authorization applicability — 2026-09-21:** Earlier implementation/demo evidence
+below predates the Head/Staff split. It is not a current permission grant or verification
+of that split. Current baseline §2.1 requires explicit Head scope and an effective
+proposal/project management-officer assignment for Staff management access; neither
+role grants leadership final decisions. No seed, account, migration or test is changed
+by this documentation update.
+
 Story 1.2 uses Prisma-seeded internal accounts for local development until Story 1.3 introduces user, role, and organization management screens.
 
 These credentials are for local development only. All seeded accounts share the password `1234`.

@@ -36,6 +36,17 @@ implemented. The current code still contains multi-role/global business-role
 authorization and proposal-specific seams; the foundation migration must
 reconcile those seams before dependent stories may rely on this spine.
 
+## Scientific Management clarification — 2026-09-21
+
+Apply the companion Authorization Contracts target update: Head oversight within
+explicit scope; Staff management only through active `PROPOSAL_MANAGEMENT_OFFICER` /
+`PROJECT_MANAGEMENT_OFFICER`; one primary officer per record with atomic, audited
+history. Domain resolvers retain independent participation access and deny conflicting
+management/evaluation/decision assignments at changes and actions. Head oversight exposes
+responsible Staff/unassigned/workload data without granting leadership decisions or hidden
+review data. All read/aggregate/file/history surfaces share these rules. Resolve baseline
+§2.1 open decisions and contract versioning before coding; this is not implemented evidence.
+
 ## Design Paradigm
 
 Policy-enforced modular monolith. Source domains own typed record

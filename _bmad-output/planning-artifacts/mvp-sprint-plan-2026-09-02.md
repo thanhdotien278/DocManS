@@ -9,6 +9,8 @@ authority: current UX, current architecture, authorization baseline, permission 
 
 # DocManS MVP Sprint Plan
 
+**Target refinement — 2026-09-21:** Head visibility is scope-wide for proposals/projects; Staff management needs the exact active officer assignment. Officer history, conflict checks, access-basis projections and workload filtering are current acceptance targets. Resolve baseline §2.1 open decisions before coding; the older readiness assessment does not certify this revision.
+
 ## 1. Sprint Planning Overview
 
 **MVP delivery goal.** Deliver a safe, demonstrable proposal path: an authorized
@@ -27,7 +29,7 @@ are recorded.
 | Cadence | Two-week sprints. Sprint 0 is readiness-only; Sprint 1 is a small vertical foundation/proposal slice. |
 | Decision authority | Current `docs/ux-ui-spec.md`, `docs/diagrams/current-architecture.md`, authorization baseline, permission matrix, Authorization Contracts V1, and readiness report. |
 | Superseded statements | Do not use historical four-role or Redis statements for implementation decisions. The deployed scope has no Redis unless accepted current architecture restores it. |
-| Role baseline | Five system roles: `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP`, `EXTERNAL_RESEARCHER_USER`, and `RESEARCHER_USER`; record relationships add context but do not replace system roles. |
+| Role baseline | Six system roles: `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `EXTERNAL_RESEARCHER_USER`, and `RESEARCHER_INTERNAL_USER`; record relationships add context but do not replace system roles. |
 | Security boundary | Browser uses the NestJS API only. PostgreSQL/MinIO are private; UI capability data is not authorization. |
 | MVP included | Foundation, identity/scope facts, proposal intake/draft/read, staff check/supplement, assignment/evaluation foundations, proposal result/decision subject to authority gate, project initialization/basic tracking, tasks/files, scoped operational views, and core hardening as each slice lands. |
 | Deferred/non-MVP | SSO/MFA, native mobile, proposal delegation, approval delegation, advanced reports/charts, broad exports, SMS/external integrations, complex preview, and any non-proposal domain without its V1 contract. |
@@ -94,7 +96,7 @@ stories, never a single sprint block.
 | S0-01 Canonical tracker | Readiness §§ Epic Coverage; epics consolidation map. Map each selected Sprint 1 item once. | Cross-reference table exists and names canonical + legacy IDs; no ambiguous `3.2`. | Current epics | Docs / S | Reviewer confirms all Sprint 1 rows map. |
 | S0-02 Source precedence | Readiness Document Discovery and UX §0. Record governing sources. | One precedence note; current architecture/UX wins conflicts. | S0-01 | Docs / XS | Plan review finds no historic source used as authority. |
 | S0-03 Current architecture boundary | Current architecture + readiness. Confirm deployed path and Redis exclusion. | Architecture note says browser → API → PostgreSQL/private MinIO; no Redis task. | S0-02 | Architect / XS | Architecture owner sign-off. |
-| S0-04 Five-role confirmation | Permission matrix §§2-3. Confirm role/scoped-persona model and negative rules. | Seed/fixture role matrix for Sprint 1. | S0-02 | Product + backend / S | Five active roles and expected scoped actors recorded. |
+| S0-04 Six-role confirmation | Permission matrix §§2-3. Confirm role/scoped-persona model and negative rules. | Seed/fixture role matrix for Sprint 1. | S0-02 | Product + backend / S | Six canonical roles and expected scoped actors recorded. |
 | S0-05 Migration/test environment | Readiness recommendation; NFR13. Verify database, migration and test route before feature work. | Reproducible environment checklist. | Existing local stack | Backend + QA / S | Migration applies; targeted auth/proposal test command recorded. |
 | S0-06 Capability checklist | Authorization Contracts §§1-6,11. | Reusable per-domain checklist: exact action, facts, resolver, context token, denials, disclosure, audit, fixtures. | S0-04 | Architect / S | Sprint 1 proposal contract checked item-by-item. |
 | S0-07 Sprint 1 product decisions | Readiness required decisions. Resolve only decisions needed for intake/draft/read. | Decision log: intake scope, authorized creator, minimum fields, file scope, demo users. | S0-01 | Product / S | Product owner records decisions or explicitly removes gated story. |
@@ -122,7 +124,7 @@ row is MVP**; Later/Should-have work remains in the gated outline.
 | S1-08 Scoped proposal list/detail | C3.1-3.2; L4.1-4.3; FR9-11; NFR1,3,7,8 | As staff or a participating PI, I want a scoped proposal list/detail so I can find authorized work. | S04-S06, C06-C07/C08; list/detail/capability responses. | Org + active relationship intersection; omission rather than null placeholders; no reviewer data. | Given staff in scope or active PI, when listing/detailing, then only permitted minimum data appears. Given cross-scope/unrelated actor, then no record/count leak. | S1-03,S1-06 / M / full-stack. List/detail/cross-scope/count disclosure tests. |
 | S1-09 Draft workflow + audit timeline | C10 slice; L3.3-3.4; FR39-40; NFR9-10 | As an authorized operator, I want draft history so I can trace consequential changes. | C15; append-only audit/event storage and safe timeline API for draft create/edit. | Audit actor, UTC/as-of, target, exact action, context version, redacted before/after and decision code; no broad audit viewer yet. | Given create/edit, when it succeeds or is denied, then required audit event exists. Given unauthorized viewer, then protected audit data is denied. | S1-06,S1-07 / S / backend. Audit query + redaction/denial test. |
 | S1-10 State and accessibility hardening | C1.4/C23; L1.8; FR6c; NFR14-16,20 | As a keyboard or small-screen user, I want every Sprint 1 state understandable and usable. | Shared loading, empty, error, permission-denied, inline validation, accessible dialogs, text/icon status. | Never show an unauthorized record merely to explain a denial; confirmation is reserved for irreversible actions, none added speculatively. | Given each Sprint 1 screen, when loading/empty/error/denied, then state has text, accessible name and focus behavior; no color-only status. | S1-02,S1-05-S1-08 / S / frontend + QA. Manual keyboard matrix and viewport evidence. |
-| S1-11 Seed/demo alignment | Cross-cutting; L1.3-1.4; FR1-6; NFR7,20 | As a reviewer, I want deterministic demo actors so access evidence is repeatable. | Seed/demo documentation and fixtures for five roles plus in/out-of-scope PI. | No credentials in plan/logs; fixtures encode role, org, relationship and expected denial. | Given fixture set, when each scenario runs, then expected allowed/denied result is reproducible. | S0-04 / S / QA + backend. Fixture inventory and test output. |
+| S1-11 Seed/demo alignment | Cross-cutting; L1.3-1.4; FR1-6; NFR7,20 | As a reviewer, I want deterministic demo actors so access evidence is repeatable. | Seed/demo documentation and fixtures for six roles plus in/out-of-scope PI. | No credentials in plan/logs; fixtures encode role, org, relationship and expected denial. | Given fixture set, when each scenario runs, then expected allowed/denied result is reproducible. | S0-04 / S / QA + backend. Fixture inventory and test output. |
 
 ### Sprint 1 Definition of Done
 
@@ -189,7 +191,7 @@ late “hardening” batch:
 | MVP capability | FR/NFR | Canonical epic | Legacy story |
 | --- | --- | --- | --- |
 | Authenticated workspace and safe session | FR4,4a; NFR5-8,14-16 | 1 | 1.1,1.2,1.5,1.8 |
-| Account, five-role, org-scope facts | FR1-3,6; NFR7,13 | 2 | 1.3,1.4 |
+| Account, six-role, org-scope facts | FR1-3,6; NFR7,13 | 2 | 1.3,1.4 |
 | Intake configuration/read | FR7-9; NFR1,3,7 | 2-3 | 1.6,4.1 |
 | Draft proposal, relationship, structured edit/read | FR10-11; NFR7,10,19 | 3 | 4.2,4.3 |
 | Proposal files, readiness, submit | FR12-14; NFR7,10,12 | 3,7,10 | 4.4-4.6,3.1,3.4 |

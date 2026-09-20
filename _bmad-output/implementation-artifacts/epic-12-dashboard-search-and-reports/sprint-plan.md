@@ -1,5 +1,7 @@
 # Epic 12: Dashboard, tìm kiếm, báo cáo và xuất dữ liệu
 
+**Authorization refinement — 2026-09-21:** Stories 12.1–12.5 implement FR45a: Head sees authorized-scope responsible Staff/unassigned records, filters/groups by officer and monitors workload/status/deadlines. Staff management queries include only current officer assignments. Apply identical current authorization to list/detail/search/count/facets/dashboard/reports/export/notifications/files/history and drill-down. Baseline §2.1 owns officer-grant/Head-action and migration questions before coding; this note does not mark implementation complete.
+
 - **Epic status:** `backlog`
 - **Canonical source:** [epics.md](../../epics.md)
 - **Planning order:** sequential, in the order below

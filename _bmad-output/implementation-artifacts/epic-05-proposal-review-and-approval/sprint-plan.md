@@ -1,5 +1,7 @@
 # Epic 5: Kiểm tra, đánh giá và phê duyệt đề xuất
 
+**Authorization refinement — 2026-09-21:** Stories 5.1/5.3/5.5 require current `PROPOSAL_MANAGEMENT_OFFICER` plus scope; participation/review alone grants no administrative action. Preserve Head oversight, leadership-only final decisions and conflict checks at relationship changes and actions. Baseline §2.1 owns officer-grant/Head-action and migration questions before coding; this note does not mark implementation complete.
+
 - **Epic status:** `in-progress` (aligned with `../sprint-status.yaml`)
 - **Canonical source:** [epics.md](../../epics.md)
 - **Current slice:** [Proposal Review & Approval implementation plan](implementation-plan.md)

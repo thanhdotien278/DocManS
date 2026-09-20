@@ -1,5 +1,7 @@
 # Epic 6: Theo dõi và nghiệm thu đề tài đã phê duyệt
 
+**Authorization refinement — 2026-09-21:** Stories 6.1/6.2 own independent `PROJECT_MANAGEMENT_OFFICER` lifecycle: at most one active primary officer, no automatic proposal-authority copy, atomic reassignment/history/audit. Head oversight and assigned-Staff visibility apply to reporting/acceptance/files/history; participants cannot hold conflicting management/evaluation roles. Baseline §2.1 owns officer-grant/Head-action and migration questions before coding; this note does not mark implementation complete.
+
 - **Epic status:** `backlog`
 - **Canonical source:** [epics.md](../../epics.md)
 - **Planning order:** sequential, in the order below

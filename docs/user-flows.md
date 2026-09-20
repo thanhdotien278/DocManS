@@ -35,13 +35,15 @@ hệ thống. Proposal PI luôn được suy ra từ `ownerId`; PI không là te
 ```mermaid
 flowchart LR
   account["Tài khoản<br/>1 system role active"] --> admin["SYSTEM_ADMIN<br/>Nền tảng, tài khoản, scope"]
-  account --> staff["SCIENTIFIC_MANAGEMENT_STAFF<br/>Vận hành nghiệp vụ"]
+  account --> head["SCIENTIFIC_MANAGEMENT_HEAD<br/>Giám sát trong scope được cấp"]
+  account --> staff["SCIENTIFIC_MANAGEMENT_STAFF<br/>Quản lý hồ sơ được phân công"]
   account --> leader["LEADERSHIP_APPROVAL_AUTHORITY<br/>Quyết định trong thẩm quyền"]
   account --> internal["RESEARCHER_INTERNAL_USER<br/>Bản ghi của mình / quan hệ hợp lệ"]
   account --> external["EXTERNAL_RESEARCHER_USER<br/>Chỉ bản ghi được cấp"]
 
   record["Một proposal / approved topic / review / task"] --> pi["PROPOSAL_PI / TOPIC_PI / TOPIC_MEMBER"]
   record --> secretary["TOPIC_SECRETARY"]
+  record --> officer["PROPOSAL_MANAGEMENT_OFFICER / PROJECT_MANAGEMENT_OFFICER"]
   record --> reviewer["Reviewer / council member"]
   record --> assignee["Task assignee / collaborator"]
 
@@ -51,9 +53,31 @@ flowchart LR
   account -. "được gắn assignment cụ thể" .-> assignee
 ```
 
+### Luồng giám sát và phân công quản lý
+
+1. Head mở danh sách proposal/project trong scope được cấp, thấy officer hiện tại
+   hoặc “Chưa phân công”; lọc/nhóm theo chuyên viên để xem workload, trạng thái và hạn.
+2. Actor có capability phân công đã được chốt chọn Staff phụ trách. Backend kiểm tra
+   scope, account, participation/conflict và context; role Head tự nó chưa cấp action này.
+3. Chuyển phân công kết thúc quan hệ cũ và tạo quan hệ mới nguyên tử, giữ history/audit;
+   tối đa một `PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER` hiện hành.
+4. Staff thấy hàng chờ quản lý của mình. Hồ sơ khác chỉ xuất hiện qua quan hệ PI/member/
+   secretary/reviewer/council/task hợp lệ, kèm lý do truy cập và action đúng quan hệ.
+   Không hiện action hành chính Quản lý khoa học chỉ vì Staff đọc được hồ sơ.
+5. Thu hồi/hết hiệu lực loại hồ sơ khỏi hàng chờ quản lý; backend re-authorize cả link,
+   files, notification, history, count, dashboard và export. Quan hệ khác vẫn được xét.
+
+Participant không đồng thời làm officer, reviewer, evaluation/acceptance council hoặc
+quyết định cuối cùng hồ sơ; reviewer không quyết định cùng vòng, các vị trí loại trừ
+trong hội đồng không được kiêm nhiệm. Kiểm tra khi tạo/thay đổi assignment/participation
+và tại protected action. Head không có action phê duyệt/từ chối cuối của lãnh đạo.
+Quyền phân công và quyền vận hành cụ thể của Head còn cần chốt theo baseline §2.1;
+không thêm bước phê duyệt hoặc tự cấp quyền. Đợt/profile giữ scope riêng, không mở
+quyền proposal/project; project mới không tự kế thừa officer của proposal.
+
 ## 2. Cổng kiểm tra chung cho mọi hành động
 
-List, search, count, facet, dashboard, export, notification và file metadata
+List, detail, search, count/facet, dashboard, reports/export, notifications, files và workflow/business history
 cũng đi qua cùng cổng này; thiếu hoặc mơ hồ context thì từ chối an toàn.
 
 ```mermaid
@@ -78,7 +102,7 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-  subgraph staff["Quản lý khoa học / Thư ký được giao"]
+  subgraph staff["Chuyên viên có capability/scope; proposal/project cần officer assignment"]
     open["Tạo và mở đợt tiếp nhận"]
     check["Kiểm tra đầy đủ / thủ tục"]
     assign["Phân công phản biện / hội đồng<br/>+ conflict check"]
@@ -123,8 +147,8 @@ Quy tắc cố định trong flow:
 - `Phiếu đánh giá của tôi` chỉ xuất hiện trong proposal có assignment đang hiệu
   lực của chính người xem; assignment ở proposal khác, role researcher/council
   hoặc system role rộng không mở rộng context.
-- `Phân công đánh giá` chỉ dành cho `SCIENTIFIC_MANAGEMENT_STAFF` khi
-  capability và state của proposal cho phép. Staff dùng `Trình phê duyệt` để
+- `Phân công đánh giá` chỉ dành cho `SCIENTIFIC_MANAGEMENT_STAFF` có
+  `PROPOSAL_MANAGEMENT_OFFICER` hiện hành, scope, capability và state phù hợp. Staff dùng `Trình phê duyệt` để
   gửi hồ sơ đã tổng hợp tới lãnh đạo; staff không nhận action `Phê duyệt` cuối.
 - Lãnh đạo chỉ quyết định ở trạng thái `Chờ quyết định`/`ready_for_approval`;
   không sửa nội dung và không tự quyết bản ghi có xung đột.

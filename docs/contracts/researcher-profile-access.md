@@ -4,6 +4,14 @@ Effective 2026-09-15. This contract implements the explicitly requested completi
 of FR65–FR69 and researcher account onboarding. It supersedes older Story 2.1
 field exclusions and the future-only classification of researcher email onboarding.
 
+## Proposal/project boundary — 2026-09-21
+
+Existing Staff profile/account capabilities remain separately scoped and do not grant
+proposal/project management visibility. Head oversight does not implicitly inherit those
+profile actions. Staff management requires the active `PROPOSAL_MANAGEMENT_OFFICER` /
+`PROJECT_MANAGEMENT_OFFICER`; self-reported participation is not an assignment.
+Baseline §2.1 governs officer lifecycle, conflict checks and pre-coding decisions.
+
 ## Identity and authority
 
 - `ResearcherProfile` is a scientific identity independent of `User` (Account).

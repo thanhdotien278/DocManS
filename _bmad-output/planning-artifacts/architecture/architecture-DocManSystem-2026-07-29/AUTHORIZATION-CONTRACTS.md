@@ -99,12 +99,54 @@ final-decision conflict/staleness responses must populate it, while other V1
 blocked actions may omit it. This additive field does not change primary-code
 precedence; executable schemas and fixtures must reject unknown reason values.
 
+## Scientific Management role and access contract — 2026-09-21 target
+
+The canonical system-role set is `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`,
+`SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
+`RESEARCHER_INTERNAL_USER`, `EXTERNAL_RESEARCHER_USER`, with one active role per account.
+Head sees all proposals/projects within explicitly authorized Scientific Management
+scope, including current officer, unassigned records, officer filters/groups and
+workload/status/deadlines. Neither Head nor Staff is leadership final approval authority.
+Head visibility alone does not grant operational mutations or unrestricted review data.
+
+Staff management reads/actions require an effective officer relationship on the exact
+proposal/project and granted scope. PI/member/secretary/reviewer/council/task access
+is an independent basis with its own action and disclosure set. The policy/projection
+must distinguish these bases; a generic allowed-read flag must not authorize management.
+The existing `systemRole`, `viewerRelationships` and per-action decision dimensions
+must explain the result without inventing a highest relationship.
+
+Management reassignment atomically ends the old interval and records the new officer;
+at most one primary officer may be effective per record, including concurrent writes.
+Retain old/new account IDs, effective intervals, actor, time, reason and audit. Zero
+active officers resolves as unassigned; unresolved/ambiguous context denies. Revocation,
+role/scope changes or expiry end the management grant immediately and invalidate stale
+context, while unrelated legitimate participation is re-evaluated independently.
+
+Participant + management officer/reviewer/evaluation or acceptance council/final decision
+is prohibited on the same source record. Check assignments and changes to participation
+in either order, and repeat on the protected action. The existing same-round reviewer/
+final-decision and mutually exclusive council-position rules also apply. Head with a
+participation conflict cannot use oversight to obtain undisclosed review material.
+
+Use identical current authorization and disclosure for list, detail, search, count/facets,
+dashboard, reports/export, notifications, files and workflow/business history; filters
+and drill-down cannot widen the result. Officer identity for Head oversight is an
+explicit management projection, never blanket disclosure of review/council assignments.
+
+These are target contract changes. Before implementation, version the affected role/
+relationship registries and consumers; decide exact officer-grant actions/actors and
+Head operational actions per baseline §2.1. Do not silently treat legacy V1 clients or
+role-only policies as compliant, or grant unknown actions while those decisions are open.
+
 ## 3. Relationship Type Registry
 
 The following V1 relationship types are canonical:
 
 | Type | Owner | Same actor + record multiplicity | Composition |
 | --- | --- | --- | --- |
+| `PROPOSAL_MANAGEMENT_OFFICER` | proposal | at most one active primary officer per record (across all actors) | Staff management actions only with scope, state and no conflict |
+| `PROJECT_MANAGEMENT_OFFICER` | approved project | at most one active primary officer per record (across all actors) | Staff management actions only with scope, state and no conflict |
 | `PROPOSAL_PI` | proposal | one | additive subject to denials |
 | `TOPIC_PI` | approved topic | one | additive subject to denials |
 | `TOPIC_SECRETARY` | proposal or approved topic | at most one active per record | administrative actions only |
@@ -212,7 +254,11 @@ ViewerAuthorizationV1
 
 Arrays are sorted by canonical ID. The DTO contains only the viewer's own
 relationships and minimum facts needed to explain the result. It never exposes
-another user's assignment, conflict source, or undisclosed review material.
+another user's hidden review assignment, conflict source, or undisclosed review material.
+An authorized management projection may expose the current responsible Staff member
+or unassigned state to Head within scope; this is separate from `viewerRelationships`.
+Expose only the officer identifier/display label needed for responsibility tracking,
+not private profile/contact data or hidden evaluation duties.
 
 For proposal workflow projections, `allowedActions` and `blockedActions` are
 record-scoped and fail closed. A blocked action with `ACTION_NOT_GRANTED` is
@@ -222,7 +268,9 @@ must remain disabled with the server reason. `proposal.review.submit` requires
 an active `ProposalReviewAssignment` for the exact proposal and current review
 round; account role or an assignment on another proposal is insufficient.
 `proposal.review.assign` and staff consolidation/routing require
-`SCIENTIFIC_MANAGEMENT_STAFF` capability on that proposal. Final
+`SCIENTIFIC_MANAGEMENT_STAFF` plus an effective `PROPOSAL_MANAGEMENT_OFFICER`,
+explicit scope and capability on that proposal. Head oversight is a read basis,
+not an automatic grant of these operations. Final
 `proposal.decision.approve`/`proposal.decision.reject` require
 `LEADERSHIP_APPROVAL_AUTHORITY` and the ready-for-approval state with no conflict;
 `SYSTEM_ADMIN` has no implicit business workflow capability. Researcher profile
@@ -235,7 +283,8 @@ responses never embed proposal review/assignment/approval sections.
 | PI/team member/team secretary before final disclosure | hidden | hidden | hidden | generic workflow status only |
 | Same audiences after final decision | hidden | hidden | hidden | `PublishedReviewSummaryV1` only |
 | Assigned reviewer | own identity only | own submitted/draft material only | hidden | own assignment DTO |
-| Assigned scientific-management staff | visible as required | visible as required | visible as required | operational internal DTO |
+| Head oversight within authorized scope | Only identities permitted by disclosure policy | Only if specifically permitted by disclosure policy | Only if permitted by disclosure policy | oversight data with current responsible Staff/unassigned state; participation conflicts retain PI/team restrictions |
+| Staff with current management-officer assignment and scope, without conflict | visible as required | visible as required | visible as required | operational internal DTO |
 | Assigned approval authority/council member | visible only where decision duty requires | visible only where decision duty requires | visible as required | decision-duty DTO |
 | Unrelated actor | hidden | hidden | hidden | deny |
 
@@ -355,7 +404,8 @@ satisfy the gate.
 
 `GET /research-proposals/:id/assignable-reviewers?q=` returns `{ users }` with
 eligible account `id`, `displayName`, and `username`. Search matches display name
-or username and is restricted to unconflicted, scoped scientific management in
+or username and is restricted to unconflicted Staff with explicit scope and
+current `PROPOSAL_MANAGEMENT_OFFICER` on the proposal, in
 assignable states with current completeness evidence. Candidates may have any role,
 any organization scope and no Scientist Profile. PI/active team participants and
 accounts with a live duplicate assignment are excluded.
@@ -379,7 +429,8 @@ mutation; direct persistence is not a supported assignment path.
 
 Review queue, proposal/package/file reads and own review actions rely on the effective
 assignment and conflict checks, without assignee role or host-unit scope requirements.
-Staff assignment/consolidation authority and the leadership decision conflict rule
+Staff assignment/consolidation requires the active proposal management-officer
+relationship and scope; the leadership decision conflict rule
 remain unchanged. Revoke retains required nonblank `note` (max 2000 trimmed characters)
 and `contextVersion`. Assignment/revocation and audit are atomic; candidate conflict
 rejection commits only its failure audit. Preserve historical profile provenance.
