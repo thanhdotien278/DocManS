@@ -365,6 +365,9 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
           <EmptyState title="Chưa có phiếu đánh giá" message="Nội dung nhận xét sẽ hiện ở đây khi người đánh giá gửi phiếu." />
         )}
 
+        <p className="record-meta">
+          Người phản biện: {progress.reviewerCount}/2 · Thành viên hội đồng: {progress.committeeMemberCount} (tối thiểu 3).
+        </p>
         {progress.pendingCount > 0 ? (
           <p className="state-message warning" role="status">
             Còn {progress.pendingCount} phiếu chưa gửi:{" "}
@@ -438,8 +441,8 @@ export function ProposalEvaluationPanel({ proposalId, onWorkflowChange, canAssig
             <p className="record-meta">{consolidateBlockedReason || "Chỉ hồ sơ đang đánh giá hoặc chờ phê duyệt mới được tổng hợp kết quả."}</p>
           ) : !progress.allReviewsSubmitted && !isReadyForApproval ? (
             <p className="record-meta">
-              {progress.activeAssignmentCount === 0
-                ? "Chưa phân công người đánh giá nên chưa thể chuyển hồ sơ sang chờ phê duyệt."
+              {!progress.assignmentRequirementsMet
+                ? "Cần đúng 2 người phản biện và ít nhất 3 thành viên hội đồng trước khi gửi lãnh đạo phê duyệt."
                 : "Còn phiếu đánh giá chưa gửi nên chưa thể chuyển hồ sơ sang chờ phê duyệt."}
             </p>
           ) : null}

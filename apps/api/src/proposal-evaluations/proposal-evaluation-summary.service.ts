@@ -114,7 +114,7 @@ export class ProposalEvaluationSummaryService {
 
     if (markReady && !progress.allReviewsSubmitted) {
       throw new BadRequestException({
-        message: "Chưa thể chuyển sang chờ phê duyệt: còn phiếu đánh giá chưa gửi.",
+        message: "Chưa thể chuyển sang chờ phê duyệt: cần đúng 2 người phản biện, ít nhất 3 thành viên hội đồng và đầy đủ phiếu đánh giá.",
         pendingReviewers: progress.pendingReviewers
       });
     }
@@ -124,6 +124,16 @@ export class ProposalEvaluationSummaryService {
     const nextStatus = markReady ? EVALUATION_SUMMARY_STATUS.readyForApproval : existing?.status ?? EVALUATION_SUMMARY_STATUS.draft;
 
     const saved = (await this.prisma.$transaction(async (tx) => {
+      if (markReady) {
+        await tx.$queryRaw`SELECT id FROM research_proposals WHERE id = ${proposalId} FOR UPDATE`;
+        const currentProgress = this.summarizeProgress(
+          await tx.proposalReviewAssignment.findMany({ where: { proposalId } }) as ReviewAssignmentRecord[],
+          await tx.proposalReview.findMany({ where: { proposalId } }) as ProposalReviewRecord[]
+        );
+        if (!currentProgress.allReviewsSubmitted) {
+          throw new BadRequestException({ message: "Phân công đã thay đổi: cần đúng 2 người phản biện, ít nhất 3 thành viên hội đồng và đầy đủ phiếu đánh giá." });
+        }
+      }
       const record = existing
         ? ((await tx.proposalEvaluationSummary.update({
             where: { id: existing.id },
@@ -241,7 +251,10 @@ export class ProposalEvaluationSummaryService {
    * assignment must not hold the proposal back, and a completed one counts as done.
    */
   summarizeProgress(assignments: ReviewAssignmentRecord[], reviews: ProposalReviewRecord[]) {
-    const active = assignments.filter((assignment) => assignment.status !== REVIEW_ASSIGNMENT_STATUS.revoked);
+    const active = assignments.filter((assignment) => assignment.status === REVIEW_ASSIGNMENT_STATUS.assigned || assignment.status === REVIEW_ASSIGNMENT_STATUS.completed);
+    const reviewerCount = new Set(active.filter((assignment) => assignment.assignmentRole === "reviewer").map((assignment) => assignment.reviewerUserId)).size;
+    const committeeMemberCount = new Set(active.filter((assignment) => assignment.assignmentRole === "committee_member").map((assignment) => assignment.reviewerUserId)).size;
+    const assignmentRequirementsMet = reviewerCount === 2 && committeeMemberCount >= 3;
     const submitted = reviews.filter((review) => review.status === REVIEW_STATUS.submitted);
     const submittedAssignmentIds = new Set(submitted.map((review) => review.assignmentId));
     const pending = active.filter((assignment) => !submittedAssignmentIds.has(assignment.id));
@@ -249,6 +262,9 @@ export class ProposalEvaluationSummaryService {
 
     return {
       activeAssignmentCount: active.length,
+      reviewerCount,
+      committeeMemberCount,
+      assignmentRequirementsMet,
       submittedCount: submitted.filter((review) => active.some((assignment) => assignment.id === review.assignmentId)).length,
       pendingCount: pending.length,
       pendingReviewers: pending.map((assignment) => ({
@@ -256,7 +272,7 @@ export class ProposalEvaluationSummaryService {
         reviewerUserId: assignment.reviewerUserId,
         reviewerDisplayName: assignment.reviewer?.displayName ?? ""
       })),
-      allReviewsSubmitted: active.length > 0 && pending.length === 0,
+      allReviewsSubmitted: assignmentRequirementsMet && pending.length === 0,
       averageTotalScore: scored.length ? Math.round((scored.reduce((sum, score) => sum + score, 0) / scored.length) * 10) / 10 : null,
       maxTotalScore: REVIEW_MAX_TOTAL_SCORE
     };
