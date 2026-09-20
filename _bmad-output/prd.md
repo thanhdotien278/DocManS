@@ -424,7 +424,7 @@ RTMS is a browser-based internal administrative web application optimized for mu
 
 - FR15: Scientific management staff can review proposal completeness once per submitted/resubmitted version and request supplements with a stated reason and whole-calendar-day due date; repeat completeness confirmation for the current version is denied.
 - FR16: Principal investigators can view supplement requests, revise proposal content or attachments, and resubmit the proposal.
-- FR17: Scientific management staff can assign/revoke proposal reviewers or council members from eligible ACTIVE Scientist Profiles, deriving the existing linked account, enforcing current record scope, workflow, conflict and context checks, and preserving append-only audit and disclosure. See the Reviewer / Council Assignment section of `docs/authorization-core-business-baseline.md`.
+- FR17: Scientific management staff can assign, revoke or change proposal reviewer/council evaluation positions for eligible active user accounts, regardless of assignee system role, host-unit scope or profile linkage; retain optional linked-profile provenance and enforce staff scope, workflow, source-participation conflict, one active mutually exclusive evaluation position per person/context, non-overlapping lifecycle, mutation-time context revalidation, append-only history/audit and disclosure. See the authoritative compatibility/multiplicity definition in `docs/authorization-core-business-baseline.md`.
 - FR18: Reviewers and committee members can access assigned proposals and submit scores, comments, and recommendations.
 - FR19: Scientific management staff can monitor review progress and consolidate evaluation outcomes.
 - FR19a: Scientific management staff can submit a completed, consolidated proposal dossier to the leadership approval authority; this action is labelled "Trình phê duyệt" / "Gửi lãnh đạo phê duyệt" and never grants final approve/reject authority.
@@ -506,7 +506,7 @@ RTMS is a browser-based internal administrative web application optimized for mu
 - FR65: Authorized users can create and maintain researcher profiles with identity, academic rank or degree, title, contact details, organization, research fields, expertise keywords, and active status.
 - FR66: Authorized users can link researcher profiles to user accounts where applicable while still allowing profile records for researchers who do not yet have system login accounts.
 - FR67: Authorized users can associate researcher profiles with proposals, approved projects, seminars, student research activities, councils, ethics dossiers, reviews, publications, products, and tasks where relevant.
-- FR67a: The system can enforce conflict-of-interest and separation-of-duty rules when assigning participation, reviewer, council, secretary, or approval roles, including blocking self-review, self-approval, and unauthorized secretary decision actions within the same business record.
+- FR67a: The system can enforce record/council/evaluation-context-scoped conflict-of-interest, separation-of-duty and assignment-multiplicity rules when assigning participation, reviewer, council, secretary, or approval roles, including blocking source participants from evaluation/approval, multiple active mutually exclusive evaluation positions, overlapping assignments, reviewer final decisions, stale assignment context and unauthorized secretary decision actions. Preflight is advisory; every authoritative single, bulk, import, direct-API or administrative mutation rechecks the same backend policy.
 - FR68: Users can search and filter researcher profiles by name, unit, field, expertise, status, participation history, and other authorized business attributes.
 - FR69: The system can preserve researcher profile history and audit important profile changes according to role and data-scope permissions.
 
@@ -731,10 +731,26 @@ reviewer, and secretary authority remains record-scoped.
   participant on a record, when staff attempts to assign an independent
   reviewer or conflicting council role, then the assignment is rejected and no
   access or notification is created.
+- AC-PERM-06a: Given a researcher already has any active chair, council-secretary,
+  council-member, reviewer, or council-reviewer position in an evaluation
+  context, when the same or another position is proposed with an overlapping
+  interval, then preflight and the authoritative mutation reject it with the
+  stable backend reason; an assignment on an unrelated record/council/round has
+  no effect.
+- AC-PERM-06b: Given an authorized position change, when the replacement becomes
+  effective, then the prior row is ended or revoked first, active intervals do
+  not overlap, and immutable assignment history is retained even under
+  concurrent or bulk requests.
 - AC-PERM-07: Given an approval authority is also PI, member, secretary, reviewer, or
   conflicting council participant on the same record, when the authority
   attempts a final decision, then the action is blocked even though the
   account-level role normally permits approval.
+- AC-PERM-07a: Given a person holds an active evaluation position or has a
+  persisted draft/submitted evaluation in
+  the same evaluation round, when that person attempts final approval or
+  rejection, then the backend denies `REVIEWER_DECISION_CONFLICT` even if the
+  assignment later expired or was revoked; an ended assignment with no
+  persisted evaluation creates no lasting conflict.
 - AC-PERM-08: Given the same person is reviewer or secretary on a different unrelated
   record, when authorization is evaluated, then that relationship does not
   restrict or widen permissions on the current record.
@@ -746,6 +762,11 @@ reviewer, and secretary authority remains record-scoped.
   context is missing or ambiguous, when a protected action is requested, then
   the backend fails closed and returns a stable denial code plus a
   plain-language reason.
+- AC-PERM-10a: Given candidate/preflight was allowed but the candidate, source,
+  council/round, assignment interval, or context version changes before write,
+  when any assignment path reaches the authoritative mutation, then it denies
+  `STALE_ASSIGNMENT_CONTEXT` without a partial assignment, notification, access
+  grant, or decision side effect.
 - AC-PERM-11: Given a participation, assignment, or council membership reaches
   its end date, is suspended, or is revoked, when the affected user next
   requests the record or an action, then the relationship grants no access or
