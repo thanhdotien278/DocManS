@@ -32,9 +32,9 @@ companions:
 
 This is the adopted target contract for new and migrated authorization work.
 `[ADOPTED]` means accepted from the named planning sources, not already
-implemented. The current code still contains multi-role/global business-role
-authorization and proposal-specific seams; the foundation migration must
-reconcile those seams before dependent stories may rely on this spine.
+implemented. The current account model has one of seven system roles and proposal-owned
+participation/review/management relationships. Domains without backend sources remain
+planned; dependent stories must distinguish requirements from operational evidence.
 
 ## Scientific Management clarification — 2026-09-21
 
@@ -44,8 +44,10 @@ explicit scope; Staff management only through active `PROPOSAL_MANAGEMENT_OFFICE
 history. Domain resolvers retain independent participation access and deny conflicting
 management/evaluation/decision assignments at changes and actions. Head oversight exposes
 responsible Staff/unassigned/workload data without granting leadership decisions or hidden
-review data. All read/aggregate/file/history surfaces share these rules. Resolve baseline
-§2.1 open decisions and contract versioning before coding; this is not implemented evidence.
+review data. All read/aggregate/file/history surfaces share these rules. Baseline §2.1 now defines Head officer management and completed-package submission, Director
+oversight plus eligible decisions, and Deputy internal-researcher eligibility plus read-only
+oversight. Proposal persistence is implemented; project/dashboard/reporting sources remain
+planned and must not be represented as operational.
 
 ## Design Paradigm
 

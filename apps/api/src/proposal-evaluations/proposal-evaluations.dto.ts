@@ -28,15 +28,17 @@ export class SaveProposalReviewDto {
 export class SaveEvaluationSummaryDto {
   [key: string]: unknown;
 
-  summary!: string;
-  recommendation!: string;
+  summary?: string;
+  recommendation?: string;
   markReady?: boolean;
+  contextVersion?: ContextVersionTokenV1;
 }
 
 export class ProposalDecisionDto {
   [key: string]: unknown;
 
   note?: string;
+  contextVersion!: ContextVersionTokenV1;
 }
 
 /** Revocation requires a nonblank reason, bounded at 2000 characters. */
@@ -126,15 +128,18 @@ export const saveEvaluationSummaryPipe: PipeTransform<unknown, SaveEvaluationSum
   transform(value: unknown) {
     const input = assertRecord(value);
 
-    if (typeof input.summary !== "string" || !input.summary.trim()) {
+    const markReady = input.markReady === true || input.markReady === "true";
+    if (!markReady && (typeof input.summary !== "string" || !input.summary.trim())) {
       throw new BadRequestException({ message: "Nhập nội dung tổng hợp kết quả đánh giá." });
     }
-
-    if (typeof input.recommendation !== "string" || !REVIEW_RECOMMENDATIONS.includes(input.recommendation as ReviewRecommendation)) {
+    if (!markReady && (typeof input.recommendation !== "string" || !REVIEW_RECOMMENDATIONS.includes(input.recommendation as ReviewRecommendation))) {
       throw new BadRequestException({ message: "Chọn kết luận tổng hợp hợp lệ." });
     }
+    if (input.contextVersion !== undefined && !isContextVersionTokenV1(input.contextVersion)) {
+      throw new BadRequestException({ message: "Context phiên bản hồ sơ không hợp lệ." });
+    }
 
-    return input as SaveEvaluationSummaryDto;
+    return { ...input, contextVersion: readContextVersion(input) } as SaveEvaluationSummaryDto;
   }
 };
 
@@ -144,7 +149,7 @@ export const proposalDecisionPipe: PipeTransform<unknown, ProposalDecisionDto> =
     // reject-needs-a-reason rule lives in the service where the decision type is known.
     const input = value === undefined || value === null || value === "" ? {} : assertRecord(value);
     assertOptionalText(input.note, "note", 2000);
-    return input as ProposalDecisionDto;
+    return { ...input, contextVersion: readContextVersion(input) } as ProposalDecisionDto;
   }
 };
 
@@ -154,5 +159,12 @@ export const revokeReviewAssignmentPipe: PipeTransform<unknown, RevokeReviewAssi
     const input = value === undefined || value === null || value === "" ? {} : assertRecord(value);
     assertRequiredText(input.note, "note", 2000);
     return { ...input, contextVersion: readContextVersion(input) } as RevokeReviewAssignmentDto;
+  }
+};
+
+export const submitCompletedPackagePipe: PipeTransform<unknown, { contextVersion: ContextVersionTokenV1 }> = {
+  transform(value: unknown) {
+    const input = assertRecord(value);
+    return { contextVersion: readContextVersion(input) };
   }
 };

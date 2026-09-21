@@ -53,6 +53,21 @@ export class ProposalMutationDto {
   contextVersion?: unknown;
 }
 
+export class AssignProposalManagementOfficerDto {
+  [key: string]: unknown;
+
+  officerUserId!: string;
+  reason!: string;
+  contextVersion?: unknown;
+}
+
+export class RevokeProposalManagementOfficerDto {
+  [key: string]: unknown;
+
+  reason!: string;
+  contextVersion?: unknown;
+}
+
 function assertRecord(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new BadRequestException({ message: PROPOSAL_VALIDATION_MESSAGE });
@@ -140,5 +155,22 @@ export const proposalMutationPipe: PipeTransform<unknown, ProposalMutationDto> =
       throw new BadRequestException({ message: "Nộp hồ sơ theo ủy quyền không còn được hỗ trợ." });
     }
     return input as ProposalMutationDto;
+  }
+};
+
+export const assignProposalManagementOfficerPipe: PipeTransform<unknown, AssignProposalManagementOfficerDto> = {
+  transform(value: unknown) {
+    const input = assertRecord(value);
+    readText(input.officerUserId, "officerUserId", 120);
+    readText(input.reason, "reason", 2000);
+    return input as unknown as AssignProposalManagementOfficerDto;
+  }
+};
+
+export const revokeProposalManagementOfficerPipe: PipeTransform<unknown, RevokeProposalManagementOfficerDto> = {
+  transform(value: unknown) {
+    const input = assertRecord(value);
+    readText(input.reason, "reason", 2000);
+    return input as unknown as RevokeProposalManagementOfficerDto;
   }
 };

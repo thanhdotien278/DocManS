@@ -22,3 +22,13 @@
 ## Execution note
 
 Create the next story specification only after its preceding dependency is understood and the shared authorization, audit, and file rules in the project context remain satisfied.
+
+## Finalized leadership authorization impact
+
+`RESEARCH_OVERSIGHT_AUTHORITY` combines internal researcher capabilities through record
+relationships with explicit-scope institutional oversight. It grants no final proposal,
+council-establishment, funding or acceptance decision. `LEADERSHIP_APPROVAL_AUTHORITY`
+has oversight plus eligible conflict-free final decisions. All surfaces must preserve
+disclosure, source authorization and active officer restrictions; no broad Staff queues.
+Project/council establishment, notifications/My Work and institutional dashboards/reports
+remain planned where their owning backend is absent. Funding uses available metadata only.

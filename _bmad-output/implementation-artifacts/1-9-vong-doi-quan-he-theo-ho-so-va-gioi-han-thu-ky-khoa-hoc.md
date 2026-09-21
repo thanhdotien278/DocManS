@@ -81,7 +81,7 @@ so that a past relationship or scientific-secretary title cannot grant authority
 
 - Mutating a relationship lifecycle is security-relevant: validate DTO input at the API boundary, enforce scientific-management organization scope and conflict policy, audit actor/target/from-to status/effective interval/context version, and never log secrets.
 - A failed overlap/conflict/version check must persist neither a relationship mutation nor an authorization counter increment. Protect concurrent writers at the database/service transaction boundary.
-- Do not disclose reviewer identity, raw scores/comments, or conflict sources to PI, member, or secretary audiences. Target account system roles are the six canonical roles, including `SCIENTIFIC_MANAGEMENT_HEAD` and `EXTERNAL_RESEARCHER_USER`; a record relationship never becomes a global role.
+- Do not disclose reviewer identity, raw scores/comments, or conflict sources to PI, member, or secretary audiences. Target account system roles are the seven canonical roles, including `SCIENTIFIC_MANAGEMENT_HEAD`, `RESEARCH_OVERSIGHT_AUTHORITY` and `EXTERNAL_RESEARCHER_USER`; a record relationship never becomes a global role.
 
 ### Testing requirements
 

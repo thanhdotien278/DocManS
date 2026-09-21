@@ -347,3 +347,14 @@ Khi thiết kế thêm màn hình hoặc tính năng mới:
 - Nếu cần thêm component mới, phải đảm bảo dùng được cho nhiều màn hình cùng loại.
 - Không tạo phong cách riêng cho từng module nếu không có lý do nghiệp vụ mạnh.
 - Bất kỳ màn hình nào cũng phải được đánh giá theo tài liệu này trước khi đưa vào thiết kế chi tiết.
+
+## Scientific Management and Leadership capability presentation
+
+Head: officer assignment/reassignment/revocation, unassigned and staff workload filters, staff
+summary and eligible package submission. Staff: assigned-record management plus independent
+participation views. Director: institutional oversight and eligible final decisions. Deputy:
+internal researcher work plus read-only institutional oversight. Render backend actions and
+access reasons; never derive a decision button from general oversight or record visibility.
+Confidential reviewer fields are omitted unless exact disclosure policy allows them. Dashboard
+showcases must be labelled demo; unavailable project/funding sources must not display invented
+operational totals. Funding remains research metadata, never accounting.

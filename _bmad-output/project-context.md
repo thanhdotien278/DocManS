@@ -130,10 +130,10 @@ Primary business roles to preserve across planning and implementation:
 - reviewers
 - council members
 
-# Scientific Management Head and Staff — target model
+# Scientific Management Head and Staff — finalized model
 
-The six system roles are `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`,
-`SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
+The seven system roles are `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`,
+`SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`,
 `RESEARCHER_INTERNAL_USER`, and `EXTERNAL_RESEARCHER_USER`; one active per account.
 Head sees all proposals/projects in explicitly authorized Scientific Management scope,
 responsible Staff, unassigned records and workload/status/deadlines, with officer filters/
@@ -149,8 +149,9 @@ final-decision, same-round reviewer/decision and council-position conflicts at r
 changes and protected actions. Apply identical filtering to every read/derived-data surface,
 including files and workflow/business history. Missing/ambiguous context fails closed.
 
-Baseline §2.1 owns the open officer-grant, Head operational-action, migration and Staff-PI
-questions. Intake/profile scope remains independent; existing code is not target policy.
+Baseline §2.1 defines Head officer actions, Staff assignment restrictions, Director decisions and
+Deputy researcher/oversight separation. Intake/profile scope remains independent. Only existing
+proposal features are implemented; absent project/reporting sources remain planned.
 
 # Authorization And Security Rules
 
@@ -399,3 +400,21 @@ credential delivery, migration compatibility and history retention.
 - Profile/link/account/credential/first-password-change audit is preserved with
   safe transactional change facts. No test files are written or changed for this
   completion at the user's instruction; verification is recorded in its artifact.
+
+### Finalized implementation scope — 2026-09-21
+
+The current change implements this model on the existing proposal, intake, researcher-profile,
+file and evaluation features. Approved projects, council-establishment/ethics lifecycles,
+institutional dashboards, general search/report/export and notification/My Work backends
+remain planned where no operational source exists. `PROJECT_MANAGEMENT_OFFICER` is a
+contract relationship, not a persisted orphan assignment. Dashboard showcase data is not
+an institutional report or proof of authorization. Future source domains must apply the
+same current scope, relationship, conflict and disclosure checks before aggregates or drill-down.
+
+Director and Deputy Director require institutional research dashboard views of available
+proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
+funding and management workload. Only Director gets eligible decision queues. Head gets
+responsible-officer/unassigned filters and workload; Staff sees assigned management records.
+Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,
+used and remaining project funding and utilization are unavailable until their source exists;
+never infer expenditure or add ledgers, payments, banking, invoices or ERP integration.

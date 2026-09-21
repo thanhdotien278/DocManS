@@ -8,6 +8,7 @@ import {
   proposalDecisionPipe,
   revokeReviewAssignmentPipe,
   saveEvaluationSummaryPipe,
+  submitCompletedPackagePipe,
   saveProposalReviewPipe,
   type AssignProposalReviewerDto,
   type ProposalDecisionDto,
@@ -114,6 +115,11 @@ export class ProposalEvaluationsController {
     @Body(saveEvaluationSummaryPipe) body: SaveEvaluationSummaryDto
   ) {
     return this.summaries.saveEvaluationSummary(request.currentUser!, id, body);
+  }
+
+  @Post(":id/evaluation-summary/submit")
+  async submitCompletedPackage(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body(submitCompletedPackagePipe) body: { contextVersion: unknown }) {
+    return this.summaries.submitCompletedPackage(request.currentUser!, id, body);
   }
 
   // ST-3.5 ------------------------------------------------------------------------------------

@@ -77,6 +77,12 @@ export type ProposalReviewAccess = {
   assignmentRole: ReviewAssignmentRole | "none";
   effectiveFrom: string;
   effectiveUntil: string | null;
+  /** A retained draft/submitted review remains a conflict after its assignment expires. */
+  hasPersistedReview?: boolean;
+  /** Non-revoked review duties also conflict before their access interval starts. */
+  hasReviewConflict?: boolean;
+  /** True when the review history could not be resolved safely. */
+  conflictUnresolved?: boolean;
 };
 
 const NO_REVIEW_ACCESS: ProposalReviewAccess = {
@@ -84,7 +90,9 @@ const NO_REVIEW_ACCESS: ProposalReviewAccess = {
   assignmentId: "",
   assignmentRole: "none",
   effectiveFrom: "",
-  effectiveUntil: null
+  effectiveUntil: null,
+  hasPersistedReview: false,
+  conflictUnresolved: false
 };
 
 export function normalizeAssignmentRole(value: unknown): ReviewAssignmentRole {

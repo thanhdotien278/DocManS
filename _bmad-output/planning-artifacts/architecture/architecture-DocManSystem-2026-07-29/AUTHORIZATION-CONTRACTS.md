@@ -99,10 +99,10 @@ final-decision conflict/staleness responses must populate it, while other V1
 blocked actions may omit it. This additive field does not change primary-code
 precedence; executable schemas and fixtures must reject unknown reason values.
 
-## Scientific Management role and access contract — 2026-09-21 target
+## Scientific Management role and access contract — 2026-09-21 finalized
 
 The canonical system-role set is `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`,
-`SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
+`SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`,
 `RESEARCHER_INTERNAL_USER`, `EXTERNAL_RESEARCHER_USER`, with one active role per account.
 Head sees all proposals/projects within explicitly authorized Scientific Management
 scope, including current officer, unassigned records, officer filters/groups and
@@ -134,10 +134,12 @@ dashboard, reports/export, notifications, files and workflow/business history; f
 and drill-down cannot widen the result. Officer identity for Head oversight is an
 explicit management projection, never blanket disclosure of review/council assignments.
 
-These are target contract changes. Before implementation, version the affected role/
-relationship registries and consumers; decide exact officer-grant actions/actors and
-Head operational actions per baseline §2.1. Do not silently treat legacy V1 clients or
-role-only policies as compliant, or grant unknown actions while those decisions are open.
+The runtime role/action/relationship registries include the finalized model. Capability responses
+carry accessReasons alongside independent viewerRelationships, allowedActions and blockedActions.
+PROPOSAL_MANAGEMENT_OFFICER is persisted with transactional lifecycle/audit and a partial unique
+index. PROJECT_MANAGEMENT_OFFICER remains contract-only until the project aggregate exists.
+Head has officer management and eligible package submission; Deputy has read-only oversight and
+internal researcher eligibility. Disclosure and conflicts constrain each grant independently.
 
 ## 3. Relationship Type Registry
 
@@ -462,3 +464,29 @@ credential delivery, migration compatibility and history retention.
 - Profile/link/account/credential/first-password-change audit is preserved with
   safe transactional change facts. No test files are written or changed for this
   completion at the user's instruction; verification is recorded in its artifact.
+
+### Finalized implementation scope — 2026-09-21
+
+The current change implements this model on the existing proposal, intake, researcher-profile,
+file and evaluation features. Approved projects, council-establishment/ethics lifecycles,
+institutional dashboards, general search/report/export and notification/My Work backends
+remain planned where no operational source exists. `PROJECT_MANAGEMENT_OFFICER` is a
+contract relationship, not a persisted orphan assignment. Dashboard showcase data is not
+an institutional report or proof of authorization. Future source domains must apply the
+same current scope, relationship, conflict and disclosure checks before aggregates or drill-down.
+
+Director and Deputy Director require institutional research dashboard views of available
+proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
+funding and management workload. Only Director gets eligible decision queues. Head gets
+responsible-officer/unassigned filters and workload; Staff sees assigned management records.
+Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,
+used and remaining project funding and utilization are unavailable until their source exists;
+never infer expenditure or add ledgers, payments, banking, invoices or ERP integration.
+
+### Existing proposal capability additions (2026-09-21)
+
+- `proposal.management-officer.assign` / `proposal.management-officer.revoke`: scoped, conflict-free Head; a resolved current officer is required to revoke.
+- `proposal.review.progress.read`: scoped Head/Director/Deputy operational counts and deadlines; assigned conflict-free Staff retains the existing detailed management view. Read-only oversight does not inherit review writes or decisions.
+- `proposal.review.submit-package`: scoped, conflict-free Head, under-review proposal, a saved Staff summary and all required reviews. The request carries `contextVersion`; it does not accept replacement summary content.
+- Summary saves and final decisions also carry `contextVersion` and run within the proposal mutation boundary. Future or unexpired non-revoked review duties and persisted review activity prevent incompatible management/decision actions.
+- Capability `accessReasons` distinguishes institutional oversight, primary management officer and independent participation/reviewer access. Exact action IDs remain authoritative for the UI.

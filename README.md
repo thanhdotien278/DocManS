@@ -45,6 +45,20 @@ Browser
 
 The authorization model is intentionally record-aware: a broad platform role alone does not automatically grant access to institutional research data.
 
+The seven system roles separate Scientific Management Head (scoped oversight and officer
+assignment), Scientific Management Staff (assigned-record management), Director (oversight and
+eligible final decisions), Deputy Director (researcher participation plus read-only institutional
+oversight), system administrator, internal researcher and external researcher. Proposal management
+officer history is persisted; project officer relationships and institutional reporting remain
+contracts until their backend domains exist. Dashboard showcase values are demo data. Funding
+currently covers requested proposal metadata, not actual expenditure or accounting.
+
+Local accounts: `nmphuong` (Head), `hdtien1`/`hdtien2` (Staff), `tvtien` (Director), `vndinh`
+(Deputy Director). See [local demo accounts](docs/development/auth-seed-users.md). Existing
+proposals remain unassigned until Head explicitly assigns Staff; organization scope alone no
+longer gives Staff management access.
+
+
 ## Technology Stack
 
 | Area | Technology |

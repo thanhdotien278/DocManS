@@ -1,5 +1,7 @@
 # Scientific Management authorization documentation update — 2026-09-21
 
+> Historical review evidence. The finalized seven-role implementation supersedes this snapshot; see `authorization-core-business-baseline.md` and `development/finalized-authorization-delivery.md` for current scope.
+
 Documentation-only reconciliation of the user-confirmed Head/Staff authorization
 model. No application code, schema, migrations, seed data, accounts or tests changed.
 Existing implementation status and historical verification are not claims of support

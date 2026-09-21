@@ -7,10 +7,10 @@ field exclusions and the future-only classification of researcher email onboardi
 ## Proposal/project boundary — 2026-09-21
 
 Existing Staff profile/account capabilities remain separately scoped and do not grant
-proposal/project management visibility. Head oversight does not implicitly inherit those
-profile actions. Staff management requires the active `PROPOSAL_MANAGEMENT_OFFICER` /
+proposal/project management visibility. Head is explicitly included in scoped profile management; oversight roles do not inherit
+profile management actions. Staff management requires the active `PROPOSAL_MANAGEMENT_OFFICER` /
 `PROJECT_MANAGEMENT_OFFICER`; self-reported participation is not an assignment.
-Baseline §2.1 governs officer lifecycle, conflict checks and pre-coding decisions.
+Baseline §2.1 governs officer lifecycle, conflict checks and finalized role decisions.
 
 ## Identity and authority
 
@@ -18,7 +18,7 @@ Baseline §2.1 governs officer lifecycle, conflict checks and pre-coding decisio
   A profile may have no account. Nullable unique `linkedUserId` is the current
   one-to-one link, including inactive profiles/accounts. Ended link rows preserve
   history; `ResearcherProfileAccountLink` has at most one ACTIVE row on each side.
-- Active `SYSTEM_ADMIN` and `SCIENTIFIC_MANAGEMENT_STAFF` manage profiles only in
+- Active `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD` and `SCIENTIFIC_MANAGEMENT_STAFF` manage profiles only in
   explicitly granted active organization scopes. This administrative permission
   does not grant proposal editing, review, approval or access to unrelated records.
 - Managers create, view, update, search/filter/page, activate/deactivate profiles,

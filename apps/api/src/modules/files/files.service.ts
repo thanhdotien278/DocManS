@@ -8,7 +8,8 @@ import { AuditLogService } from "../../auth/audit-log.service.js";
 import type { SafeUserContext } from "../../auth/auth.types.js";
 import type { ObjectStorage } from "../../infrastructure/minio/minio-object-storage.service.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { assertHasOrganizationScope } from "../../proposals-shared/proposal-access.js";
+import { assertHasOrganizationScope, isInternalResearcherEligible } from "../../proposals-shared/proposal-access.js";
+import { ProposalManagementOfficerService } from "../../proposals-shared/proposal-management-officer.service.js";
 import { ProposalReviewAccessService } from "../../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../../research-proposals/proposal-participation.service.js";
 import { RESEARCH_PROPOSAL_ENTITY_TYPE } from "./files.dto.js";
@@ -90,7 +91,8 @@ export class FilesService {
     private readonly auditLog: AuditLogService,
     private readonly participation: ProposalParticipationService,
     private readonly reviewAccess: ProposalReviewAccessService,
-    private readonly config: FileModuleConfig = defaultFileConfig()
+    private readonly config: FileModuleConfig = defaultFileConfig(),
+    private readonly managementOfficers: ProposalManagementOfficerService = new ProposalManagementOfficerService(prisma)
   ) {}
 
   private transactional = false;
@@ -100,7 +102,7 @@ export class FilesService {
     let uploadedKey: string | undefined;
     try {
       return await runProposalMutation(this.prisma, actor, proposalId, expected, async (tx, currentActor) => {
-        const service = new FilesService(tx, this.objectStorage, new AuditLogService(tx), new ProposalParticipationService(tx), new ProposalReviewAccessService(tx), this.config);
+        const service = new FilesService(tx, this.objectStorage, new AuditLogService(tx), new ProposalParticipationService(tx), new ProposalReviewAccessService(tx), this.config, new ProposalManagementOfficerService(tx));
         service.transactional = true;
         try { return await work(service, currentActor); } finally { uploadedKey = service.uploadedObjectKey; }
       });
@@ -176,7 +178,7 @@ export class FilesService {
 
   async listFiles(actor: SafeUserContext, input: { relatedEntityType: string; relatedEntityId: string }) {
     this.assertSupportedEntity(input.relatedEntityType);
-    const proposal = await new ResearchProposalsService(this.prisma, this.auditLog, this.participation, this.reviewAccess).getProposal(actor, input.relatedEntityId);
+    const proposal = await new ResearchProposalsService(this.prisma, this.auditLog, this.participation, this.reviewAccess, this.managementOfficers).getProposal(actor, input.relatedEntityId);
     return proposal.attachments;
   }
 
@@ -328,7 +330,7 @@ export class FilesService {
   }
 
   private async assertCanUpload(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {
-    if (relatedEntityType === RESEARCH_PROPOSAL_ENTITY_TYPE && actor.systemRole !== "RESEARCHER_INTERNAL_USER") {
+    if (relatedEntityType === RESEARCH_PROPOSAL_ENTITY_TYPE && !isInternalResearcherEligible(actor)) {
       throw new ForbiddenException({ message: "Chỉ PI hoặc thư ký nội bộ được tải tệp cho hồ sơ đề xuất." });
     }
     const proposal = await this.findRelatedProposal(relatedEntityType, relatedEntityId);
@@ -345,7 +347,7 @@ export class FilesService {
 
   private async assertCanRead(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {
     this.assertSupportedEntity(relatedEntityType);
-    await new ResearchProposalsService(this.prisma, this.auditLog, this.participation, this.reviewAccess).getProposal(actor, relatedEntityId);
+    await new ResearchProposalsService(this.prisma, this.auditLog, this.participation, this.reviewAccess, this.managementOfficers).getProposal(actor, relatedEntityId);
   }
 
   private async canMutateEntity(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {

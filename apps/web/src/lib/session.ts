@@ -55,8 +55,12 @@ export function getSystemRoleLabel(systemRole: CurrentUser["systemRole"]) {
     ? "Quản trị hệ thống"
     : systemRole === "SCIENTIFIC_MANAGEMENT_STAFF"
       ? "Chuyên viên quản lý khoa học"
+      : systemRole === "SCIENTIFIC_MANAGEMENT_HEAD"
+        ? "Trưởng phòng quản lý khoa học"
       : systemRole === "LEADERSHIP_APPROVAL_AUTHORITY"
         ? "Lãnh đạo phê duyệt"
+        : systemRole === "RESEARCH_OVERSIGHT_AUTHORITY"
+          ? "Lãnh đạo giám sát nghiên cứu"
         : systemRole === "RESEARCHER_INTERNAL_USER"
           ? "Người dùng nghiên cứu nội bộ"
           : "Nhà nghiên cứu bên ngoài";

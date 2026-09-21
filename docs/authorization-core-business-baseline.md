@@ -2,7 +2,7 @@
 title: "DocManS — Baseline vai trò, quyền theo bản ghi và nghiệp vụ cốt lõi"
 type: normative-product-decision
 status: approved
-version: 1.1
+version: 1.2
 updated: 2026-09-21
 approved: 2026-08-26
 audience:
@@ -50,7 +50,8 @@ qua quan hệ theo bản ghi.
 | `SYSTEM_ADMIN` | Toàn hệ thống cho dữ liệu nền tảng | Tài khoản, trạng thái tài khoản, system role, đơn vị/scope, danh mục nền tảng, cấu hình kỹ thuật, hỗ trợ truy vết vận hành | Không mặc nhiên xem/sửa dữ liệu nghiệp vụ, không phản biện, không phê duyệt, không mở lại hồ sơ |
 | `SCIENTIFIC_MANAGEMENT_HEAD` | Tất cả proposal/project trong phạm vi Quản lý khoa học được cấp rõ ràng | Trưởng phòng: xem hồ sơ, chuyên viên phụ trách, hồ sơ chưa phân công; lọc/nhóm theo chuyên viên, theo dõi khối lượng, trạng thái và hạn | Không phải `LEADERSHIP_APPROVAL_AUTHORITY`; quyền xem không tự cấp hành động quản trị hoặc quyết định cuối |
 | `SCIENTIFIC_MANAGEMENT_STAFF` | Chỉ proposal/project được phân công quản lý đang hiệu lực | Chuyên viên/trợ lý: kiểm tra, yêu cầu bổ sung, phân công đánh giá, tổng hợp và theo dõi trên hồ sơ mình phụ trách; nghiệp vụ không gắn proposal/project theo scope riêng | Không tự có quyền toàn Học viện; quan hệ tham gia không cấp quyền hành chính Quản lý khoa học; không quyết định cuối |
-| `LEADERSHIP_APPROVAL_AUTHORITY` | Hồ sơ được trình và phạm vi quyết định được cấp; mặc định phù hợp vai trò lãnh đạo Học viện | Xem hồ sơ đủ điều kiện, xem kết quả đánh giá và xác nhận/phê duyệt/từ chối cuối cùng khi quy trình yêu cầu | Không sửa nội dung hồ sơ, không bỏ qua phản biện/tổng hợp, không tự quyết hồ sơ mình là PI/thành viên/phản biện |
+| `LEADERSHIP_APPROVAL_AUTHORITY` | Toàn bộ hồ sơ trong scope lãnh đạo được cấp rõ ràng | Giám sát trạng thái, tiến độ, kinh phí hiện có; chỉ xem gói đánh giá nhạy cảm đã trình và quyết định cuối khi đủ điều kiện | Không sửa nội dung hồ sơ, không bỏ qua phản biện/tổng hợp, không tự quyết hồ sơ mình là PI/thành viên/phản biện |
+| `RESEARCH_OVERSIGHT_AUTHORITY` | Deputy Director: institutional research oversight plus internal researcher capabilities through record relationships | Explicit institutional scopes; read-only oversight; no final decisions | No protected reviewer data from oversight; conflict/disclosure checks still apply |
 | `RESEARCHER_INTERNAL_USER` | Các bản ghi do chính user tạo hoặc có quan hệ hợp lệ | Tạo bản nháp đề xuất, sửa bản nháp, nộp đề xuất, phản hồi bổ sung, tham gia đề tài và nộp báo cáo theo quan hệ | Không xem bản ghi không liên quan, không tự phân công phản biện/thư ký, không quyết định cuối |
 | `EXTERNAL_RESEARCHER_USER` | Chỉ các bản ghi có quan hệ được cấp | Xem bản ghi liên quan, phản biện được giao hoặc đóng góp đề tài/task theo assignment | Không tạo/sửa/nộp đề xuất, không đổi PI/team/kinh phí/mục tiêu/trạng thái, không phân công hoặc quyết định cuối |
 
@@ -113,28 +114,54 @@ nội dung/action, kể cả Head là participant; Head không được dùng qu
 
 Trong các bảng nghiệp vụ bên dưới, “Quản lý khoa học” trên proposal/project là
 operator có capability quản lý cụ thể; Staff bắt buộc có officer assignment tương
-ứng. Quyền Head được chốt ở đây là visibility/giám sát; không suy ra toàn bộ action
-của Staff hay quyền quyết định lãnh đạo từ system role Head.
+ứng. Head được phân công/thu hồi officer, xem tổng hợp và trình gói đủ điều kiện; không suy ra
+toàn bộ action của Staff hay quyền quyết định lãnh đạo từ system role Head.
 
 Nghiệp vụ độc lập như đợt tiếp nhận và hồ sơ nhà khoa học tiếp tục dùng capability/
 scope riêng đã được quy định. Chúng không cấp quyền proposal/project. Không tạo
 thêm officer relationship cho các domain khác trong thay đổi này.
 
-### Các quyết định cần chốt trước coding
+### Final decisions replacing the pre-coding questions
 
-- Ai có capability tạo/chuyển/thu hồi officer (Head, hay actor khác được cấp rõ),
-  và Head có được trực tiếp thực hiện những action vận hành nào? Chưa cấp mặc định
-  bằng chức danh; thiếu policy cụ thể thì deny. Không thêm bước phê duyệt mới.
-- Chốt tập scope Quản lý khoa học thực tế cho từng Head/Staff; không suy ra từ cây đơn vị.
-- Chốt ánh xạ account cũ sang Head/Staff và phân công hồ sơ hiện có từ dữ liệu có căn cứ.
-  Không nâng tất cả Staff thành Head hoặc tự gán officer để bảo toàn quyền rộng cũ.
-- Staff có thể có quan hệ PI và quyền xem tương ứng, nhưng rule hiện hữu vẫn giới hạn
-  proposal create/edit/submit/resubmit ở PI có `RESEARCHER_INTERNAL_USER`. Nếu muốn
-  Staff thực hiện các action này, cần quyết định riêng; không âm thầm mở rộng trong đợt này.
-- Chốt thời điểm phân công proposal/project và actor khởi tạo project. Cho phép trạng thái
-  chưa phân công; không tự copy officer từ proposal hoặc tự cấp quyền cho người tạo.
+- Head owns officer assignment/reassignment/revocation within explicit scope and without conflict.
+  Assignment takes effect at transaction time; prior rows and audit are retained. No automatic
+  officer backfill preserves the former broad Staff grant. Unassigned records remain valid.
+- Head can read Staff operational summaries and submit a completed eligible review package;
+  routine reviewer assignment and consolidation remain assigned Staff operations. Head has
+  no final approval authority and cannot edit research content through management authority.
+- `nmphuong` maps to Head; `hdtien1` and `hdtien2` remain Staff; `tvtien` is Director;
+  `vndinh` is Deputy Director (`RESEARCH_OVERSIGHT_AUTHORITY`). Local demo institutional
+  scope is granted explicitly for each internal unit, never inherited from an organization tree.
+- Internal proposal eligibility includes `RESEARCHER_INTERNAL_USER` and
+  `RESEARCH_OVERSIGHT_AUTHORITY`. Create/edit/submit/resubmit still require the current
+  owner-derived PI, applicable scope/intake/state and no prohibited conflict. Staff may hold
+  participation relationships but receives no new PI mutation grant from its system role.
+- Director has institutional leadership oversight and eligible final decisions. Deputy Director
+  has institutional research oversight plus independent researcher relationships; the role
+  never grants final proposal, council, funding or acceptance decisions. A Deputy PI/member
+  gains only that relationship's actions; unrelated records remain read-only.
+- Leadership/oversight operational disclosure is status/counts/deadlines/responsible officer.
+  Reviewer identity, raw scores and confidential comments are omitted unless exact actor/state
+  disclosure explicitly permits them. Review participation continues to block same-round final
+  decisions after revocation when a persisted draft/submitted evaluation exists.
 
-Đây là target documentation; chưa triển khai role, persistence, migration hoặc API.
+### Finalized implementation scope — 2026-09-21
+
+The current change implements this model on the existing proposal, intake, researcher-profile,
+file and evaluation features. Approved projects, council-establishment/ethics lifecycles,
+institutional dashboards, general search/report/export and notification/My Work backends
+remain planned where no operational source exists. `PROJECT_MANAGEMENT_OFFICER` is a
+contract relationship, not a persisted orphan assignment. Dashboard showcase data is not
+an institutional report or proof of authorization. Future source domains must apply the
+same current scope, relationship, conflict and disclosure checks before aggregates or drill-down.
+
+Director and Deputy Director require institutional research dashboard views of available
+proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
+funding and management workload. Only Director gets eligible decision queues. Head gets
+responsible-officer/unassigned filters and workload; Staff sees assigned management records.
+Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,
+used and remaining project funding and utilization are unavailable until their source exists;
+never infer expenditure or add ledgers, payments, banking, invoices or ERP integration.
 
 # 3. Quy tắc scope, xung đột và ủy quyền
 
@@ -174,9 +201,9 @@ thêm officer relationship cho các domain khác trong thay đổi này.
 
 | Hành động | Quyền |
 | --- | --- |
-| Tạo/cập nhật/kích hoạt/ngừng hoạt động | `SYSTEM_ADMIN` và `SCIENTIFIC_MANAGEMENT_STAFF` trong scope tổ chức được cấp rõ ràng |
+| Tạo/cập nhật/kích hoạt/ngừng hoạt động | `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD` và `SCIENTIFIC_MANAGEMENT_STAFF` trong scope tổ chức được cấp rõ ràng |
 | Xác minh/gộp hồ sơ trùng | Quản lý hoặc Thư ký có scope cảnh báo/xác minh; chỉ Quản lý khoa học phê duyệt gộp |
-| Liên kết tài khoản | `SYSTEM_ADMIN` và `SCIENTIFIC_MANAGEMENT_STAFF` có scope; một hồ sơ chỉ một liên kết account hiện hành, kể cả khi inactive và một account không liên kết nhiều hồ sơ |
+| Liên kết tài khoản | `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD` và `SCIENTIFIC_MANAGEMENT_STAFF` có scope; một hồ sơ chỉ một liên kết account hiện hành, kể cả khi inactive và một account không liên kết nhiều hồ sơ |
 | Xem dữ liệu định danh/liên hệ | Chỉ người có scope quản lý hoặc quan hệ nghiệp vụ cần thiết; danh sách/search/notification dùng dữ liệu tối thiểu |
 | Tham gia đề tài/phản biện | Chỉ qua quan hệ/assignment riêng trên từng bản ghi |
 

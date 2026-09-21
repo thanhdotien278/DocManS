@@ -15,21 +15,60 @@ type AssignmentRow = ReviewAssignmentLike & { proposalId: string };
 export class ProposalReviewAccessService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Resolves one user's reviewer access to one proposal. Fails closed on any read error. */
-  async resolveForProposal(userId: string | undefined, proposalId: string, asOf = new Date()): Promise<ProposalReviewAccess> {
+  /**
+   * Conflict reads have a stronger contract than ordinary reviewer access reads. A revoked or
+   * expired assignment must stop granting access, but a persisted draft/submitted review remains
+   * evidence of prior review activity and therefore remains a conflict. Any read failure is also
+   * unresolved rather than silently becoming a no-conflict answer.
+   */
+  async resolveConflictForProposal(userId: string | undefined, proposalId: string, asOf = new Date()) {
     if (!userId || !proposalId) {
-      return resolveProposalReviewAccess(null, asOf);
+      return { isAssignedReviewer: false, hasPersistedReview: false, unresolved: true };
     }
 
     try {
-      const assignments = (await this.prisma.proposalReviewAssignment.findMany({
-        where: { proposalId, reviewerUserId: userId },
-        select: { id: true, status: true, assignmentRole: true, assignedAt: true, effectiveFrom: true, effectiveUntil: true }
-      })) as ReviewAssignmentLike[];
+      const [assignments, persistedReview] = await Promise.all([
+        this.prisma.proposalReviewAssignment.findMany({
+          where: { proposalId, reviewerUserId: userId },
+          select: { id: true, status: true, assignmentRole: true, assignedAt: true, effectiveFrom: true, effectiveUntil: true }
+        }),
+        this.prisma.proposalReview.findFirst({
+          where: { proposalId, reviewerUserId: userId, status: { in: ["draft", "submitted"] } },
+          select: { id: true }
+        })
+      ]);
 
-      return resolveProposalReviewAccess(assignments, asOf);
+      return {
+        isAssignedReviewer: assignments.some((assignment) => (assignment.status === "assigned" || assignment.status === "completed") && (!assignment.effectiveUntil || assignment.effectiveUntil > asOf)),
+        hasPersistedReview: Boolean(persistedReview),
+        unresolved: false
+      };
     } catch {
-      return resolveProposalReviewAccess(null, asOf);
+      return { isAssignedReviewer: false, hasPersistedReview: false, unresolved: true };
+    }
+  }
+
+  /** Resolves one user's reviewer access to one proposal. Fails closed on any read error. */
+  async resolveForProposal(userId: string | undefined, proposalId: string, asOf = new Date()): Promise<ProposalReviewAccess> {
+    if (!userId || !proposalId) {
+      return { ...resolveProposalReviewAccess(null, asOf), conflictUnresolved: true };
+    }
+
+    try {
+      const [assignments, persistedReview] = await Promise.all([
+        this.prisma.proposalReviewAssignment.findMany({
+          where: { proposalId, reviewerUserId: userId },
+          select: { id: true, status: true, assignmentRole: true, assignedAt: true, effectiveFrom: true, effectiveUntil: true }
+        }),
+        this.prisma.proposalReview.findFirst({
+          where: { proposalId, reviewerUserId: userId, status: { in: ["draft", "submitted"] } },
+          select: { id: true }
+        })
+      ]);
+
+      return { ...resolveProposalReviewAccess(assignments as ReviewAssignmentLike[], asOf), hasPersistedReview: Boolean(persistedReview), hasReviewConflict: Boolean(persistedReview) || assignments.some((assignment) => (assignment.status === "assigned" || assignment.status === "completed") && (!assignment.effectiveUntil || assignment.effectiveUntil > asOf)), conflictUnresolved: false };
+    } catch {
+      return { ...resolveProposalReviewAccess(null, asOf), hasPersistedReview: false, conflictUnresolved: true };
     }
   }
 
@@ -41,12 +80,20 @@ export class ProposalReviewAccessService {
     }
 
     let assignments: AssignmentRow[] = [];
+    let persistedReviews: Array<{ proposalId: string }> = [];
     try {
-      assignments = (await this.prisma.proposalReviewAssignment.findMany({
-        where: { proposalId: { in: proposalIds }, reviewerUserId: userId },
-        select: { id: true, proposalId: true, status: true, assignmentRole: true, assignedAt: true, effectiveFrom: true, effectiveUntil: true }
-      })) as AssignmentRow[];
+      [assignments, persistedReviews] = await Promise.all([
+        this.prisma.proposalReviewAssignment.findMany({
+          where: { proposalId: { in: proposalIds }, reviewerUserId: userId },
+          select: { id: true, proposalId: true, status: true, assignmentRole: true, assignedAt: true, effectiveFrom: true, effectiveUntil: true }
+        }) as Promise<AssignmentRow[]>,
+        this.prisma.proposalReview.findMany({
+          where: { proposalId: { in: proposalIds }, reviewerUserId: userId, status: { in: ["draft", "submitted"] } },
+          select: { proposalId: true }
+        }) as Promise<Array<{ proposalId: string }>>
+      ]);
     } catch {
+      for (const proposalId of proposalIds) resolved.set(proposalId, { ...resolveProposalReviewAccess(null, asOf), hasPersistedReview: false, conflictUnresolved: true });
       return resolved;
     }
 
@@ -57,8 +104,9 @@ export class ProposalReviewAccessService {
       byProposal.set(assignment.proposalId, bucket);
     }
 
+    const persisted = new Set(persistedReviews.map((review) => review.proposalId));
     for (const proposalId of proposalIds) {
-      resolved.set(proposalId, resolveProposalReviewAccess(byProposal.get(proposalId) ?? [], asOf));
+      resolved.set(proposalId, { ...resolveProposalReviewAccess(byProposal.get(proposalId) ?? [], asOf), hasPersistedReview: persisted.has(proposalId), hasReviewConflict: persisted.has(proposalId) || (byProposal.get(proposalId) ?? []).some((assignment) => (assignment.status === "assigned" || assignment.status === "completed") && (!assignment.effectiveUntil || assignment.effectiveUntil > asOf)), conflictUnresolved: false });
     }
 
     return resolved;

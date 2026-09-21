@@ -52,7 +52,7 @@ policy and current workflow rules, use the linked normative documents.
 
 DocManS distinguishes **system roles** from **record-scoped relationships and
 assignments**. The active system roles are `SYSTEM_ADMIN`,
-`SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
+`SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`,
 `RESEARCHER_INTERNAL_USER`, and `EXTERNAL_RESEARCHER_USER`.
 
 System roles describe account-level responsibility; they do not automatically
@@ -85,9 +85,12 @@ Staff may access other records through legitimate participation/review/council/t
 relationships, which grant no Scientific Management administrative actions. Backend
 capabilities must distinguish this access basis; revocation removes only the relevant
 grant. Unassigned is a valid state; missing/ambiguous context fails closed.
-Independent intake/profile scope does not widen proposal/project access. The exact
-officer-grant capability, Head operational actions and migration mapping remain open
-in baseline §2.1. This is a documentation target, not a claim of implementation.
+Independent intake/profile scope does not widen proposal/project access. Head assigns/reassigns/revokes officers, reads operational summaries and submits eligible
+completed packages. Routine assignment/consolidation belongs to assigned Staff. Director
+combines oversight with eligible final decisions; Deputy Director combines internal researcher
+eligibility with read-only institutional oversight. Neither oversight reason bypasses disclosure.
+Proposal implementation is operational; project relationships remain a contract until the
+approved-project backend is implemented (baseline §2.1).
 
 ## Workflow vocabulary
 
@@ -161,7 +164,7 @@ Read these only when the task needs their detail; do not duplicate them here:
 source of truth for this feature, including API/data fields, authorization,
 credential delivery, migration compatibility and history retention.
 
-- Scoped SYSTEM_ADMIN and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
+- Scoped SYSTEM_ADMIN, SCIENTIFIC_MANAGEMENT_HEAD and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
   profiles independently of Accounts, including academic/contact information,
   position, military rank, expertise, publications and self-reported project
   history (title, role, Academy/institutional/Ministry/other level, dates, status,

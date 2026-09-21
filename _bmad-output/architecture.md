@@ -217,7 +217,7 @@ nx add @nx/nest
 - **Phase 1 authentication:** local application authentication with extensible adapter boundaries for future SSO
 - **System-role model:** exactly one active account-level role per user:
   `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`,
-  `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`
+  `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`
 - **Record-role model:** proposals derive one `PROPOSAL_PI` from `ownerId` and
   use only `TOPIC_SECRETARY`/`TOPIC_MEMBER` team relationships; approved topics
   use `TOPIC_PI` plus the same team roles. Reviewer, council, ethics, and task
@@ -267,10 +267,9 @@ conflicts on both directions of relationship changes and at protected actions; r
 same-round reviewer/decision and mutually exclusive council-position checks. Head
 oversight never bypasses participant disclosure or conflict restrictions.
 
-Before code: decide officer-grant actors and exact Head operational actions, resolve
-legacy role/assignment mapping, and version affected contracts/consumers. Missing
-policy/context fails closed. Existing role-only implementation is not evidence of
-compliance; no schema, code or migration is changed by this documentation revision.
+Head owns officer changes and submission of eligible completed Staff packages; no final decisions.
+Migration adds proposal-owned officer history and role registry checks. Project officer persistence
+awaits the approved-project domain; no orphan generic assignment store is introduced.
 
 #### Authorization Decision Contract
 
@@ -1681,3 +1680,21 @@ credential delivery, migration compatibility and history retention.
 - Profile/link/account/credential/first-password-change audit is preserved with
   safe transactional change facts. No test files are written or changed for this
   completion at the user's instruction; verification is recorded in its artifact.
+
+### Finalized implementation scope — 2026-09-21
+
+The current change implements this model on the existing proposal, intake, researcher-profile,
+file and evaluation features. Approved projects, council-establishment/ethics lifecycles,
+institutional dashboards, general search/report/export and notification/My Work backends
+remain planned where no operational source exists. `PROJECT_MANAGEMENT_OFFICER` is a
+contract relationship, not a persisted orphan assignment. Dashboard showcase data is not
+an institutional report or proof of authorization. Future source domains must apply the
+same current scope, relationship, conflict and disclosure checks before aggregates or drill-down.
+
+Director and Deputy Director require institutional research dashboard views of available
+proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
+funding and management workload. Only Director gets eligible decision queues. Head gets
+responsible-officer/unassigned filters and workload; Staff sees assigned management records.
+Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,
+used and remaining project funding and utilization are unavailable until their source exists;
+never infer expenditure or add ledgers, payments, banking, invoices or ERP integration.

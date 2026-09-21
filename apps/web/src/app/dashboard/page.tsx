@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useSession } from "@/components/auth/session-provider";
 import { AlertList } from "@/components/ui/alert-list";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { KpiCard } from "@/components/ui/kpi-card";
@@ -111,7 +114,8 @@ function renderPanel(panel: DashboardPanel) {
 }
 
 export default function DashboardPage() {
-  const snapshot = getDashboardSnapshot("LEADERSHIP_APPROVAL_AUTHORITY");
+  const { account } = useSession();
+  const snapshot = getDashboardSnapshot(account?.systemRole ?? "SCIENTIFIC_MANAGEMENT_STAFF");
 
   return (
     <>
@@ -126,6 +130,7 @@ export default function DashboardPage() {
           </Link>
         }
       />
+      <p className="record-meta" role="note">Dữ liệu dashboard hiện là dữ liệu minh họa giao diện; số liệu vận hành thực tế lấy từ các màn hình nghiệp vụ theo phạm vi quyền.</p>
 
       <div className="grid kpi-grid" style={{ marginBottom: 16 }}>
         {snapshot.kpis.map((kpi) => (

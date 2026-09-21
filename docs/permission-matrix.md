@@ -37,8 +37,9 @@ document must be updated in the same change set.
 - Can view all proposals/projects within explicitly authorized Scientific Management
   scope, including current responsible Staff, unassigned records, workload, status
   and deadlines; filter/group by responsible Staff.
-- Visibility does not grant final decisions or every operational action. Exact
-  officer-grant authority and Head operational capabilities remain open in baseline §2.1.
+- Head assigns/reassigns/revokes officers, reads Staff summaries and submits eligible
+  completed packages. Routine reviewer assignment/consolidation stays with assigned Staff.
+  Head never receives final decisions.
 
 ### Scientific Management Staff / Chuyen vien quan ly khoa hoc
 
@@ -62,6 +63,15 @@ document must be updated in the same change set.
 - Important limits: approval actions must follow workflow state rules and cannot
   bypass required review, consolidation, or history.
 
+### Research Oversight Authority / Pho Giam doc phu trach NCKH
+
+- Institutional proposal/project oversight inside explicit scopes, read-only unless an
+  independent PI/member/reviewer relationship grants its own action.
+- Internal researcher eligibility includes draft creation and PI edit/submit/resubmit.
+- Deny all role-derived final proposal/rejection, council establishment, funding and acceptance decisions.
+- Only operational review counts/status/deadlines are disclosed from oversight. Sensitive
+  identity, scores, comments and internal consolidation require separate disclosure authority.
+
 ### External Researcher User / Nha nghien cuu ben ngoai
 
 - Main responsibility: work only on explicitly related records, approved-topic/task
@@ -74,7 +84,7 @@ document must be updated in the same change set.
 ### Record-scoped business personas
 
 The following headings are business relationships/personas, not account-level
-system roles. A user with one of the six system roles may hold one or more of
+system roles. A user with one of the seven system roles may hold one or more of
 these relationships on different records.
 
 #### Principal Investigator / Chu nhiem de tai
@@ -107,8 +117,8 @@ these relationships on different records.
 
 ### Record-Scoped Participation And Assignment Roles
 
-The six canonical account roles are `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`,
-`SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
+The seven canonical account roles are `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`,
+`SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`,
 `RESEARCHER_INTERNAL_USER`, and `EXTERNAL_RESEARCHER_USER`. Scientific work roles such
 as `PROPOSAL_PI`, `TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer,
 council chair, council secretary, council member, and ethics reviewer must be
@@ -138,7 +148,7 @@ Common record-scoped roles:
 
 The detailed matrices below retain PI, topic-team, and reviewer columns as
 compact record-context shorthand. Apply this overlay to every row in addition
-to the six account-level system roles:
+to the seven account-level system roles:
 
 | Capability | `EXTERNAL_RESEARCHER_USER` rule |
 | --- | --- |
@@ -256,15 +266,15 @@ column; it cannot satisfy the Staff administrative grant. A revoked officer with
 another valid relationship retains only that relationship's allowed access.
 Independent intake, profile and other-domain actions retain their existing exact
 capability/scope checks and grant no proposal/project visibility. Head does not
-inherit the Staff column; apply this explicit Head/Staff matrix:
+inherit the Staff column; Deputy never inherits Director decision cells. Apply this Head/Staff matrix:
 
 | Capability | `SCIENTIFIC_MANAGEMENT_HEAD` | `SCIENTIFIC_MANAGEMENT_STAFF` |
 | --- | --- | --- |
 | Proposal/project list, detail, search | All within authorized Scientific Management scope, with disclosure/conflict limits | Management view only for own active officer assignments; other reads via independent legitimate relationships |
 | Responsible officer / unassigned state | See current responsible Staff or unassigned; filter/group by officer | Own management responsibility only; no unassigned queue or other Staff workload through role alone |
 | Workload, status, deadlines, counts/facets, dashboard, reports/export | Authorized-scope aggregates, same record filters for drill-down/export | Management aggregates only for own assignments; participation/review queues retain their own access basis |
-| Assign/reassign/revoke primary officer | Requires an explicitly decided capability; role alone does not grant it (baseline §2.1) | Same; no implicit self-assignment or assignment of other officers |
-| Completeness, reviewer assignment, consolidation, project administration | Only if a specific operational capability is approved; oversight alone is insufficient | Existing action plus exact effective officer assignment, scope, state and no conflict |
+| Assign/reassign/revoke primary officer | Head capability plus scope, current context and no conflict | Deny; no self-assignment or assignment of other officers |
+| Completeness, reviewer assignment, consolidation, project administration | Read Staff summaries and submit eligible completed packages; no routine reviewer assignment/consolidation | Existing action plus exact effective officer assignment, scope, state and no conflict |
 | Final approve/reject | Deny from Head role; reserved to leadership | Deny from Staff role; reserved to leadership |
 | Notifications, files and workflow/business history | Re-authorize source record and disclosure for every surface | Same; officer revocation ends management access immediately, independent participation remains |
 
@@ -329,11 +339,11 @@ surfaces (including files and workflow/business history).
 | Review proposal completeness | None | Review | Read scoped | Read own | Read if participating | None | Organization/unit scope | Submitted, resubmitted; once per current submitted version | Yes when state changes | FR15, Story 3.1 |
 | Request supplement | None | Submit request | Read scoped | Read own request | Read if participating | None | Organization/unit scope | Submitted, needs supplement; due date is a whole calendar day | Yes | FR15, Story 3.1 |
 | Respond to supplement request | None | Read scoped | Read scoped | Update/Submit own | None | None | Own proposal scope | Needs supplement | Yes | FR16, Story 3.1 |
-| Assign reviewer or committee member | None | Assign with conflict/exclusivity check | Read scoped | None | None | Read assigned after assignment | Organization/unit scope plus source-record/evaluation-context compatibility and multiplicity | Submitted, resubmitted, under review | Yes | FR17, FR67a, Story 3.2 |
-| Change reviewer assignment | None | Revoke/end then assign with conflict/exclusivity check | Read scoped | None | None | Read assigned after assignment | Same owning mutation and non-overlapping interval rules as initial assignment | Under review | Yes | FR17, FR67a, Story 3.2 |
-| Access assigned review package | None | Read scoped | Read scoped | None | None | Read assigned | Reviewer assignment scope | Under review | No | FR18, Story 3.2 |
-| Submit score/comment/recommendation | None | Read/Review | Read scoped | None | None | Review/Submit assigned | Reviewer assignment scope | Under review | Yes | FR18, Story 3.3 |
-| Consolidate evaluation outcome | None | Review/Update | Read scoped | None | None | None | Organization/unit scope | Under review, ready for approval | Yes | FR19, Story 3.4 |
+| Assign reviewer or committee member | None | Assigned officer: assign with conflict/exclusivity check | Operational counts/status only | None | None | Read assigned after assignment | Organization/unit scope plus source-record/evaluation-context compatibility and multiplicity | Submitted, resubmitted, under review | Yes | FR17, FR67a, Story 3.2 |
+| Change reviewer assignment | None | Assigned officer: revoke/end then assign with conflict/exclusivity check | Operational counts/status only | None | None | Read assigned after assignment | Same owning mutation and non-overlapping interval rules as initial assignment | Under review | Yes | FR17, FR67a, Story 3.2 |
+| Access assigned review package | None | Only through independent reviewer assignment | Only through independent reviewer assignment | None | None | Read assigned | Reviewer assignment scope | Under review | No | FR18, Story 3.2 |
+| Submit score/comment/recommendation | None | Only through independent reviewer assignment | Only through independent reviewer assignment | None | None | Review/Submit assigned | Reviewer assignment scope | Under review | Yes | FR18, Story 3.3 |
+| Consolidate evaluation outcome | None | Assigned officer: review/update without conflict | Operational counts/status; decision package only after routing | None | None | None | Organization/unit scope | Under review, ready for approval | Yes | FR19, Story 3.4 |
 | View evaluation output before decision | None | Read scoped | Read authority scoped | None unless policy allows result view | None unless participating view is allowed | Read own submitted review | Approval authority scope, reviewer assignment scope | Ready for approval | No | FR20, Story 3.5 |
 | Approve/reject proposal | None | None | Approve/Reject with conflict check | Read result | Read result if participating | None | Approval authority scope, conflict policy scope | Ready for approval | Yes | FR21, FR22, FR67a, Story 3.5 |
 
@@ -528,7 +538,7 @@ Researcher profile pages never host these proposal workflow sections.
 - Permission checks should return a fail-closed result when context is missing or
   ambiguous.
 - Legacy roles removed: ADM, LD, VT, TBP, CB, HD, BC. These are replaced by the
-  six canonical system roles in section 2; PI, member, secretary, reviewer,
+  seven canonical system roles in section 2; PI, member, secretary, reviewer,
   council, ethics, and task roles remain record-scoped relationships.
 
 ## User Account assignment contract
@@ -591,3 +601,21 @@ credential delivery, migration compatibility and history retention.
 | Normal features before mandatory change | Deny | Deny | Deny |
 
 These profile permissions do not widen any business-record permission in this matrix.
+
+### Finalized implementation scope — 2026-09-21
+
+The current change implements this model on the existing proposal, intake, researcher-profile,
+file and evaluation features. Approved projects, council-establishment/ethics lifecycles,
+institutional dashboards, general search/report/export and notification/My Work backends
+remain planned where no operational source exists. `PROJECT_MANAGEMENT_OFFICER` is a
+contract relationship, not a persisted orphan assignment. Dashboard showcase data is not
+an institutional report or proof of authorization. Future source domains must apply the
+same current scope, relationship, conflict and disclosure checks before aggregates or drill-down.
+
+Director and Deputy Director require institutional research dashboard views of available
+proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
+funding and management workload. Only Director gets eligible decision queues. Head gets
+responsible-officer/unassigned filters and workload; Staff sees assigned management records.
+Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,
+used and remaining project funding and utilization are unavailable until their source exists;
+never infer expenditure or add ledgers, payments, banking, invoices or ERP integration.

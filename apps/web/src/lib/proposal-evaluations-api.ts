@@ -120,9 +120,9 @@ export type ReviewProgressCounts = {
   activeAssignmentCount: number;
   submittedCount: number;
   pendingCount: number;
-  pendingReviewers: Array<{ assignmentId: string; reviewerUserId: string; reviewerDisplayName: string }>;
+  pendingReviewers?: Array<{ assignmentId: string; reviewerUserId: string; reviewerDisplayName: string }>;
   allReviewsSubmitted: boolean;
-  averageTotalScore: number | null;
+  averageTotalScore?: number | null;
   maxTotalScore: number;
 };
 
@@ -132,8 +132,10 @@ export type ProposalReviewProgress = ReviewProgressCounts & {
   proposalStatusLabel: string;
   assignments: ProposalReviewAssignment[];
   reviews: SubmittedProposalReview[];
-  evaluationSummary: ProposalEvaluationSummary | null;
+  evaluationSummary?: ProposalEvaluationSummary | null;
+  reviewDeadlines?: Array<{ role: string; status: string; dueDate: string | null }>;
   recommendations: ReviewRecommendationOption[];
+  disclosure?: "FULL" | "OVERSIGHT_REDACTED";
 };
 
 export type ProposalDecisionRecord = {
@@ -344,11 +346,18 @@ export async function loadProposalReviewProgress(proposalId: string) {
 
 export async function saveProposalEvaluationSummary(
   proposalId: string,
-  input: { summary: string; recommendation: string; markReady: boolean }
+  input: { summary: string; recommendation: string; markReady: boolean; contextVersion: ViewerAuthorizationV1["contextVersion"] }
 ) {
   return requestJson<{ evaluationSummary: ProposalEvaluationSummary; proposalStatus: string }>(
     `/research-proposals/${proposalId}/evaluation-summary`,
     { method: "PUT", body: JSON.stringify(input) }
+  );
+}
+
+export async function submitCompletedProposalPackage(proposalId: string, contextVersion: ViewerAuthorizationV1["contextVersion"]) {
+  return requestJson<{ evaluationSummary: ProposalEvaluationSummary | null; proposalStatus: string }>(
+    `/research-proposals/${proposalId}/evaluation-summary/submit`,
+    { method: "POST", body: JSON.stringify({ contextVersion }) }
   );
 }
 
@@ -359,10 +368,10 @@ export async function loadProposalDecisionPackage(proposalId: string) {
   return response.decisionPackage;
 }
 
-export async function decideProposal(proposalId: string, decision: "approve" | "reject", note: string) {
+export async function decideProposal(proposalId: string, decision: "approve" | "reject", note: string, contextVersion: ViewerAuthorizationV1["contextVersion"]) {
   return requestJson<{ decision: ProposalDecisionRecord; proposalStatus: string; proposalStatusLabel: string }>(
     `/research-proposals/${proposalId}/${decision}`,
-    { method: "POST", body: JSON.stringify({ note }) }
+    { method: "POST", body: JSON.stringify({ note, contextVersion }) }
   );
 }
 

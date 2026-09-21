@@ -1,12 +1,14 @@
 import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
+import { readTransactionClockV1 } from "../permissions/authorization-v1.service.js";
+import { runProposalMutation } from "../proposals-shared/proposal-mutation.js";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
+import { isScientificManagementHead, isScientificManagementStaff } from "../proposals-shared/proposal-access.js";
 import {
   getRecommendationLabel,
-  resolveProposalReviewAccess,
   REVIEW_ASSIGNMENT_STATUS,
   REVIEW_MAX_TOTAL_SCORE,
   REVIEW_RECOMMENDATIONS,
@@ -17,6 +19,8 @@ import {
 import { CONSOLIDATABLE_STATUSES, isWorkflowVisibleStatus, PROPOSAL_STATUS, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import {
   assertProposalStatus,
+  assertEvaluationReadScope,
+  assertScientificManagementHeadScope,
   assertScientificManagementScope,
   findEvaluationProposal,
   resolveActorConflict,
@@ -50,27 +54,57 @@ export class ProposalEvaluationSummaryService {
     private readonly reviewAccess: ProposalReviewAccessService
   ) {}
 
+  private transactional = false;
+
+  private mutate<T>(actor: SafeUserContext, proposalId: string, context: unknown, work: (service: ProposalEvaluationSummaryService, currentActor: SafeUserContext) => Promise<T>) {
+    return runProposalMutation(this.prisma, actor, proposalId, context, async (tx, currentActor) => {
+      const service = new ProposalEvaluationSummaryService(
+        tx,
+        new AuditLogService(tx),
+        new ProposalReviewAssignmentsService(tx, new AuditLogService(tx), new ProposalParticipationService(tx), new ProposalReviewAccessService(tx)),
+        new ProposalReviewsService(tx, new AuditLogService(tx), new ProposalReviewAccessService(tx), new ProposalParticipationService(tx)),
+        new ProposalParticipationService(tx),
+        new ProposalReviewAccessService(tx)
+      );
+      service.transactional = true;
+      const result = await work(service, currentActor);
+      await tx.researchProposal.update({ where: { id: proposalId }, data: { authorizationContextUpdatedAt: new Date() } });
+      return result;
+    });
+  }
+
   /** Operational progress is for scoped staff without a same-proposal review duty. */
   async getReviewProgress(actor: SafeUserContext, proposalId: string) {
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    assertScientificManagementScope(actor, proposal);
+    await assertEvaluationReadScope(this.prisma, actor, proposal);
     if (!isWorkflowVisibleStatus(proposal.status)) throw new ForbiddenException();
-    if ((await this.participation.evaluateConflict(actor.id, proposalId)).conflicted) throw new BadRequestException({ message: "Không được xem dữ liệu phản biện của hồ sơ mình tham gia." });
-
+    const conflict = await resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId);
+    if (isScientificManagementStaff(actor) && conflict.conflicted) throw new ForbiddenException({ message: conflict.viewerMessage });
     const assignmentRecords = await this.assignments.findAssignments(proposalId);
-    if (resolveProposalReviewAccess(assignmentRecords.filter((assignment) => assignment.reviewerUserId === actor.id)).isAssignedReviewer) throw new ForbiddenException();
     const reviewRecords = await this.assignments.findReviews(proposalId);
     const summary = await this.findSummary(proposalId);
-
+    const progress = this.summarizeProgress(assignmentRecords, reviewRecords);
+    if (!isScientificManagementStaff(actor)) {
+      const { pendingReviewers, averageTotalScore, ...operationalProgress } = progress;
+      return {
+        proposalId,
+        proposalStatus: proposal.status,
+        proposalStatusLabel: PROPOSAL_STATUS_LABELS[proposal.status] ?? proposal.status,
+        ...operationalProgress,
+        assignments: [],
+        reviews: [],
+        ...(isScientificManagementHead(actor) && !conflict.conflicted ? { evaluationSummary: this.toSummaryResponse(summary) } : {}),
+        reviewDeadlines: assignmentRecords.filter((assignment) => ["assigned", "completed"].includes(assignment.status)).map((assignment) => ({ role: assignment.assignmentRole, status: assignment.status, dueDate: assignment.dueDate?.toISOString() ?? null })),
+        recommendations: []
+      };
+    }
     return {
       proposalId,
       proposalStatus: proposal.status,
       proposalStatusLabel: PROPOSAL_STATUS_LABELS[proposal.status] ?? proposal.status,
-      ...this.summarizeProgress(assignmentRecords, reviewRecords),
+      ...progress,
       assignments: assignmentRecords.map((assignment) => this.assignments.toAssignmentResponse(assignment, reviewRecords)),
-      reviews: reviewRecords
-        .filter((review) => review.status === REVIEW_STATUS.submitted)
-        .map((review) => this.reviews.toSubmittedReviewResponse(review)),
+      reviews: reviewRecords.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => this.reviews.toSubmittedReviewResponse(review)),
       evaluationSummary: this.toSummaryResponse(summary),
       recommendations: REVIEW_RECOMMENDATIONS.map((code) => ({ code, label: REVIEW_RECOMMENDATION_LABELS[code] }))
     };
@@ -81,9 +115,10 @@ export class ProposalEvaluationSummaryService {
    * explicit `markReady` flag, so a draft consolidation cannot drift into an approval-ready state
    * as a side effect of an ordinary save.
    */
-  async saveEvaluationSummary(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>) {
+  async saveEvaluationSummary(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>): Promise<any> {
+    if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, currentActor) => service.saveEvaluationSummary(currentActor, proposalId, input));
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    assertScientificManagementScope(actor, proposal);
+    await assertScientificManagementScope(this.prisma, actor, proposal);
     assertProposalStatus(proposal, CONSOLIDATABLE_STATUSES, "Chỉ hồ sơ đang đánh giá hoặc chờ phê duyệt mới được tổng hợp kết quả.");
 
     // AC-ST-3.4-03 read through the conflict lens: a staff member who participates in the proposal
@@ -217,6 +252,47 @@ export class ProposalEvaluationSummaryService {
       evaluationSummary: this.toSummaryResponse(saved),
       proposalStatus: markReady ? PROPOSAL_STATUS.readyForApproval : proposal.status
     };
+  }
+
+  /** Head review gate: submit an already-completed Staff summary without editing its content. */
+  async submitCompletedPackage(actor: SafeUserContext, proposalId: string, input: Record<string, unknown> = {}): Promise<any> {
+    if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, currentActor) => service.submitCompletedPackage(currentActor, proposalId, input));
+
+    const proposal = await findEvaluationProposal(this.prisma, proposalId);
+    assertScientificManagementHeadScope(actor, proposal);
+    assertProposalStatus(proposal, [PROPOSAL_STATUS.underReview], "Chỉ hồ sơ đang đánh giá mới được trình gói hoàn tất.");
+
+    const conflict = await resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId);
+    if (conflict.conflicted) throw new BadRequestException({ message: conflict.viewerMessage, reasonCode: conflict.reasonCode });
+
+    const existing = await this.findSummary(proposalId);
+    if (!existing || existing.status !== EVALUATION_SUMMARY_STATUS.draft) {
+      throw new BadRequestException({ message: "Chưa có bản tổng hợp của chuyên viên để trình lãnh đạo." });
+    }
+    const progress = this.summarizeProgress(await this.assignments.findAssignments(proposalId), await this.assignments.findReviews(proposalId));
+    if (!progress.allReviewsSubmitted) {
+      throw new BadRequestException({ message: "Gói đánh giá chưa hoàn tất, chưa thể trình lãnh đạo.", pendingCount: progress.pendingCount });
+    }
+
+    const now = await readTransactionClockV1(this.prisma);
+    const saved = (await this.prisma.$transaction(async (tx) => {
+      const currentSummary = await tx.proposalEvaluationSummary.findUnique({ where: { id: existing.id } });
+      if (!currentSummary || currentSummary.status !== EVALUATION_SUMMARY_STATUS.draft) throw new BadRequestException({ message: "Bản tổng hợp đã được thay đổi. Vui lòng tải lại hồ sơ." });
+      const currentProgress = this.summarizeProgress(
+        await tx.proposalReviewAssignment.findMany({ where: { proposalId } }) as ReviewAssignmentRecord[],
+        await tx.proposalReview.findMany({ where: { proposalId } }) as ProposalReviewRecord[]
+      );
+      if (!currentProgress.allReviewsSubmitted) throw new BadRequestException({ message: "Phân công đã thay đổi: gói đánh giá chưa hoàn tất." });
+      const statusUpdate = await tx.researchProposal.updateMany({ where: { id: proposalId, status: PROPOSAL_STATUS.underReview }, data: { status: PROPOSAL_STATUS.readyForApproval, authorizationRelationshipVersion: { increment: 1 }, authorizationDelegationVersion: { increment: 1 }, authorizationContextUpdatedAt: now } as never });
+      if (statusUpdate.count !== 1) throw new BadRequestException({ message: "Trạng thái hồ sơ vừa thay đổi. Vui lòng tải lại hồ sơ." });
+      const record = (await tx.proposalEvaluationSummary.update({ where: { id: existing.id }, data: { status: EVALUATION_SUMMARY_STATUS.readyForApproval, updatedById: actor.id, markedReadyAt: now } as never, include: { updatedBy: { select: { displayName: true } } } })) as EvaluationSummaryRecord;
+      await tx.proposalReviewAssignment.updateMany({ where: { proposalId, status: REVIEW_ASSIGNMENT_STATUS.assigned }, data: { status: REVIEW_ASSIGNMENT_STATUS.completed, completedAt: now } as never });
+      await tx.proposalSubmissionEvent.create({ data: { proposalId, actorId: actor.id, fromStatus: PROPOSAL_STATUS.underReview, toStatus: PROPOSAL_STATUS.readyForApproval, submittedAt: now, note: "Trưởng phòng kiểm tra và trình gói đánh giá đã hoàn tất tới lãnh đạo" } as never });
+      await tx.auditLog.create({ data: { action: "submit-evaluation-package", result: "success", actorId: actor.id, targetEntity: "proposal-evaluation-summary", targetEntityId: record.id, username: actor.username, reason: JSON.stringify({ proposalId, sourceSummaryUpdatedById: existing.updatedById, submittedReviews: currentProgress.submittedCount, fromStatus: PROPOSAL_STATUS.underReview, toStatus: PROPOSAL_STATUS.readyForApproval }) } });
+      return record;
+    })) as unknown as EvaluationSummaryRecord;
+
+    return { evaluationSummary: this.toSummaryResponse(saved), proposalStatus: PROPOSAL_STATUS.readyForApproval };
   }
 
   async findSummary(proposalId: string) {

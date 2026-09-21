@@ -5,6 +5,10 @@ import {
   createResearchProposalDraftPipe,
   requestProposalSupplementPipe,
   proposalMutationPipe,
+  assignProposalManagementOfficerPipe,
+  revokeProposalManagementOfficerPipe,
+  type AssignProposalManagementOfficerDto,
+  type RevokeProposalManagementOfficerDto,
   updateResearchProposalDraftPipe,
   type CreateResearchProposalDraftDto,
   type RequestProposalSupplementDto,
@@ -79,5 +83,28 @@ export class ResearchProposalsController {
   @Get(":id/history")
   async listHistory(@Req() request: RequestWithCurrentUser, @Param("id") id: string) {
     return { history: await this.proposalsService.listHistory(request.currentUser!, id) };
+  }
+
+  @Get(":id/management-officer-candidates")
+  async managementOfficerCandidates(@Req() request: RequestWithCurrentUser, @Param("id") id: string) {
+    return { users: await this.proposalsService.listManagementOfficerCandidates(request.currentUser!, id) };
+  }
+
+  @Post(":id/management-officer")
+  async assignManagementOfficer(
+    @Req() request: RequestWithCurrentUser,
+    @Param("id") id: string,
+    @Body(assignProposalManagementOfficerPipe) body: AssignProposalManagementOfficerDto
+  ) {
+    return { managementOfficer: await this.proposalsService.assignManagementOfficer(request.currentUser!, id, body) };
+  }
+
+  @Post(":id/management-officer/revoke")
+  async revokeManagementOfficer(
+    @Req() request: RequestWithCurrentUser,
+    @Param("id") id: string,
+    @Body(revokeProposalManagementOfficerPipe) body: RevokeProposalManagementOfficerDto
+  ) {
+    return { managementOfficer: await this.proposalsService.revokeManagementOfficer(request.currentUser!, id, body) };
   }
 }

@@ -1,6 +1,6 @@
 # Epic 5: Kiểm tra, đánh giá và phê duyệt đề xuất
 
-**Authorization refinement — 2026-09-21:** Stories 5.1/5.3/5.5 require current `PROPOSAL_MANAGEMENT_OFFICER` plus scope; participation/review alone grants no administrative action. Preserve Head oversight, leadership-only final decisions and conflict checks at relationship changes and actions. Baseline §2.1 owns officer-grant/Head-action and migration questions before coding; this note does not mark implementation complete.
+**Authorization refinement — 2026-09-21:** Stories 5.1/5.3/5.5 require current `PROPOSAL_MANAGEMENT_OFFICER` plus scope; participation/review alone grants no administrative action. Preserve Head oversight, leadership-only final decisions and conflict checks at relationship changes and actions. Finalized baseline §2.1 grants Head officer management and eligible package submission. Deputy has researcher eligibility plus read-only institutional oversight; Director alone has eligible final decisions. Proposal implementation is current; project/council/dashboard/reporting/notification backends absent from the repository remain backlog.
 
 - **Epic status:** `in-progress` (aligned with `../sprint-status.yaml`)
 - **Canonical source:** [epics.md](../../epics.md)
@@ -34,3 +34,13 @@ profile-only candidate policy in older assignment specs. Keep those historical
 artifacts unchanged. The implementation plan records verified source gaps and the
 end-to-end acceptance gate; code presence is not acceptance evidence. Promote
 tracker statuses only after the relevant implementation and verification.
+
+## Finalized leadership authorization impact
+
+`RESEARCH_OVERSIGHT_AUTHORITY` combines internal researcher capabilities through record
+relationships with explicit-scope institutional oversight. It grants no final proposal,
+council-establishment, funding or acceptance decision. `LEADERSHIP_APPROVAL_AUTHORITY`
+has oversight plus eligible conflict-free final decisions. All surfaces must preserve
+disclosure, source authorization and active officer restrictions; no broad Staff queues.
+Project/council establishment, notifications/My Work and institutional dashboards/reports
+remain planned where their owning backend is absent. Funding uses available metadata only.

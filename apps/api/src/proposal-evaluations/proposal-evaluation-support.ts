@@ -1,7 +1,9 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
+import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
+import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import type { PrismaService } from "../infrastructure/prisma/prisma.service.js";
-import { assertHasOrganizationScope, isLeadership, isScientificManagement } from "../proposals-shared/proposal-access.js";
+import { assertHasOrganizationScope, isLeadership, isResearchOversightAuthority, isScientificManagementHead, isScientificManagementStaff } from "../proposals-shared/proposal-access.js";
 import type { ProposalConflictDecision } from "../proposals-shared/proposal-participation.js";
 import { isWorkflowVisibleStatus, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 
@@ -95,12 +97,27 @@ export async function findEvaluationProposal(prisma: PrismaService, proposalId: 
  * so an in-scope check runs on every consolidation and assignment action (AC-ST-3.2-01,
  * AC-ST-3.4-03) rather than only on the first one.
  */
-export function assertScientificManagementScope(actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
-  if (!actor || !isScientificManagement(actor)) {
-    throw new ForbiddenException({ message: "Chỉ chuyên viên quản lý khoa học được thực hiện thao tác này." });
+export async function assertScientificManagementScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
+  if (!actor || !isScientificManagementStaff(actor)) {
+    throw new ForbiddenException({ message: "Chỉ chuyên viên quản lý khoa học được phân công cho hồ sơ mới được thực hiện thao tác này." });
   }
 
   assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
+  const current = await prisma.proposalManagementOfficer.findFirst({
+    where: {
+      proposalId: proposal.id,
+      officerUserId: actor.id,
+      status: "ACTIVE",
+      effectiveFrom: { lte: new Date() },
+      OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: new Date() } }]
+    },
+    select: { id: true }
+  });
+  if (!current) {
+    throw new ForbiddenException({ message: "Bạn không còn là chuyên viên phụ trách hồ sơ này." });
+  }
+  const conflict = await resolveActorConflict({ participation: new ProposalParticipationService(prisma), reviewAccess: new ProposalReviewAccessService(prisma) }, actor.id, proposal.id);
+  if (conflict.conflicted) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: conflict.viewerMessage });
   return actor;
 }
 
@@ -109,11 +126,33 @@ export function assertScientificManagementScope(actor: SafeUserContext | undefin
  *
  * Staff read inside their organization scope only — the read side has to be scoped as tightly as
  * the write side, or out-of-scope staff could read every reviewer's name and score for a unit they
- * do not operate. Leadership reads without an organization scope because approval authority is
- * academy-wide. Section 7.4 of the permission matrix gives the system administrator `None` for
+ * do not operate. Leadership reads require an explicit organization scope. Section 7.4 of the permission matrix gives the system administrator `None` for
  * these actions, so an admin role is not accepted here.
  */
-export function assertCanReadEvaluation(actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
+export function assertScientificManagementHeadScope(actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
+  if (!actor || !isScientificManagementHead(actor)) {
+    throw new ForbiddenException({ message: "Chỉ Trưởng phòng quản lý khoa học được xem tổng hợp vận hành của hồ sơ." });
+  }
+  assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
+  return actor;
+}
+
+/** Shared read gate for evaluation progress. Staff require the active officer relationship;
+ * Head, Deputy and Director require an explicit organization scope. */
+export async function assertEvaluationReadScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
+  if (!actor) throw new ForbiddenException({ message: "Không có quyền xem thông tin đánh giá của hồ sơ này." });
+  if (isLeadership(actor) || isScientificManagementHead(actor) || isResearchOversightAuthority(actor)) {
+    assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
+    return actor;
+  }
+  if (isScientificManagementStaff(actor)) {
+    await assertScientificManagementScope(prisma, actor, proposal);
+    return actor;
+  }
+  throw new ForbiddenException({ message: "Không có quyền xem thông tin đánh giá của hồ sơ này." });
+}
+
+export async function assertCanReadEvaluation(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
   // A draft has no evaluation to read, and `canReadProposal` keeps drafts private to their owner.
   // Gating here too stops the evaluation read models from becoming a side channel that reports a
   // draft's existence and attachment count to a viewer the proposal read itself would refuse.
@@ -121,21 +160,15 @@ export function assertCanReadEvaluation(actor: SafeUserContext | undefined, prop
     throw new ForbiddenException({ message: "Không có quyền xem thông tin đánh giá của hồ sơ này." });
   }
 
-  if (actor && isLeadership(actor)) {
-    return actor;
-  }
-
-  if (actor && isScientificManagement(actor)) {
-    assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
-    return actor;
-  }
-
-  throw new ForbiddenException({ message: "Không có quyền xem thông tin đánh giá của hồ sơ này." });
+  return assertEvaluationReadScope(prisma, actor, proposal);
 }
 
 type ConflictResolvers = {
   participation: { evaluateConflict(userId: string | undefined | null, proposalId: string): Promise<ProposalConflictDecision> };
-  reviewAccess: { resolveForProposal(userId: string | undefined, proposalId: string): Promise<{ isAssignedReviewer: boolean }> };
+  reviewAccess: {
+    resolveForProposal(userId: string | undefined, proposalId: string): Promise<{ isAssignedReviewer: boolean }>;
+    resolveConflictForProposal?(userId: string | undefined, proposalId: string): Promise<{ isAssignedReviewer: boolean; hasPersistedReview: boolean; unresolved: boolean }>;
+  };
 };
 
 const REVIEWER_CONFLICT: ProposalConflictDecision = {
@@ -144,6 +177,14 @@ const REVIEWER_CONFLICT: ProposalConflictDecision = {
   reasonCode: "participation",
   reason: "Người dùng được phân công đánh giá hồ sơ này.",
   viewerMessage: "Bạn được phân công đánh giá hồ sơ này nên không thể tự quyết định hoặc tổng hợp kết quả."
+};
+
+const UNRESOLVED_CONFLICT: ProposalConflictDecision = {
+  conflicted: true,
+  role: "unknown",
+  reasonCode: "unresolved",
+  reason: "Không xác định được lịch sử phản biện của người dùng với hồ sơ này.",
+  viewerMessage: "Không xác định được lịch sử phản biện của bạn nên thao tác bị chặn để bảo đảm an toàn."
 };
 
 /**
@@ -162,8 +203,11 @@ export async function resolveActorConflict(
     return participationConflict;
   }
 
-  const access = await resolvers.reviewAccess.resolveForProposal(actorId, proposalId);
-  return access.isAssignedReviewer ? REVIEWER_CONFLICT : participationConflict;
+  const access = resolvers.reviewAccess.resolveConflictForProposal
+    ? await resolvers.reviewAccess.resolveConflictForProposal(actorId, proposalId)
+    : { isAssignedReviewer: false, hasPersistedReview: false, unresolved: true };
+  if (access.unresolved) return UNRESOLVED_CONFLICT;
+  return access.isAssignedReviewer || access.hasPersistedReview ? REVIEWER_CONFLICT : participationConflict;
 }
 
 /**

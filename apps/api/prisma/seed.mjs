@@ -43,7 +43,7 @@ const users = [
       "scrypt:user-staff:ea925bf5f31fe306cb863a45afec44a4e67d84423e431cb93de5af91425c6723cb66ac59963afe1f47ad86d3c16aec95f73bffc74c22d75b032fd1093f7a71d5",
     displayName: "TS. Nguyễn Minh Phương",
     status: "active",
-    systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
+    systemRole: "SCIENTIFIC_MANAGEMENT_HEAD",
     unit: "Phòng KHQS"
   },
   {
@@ -145,6 +145,16 @@ const users = [
     status: "active",
     systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
     unit: "Phòng KHQS"
+  },
+  {
+    id: "user-oversight-vndinh",
+    username: "vndinh",
+    passwordHash:
+      "scrypt:user-oversight-vndinh:160c990dff95c8879c814e0cfebadd0ab04305c0442bdff044342674d7ef241c364e1457a75a02617d6f303aec6e1a01c26d97b2baaa7522e14b9ef8874cbd7f",
+    displayName: "Thiếu tướng PGS. TS. Vũ Nhất Định",
+    status: "active",
+    systemRole: "RESEARCH_OVERSIGHT_AUTHORITY",
+    unit: "Ban Giám Đốc"
   }
 ];
 
@@ -169,9 +179,10 @@ const organizationUnits = [
 const additionalOrganizationScopes = {
   "user-admin": ["org-bgq", "org-khqs", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
   "user-leadership": ["org-hvqy", "org-khti", "org-khqs", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
-  "user-staff": ["org-khti", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
   "user-staff-hdtien1": ["org-khti", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
-  "user-staff-hdtien2": ["org-khti", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"]
+  "user-staff-hdtien2": ["org-khti", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
+  "user-staff": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-khqs").map(([id]) => id),
+  "user-oversight-vndinh": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-bgq").map(([id]) => id)
 };
 
 for (const [id, code, name] of organizationUnits) {
@@ -224,6 +235,43 @@ for (const user of users) {
       create: { userId: user.id, organizationUnitId, isPrimary: false }
     });
   }
+}
+
+const oversightProfile = await prisma.researcherProfile.upsert({
+  where: { id: "profile-oversight-vndinh" },
+  update: {
+    managementOrganizationUnitId: "org-bgq",
+    linkedUserId: "user-oversight-vndinh",
+    profileType: "INTERNAL",
+    fullName: "Thiếu tướng PGS. TS. Vũ Nhất Định",
+    fullNameKey: "thieu tuong pgs ts vu nhat dinh",
+    militaryRank: "Thiếu tướng",
+    title: "PGS. TS.",
+    position: "Phó Giám đốc phụ trách NCKH",
+    status: "ACTIVE",
+    updatedById: "user-admin"
+  },
+  create: {
+    id: "profile-oversight-vndinh",
+    managementOrganizationUnitId: "org-bgq",
+    linkedUserId: "user-oversight-vndinh",
+    profileType: "INTERNAL",
+    fullName: "Thiếu tướng PGS. TS. Vũ Nhất Định",
+    fullNameKey: "thieu tuong pgs ts vu nhat dinh",
+    militaryRank: "Thiếu tướng",
+    title: "PGS. TS.",
+    position: "Phó Giám đốc phụ trách NCKH",
+    status: "ACTIVE",
+    createdById: "user-admin",
+    updatedById: "user-admin"
+  }
+});
+
+const existingOversightLink = await prisma.researcherProfileAccountLink.findFirst({ where: { researcherProfileId: oversightProfile.id, userId: "user-oversight-vndinh" } });
+if (existingOversightLink) {
+  await prisma.researcherProfileAccountLink.update({ where: { id: existingOversightLink.id }, data: { status: "ACTIVE", effectiveUntil: null, reason: "seed-oversight-account" } });
+} else {
+  await prisma.researcherProfileAccountLink.create({ data: { researcherProfileId: oversightProfile.id, userId: "user-oversight-vndinh", status: "ACTIVE", effectiveFrom: new Date(), reason: "seed-oversight-account", createdById: "user-admin" } });
 }
 
 const catalogs = [

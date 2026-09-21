@@ -10,7 +10,7 @@ import {
   assertCanManageIntakePeriods,
   intakeAppliesToUser,
   isIntakeOpenForSubmission,
-  isResearcherInternalUser,
+  isInternalResearcherEligible,
   isScientificManagement,
 } from "../proposals-shared/proposal-access.js";
 import type { IntakeStatus } from "../proposals-shared/proposal-types.js";
@@ -125,7 +125,7 @@ export class ProposalIntakePeriodsService {
   }
 
   async options(actor: SafeUserContext) {
-    if (!isScientificManagement(actor) && !isResearcherInternalUser(actor)) throw new ForbiddenException();
+    if (!isScientificManagement(actor) && !isInternalResearcherEligible(actor)) throw new ForbiddenException();
     const ids = actor.organizationScopes.map((s) => s.id);
     return { canCreate: isScientificManagement(actor), organizationUnits: await this.prisma.organizationUnit.findMany({ where: { id: { in: ids }, status: "active" }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }) };
   }
@@ -138,7 +138,7 @@ export class ProposalIntakePeriodsService {
   }
 
   async listPeriods(actor: SafeUserContext, filters: Record<string, unknown> = {}) {
-    if (!isScientificManagement(actor) && !isResearcherInternalUser(actor)) {
+    if (!isScientificManagement(actor) && !isInternalResearcherEligible(actor)) {
       throw new ForbiddenException({ message: "Không có quyền xem đợt tiếp nhận." });
     }
 
@@ -154,7 +154,7 @@ export class ProposalIntakePeriodsService {
         .map((record) => this.toResponse(record, actor));
     }
 
-    if (isResearcherInternalUser(actor)) {
+    if (isInternalResearcherEligible(actor)) {
       return records
         .filter((record) => isIntakeOpenForSubmission(record) && intakeAppliesToUser(record, actor))
         .map((record) => this.toResponse(record, actor));
@@ -357,7 +357,7 @@ export class ProposalIntakePeriodsService {
   private toResponse(period: IntakePeriodRecord, actor: SafeUserContext) {
     return {
       contextVersion: period.updatedAt.toISOString(),
-      capabilities: { canEdit: isScientificManagement(actor) && period.status !== "closed", canOpen: isScientificManagement(actor) && period.status === "draft" && period.endsAt > new Date(), canClose: isScientificManagement(actor) && period.status === "open", canCreateProposal: isResearcherInternalUser(actor) && isIntakeOpenForSubmission(period) && intakeAppliesToUser(period, actor) },
+      capabilities: { canEdit: isScientificManagement(actor) && period.status !== "closed", canOpen: isScientificManagement(actor) && period.status === "draft" && period.endsAt > new Date(), canClose: isScientificManagement(actor) && period.status === "open", canCreateProposal: isInternalResearcherEligible(actor) && isIntakeOpenForSubmission(period) && intakeAppliesToUser(period, actor) },
       applicableOrganizationUnitIds: period.applicableOrganizationUnitIds?.length ? period.applicableOrganizationUnitIds : period.applicableOrganizationUnitId ? [period.applicableOrganizationUnitId] : [],
       id: period.id,
       code: period.code,

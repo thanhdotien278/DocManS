@@ -46,7 +46,7 @@ disclosure; unresolved context fails closed and important changes are audited.
   officer assignment. Head oversight does not grant leadership decisions or all
   operational actions. State, conflict and disclosure remain enforced; no tree inheritance.
 - Each account has one active role from `SYSTEM_ADMIN`,
-  `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
+  `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`,
   `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`. All PI, member,
   secretary, reviewer, council, ethics, and task authority remains record
   scoped.
@@ -61,9 +61,10 @@ Every Staff proposal/project check, assignment, consolidation, follow-up or admi
 operation requires the matching active management-officer relationship and explicit scope;
 participation/review access never supplies that authority. Independent intake/profile and
 other-domain capabilities retain their own scope and cannot widen proposal/project access.
-Head sees the authorized portfolio, responsible Staff and unassigned records; exact officer-
-grant authority and Head operational actions remain pre-coding decisions in baseline §2.1.
-This revision changes acceptance targets, not completed implementation evidence or status.
+Head sees the authorized portfolio, assigns/reassigns/revokes responsible Staff, reviews
+Staff summaries and submits eligible completed packages. Director has oversight and final
+decisions only when eligible and conflict-free. Deputy has internal researcher eligibility
+and read-only institutional oversight. Project and other absent backends remain planned.
 
 | Requirement | Owning existing stories |
 | --- | --- |
@@ -71,16 +72,16 @@ This revision changes acceptance targets, not completed implementation evidence 
 | FR6g: independent access basis, bidirectional/action-time conflict, surface parity | 1.7–1.9, 2.4, 3.1–3.5, 4–7, 10.5–10.8, 11.1–11.5, 12.1–12.5 |
 | FR45a: Head oversight, officer filters, unassigned and workload/status/deadlines | Dashboard delivery Epic 8, reporting delivery Epic 9; Stories 12.1–12.5 |
 
-No new approval workflow, system role beyond the requested Head/Staff split, or generic
-assignment abstraction is introduced. Decide legacy role mapping, existing-record assignment,
-Head operational authority and the existing Staff-PI mutation restriction before coding.
+The seven-role registry includes Head and Deputy Director. Proposal officer history is
+source-owned; no generic ACL is introduced. Existing records stay unassigned. Staff PI
+mutation eligibility is unchanged; Deputy gains internal researcher eligibility.
 
 ## Requirements Inventory
 
 ### Functional Requirements
 
 - FR1: System administrators can create, update, activate, deactivate, and lock user accounts.
-- FR2: System administrators can assign exactly one active account-level system role (`SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`) to a user; owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer permissions are assigned through record-scoped relationships or assignments instead of additional global roles.
+- FR2: System administrators can assign exactly one active account-level system role (`SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`) to a user; owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer permissions are assigned through record-scoped relationships or assignments instead of additional global roles.
 - FR3: System administrators can associate users with an organizational unit and other scope-defining organizational attributes.
 - FR4: The system can authenticate users and establish a role-aware session for authorized access.
 - FR4a: Authenticated users can change their own password, and authorized administrators can initiate a controlled password reset flow for internal users.
@@ -340,7 +341,7 @@ decomposition is retained below as a traceability source and is not removed.
 | Canonical epic | Existing backlog retained | Delivery intent |
 | --- | --- | --- |
 | 1. Foundation, authentication, app shell, navigation | Epic 1 stories 1.1-1.2, 1.5, 1.8 | Establish one authenticated responsive workspace and route boundary. |
-| 2. User, role, organization, catalog administration | Epic 1 stories 1.3-1.9; Epic 2 stories 2.1-2.6 | Keep account, six system roles, scope, researcher profiles, relationships, conflicts, and catalogs. |
+| 2. User, role, organization, catalog administration | Epic 1 stories 1.3-1.9; Epic 2 stories 2.1-2.6 | Keep account, seven system roles, scope, researcher profiles, relationships, conflicts, and catalogs. |
 | 3. Proposal / research topic management | Epic 4 stories 4.1-4.6 | Convert intake, draft, structured form, files, readiness, submit, and resubmit into UX-backed delivery slices. |
 | 4. Review, evaluation, aggregation, approval | Epic 5 stories 5.1-5.8 | Preserve supplement, reviewer assignment, evaluation, aggregation, decision, disclosure, and state controls. |
 | 5. Project tracking after approval | Epic 6 stories 6.1-6.10 | Preserve explicit project creation, milestones, reports, adjustment, acceptance, member scope, and final decision. |
@@ -365,7 +366,7 @@ unauthorized requests remain outside the protected data boundary.
 
 ### Primary users / roles
 
-Unauthenticated users; all six active system roles; record-scoped PI, member,
+Unauthenticated users; all seven active system roles; record-scoped PI, member,
 reviewer, secretary, and task assignee relationships.
 
 ### In scope
@@ -444,7 +445,7 @@ with no administrative authority; read-only users of catalog values.
 
 ### In scope
 
-Users, six system roles, units/scope, researcher profiles and account links,
+Users, seven system roles, units/scope, researcher profiles and account links,
 participation history, reviewer/team relationships, conflict preflight,
 catalogs, forms, checklists, score criteria, notification templates, and
 configuration.
@@ -479,7 +480,7 @@ Proposal create/submit/resubmit are PI-only; no proposal delegation is allowed.
 
 ### Acceptance criteria
 
-- An account has exactly one active system role from the six canonical values;
+- An account has exactly one active system role from the seven canonical values;
   invalid legacy ambiguity fails closed and is reported for migration.
 - An active `EXTERNAL_RESEARCHER_USER` can sign in and receive only explicitly
   related/assigned record capabilities; it cannot manage accounts, roles,
@@ -1484,7 +1485,7 @@ So that quyền toàn hệ thống không bị cộng dồn với vai trò nghi�
 
 **Given** một tài khoản được tạo hoặc cập nhật
 **When** quản trị viên gán vai trò hệ thống
-**Then** chỉ một trong sáu giá trị `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, `EXTERNAL_RESEARCHER_USER` được hoạt động
+**Then** chỉ một trong bảy giá trị `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, `EXTERNAL_RESEARCHER_USER` được hoạt động
 **And** persistence và service boundary đều ngăn nhiều vai trò hệ thống đồng thời.
 
 **Given** dữ liệu cũ chứa global PI, reviewer, council member hoặc nhiều role assignment
@@ -3934,7 +3935,7 @@ So that tôi sử dụng số liệu ngoài hệ thống mà vẫn đúng phạm
 source of truth for this feature, including API/data fields, authorization,
 credential delivery, migration compatibility and history retention.
 
-- Scoped SYSTEM_ADMIN and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
+- Scoped SYSTEM_ADMIN, SCIENTIFIC_MANAGEMENT_HEAD and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
   profiles independently of Accounts, including academic/contact information,
   position, military rank, expertise, publications and self-reported project
   history (title, role, Academy/institutional/Ministry/other level, dates, status,

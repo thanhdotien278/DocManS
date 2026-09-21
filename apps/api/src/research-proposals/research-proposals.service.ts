@@ -12,11 +12,12 @@ import {
   assertHasOrganizationScope,
   assertCanCreateProposalDraft,
   canReadProposal,
+  isInternalResearcherEligible,
   intakeAppliesToUser,
   isIntakeOpenForSubmission,
-  isScientificManagement,
   isSystemAdmin
 } from "../proposals-shared/proposal-access.js";
+import { isScientificManagementHead, isScientificManagementStaff } from "../proposals-shared/proposal-access.js";
 import {
   evaluateProposalConflict,
   getParticipationRoleLabel,
@@ -26,6 +27,7 @@ import {
 } from "../proposals-shared/proposal-participation.js";
 import { getAssignmentRoleLabel, type ProposalReviewAccess } from "../proposals-shared/proposal-review-access.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
+import { MANAGEMENT_OFFICER_STATUS, ProposalManagementOfficerService, type ProposalManagementOfficer, type ProposalManagementOfficerResolution } from "../proposals-shared/proposal-management-officer.service.js";
 import { PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import type { ProposalMemberPersistInput, ProposalMissingItem } from "../proposals-shared/proposal-types.js";
 import { ProposalParticipationService } from "./proposal-participation.service.js";
@@ -149,14 +151,15 @@ export class ResearchProposalsService {
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
     private readonly participation: ProposalParticipationService,
-    private readonly reviewAccess: ProposalReviewAccessService
+    private readonly reviewAccess: ProposalReviewAccessService,
+    private readonly managementOfficers: ProposalManagementOfficerService
   ) {}
 
   private transactional = false;
 
   private mutate<T>(actor: SafeUserContext, id: string | null, context: unknown, work: (service: ResearchProposalsService, currentActor: SafeUserContext) => Promise<T>): Promise<T> {
     return runProposalMutation(this.prisma, actor, id, context, async (tx, currentActor) => {
-      const service = new ResearchProposalsService(tx, new AuditLogService(tx), new ProposalParticipationService(tx), new ProposalReviewAccessService(tx));
+      const service = new ResearchProposalsService(tx, new AuditLogService(tx), new ProposalParticipationService(tx), new ProposalReviewAccessService(tx), new ProposalManagementOfficerService(tx));
       service.transactional = true;
       return work(service, currentActor);
     });
@@ -169,13 +172,14 @@ export class ResearchProposalsService {
       include: { owner: { select: { displayName: true } } }
     })) as ResearchProposalRecord[];
 
-    const [participationByProposal, reviewAccessByProposal, completenessEvents] = await Promise.all([
+    const [participationByProposal, reviewAccessByProposal, managementOfficerByProposal, completenessEvents] = await Promise.all([
       this.participation.resolveForProposals(actor?.id, records, asOf),
       this.reviewAccess.resolveForProposals(
         actor?.id,
         records.map((proposal) => proposal.id),
         asOf
       ),
+      this.managementOfficers.resolveForProposals(records.map((proposal) => proposal.id), asOf),
       this.prisma.proposalSubmissionEvent.findMany({
         where: { proposalId: { in: records.map((proposal) => proposal.id) }, snapshot: { path: ["kind"], equals: "completeness_check" } },
         select: { proposalId: true, submittedAt: true }
@@ -187,21 +191,22 @@ export class ResearchProposalsService {
     }).map((event) => event.proposalId));
 
     return records
-      .filter((proposal) => canReadProposal(actor, proposal, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id)))
+      .filter((proposal) => canReadProposal(actor, proposal, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), managementOfficerByProposal.get(proposal.id)))
       .map((proposal) =>
-        this.toProposalResponse(proposal, actor, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), completenessChecked.has(proposal.id))
+        this.toProposalResponse(proposal, actor, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), completenessChecked.has(proposal.id), managementOfficerByProposal.get(proposal.id))
       );
   }
 
   async getProposal(actor: SafeUserContext, proposalId: string) {
     const asOf = new Date();
     const proposal = await this.findProposal(proposalId);
-    const [participation, reviewAccess] = await Promise.all([
+    const [participation, reviewAccess, managementOfficer] = await Promise.all([
       this.participation.resolveForProposal(actor?.id, proposal, undefined, asOf),
-      this.reviewAccess.resolveForProposal(actor?.id, proposalId, asOf)
+      this.reviewAccess.resolveForProposal(actor?.id, proposalId, asOf),
+      this.managementOfficers.resolveForProposal(proposalId, asOf)
     ]);
-    assertCanReadProposal(actor, proposal, participation, reviewAccess);
-    return this.toProposalDetailResponse(proposal, actor, participation, reviewAccess);
+    assertCanReadProposal(actor, proposal, participation, reviewAccess, managementOfficer);
+    return this.toProposalDetailResponse(proposal, actor, participation, reviewAccess, managementOfficer);
   }
 
   async createDraft(actor: SafeUserContext, input: Record<string, unknown>): Promise<any> {
@@ -407,7 +412,7 @@ export class ResearchProposalsService {
   async requestSupplement(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>): Promise<any> {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, a) => service.requestSupplement(a, proposalId, input));
     const proposal = await this.findProposal(proposalId);
-    this.assertCanRequestSupplement(actor, proposal);
+    await this.assertCanRequestSupplement(actor, proposal);
     if (!["submitted", "resubmitted"].includes(proposal.status)) {
       throw new BadRequestException({ message: "Chỉ hồ sơ đã nộp hoặc nộp lại mới được yêu cầu bổ sung ở bước này." });
     }
@@ -417,7 +422,7 @@ export class ResearchProposalsService {
     const requestedAt = new Date();
     if (dueDate <= requestedAt) throw new BadRequestException({ message: "Hạn bổ sung phải ở tương lai." });
     const participation = await this.participation.resolveForProposal(actor.id, proposal);
-    if (participation.isParticipant && !participation.roles.includes("TOPIC_SECRETARY")) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được tự kiểm tra hồ sơ." });
+    if (participation.isParticipant) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được tự kiểm tra hồ sơ." });
     const updated = (await this.prisma.$transaction(async (tx) => {
       const record = (await tx.researchProposal.update({
         where: { id: proposalId },
@@ -547,18 +552,174 @@ export class ResearchProposalsService {
 
   async listHistory(actor: SafeUserContext, proposalId: string) {
     const proposal = await this.findProposal(proposalId);
-    await this.assertReadableProposal(actor, proposal);
-    const records = (await this.prisma.proposalSubmissionEvent.findMany({
-      where: { proposalId },
-      orderBy: { submittedAt: "asc" },
-      include: {
-        actor: {
-          select: { displayName: true }
-        }
-      }
-    })) as ProposalSubmissionEventRecord[];
+    const participation = await this.assertReadableProposal(actor, proposal);
+    const reviewAccess = await this.reviewAccess.resolveForProposal(actor.id, proposalId);
+    const history = await this.listHistoryForProposal(proposalId);
+    return reviewAccess.isAssignedReviewer && !participation.isParticipant
+      ? history.map(({ actorId, actorDisplayName, ...event }) => event)
+      : history;
+  }
 
-    return records.map((record) => this.toHistoryResponse(record));
+  async listManagementOfficerCandidates(actor: SafeUserContext, proposalId: string) {
+    const proposal = await this.findProposal(proposalId);
+    this.assertManagementOfficerAuthority(actor, proposal);
+    await this.assertNoProposalReviewConflict(actor.id, proposalId, "Người tham gia hoặc người đã phản biện không được phân công cán bộ quản lý cho hồ sơ.");
+
+    const accounts = await this.prisma.user.findMany({
+      where: {
+        status: "active",
+        systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
+        organizationScopes: { some: { organizationUnitId: proposal.hostOrganizationUnitId, organizationUnit: { status: "active" } } }
+      },
+      select: { id: true, username: true, displayName: true, unit: true },
+      orderBy: [{ displayName: "asc" }, { id: "asc" }]
+    });
+
+    const users = [];
+    for (const account of accounts) {
+      const conflict = await this.participation.evaluateConflict(account.id, proposalId);
+      const reviewerAssignment = await this.prisma.proposalReviewAssignment.findFirst({
+        where: { proposalId, reviewerUserId: account.id, status: { in: ["assigned", "completed"] }, OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: new Date() } }] },
+        select: { id: true }
+      });
+      const persistedReview = await this.prisma.proposalReview.findFirst({
+        where: { proposalId, reviewerUserId: account.id, status: { in: ["draft", "submitted"] } },
+        select: { id: true }
+      });
+      if (!conflict.conflicted && !reviewerAssignment && !persistedReview) users.push(account);
+    }
+
+    return users;
+  }
+
+  async assignManagementOfficer(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>): Promise<any> {
+    if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, currentActor) => service.assignManagementOfficer(currentActor, proposalId, input));
+
+    const proposal = await this.findProposal(proposalId);
+    this.assertManagementOfficerAuthority(actor, proposal);
+    await this.assertNoProposalReviewConflict(actor.id, proposalId, "Người tham gia hoặc người đã phản biện không được phân công cán bộ quản lý cho hồ sơ.");
+
+    const officerUserId = readText(input.officerUserId, "officerUserId", 120);
+    const reason = readText(input.reason, "reason", 2000);
+    const now = await readTransactionClockV1(this.prisma);
+    const effectiveFrom = now;
+    const effectiveUntil: Date | null = null;
+    if (officerUserId === actor.id) throw new BadRequestException({ message: "Không thể tự phân công chính mình làm cán bộ quản lý hồ sơ." });
+
+    const candidate = await this.prisma.user.findUnique({
+      where: { id: officerUserId },
+      include: { organizationScopes: { include: { organizationUnit: true } } }
+    });
+    if (!candidate || candidate.status !== "active" || candidate.systemRole !== "SCIENTIFIC_MANAGEMENT_STAFF") {
+      throw new BadRequestException({ message: "Cán bộ được chọn phải là tài khoản chuyên viên quản lý khoa học đang hoạt động." });
+    }
+    if (!candidate.organizationScopes.some((scope) => scope.organizationUnitId === proposal.hostOrganizationUnitId && scope.organizationUnit.status === "active")) {
+      throw new ForbiddenException({ message: "Cán bộ được chọn không có phạm vi đơn vị của hồ sơ." });
+    }
+
+    const candidateConflict = await this.participation.evaluateConflict(candidate.id, proposalId);
+    if (candidateConflict.conflicted) throw new BadRequestException({ code: "CONFLICT_DENIED", message: candidateConflict.reason });
+    const candidateReviewer = await this.prisma.proposalReviewAssignment.findFirst({
+      where: { proposalId, reviewerUserId: candidate.id, status: { in: ["assigned", "completed"] }, OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: now } }] },
+      select: { id: true }
+    });
+    const candidateReview = await this.prisma.proposalReview.findFirst({
+      where: { proposalId, reviewerUserId: candidate.id, status: { in: ["draft", "submitted"] } },
+      select: { id: true }
+    });
+    if (candidateReviewer || candidateReview) {
+      throw new BadRequestException({ code: "CONFLICT_DENIED", message: "Không thể phân công người đã hoặc đang phản biện hồ sơ này." });
+    }
+
+    const current = await this.managementOfficers.resolveForProposal(proposalId, now);
+    if (!current.resolved) throw new ConflictException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được cán bộ quản lý hiện tại." });
+    if (current.officer?.officerUserId === officerUserId) throw new BadRequestException({ message: "Cán bộ này đã là người phụ trách hồ sơ." });
+
+    const activeRows = await this.prisma.proposalManagementOfficer.findMany({
+      where: { proposalId, status: MANAGEMENT_OFFICER_STATUS.active },
+      select: { id: true, effectiveUntil: true }
+    });
+    for (const row of activeRows) {
+      await this.prisma.proposalManagementOfficer.update({
+        where: { id: row.id },
+        data: {
+          status: MANAGEMENT_OFFICER_STATUS.ended,
+          effectiveUntil: row.effectiveUntil && row.effectiveUntil <= now ? row.effectiveUntil : now
+        }
+      });
+    }
+    const record = await this.prisma.proposalManagementOfficer.create({
+      data: {
+        proposalId,
+        officerUserId,
+        assignedById: actor.id,
+        status: MANAGEMENT_OFFICER_STATUS.active,
+        effectiveFrom,
+        effectiveUntil,
+        reason,
+        assignmentContextVersion: input.contextVersion ?? null
+      } as never,
+      include: { officer: { select: { id: true, username: true, displayName: true, status: true, systemRole: true, unit: true } }, assignedBy: { select: { displayName: true } } }
+    });
+    await this.prisma.researchProposal.update({
+      where: { id: proposalId },
+      data: {
+        authorizationRelationshipVersion: { increment: 1 },
+        authorizationConflictVersion: { increment: 1 },
+        authorizationDelegationVersion: { increment: 1 },
+        authorizationContextUpdatedAt: now
+      } as never
+    });
+    await this.auditLog.record({
+      action: "assign-proposal-management-officer",
+      result: "success",
+      actorId: actor.id,
+      targetEntity: "proposal-management-officer",
+      targetEntityId: record.id,
+      username: actor.username,
+      reason: JSON.stringify({ proposalId, officerUserId, replacedOfficerUserId: current.officer?.officerUserId ?? null, effectiveFrom: effectiveFrom.toISOString(), effectiveUntil: null, reason, contextVersion: input.contextVersion })
+    });
+
+    return this.toManagementOfficerResponse({ resolved: true, officer: record as unknown as ProposalManagementOfficer });
+  }
+
+  async revokeManagementOfficer(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>): Promise<any> {
+    if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, currentActor) => service.revokeManagementOfficer(currentActor, proposalId, input));
+
+    const proposal = await this.findProposal(proposalId);
+    this.assertManagementOfficerAuthority(actor, proposal);
+    await this.assertNoProposalReviewConflict(actor.id, proposalId, "Người tham gia hoặc người đã phản biện không được thu hồi cán bộ quản lý cho hồ sơ.");
+    const reason = readText(input.reason, "reason", 2000);
+    const now = await readTransactionClockV1(this.prisma);
+    const current = await this.managementOfficers.resolveForProposal(proposalId, now);
+    if (!current.resolved) throw new ConflictException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được cán bộ quản lý hiện tại." });
+    if (!current.officer) throw new BadRequestException({ message: "Hồ sơ hiện chưa có cán bộ quản lý đang hoạt động." });
+
+    const updated = await this.prisma.proposalManagementOfficer.update({
+      where: { id: current.officer.id },
+      data: { status: MANAGEMENT_OFFICER_STATUS.revoked, effectiveUntil: now, reason: `${current.officer.reason ?? ""}${current.officer.reason ? " | " : ""}${reason}` },
+      include: { officer: { select: { id: true, username: true, displayName: true, status: true, systemRole: true, unit: true } }, assignedBy: { select: { displayName: true } } }
+    });
+    await this.prisma.researchProposal.update({
+      where: { id: proposalId },
+      data: {
+        authorizationRelationshipVersion: { increment: 1 },
+        authorizationConflictVersion: { increment: 1 },
+        authorizationDelegationVersion: { increment: 1 },
+        authorizationContextUpdatedAt: now
+      } as never
+    });
+    await this.auditLog.record({
+      action: "revoke-proposal-management-officer",
+      result: "success",
+      actorId: actor.id,
+      targetEntity: "proposal-management-officer",
+      targetEntityId: updated.id,
+      username: actor.username,
+      reason: JSON.stringify({ proposalId, officerUserId: current.officer.officerUserId, reason, contextVersion: input.contextVersion })
+    });
+
+    return this.toManagementOfficerResponse({ resolved: true, officer: null });
   }
 
   async listCatalogs() {
@@ -587,9 +748,9 @@ export class ResearchProposalsService {
   async completeCheck(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>): Promise<any> {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, a) => service.completeCheck(a, proposalId, input));
     const proposal = await this.findProposal(proposalId);
-    this.assertCanRequestSupplement(actor, proposal);
+    await this.assertCanRequestSupplement(actor, proposal);
     const participation = await this.participation.resolveForProposal(actor.id, proposal);
-    if (participation.isParticipant && !participation.roles.includes("TOPIC_SECRETARY")) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được tự kiểm tra hồ sơ." });
+    if (participation.isParticipant) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được tự kiểm tra hồ sơ." });
     if (!["submitted", "resubmitted"].includes(proposal.status)) throw new BadRequestException({ message: "Hồ sơ không ở bước kiểm tra đầy đủ." });
     if (!proposal.submittedAt) throw new BadRequestException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được lần nộp hiện tại." });
     if (await this.hasCurrentCompletenessCheck(proposal)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Phiên bản nộp hiện tại đã được xác nhận đầy đủ." });
@@ -668,11 +829,30 @@ export class ResearchProposalsService {
     return pi;
   }
 
-  private assertCanRequestSupplement(actor: SafeUserContext, proposal: ResearchProposalRecord) {
-    if (!isScientificManagement(actor)) {
-      throw new ForbiddenException({ message: "Chỉ chuyên viên quản lý khoa học được yêu cầu bổ sung hồ sơ." });
+  private async assertCanRequestSupplement(actor: SafeUserContext, proposal: ResearchProposalRecord) {
+    if (!isScientificManagementStaff(actor)) {
+      throw new ForbiddenException({ message: "Chỉ chuyên viên phụ trách hồ sơ được yêu cầu bổ sung hồ sơ." });
     }
     assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
+    if (!await this.managementOfficers.isCurrentOfficer(proposal.id, actor.id)) {
+      throw new ForbiddenException({ message: "Bạn không còn là chuyên viên phụ trách hồ sơ này." });
+    }
+    await this.assertNoProposalReviewConflict(actor.id, proposal.id, "Người tham gia hoặc đánh giá hồ sơ không được thực hiện nghiệp vụ quản lý hồ sơ.");
+  }
+
+  private assertManagementOfficerAuthority(actor: SafeUserContext, proposal: ResearchProposalRecord) {
+    if (!isScientificManagementHead(actor)) {
+      throw new ForbiddenException({ message: "Chỉ Trưởng phòng quản lý khoa học được phân công hoặc thu hồi cán bộ phụ trách hồ sơ." });
+    }
+    assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
+  }
+
+  private async assertNoProposalReviewConflict(userId: string, proposalId: string, message: string) {
+    const participationConflict = await this.participation.evaluateConflict(userId, proposalId);
+    if (participationConflict.conflicted) throw new ForbiddenException({ code: "CONFLICT_DENIED", message });
+    const reviewConflict = await this.reviewAccess.resolveConflictForProposal(userId, proposalId);
+    if (reviewConflict.unresolved) throw new ConflictException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được lịch sử phản biện của người dùng." });
+    if (reviewConflict.isAssignedReviewer || reviewConflict.hasPersistedReview) throw new ForbiddenException({ code: "CONFLICT_DENIED", message });
   }
 
   private assertCanResubmitSupplement(actor: SafeUserContext, proposal: ResearchProposalRecord) {
@@ -699,11 +879,21 @@ export class ResearchProposalsService {
     if (members.some((member) => member.userId === proposal.ownerId)) {
       throw new BadRequestException({ message: "Chủ nhiệm được lấy từ ownerId và không được lưu trong danh sách team." });
     }
+    const currentManagementOfficer = await this.managementOfficers.resolveForProposal(proposalId);
+    if (!currentManagementOfficer.resolved) throw new ConflictException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được cán bộ phụ trách hồ sơ." });
+    if (currentManagementOfficer.officer && members.some((member) => member.userId === currentManagementOfficer.officer?.officerUserId)) {
+      throw new BadRequestException({ code: "CONFLICT_DENIED", message: "Không thể đưa cán bộ đang phụ trách hồ sơ vào nhóm tham gia hồ sơ." });
+    }
     if (members.filter((member) => member.participationRole === "TOPIC_SECRETARY").length > 1) {
       throw new BadRequestException({ message: "Mỗi hồ sơ chỉ được có tối đa một TOPIC_SECRETARY." });
     }
     let previous: ProposalMemberRecord[] = [];
     const nextUserIds = new Set(members.map((member) => member.userId).filter((value): value is string => Boolean(value)));
+    for (const userId of nextUserIds) {
+      const reviewConflict = await this.reviewAccess.resolveConflictForProposal(userId, proposalId);
+      if (reviewConflict.unresolved) throw new ConflictException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được lịch sử phản biện của thành viên." });
+      if (reviewConflict.isAssignedReviewer || reviewConflict.hasPersistedReview) throw new BadRequestException({ code: "CONFLICT_DENIED", message: "Không thể thêm người đang hoặc đã đánh giá hồ sơ vào nhóm tham gia." });
+    }
     const key = (member: { userId?: string | null; participationRole?: string | null; name: string; role: string; organization: string }) =>
       `${member.userId ?? `external:${member.name}:${member.organization}`}:${normalizeParticipationRole(member.participationRole ?? member.role)}`;
     const desiredKeys = members.map((member) => key(member));
@@ -923,18 +1113,21 @@ export class ResearchProposalsService {
     proposal: ResearchProposalRecord,
     actor?: SafeUserContext,
     resolvedParticipation?: ProposalParticipation,
-    resolvedReviewAccess?: ProposalReviewAccess
+    resolvedReviewAccess?: ProposalReviewAccess,
+    resolvedManagementOfficer?: ProposalManagementOfficerResolution
   ) {
     const members = await this.findMembers(proposal.id);
     const participation = resolvedParticipation ?? (await this.participation.resolveForProposal(actor?.id, proposal, members));
     const reviewAccess = resolvedReviewAccess ?? (await this.reviewAccess.resolveForProposal(actor?.id, proposal.id));
+    const managementOfficer = resolvedManagementOfficer ?? (await this.managementOfficers.resolveForProposal(proposal.id));
     const attachments = await this.findAttachments(proposal.id, { canMutate: this.canMutateProposalFiles(actor, proposal, participation) });
     const history = await this.listHistoryForProposal(proposal.id);
     const supplementRequests = await this.listSupplementRequestsForProposal(proposal.id);
     const requiredPackage = await this.getRequiredPackageForProposal(proposal);
     const completenessCheckCompleted = await this.hasCurrentCompletenessCheck(proposal);
+    const managementOfficerHistory = await this.managementOfficers.listHistory(proposal.id);
 
-    const response = this.toProposalResponse(proposal, actor, participation, reviewAccess, completenessCheckCompleted);
+    const response = this.toProposalResponse(proposal, actor, participation, reviewAccess, completenessCheckCompleted, managementOfficer);
     const versions = await this.prisma.proposalSubmissionEvent.findMany({ where: { proposalId: proposal.id, toStatus: { in: ["submitted", "resubmitted"] } }, orderBy: { submittedAt: "asc" }, select: { id: true, submittedAt: true, snapshot: true } });
     return {
       ...response,
@@ -945,6 +1138,7 @@ export class ResearchProposalsService {
       attachments: reviewAccess.isAssignedReviewer && !participation.isParticipant ? attachments.map(({ uploadedById, uploaderDisplayName, ...file }) => file) : attachments,
       history: reviewAccess.isAssignedReviewer && !participation.isParticipant ? history.map(({ actorId, actorDisplayName, ...event }) => event) : history,
       supplementRequests: reviewAccess.isAssignedReviewer && !participation.isParticipant ? [] : supplementRequests,
+      managementOfficer: this.toManagementOfficerResponse(managementOfficer, managementOfficerHistory),
       requiredPackage
     };
   }
@@ -991,17 +1185,18 @@ export class ResearchProposalsService {
   }
 
   private async assertReadableProposal(actor: SafeUserContext, proposal: ResearchProposalRecord) {
-    const [participation, reviewAccess] = await Promise.all([
+    const [participation, reviewAccess, managementOfficer] = await Promise.all([
       this.participation.resolveForProposal(actor?.id, proposal),
-      this.reviewAccess.resolveForProposal(actor?.id, proposal.id)
+      this.reviewAccess.resolveForProposal(actor?.id, proposal.id),
+      this.managementOfficers.resolveForProposal(proposal.id)
     ]);
-    assertCanReadProposal(actor, proposal, participation, reviewAccess);
+    assertCanReadProposal(actor, proposal, participation, reviewAccess, managementOfficer);
     return participation;
   }
 
   private canMutateProposalFiles(actor: SafeUserContext | undefined, proposal: ResearchProposalRecord, participation?: ProposalParticipation) {
     if (
-      !actor || actor.systemRole !== "RESEARCHER_INTERNAL_USER" ||
+      !actor || !isInternalResearcherEligible(actor) ||
       (proposal.status !== "draft" && proposal.status !== "supplement_requested")
     ) {
       return false;
@@ -1023,16 +1218,18 @@ export class ResearchProposalsService {
     actor?: SafeUserContext,
     participation?: ProposalParticipation,
     reviewAccess?: ProposalReviewAccess,
-    completenessCheckCompleted = false
+    completenessCheckCompleted = false,
+    managementOfficer?: ProposalManagementOfficerResolution
   ) {
     const canEditDraft = this.canEditProposalDraft(actor, proposal);
-    const canRead = canReadProposal(actor, proposal, participation, reviewAccess);
+    const canRead = canReadProposal(actor, proposal, participation, reviewAccess, managementOfficer);
     const viewerAuthorization = actor
       ? projectProposalViewerAuthorizationV1({
           actor,
           proposal,
           participation,
           reviewAccess,
+          managementOfficer,
           canRead,
           canEdit: canEditDraft,
           canManageFiles: this.canMutateProposalFiles(actor, proposal, participation),
@@ -1071,13 +1268,14 @@ export class ResearchProposalsService {
       createdAt: proposal.createdAt.toISOString(),
       updatedAt: proposal.updatedAt.toISOString(),
       canEdit: canEditDraft,
-      canSubmit: canEditDraft
+      canSubmit: canEditDraft,
+      managementOfficer: this.toManagementOfficerResponse(managementOfficer)
     };
   }
 
   private canEditProposalDraft(actor: SafeUserContext | undefined, proposal: ResearchProposalRecord) {
     if (
-      !actor || actor.systemRole !== "RESEARCHER_INTERNAL_USER" ||
+      !actor || !isInternalResearcherEligible(actor) ||
       (proposal.status !== "draft" && proposal.status !== "supplement_requested") ||
       proposal.ownerId !== actor.id
     ) {
@@ -1090,6 +1288,37 @@ export class ResearchProposalsService {
     } catch {
       return false;
     }
+  }
+
+  private toManagementOfficerResponse(resolution?: ProposalManagementOfficerResolution, history: ProposalManagementOfficer[] = []) {
+    if (!resolution) return { resolved: false, current: null, history: [] };
+    const officer = resolution.officer;
+    return {
+      resolved: resolution.resolved,
+      current: officer ? {
+        id: officer.id,
+        officerUserId: officer.officerUserId,
+        officerDisplayName: officer.officer?.displayName ?? "",
+        officerUsername: officer.officer?.username ?? "",
+        status: officer.status,
+        effectiveFrom: officer.effectiveFrom.toISOString(),
+        effectiveUntil: officer.effectiveUntil?.toISOString() ?? "",
+        reason: officer.reason ?? "",
+        assignedById: officer.assignedById
+      } : null,
+      history: history.map((row) => ({
+        id: row.id,
+        officerUserId: row.officerUserId,
+        officerDisplayName: row.officer?.displayName ?? "",
+        officerUsername: row.officer?.username ?? "",
+        status: row.status,
+        effectiveFrom: row.effectiveFrom.toISOString(),
+        effectiveUntil: row.effectiveUntil?.toISOString() ?? "",
+        reason: row.reason ?? "",
+        assignedById: row.assignedById,
+        assignedByDisplayName: row.assignedBy?.displayName ?? ""
+      }))
+    };
   }
 
   private toAttachmentResponse(attachment: ProposalAttachmentRecord, options: { canMutate: boolean }) {
