@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { loadResearchProposals, type ResearchProposal } from "@/lib/research-proposals-api";
+import { loadDecisionQueue, type ResearchProposal } from "@/lib/research-proposals-api";
 
 const DECIDED_STATUSES = ["approved", "rejected"];
 
@@ -16,9 +16,8 @@ function formatDate(value: string) {
 /**
  * ST-3.5 — the approval authority's queue.
  *
- * It reads the ordinary proposal list, which the backend already narrows to what this authority may
- * see, and splits it into "waiting for a decision" and "already decided". Drafts never reach it
- * because leadership read starts at formal submission.
+ * The backend returns only routed proposals in the authority's explicit scope; the UI only splits
+ * that server-filtered projection into waiting and decided sections.
  */
 export function ApprovalQueuePanel() {
   const [proposals, setProposals] = useState<ResearchProposal[]>([]);
@@ -29,7 +28,7 @@ export function ApprovalQueuePanel() {
 
     async function load() {
       try {
-        const data = await loadResearchProposals();
+        const data = await loadDecisionQueue();
         if (!cancelled) {
           setProposals(data);
           setState("ready");

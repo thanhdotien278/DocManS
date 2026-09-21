@@ -7,6 +7,7 @@ import { SectionCard } from "@/components/ui/section-card";
 import {
   isNotEntitled,
   loadMyProposalReview,
+  loadProposalReviewPackage,
   saveMyProposalReview,
   submitMyProposalReview,
   type EvaluationApiError,
@@ -26,6 +27,7 @@ function formatDate(value: string) {
  */
 export function ProposalReviewForm({ proposalId, onReviewSubmitted, canSubmitReview, blockedReason, contextVersion }: { proposalId: string; onReviewSubmitted: () => void; canSubmitReview: boolean; blockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
   const [review, setReview] = useState<MyProposalReview | null>(null);
+  const [reviewPackage, setReviewPackage] = useState<Awaited<ReturnType<typeof loadProposalReviewPackage>> | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
   const [loadError, setLoadError] = useState("");
   const [scores, setScores] = useState<Record<string, string>>({});
@@ -49,8 +51,10 @@ export function ProposalReviewForm({ proposalId, onReviewSubmitted, canSubmitRev
     async function load() {
       try {
         const data = await loadMyProposalReview(proposalId);
+        const packageData = await loadProposalReviewPackage(proposalId).catch(() => null);
         if (!cancelled) {
           applyReview(data);
+          setReviewPackage(packageData);
           setState("ready");
         }
       } catch (error) {
@@ -116,6 +120,10 @@ export function ProposalReviewForm({ proposalId, onReviewSubmitted, canSubmitRev
     setFieldErrors({});
     setFormError("");
     setMessage("");
+    if (!contextVersion) {
+      setFormError("Không xác định được phiên bản hồ sơ hiện tại.");
+      return;
+    }
     setBusyMode("draft");
     try {
       applyReview(await saveMyProposalReview(proposalId, { scoreData: collectScores(), comment, recommendation, contextVersion }));
@@ -137,6 +145,10 @@ export function ProposalReviewForm({ proposalId, onReviewSubmitted, canSubmitRev
     if (!window.confirm("Gửi phiếu đánh giá? Sau khi gửi, phiếu không còn được chỉnh sửa.")) {
       return;
     }
+    if (!contextVersion) {
+      setFormError("Không xác định được phiên bản hồ sơ hiện tại.");
+      return;
+    }
 
     setBusyMode("submit");
     try {
@@ -153,7 +165,9 @@ export function ProposalReviewForm({ proposalId, onReviewSubmitted, canSubmitRev
   return (
     <SectionCard
       title="Phiếu đánh giá của tôi"
-      subtitle={isSubmitted ? "Phiếu đã gửi và ở chế độ chỉ đọc" : "Chấm điểm theo từng tiêu chí, nhận xét và chọn kết luận đề nghị"}
+      subtitle={isSubmitted
+        ? `Phiếu đã gửi và ở chế độ chỉ đọc · ${reviewPackage?.assignmentRoleLabel ?? "Phân công"}`
+        : `Chấm điểm theo từng tiêu chí, nhận xét và chọn kết luận đề nghị · ${reviewPackage?.assignmentRoleLabel ?? "Phân công"}`}
     >
       <form className="admin-form" onSubmit={(event) => void handleSubmit(event)}>
         <div className="form-section-inline">

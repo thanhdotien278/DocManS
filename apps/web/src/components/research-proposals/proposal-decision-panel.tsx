@@ -73,6 +73,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
       setError("Không xác định được phiên bản quyền của hồ sơ. Vui lòng tải lại.");
       return;
     }
+    const packageRevision = decisionPackage?.packageRevision ?? 0;
 
     const confirmText =
       decision === "approve"
@@ -84,7 +85,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
 
     setBusyDecision(decision);
     try {
-      const result = await decideProposal(proposalId, decision, note.trim(), contextVersion);
+      const result = await decideProposal(proposalId, decision, note.trim(), packageRevision, contextVersion);
       setMessage(`Đã ghi nhận quyết định: ${result.decision.decisionLabel}.`);
       setNote("");
       await refresh();

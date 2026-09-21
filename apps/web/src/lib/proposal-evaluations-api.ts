@@ -105,6 +105,7 @@ export type ProposalEvaluationSummary = {
   recommendationLabel: string;
   status: "draft" | "ready_for_approval";
   statusLabel: string;
+  revision: number;
   createdById: string;
   updatedById: string;
   updatedByDisplayName: string;
@@ -149,6 +150,8 @@ export type ProposalDecisionRecord = {
   decidedAt: string;
   fromStatus: string;
   toStatus: string;
+  publicSummary?: string;
+  requiredFollowUp?: string;
 };
 
 export type ProposalDecisionPackage = {
@@ -167,6 +170,8 @@ export type ProposalDecisionPackage = {
   evaluationSummary: ProposalEvaluationSummary | null;
   decisions: ProposalDecisionRecord[];
   attachmentCount: number;
+  packageRevision: number;
+  disclosure?: { protectedReviewData: "REDACTED" | "HIDDEN_CONFLICT" | "FULL" };
   history: Array<{
     id: string;
     fromStatus: string;
@@ -181,6 +186,8 @@ export type ProposalReviewPackage = {
   assignmentId: string;
   assignmentRole: string;
   assignmentRoleLabel: string;
+  contextVersion?: ViewerAuthorizationV1["contextVersion"];
+  submissionEvidence?: { eventId: string; submittedAt: string; submissionVersion: string };
   proposal: {
     id: string;
     code: string;
@@ -317,7 +324,7 @@ export async function loadMyProposalReview(proposalId: string) {
 
 export async function saveMyProposalReview(
   proposalId: string,
-  input: { scoreData: Record<string, number>; comment: string; recommendation: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }
+  input: { scoreData: Record<string, number>; comment: string; recommendation: string; contextVersion: ViewerAuthorizationV1["contextVersion"] }
 ) {
   const response = await requestJson<{ review: MyProposalReview }>(`/research-proposals/${proposalId}/my-review`, {
     method: "PUT",
@@ -328,7 +335,7 @@ export async function saveMyProposalReview(
 
 export async function submitMyProposalReview(
   proposalId: string,
-  input: { scoreData: Record<string, number>; comment: string; recommendation: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }
+  input: { scoreData: Record<string, number>; comment: string; recommendation: string; contextVersion: ViewerAuthorizationV1["contextVersion"] }
 ) {
   const response = await requestJson<{ review: MyProposalReview }>(`/research-proposals/${proposalId}/my-review/submit`, {
     method: "POST",
@@ -368,10 +375,10 @@ export async function loadProposalDecisionPackage(proposalId: string) {
   return response.decisionPackage;
 }
 
-export async function decideProposal(proposalId: string, decision: "approve" | "reject", note: string, contextVersion: ViewerAuthorizationV1["contextVersion"]) {
+export async function decideProposal(proposalId: string, decision: "approve" | "reject", note: string, packageRevision: number, contextVersion: ViewerAuthorizationV1["contextVersion"]) {
   return requestJson<{ decision: ProposalDecisionRecord; proposalStatus: string; proposalStatusLabel: string }>(
     `/research-proposals/${proposalId}/${decision}`,
-    { method: "POST", body: JSON.stringify({ note, contextVersion }) }
+    { method: "POST", body: JSON.stringify({ note, packageRevision, contextVersion }) }
   );
 }
 

@@ -593,6 +593,9 @@ model ProposalReviewAssignment {
   dueDate        DateTime?        @map("due_date")
   revokedAt      DateTime?        @map("revoked_at")
   completedAt    DateTime?        @map("completed_at")
+  /// The immutable submission event this assignment evaluates. Nullable only for historical rows
+  /// created before the golden-flow binding was introduced.
+  reviewedSubmissionEventId String? @map("reviewed_submission_event_id")
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
   review         ProposalReview?
@@ -619,6 +622,9 @@ model ProposalReview {
   comment        String?
   recommendation String?
   submittedAt    DateTime?                @map("submitted_at")
+  submissionEventId String?                @map("submission_event_id")
+  contextVersion Json?                     @map("context_version")
+  evidenceSnapshot Json?                   @map("evidence_snapshot")
   createdAt      DateTime                 @default(now()) @map("created_at")
   updatedAt      DateTime                 @updatedAt @map("updated_at")
 
@@ -641,6 +647,9 @@ model ProposalEvaluationSummary {
   updatedById    String           @map("updated_by_id")
   updatedBy      User             @relation("EvaluationSummaryEditor", fields: [updatedById], references: [id])
   markedReadyAt  DateTime?        @map("marked_ready_at")
+  revision       Int              @default(0)
+  contextVersion Json?            @map("context_version")
+  evidenceSnapshot Json?          @map("evidence_snapshot")
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
 
@@ -660,6 +669,10 @@ model ProposalDecision {
   decidedAt   DateTime         @default(now()) @map("decided_at")
   fromStatus  String           @map("from_status")
   toStatus    String           @map("to_status")
+  packageRevision Int?         @map("package_revision")
+  contextVersion Json?         @map("context_version")
+  packageSnapshot Json?        @map("package_snapshot")
+  publicSummary Json?          @map("public_summary")
   createdAt   DateTime         @default(now()) @map("created_at")
 
   @@index([proposalId])
