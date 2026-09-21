@@ -3,7 +3,6 @@ import { runProposalMutation } from "../proposals-shared/proposal-mutation.js";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
-import { REVIEW_STATUS } from "../proposals-shared/proposal-review-access.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
 import { DECIDABLE_STATUSES, PROPOSAL_STATUS, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
@@ -11,6 +10,7 @@ import {
   assertApprovalAuthority,
   assertCanReadEvaluation,
   assertProposalStatus,
+  findCurrentSubmissionEvidence,
   findEvaluationProposal,
   resolveActorConflict,
   updateProposalStatusGuarded,
@@ -87,8 +87,8 @@ export class ProposalDecisionsService {
     }
 
     const [assignmentRecords, reviewRecords, summary, decisions, attachments, history] = await Promise.all([
-      this.assignments.findAssignments(proposalId),
-      this.assignments.findReviews(proposalId),
+      this.assignments.findCurrentRoundAssignments(proposal),
+      this.assignments.findCurrentRoundReviews(proposal),
       this.summaries.findSummary(proposalId),
       this.findDecisions(proposalId),
       this.prisma.fileRecord.findMany({
@@ -102,8 +102,6 @@ export class ProposalDecisionsService {
       })
     ]);
 
-    const discloseProtectedReviewData = !conflict.conflicted;
-
     return {
       proposalId,
       proposalStatus: proposal.status,
@@ -111,11 +109,13 @@ export class ProposalDecisionsService {
       canDecide: (DECIDABLE_STATUSES as string[]).includes(proposal.status) && !conflict.conflicted,
       conflict,
       progress: this.summaries.summarizeProgress(assignmentRecords, reviewRecords),
-      reviews: discloseProtectedReviewData
-        ? reviewRecords.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => this.reviews.toSubmittedReviewResponse(review))
-        : [],
-      evaluationSummary: discloseProtectedReviewData ? this.summaries.toSummaryResponse(summary) : null,
-      disclosure: { protectedReviewData: discloseProtectedReviewData ? "FULL" : "HIDDEN_CONFLICT" },
+      // Leadership receives the routed aggregate and decision history, but reviewer identity,
+      // raw scores and confidential comments remain hidden unless a future policy explicitly grants
+      // that disclosure.
+      reviews: [],
+      evaluationSummary: this.summaries.toSummaryResponse(summary),
+      packageRevision: summary?.revision ?? 0,
+      disclosure: { protectedReviewData: "REDACTED" },
       decisions: decisions.map((decision) => this.toDecisionResponse(decision)),
       attachmentCount: (attachments as unknown[]).length,
       history: (
@@ -125,14 +125,16 @@ export class ProposalDecisionsService {
           toStatus: string;
           submittedAt: Date;
           note: string | null;
+          snapshot?: unknown;
           actor?: { displayName: string } | null;
         }>
       ).map((event) => ({
+        // Do not expose reviewer identity through the leadership history projection.
         id: event.id,
         fromStatus: event.fromStatus,
         toStatus: event.toStatus,
         submittedAt: event.submittedAt.toISOString(),
-        actorDisplayName: event.actor?.displayName ?? "",
+        actorDisplayName: ((event.snapshot as { kind?: string } | null | undefined)?.kind === "review_submitted" || (event.fromStatus === "under_review" && event.toStatus === "under_review")) ? "" : event.actor?.displayName ?? "",
         note: event.note ?? ""
       }))
     };
@@ -162,14 +164,33 @@ export class ProposalDecisionsService {
     }
 
     const summary = await this.summaries.findSummary(proposalId);
-    const progress = this.summaries.summarizeProgress(await this.assignments.findAssignments(proposalId), await this.assignments.findReviews(proposalId));
+    const packageRevision = Number(input.packageRevision);
+    const currentEvidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
+    const packageSnapshot = summary?.evidenceSnapshot as { submissionEventId?: unknown } | null | undefined;
+    if (!summary || summary.revision !== packageRevision || !summary.evidenceSnapshot || packageSnapshot?.submissionEventId !== currentEvidence.eventId) {
+      throw new BadRequestException({ code: "PACKAGE_CONTEXT_MISMATCH", message: "Gói đánh giá đã thay đổi. Vui lòng tải lại trước khi quyết định." });
+    }
+    const progress = this.summaries.summarizeProgress(await this.assignments.findCurrentRoundAssignments(proposal), await this.assignments.findCurrentRoundReviews(proposal));
     if (summary?.status !== "ready_for_approval" || !progress.allReviewsSubmitted) throw new BadRequestException({ message: "Gói đánh giá chưa đủ điều kiện quyết định." });
     const note = this.readNote(input.note, { required: decision === PROPOSAL_DECISIONS.rejected });
     const toStatus = DECISION_TARGET_STATUS[decision];
     const decidedAt = new Date();
 
     const created = (await this.prisma.$transaction(async (tx) => {
-      // Conditional on the status we validated, so two authorities deciding at once cannot both win.
+      const currentSummary = await tx.proposalEvaluationSummary.findUnique({ where: { id: summary.id } });
+      const currentAssignments = await tx.proposalReviewAssignment.findMany({ where: { proposalId } });
+      const currentReviews = await tx.proposalReview.findMany({ where: { proposalId } });
+      const currentEvidence = await findCurrentSubmissionEvidence(tx, proposal);
+      const currentPackageSnapshot = currentSummary?.evidenceSnapshot as { submissionEventId?: unknown } | null | undefined;
+      const currentProgress = this.summaries.summarizeProgress(
+        currentAssignments.filter((assignment) => assignment.reviewedSubmissionEventId === currentEvidence.eventId) as never,
+        currentReviews.filter((review) => review.submissionEventId === currentEvidence.eventId) as never
+      );
+      if (!currentSummary || currentSummary.status !== "ready_for_approval" || currentSummary.revision !== packageRevision || !currentSummary.evidenceSnapshot || currentPackageSnapshot?.submissionEventId !== currentEvidence.eventId || !currentProgress.allReviewsSubmitted) {
+        throw new BadRequestException({ code: "PACKAGE_CONTEXT_MISMATCH", message: "Gói đánh giá đã thay đổi. Vui lòng tải lại trước khi quyết định." });
+      }
+
+      // Conditional on the status and package revision we validated, so two authorities deciding at once cannot both win.
       await updateProposalStatusGuarded(tx, proposalId, proposal.status, toStatus);
 
       const record = (await tx.proposalDecision.create({
@@ -180,7 +201,11 @@ export class ProposalDecisionsService {
           decidedById: actor.id,
           decidedAt,
           fromStatus: proposal.status,
-          toStatus
+          toStatus,
+          packageRevision,
+          contextVersion: input.contextVersion,
+          packageSnapshot: currentSummary.evidenceSnapshot,
+          publicSummary: input.publicSummary ? { text: String(input.publicSummary), requiredFollowUp: input.requiredFollowUp ? String(input.requiredFollowUp) : "" } : null
         } as never,
         // Included so the response names the deciding authority, matching what `findDecisions`
         // returns on a later read of the same record.
@@ -194,6 +219,14 @@ export class ProposalDecisionsService {
           fromStatus: proposal.status,
           toStatus,
           submittedAt: decidedAt,
+          snapshot: {
+            kind: "proposal_decision",
+            schemaVersion: "proposal-decision-evidence.v1",
+            decision,
+            packageRevision,
+            packageSnapshot: currentSummary.evidenceSnapshot,
+            contextVersion: input.contextVersion
+          },
           note: decision === PROPOSAL_DECISIONS.approved ? "Lãnh đạo phê duyệt hồ sơ" : "Lãnh đạo không phê duyệt hồ sơ"
         } as never
       });
@@ -206,7 +239,7 @@ export class ProposalDecisionsService {
           targetEntity: "proposal-decision",
           targetEntityId: record.id,
           username: actor.username,
-          reason: JSON.stringify({ proposalId, decision, fromStatus: proposal.status, toStatus, hasNote: Boolean(note) })
+          reason: JSON.stringify({ proposalId, decision, fromStatus: proposal.status, toStatus, packageRevision, hasNote: Boolean(note) })
         }
       });
 
@@ -265,7 +298,9 @@ export class ProposalDecisionsService {
       decidedByDisplayName: decision.decidedBy?.displayName ?? "",
       decidedAt: decision.decidedAt.toISOString(),
       fromStatus: decision.fromStatus,
-      toStatus: decision.toStatus
+      toStatus: decision.toStatus,
+      publicSummary: (decision.publicSummary as { text?: unknown } | null)?.text ?? "",
+      requiredFollowUp: (decision.publicSummary as { requiredFollowUp?: unknown } | null)?.requiredFollowUp ?? ""
     };
   }
 }

@@ -19,6 +19,7 @@ import { ProposalParticipationService } from "../research-proposals/proposal-par
 import { REVIEW_SUBMITTABLE_STATUSES } from "../proposals-shared/proposal-workflow.js";
 import {
   assertProposalStatus,
+  findCurrentSubmissionEvidence,
   findEvaluationProposal,
   type EvaluationProposalRecord,
   type ProposalReviewRecord
@@ -86,6 +87,8 @@ export class ProposalReviewsService {
 
     const existing = await this.findReviewByAssignment(assignmentId);
     this.assertReviewIsOpen(existing);
+    const evidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
+    const reviewEvidence = this.buildReviewEvidence(proposal, evidence, assignmentId, actor.id);
 
     // A field that is present replaces what was stored; a field that is absent keeps it. Reading an
     // omitted field as "empty" would let a partial payload silently erase work already saved.
@@ -106,7 +109,10 @@ export class ProposalReviewsService {
       scoreData,
       totalScore,
       comment,
-      recommendation
+      recommendation,
+      submissionEventId: evidence.eventId,
+      contextVersion: input.contextVersion,
+      evidenceSnapshot: reviewEvidence
     });
 
     return {
@@ -128,6 +134,8 @@ export class ProposalReviewsService {
 
     const existing = await this.findReviewByAssignment(assignmentId);
     this.assertReviewIsOpen(existing);
+    const evidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
+    const reviewEvidence = this.buildReviewEvidence(proposal, evidence, assignmentId, actor.id);
 
     // Fall back to whatever the draft already holds, so submit works from the stored review as well
     // as from a full form payload.
@@ -163,7 +171,10 @@ export class ProposalReviewsService {
               totalScore,
               comment,
               recommendation,
-              submittedAt
+              submittedAt,
+              submissionEventId: evidence.eventId,
+              contextVersion: input.contextVersion,
+              evidenceSnapshot: reviewEvidence
             } as never
           })) as ProposalReviewRecord)
         : ((await tx.proposalReview.create({
@@ -176,7 +187,10 @@ export class ProposalReviewsService {
               totalScore,
               comment,
               recommendation,
-              submittedAt
+              submittedAt,
+              submissionEventId: evidence.eventId,
+              contextVersion: input.contextVersion,
+              evidenceSnapshot: reviewEvidence
             } as never
           })) as ProposalReviewRecord);
 
@@ -203,6 +217,17 @@ export class ProposalReviewsService {
           fromStatus: proposal.status,
           toStatus: proposal.status,
           submittedAt,
+          snapshot: {
+            kind: "review_submitted",
+            schemaVersion: "proposal-review-evidence.v1",
+            reviewId: review.id,
+            assignmentId,
+            reviewerUserId: actor.id,
+            submissionEventId: evidence.eventId,
+            contextVersion: input.contextVersion,
+            totalScore,
+            recommendation
+          },
           note: "Người đánh giá gửi phiếu chấm điểm và nhận xét"
         } as never
       });
@@ -215,7 +240,7 @@ export class ProposalReviewsService {
           targetEntity: "proposal-review",
           targetEntityId: review.id,
           username: actor.username,
-          reason: JSON.stringify({ proposalId, assignmentId, totalScore, recommendation })
+          reason: JSON.stringify({ proposalId, assignmentId, totalScore, recommendation, submissionEventId: evidence.eventId, contextVersion: input.contextVersion })
         }
       });
 
@@ -249,6 +274,7 @@ export class ProposalReviewsService {
   }
 
   private async assertAssigned(actor: SafeUserContext, proposalId: string) {
+    const proposal = await findEvaluationProposal(this.prisma, proposalId);
     const conflict = await this.participation.evaluateConflict(actor.id, proposalId);
     if (conflict.conflicted) {
       throw new ForbiddenException({ message: "Người đang tham gia hồ sơ không thể chấm điểm hoặc gửi đánh giá." });
@@ -258,6 +284,12 @@ export class ProposalReviewsService {
     const access = await this.reviewAccess.resolveForProposal(actor?.id, proposalId);
     if (!access.isAssignedReviewer) {
       throw new ForbiddenException({ message: "Bạn không được phân công đánh giá hồ sơ này." });
+    }
+
+    const assignment = (await this.prisma.proposalReviewAssignment.findUnique({ where: { id: access.assignmentId } })) as { id: string; proposalId: string; reviewedSubmissionEventId: string | null } | null;
+    const evidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
+    if (!assignment || assignment.proposalId !== proposalId || assignment.reviewedSubmissionEventId !== evidence.eventId) {
+      throw new ForbiddenException({ code: "STALE_ASSIGNMENT_CONTEXT", message: "Phân công không còn gắn với phiên bản nộp hiện tại của hồ sơ." });
     }
 
     return access.assignmentId;
@@ -291,6 +323,9 @@ export class ProposalReviewsService {
       totalScore: number;
       comment: string;
       recommendation: string | null;
+      submissionEventId: string;
+      contextVersion: unknown;
+      evidenceSnapshot: unknown;
     }
   ) {
     const existing = await this.findReviewByAssignment(assignmentId);
@@ -301,7 +336,10 @@ export class ProposalReviewsService {
           scoreData: data.scoreData,
           totalScore: data.totalScore,
           comment: data.comment,
-          recommendation: data.recommendation
+          recommendation: data.recommendation,
+          submissionEventId: data.submissionEventId,
+          contextVersion: data.contextVersion,
+          evidenceSnapshot: data.evidenceSnapshot
         } as never
       })) as ProposalReviewRecord;
     }
@@ -309,6 +347,21 @@ export class ProposalReviewsService {
     return (await this.prisma.proposalReview.create({
       data: { assignmentId, ...data } as never
     })) as ProposalReviewRecord;
+  }
+
+  private buildReviewEvidence(proposal: EvaluationProposalRecord, evidence: Awaited<ReturnType<typeof findCurrentSubmissionEvidence>>, assignmentId: string, reviewerUserId: string) {
+    return {
+      kind: "review_evidence",
+      schemaVersion: "proposal-review-evidence.v1",
+      proposalId: proposal.id,
+      assignmentId,
+      reviewerUserId,
+      submissionEventId: evidence.eventId,
+      submissionVersion: evidence.submissionVersion,
+      contextVersion: evidence.contextVersion,
+      submissionSnapshot: evidence.snapshot,
+      attachmentSnapshot: (evidence.snapshot as { attachments?: unknown } | null)?.attachments ?? []
+    };
   }
 
   private readScores(value: unknown, options: { partial: boolean }) {

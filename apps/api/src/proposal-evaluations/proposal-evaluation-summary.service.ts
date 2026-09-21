@@ -22,6 +22,7 @@ import {
   assertEvaluationReadScope,
   assertScientificManagementHeadScope,
   assertScientificManagementScope,
+  findCurrentSubmissionEvidence,
   findEvaluationProposal,
   resolveActorConflict,
   updateProposalStatusGuarded,
@@ -80,8 +81,8 @@ export class ProposalEvaluationSummaryService {
     if (!isWorkflowVisibleStatus(proposal.status)) throw new ForbiddenException();
     const conflict = await resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId);
     if (isScientificManagementStaff(actor) && conflict.conflicted) throw new ForbiddenException({ message: conflict.viewerMessage });
-    const assignmentRecords = await this.assignments.findAssignments(proposalId);
-    const reviewRecords = await this.assignments.findReviews(proposalId);
+    const assignmentRecords = await this.assignments.findCurrentRoundAssignments(proposal);
+    const reviewRecords = await this.assignments.findCurrentRoundReviews(proposal);
     const summary = await this.findSummary(proposalId);
     const progress = this.summarizeProgress(assignmentRecords, reviewRecords);
     if (!isScientificManagementStaff(actor)) {
@@ -144,9 +145,13 @@ export class ProposalEvaluationSummaryService {
     const summaryText = this.readSummaryText(input.summary);
     const recommendation = this.readRecommendation(input.recommendation);
     const markReady = input.markReady === true || input.markReady === "true";
+    if (proposal.status === PROPOSAL_STATUS.readyForApproval) {
+      throw new BadRequestException({ message: "Gói đánh giá đã trình lãnh đạo và không còn được chỉnh sửa." });
+    }
 
-    const assignmentRecords = await this.assignments.findAssignments(proposalId);
-    const reviewRecords = await this.assignments.findReviews(proposalId);
+    const submissionEvidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
+    const assignmentRecords = await this.assignments.findCurrentRoundAssignments(proposal);
+    const reviewRecords = await this.assignments.findCurrentRoundReviews(proposal);
     const progress = this.summarizeProgress(assignmentRecords, reviewRecords);
 
     if (markReady && !progress.allReviewsSubmitted) {
@@ -163,14 +168,28 @@ export class ProposalEvaluationSummaryService {
     const saved = (await this.prisma.$transaction(async (tx) => {
       if (markReady) {
         await tx.$queryRaw`SELECT id FROM research_proposals WHERE id = ${proposalId} FOR UPDATE`;
+        const currentAssignments = await tx.proposalReviewAssignment.findMany({ where: { proposalId } }) as ReviewAssignmentRecord[];
+        const currentReviews = await tx.proposalReview.findMany({ where: { proposalId } }) as ProposalReviewRecord[];
         const currentProgress = this.summarizeProgress(
-          await tx.proposalReviewAssignment.findMany({ where: { proposalId } }) as ReviewAssignmentRecord[],
-          await tx.proposalReview.findMany({ where: { proposalId } }) as ProposalReviewRecord[]
+          currentAssignments.filter((assignment) => assignment.reviewedSubmissionEventId === submissionEvidence.eventId),
+          currentReviews.filter((review) => review.submissionEventId === submissionEvidence.eventId)
         );
         if (!currentProgress.allReviewsSubmitted) {
           throw new BadRequestException({ message: "Phân công đã thay đổi: cần đúng 2 người phản biện, ít nhất 3 thành viên hội đồng và đầy đủ phiếu đánh giá." });
         }
       }
+      const revision = (existing?.revision ?? 0) + 1;
+      const evidenceSnapshot = {
+        kind: "evaluation_package",
+        schemaVersion: "proposal-evaluation-package.v1",
+        revision,
+        submissionEventId: submissionEvidence.eventId,
+        assignmentIds: assignmentRecords.map((assignment) => assignment.id),
+        reviewIds: reviewRecords.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => review.id),
+        summary: summaryText,
+        recommendation,
+        capturedAt: now.toISOString()
+      };
       const record = existing
         ? ((await tx.proposalEvaluationSummary.update({
             where: { id: existing.id },
@@ -179,7 +198,10 @@ export class ProposalEvaluationSummaryService {
               recommendation,
               status: nextStatus,
               updatedById: actor.id,
-              markedReadyAt: markReady ? existing.markedReadyAt ?? now : existing.markedReadyAt
+              markedReadyAt: markReady ? existing.markedReadyAt ?? now : existing.markedReadyAt,
+              revision,
+              contextVersion: input.contextVersion,
+              evidenceSnapshot
             } as never
           })) as EvaluationSummaryRecord)
         : ((await tx.proposalEvaluationSummary.create({
@@ -190,7 +212,10 @@ export class ProposalEvaluationSummaryService {
               status: nextStatus,
               createdById: actor.id,
               updatedById: actor.id,
-              markedReadyAt: markReady ? now : null
+              markedReadyAt: markReady ? now : null,
+              revision,
+              contextVersion: input.contextVersion,
+              evidenceSnapshot
             } as never
           })) as EvaluationSummaryRecord);
 
@@ -220,6 +245,7 @@ export class ProposalEvaluationSummaryService {
             fromStatus: proposal.status,
             toStatus: PROPOSAL_STATUS.readyForApproval,
             submittedAt: now,
+            snapshot: evidenceSnapshot,
             note: "Chuyên viên tổng hợp kết quả đánh giá và chuyển hồ sơ sang chờ phê duyệt"
           } as never
         });
@@ -269,7 +295,8 @@ export class ProposalEvaluationSummaryService {
     if (!existing || existing.status !== EVALUATION_SUMMARY_STATUS.draft) {
       throw new BadRequestException({ message: "Chưa có bản tổng hợp của chuyên viên để trình lãnh đạo." });
     }
-    const progress = this.summarizeProgress(await this.assignments.findAssignments(proposalId), await this.assignments.findReviews(proposalId));
+    const submissionEvidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
+    const progress = this.summarizeProgress(await this.assignments.findCurrentRoundAssignments(proposal), await this.assignments.findCurrentRoundReviews(proposal));
     if (!progress.allReviewsSubmitted) {
       throw new BadRequestException({ message: "Gói đánh giá chưa hoàn tất, chưa thể trình lãnh đạo.", pendingCount: progress.pendingCount });
     }
@@ -278,16 +305,30 @@ export class ProposalEvaluationSummaryService {
     const saved = (await this.prisma.$transaction(async (tx) => {
       const currentSummary = await tx.proposalEvaluationSummary.findUnique({ where: { id: existing.id } });
       if (!currentSummary || currentSummary.status !== EVALUATION_SUMMARY_STATUS.draft) throw new BadRequestException({ message: "Bản tổng hợp đã được thay đổi. Vui lòng tải lại hồ sơ." });
+      const currentAssignments = await tx.proposalReviewAssignment.findMany({ where: { proposalId } }) as ReviewAssignmentRecord[];
+      const currentReviews = await tx.proposalReview.findMany({ where: { proposalId } }) as ProposalReviewRecord[];
       const currentProgress = this.summarizeProgress(
-        await tx.proposalReviewAssignment.findMany({ where: { proposalId } }) as ReviewAssignmentRecord[],
-        await tx.proposalReview.findMany({ where: { proposalId } }) as ProposalReviewRecord[]
+        currentAssignments.filter((assignment) => assignment.reviewedSubmissionEventId === submissionEvidence.eventId),
+        currentReviews.filter((review) => review.submissionEventId === submissionEvidence.eventId)
       );
       if (!currentProgress.allReviewsSubmitted) throw new BadRequestException({ message: "Phân công đã thay đổi: gói đánh giá chưa hoàn tất." });
       const statusUpdate = await tx.researchProposal.updateMany({ where: { id: proposalId, status: PROPOSAL_STATUS.underReview }, data: { status: PROPOSAL_STATUS.readyForApproval, authorizationRelationshipVersion: { increment: 1 }, authorizationDelegationVersion: { increment: 1 }, authorizationContextUpdatedAt: now } as never });
       if (statusUpdate.count !== 1) throw new BadRequestException({ message: "Trạng thái hồ sơ vừa thay đổi. Vui lòng tải lại hồ sơ." });
-      const record = (await tx.proposalEvaluationSummary.update({ where: { id: existing.id }, data: { status: EVALUATION_SUMMARY_STATUS.readyForApproval, updatedById: actor.id, markedReadyAt: now } as never, include: { updatedBy: { select: { displayName: true } } } })) as EvaluationSummaryRecord;
-      await tx.proposalReviewAssignment.updateMany({ where: { proposalId, status: REVIEW_ASSIGNMENT_STATUS.assigned }, data: { status: REVIEW_ASSIGNMENT_STATUS.completed, completedAt: now } as never });
-      await tx.proposalSubmissionEvent.create({ data: { proposalId, actorId: actor.id, fromStatus: PROPOSAL_STATUS.underReview, toStatus: PROPOSAL_STATUS.readyForApproval, submittedAt: now, note: "Trưởng phòng kiểm tra và trình gói đánh giá đã hoàn tất tới lãnh đạo" } as never });
+      const revision = (currentSummary.revision ?? 0) + 1;
+      const evidenceSnapshot = {
+        kind: "evaluation_package",
+        schemaVersion: "proposal-evaluation-package.v1",
+        revision,
+        submissionEventId: submissionEvidence.eventId,
+        assignmentIds: currentAssignments.filter((assignment) => assignment.reviewedSubmissionEventId === submissionEvidence.eventId).map((assignment) => assignment.id),
+        reviewIds: currentReviews.filter((review) => review.submissionEventId === submissionEvidence.eventId && review.status === REVIEW_STATUS.submitted).map((review) => review.id),
+        summary: currentSummary.summary,
+        recommendation: currentSummary.recommendation,
+        capturedAt: now.toISOString()
+      };
+      const record = (await tx.proposalEvaluationSummary.update({ where: { id: existing.id }, data: { status: EVALUATION_SUMMARY_STATUS.readyForApproval, updatedById: actor.id, markedReadyAt: now, revision, contextVersion: input.contextVersion, evidenceSnapshot } as never, include: { updatedBy: { select: { displayName: true } } } })) as EvaluationSummaryRecord;
+      await tx.proposalReviewAssignment.updateMany({ where: { proposalId, reviewedSubmissionEventId: submissionEvidence.eventId, status: REVIEW_ASSIGNMENT_STATUS.assigned }, data: { status: REVIEW_ASSIGNMENT_STATUS.completed, completedAt: now } as never });
+      await tx.proposalSubmissionEvent.create({ data: { proposalId, actorId: actor.id, fromStatus: PROPOSAL_STATUS.underReview, toStatus: PROPOSAL_STATUS.readyForApproval, submittedAt: now, snapshot: evidenceSnapshot, note: "Trưởng phòng kiểm tra và trình gói đánh giá đã hoàn tất tới lãnh đạo" } as never });
       await tx.auditLog.create({ data: { action: "submit-evaluation-package", result: "success", actorId: actor.id, targetEntity: "proposal-evaluation-summary", targetEntityId: record.id, username: actor.username, reason: JSON.stringify({ proposalId, sourceSummaryUpdatedById: existing.updatedById, submittedReviews: currentProgress.submittedCount, fromStatus: PROPOSAL_STATUS.underReview, toStatus: PROPOSAL_STATUS.readyForApproval }) } });
       return record;
     })) as unknown as EvaluationSummaryRecord;
@@ -315,6 +356,7 @@ export class ProposalEvaluationSummaryService {
       recommendationLabel: getRecommendationLabel(summary.recommendation),
       status: summary.status,
       statusLabel: summary.status === EVALUATION_SUMMARY_STATUS.readyForApproval ? "Đã chuyển chờ phê duyệt" : "Bản nháp tổng hợp",
+      revision: summary.revision ?? 0,
       createdById: summary.createdById,
       updatedById: summary.updatedById,
       updatedByDisplayName: summary.updatedBy?.displayName ?? "",
@@ -333,7 +375,8 @@ export class ProposalEvaluationSummaryService {
     const reviewerCount = new Set(active.filter((assignment) => assignment.assignmentRole === "reviewer").map((assignment) => assignment.reviewerUserId)).size;
     const committeeMemberCount = new Set(active.filter((assignment) => assignment.assignmentRole === "committee_member").map((assignment) => assignment.reviewerUserId)).size;
     const assignmentRequirementsMet = reviewerCount === 2 && committeeMemberCount >= 3;
-    const submitted = reviews.filter((review) => review.status === REVIEW_STATUS.submitted);
+    const activeIds = new Set(active.map((assignment) => assignment.id));
+    const submitted = reviews.filter((review) => review.status === REVIEW_STATUS.submitted && activeIds.has(review.assignmentId));
     const submittedAssignmentIds = new Set(submitted.map((review) => review.assignmentId));
     const pending = active.filter((assignment) => !submittedAssignmentIds.has(assignment.id));
     const scored = submitted.map((review) => review.totalScore).filter((score): score is number => typeof score === "number");
@@ -343,7 +386,7 @@ export class ProposalEvaluationSummaryService {
       reviewerCount,
       committeeMemberCount,
       assignmentRequirementsMet,
-      submittedCount: submitted.filter((review) => active.some((assignment) => assignment.id === review.assignmentId)).length,
+      submittedCount: submitted.length,
       pendingCount: pending.length,
       pendingReviewers: pending.map((assignment) => ({
         assignmentId: assignment.id,

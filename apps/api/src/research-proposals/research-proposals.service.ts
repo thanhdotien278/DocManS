@@ -12,12 +12,15 @@ import {
   assertHasOrganizationScope,
   assertCanCreateProposalDraft,
   canReadProposal,
+  getOrganizationScopeIds,
+  isLeadership,
   isInternalResearcherEligible,
+  isScientificManagementHead,
+  isScientificManagementStaff,
   intakeAppliesToUser,
   isIntakeOpenForSubmission,
   isSystemAdmin
 } from "../proposals-shared/proposal-access.js";
-import { isScientificManagementHead, isScientificManagementStaff } from "../proposals-shared/proposal-access.js";
 import {
   evaluateProposalConflict,
   getParticipationRoleLabel,
@@ -166,11 +169,32 @@ export class ResearchProposalsService {
   }
 
   async listProposals(actor: SafeUserContext) {
-    const asOf = new Date();
     const records = (await this.prisma.researchProposal.findMany({
       orderBy: { createdAt: "desc" },
       include: { owner: { select: { displayName: true } } }
     })) as ResearchProposalRecord[];
+    return this.projectProposalList(actor, records);
+  }
+
+  async listDecisionQueue(actor: SafeUserContext) {
+    if (!isLeadership(actor)) {
+      throw new ForbiddenException({ message: "Chỉ lãnh đạo có thẩm quyền phê duyệt được xem hàng đợi quyết định." });
+    }
+    const scopeIds = getOrganizationScopeIds(actor);
+    if (!scopeIds.length) return [];
+    const records = (await this.prisma.researchProposal.findMany({
+      where: {
+        hostOrganizationUnitId: { in: scopeIds },
+        status: { in: ["ready_for_approval", "approved", "rejected"] }
+      },
+      orderBy: { createdAt: "desc" },
+      include: { owner: { select: { displayName: true } } }
+    })) as ResearchProposalRecord[];
+    return this.projectProposalList(actor, records);
+  }
+
+  private async projectProposalList(actor: SafeUserContext, records: ResearchProposalRecord[]) {
+    const asOf = new Date();
 
     const [participationByProposal, reviewAccessByProposal, managementOfficerByProposal, completenessEvents] = await Promise.all([
       this.participation.resolveForProposals(actor?.id, records, asOf),
@@ -1393,11 +1417,12 @@ export class ResearchProposalsService {
   }
 
   private toHistoryResponse(record: ProposalSubmissionEventRecord) {
+    const reviewSubmission = (record.snapshot as { kind?: string } | null | undefined)?.kind === "review_submitted";
     return {
       id: record.id,
       proposalId: record.proposalId,
-      actorId: record.fromStatus === "under_review" && record.toStatus === "under_review" ? undefined : record.actorId,
-      actorDisplayName: record.fromStatus === "under_review" && record.toStatus === "under_review" ? "" : record.actor?.displayName ?? "",
+      actorId: reviewSubmission || (record.fromStatus === "under_review" && record.toStatus === "under_review") ? undefined : record.actorId,
+      actorDisplayName: reviewSubmission || (record.fromStatus === "under_review" && record.toStatus === "under_review") ? "" : record.actor?.displayName ?? "",
       fromStatus: record.fromStatus,
       toStatus: record.toStatus,
       submittedAt: record.submittedAt.toISOString(),

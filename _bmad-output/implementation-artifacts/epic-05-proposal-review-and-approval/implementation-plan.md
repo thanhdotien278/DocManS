@@ -1,7 +1,7 @@
 # Proposal Review & Approval — scoped implementation plan
 
-Date: 2026-09-20. Updated: 2026-09-21. Status: first assignment-to-queue slice
-implemented; remaining evaluation/consolidation/decision work is pending.
+Date: 2026-09-20. Updated: 2026-09-21. Status: Golden Flow implementation completed;
+runtime DB/browser acceptance remains explicitly deferred where the local stack is unavailable.
 Story authority: [Epic 5](../../epics.md#epic-5-kiểm-tra-đánh-giá-và-phê-duyệt-đề-xuất).
 
 ## First vertical slice execution — 2026-09-21
@@ -278,6 +278,34 @@ Re-authorize recipients at dispatch/read, deduplicate retries, and preserve comm
 business state if SMTP fails. No broad reminder scheduler or cross-module My Work rebuild.
 
 ## 6. Recommended order and acceptance gate
+
+### Golden Flow delivery gate — added 2026-09-21
+
+The owning stories remain 5.3, 5.4, 5.5, 5.7 and 5.8. They are accepted as one
+cross-role deliverable only when both approval and rejection are exercised from a
+real submitted/resubmitted proposal through the real UI and backend, with no direct
+status mutation. The gate requires:
+
+1. Staff assignment, reviewer work and staff synthesis each revalidate current
+   actor, scope, proposal context, assignment cardinality and conflict inside the
+   owning transaction; exactly two reviewers and at least three committee members
+   are required before routing.
+2. Reviewer drafts are assignment-scoped, submitted reviews are immutable, and the
+   review package, proposal detail, history, list, file and notification projections
+   preserve the current disclosure policy.
+3. Synthesis and the routed decision package are attributable, versioned evidence
+   built from submitted reviews without overwriting them. Readiness explains every
+   missing condition and is rechecked under the proposal lock.
+4. The leadership queue is server-filtered to actionable/decided records in scope;
+   only `LEADERSHIP_APPROVAL_AUTHORITY` can decide. Approve/reject rechecks authority,
+   conflict, state, package/context and readiness atomically and records the result,
+   reason, audit and workflow history.
+5. Negative scenarios from the sprint plan deny cleanly and do not leak protected
+   reviewer identity, raw score, internal comment or synthesis data through sibling
+   APIs, files, lists, history or notifications.
+
+No story status is promoted by this documentation update; the existing tracker is
+intentionally conservative until runtime evidence exists.
 
 0. **Management authorization prerequisite:** resolve baseline §2.1 decisions; implement
    explicit Head/Staff roles and proposal officer lifecycle/query facts before relying on

@@ -23,6 +23,7 @@ export class SaveProposalReviewDto {
   scoreData?: Record<string, number>;
   comment?: string;
   recommendation?: string;
+  contextVersion!: ContextVersionTokenV1;
 }
 
 export class SaveEvaluationSummaryDto {
@@ -39,6 +40,9 @@ export class ProposalDecisionDto {
 
   note?: string;
   contextVersion!: ContextVersionTokenV1;
+  packageRevision!: number;
+  publicSummary?: string;
+  requiredFollowUp?: string;
 }
 
 /** Revocation requires a nonblank reason, bounded at 2000 characters. */
@@ -120,7 +124,7 @@ export const saveProposalReviewPipe: PipeTransform<unknown, SaveProposalReviewDt
       }
     }
 
-    return input as SaveProposalReviewDto;
+    return { ...input, contextVersion: readContextVersion(input) } as SaveProposalReviewDto;
   }
 };
 
@@ -145,11 +149,16 @@ export const saveEvaluationSummaryPipe: PipeTransform<unknown, SaveEvaluationSum
 
 export const proposalDecisionPipe: PipeTransform<unknown, ProposalDecisionDto> = {
   transform(value: unknown) {
-    // Approve carries no required body, so an empty payload has to stay valid here and the
-    // reject-needs-a-reason rule lives in the service where the decision type is known.
+    // The body may omit the optional note, but the current package revision and context token are
+    // required for every approve/reject mutation; the reject-needs-a-reason rule stays in the service.
     const input = value === undefined || value === null || value === "" ? {} : assertRecord(value);
     assertOptionalText(input.note, "note", 2000);
-    return { ...input, contextVersion: readContextVersion(input) } as ProposalDecisionDto;
+    if (!Number.isInteger(input.packageRevision) || Number(input.packageRevision) < 0) {
+      throw new BadRequestException({ message: "Thiếu hoặc không hợp lệ phiên bản gói đánh giá." });
+    }
+    assertOptionalText(input.publicSummary, "publicSummary", 5000);
+    assertOptionalText(input.requiredFollowUp, "requiredFollowUp", 5000);
+    return { ...input, contextVersion: readContextVersion(input), packageRevision: Number(input.packageRevision) } as ProposalDecisionDto;
   }
 };
 

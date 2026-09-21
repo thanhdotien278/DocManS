@@ -254,6 +254,11 @@ export async function loadResearchProposals() {
   return response.proposals;
 }
 
+export async function loadDecisionQueue() {
+  const response = await requestJson<{ proposals: ResearchProposal[] }>("/research-proposals/decision-queue");
+  return response.proposals;
+}
+
 export async function createResearchProposalDraft(input: ProposalDraftInput) {
   return requestJson<{ proposal: ResearchProposal }>("/research-proposals", {
     method: "POST",

@@ -27,6 +27,11 @@ export class ResearchProposalsController {
     return { proposals: await this.proposalsService.listProposals(request.currentUser!) };
   }
 
+  @Get("decision-queue")
+  async decisionQueue(@Req() request: RequestWithCurrentUser) {
+    return { proposals: await this.proposalsService.listDecisionQueue(request.currentUser!) };
+  }
+
   @Post()
   async createDraft(@Req() request: RequestWithCurrentUser, @Body(createResearchProposalDraftPipe) body: CreateResearchProposalDraftDto) {
     return { proposal: await this.proposalsService.createDraft(request.currentUser!, body) };

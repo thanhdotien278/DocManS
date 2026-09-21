@@ -6,6 +6,7 @@ import type { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { assertHasOrganizationScope, isLeadership, isResearchOversightAuthority, isScientificManagementHead, isScientificManagementStaff } from "../proposals-shared/proposal-access.js";
 import type { ProposalConflictDecision } from "../proposals-shared/proposal-participation.js";
 import { isWorkflowVisibleStatus, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
+import { proposalContextVersion } from "../proposals-shared/proposal-mutation.js";
 
 /** The proposal fields every EP-03 evaluation operation needs. */
 export type EvaluationProposalRecord = {
@@ -18,6 +19,9 @@ export type EvaluationProposalRecord = {
   submittedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  authorizationRelationshipVersion: number;
+  authorizationConflictVersion: number;
+  authorizationDelegationVersion: number;
 };
 
 export type ReviewAssignmentRecord = {
@@ -34,6 +38,7 @@ export type ReviewAssignmentRecord = {
   dueDate: Date | null;
   revokedAt: Date | null;
   completedAt: Date | null;
+  reviewedSubmissionEventId: string | null;
   reviewer?: { displayName: string; username: string; unit: string } | null;
   assignedBy?: { displayName: string } | null;
 };
@@ -51,6 +56,9 @@ export type ProposalReviewRecord = {
   submittedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  submissionEventId: string | null;
+  contextVersion: unknown;
+  evidenceSnapshot: unknown;
   reviewer?: { displayName: string } | null;
 };
 
@@ -65,6 +73,9 @@ export type EvaluationSummaryRecord = {
   markedReadyAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  revision: number;
+  contextVersion: unknown;
+  evidenceSnapshot: unknown;
   updatedBy?: { displayName: string } | null;
 };
 
@@ -77,8 +88,24 @@ export type ProposalDecisionRecord = {
   decidedAt: Date;
   fromStatus: string;
   toStatus: string;
+  packageRevision: number | null;
+  contextVersion: unknown;
+  packageSnapshot: unknown;
+  publicSummary: unknown;
   decidedBy?: { displayName: string } | null;
 };
+
+export type ProposalSubmissionEvidence = {
+  eventId: string;
+  submittedAt: Date;
+  submissionVersion: string;
+  contextVersion: ReturnType<typeof proposalContextVersion>;
+  snapshot: unknown;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
 
 export async function findEvaluationProposal(prisma: PrismaService, proposalId: string) {
   const proposal = (await prisma.researchProposal.findUnique({
@@ -90,6 +117,38 @@ export async function findEvaluationProposal(prisma: PrismaService, proposalId: 
   }
 
   return proposal;
+}
+
+/**
+ * Resolves the immutable submission event that the current evaluation round is reviewing. A round
+ * without a persisted submission event is not safe to evaluate: callers must fail closed instead
+ * of guessing which attachment/member snapshot a review referred to.
+ */
+export async function findCurrentSubmissionEvidence(prisma: Pick<PrismaService, "proposalSubmissionEvent">, proposal: EvaluationProposalRecord): Promise<ProposalSubmissionEvidence> {
+  if (!proposal.submittedAt) {
+    throw new BadRequestException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được lần nộp hiện tại." });
+  }
+
+  const events = await prisma.proposalSubmissionEvent.findMany({
+    where: { proposalId: proposal.id, toStatus: { in: ["submitted", "resubmitted"] }, submittedAt: { gte: proposal.submittedAt } },
+    orderBy: { submittedAt: "desc" },
+    select: { id: true, submittedAt: true, snapshot: true }
+  });
+  const event = events[0] as { id: string; submittedAt: Date; snapshot: unknown } | undefined;
+  if (!event) {
+    throw new BadRequestException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được bằng chứng lần nộp hiện tại." });
+  }
+  if (!isRecord(event.snapshot) || !Array.isArray(event.snapshot.members) || !Array.isArray(event.snapshot.attachments) || !Array.isArray(event.snapshot.requiredPackage)) {
+    throw new BadRequestException({ code: "CONTEXT_UNRESOLVED", message: "Bằng chứng lần nộp hiện tại không hợp lệ." });
+  }
+
+  return {
+    eventId: event.id,
+    submittedAt: event.submittedAt,
+    submissionVersion: event.id,
+    contextVersion: proposalContextVersion(proposal),
+    snapshot: event.snapshot
+  };
 }
 
 /**

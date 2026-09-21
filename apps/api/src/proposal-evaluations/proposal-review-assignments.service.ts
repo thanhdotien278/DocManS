@@ -20,6 +20,7 @@ import { isWorkflowVisibleStatus, PROPOSAL_STATUS, PROPOSAL_STATUS_LABELS, REVIE
 import {
   assertProposalStatus,
   assertScientificManagementScope,
+  findCurrentSubmissionEvidence,
   findEvaluationProposal,
   updateProposalStatusGuarded,
   type EvaluationProposalRecord,
@@ -77,6 +78,7 @@ export class ProposalReviewAssignmentsService {
     }
     if ((await this.participation.evaluateConflict(actor.id, proposalId)).conflicted) throw new ForbiddenException();
     await this.assertCompletenessEvidence(proposal);
+    const submissionEvidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
     const search = query.trim().slice(0, 100);
     // ponytail: scans matching accounts for 50 eligible results; paginate if the directory grows large.
     const accounts = await this.prisma.user.findMany({
@@ -93,7 +95,7 @@ export class ProposalReviewAssignmentsService {
     const users: typeof accounts = [];
     for (const account of accounts) {
       const conflict = await this.participation.evaluateConflict(account.id, proposalId);
-      const assigned = await this.findLiveAssignment(proposalId, account.id);
+      const assigned = await this.findLiveAssignment(proposalId, account.id, submissionEvidence.eventId);
       const managementOfficer = await this.prisma.proposalManagementOfficer.findFirst({
         where: { proposalId, officerUserId: account.id, status: "ACTIVE" },
         select: { id: true }
@@ -137,11 +139,12 @@ export class ProposalReviewAssignmentsService {
     }
 
     await this.assertCompletenessEvidence(proposal);
+    const submissionEvidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
     const candidate = await this.resolveReviewerCandidate(input);
     if (input.assignmentRole !== undefined && !["reviewer", "committee_member"].includes(String(input.assignmentRole))) throw new BadRequestException({ message: "Vai trò phân công không hợp lệ." });
     const assignmentRole = normalizeAssignmentRole(input.assignmentRole);
     if (assignmentRole === "reviewer" && await this.prisma.proposalReviewAssignment.count({
-      where: { proposalId, assignmentRole: "reviewer", status: { in: [REVIEW_ASSIGNMENT_STATUS.assigned, REVIEW_ASSIGNMENT_STATUS.completed] } }
+      where: { proposalId, reviewedSubmissionEventId: submissionEvidence.eventId, assignmentRole: "reviewer", status: { in: [REVIEW_ASSIGNMENT_STATUS.assigned, REVIEW_ASSIGNMENT_STATUS.completed] } }
     }) >= 2) {
       throw new BadRequestException({ message: "Mỗi đề tài chỉ được phân công 2 người phản biện. Thu hồi phân công cũ trước khi thay thế." });
     }
@@ -189,7 +192,7 @@ export class ProposalReviewAssignmentsService {
     // Any non-revoked assignment blocks a new one, not just an open one: a reviewer who already
     // submitted holds a `completed` row, and assigning them again would count them twice in the
     // round's progress and ask them for a second review. Re-review needs an explicit later policy.
-    const existing = await this.findLiveAssignment(proposalId, candidate.id);
+    const existing = await this.findLiveAssignment(proposalId, candidate.id, submissionEvidence.eventId);
     if (existing) {
       throw new BadRequestException({
         message:
@@ -215,7 +218,8 @@ export class ProposalReviewAssignmentsService {
             assignedAt,
             effectiveFrom,
             effectiveUntil,
-            dueDate
+            dueDate,
+            reviewedSubmissionEventId: submissionEvidence.eventId
           } as never,
           include: ASSIGNMENT_INCLUDE
         })) as ReviewAssignmentRecord;
@@ -289,6 +293,10 @@ export class ProposalReviewAssignmentsService {
     assertProposalStatus(proposal, REVIEWER_ASSIGNABLE_STATUSES, "Hồ sơ không ở trạng thái cho phép thay đổi phân công đánh giá.");
 
     const assignment = await this.findAssignmentById(proposalId, assignmentId);
+    const submissionEvidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
+    if (assignment.reviewedSubmissionEventId && assignment.reviewedSubmissionEventId !== submissionEvidence.eventId) {
+      throw new BadRequestException({ code: "STALE_ASSIGNMENT_CONTEXT", message: "Phân công thuộc phiên bản nộp cũ của hồ sơ." });
+    }
     if (assignment.status !== REVIEW_ASSIGNMENT_STATUS.assigned && assignment.status !== REVIEW_ASSIGNMENT_STATUS.completed) {
       throw new BadRequestException({
         message: "Phân công này không còn hiệu lực."
@@ -364,7 +372,11 @@ export class ProposalReviewAssignmentsService {
             title: true,
             status: true,
             submittedAt: true,
-            hostOrganizationUnitId: true
+            hostOrganizationUnitId: true,
+            updatedAt: true,
+            authorizationRelationshipVersion: true,
+            authorizationConflictVersion: true,
+            authorizationDelegationVersion: true
           }
         }
       }
@@ -382,6 +394,14 @@ export class ProposalReviewAssignmentsService {
 
     const visible = [];
     for (const assignment of assignments) {
+      const proposal = assignment.proposal as EvaluationProposalRecord;
+      let currentSubmissionEventId = "";
+      try {
+        currentSubmissionEventId = (await findCurrentSubmissionEvidence(this.prisma, proposal)).eventId;
+      } catch {
+        continue;
+      }
+      if (assignment.reviewedSubmissionEventId !== currentSubmissionEventId) continue;
       const access = await this.reviewAccess.resolveForProposal(actor.id, assignment.proposalId, asOf);
       const conflict = await this.participation.evaluateConflict(actor.id, assignment.proposalId);
       if (isWorkflowVisibleStatus(assignment.proposal?.status ?? "") && access.isAssignedReviewer && access.assignmentId === assignment.id && !conflict.conflicted) visible.push(assignment);
@@ -426,6 +446,18 @@ export class ProposalReviewAssignmentsService {
         message: "Bạn không được phân công đánh giá hồ sơ này."
       });
     }
+    const submissionEvidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
+    const assignment = await this.findAssignmentById(proposalId, access.assignmentId ?? "");
+    const now = new Date();
+    if (
+      assignment.reviewedSubmissionEventId !== submissionEvidence.eventId ||
+      ![REVIEW_ASSIGNMENT_STATUS.assigned, REVIEW_ASSIGNMENT_STATUS.completed].includes(assignment.status as never) ||
+      assignment.effectiveFrom > now ||
+      (assignment.effectiveUntil && assignment.effectiveUntil <= now)
+    ) {
+      throw new ForbiddenException({ code: "STALE_ASSIGNMENT_CONTEXT", message: "Phân công không còn gắn với phiên bản nộp hiện tại của hồ sơ." });
+    }
+    assertProposalStatus(proposal, ["submitted", "resubmitted", "under_review"], "Hồ sơ không ở trạng thái cho phép đánh giá.");
 
     const [members, attachments, history] = await Promise.all([
       this.prisma.proposalMember.findMany({
@@ -467,6 +499,12 @@ export class ProposalReviewAssignmentsService {
       assignmentId: access.assignmentId,
       assignmentRole: access.assignmentRole,
       assignmentRoleLabel: getAssignmentRoleLabel(access.assignmentRole),
+      contextVersion: submissionEvidence.contextVersion,
+      submissionEvidence: {
+        eventId: submissionEvidence.eventId,
+        submittedAt: submissionEvidence.submittedAt.toISOString(),
+        submissionVersion: submissionEvidence.submissionVersion
+      },
       proposal: {
         id: proposal.id,
         code: proposal.code ?? "",
@@ -547,6 +585,24 @@ export class ProposalReviewAssignmentsService {
     })) as ReviewAssignmentRecord[];
   }
 
+  async findCurrentRoundAssignments(proposal: EvaluationProposalRecord) {
+    const evidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
+    const assignments = await this.findAssignments(proposal.id);
+    return assignments.filter((assignment) => assignment.reviewedSubmissionEventId === evidence.eventId);
+  }
+
+  async findCurrentRoundReviews(proposal: EvaluationProposalRecord) {
+    const evidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
+    const assignments = await this.findAssignments(proposal.id);
+    const assignmentIds = new Set(
+      assignments
+        .filter((assignment) => assignment.reviewedSubmissionEventId === evidence.eventId)
+        .map((assignment) => assignment.id)
+    );
+    const reviews = await this.findReviews(proposal.id);
+    return reviews.filter((review) => assignmentIds.has(review.assignmentId) && review.submissionEventId === evidence.eventId);
+  }
+
   async findReviews(proposalId: string) {
     return (await this.prisma.proposalReview.findMany({
       where: { proposalId },
@@ -586,11 +642,12 @@ export class ProposalReviewAssignmentsService {
   }
 
   /** Any assignment that still counts — i.e. anything not revoked. */
-  async findLiveAssignment(proposalId: string, reviewerUserId: string) {
+  async findLiveAssignment(proposalId: string, reviewerUserId: string, reviewedSubmissionEventId?: string) {
     return (await this.prisma.proposalReviewAssignment.findFirst({
       where: {
         proposalId,
         reviewerUserId,
+        ...(reviewedSubmissionEventId ? { reviewedSubmissionEventId } : {}),
         status: {
           in: [REVIEW_ASSIGNMENT_STATUS.assigned, REVIEW_ASSIGNMENT_STATUS.completed]
         }

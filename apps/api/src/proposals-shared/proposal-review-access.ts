@@ -122,11 +122,13 @@ export function resolveProposalReviewAccess(assignments?: ReviewAssignmentLike[]
     return NO_REVIEW_ACCESS;
   }
 
-  const active = assignments.find((assignment) =>
-    (assignment.status === REVIEW_ASSIGNMENT_STATUS.assigned || assignment.status === REVIEW_ASSIGNMENT_STATUS.completed) &&
-    (!assignment.effectiveFrom || assignment.effectiveFrom <= asOf) &&
-    (!assignment.effectiveUntil || asOf < assignment.effectiveUntil)
-  );
+  const active = assignments
+    .filter((assignment) =>
+      (assignment.status === REVIEW_ASSIGNMENT_STATUS.assigned || assignment.status === REVIEW_ASSIGNMENT_STATUS.completed) &&
+      (!assignment.effectiveFrom || assignment.effectiveFrom <= asOf) &&
+      (!assignment.effectiveUntil || asOf < assignment.effectiveUntil)
+    )
+    .sort((left, right) => ((right.effectiveFrom ?? right.assignedAt)?.getTime() ?? 0) - ((left.effectiveFrom ?? left.assignedAt)?.getTime() ?? 0))[0];
 
   if (!active) {
     return NO_REVIEW_ACCESS;
