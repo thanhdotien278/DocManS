@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ViewerAuthorizationV1 } from "@rtms/permissions";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
@@ -18,7 +19,7 @@ function formatDate(value: string) {
  * workflow trail behind them. A conflict is shown with its reason rather than silently hiding the
  * buttons (UX-DR27), and the backend re-checks authority, state and conflict on the action itself.
  */
-export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, blockedReason }: { proposalId: string; onDecision: () => void; canDecide: boolean; blockedReason: string }) {
+export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, blockedReason, contextVersion }: { proposalId: string; onDecision: () => void; canDecide: boolean; blockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
   const [decisionPackage, setDecisionPackage] = useState<ProposalDecisionPackage | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
   const [loadError, setLoadError] = useState("");
@@ -68,6 +69,10 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
       setError("Nhập lý do khi không phê duyệt hồ sơ.");
       return;
     }
+    if (!contextVersion) {
+      setError("Không xác định được phiên bản quyền của hồ sơ. Vui lòng tải lại.");
+      return;
+    }
 
     const confirmText =
       decision === "approve"
@@ -79,7 +84,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
 
     setBusyDecision(decision);
     try {
-      const result = await decideProposal(proposalId, decision, note.trim());
+      const result = await decideProposal(proposalId, decision, note.trim(), contextVersion);
       setMessage(`Đã ghi nhận quyết định: ${result.decision.decisionLabel}.`);
       setNote("");
       await refresh();
@@ -200,7 +205,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
           <button
             className="button primary"
             type="button"
-            disabled={!canDecide || !decisionPackage.canDecide || busyDecision !== ""}
+            disabled={!canDecide || !contextVersion || !decisionPackage.canDecide || busyDecision !== ""}
             onClick={() => void handleDecide("approve")}
           >
             <CheckCircle2 size={16} aria-hidden="true" />
@@ -209,7 +214,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
           <button
             className="button danger"
             type="button"
-            disabled={!canDecide || !decisionPackage.canDecide || busyDecision !== ""}
+            disabled={!canDecide || !contextVersion || !decisionPackage.canDecide || busyDecision !== ""}
             onClick={() => void handleDecide("reject")}
           >
             <XCircle size={16} aria-hidden="true" />

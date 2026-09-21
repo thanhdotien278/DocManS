@@ -1,62 +1,52 @@
-# Development Auth Accounts
+# Local development and demo accounts
 
-**Authorization applicability — 2026-09-21:** Earlier implementation/demo evidence
-below predates the Head/Staff split. It is not a current permission grant or verification
-of that split. Current baseline §2.1 requires explicit Head scope and an effective
-proposal/project management-officer assignment for Staff management access; neither
-role grants leadership final decisions. No seed, account, migration or test is changed
-by this documentation update.
+These identities and credentials are **local/demo only**, not production identity data.
+All seeded accounts use the existing local password `1234`; the seed stores scrypt hashes.
+Run `npm run db:setup` for a new local database, or `npm run prisma:seed` after migrations.
 
-Story 1.2 uses Prisma-seeded internal accounts for local development until Story 1.3 introduces user, role, and organization management screens.
+| Username | System role | Demo responsibility |
+| --- | --- | --- |
+| `admin` | `SYSTEM_ADMIN` | Platform administration; no implicit business approval |
+| `nmphuong` | `SCIENTIFIC_MANAGEMENT_HEAD` | Trưởng phòng KHQS: scoped portfolio, officer assignment/reassignment/revocation, summary review and eligible package submission |
+| `hdtien1`, `hdtien2` | `SCIENTIFIC_MANAGEMENT_STAFF` | Trợ lý/Chuyên viên KHQS: manage only proposals actively assigned to that account |
+| `tvtien` | `LEADERSHIP_APPROVAL_AUTHORITY` | Giám đốc: oversight plus eligible final decisions, subject to conflicts |
+| `vndinh` | `RESEARCH_OVERSIGHT_AUTHORITY` | Thiếu tướng PGS. TS. Vũ Nhất Định — Phó Giám đốc phụ trách NCKH; read-only institutional oversight plus independent researcher capabilities |
+| `patuan`, `nmtrung`, `researcher1`, `researcher2`, `researcher3` | `RESEARCHER_INTERNAL_USER` | Researcher accounts; PI/member/reviewer/council responsibilities come from record relationships |
+| `external1`, `external2`, `external3` | `EXTERNAL_RESEARCHER_USER` | Assigned external research/review work only |
 
-These credentials are for local development only. All seeded accounts share the password `1234`.
+Check `apps/api/prisma/seed.mjs` for the complete current seed identity list. Titles shown
+in demo content are not system roles. Each account retains exactly one active system role.
+`vndinh` links to an active INTERNAL researcher profile with the supplied name, military
+rank, academic title and position; that profile does not grant management or decision power.
 
-| Username | Password | Role | Unit |
-| --- | --- | --- | --- |
-| `admin` | `1234` | Quản trị hệ thống | Khoa Toán - Tin học |
-| `tvtien` | `1234` | Giám Đốc | Ban Giám Đốc |
-| `nmphuong` | `1234` | Trưởng phòng | Phòng KHQS |
-| `patuan` | `1234` | Chủ nhiệm đề tài | Khoa Toán - Tin học |
-| `nmtrung` | `1234` | Thành viên Hội đồng | Ban Quản lý KHQS |
-| `hdtien1` | `1234` | Chuyên viên | Phòng KHQS |
-| `hdtien2` | `1234` | Chuyên viên | Phòng KHQS |
+## Scope and management assignment
 
-The seed file stores precomputed `scrypt` password hashes only. Plaintext credentials are documented here for local development and are not returned through auth endpoints.
+Home unit is not organization scope. Head, Director and Deputy Director have explicit grants
+for all nine seeded internal units (`org-hvqy`, `org-bgq`, `org-khti`, `org-khqs`,
+`org-bqlkhqs`, `org-k30`, `org-k81`, `org-k82`, `org-k84`). No organization-tree inheritance
+is assumed. Staff has its existing seven-unit scope, but scope alone no longer grants
+proposal visibility or management actions. An effective `PROPOSAL_MANAGEMENT_OFFICER`
+assignment on that exact proposal is also required.
 
-## Organization scopes
+Existing proposals remain unassigned after migration/seed. Sign in as `nmphuong`, open an
+in-scope proposal and explicitly assign eligible Staff with a reason. Reassignment/revocation
+retains lifecycle history and audit. Staff participation/review on other records is evaluated
+independently; it never supplies administrative actions. Conflicting participants/reviewers
+cannot be assigned management responsibility. Do not create automatic officers to preserve
+older broad Staff access.
 
-The `Unit` column above is each account's home unit. Backend authorization checks the account's
-**organization scopes**, which are not always just that one unit.
+A Director who is already a participant/reviewer retains the corresponding conflict and
+cannot make the final decision. `vndinh` can read institutional records but receives no final
+approval/rejection actions. As PI of an eligible own proposal, the same account can create,
+edit and submit through ordinary researcher rules. Sensitive reviewer data remains protected.
 
-The three scientific-management accounts (`nmphuong`, `hdtien1`, `hdtien2`) are additionally scoped
-to `org-khti` (Khoa Toán - Tin học) and `org-bqlkhqs` (Ban Quản lý KHQS), because staff operate the
-intake, supplement, reviewer-assignment and consolidation flows for the units they oversee rather
-than only for their own department. Without those extra scopes the seeded PI (`patuan`, Khoa Toán -
-Tin học) files proposals no seeded staff account may act on, and the EP-02/EP-03 demo stalls at the
-first scope-checked staff action.
+`PROJECT_MANAGEMENT_OFFICER` and project oversight are contract requirements until the
+approved-project backend exists. Current dashboards are showcase/demo data. Funding is
+requested proposal metadata; actual expenditure/remaining project funding is not implemented.
 
-| Username | Organization scopes |
-| --- | --- |
-| `admin` | `org-khti` |
-| `tvtien` | `org-bgq` |
-| `nmphuong`, `hdtien1`, `hdtien2` | `org-khqs`, `org-khti`, `org-bqlkhqs` |
-| `patuan` | `org-khti` |
-| `nmtrung` | `org-bqlkhqs` |
+## Local startup
 
-Leadership (`tvtien`) does not need a matching organization scope to read or decide a proposal:
-approval authority is evaluated from the `leadership` role plus the proposal's workflow state, and
-reviewers read only the proposals they were explicitly assigned to.
-
-Local database setup:
-
-```bash
-docker compose up -d postgres
-npm run db:setup
-```
-
-`docker compose up api` runs the same setup path before starting the NestJS API, so a fresh local database receives the Epic 1 auth/session/audit migration and seed users automatically.
-
-Troubleshooting:
-
-- If the browser reports `Failed to fetch` while calling `http://localhost:4000/api/v1/auth/me`, confirm the API container is running with `docker compose ps` and start it with `docker compose up -d api`.
-- A healthy unauthenticated API should return `200` from `http://localhost:4000/api/v1/health` and `401` from `http://localhost:4000/api/v1/auth/me`.
+Follow the mutually exclusive host-run or all-Docker setup in the root README. The API
+command builds once; restart it after API source changes. Migration/seed does not refresh
+an already running API process. A healthy unauthenticated API returns HTTP 200 at
+`/api/v1/health` and HTTP 401 at `/api/v1/auth/me`.

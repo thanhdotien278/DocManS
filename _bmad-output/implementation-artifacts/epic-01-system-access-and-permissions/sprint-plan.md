@@ -23,3 +23,13 @@
 ## Execution note
 
 Stories 1.1–1.4 are implemented and covered by the current workspace, authentication, admin-user, proposal-scope, and clean-schema migration test suites. Story 1.4 is `done`: review blockers were resolved with exact organization-ID enforcement, fail-closed legacy migration handling, atomic account/scope writes, preserved multi-unit scopes, and one shared system-role source.
+
+## Finalized leadership authorization impact
+
+`RESEARCH_OVERSIGHT_AUTHORITY` combines internal researcher capabilities through record
+relationships with explicit-scope institutional oversight. It grants no final proposal,
+council-establishment, funding or acceptance decision. `LEADERSHIP_APPROVAL_AUTHORITY`
+has oversight plus eligible conflict-free final decisions. All surfaces must preserve
+disclosure, source authorization and active officer restrictions; no broad Staff queues.
+Project/council establishment, notifications/My Work and institutional dashboards/reports
+remain planned where their owning backend is absent. Funding uses available metadata only.

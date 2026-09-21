@@ -70,7 +70,7 @@ export class ProposalReviewAssignmentsService {
 
   async candidates(actor: SafeUserContext, proposalId: string, query: unknown = "") {
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    assertScientificManagementScope(actor, proposal);
+    await assertScientificManagementScope(this.prisma, actor, proposal);
     assertProposalStatus(proposal, REVIEWER_ASSIGNABLE_STATUSES, "Hồ sơ không ở trạng thái cho phép phân công đánh giá.");
     if (typeof query !== "string") {
       throw new BadRequestException({ message: "Từ khóa tìm kiếm người đánh giá không hợp lệ." });
@@ -94,7 +94,11 @@ export class ProposalReviewAssignmentsService {
     for (const account of accounts) {
       const conflict = await this.participation.evaluateConflict(account.id, proposalId);
       const assigned = await this.findLiveAssignment(proposalId, account.id);
-      if (!conflict.conflicted && !assigned) {
+      const managementOfficer = await this.prisma.proposalManagementOfficer.findFirst({
+        where: { proposalId, officerUserId: account.id, status: "ACTIVE" },
+        select: { id: true }
+      });
+      if (!conflict.conflicted && !assigned && !managementOfficer) {
         users.push(account);
         if (users.length === 50) break;
       }
@@ -104,7 +108,7 @@ export class ProposalReviewAssignmentsService {
 
   async listAssignments(actor: SafeUserContext, proposalId: string) {
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    assertScientificManagementScope(actor, proposal);
+    await assertScientificManagementScope(this.prisma, actor, proposal);
     if (!isWorkflowVisibleStatus(proposal.status)) throw new ForbiddenException();
     if ((await this.participation.evaluateConflict(actor.id, proposalId)).conflicted) throw new ForbiddenException({ message: "Không được xem dữ liệu phản biện của hồ sơ mình tham gia." });
     const assignments = await this.findAssignments(proposalId);
@@ -125,7 +129,7 @@ export class ProposalReviewAssignmentsService {
       return result;
     }
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    assertScientificManagementScope(actor, proposal);
+    await assertScientificManagementScope(this.prisma, actor, proposal);
     assertProposalStatus(proposal, REVIEWER_ASSIGNABLE_STATUSES, "Chỉ hồ sơ đã nộp hoặc đang đánh giá mới được phân công người đánh giá.");
     const actorConflict = await this.participation.evaluateConflict(actor.id, proposalId);
     if (actorConflict.conflicted) {
@@ -172,6 +176,14 @@ export class ProposalReviewAssignmentsService {
         message: `Không thể phân công ${candidate.displayName}: ${conflict.reason}`,
         reasonCode: conflict.reasonCode
       });
+    }
+
+    const managementOfficer = await this.prisma.proposalManagementOfficer.findFirst({
+      where: { proposalId, officerUserId: candidate.id, status: "ACTIVE" },
+      select: { id: true }
+    });
+    if (managementOfficer) {
+      throw new BadRequestException({ code: "CONFLICT_DENIED", message: "Không thể phân công cán bộ đang phụ trách hồ sơ làm người phản biện." });
     }
 
     // Any non-revoked assignment blocks a new one, not just an open one: a reviewer who already
@@ -273,7 +285,7 @@ export class ProposalReviewAssignmentsService {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (s, a) => s.revokeAssignment(a, proposalId, assignmentId, input));
     if ((await this.participation.evaluateConflict(actor.id, proposalId)).conflicted) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được thay đổi phân công." });
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    assertScientificManagementScope(actor, proposal);
+    await assertScientificManagementScope(this.prisma, actor, proposal);
     assertProposalStatus(proposal, REVIEWER_ASSIGNABLE_STATUSES, "Hồ sơ không ở trạng thái cho phép thay đổi phân công đánh giá.");
 
     const assignment = await this.findAssignmentById(proposalId, assignmentId);

@@ -35,6 +35,7 @@ hệ thống. Proposal PI luôn được suy ra từ `ownerId`; PI không là te
 ```mermaid
 flowchart LR
   account["Tài khoản<br/>1 system role active"] --> admin["SYSTEM_ADMIN<br/>Nền tảng, tài khoản, scope"]
+  account --> oversight["RESEARCH_OVERSIGHT_AUTHORITY<br/>Nghiên cứu theo quan hệ + giám sát chỉ đọc"]
   account --> head["SCIENTIFIC_MANAGEMENT_HEAD<br/>Giám sát trong scope được cấp"]
   account --> staff["SCIENTIFIC_MANAGEMENT_STAFF<br/>Quản lý hồ sơ được phân công"]
   account --> leader["LEADERSHIP_APPROVAL_AUTHORITY<br/>Quyết định trong thẩm quyền"]
@@ -57,8 +58,8 @@ flowchart LR
 
 1. Head mở danh sách proposal/project trong scope được cấp, thấy officer hiện tại
    hoặc “Chưa phân công”; lọc/nhóm theo chuyên viên để xem workload, trạng thái và hạn.
-2. Actor có capability phân công đã được chốt chọn Staff phụ trách. Backend kiểm tra
-   scope, account, participation/conflict và context; role Head tự nó chưa cấp action này.
+2. Head có capability phân công chọn Staff phụ trách. Backend kiểm tra
+   scope, account, participation/conflict và context hiện thời trước khi ghi.
 3. Chuyển phân công kết thúc quan hệ cũ và tạo quan hệ mới nguyên tử, giữ history/audit;
    tối đa một `PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER` hiện hành.
 4. Staff thấy hàng chờ quản lý của mình. Hồ sơ khác chỉ xuất hiện qua quan hệ PI/member/
@@ -71,8 +72,8 @@ Participant không đồng thời làm officer, reviewer, evaluation/acceptance 
 quyết định cuối cùng hồ sơ; reviewer không quyết định cùng vòng, các vị trí loại trừ
 trong hội đồng không được kiêm nhiệm. Kiểm tra khi tạo/thay đổi assignment/participation
 và tại protected action. Head không có action phê duyệt/từ chối cuối của lãnh đạo.
-Quyền phân công và quyền vận hành cụ thể của Head còn cần chốt theo baseline §2.1;
-không thêm bước phê duyệt hoặc tự cấp quyền. Đợt/profile giữ scope riêng, không mở
+Head được phân công officer, xem tổng hợp và trình gói đủ điều kiện theo baseline §2.1;
+không có quyền quyết định cuối. Đợt/profile giữ scope riêng, không mở
 quyền proposal/project; project mới không tự kế thừa officer của proposal.
 
 ## 2. Cổng kiểm tra chung cho mọi hành động
@@ -378,3 +379,12 @@ role/scope. Pending branch: show email, `Chờ kích hoạt`, expiry and allow r
 activation. Delivery failure branch: inspect pending/unknown status, confirm email
 and issue a new activation token. Unlink branch: enter reason, end current link,
 retain history, remove My Profile access immediately.
+
+### Director and Deputy Director oversight
+
+Both open scoped institutional records and operational counts/status/deadlines. Director
+receives final decision actions only for eligible routed packages without participation/review
+conflicts. Deputy receives no final decision action; PI/member/reviewer work is evaluated
+independently. Head assigns Staff, reviews their summary and submits a completed package.
+Protected reviewer information is omitted from oversight responses. Project/dashboard/
+notification/report routes without operational backends remain design requirements.

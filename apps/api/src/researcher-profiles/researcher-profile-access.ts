@@ -20,7 +20,7 @@ export const RESEARCHER_PROFILE_ACTIONS = [
   "researcher-profile.update"
 ] as const satisfies readonly PermissionActionV1[];
 
-export const RESEARCHER_PROFILE_MANAGER_ROLES = ["SYSTEM_ADMIN", "SCIENTIFIC_MANAGEMENT_STAFF"] as const;
+export const RESEARCHER_PROFILE_MANAGER_ROLES = ["SYSTEM_ADMIN", "SCIENTIFIC_MANAGEMENT_HEAD", "SCIENTIFIC_MANAGEMENT_STAFF"] as const;
 
 export function hasResearcherProfileScope(actor: SafeUserContext, organizationId: string) {
   return actor.organizationScopes.some((scope) => scope.id === organizationId);

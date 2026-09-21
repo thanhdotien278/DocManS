@@ -40,6 +40,8 @@ model User {
   proposalParticipations ProposalMember[] @relation("ProposalParticipant")
   proposalReviewAssignments ProposalReviewAssignment[] @relation("ReviewAssignmentReviewer")
   assignedProposalReviews ProposalReviewAssignment[] @relation("ReviewAssignmentAssigner")
+  proposalManagementOfficerAssignments ProposalManagementOfficer[] @relation("ProposalManagementOfficerUser")
+  assignedProposalManagementOfficers ProposalManagementOfficer[] @relation("ProposalManagementOfficerAssigner")
   proposalReviews ProposalReview[] @relation("ProposalReviewReviewer")
   createdEvaluationSummaries ProposalEvaluationSummary[] @relation("EvaluationSummaryCreator")
   updatedEvaluationSummaries ProposalEvaluationSummary[] @relation("EvaluationSummaryEditor")
@@ -434,6 +436,7 @@ model ResearchProposal {
   submissionEvents       ProposalSubmissionEvent[]
   supplementRequests     ProposalSupplementRequest[]
   reviewAssignments      ProposalReviewAssignment[]
+  managementOfficers     ProposalManagementOfficer[]
   reviews                ProposalReview[]
   evaluationSummary      ProposalEvaluationSummary?
   decisions              ProposalDecision[]
@@ -465,6 +468,28 @@ model ProposalMember {
   @@index([participationRole])
   @@index([proposalId, userId, participationRole, status])
   @@map("proposal_members")
+}
+
+/// Proposal-scoped primary management responsibility. Ended rows are retained as lifecycle history.
+model ProposalManagementOfficer {
+  id                       String           @id @default(uuid())
+  proposalId               String           @map("proposal_id")
+  proposal                 ResearchProposal @relation(fields: [proposalId], references: [id], onDelete: Restrict)
+  officerUserId            String           @map("officer_user_id")
+  officer                  User             @relation("ProposalManagementOfficerUser", fields: [officerUserId], references: [id], onDelete: Restrict)
+  assignedById             String           @map("assigned_by_id")
+  assignedBy               User             @relation("ProposalManagementOfficerAssigner", fields: [assignedById], references: [id], onDelete: Restrict)
+  status                   String           @default("ACTIVE")
+  effectiveFrom            DateTime         @map("effective_from")
+  effectiveUntil           DateTime?        @map("effective_until")
+  reason                   String?
+  assignmentContextVersion Json?            @map("assignment_context_version")
+  createdAt                DateTime         @default(now()) @map("created_at")
+  updatedAt                DateTime         @updatedAt @map("updated_at")
+
+  @@index([proposalId, status, effectiveUntil])
+  @@index([officerUserId, status, effectiveUntil])
+  @@map("proposal_management_officers")
 }
 
 model ProposalAttachment {

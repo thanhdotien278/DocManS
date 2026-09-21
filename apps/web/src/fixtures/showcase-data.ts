@@ -214,6 +214,7 @@ export function getProposalById(id: string) {
 
 export function getDashboardSnapshot(role: UserRole): DashboardSnapshot {
   switch (role) {
+    case "SCIENTIFIC_MANAGEMENT_HEAD":
     case "SCIENTIFIC_MANAGEMENT_STAFF":
       return {
         eyebrow: "Điều hành nghiệp vụ",
@@ -280,6 +281,17 @@ export function getDashboardSnapshot(role: UserRole): DashboardSnapshot {
           }
         ]
       };
+    case "RESEARCH_OVERSIGHT_AUTHORITY": {
+      const managementSnapshot = getDashboardSnapshot("SCIENTIFIC_MANAGEMENT_STAFF");
+      return {
+        ...managementSnapshot,
+        eyebrow: "Giám sát nghiên cứu",
+        title: "Dashboard giám sát nghiên cứu",
+        description: "Theo dõi tổng quan hồ sơ và tiến độ nghiên cứu trong phạm vi tổ chức được cấp quyền.",
+        primaryActionLabel: "Mở danh sách đề tài",
+        primaryActionHref: "/proposals"
+      };
+    }
     case "RESEARCHER_INTERNAL_USER":
       return {
         eyebrow: "Công việc cá nhân",

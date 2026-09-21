@@ -36,14 +36,15 @@ administration panels, responsive list patterns, shared status badges, KPI
 cards, filters, breadcrumbs, timelines, and UI tokens. The target UX must reuse
 those patterns.
 
-The target product baseline contains six system roles (one active per account):
+The target product baseline contains seven system roles (one active per account):
 
 | System role | UI meaning |
 | --- | --- |
 | `SYSTEM_ADMIN` | Platform foundation administration only |
 | `SCIENTIFIC_MANAGEMENT_HEAD` | All proposals/projects within authorized Scientific Management scope; responsible Staff/unassigned/workload/status/deadlines |
 | `SCIENTIFIC_MANAGEMENT_STAFF` | Management operations on explicitly assigned proposals/projects only; other access through its own legitimate relationship |
-| `LEADERSHIP_APPROVAL_AUTHORITY` | Decision work for records presented within authority scope |
+| `LEADERSHIP_APPROVAL_AUTHORITY` | Institutional oversight; final decision controls only for eligible routed records without conflict |
+| `RESEARCH_OVERSIGHT_AUTHORITY` | Deputy Director: institutional research oversight plus internal researcher capabilities through record relationships; no final decisions |
 | `RESEARCHER_INTERNAL_USER` | Researcher-owned and related records |
 | `EXTERNAL_RESEARCHER_USER` | Only explicitly related approved-topic/task records and assigned review work |
 
@@ -79,8 +80,8 @@ and authorization as list/detail. Unassigned is a real state, not an error or a 
 Responsible Staff is operational metadata explicitly visible to Head, not permission to
 expose hidden reviewer/council identities. Head participation conflicts retain disclosure limits.
 
-Officer assignment/reassignment/revocation controls require a separately decided backend
-capability (baseline §2.1); Head visibility alone does not enable them. When authorized,
+Officer assignment/reassignment/revocation controls use the Head backend capability
+(baseline §2.1), with scope, conflict and current context checks. When authorized,
 show the current/new responsible Staff, reason and effective change; after success refresh
 capabilities and queues. Preserve history/audit and reject stale/concurrent competing
 assignments. No extra approval step. No more than one active primary officer per record.
@@ -858,3 +859,14 @@ credential delivery, migration compatibility and history retention.
 - Mandatory change: login routes to `/change-password`; middleware, app shell and
   shared API guard block normal features until successful change. Password inputs
   support password managers. Success invalidates the session and returns to login.
+
+### Finalized oversight presentation
+
+Use backend accessReasons and allowedActions for Head officer controls and package submission.
+Show current officer or unassigned, an officer filter and visible-record workload counts on the
+existing proposal list. Deputy gets institutional reads and their independent PI/member actions,
+never final-decision buttons. Head reads Staff summary; oversight counts/deadlines omit reviewer
+identity/scores/comments. Both Director and Deputy institutional dashboards include proposal,
+project and funding indicators only when their source exists; Director alone has decision queues.
+The current dashboard remains clearly labelled demo data. Project/funding/report/notification
+backends remain planned; requested proposal funding is the only current budget source.

@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
+import { runProposalMutation } from "../proposals-shared/proposal-mutation.js";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
@@ -57,13 +58,33 @@ export class ProposalDecisionsService {
     private readonly summaries: ProposalEvaluationSummaryService
   ) {}
 
+  private transactional = false;
+
+  private mutate<T>(actor: SafeUserContext, proposalId: string, context: unknown, work: (service: ProposalDecisionsService, currentActor: SafeUserContext) => Promise<T>) {
+    return runProposalMutation(this.prisma, actor, proposalId, context, async (tx, currentActor) => {
+      const audit = new AuditLogService(tx);
+      const participation = new ProposalParticipationService(tx);
+      const access = new ProposalReviewAccessService(tx);
+      const assignments = new ProposalReviewAssignmentsService(tx, audit, participation, access);
+      const reviews = new ProposalReviewsService(tx, audit, access, participation);
+      const summaries = new ProposalEvaluationSummaryService(tx, audit, assignments, reviews, participation, access);
+      const service = new ProposalDecisionsService(tx, audit, participation, access, assignments, reviews, summaries);
+      service.transactional = true;
+      return work(service, currentActor);
+    });
+  }
+
   /** AC-ST-3.5-01 — everything the authority needs in one authority-scoped read model. */
   async getDecisionPackage(actor: SafeUserContext, proposalId: string) {
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
     assertApprovalAuthority(actor);
     // Same workflow gate as `canReadProposal`: a draft belongs to its owner, so the decision package
     // must not become a side channel that reports an unsubmitted proposal's existence.
-    assertCanReadEvaluation(actor, proposal);
+    await assertCanReadEvaluation(this.prisma, actor, proposal);
+    const conflict = await this.resolveDecisionConflict(actor, proposal);
+    if (conflict.conflicted || ![PROPOSAL_STATUS.readyForApproval, PROPOSAL_STATUS.approved, PROPOSAL_STATUS.rejected].includes(proposal.status as never)) {
+      throw new ForbiddenException({ message: "Chỉ được xem gói đánh giá đã trình lãnh đạo khi không có xung đột lợi ích." });
+    }
 
     const [assignmentRecords, reviewRecords, summary, decisions, attachments, history] = await Promise.all([
       this.assignments.findAssignments(proposalId),
@@ -81,7 +102,7 @@ export class ProposalDecisionsService {
       })
     ]);
 
-    const conflict = await this.resolveDecisionConflict(actor, proposal);
+    const discloseProtectedReviewData = !conflict.conflicted;
 
     return {
       proposalId,
@@ -90,10 +111,11 @@ export class ProposalDecisionsService {
       canDecide: (DECIDABLE_STATUSES as string[]).includes(proposal.status) && !conflict.conflicted,
       conflict,
       progress: this.summaries.summarizeProgress(assignmentRecords, reviewRecords),
-      reviews: reviewRecords
-        .filter((review) => review.status === REVIEW_STATUS.submitted)
-        .map((review) => this.reviews.toSubmittedReviewResponse(review)),
-      evaluationSummary: this.summaries.toSummaryResponse(summary),
+      reviews: discloseProtectedReviewData
+        ? reviewRecords.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => this.reviews.toSubmittedReviewResponse(review))
+        : [],
+      evaluationSummary: discloseProtectedReviewData ? this.summaries.toSummaryResponse(summary) : null,
+      disclosure: { protectedReviewData: discloseProtectedReviewData ? "FULL" : "HIDDEN_CONFLICT" },
       decisions: decisions.map((decision) => this.toDecisionResponse(decision)),
       attachmentCount: (attachments as unknown[]).length,
       history: (
@@ -117,9 +139,11 @@ export class ProposalDecisionsService {
   }
 
   /** AC-ST-3.5-02. Status, decision record, history and audit are written in one transaction. */
-  async decide(actor: SafeUserContext, proposalId: string, decision: ProposalDecisionCode, input: Record<string, unknown> = {}) {
+  async decide(actor: SafeUserContext, proposalId: string, decision: ProposalDecisionCode, input: Record<string, unknown> = {}): Promise<any> {
+    if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, currentActor) => service.decide(currentActor, proposalId, decision, input));
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
     assertApprovalAuthority(actor);
+    await assertCanReadEvaluation(this.prisma, actor, proposal);
     assertProposalStatus(proposal, DECIDABLE_STATUSES, "Chỉ hồ sơ ở trạng thái chờ phê duyệt mới được quyết định.");
 
     const conflict = await this.resolveDecisionConflict(actor, proposal);
@@ -137,6 +161,9 @@ export class ProposalDecisionsService {
       throw new BadRequestException({ message: conflict.viewerMessage, reasonCode: conflict.reasonCode });
     }
 
+    const summary = await this.summaries.findSummary(proposalId);
+    const progress = this.summaries.summarizeProgress(await this.assignments.findAssignments(proposalId), await this.assignments.findReviews(proposalId));
+    if (summary?.status !== "ready_for_approval" || !progress.allReviewsSubmitted) throw new BadRequestException({ message: "Gói đánh giá chưa đủ điều kiện quyết định." });
     const note = this.readNote(input.note, { required: decision === PROPOSAL_DECISIONS.rejected });
     const toStatus = DECISION_TARGET_STATUS[decision];
     const decidedAt = new Date();

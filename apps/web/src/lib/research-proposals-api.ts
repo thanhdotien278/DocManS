@@ -63,6 +63,25 @@ export type ProposalViewerReviewAssignment = {
   assignmentRoleLabel: string;
 };
 
+export type ProposalManagementOfficerRecord = {
+  id: string;
+  officerUserId: string;
+  officerDisplayName: string;
+  officerUsername: string;
+  status: string;
+  effectiveFrom: string;
+  effectiveUntil: string;
+  reason: string;
+  assignedById: string;
+  assignedByDisplayName?: string;
+};
+
+export type ProposalManagementOfficerState = {
+  resolved: boolean;
+  current: ProposalManagementOfficerRecord | null;
+  history: ProposalManagementOfficerRecord[];
+};
+
 export type ProposalCapabilityState = {
   capability: ViewerAuthorizationV1 | null;
   reloadRequired: boolean;
@@ -162,6 +181,7 @@ export type ResearchProposal = {
   viewerAuthorization?: ViewerAuthorizationV1;
   viewerParticipation?: ProposalViewerParticipation;
   viewerReviewAssignment?: ProposalViewerReviewAssignment;
+  managementOfficer?: ProposalManagementOfficerState;
   members?: ProposalMember[];
   attachments?: ProposalAttachment[];
   history?: ProposalHistoryEvent[];
@@ -244,6 +264,25 @@ export async function createResearchProposalDraft(input: ProposalDraftInput) {
 export async function loadResearchProposal(id: string) {
   const response = await requestJson<{ proposal: ResearchProposal }>(`/research-proposals/${id}`);
   return response.proposal;
+}
+
+export async function loadProposalManagementOfficerCandidates(id: string) {
+  const response = await requestJson<{ users: Array<{ id: string; username: string | null; displayName: string; unit: string }> }>(`/research-proposals/${id}/management-officer-candidates`);
+  return response.users;
+}
+
+export async function assignProposalManagementOfficer(id: string, input: { officerUserId: string; reason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
+  return requestJson<{ managementOfficer: ProposalManagementOfficerState }>(`/research-proposals/${id}/management-officer`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function revokeProposalManagementOfficer(id: string, input: { reason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
+  return requestJson<{ managementOfficer: ProposalManagementOfficerState }>(`/research-proposals/${id}/management-officer/revoke`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
 }
 
 export async function updateResearchProposalDraft(

@@ -1,6 +1,6 @@
 # Epic 12: Dashboard, tìm kiếm, báo cáo và xuất dữ liệu
 
-**Authorization refinement — 2026-09-21:** Stories 12.1–12.5 implement FR45a: Head sees authorized-scope responsible Staff/unassigned records, filters/groups by officer and monitors workload/status/deadlines. Staff management queries include only current officer assignments. Apply identical current authorization to list/detail/search/count/facets/dashboard/reports/export/notifications/files/history and drill-down. Baseline §2.1 owns officer-grant/Head-action and migration questions before coding; this note does not mark implementation complete.
+**Authorization refinement — 2026-09-21:** Stories 12.1–12.5 implement FR45a: Head sees authorized-scope responsible Staff/unassigned records, filters/groups by officer and monitors workload/status/deadlines. Staff management queries include only current officer assignments. Apply identical current authorization to list/detail/search/count/facets/dashboard/reports/export/notifications/files/history and drill-down. Finalized baseline §2.1 grants Head officer management and eligible package submission. Deputy has researcher eligibility plus read-only institutional oversight; Director alone has eligible final decisions. Proposal implementation is current; project/council/dashboard/reporting/notification backends absent from the repository remain backlog.
 
 - **Epic status:** `backlog`
 - **Canonical source:** [epics.md](../../epics.md)
@@ -20,3 +20,13 @@
 ## Execution note
 
 Create the next story specification only after its preceding dependency is understood and the shared authorization, audit, and file rules in the project context remain satisfied.
+
+## Finalized leadership authorization impact
+
+`RESEARCH_OVERSIGHT_AUTHORITY` combines internal researcher capabilities through record
+relationships with explicit-scope institutional oversight. It grants no final proposal,
+council-establishment, funding or acceptance decision. `LEADERSHIP_APPROVAL_AUTHORITY`
+has oversight plus eligible conflict-free final decisions. All surfaces must preserve
+disclosure, source authorization and active officer restrictions; no broad Staff queues.
+Project/council establishment, notifications/My Work and institutional dashboards/reports
+remain planned where their owning backend is absent. Funding uses available metadata only.

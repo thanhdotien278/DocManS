@@ -9,7 +9,7 @@ authority: current UX, current architecture, authorization baseline, permission 
 
 # DocManS MVP Sprint Plan
 
-**Target refinement — 2026-09-21:** Head visibility is scope-wide for proposals/projects; Staff management needs the exact active officer assignment. Officer history, conflict checks, access-basis projections and workload filtering are current acceptance targets. Resolve baseline §2.1 open decisions before coding; the older readiness assessment does not certify this revision.
+**Target refinement — 2026-09-21:** Head visibility is scope-wide for proposals/projects; Staff management needs the exact active officer assignment. Officer history, conflict checks, access-basis projections and workload filtering are current acceptance targets. Baseline §2.1 contains finalized Head officer/package actions and Deputy researcher/oversight separation. The older readiness assessment does not certify this revision; absent project/reporting backends remain planned.
 
 ## 1. Sprint Planning Overview
 

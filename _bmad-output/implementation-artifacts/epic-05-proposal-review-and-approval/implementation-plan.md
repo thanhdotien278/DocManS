@@ -19,16 +19,15 @@ review conflict, consolidation and final approval remain in their later slices.
 The source-inspection tables below describe the original planning baseline; the
 linked execution record identifies the subset now implemented and verified.
 
-## Scientific Management target revision — 2026-09-21
+## Finalized Scientific Management and Leadership model — 2026-09-21
 
-The completed slice above is historical evidence, not proof of the new model.
-Before further implementation, align Stories 1.4/1.7–1.9 and baseline §2.1: Head
-oversight within explicit scope; Staff operations only with the current
-`PROPOSAL_MANAGEMENT_OFFICER`; one primary officer with audited assignment history.
-Preserve other participation/review access without management actions. Head may see
-responsible Staff, unassigned records and workload/status/deadlines; this grants no
-leadership decision or unspecified operational action. Officer-grant actors, Head
-operational powers and legacy mapping remain open, fail-closed coding prerequisites.
+Head assigns/reassigns/revokes proposal officers, reads Staff operational summaries and
+submits completed eligible packages. Staff operations require current officer assignment,
+explicit scope and no conflict. Director receives institutional oversight plus eligible final
+decisions; Deputy receives internal researcher eligibility plus read-only oversight. Neither
+Head nor Deputy gets final decisions. Preserve protected reviewer disclosure and persist
+conflicts for an existing review even after assignment revocation. Prior slice verification
+remains historical; use the finalized-model spec/report for this change's evidence.
 
 ## 1. Scope and governing sources
 

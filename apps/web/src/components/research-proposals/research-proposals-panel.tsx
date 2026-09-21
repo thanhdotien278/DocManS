@@ -62,6 +62,7 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
   const [intakes, setIntakes] = useState<ProposalIntakePeriod[]>([]);
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [managementOfficerFilter, setManagementOfficerFilter] = useState("");
   const [form, setForm] = useState<ProposalDraftInput>(() => defaultForm(initialHostScope));
   const [formError, setFormError] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
@@ -89,6 +90,34 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
     void refresh();
   }, [initialHostScope]);
 
+  const officerWorkloads = useMemo(() => {
+    const workload = new Map<string, { displayName: string; count: number }>();
+    let unassigned = 0;
+    let unresolved = 0;
+    for (const proposal of proposals) {
+      const state = proposal.managementOfficer;
+      if (state && !state.resolved) {
+        unresolved += 1;
+        continue;
+      }
+      const officer = state?.current;
+      if (!officer) {
+        unassigned += 1;
+        continue;
+      }
+      const current = workload.get(officer.officerUserId);
+      workload.set(officer.officerUserId, {
+        displayName: officer.officerDisplayName,
+        count: (current?.count ?? 0) + 1
+      });
+    }
+    return {
+      entries: [...workload.entries()].sort((a, b) => a[1].displayName.localeCompare(b[1].displayName, "vi")),
+      unassigned,
+      unresolved
+    };
+  }, [proposals]);
+
   const filteredProposals = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
     return proposals.filter((proposal) => {
@@ -97,9 +126,23 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
         proposal.title.toLowerCase().includes(normalizedKeyword) ||
         proposal.code.toLowerCase().includes(normalizedKeyword);
       const matchesStatus = !statusFilter || proposal.status === statusFilter;
-      return matchesKeyword && matchesStatus;
+      const officerState = proposal.managementOfficer;
+      const officerId = officerState && !officerState.resolved
+        ? "unresolved"
+        : officerState?.current?.officerUserId ?? "unassigned";
+      const matchesOfficer = !managementOfficerFilter || officerId === managementOfficerFilter;
+      return matchesKeyword && matchesStatus && matchesOfficer;
     });
-  }, [keyword, proposals, statusFilter]);
+  }, [keyword, managementOfficerFilter, proposals, statusFilter]);
+
+  const showManagementOfficerFilter = account?.systemRole === "SCIENTIFIC_MANAGEMENT_HEAD";
+
+  function managementOfficerLabel(proposal: ResearchProposal) {
+    const state = proposal.managementOfficer;
+    if (state && !state.resolved) return { label: "Chưa xác định", detail: "Không xác định được ngữ cảnh phân công" };
+    if (!state?.current) return { label: "Chưa phân công", detail: "Cần Trưởng phòng phân công" };
+    return { label: state.current.officerDisplayName, detail: `${state.current.officerUsername || "Không có tài khoản"}` };
+  }
 
 
   function validateForm() {
@@ -175,7 +218,25 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
               <option value="rejected">Từ chối</option>
             </select>
           </label>
+          {showManagementOfficerFilter ? (
+            <label className="filter-field">
+              <span>Cán bộ phụ trách</span>
+              <select value={managementOfficerFilter} onChange={(event) => setManagementOfficerFilter(event.target.value)}>
+                <option value="">Tất cả ({proposals.length})</option>
+                <option value="unassigned">Chưa phân công ({officerWorkloads.unassigned})</option>
+                {officerWorkloads.entries.map(([officerId, item]) => (
+                  <option key={officerId} value={officerId}>{item.displayName} ({item.count})</option>
+                ))}
+                {officerWorkloads.unresolved ? <option value="unresolved">Chưa xác định ({officerWorkloads.unresolved})</option> : null}
+              </select>
+            </label>
+          ) : null}
         </div>
+        {showManagementOfficerFilter ? (
+          <p className="record-meta" role="status">
+            Trưởng phòng đang xem tải xử lý theo cán bộ: {officerWorkloads.unassigned} hồ sơ chưa phân công · {officerWorkloads.entries.length} cán bộ đang phụ trách.
+          </p>
+        ) : null}
 
         {state === "loading" ? <p className="state-message">Đang tải hồ sơ...</p> : null}
         {state === "error" ? <p className="state-message error">Không thể tải danh sách hồ sơ.</p> : null}
@@ -190,6 +251,7 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
                   <tr>
                     <th>Hồ sơ</th>
                     <th>Vai trò của tôi</th>
+                    {showManagementOfficerFilter ? <th>Cán bộ phụ trách</th> : null}
                     <th>Đợt</th>
                     <th>Thời gian</th>
                     <th>Kinh phí</th>
@@ -211,6 +273,12 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
                           <span className="status-badge info" key={relationship.type}>{relationshipLabel(relationship.type)}</span>
                         ))}
                       </td>
+                      {showManagementOfficerFilter ? (
+                        <td>
+                          <span className="record-title">{managementOfficerLabel(proposal).label}</span>
+                          <span className="record-meta">{managementOfficerLabel(proposal).detail}</span>
+                        </td>
+                      ) : null}
                       <td>{intakes.find((intake) => intake.id === proposal.intakePeriodId)?.title ?? proposal.intakePeriodId}</td>
                       <td>
                         {formatDate(proposal.startDate)} - {formatDate(proposal.endDate)}
@@ -247,6 +315,9 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
                   {(proposal.viewerAuthorization?.viewerRelationships ?? []).map((relationship) => (
                     <span className="status-badge info" key={relationship.type}>{relationshipLabel(relationship.type)}</span>
                   ))}
+                  {showManagementOfficerFilter ? (
+                    <span className="record-meta">Phụ trách: {managementOfficerLabel(proposal).label}</span>
+                  ) : null}
                   <span className="record-meta">
                     {formatDate(proposal.startDate)} - {formatDate(proposal.endDate)}
                   </span>

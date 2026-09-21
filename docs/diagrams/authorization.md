@@ -6,6 +6,8 @@ flowchart TD
   role(["SYSTEM_ADMIN: gán system role và scope"])
   account["System: mỗi account có một system role active"]
   head(["SCIENTIFIC_MANAGEMENT_HEAD: xem trong scope; officer / chưa phân công / workload"])
+  director(["LEADERSHIP_APPROVAL_AUTHORITY: giám sát trong scope và quyết định đủ điều kiện"])
+  deputy(["RESEARCH_OVERSIGHT_AUTHORITY: nghiên cứu nội bộ và giám sát chỉ đọc; không quyết định cuối"])
   staff(["SCIENTIFIC_MANAGEMENT_STAFF: management cần officer assignment hiện hành"])
   record["System: relationship hoặc assignment chỉ có hiệu lực trên record tương ứng"]
   delegation_rules["System: delegation chỉ tồn tại khi owning contract cho phép"]
@@ -20,6 +22,11 @@ flowchart TD
   admin --> role --> account
   role -. "Scope giám sát được cấp" .-> head
   role -. "Scope + officer assignment" .-> staff
+  role -. "Scope lãnh đạo được cấp" .-> director
+  role -. "Scope giám sát được cấp" .-> deputy
+  director --> context
+  deputy --> context
+  deputy -. "PI / thành viên độc lập" .-> record
   staff --> record
   head -. "Visibility, không phải final decision" .-> context
   delegation_rules --> context

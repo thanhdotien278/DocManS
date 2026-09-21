@@ -1,6 +1,6 @@
 # Epic 4: Tiếp nhận và nộp đề xuất nghiên cứu
 
-**Authorization refinement — 2026-09-21:** Intake scope never grants proposal visibility. Story 4.2 must represent unassigned proposals; Head sees them within authorized scope, Staff needs `PROPOSAL_MANAGEMENT_OFFICER` for management. Preserve independent PI/team access and existing PI submission restrictions. Baseline §2.1 owns officer-grant/Head-action and migration questions before coding; this note does not mark implementation complete.
+**Authorization refinement — 2026-09-21:** Intake scope never grants proposal visibility. Story 4.2 must represent unassigned proposals; Head sees them within authorized scope, Staff needs `PROPOSAL_MANAGEMENT_OFFICER` for management. Preserve independent PI/team access and existing PI submission restrictions. Finalized baseline §2.1 grants Head officer management and eligible package submission. Deputy has researcher eligibility plus read-only institutional oversight; Director alone has eligible final decisions. Proposal implementation is current; project/council/dashboard/reporting/notification backends absent from the repository remain backlog.
 
 - **Epic status:** `backlog`
 - **Canonical source:** [epics.md](../../epics.md)
@@ -21,3 +21,13 @@
 ## Execution note
 
 Create the next story specification only after its preceding dependency is understood and the shared authorization, audit, and file rules in the project context remain satisfied.
+
+## Finalized leadership authorization impact
+
+`RESEARCH_OVERSIGHT_AUTHORITY` combines internal researcher capabilities through record
+relationships with explicit-scope institutional oversight. It grants no final proposal,
+council-establishment, funding or acceptance decision. `LEADERSHIP_APPROVAL_AUTHORITY`
+has oversight plus eligible conflict-free final decisions. All surfaces must preserve
+disclosure, source authorization and active officer restrictions; no broad Staff queues.
+Project/council establishment, notifications/My Work and institutional dashboards/reports
+remain planned where their owning backend is absent. Funding uses available metadata only.

@@ -253,6 +253,8 @@ export class ProposalReviewsService {
     if (conflict.conflicted) {
       throw new ForbiddenException({ message: "Người đang tham gia hồ sơ không thể chấm điểm hoặc gửi đánh giá." });
     }
+    const officer = await this.prisma.proposalManagementOfficer.findFirst({ where: { proposalId, officerUserId: actor.id, status: "ACTIVE", effectiveFrom: { lte: new Date() }, OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: new Date() } }] }, select: { id: true } });
+    if (officer) throw new ForbiddenException({ message: "Cán bộ phụ trách không được đồng thời đánh giá hồ sơ này." });
     const access = await this.reviewAccess.resolveForProposal(actor?.id, proposalId);
     if (!access.isAssignedReviewer) {
       throw new ForbiddenException({ message: "Bạn không được phân công đánh giá hồ sơ này." });
