@@ -8,9 +8,10 @@ import { ProposalParticipationService } from "../research-proposals/proposal-par
 import { DECIDABLE_STATUSES, PROPOSAL_STATUS, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import {
   assertApprovalAuthority,
+  filterCurrentRoundAssignments,
   assertCanReadEvaluation,
+  assertCurrentCompletenessEvidence,
   assertProposalStatus,
-  findCurrentSubmissionEvidence,
   findEvaluationProposal,
   resolveActorConflict,
   updateProposalStatusGuarded,
@@ -102,13 +103,14 @@ export class ProposalDecisionsService {
       })
     ]);
 
+    const { pendingReviewers, averageTotalScore, ...publicProgress } = this.summaries.summarizeProgress(assignmentRecords, reviewRecords);
     return {
       proposalId,
       proposalStatus: proposal.status,
       proposalStatusLabel: PROPOSAL_STATUS_LABELS[proposal.status] ?? proposal.status,
-      canDecide: (DECIDABLE_STATUSES as string[]).includes(proposal.status) && !conflict.conflicted,
+      canDecide: (DECIDABLE_STATUSES as string[]).includes(proposal.status) && !conflict.conflicted && summary?.status === "ready_for_approval" && publicProgress.allReviewsSubmitted,
       conflict,
-      progress: this.summaries.summarizeProgress(assignmentRecords, reviewRecords),
+      progress: publicProgress,
       // Leadership receives the routed aggregate and decision history, but reviewer identity,
       // raw scores and confidential comments remain hidden unless a future policy explicitly grants
       // that disclosure.
@@ -165,9 +167,9 @@ export class ProposalDecisionsService {
 
     const summary = await this.summaries.findSummary(proposalId);
     const packageRevision = Number(input.packageRevision);
-    const currentEvidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
-    const packageSnapshot = summary?.evidenceSnapshot as { submissionEventId?: unknown } | null | undefined;
-    if (!summary || summary.revision !== packageRevision || !summary.evidenceSnapshot || packageSnapshot?.submissionEventId !== currentEvidence.eventId) {
+    const currentEvidence = await assertCurrentCompletenessEvidence(this.prisma, proposal);
+    const packageSnapshot = summary?.evidenceSnapshot as { lifecycle?: unknown; submissionEventId?: unknown } | null | undefined;
+    if (!summary || summary.revision !== packageRevision || !summary.evidenceSnapshot || packageSnapshot?.lifecycle !== "finalized" || packageSnapshot?.submissionEventId !== currentEvidence.eventId) {
       throw new BadRequestException({ code: "PACKAGE_CONTEXT_MISMATCH", message: "Gói đánh giá đã thay đổi. Vui lòng tải lại trước khi quyết định." });
     }
     const progress = this.summaries.summarizeProgress(await this.assignments.findCurrentRoundAssignments(proposal), await this.assignments.findCurrentRoundReviews(proposal));
@@ -178,15 +180,18 @@ export class ProposalDecisionsService {
 
     const created = (await this.prisma.$transaction(async (tx) => {
       const currentSummary = await tx.proposalEvaluationSummary.findUnique({ where: { id: summary.id } });
-      const currentAssignments = await tx.proposalReviewAssignment.findMany({ where: { proposalId } });
+      const currentAssignments = await tx.proposalReviewAssignment.findMany({ where: { proposalId }, include: { reviewer: true } });
       const currentReviews = await tx.proposalReview.findMany({ where: { proposalId } });
-      const currentEvidence = await findCurrentSubmissionEvidence(tx, proposal);
-      const currentPackageSnapshot = currentSummary?.evidenceSnapshot as { submissionEventId?: unknown } | null | undefined;
-      const currentProgress = this.summaries.summarizeProgress(
-        currentAssignments.filter((assignment) => assignment.reviewedSubmissionEventId === currentEvidence.eventId) as never,
-        currentReviews.filter((review) => review.submissionEventId === currentEvidence.eventId) as never
-      );
-      if (!currentSummary || currentSummary.status !== "ready_for_approval" || currentSummary.revision !== packageRevision || !currentSummary.evidenceSnapshot || currentPackageSnapshot?.submissionEventId !== currentEvidence.eventId || !currentProgress.allReviewsSubmitted) {
+      const currentEvidence = await assertCurrentCompletenessEvidence(tx, proposal);
+      const currentPackageSnapshot = currentSummary?.evidenceSnapshot as { lifecycle?: unknown; submissionEventId?: unknown; assignmentIds?: unknown; reviewIds?: unknown } | null | undefined;
+      const roundAssignments = filterCurrentRoundAssignments(currentAssignments, currentEvidence.eventId);
+      const roundReviews = currentReviews.filter((review) => review.submissionEventId === currentEvidence.eventId && roundAssignments.some((assignment) => assignment.id === review.assignmentId));
+      const currentProgress = this.summaries.summarizeProgress(roundAssignments, roundReviews);
+      const currentAssignmentIds = roundAssignments.map((assignment) => assignment.id).sort();
+      const currentReviewIds = roundReviews.filter((review) => review.status === "submitted").map((review) => review.id).sort();
+      const evidenceAssignmentIds = Array.isArray(currentPackageSnapshot?.assignmentIds) ? currentPackageSnapshot.assignmentIds.filter((id): id is string => typeof id === "string").sort() : [];
+      const evidenceReviewIds = Array.isArray(currentPackageSnapshot?.reviewIds) ? currentPackageSnapshot.reviewIds.filter((id): id is string => typeof id === "string").sort() : [];
+      if (!currentSummary || currentSummary.status !== "ready_for_approval" || currentSummary.revision !== packageRevision || !currentSummary.evidenceSnapshot || currentPackageSnapshot?.lifecycle !== "finalized" || currentPackageSnapshot?.submissionEventId !== currentEvidence.eventId || JSON.stringify(evidenceAssignmentIds) !== JSON.stringify(currentAssignmentIds) || JSON.stringify(evidenceReviewIds) !== JSON.stringify(currentReviewIds) || !currentProgress.allReviewsSubmitted) {
         throw new BadRequestException({ code: "PACKAGE_CONTEXT_MISMATCH", message: "Gói đánh giá đã thay đổi. Vui lòng tải lại trước khi quyết định." });
       }
 

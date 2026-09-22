@@ -37,15 +37,17 @@ document must be updated in the same change set.
 - Can view all proposals/projects within explicitly authorized Scientific Management
   scope, including current responsible Staff, unassigned records, workload, status
   and deadlines; filter/group by responsible Staff.
-- Head assigns/reassigns/revokes officers, reads Staff summaries and submits eligible
-  completed packages. Routine reviewer assignment/consolidation stays with assigned Staff.
+- Head assigns/reassigns/revokes officers, assigns/reassigns/revokes reviewer and
+  committee positions, drafts/finalizes synthesis, and submits eligible completed packages.
   Head never receives final decisions.
 
 ### Scientific Management Staff / Chuyen vien quan ly khoa hoc
 
 - Main responsibility: operate proposal intake, completeness review, reviewer
-  coordination, evaluation consolidation, approved-project follow-up, reminders,
-  and operational reporting.
+  monitoring, approved-project follow-up, reminders, and operational reporting.
+- Staff can monitor named reviewer/council assignments, deadlines, pending work and
+  backend-derived blockers on assigned proposals. Reviewer assignment, synthesis,
+  finalization and package submission belong to the scoped Head.
 - Default management scope: only proposals/projects with an effective
   `PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER` assignment to this
   Staff account, plus explicitly granted organization scope. Never institution-wide
@@ -274,7 +276,7 @@ inherit the Staff column; Deputy never inherits Director decision cells. Apply t
 | Responsible officer / unassigned state | See current responsible Staff or unassigned; filter/group by officer | Own management responsibility only; no unassigned queue or other Staff workload through role alone |
 | Workload, status, deadlines, counts/facets, dashboard, reports/export | Authorized-scope aggregates, same record filters for drill-down/export | Management aggregates only for own assignments; participation/review queues retain their own access basis |
 | Assign/reassign/revoke primary officer | Head capability plus scope, current context and no conflict | Deny; no self-assignment or assignment of other officers |
-| Completeness, reviewer assignment, consolidation, project administration | Read Staff summaries and submit eligible completed packages; no routine reviewer assignment/consolidation | Existing action plus exact effective officer assignment, scope, state and no conflict |
+| Completeness, reviewer monitoring, synthesis, project administration | Assign/reassign/revoke reviewers and council members; draft/finalize/submit eligible synthesis packages; no final decision | Completeness and named review-progress monitoring only, with exact effective officer assignment, scope, state and no conflict |
 | Final approve/reject | Deny from Head role; reserved to leadership | Deny from Staff role; reserved to leadership |
 | Notifications, files and workflow/business history | Re-authorize source record and disclosure for every surface | Same; officer revocation ends management access immediately, independent participation remains |
 
@@ -366,13 +368,13 @@ for the implementation gaps. This table is a contract, not a completion claim.
 | Reviewer file read | Resolved by the same assignment lookup as the proposal read, so the attachment list and the download agree. Upload still requires proposal ownership. | `FilesService.assertCanRead` |
 | Leadership decision-package read | Requires explicitly granted authority scope, a routed proposal and no participation/reviewer conflict; role alone is insufficient. Other proposal reads require their own valid record context and disclosure. No implicit Academy-wide or organization-tree bypass. | Shared proposal/evaluation/file authorization; Story 5.7 |
 | Approval authority | `LEADERSHIP_APPROVAL_AUTHORITY` plus explicit decision scope, routed record, current context, ready state and no conflict. System administrator and reviewer/committee assignments grant no final decision authority. | Shared capability and decision mutation; Story 5.8 |
-| Staff evaluation actions | `scientific-management` **and** an organization scope covering the proposal's host unit, re-checked on every assignment and consolidation action. | `assertScientificManagementScope` |
+| Head evaluation actions | `SCIENTIFIC_MANAGEMENT_HEAD` and explicit host scope, current completeness, no conflict; synthesis additionally requires all current required reviews. | `assertScientificManagementHeadScope`, `assertCurrentCompletenessEvidence` |
 | Decision/consolidation conflict | Participation and reviewer conflicts override role/scope. An active evaluation position blocks the same-round decision; any persisted draft/submitted evaluation retains that conflict after assignment revocation/expiry. An ended assignment with no persisted evaluation creates no lasting conflict. | Shared conflict resolver; Stories 5.5, 5.7, 5.8 |
 
 Proposal-detail presentation follows the same projection: the PI receives the edit/submission workspace, while scientific-management staff receive a read-only summary of the proposal, team, schedule, and expected budget. Supplement deadlines and reviewer-assignment effective/deadline values are entered as whole Vietnam calendar days; no hour/minute control is exposed.
 
 Workflow states used by EP-03: `submitted` / `resubmitted` -> `under_review` (first reviewer
-assignment) -> `ready_for_approval` (staff consolidation marked ready) -> `approved` | `rejected`
+assignment) -> `ready_for_approval` (Head explicitly submits finalized synthesis after all required reviews) -> `approved` | `rejected`
 (leadership decision). The allowed states per action are declared once in
 `apps/api/src/proposals-shared/proposal-workflow.ts`. The proposal detail UI
 renders the three review/approval sections only from the current proposal's
@@ -545,18 +547,17 @@ Researcher profile pages never host these proposal workflow sections.
 
 The [Reviewer / Council Assignment contract](authorization-core-business-baseline.md#reviewer--council-assignment-from-user-accounts)
 is normative for `proposal.review.assign`, including revocation. Only scoped,
-unconflicted Scientific Management Staff with an effective
-`PROPOSAL_MANAGEMENT_OFFICER` may search candidates or mutate duties.
+unconflicted Scientific Management Head may search candidates or mutate duties after current-submission completeness confirmation.
 Any active user is eligible independently of account role, host-unit scope or
 Scientist Profile. Both duties remain proposal-scoped; a reviewer assignment grants
 review access across organization boundaries, never final decision authority.
 
 | Operation | Required checks | Evidence / disclosure |
 | --- | --- | --- |
-| Search eligible accounts | Staff role/host scope and effective proposal management-officer assignment, assignable state, current completeness evidence, active candidate account, no PI/team conflict or live duplicate | Only account ID, display name, username |
+| Search eligible accounts | Head role and explicit host scope, assignable state, current completeness evidence, active candidate account, no PI/team conflict or live duplicate | Only account ID, display name, username |
 | Assign either duty | Recheck search eligibility, proposal context, effective dates/deadline; self-selection allowed for nonparticipants | Account ID and optional linked profile ID; atomic assignment and audit |
 | Read package/files or submit own review | Effective assignment, no participation conflict, applicable state and disclosure; no assignee role/host scope/profile restriction | Own assignment and review only |
-| Revoke either duty | Staff role/scope and effective proposal management-officer assignment, no actor participation conflict, assignable state, current context, nonblank reason | Retain history and submitted reviews; append audit and immediately end access |
+| Revoke either duty | Head role and explicit host scope, no actor participation conflict, assignable state, current context, nonblank reason | Retain history and submitted reviews; append audit and immediately end access |
 
 `submitted` and `resubmitted` require current completeness evidence before the
 first assignment opens `under_review`. Invalid or unresolved context denies.

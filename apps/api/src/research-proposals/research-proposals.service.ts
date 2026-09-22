@@ -1,3 +1,4 @@
+import { filterCurrentRoundAssignments, summarizeReviewProgress } from "../proposal-evaluations/proposal-evaluation-support.js";
 import { runProposalMutation } from "../proposals-shared/proposal-mutation.js";
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 // @ts-ignore The runtime package is JavaScript; its TypeScript source entry supplies this contract.
@@ -196,29 +197,24 @@ export class ResearchProposalsService {
   private async projectProposalList(actor: SafeUserContext, records: ResearchProposalRecord[]) {
     const asOf = new Date();
 
-    const [participationByProposal, reviewAccessByProposal, managementOfficerByProposal, completenessEvents] = await Promise.all([
+    const [participationByProposal, reviewAccessByProposal, managementOfficerByProposal] = await Promise.all([
       this.participation.resolveForProposals(actor?.id, records, asOf),
       this.reviewAccess.resolveForProposals(
         actor?.id,
         records.map((proposal) => proposal.id),
         asOf
       ),
-      this.managementOfficers.resolveForProposals(records.map((proposal) => proposal.id), asOf),
-      this.prisma.proposalSubmissionEvent.findMany({
-        where: { proposalId: { in: records.map((proposal) => proposal.id) }, snapshot: { path: ["kind"], equals: "completeness_check" } },
-        select: { proposalId: true, submittedAt: true }
-      })
+      this.managementOfficers.resolveForProposals(records.map((proposal) => proposal.id), asOf)
     ]);
-    const completenessChecked = new Set(completenessEvents.filter((event) => {
-      const proposal = records.find((record) => record.id === event.proposalId);
-      return proposal?.submittedAt && event.submittedAt >= proposal.submittedAt;
-    }).map((event) => event.proposalId));
-
-    return records
+    // ponytail: per-visible-record evidence reads; batch these if proposal queues grow large.
+    return Promise.all(records
       .filter((proposal) => canReadProposal(actor, proposal, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), managementOfficerByProposal.get(proposal.id)))
-      .map((proposal) =>
-        this.toProposalResponse(proposal, actor, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), completenessChecked.has(proposal.id), managementOfficerByProposal.get(proposal.id))
-      );
+      .map(async (proposal) => {
+        const [checked, summaryStatus, reviewReadiness] = await Promise.all([
+          this.hasCurrentCompletenessCheck(proposal), this.findEvaluationSummaryStatus(proposal.id), this.findReviewReadiness(proposal)
+        ]);
+        return this.toProposalResponse(proposal, actor, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), checked, managementOfficerByProposal.get(proposal.id), summaryStatus, reviewReadiness);
+      }));
   }
 
   async getProposal(actor: SafeUserContext, proposalId: string) {
@@ -230,7 +226,8 @@ export class ResearchProposalsService {
       this.managementOfficers.resolveForProposal(proposalId, asOf)
     ]);
     assertCanReadProposal(actor, proposal, participation, reviewAccess, managementOfficer);
-    return this.toProposalDetailResponse(proposal, actor, participation, reviewAccess, managementOfficer);
+    const evaluationSummaryStatus = await this.findEvaluationSummaryStatus(proposalId);
+    return this.toProposalDetailResponse(proposal, actor, participation, reviewAccess, managementOfficer, evaluationSummaryStatus);
   }
 
   async createDraft(actor: SafeUserContext, input: Record<string, unknown>): Promise<any> {
@@ -780,7 +777,9 @@ export class ResearchProposalsService {
     if (await this.hasCurrentCompletenessCheck(proposal)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Phiên bản nộp hiện tại đã được xác nhận đầy đủ." });
     const readiness = await this.computeReadiness(proposal);
     if (!readiness.ready) throw new BadRequestException({ message: "Hồ sơ chưa đầy đủ.", ...readiness });
-    await this.prisma.proposalSubmissionEvent.create({ data: { proposalId, actorId: actor.id, fromStatus: proposal.status, toStatus: proposal.status, note: "Đã kiểm tra hồ sơ đầy đủ", snapshot: { kind: "completeness_check", readiness, note: readOptionalText(input.note, "note", 2000) ?? "" } } });
+    const currentSubmission = await this.findCurrentSubmissionEvent(proposal);
+    if (!currentSubmission?.id) throw new BadRequestException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được bằng chứng lần nộp hiện tại." });
+    await this.prisma.proposalSubmissionEvent.create({ data: { proposalId, actorId: actor.id, fromStatus: proposal.status, toStatus: proposal.status, note: "Đã kiểm tra hồ sơ đầy đủ", snapshot: { kind: "completeness_check", submissionEventId: currentSubmission.id, readiness, note: readOptionalText(input.note, "note", 2000) ?? "" } } });
     await this.prisma.researchProposal.update({ where: { id: proposalId }, data: { authorizationContextUpdatedAt: new Date() } });
     await this.auditLog.record({ action: "check-proposal-completeness", result: "success", actorId: actor.id, targetEntity: "research-proposal", targetEntityId: proposalId });
     return this.getProposal(actor, proposalId);
@@ -800,15 +799,33 @@ export class ResearchProposalsService {
   }
 
   private async hasCurrentCompletenessCheck(proposal: ResearchProposalRecord) {
-    if (!proposal.submittedAt) return false;
-    return Boolean(await this.prisma.proposalSubmissionEvent.findFirst({
+    const currentSubmission = await this.findCurrentSubmissionEvent(proposal);
+    if (!currentSubmission || !proposal.submittedAt) return false;
+    const checks = await this.prisma.proposalSubmissionEvent.findMany({
       where: {
         proposalId: proposal.id,
         submittedAt: { gte: proposal.submittedAt },
         snapshot: { path: ["kind"], equals: "completeness_check" }
       },
-      select: { id: true }
-    }));
+      select: { snapshot: true }
+    });
+    return checks.some((event) => {
+      const snapshot = event.snapshot as { submissionEventId?: unknown; readiness?: { ready?: unknown } } | null;
+      return snapshot?.submissionEventId === currentSubmission.id && snapshot?.readiness?.ready === true;
+    });
+  }
+
+  private async findCurrentSubmissionEvent(proposal: ResearchProposalRecord) {
+    if (!proposal.submittedAt) return null;
+    const events = await this.prisma.proposalSubmissionEvent.findMany({
+      where: { proposalId: proposal.id, submittedAt: { gte: proposal.submittedAt }, toStatus: { in: ["submitted", "resubmitted"] } },
+      orderBy: { submittedAt: "desc" },
+      select: { id: true, snapshot: true }
+    });
+    return events.find((event) => {
+      const snapshot = event.snapshot as { kind?: unknown; members?: unknown; attachments?: unknown; requiredPackage?: unknown } | null;
+      return snapshot !== null && snapshot.kind === undefined && Array.isArray(snapshot.members) && Array.isArray(snapshot.attachments) && Array.isArray(snapshot.requiredPackage);
+    }) ?? null;
   }
 
   private async findIntakePeriod(intakePeriodId: string) {
@@ -1138,7 +1155,8 @@ export class ResearchProposalsService {
     actor?: SafeUserContext,
     resolvedParticipation?: ProposalParticipation,
     resolvedReviewAccess?: ProposalReviewAccess,
-    resolvedManagementOfficer?: ProposalManagementOfficerResolution
+    resolvedManagementOfficer?: ProposalManagementOfficerResolution,
+    evaluationSummaryStatus?: string | null
   ) {
     const members = await this.findMembers(proposal.id);
     const participation = resolvedParticipation ?? (await this.participation.resolveForProposal(actor?.id, proposal, members));
@@ -1151,7 +1169,7 @@ export class ResearchProposalsService {
     const completenessCheckCompleted = await this.hasCurrentCompletenessCheck(proposal);
     const managementOfficerHistory = await this.managementOfficers.listHistory(proposal.id);
 
-    const response = this.toProposalResponse(proposal, actor, participation, reviewAccess, completenessCheckCompleted, managementOfficer);
+    const response = this.toProposalResponse(proposal, actor, participation, reviewAccess, completenessCheckCompleted, managementOfficer, evaluationSummaryStatus ?? await this.findEvaluationSummaryStatus(proposal.id), await this.findReviewReadiness(proposal));
     const versions = await this.prisma.proposalSubmissionEvent.findMany({ where: { proposalId: proposal.id, toStatus: { in: ["submitted", "resubmitted"] } }, orderBy: { submittedAt: "asc" }, select: { id: true, submittedAt: true, snapshot: true } });
     return {
       ...response,
@@ -1243,10 +1261,13 @@ export class ResearchProposalsService {
     participation?: ProposalParticipation,
     reviewAccess?: ProposalReviewAccess,
     completenessCheckCompleted = false,
-    managementOfficer?: ProposalManagementOfficerResolution
+    managementOfficer?: ProposalManagementOfficerResolution,
+    evaluationSummaryStatus?: string | null,
+    reviewReadiness?: ReturnType<typeof summarizeReviewProgress> | null
   ) {
     const canEditDraft = this.canEditProposalDraft(actor, proposal);
     const canRead = canReadProposal(actor, proposal, participation, reviewAccess, managementOfficer);
+    const canExposeEvaluationSummaryStatus = isScientificManagementHead(actor) || isScientificManagementStaff(actor) || isLeadership(actor);
     const viewerAuthorization = actor
       ? projectProposalViewerAuthorizationV1({
           actor,
@@ -1257,7 +1278,9 @@ export class ResearchProposalsService {
           canRead,
           canEdit: canEditDraft,
           canManageFiles: this.canMutateProposalFiles(actor, proposal, participation),
-          completenessCheckCompleted
+          completenessCheckCompleted,
+          evaluationSummaryStatus: evaluationSummaryStatus ?? undefined,
+          allReviewsSubmitted: reviewReadiness?.allReviewsSubmitted ?? false
         })
       : undefined;
 
@@ -1293,8 +1316,33 @@ export class ResearchProposalsService {
       updatedAt: proposal.updatedAt.toISOString(),
       canEdit: canEditDraft,
       canSubmit: canEditDraft,
-      managementOfficer: this.toManagementOfficerResponse(managementOfficer)
+      managementOfficer: this.toManagementOfficerResponse(managementOfficer),
+      ...((isScientificManagementHead(actor) || isScientificManagementStaff(actor)) && !participation?.isParticipant && !reviewAccess?.hasReviewConflict && !reviewAccess?.isAssignedReviewer ? { reviewWorkflow: {
+        completenessChecked: completenessCheckCompleted,
+        submittedCount: reviewReadiness?.submittedCount ?? 0,
+        assignmentCount: reviewReadiness?.activeAssignmentCount ?? 0,
+        pendingCount: reviewReadiness?.pendingCount ?? 0,
+        overdueCount: reviewReadiness?.overdueCount ?? 0,
+        readyForSynthesis: reviewReadiness?.allReviewsSubmitted ?? false
+      } } : {}),
+      ...(canExposeEvaluationSummaryStatus && !participation?.isParticipant && !reviewAccess?.hasReviewConflict && !reviewAccess?.isAssignedReviewer ? { evaluationSummaryStatus: evaluationSummaryStatus ?? "" } : {})
     };
+  }
+
+  private async findEvaluationSummaryStatus(proposalId: string) {
+    const summary = await this.prisma.proposalEvaluationSummary.findFirst({ where: { proposalId }, select: { status: true } });
+    return summary?.status ?? null;
+  }
+
+  private async findReviewReadiness(proposal: ResearchProposalRecord) {
+    if (!["under_review", "ready_for_approval", "approved", "rejected"].includes(proposal.status)) return null;
+    const submission = await this.findCurrentSubmissionEvent(proposal);
+    if (!submission) return null;
+    const [assignments, reviews] = await Promise.all([
+      this.prisma.proposalReviewAssignment.findMany({ where: { proposalId: proposal.id }, include: { reviewer: true } }),
+      this.prisma.proposalReview.findMany({ where: { proposalId: proposal.id, submissionEventId: submission.id } })
+    ]);
+    return summarizeReviewProgress(filterCurrentRoundAssignments(assignments, submission.id), reviews);
   }
 
   private canEditProposalDraft(actor: SafeUserContext | undefined, proposal: ResearchProposalRecord) {

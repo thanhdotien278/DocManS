@@ -61,6 +61,7 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
   const [proposals, setProposals] = useState<ResearchProposal[]>([]);
   const [intakes, setIntakes] = useState<ProposalIntakePeriod[]>([]);
   const [keyword, setKeyword] = useState("");
+  const [reviewQueue, setReviewQueue] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [managementOfficerFilter, setManagementOfficerFilter] = useState("");
   const [form, setForm] = useState<ProposalDraftInput>(() => defaultForm(initialHostScope));
@@ -131,9 +132,17 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
         ? "unresolved"
         : officerState?.current?.officerUserId ?? "unassigned";
       const matchesOfficer = !managementOfficerFilter || officerId === managementOfficerFilter;
-      return matchesKeyword && matchesStatus && matchesOfficer;
+      const flow = proposal.reviewWorkflow;
+      const matchesQueue = !reviewQueue || Boolean(flow && (
+        (reviewQueue === "recheck" && ["submitted", "resubmitted"].includes(proposal.status) && !flow.completenessChecked) ||
+        (reviewQueue === "assign" && ["submitted", "resubmitted"].includes(proposal.status) && flow.completenessChecked) ||
+        (reviewQueue === "pending" && proposal.status === "under_review" && !flow.readyForSynthesis) ||
+        (reviewQueue === "overdue" && proposal.status === "under_review" && flow.overdueCount > 0) ||
+        (reviewQueue === "synthesis" && proposal.status === "under_review" && flow.readyForSynthesis)
+      ));
+      return matchesKeyword && matchesStatus && matchesOfficer && matchesQueue;
     });
-  }, [keyword, managementOfficerFilter, proposals, statusFilter]);
+  }, [keyword, managementOfficerFilter, proposals, statusFilter, reviewQueue]);
 
   const showManagementOfficerFilter = account?.systemRole === "SCIENTIFIC_MANAGEMENT_HEAD";
 
@@ -218,6 +227,17 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
               <option value="rejected">Từ chối</option>
             </select>
           </label>
+          {["SCIENTIFIC_MANAGEMENT_HEAD", "SCIENTIFIC_MANAGEMENT_STAFF"].includes(account?.systemRole ?? "") ? <label className="filter-field">
+            <span>Công việc đánh giá</span>
+            <select value={reviewQueue} onChange={(event) => setReviewQueue(event.target.value)}>
+              <option value="">Tất cả</option>
+              <option value="recheck">Chờ kiểm tra đầy đủ</option>
+              <option value="assign">Đủ điều kiện phân công</option>
+              <option value="pending">Đang chờ phiếu đánh giá</option>
+              <option value="overdue">Có phiếu quá hạn</option>
+              <option value="synthesis">Đủ phiếu — chờ Head tổng hợp</option>
+            </select>
+          </label> : null}
           {showManagementOfficerFilter ? (
             <label className="filter-field">
               <span>Cán bộ phụ trách</span>

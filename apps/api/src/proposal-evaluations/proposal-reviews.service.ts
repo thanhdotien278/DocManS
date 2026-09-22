@@ -19,6 +19,9 @@ import { ProposalParticipationService } from "../research-proposals/proposal-par
 import { REVIEW_SUBMITTABLE_STATUSES } from "../proposals-shared/proposal-workflow.js";
 import {
   assertProposalStatus,
+  assertCurrentCompletenessEvidence,
+  filterCurrentRoundAssignments,
+  summarizeReviewProgress,
   findCurrentSubmissionEvidence,
   findEvaluationProposal,
   type EvaluationProposalRecord,
@@ -87,7 +90,7 @@ export class ProposalReviewsService {
 
     const existing = await this.findReviewByAssignment(assignmentId);
     this.assertReviewIsOpen(existing);
-    const evidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
+    const evidence = await assertCurrentCompletenessEvidence(this.prisma, proposal);
     const reviewEvidence = this.buildReviewEvidence(proposal, evidence, assignmentId, actor.id);
 
     // A field that is present replaces what was stored; a field that is absent keeps it. Reading an
@@ -134,7 +137,7 @@ export class ProposalReviewsService {
 
     const existing = await this.findReviewByAssignment(assignmentId);
     this.assertReviewIsOpen(existing);
-    const evidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
+    const evidence = await assertCurrentCompletenessEvidence(this.prisma, proposal);
     const reviewEvidence = this.buildReviewEvidence(proposal, evidence, assignmentId, actor.id);
 
     // Fall back to whatever the draft already holds, so submit works from the stored review as well
@@ -244,6 +247,20 @@ export class ProposalReviewsService {
         }
       });
 
+      const roster = filterCurrentRoundAssignments(await tx.proposalReviewAssignment.findMany({ where: { proposalId }, include: { reviewer: true } }), evidence.eventId);
+      const roundReviews = await tx.proposalReview.findMany({ where: { proposalId, submissionEventId: evidence.eventId } });
+      if (summarizeReviewProgress(roster, roundReviews).allReviewsSubmitted) {
+        await tx.proposalSubmissionEvent.create({ data: {
+          proposalId, actorId: actor.id, fromStatus: proposal.status, toStatus: proposal.status, submittedAt,
+          snapshot: { kind: "review_round_completed", submissionEventId: evidence.eventId, assignmentIds: roster.map((assignment) => assignment.id) },
+          note: "Đã đủ phiếu đánh giá để Trưởng phòng tổng hợp"
+        } });
+        await tx.auditLog.create({ data: {
+          action: "complete-review-round", result: "success", actorId: actor.id, username: actor.username,
+          targetEntity: "research-proposal", targetEntityId: proposalId,
+          reason: JSON.stringify({ submissionEventId: evidence.eventId, submittedCount: roster.length })
+        } });
+      }
       return review;
     })) as unknown as ProposalReviewRecord;
 
@@ -287,7 +304,7 @@ export class ProposalReviewsService {
     }
 
     const assignment = (await this.prisma.proposalReviewAssignment.findUnique({ where: { id: access.assignmentId } })) as { id: string; proposalId: string; reviewedSubmissionEventId: string | null } | null;
-    const evidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
+    const evidence = await assertCurrentCompletenessEvidence(this.prisma, proposal);
     if (!assignment || assignment.proposalId !== proposalId || assignment.reviewedSubmissionEventId !== evidence.eventId) {
       throw new ForbiddenException({ code: "STALE_ASSIGNMENT_CONTEXT", message: "Phân công không còn gắn với phiên bản nộp hiện tại của hồ sơ." });
     }

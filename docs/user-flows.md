@@ -106,9 +106,13 @@ flowchart LR
   subgraph staff["Chuyên viên có capability/scope; proposal/project cần officer assignment"]
     open["Tạo và mở đợt tiếp nhận"]
     check["Kiểm tra đầy đủ / thủ tục"]
-    assign["Phân công phản biện / hội đồng<br/>+ conflict check"]
-    consolidate["Tổng hợp đánh giá"]
     create_project["Chủ động tạo đề tài<br/>từ đề xuất đã duyệt"]
+  end
+
+  subgraph head["Trưởng phòng có scope, không xung đột"]
+    assign["Phân công phản biện / hội đồng<br/>+ conflict check"]
+    consolidate["Đủ phiếu → Soạn tổng hợp → Chốt tổng hợp"]
+    submit_for_approval["Trình lãnh đạo phê duyệt"]
   end
 
   subgraph pi_lane["PI / Nhà nghiên cứu nội bộ"]
@@ -131,7 +135,7 @@ flowchart LR
   open --> draft --> edit --> submit --> check
   check --> complete{"Hồ sơ đủ điều kiện?"}
   complete -- "Chưa đủ" --> request["Yêu cầu bổ sung<br/>nêu lý do + hạn"] --> supplement --> resubmit --> check
-  complete -- "Đủ" --> assign --> review --> score --> consolidate --> submit_for_approval["Trình phê duyệt / Gửi lãnh đạo phê duyệt"] --> ready["Chờ quyết định"] --> decide
+  complete -- "Đủ" --> assign --> review --> score --> consolidate --> submit_for_approval --> ready["Chờ quyết định"] --> decide
   decide -- "Không phê duyệt" --> rejected["Không phê duyệt<br/>giữ lịch sử"] --> proposal_archive["Đóng / lưu trữ"]
   decide -- "Phê duyệt" --> approved["Đã phê duyệt"] --> create_project --> project["Đề tài được tạo<br/>TOPIC_PI/team là quan hệ mới"]
 ```
@@ -144,13 +148,11 @@ Quy tắc cố định trong flow:
 - PI hiện tại có system role `RESEARCHER_INTERNAL_USER` là người duy nhất được
   tạo, nộp và nộp lại proposal; không có đường delegation cho các hành động này.
 - Reviewer chỉ thấy proposal/assignment được giao; gửi review xong thì review
-  bị khóa, sửa lỗi bằng phiên bản nhận xét mới.
+  bị khóa; mở lại chưa có workflow được phê duyệt, không sửa ngầm.
 - `Phiếu đánh giá của tôi` chỉ xuất hiện trong proposal có assignment đang hiệu
   lực của chính người xem; assignment ở proposal khác, role researcher/council
   hoặc system role rộng không mở rộng context.
-- `Phân công đánh giá` chỉ dành cho `SCIENTIFIC_MANAGEMENT_STAFF` có
-  `PROPOSAL_MANAGEMENT_OFFICER` hiện hành, scope, capability và state phù hợp. Staff dùng `Trình phê duyệt` để
-  gửi hồ sơ đã tổng hợp tới lãnh đạo; staff không nhận action `Phê duyệt` cuối.
+- `Phân công đánh giá`, soạn/chốt tổng hợp và `Trình phê duyệt` chỉ dành cho Head có scope, capability, state và không xung đột. Staff có officer assignment kiểm tra đầy đủ và theo dõi tiến độ; không phân công hoặc tổng hợp.
 - Lãnh đạo chỉ quyết định ở trạng thái `Chờ quyết định`/`ready_for_approval`;
   không sửa nội dung và không tự quyết bản ghi có xung đột.
 - Phê duyệt không tự động sinh project; Quản lý khoa học phải tạo và xác nhận.
@@ -385,6 +387,6 @@ retain history, remove My Profile access immediately.
 Both open scoped institutional records and operational counts/status/deadlines. Director
 receives final decision actions only for eligible routed packages without participation/review
 conflicts. Deputy receives no final decision action; PI/member/reviewer work is evaluated
-independently. Head assigns Staff, reviews their summary and submits a completed package.
+independently. Head assigns Staff and reviewers, reads submitted reviews, drafts/finalizes synthesis and submits the completed package.
 Protected reviewer information is omitted from oversight responses. Project/dashboard/
 notification/report routes without operational backends remain design requirements.

@@ -31,42 +31,54 @@ test('readiness requires exactly two reviewers, at least three distinct council 
   assert.equal(service.summarizeProgress(duplicate, submitted(duplicate)).allReviewsSubmitted, false);
 });
 
-test('third reviewer is rejected inside the locked proposal mutation before any write', async () => {
-  let locked = false;
-  const tx = {
-    $queryRaw: async strings => { if (strings.join('').includes('research_proposals')) locked = true; return []; },
-    researchProposal: { findUnique: async () => proposal },
-    user: { findUnique: async ({ where }) => where.id === actor.id
-      ? { ...actor, status: 'active', organizationScopes: [{ organizationUnit: { id: 'unit', status: 'active' } }] }
-      : { id: 'third', status: 'active', researcherProfile: null } },
-    proposalReviewAssignment: { count: async ({ where }) => {
-      assert.equal(locked, true);
-      assert.equal(where.proposalId, proposal.id);
-      assert.equal(where.assignmentRole, 'reviewer');
-      assert.deepEqual(where.status.in, ['assigned', 'completed']);
-      return 2;
-    } },
-    // The production conflict resolver uses these reads before the cardinality check.
-    proposalMember: { findMany: async () => [] },
-    proposalParticipation: { findMany: async () => [] }
-  };
-  const service = new ProposalReviewAssignmentsService({ $transaction: async work => work(tx) }, {}, participation, access);
-  await assert.rejects(() => service.assignReviewer(actor, proposal.id, { reviewerUserId: 'third', contextVersion: proposalContextVersion(proposal) }), /2 người phản biện/);
+test('Staff cannot assign reviewers or synthesize even on an under-review proposal', async () => {
+  const prisma = { researchProposal: { findUnique: async () => proposal } };
+  const assignments = new ProposalReviewAssignmentsService(prisma, {}, participation, access);
+  assignments.transactional = true;
+  await assert.rejects(() => assignments.assignReviewer(actor, proposal.id, { reviewerUserId: 'third' }), /Trưởng phòng/);
+  const summary = new ProposalEvaluationSummaryService(prisma, {}, {}, {}, participation, access);
+  summary.transactional = true;
+  for (const method of ['saveEvaluationSummary', 'finalizeEvaluationSummary', 'submitCompletedPackage']) {
+    await assert.rejects(() => summary[method](actor, proposal.id, { summary: 'Đủ điều kiện', recommendation: 'approve' }), /Trưởng phòng/);
+  }
 });
 
-test('readiness rechecks assignments after locking, rejecting a concurrent revocation before writes', async () => {
-  const assignments = roster(2, 3);
-  let locked = false;
-  const tx = {
-    $queryRaw: async () => { locked = true; return []; },
-    proposalReviewAssignment: { findMany: async () => { assert.equal(locked, true); return assignments.slice(1); } },
-    proposalReview: { findMany: async () => submitted(assignments) }
-  };
+test('Head cannot route a draft or synthesize incomplete current reviews', async () => {
+  const head = { ...actor, systemRole: 'SCIENTIFIC_MANAGEMENT_HEAD' };
+  const submission = { id: 'submission', submittedAt: new Date(1), snapshot: { members: [], attachments: [], requiredPackage: [] } };
   const prisma = {
-    researchProposal: { findUnique: async () => proposal },
-    proposalEvaluationSummary: { findFirst: async () => null },
-    $transaction: async work => work(tx)
+    researchProposal: { findUnique: async () => ({ ...proposal, submittedAt: new Date(1) }) },
+    proposalSubmissionEvent: { findMany: async query => query.where.snapshot ? [{ snapshot: { submissionEventId: 'submission', readiness: { ready: true } } }] : [submission] },
+    proposalEvaluationSummary: { findFirst: async () => ({ status: 'draft' }) }
   };
-  const service = new ProposalEvaluationSummaryService(prisma, {}, { findAssignments: async () => assignments, findReviews: async () => submitted(assignments) }, {}, participation, access);
-  await assert.rejects(() => service.saveEvaluationSummary(actor, proposal.id, { summary: 'Đủ điều kiện', recommendation: 'approve', markReady: true }), /Phân công đã thay đổi/);
+  const assignments = roster(2, 3);
+  const summary = new ProposalEvaluationSummaryService(prisma, {}, {
+    findCurrentRoundAssignments: async () => assignments,
+    findCurrentRoundReviews: async () => submitted(assignments).slice(1)
+  }, {}, participation, { resolveConflictForProposal: async () => ({ isAssignedReviewer: false, hasPersistedReview: false, unresolved: false }) });
+  summary.transactional = true;
+  await assert.rejects(() => summary.saveEvaluationSummary(head, proposal.id, { summary: 'Đủ điều kiện', recommendation: 'approve' }), /đầy đủ phiếu/);
+  await assert.rejects(() => summary.submitCompletedPackage(head, proposal.id), /phải được Trưởng phòng chốt/);
+});
+
+test('finalized synthesis refuses a replaced review roster without regenerating its evidence', async () => {
+  const head = { ...actor, systemRole: 'SCIENTIFIC_MANAGEMENT_HEAD' };
+  const assignments = roster(2, 3).map(row => ({ ...row, reviewedSubmissionEventId: 'submission', reviewer: { status: 'active' } }));
+  const reviews = submitted(assignments).map((row, index) => ({ ...row, id: `review-${index}`, submissionEventId: 'submission' }));
+  const frozen = { id: 'summary', status: 'finalized', revision: 2, evidenceSnapshot: { lifecycle: 'finalized', submissionEventId: 'submission', assignmentIds: assignments.map(row => row.id), reviewIds: reviews.map(row => row.id) } };
+  const submission = { id: 'submission', submittedAt: new Date(1), snapshot: { members: [], attachments: [], requiredPackage: [] } };
+  const db = {
+    $queryRaw: async () => [{ asOf: new Date() }],
+    researchProposal: { findUnique: async () => ({ ...proposal, submittedAt: new Date(1) }) },
+    proposalSubmissionEvent: { findMany: async query => query.where.snapshot ? [{ snapshot: { submissionEventId: 'submission', readiness: { ready: true } } }] : [submission] },
+    proposalEvaluationSummary: { findFirst: async () => frozen, findUnique: async () => frozen },
+    proposalReviewAssignment: { findMany: async () => assignments.map((row, index) => index === 0 ? { ...row, id: 'replacement' } : row) },
+    proposalReview: { findMany: async () => reviews }
+  };
+  db.$transaction = async work => work(db);
+  const service = new ProposalEvaluationSummaryService(db, {}, { findCurrentRoundAssignments: async () => assignments, findCurrentRoundReviews: async () => reviews }, {}, participation, { resolveConflictForProposal: async () => ({ isAssignedReviewer: false, hasPersistedReview: false, unresolved: false }) });
+  service.transactional = true;
+  await assert.rejects(() => service.submitCompletedPackage(head, proposal.id), error => error.getResponse?.().code === 'PACKAGE_CONTEXT_MISMATCH');
+  assert.equal(frozen.status, 'finalized');
+  assert.equal(frozen.evidenceSnapshot.assignmentIds[0], '0');
 });

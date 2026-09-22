@@ -100,7 +100,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
   return (
     <SectionCard
       title="Quyết định phê duyệt"
-      subtitle="Kết quả đánh giá, tổng hợp của chuyên viên và quyết định của lãnh đạo"
+      subtitle="Kết quả đánh giá, tổng hợp của Trưởng phòng và quyết định của lãnh đạo"
       action={<StatusBadge status={decisionPackage.proposalStatus} />}
     >
       <div className="meta-grid">
@@ -113,7 +113,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
         <div className="meta-item">
           <span className="meta-label">Điểm trung bình</span>
           <span className="meta-value">
-            {progress.averageTotalScore === null ? "Chưa có" : `${progress.averageTotalScore}/${progress.maxTotalScore}`}
+            {progress.averageTotalScore == null ? "Ẩn theo chính sách" : `${progress.averageTotalScore}/${progress.maxTotalScore}`}
           </span>
         </div>
         <div className="meta-item">
@@ -134,7 +134,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
 
       {evaluationSummary ? (
         <div className="form-section-inline">
-          <div className="section-mini-heading">Tổng hợp của chuyên viên</div>
+          <div className="section-mini-heading">Tổng hợp của Trưởng phòng</div>
           <p className="record-title">{evaluationSummary.summary}</p>
           <p className="record-meta">
             {evaluationSummary.updatedByDisplayName || "Chuyên viên quản lý khoa học"} · Chuyển trình{" "}
