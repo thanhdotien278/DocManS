@@ -157,7 +157,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   };
   const reviewProgressReadAction = "proposal.review.progress.read";
   const canReadReviewProgress = canPerformProposalAction(capabilityState, reviewProgressReadAction);
-  const showEvaluationPanel = ["proposal.review.assign", "proposal.review.consolidate", "proposal.review.submit-package"]
+  const showEvaluationPanel = ["proposal.review.assign", "proposal.review.consolidate", "proposal.review.finalize", "proposal.review.submit-package"]
     .some((action) => shouldRenderAction(action as Parameters<typeof canPerformProposalAction>[1]));
   const showEvaluationProgress = showEvaluationPanel || canReadReviewProgress;
   const showReviewForm = shouldRenderAction("proposal.review.submit");
@@ -165,7 +165,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   const showManagementOfficerPanel = account?.systemRole === "SCIENTIFIC_MANAGEMENT_HEAD" && (shouldRenderAction("proposal.management-officer.assign") || shouldRenderAction("proposal.management-officer.revoke") || Boolean(proposal?.managementOfficer?.current));
   const showCompletenessCheck = shouldRenderAction("proposal.completeness.check");
   const showSubmitPanel = shouldRenderAction("proposal.submit");
-  const showStaffProposalSummary = (["proposal.completeness.check", "proposal.supplement.request", "proposal.review.assign", "proposal.review.consolidate", "proposal.review.submit-package"] as const).some(shouldRenderAction);
+  const showStaffProposalSummary = (["proposal.completeness.check", "proposal.supplement.request", "proposal.review.assign", "proposal.review.consolidate", "proposal.review.finalize", "proposal.review.submit-package"] as const).some(shouldRenderAction);
   const requirementOptions = proposal?.requiredPackage ?? [];
   const documentGroups = useMemo(
     () =>
@@ -694,7 +694,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
         {showReviewForm ? <ProposalReviewForm contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} onReviewSubmitted={() => void refreshWorkflowState()} canSubmitReview={canPerformProposalAction(capabilityState, "proposal.review.submit")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.submit")?.reason ?? capabilityState.reason} /> : null}
 
         {showEvaluationProgress ? (
-          <ProposalEvaluationPanel contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} proposalStatus={proposal.status} onWorkflowChange={refreshWorkflowState} canReadProgress={canReadReviewProgress} canAssignReviewers={canPerformProposalAction(capabilityState, "proposal.review.assign")} canConsolidate={canPerformProposalAction(capabilityState, "proposal.review.consolidate")} canSubmitPackage={canPerformProposalAction(capabilityState, "proposal.review.submit-package")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.assign")?.reason ?? capabilityState.reason} consolidateBlockedReason={blockedProposalAction(capabilityState, "proposal.review.consolidate")?.reason ?? capabilityState.reason} submitPackageBlockedReason={blockedProposalAction(capabilityState, "proposal.review.submit-package")?.reason ?? capabilityState.reason} />
+          <ProposalEvaluationPanel contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} proposalStatus={proposal.status} onWorkflowChange={refreshWorkflowState} canReadProgress={canReadReviewProgress} canAssignReviewers={canPerformProposalAction(capabilityState, "proposal.review.assign")} canConsolidate={canPerformProposalAction(capabilityState, "proposal.review.consolidate")} canFinalize={canPerformProposalAction(capabilityState, "proposal.review.finalize")} canSubmitPackage={canPerformProposalAction(capabilityState, "proposal.review.submit-package")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.assign")?.reason ?? capabilityState.reason} consolidateBlockedReason={blockedProposalAction(capabilityState, "proposal.review.consolidate")?.reason ?? capabilityState.reason} finalizeBlockedReason={blockedProposalAction(capabilityState, "proposal.review.finalize")?.reason ?? capabilityState.reason} submitPackageBlockedReason={blockedProposalAction(capabilityState, "proposal.review.submit-package")?.reason ?? capabilityState.reason} />
         ) : null}
 
         {showDecisionPanel ? <ProposalDecisionPanel contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} onDecision={() => void refreshWorkflowState()} canDecide={canPerformProposalAction(capabilityState, "proposal.decision.approve")} blockedReason={blockedProposalAction(capabilityState, "proposal.decision.approve")?.reason ?? capabilityState.reason} /> : null}

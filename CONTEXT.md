@@ -86,7 +86,7 @@ relationships, which grant no Scientific Management administrative actions. Back
 capabilities must distinguish this access basis; revocation removes only the relevant
 grant. Unassigned is a valid state; missing/ambiguous context fails closed.
 Independent intake/profile scope does not widen proposal/project access. Head assigns/reassigns/revokes officers, reads operational summaries and submits eligible
-completed packages. Routine assignment/consolidation belongs to assigned Staff. Director
+completed packages. Head assigns reviewers and prepares, finalizes and submits synthesis; assigned Staff confirms completeness and monitors reviews. Director
 combines oversight with eligible final decisions; Deputy Director combines internal researcher
 eligibility with read-only institutional oversight. Neither oversight reason bypasses disclosure.
 Proposal implementation is operational; project relationships remain a contract until the

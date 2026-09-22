@@ -59,6 +59,8 @@ development_status:
   4-5-kiem-tra-muc-do-san-sang-truoc-khi-nop: backlog
   4-6-nop-chinh-thuc-va-xem-lich-su-nop-de-xuat: backlog
   epic-4-retrospective: optional
+  # Refined Golden Flow assessment and acceptance gate: epic-05-proposal-review-and-approval/sprint-plan.md
+  # No Done promotion until both real UI terminal journeys and required denials are verified.
   epic-5: in-progress
   5-1-kiem-tra-tinh-day-du-va-yeu-cau-bo-sung: backlog
   5-2-chinh-sua-theo-yeu-cau-va-nop-lai-de-xuat: backlog

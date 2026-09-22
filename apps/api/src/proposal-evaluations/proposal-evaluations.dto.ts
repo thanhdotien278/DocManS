@@ -31,8 +31,13 @@ export class SaveEvaluationSummaryDto {
 
   summary?: string;
   recommendation?: string;
-  markReady?: boolean;
   contextVersion?: ContextVersionTokenV1;
+}
+
+export class FinalizeEvaluationSummaryDto {
+  [key: string]: unknown;
+
+  contextVersion!: ContextVersionTokenV1;
 }
 
 export class ProposalDecisionDto {
@@ -132,11 +137,13 @@ export const saveEvaluationSummaryPipe: PipeTransform<unknown, SaveEvaluationSum
   transform(value: unknown) {
     const input = assertRecord(value);
 
-    const markReady = input.markReady === true || input.markReady === "true";
-    if (!markReady && (typeof input.summary !== "string" || !input.summary.trim())) {
+    if (typeof input.markReady === "boolean" || typeof input.markReady === "string") {
+      throw new BadRequestException({ message: "Lưu nháp, chốt và trình phê duyệt là các thao tác riêng biệt." });
+    }
+    if (typeof input.summary !== "string" || !input.summary.trim()) {
       throw new BadRequestException({ message: "Nhập nội dung tổng hợp kết quả đánh giá." });
     }
-    if (!markReady && (typeof input.recommendation !== "string" || !REVIEW_RECOMMENDATIONS.includes(input.recommendation as ReviewRecommendation))) {
+    if (typeof input.recommendation !== "string" || !REVIEW_RECOMMENDATIONS.includes(input.recommendation as ReviewRecommendation)) {
       throw new BadRequestException({ message: "Chọn kết luận tổng hợp hợp lệ." });
     }
     if (input.contextVersion !== undefined && !isContextVersionTokenV1(input.contextVersion)) {
@@ -175,5 +182,12 @@ export const submitCompletedPackagePipe: PipeTransform<unknown, { contextVersion
   transform(value: unknown) {
     const input = assertRecord(value);
     return { contextVersion: readContextVersion(input) };
+  }
+};
+
+export const finalizeEvaluationSummaryPipe: PipeTransform<unknown, FinalizeEvaluationSummaryDto> = {
+  transform(value: unknown) {
+    const input = assertRecord(value);
+    return { contextVersion: readContextVersion(input) } as FinalizeEvaluationSummaryDto;
   }
 };

@@ -150,6 +150,7 @@ export type ProposalSupplementRequest = {
 };
 
 export type ResearchProposal = {
+  reviewWorkflow?: { completenessChecked: boolean; submittedCount: number; assignmentCount: number; pendingCount: number; overdueCount: number; readyForSynthesis: boolean };
   versions?: Array<{ id: string; version: number; submittedAt: string; content: { title: string; objectives: string; summary: string; attachments: ProposalAttachment[] } }>;
   id: string;
   code: string;

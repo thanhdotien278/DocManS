@@ -1,3 +1,4 @@
+import { REVIEW_ASSIGNMENT_STATUS, REVIEW_STATUS, REVIEW_MAX_TOTAL_SCORE } from "../proposals-shared/proposal-review-access.js";
 import { BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
@@ -39,9 +40,18 @@ export type ReviewAssignmentRecord = {
   revokedAt: Date | null;
   completedAt: Date | null;
   reviewedSubmissionEventId: string | null;
-  reviewer?: { displayName: string; username: string; unit: string } | null;
+  reviewer?: { displayName: string; username: string | null; unit: string; status?: string } | null;
   assignedBy?: { displayName: string } | null;
 };
+
+/** The same effective roster is used for progress and frozen package evidence. */
+export function filterCurrentRoundAssignments(assignments: ReviewAssignmentRecord[], submissionEventId: string, asOf = new Date()) {
+  return assignments.filter((assignment) => assignment.reviewedSubmissionEventId === submissionEventId &&
+    ["assigned", "completed"].includes(assignment.status) &&
+    (!assignment.effectiveFrom || assignment.effectiveFrom <= asOf) &&
+    (!assignment.effectiveUntil || assignment.effectiveUntil > asOf) &&
+    assignment.reviewer?.status === "active");
+}
 
 export type ProposalReviewRecord = {
   id: string;
@@ -134,7 +144,10 @@ export async function findCurrentSubmissionEvidence(prisma: Pick<PrismaService, 
     orderBy: { submittedAt: "desc" },
     select: { id: true, submittedAt: true, snapshot: true }
   });
-  const event = events[0] as { id: string; submittedAt: Date; snapshot: unknown } | undefined;
+  // Completeness checks retain the submitted status, but are not submission snapshots.
+  const event = events.find((candidate) => isRecord(candidate.snapshot) && !candidate.snapshot.kind &&
+    Array.isArray(candidate.snapshot.members) && Array.isArray(candidate.snapshot.attachments) &&
+    Array.isArray(candidate.snapshot.requiredPackage));
   if (!event) {
     throw new BadRequestException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được bằng chứng lần nộp hiện tại." });
   }
@@ -149,6 +162,32 @@ export async function findCurrentSubmissionEvidence(prisma: Pick<PrismaService, 
     contextVersion: proposalContextVersion(proposal),
     snapshot: event.snapshot
   };
+}
+
+/** Every protected evaluation mutation must be tied to a successful completeness check for the
+ * exact submission event it is about to consume. A check from an earlier resubmission is never
+ * sufficient, even when the proposal status is otherwise eligible. */
+export async function assertCurrentCompletenessEvidence(
+  prisma: Pick<PrismaService, "proposalSubmissionEvent">,
+  proposal: EvaluationProposalRecord
+) {
+  const submissionEvidence = await findCurrentSubmissionEvidence(prisma, proposal);
+  const checks = await prisma.proposalSubmissionEvent.findMany({
+    where: {
+      proposalId: proposal.id,
+      submittedAt: { gte: submissionEvidence.submittedAt },
+      snapshot: { path: ["kind"], equals: "completeness_check" }
+    },
+    select: { snapshot: true }
+  });
+  const valid = checks.some((event) => {
+    const snapshot = event.snapshot as { readiness?: { ready?: unknown }; submissionEventId?: unknown } | null;
+    return snapshot?.submissionEventId === submissionEvidence.eventId && snapshot?.readiness?.ready === true;
+  });
+  if (!valid) {
+    throw new BadRequestException({ message: "Cần xác nhận hồ sơ đầy đủ cho đúng phiên bản hiện tại trước khi tiếp tục vòng đánh giá." });
+  }
+  return submissionEvidence;
 }
 
 /**
@@ -190,10 +229,17 @@ export async function assertScientificManagementScope(prisma: PrismaService, act
  */
 export function assertScientificManagementHeadScope(actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
   if (!actor || !isScientificManagementHead(actor)) {
-    throw new ForbiddenException({ message: "Chỉ Trưởng phòng quản lý khoa học được xem tổng hợp vận hành của hồ sơ." });
+    throw new ForbiddenException({ message: "Chỉ Trưởng phòng quản lý khoa học được thực hiện nghiệp vụ phân công và tổng hợp hồ sơ." });
   }
   assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
   return actor;
+}
+
+/** Assignment rosters are operational reads for scoped Head and assigned Staff. */
+export async function assertReviewAssignmentReadScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
+  if (isScientificManagementHead(actor)) return assertScientificManagementHeadScope(actor, proposal);
+  if (isScientificManagementStaff(actor)) return assertScientificManagementScope(prisma, actor, proposal);
+  throw new ForbiddenException({ message: "Không có quyền xem phân công đánh giá của hồ sơ này." });
 }
 
 /** Shared read gate for evaluation progress. Staff require the active officer relationship;
@@ -318,4 +364,39 @@ export function assertProposalStatus(proposal: EvaluationProposalRecord, allowed
       currentStatusLabel: PROPOSAL_STATUS_LABELS[proposal.status] ?? proposal.status
     });
   }
+}
+
+export function summarizeReviewProgress(assignments: ReviewAssignmentRecord[], reviews: ProposalReviewRecord[]) {
+  const active = assignments.filter((assignment) => assignment.status === REVIEW_ASSIGNMENT_STATUS.assigned || assignment.status === REVIEW_ASSIGNMENT_STATUS.completed);
+  const reviewerCount = new Set(active.filter((assignment) => assignment.assignmentRole === "reviewer").map((assignment) => assignment.reviewerUserId)).size;
+  const committeeMemberCount = new Set(active.filter((assignment) => assignment.assignmentRole === "committee_member").map((assignment) => assignment.reviewerUserId)).size;
+  const assignmentRequirementsMet = reviewerCount === 2 && committeeMemberCount >= 3 && new Set(active.map((assignment) => assignment.reviewerUserId)).size === active.length;
+  const activeIds = new Set(active.map((assignment) => assignment.id));
+  const submitted = reviews.filter((review) => review.status === REVIEW_STATUS.submitted && activeIds.has(review.assignmentId));
+  const submittedAssignmentIds = new Set(submitted.map((review) => review.assignmentId));
+  const pending = active.filter((assignment) => !submittedAssignmentIds.has(assignment.id));
+  const scored = submitted.map((review) => review.totalScore).filter((score): score is number => typeof score === "number");
+
+  return {
+    activeAssignmentCount: active.length,
+    reviewerCount,
+    committeeMemberCount,
+    assignmentRequirementsMet,
+    submittedCount: submitted.length,
+    pendingCount: pending.length,
+    overdueCount: pending.filter((assignment) => assignment.dueDate && assignment.dueDate < new Date()).length,
+    readinessReasons: [
+      ...(reviewerCount !== 2 ? ["Cần đúng 2 người phản biện."] : []),
+      ...(committeeMemberCount < 3 ? ["Cần ít nhất 3 thành viên hội đồng."] : []),
+      ...(pending.length ? [`Còn ${pending.length} phiếu chưa gửi.`] : [])
+    ],
+    pendingReviewers: pending.map((assignment) => ({
+      assignmentId: assignment.id,
+      reviewerUserId: assignment.reviewerUserId,
+      reviewerDisplayName: assignment.reviewer?.displayName ?? ""
+    })),
+    allReviewsSubmitted: assignmentRequirementsMet && pending.length === 0,
+    averageTotalScore: scored.length ? Math.round((scored.reduce((sum, score) => sum + score, 0) / scored.length) * 10) / 10 : null,
+    maxTotalScore: REVIEW_MAX_TOTAL_SCORE
+  };
 }

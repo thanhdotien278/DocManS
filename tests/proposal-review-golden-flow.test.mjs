@@ -5,7 +5,7 @@ import { proposalDecisionPipe } from "../dist/apps/api/proposal-evaluations/prop
 import { ProposalDecisionsService, PROPOSAL_DECISIONS } from "../dist/apps/api/proposal-evaluations/proposal-decisions.service.js";
 import { ProposalEvaluationSummaryService } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-summary.service.js";
 import { ProposalReviewsService } from "../dist/apps/api/proposal-evaluations/proposal-reviews.service.js";
-import { findCurrentSubmissionEvidence } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-support.js";
+import { findCurrentSubmissionEvidence, assertCurrentCompletenessEvidence, filterCurrentRoundAssignments } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-support.js";
 import { ResearchProposalsService } from "../dist/apps/api/research-proposals/research-proposals.service.js";
 
 const proposal = {
@@ -35,6 +35,7 @@ test("golden-flow evidence binds evaluation to the latest current submission", a
       findMany: async (input) => {
         query = input;
         return [
+          { id: "check", submittedAt: new Date(3), toStatus: "resubmitted", snapshot: { kind: "completeness_check", submissionEventId: "current", readiness: { ready: true } } },
           { id: "old", submittedAt: new Date(0), toStatus: "submitted", snapshot: { ...snapshots, title: "old" } },
           { id: "current", submittedAt: new Date(2), toStatus: "resubmitted", snapshot: { ...snapshots, title: "current" } }
         ]
@@ -90,4 +91,22 @@ test("leadership decision queue is server-filtered by authority scope and workfl
   await service.listDecisionQueue({ systemRole: "LEADERSHIP_APPROVAL_AUTHORITY", organizationScopes: [{ id: "unit-1" }] });
   assert.deepEqual(where.hostOrganizationUnitId, { in: ["unit-1"] });
   assert.deepEqual(where.status.in, ["ready_for_approval", "approved", "rejected"]);
+});
+
+
+test("completeness requires the exact current submission and successful readiness", async () => {
+  const submission = { id: "current", submittedAt: new Date(2), snapshot: { members: [], attachments: [], requiredPackage: [] } };
+  let check = { submissionEventId: "old", readiness: { ready: true } };
+  const db = { proposalSubmissionEvent: { findMany: async (query) => query.where.snapshot ? [{ snapshot: check }] : [submission] } };
+  await assert.rejects(() => assertCurrentCompletenessEvidence(db, proposal), BadRequestException);
+  check = { submissionEventId: "current", readiness: { ready: false } };
+  await assert.rejects(() => assertCurrentCompletenessEvidence(db, proposal), BadRequestException);
+  check.readiness.ready = true;
+  assert.equal((await assertCurrentCompletenessEvidence(db, proposal)).eventId, "current");
+});
+
+test("frozen evidence excludes revoked, expired, future, inactive and old-version duties", () => {
+  const active = { id: "active", reviewedSubmissionEventId: "current", status: "completed", reviewer: { status: "active" } };
+  const rows = [active, { ...active, id: "revoked", status: "revoked" }, { ...active, id: "old", reviewedSubmissionEventId: "old" }, { ...active, id: "expired", effectiveUntil: new Date(5) }, { ...active, id: "future", effectiveFrom: new Date(11) }, { ...active, id: "inactive", reviewer: { status: "inactive" } }];
+  assert.deepEqual(filterCurrentRoundAssignments(rows, "current", new Date(10)).map(row => row.id), ["active"]);
 });

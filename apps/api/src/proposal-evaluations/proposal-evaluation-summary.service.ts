@@ -10,22 +10,22 @@ import { isScientificManagementHead, isScientificManagementStaff } from "../prop
 import {
   getRecommendationLabel,
   REVIEW_ASSIGNMENT_STATUS,
-  REVIEW_MAX_TOTAL_SCORE,
   REVIEW_RECOMMENDATIONS,
   REVIEW_RECOMMENDATION_LABELS,
   REVIEW_STATUS,
   type ReviewRecommendation
 } from "../proposals-shared/proposal-review-access.js";
-import { CONSOLIDATABLE_STATUSES, isWorkflowVisibleStatus, PROPOSAL_STATUS, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
+import { isWorkflowVisibleStatus, PROPOSAL_STATUS, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import {
   assertProposalStatus,
+  filterCurrentRoundAssignments,
+  summarizeReviewProgress,
+  assertCurrentCompletenessEvidence,
   assertEvaluationReadScope,
   assertScientificManagementHeadScope,
-  assertScientificManagementScope,
   findCurrentSubmissionEvidence,
   findEvaluationProposal,
   resolveActorConflict,
-  updateProposalStatusGuarded,
   type EvaluationSummaryRecord,
   type ProposalReviewRecord,
   type ReviewAssignmentRecord
@@ -35,6 +35,7 @@ import { ProposalReviewsService } from "./proposal-reviews.service.js";
 
 export const EVALUATION_SUMMARY_STATUS = {
   draft: "draft",
+  finalized: "finalized",
   readyForApproval: "ready_for_approval"
 } as const;
 
@@ -92,11 +93,11 @@ export class ProposalEvaluationSummaryService {
         proposalStatus: proposal.status,
         proposalStatusLabel: PROPOSAL_STATUS_LABELS[proposal.status] ?? proposal.status,
         ...operationalProgress,
-        assignments: [],
-        reviews: [],
+        assignments: isScientificManagementHead(actor) && !conflict.conflicted ? assignmentRecords.map((assignment) => this.assignments.toAssignmentResponse(assignment, reviewRecords)) : [],
+        reviews: isScientificManagementHead(actor) && !conflict.conflicted ? reviewRecords.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => this.reviews.toSubmittedReviewResponse(review)) : [],
         ...(isScientificManagementHead(actor) && !conflict.conflicted ? { evaluationSummary: this.toSummaryResponse(summary) } : {}),
         reviewDeadlines: assignmentRecords.filter((assignment) => ["assigned", "completed"].includes(assignment.status)).map((assignment) => ({ role: assignment.assignmentRole, status: assignment.status, dueDate: assignment.dueDate?.toISOString() ?? null })),
-        recommendations: []
+        recommendations: REVIEW_RECOMMENDATIONS.map((code) => ({ code, label: REVIEW_RECOMMENDATION_LABELS[code] }))
       };
     }
     return {
@@ -106,99 +107,67 @@ export class ProposalEvaluationSummaryService {
       ...progress,
       assignments: assignmentRecords.map((assignment) => this.assignments.toAssignmentResponse(assignment, reviewRecords)),
       reviews: reviewRecords.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => this.reviews.toSubmittedReviewResponse(review)),
-      evaluationSummary: this.toSummaryResponse(summary),
       recommendations: REVIEW_RECOMMENDATIONS.map((code) => ({ code, label: REVIEW_RECOMMENDATION_LABELS[code] }))
     };
   }
 
-  /**
-   * AC-ST-3.4-02 / AC-ST-3.4-03. Saving the summary and marking it ready are one operation with an
-   * explicit `markReady` flag, so a draft consolidation cannot drift into an approval-ready state
-   * as a side effect of an ordinary save.
-   */
+  /** Head-only synthesis draft. A draft is allowed to change, but never routes the proposal. */
   async saveEvaluationSummary(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>): Promise<any> {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, currentActor) => service.saveEvaluationSummary(currentActor, proposalId, input));
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    await assertScientificManagementScope(this.prisma, actor, proposal);
-    assertProposalStatus(proposal, CONSOLIDATABLE_STATUSES, "Chỉ hồ sơ đang đánh giá hoặc chờ phê duyệt mới được tổng hợp kết quả.");
-
-    // AC-ST-3.4-03 read through the conflict lens: a staff member who participates in the proposal
-    // or was assigned to review it must not be the one who writes its consolidated outcome.
-    const conflict = await resolveActorConflict(
-      { participation: this.participation, reviewAccess: this.reviewAccess },
-      actor?.id,
-      proposalId
-    );
-    if (conflict.conflicted) {
-      await this.auditLog.record({
-        action: "consolidate-evaluation",
-        result: "failure",
-        actorId: actor.id,
-        targetEntity: "proposal-evaluation-summary",
-        targetEntityId: proposalId,
-        username: actor.username,
-        reason: JSON.stringify({ proposalId, reasonCode: conflict.reasonCode, reason: conflict.reason })
-      });
-      throw new BadRequestException({ message: conflict.viewerMessage, reasonCode: conflict.reasonCode });
-    }
-
+    assertScientificManagementHeadScope(actor, proposal);
+    assertProposalStatus(proposal, [PROPOSAL_STATUS.underReview], "Chỉ hồ sơ đang đánh giá mới được soạn tổng hợp kết quả.");
+    this.assertNoSynthesisBypass(input);
+    await this.assertSynthesisActorIsEligible(actor, proposalId);
     const summaryText = this.readSummaryText(input.summary);
     const recommendation = this.readRecommendation(input.recommendation);
-    const markReady = input.markReady === true || input.markReady === "true";
-    if (proposal.status === PROPOSAL_STATUS.readyForApproval) {
-      throw new BadRequestException({ message: "Gói đánh giá đã trình lãnh đạo và không còn được chỉnh sửa." });
-    }
-
-    const submissionEvidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
+    const submissionEvidence = await assertCurrentCompletenessEvidence(this.prisma, proposal);
     const assignmentRecords = await this.assignments.findCurrentRoundAssignments(proposal);
     const reviewRecords = await this.assignments.findCurrentRoundReviews(proposal);
     const progress = this.summarizeProgress(assignmentRecords, reviewRecords);
-
-    if (markReady && !progress.allReviewsSubmitted) {
-      throw new BadRequestException({
-        message: "Chưa thể chuyển sang chờ phê duyệt: cần đúng 2 người phản biện, ít nhất 3 thành viên hội đồng và đầy đủ phiếu đánh giá.",
-        pendingReviewers: progress.pendingReviewers
-      });
-    }
+    this.assertCompleteCurrentRound(progress);
 
     const existing = await this.findSummary(proposalId);
-    const now = new Date();
-    const nextStatus = markReady ? EVALUATION_SUMMARY_STATUS.readyForApproval : existing?.status ?? EVALUATION_SUMMARY_STATUS.draft;
+    if (existing && existing.status !== EVALUATION_SUMMARY_STATUS.draft) {
+      throw new BadRequestException({ message: "Bản tổng hợp đã chốt hoặc đã trình lãnh đạo, không còn được chỉnh sửa." });
+    }
 
     const saved = (await this.prisma.$transaction(async (tx) => {
-      if (markReady) {
-        await tx.$queryRaw`SELECT id FROM research_proposals WHERE id = ${proposalId} FOR UPDATE`;
-        const currentAssignments = await tx.proposalReviewAssignment.findMany({ where: { proposalId } }) as ReviewAssignmentRecord[];
-        const currentReviews = await tx.proposalReview.findMany({ where: { proposalId } }) as ProposalReviewRecord[];
-        const currentProgress = this.summarizeProgress(
-          currentAssignments.filter((assignment) => assignment.reviewedSubmissionEventId === submissionEvidence.eventId),
-          currentReviews.filter((review) => review.submissionEventId === submissionEvidence.eventId)
-        );
-        if (!currentProgress.allReviewsSubmitted) {
-          throw new BadRequestException({ message: "Phân công đã thay đổi: cần đúng 2 người phản biện, ít nhất 3 thành viên hội đồng và đầy đủ phiếu đánh giá." });
-        }
+      await tx.$queryRaw`SELECT id FROM research_proposals WHERE id = ${proposalId} FOR UPDATE`;
+      const currentAssignments = await tx.proposalReviewAssignment.findMany({ where: { proposalId }, include: { reviewer: { select: { status: true, displayName: true, username: true, unit: true } } } }) as ReviewAssignmentRecord[];
+      const currentReviews = await tx.proposalReview.findMany({ where: { proposalId } }) as ProposalReviewRecord[];
+      const currentRoundAssignments = filterCurrentRoundAssignments(currentAssignments, submissionEvidence.eventId);
+      const currentRoundReviews = currentReviews.filter((review) => review.submissionEventId === submissionEvidence.eventId && currentRoundAssignments.some((assignment) => assignment.id === review.assignmentId));
+      const currentProgress = this.summarizeProgress(currentRoundAssignments, currentRoundReviews);
+      this.assertCompleteCurrentRound(currentProgress);
+      const currentSummary = existing ? await tx.proposalEvaluationSummary.findUnique({ where: { id: existing.id } }) : null;
+      if (currentSummary && currentSummary.status !== EVALUATION_SUMMARY_STATUS.draft) {
+        throw new BadRequestException({ message: "Bản tổng hợp đã được thay đổi. Vui lòng tải lại hồ sơ." });
       }
-      const revision = (existing?.revision ?? 0) + 1;
+      const now = await readTransactionClockV1(tx);
+      const revision = (currentSummary?.revision ?? existing?.revision ?? 0) + 1;
       const evidenceSnapshot = {
         kind: "evaluation_package",
         schemaVersion: "proposal-evaluation-package.v1",
+        lifecycle: EVALUATION_SUMMARY_STATUS.draft,
         revision,
         submissionEventId: submissionEvidence.eventId,
-        assignmentIds: assignmentRecords.map((assignment) => assignment.id),
-        reviewIds: reviewRecords.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => review.id),
+        assignmentIds: currentRoundAssignments.map((assignment) => assignment.id),
+        reviewIds: currentRoundReviews.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => review.id),
         summary: summaryText,
         recommendation,
         capturedAt: now.toISOString()
       };
-      const record = existing
+      const existingSummary = currentSummary ?? existing;
+      const record = existingSummary
         ? ((await tx.proposalEvaluationSummary.update({
-            where: { id: existing.id },
+            where: { id: existingSummary.id },
             data: {
               summary: summaryText,
               recommendation,
-              status: nextStatus,
+              status: EVALUATION_SUMMARY_STATUS.draft,
               updatedById: actor.id,
-              markedReadyAt: markReady ? existing.markedReadyAt ?? now : existing.markedReadyAt,
+              markedReadyAt: null,
               revision,
               contextVersion: input.contextVersion,
               evidenceSnapshot
@@ -209,51 +178,31 @@ export class ProposalEvaluationSummaryService {
               proposalId,
               summary: summaryText,
               recommendation,
-              status: nextStatus,
+              status: EVALUATION_SUMMARY_STATUS.draft,
               createdById: actor.id,
               updatedById: actor.id,
-              markedReadyAt: markReady ? now : null,
+              markedReadyAt: null,
               revision,
               contextVersion: input.contextVersion,
               evidenceSnapshot
             } as never
           })) as EvaluationSummaryRecord);
 
-      const movesToReady = markReady && proposal.status !== PROPOSAL_STATUS.readyForApproval;
-      if (movesToReady) {
-        await updateProposalStatusGuarded(tx, proposalId, proposal.status, PROPOSAL_STATUS.readyForApproval);
-
-        // Any still-open assignment is closed with the round, so a revoked-but-unreviewed reviewer
-        // does not keep write access to a proposal that has left the evaluation phase.
-        await tx.proposalReviewAssignment.updateMany({
-          where: { proposalId, status: REVIEW_ASSIGNMENT_STATUS.assigned },
-          data: { status: REVIEW_ASSIGNMENT_STATUS.completed, completedAt: now } as never
-        });
-        await tx.researchProposal.update({
-          where: { id: proposalId },
-          data: {
-          authorizationRelationshipVersion: { increment: 1 },
-          authorizationDelegationVersion: { increment: 1 },
-            authorizationContextUpdatedAt: now
-          } as never
-        });
-
-        await tx.proposalSubmissionEvent.create({
-          data: {
-            proposalId,
-            actorId: actor.id,
-            fromStatus: proposal.status,
-            toStatus: PROPOSAL_STATUS.readyForApproval,
-            submittedAt: now,
-            snapshot: evidenceSnapshot,
-            note: "Chuyên viên tổng hợp kết quả đánh giá và chuyển hồ sơ sang chờ phê duyệt"
-          } as never
-        });
-      }
+      await tx.proposalSubmissionEvent.create({
+        data: {
+          proposalId,
+          actorId: actor.id,
+          fromStatus: proposal.status,
+          toStatus: proposal.status,
+          submittedAt: now,
+          snapshot: { ...evidenceSnapshot, kind: "evaluation_summary_draft" },
+          note: "Trưởng phòng lưu bản nháp tổng hợp đánh giá"
+        } as never
+      });
 
       await tx.auditLog.create({
         data: {
-          action: movesToReady ? "mark-ready-for-approval" : "consolidate-evaluation",
+          action: "draft-evaluation-summary",
           result: "success",
           actorId: actor.id,
           targetEntity: "proposal-evaluation-summary",
@@ -263,10 +212,11 @@ export class ProposalEvaluationSummaryService {
             proposalId,
             recommendation,
             summaryLength: summaryText.length,
-            submittedReviews: progress.submittedCount,
-            totalAssignments: progress.activeAssignmentCount,
+            submittedReviews: currentProgress.submittedCount,
+            totalAssignments: currentProgress.activeAssignmentCount,
             fromStatus: proposal.status,
-            toStatus: movesToReady ? PROPOSAL_STATUS.readyForApproval : proposal.status
+            toStatus: proposal.status,
+            revision
           })
         }
       });
@@ -276,11 +226,62 @@ export class ProposalEvaluationSummaryService {
 
     return {
       evaluationSummary: this.toSummaryResponse(saved),
-      proposalStatus: markReady ? PROPOSAL_STATUS.readyForApproval : proposal.status
+      proposalStatus: proposal.status
     };
   }
 
-  /** Head review gate: submit an already-completed Staff summary without editing its content. */
+  /** Freeze the current complete review round. This records a separate lifecycle event. */
+  async finalizeEvaluationSummary(actor: SafeUserContext, proposalId: string, input: Record<string, unknown> = {}): Promise<any> {
+    if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, currentActor) => service.finalizeEvaluationSummary(currentActor, proposalId, input));
+    const proposal = await findEvaluationProposal(this.prisma, proposalId);
+    assertScientificManagementHeadScope(actor, proposal);
+    assertProposalStatus(proposal, [PROPOSAL_STATUS.underReview], "Chỉ hồ sơ đang đánh giá mới được chốt bản tổng hợp.");
+    await this.assertSynthesisActorIsEligible(actor, proposalId);
+    const existing = await this.findSummary(proposalId);
+    if (!existing || existing.status !== EVALUATION_SUMMARY_STATUS.draft) throw new BadRequestException({ message: "Cần lưu bản nháp tổng hợp trước khi chốt." });
+    const submissionEvidence = await assertCurrentCompletenessEvidence(this.prisma, proposal);
+
+    const finalized = (await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM research_proposals WHERE id = ${proposalId} FOR UPDATE`;
+      const currentSummary = await tx.proposalEvaluationSummary.findUnique({ where: { id: existing.id } });
+      if (!currentSummary || currentSummary.status !== EVALUATION_SUMMARY_STATUS.draft) throw new BadRequestException({ message: "Bản nháp đã được thay đổi. Vui lòng tải lại hồ sơ." });
+      const assignments = await tx.proposalReviewAssignment.findMany({ where: { proposalId }, include: { reviewer: { select: { status: true, displayName: true, username: true, unit: true } } } }) as ReviewAssignmentRecord[];
+      const reviews = await tx.proposalReview.findMany({ where: { proposalId } }) as ProposalReviewRecord[];
+      const currentAssignments = filterCurrentRoundAssignments(assignments, submissionEvidence.eventId);
+      const currentReviews = reviews.filter((review) => review.submissionEventId === submissionEvidence.eventId && currentAssignments.some((assignment) => assignment.id === review.assignmentId));
+      const progress = this.summarizeProgress(currentAssignments, currentReviews);
+      this.assertCompleteCurrentRound(progress);
+      const draftEvidence = currentSummary.evidenceSnapshot as Record<string, unknown> | null;
+      if (!draftEvidence || draftEvidence.submissionEventId !== submissionEvidence.eventId || !this.sameEvidenceIds(draftEvidence, currentAssignments, currentReviews)) {
+        throw new BadRequestException({ code: "PACKAGE_CONTEXT_MISMATCH", message: "Phiếu đánh giá đã thay đổi. Cần lưu lại bản nháp tổng hợp trước khi chốt." });
+      }
+      const now = await readTransactionClockV1(tx);
+      const revision = (currentSummary.revision ?? 0) + 1;
+      const evidenceSnapshot = {
+        ...(currentSummary.evidenceSnapshot as Record<string, unknown> | null ?? {}),
+        kind: "evaluation_package",
+        schemaVersion: "proposal-evaluation-package.v1",
+        lifecycle: EVALUATION_SUMMARY_STATUS.finalized,
+        revision,
+        submissionEventId: submissionEvidence.eventId,
+        assignmentIds: currentAssignments.map((assignment) => assignment.id),
+        reviewIds: currentReviews.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => review.id),
+        summary: currentSummary.summary,
+        recommendation: currentSummary.recommendation,
+        finalizedById: actor.id,
+        finalizedAt: now.toISOString(),
+        capturedAt: now.toISOString()
+      };
+      const record = (await tx.proposalEvaluationSummary.update({ where: { id: existing.id }, data: { status: EVALUATION_SUMMARY_STATUS.finalized, updatedById: actor.id, revision, contextVersion: input.contextVersion, evidenceSnapshot } as never, include: { updatedBy: { select: { displayName: true } } } })) as EvaluationSummaryRecord;
+      await tx.proposalSubmissionEvent.create({ data: { proposalId, actorId: actor.id, fromStatus: proposal.status, toStatus: proposal.status, submittedAt: now, snapshot: { ...evidenceSnapshot, kind: "evaluation_summary_finalized" }, note: "Trưởng phòng chốt bản tổng hợp đánh giá" } as never });
+      await tx.auditLog.create({ data: { action: "finalize-evaluation-summary", result: "success", actorId: actor.id, targetEntity: "proposal-evaluation-summary", targetEntityId: record.id, username: actor.username, reason: JSON.stringify({ proposalId, revision, submissionEventId: submissionEvidence.eventId }) } });
+      return record;
+    })) as unknown as EvaluationSummaryRecord;
+
+    return { evaluationSummary: this.toSummaryResponse(finalized), proposalStatus: proposal.status };
+  }
+
+  /** Head review gate: submit an already-finalized Head summary without editing its content. */
   async submitCompletedPackage(actor: SafeUserContext, proposalId: string, input: Record<string, unknown> = {}): Promise<any> {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, currentActor) => service.submitCompletedPackage(currentActor, proposalId, input));
 
@@ -292,10 +293,14 @@ export class ProposalEvaluationSummaryService {
     if (conflict.conflicted) throw new BadRequestException({ message: conflict.viewerMessage, reasonCode: conflict.reasonCode });
 
     const existing = await this.findSummary(proposalId);
-    if (!existing || existing.status !== EVALUATION_SUMMARY_STATUS.draft) {
-      throw new BadRequestException({ message: "Chưa có bản tổng hợp của chuyên viên để trình lãnh đạo." });
+    if (!existing || existing.status !== EVALUATION_SUMMARY_STATUS.finalized) {
+      throw new BadRequestException({ message: "Bản tổng hợp phải được Trưởng phòng chốt trước khi trình lãnh đạo." });
     }
-    const submissionEvidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
+    const submissionEvidence = await assertCurrentCompletenessEvidence(this.prisma, proposal);
+    const finalizedEvidence = existing.evidenceSnapshot as { lifecycle?: unknown; submissionEventId?: unknown } | null | undefined;
+    if (finalizedEvidence?.lifecycle !== EVALUATION_SUMMARY_STATUS.finalized || finalizedEvidence.submissionEventId !== submissionEvidence.eventId) {
+      throw new BadRequestException({ code: "PACKAGE_CONTEXT_MISMATCH", message: "Bản tổng hợp đã chốt không còn gắn với phiên bản nộp hiện tại." });
+    }
     const progress = this.summarizeProgress(await this.assignments.findCurrentRoundAssignments(proposal), await this.assignments.findCurrentRoundReviews(proposal));
     if (!progress.allReviewsSubmitted) {
       throw new BadRequestException({ message: "Gói đánh giá chưa hoàn tất, chưa thể trình lãnh đạo.", pendingCount: progress.pendingCount });
@@ -304,31 +309,26 @@ export class ProposalEvaluationSummaryService {
     const now = await readTransactionClockV1(this.prisma);
     const saved = (await this.prisma.$transaction(async (tx) => {
       const currentSummary = await tx.proposalEvaluationSummary.findUnique({ where: { id: existing.id } });
-      if (!currentSummary || currentSummary.status !== EVALUATION_SUMMARY_STATUS.draft) throw new BadRequestException({ message: "Bản tổng hợp đã được thay đổi. Vui lòng tải lại hồ sơ." });
-      const currentAssignments = await tx.proposalReviewAssignment.findMany({ where: { proposalId } }) as ReviewAssignmentRecord[];
+      if (!currentSummary || currentSummary.status !== EVALUATION_SUMMARY_STATUS.finalized) throw new BadRequestException({ message: "Bản tổng hợp đã được thay đổi. Vui lòng tải lại hồ sơ." });
+      const currentEvidence = await findCurrentSubmissionEvidence(tx, proposal);
+      const currentAssignments = await tx.proposalReviewAssignment.findMany({ where: { proposalId }, include: { reviewer: { select: { status: true, displayName: true, username: true, unit: true } } } }) as ReviewAssignmentRecord[];
       const currentReviews = await tx.proposalReview.findMany({ where: { proposalId } }) as ProposalReviewRecord[];
+      const roundAssignments = filterCurrentRoundAssignments(currentAssignments, currentEvidence.eventId);
+      const roundReviews = currentReviews.filter((review) => review.submissionEventId === currentEvidence.eventId && roundAssignments.some((assignment) => assignment.id === review.assignmentId));
+      const finalizedEvidence = currentSummary.evidenceSnapshot as Record<string, unknown> | null | undefined;
+      if (!finalizedEvidence || finalizedEvidence.lifecycle !== EVALUATION_SUMMARY_STATUS.finalized || finalizedEvidence.submissionEventId !== currentEvidence.eventId || !this.sameEvidenceIds(finalizedEvidence, roundAssignments, roundReviews)) {
+        throw new BadRequestException({ code: "PACKAGE_CONTEXT_MISMATCH", message: "Bản tổng hợp đã chốt không còn gắn với phiên bản nộp hiện tại." });
+      }
       const currentProgress = this.summarizeProgress(
-        currentAssignments.filter((assignment) => assignment.reviewedSubmissionEventId === submissionEvidence.eventId),
-        currentReviews.filter((review) => review.submissionEventId === submissionEvidence.eventId)
+        roundAssignments,
+        roundReviews
       );
       if (!currentProgress.allReviewsSubmitted) throw new BadRequestException({ message: "Phân công đã thay đổi: gói đánh giá chưa hoàn tất." });
       const statusUpdate = await tx.researchProposal.updateMany({ where: { id: proposalId, status: PROPOSAL_STATUS.underReview }, data: { status: PROPOSAL_STATUS.readyForApproval, authorizationRelationshipVersion: { increment: 1 }, authorizationDelegationVersion: { increment: 1 }, authorizationContextUpdatedAt: now } as never });
       if (statusUpdate.count !== 1) throw new BadRequestException({ message: "Trạng thái hồ sơ vừa thay đổi. Vui lòng tải lại hồ sơ." });
-      const revision = (currentSummary.revision ?? 0) + 1;
-      const evidenceSnapshot = {
-        kind: "evaluation_package",
-        schemaVersion: "proposal-evaluation-package.v1",
-        revision,
-        submissionEventId: submissionEvidence.eventId,
-        assignmentIds: currentAssignments.filter((assignment) => assignment.reviewedSubmissionEventId === submissionEvidence.eventId).map((assignment) => assignment.id),
-        reviewIds: currentReviews.filter((review) => review.submissionEventId === submissionEvidence.eventId && review.status === REVIEW_STATUS.submitted).map((review) => review.id),
-        summary: currentSummary.summary,
-        recommendation: currentSummary.recommendation,
-        capturedAt: now.toISOString()
-      };
-      const record = (await tx.proposalEvaluationSummary.update({ where: { id: existing.id }, data: { status: EVALUATION_SUMMARY_STATUS.readyForApproval, updatedById: actor.id, markedReadyAt: now, revision, contextVersion: input.contextVersion, evidenceSnapshot } as never, include: { updatedBy: { select: { displayName: true } } } })) as EvaluationSummaryRecord;
-      await tx.proposalReviewAssignment.updateMany({ where: { proposalId, reviewedSubmissionEventId: submissionEvidence.eventId, status: REVIEW_ASSIGNMENT_STATUS.assigned }, data: { status: REVIEW_ASSIGNMENT_STATUS.completed, completedAt: now } as never });
-      await tx.proposalSubmissionEvent.create({ data: { proposalId, actorId: actor.id, fromStatus: PROPOSAL_STATUS.underReview, toStatus: PROPOSAL_STATUS.readyForApproval, submittedAt: now, snapshot: evidenceSnapshot, note: "Trưởng phòng kiểm tra và trình gói đánh giá đã hoàn tất tới lãnh đạo" } as never });
+      const record = (await tx.proposalEvaluationSummary.update({ where: { id: existing.id }, data: { status: EVALUATION_SUMMARY_STATUS.readyForApproval, updatedById: actor.id, markedReadyAt: now } as never, include: { updatedBy: { select: { displayName: true } } } })) as EvaluationSummaryRecord;
+      await tx.proposalReviewAssignment.updateMany({ where: { proposalId, reviewedSubmissionEventId: currentEvidence.eventId, status: REVIEW_ASSIGNMENT_STATUS.assigned }, data: { status: REVIEW_ASSIGNMENT_STATUS.completed, completedAt: now } as never });
+      await tx.proposalSubmissionEvent.create({ data: { proposalId, actorId: actor.id, fromStatus: PROPOSAL_STATUS.underReview, toStatus: PROPOSAL_STATUS.readyForApproval, submittedAt: now, snapshot: { kind: "evaluation_package_submitted", schemaVersion: "proposal-evaluation-package.v1", revision: currentSummary.revision, submissionEventId: currentEvidence.eventId, finalizedEvidence }, note: "Trưởng phòng trình gói đánh giá đã chốt tới lãnh đạo" } as never });
       await tx.auditLog.create({ data: { action: "submit-evaluation-package", result: "success", actorId: actor.id, targetEntity: "proposal-evaluation-summary", targetEntityId: record.id, username: actor.username, reason: JSON.stringify({ proposalId, sourceSummaryUpdatedById: existing.updatedById, submittedReviews: currentProgress.submittedCount, fromStatus: PROPOSAL_STATUS.underReview, toStatus: PROPOSAL_STATUS.readyForApproval }) } });
       return record;
     })) as unknown as EvaluationSummaryRecord;
@@ -355,7 +355,7 @@ export class ProposalEvaluationSummaryService {
       recommendation: summary.recommendation,
       recommendationLabel: getRecommendationLabel(summary.recommendation),
       status: summary.status,
-      statusLabel: summary.status === EVALUATION_SUMMARY_STATUS.readyForApproval ? "Đã chuyển chờ phê duyệt" : "Bản nháp tổng hợp",
+      statusLabel: summary.status === EVALUATION_SUMMARY_STATUS.readyForApproval ? "Đã chuyển chờ phê duyệt" : summary.status === EVALUATION_SUMMARY_STATUS.finalized ? "Đã chốt bản tổng hợp" : "Bản nháp tổng hợp",
       revision: summary.revision ?? 0,
       createdById: summary.createdById,
       updatedById: summary.updatedById,
@@ -371,32 +371,35 @@ export class ProposalEvaluationSummaryService {
    * assignment must not hold the proposal back, and a completed one counts as done.
    */
   summarizeProgress(assignments: ReviewAssignmentRecord[], reviews: ProposalReviewRecord[]) {
-    const active = assignments.filter((assignment) => assignment.status === REVIEW_ASSIGNMENT_STATUS.assigned || assignment.status === REVIEW_ASSIGNMENT_STATUS.completed);
-    const reviewerCount = new Set(active.filter((assignment) => assignment.assignmentRole === "reviewer").map((assignment) => assignment.reviewerUserId)).size;
-    const committeeMemberCount = new Set(active.filter((assignment) => assignment.assignmentRole === "committee_member").map((assignment) => assignment.reviewerUserId)).size;
-    const assignmentRequirementsMet = reviewerCount === 2 && committeeMemberCount >= 3;
-    const activeIds = new Set(active.map((assignment) => assignment.id));
-    const submitted = reviews.filter((review) => review.status === REVIEW_STATUS.submitted && activeIds.has(review.assignmentId));
-    const submittedAssignmentIds = new Set(submitted.map((review) => review.assignmentId));
-    const pending = active.filter((assignment) => !submittedAssignmentIds.has(assignment.id));
-    const scored = submitted.map((review) => review.totalScore).filter((score): score is number => typeof score === "number");
+    return summarizeReviewProgress(assignments, reviews);
+  }
 
-    return {
-      activeAssignmentCount: active.length,
-      reviewerCount,
-      committeeMemberCount,
-      assignmentRequirementsMet,
-      submittedCount: submitted.length,
-      pendingCount: pending.length,
-      pendingReviewers: pending.map((assignment) => ({
-        assignmentId: assignment.id,
-        reviewerUserId: assignment.reviewerUserId,
-        reviewerDisplayName: assignment.reviewer?.displayName ?? ""
-      })),
-      allReviewsSubmitted: assignmentRequirementsMet && pending.length === 0,
-      averageTotalScore: scored.length ? Math.round((scored.reduce((sum, score) => sum + score, 0) / scored.length) * 10) / 10 : null,
-      maxTotalScore: REVIEW_MAX_TOTAL_SCORE
-    };
+  private assertCompleteCurrentRound(progress: ReturnType<ProposalEvaluationSummaryService["summarizeProgress"]>) {
+    if (!progress.allReviewsSubmitted) {
+      throw new BadRequestException({
+        message: "Chưa thể chốt gói đánh giá: cần đúng 2 người phản biện, ít nhất 3 thành viên hội đồng và đầy đủ phiếu đánh giá.",
+        pendingReviewers: progress.pendingReviewers
+      });
+    }
+  }
+
+  private sameEvidenceIds(evidence: Record<string, unknown>, assignments: ReviewAssignmentRecord[], reviews: ProposalReviewRecord[]) {
+    const ids = (value: unknown) => Array.isArray(value) ? value.filter((item): item is string => typeof item === "string").sort() : [];
+    return JSON.stringify(ids(evidence.assignmentIds)) === JSON.stringify(assignments.map((assignment) => assignment.id).sort()) &&
+      JSON.stringify(ids(evidence.reviewIds)) === JSON.stringify(reviews.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => review.id).sort());
+  }
+
+  private async assertSynthesisActorIsEligible(actor: SafeUserContext, proposalId: string) {
+    const conflict = await resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId);
+    if (conflict.conflicted) {
+      throw new BadRequestException({ message: conflict.viewerMessage, reasonCode: conflict.reasonCode });
+    }
+  }
+
+  private assertNoSynthesisBypass(input: Record<string, unknown>) {
+    if (input.markReady === true || input.markReady === "true") {
+      throw new BadRequestException({ message: "Lưu nháp, chốt và trình phê duyệt là các thao tác riêng biệt." });
+    }
   }
 
   private readSummaryText(value: unknown) {

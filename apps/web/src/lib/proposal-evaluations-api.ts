@@ -33,6 +33,7 @@ export type ProposalReviewAssignment = {
   dueDate: string;
   revokedAt: string;
   completedAt: string;
+  isOverdue?: boolean;
   reviewStatus: string;
   reviewSubmittedAt: string;
   reviewTotalScore: number | null;
@@ -103,7 +104,7 @@ export type ProposalEvaluationSummary = {
   summary: string;
   recommendation: string;
   recommendationLabel: string;
-  status: "draft" | "ready_for_approval";
+  status: "draft" | "finalized" | "ready_for_approval";
   statusLabel: string;
   revision: number;
   createdById: string;
@@ -121,6 +122,8 @@ export type ReviewProgressCounts = {
   activeAssignmentCount: number;
   submittedCount: number;
   pendingCount: number;
+  overdueCount?: number;
+  readinessReasons?: string[];
   pendingReviewers?: Array<{ assignmentId: string; reviewerUserId: string; reviewerDisplayName: string }>;
   allReviewsSubmitted: boolean;
   averageTotalScore?: number | null;
@@ -353,11 +356,18 @@ export async function loadProposalReviewProgress(proposalId: string) {
 
 export async function saveProposalEvaluationSummary(
   proposalId: string,
-  input: { summary: string; recommendation: string; markReady: boolean; contextVersion: ViewerAuthorizationV1["contextVersion"] }
+  input: { summary: string; recommendation: string; contextVersion: ViewerAuthorizationV1["contextVersion"] }
 ) {
   return requestJson<{ evaluationSummary: ProposalEvaluationSummary; proposalStatus: string }>(
     `/research-proposals/${proposalId}/evaluation-summary`,
     { method: "PUT", body: JSON.stringify(input) }
+  );
+}
+
+export async function finalizeProposalEvaluationSummary(proposalId: string, contextVersion: ViewerAuthorizationV1["contextVersion"]) {
+  return requestJson<{ evaluationSummary: ProposalEvaluationSummary; proposalStatus: string }>(
+    `/research-proposals/${proposalId}/evaluation-summary/finalize`,
+    { method: "POST", body: JSON.stringify({ contextVersion }) }
   );
 }
 

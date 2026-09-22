@@ -49,7 +49,7 @@ qua quan hệ theo bản ghi.
 | --- | --- | --- | --- |
 | `SYSTEM_ADMIN` | Toàn hệ thống cho dữ liệu nền tảng | Tài khoản, trạng thái tài khoản, system role, đơn vị/scope, danh mục nền tảng, cấu hình kỹ thuật, hỗ trợ truy vết vận hành | Không mặc nhiên xem/sửa dữ liệu nghiệp vụ, không phản biện, không phê duyệt, không mở lại hồ sơ |
 | `SCIENTIFIC_MANAGEMENT_HEAD` | Tất cả proposal/project trong phạm vi Quản lý khoa học được cấp rõ ràng | Trưởng phòng: xem hồ sơ, chuyên viên phụ trách, hồ sơ chưa phân công; lọc/nhóm theo chuyên viên, theo dõi khối lượng, trạng thái và hạn | Không phải `LEADERSHIP_APPROVAL_AUTHORITY`; quyền xem không tự cấp hành động quản trị hoặc quyết định cuối |
-| `SCIENTIFIC_MANAGEMENT_STAFF` | Chỉ proposal/project được phân công quản lý đang hiệu lực | Chuyên viên/trợ lý: kiểm tra, yêu cầu bổ sung, phân công đánh giá, tổng hợp và theo dõi trên hồ sơ mình phụ trách; nghiệp vụ không gắn proposal/project theo scope riêng | Không tự có quyền toàn Học viện; quan hệ tham gia không cấp quyền hành chính Quản lý khoa học; không quyết định cuối |
+| `SCIENTIFIC_MANAGEMENT_STAFF` | Chỉ proposal/project được phân công quản lý đang hiệu lực | Chuyên viên/trợ lý: kiểm tra, yêu cầu bổ sung, xác nhận đầy đủ và theo dõi đánh giá trên hồ sơ mình phụ trách; nghiệp vụ không gắn proposal/project theo scope riêng | Không tự có quyền toàn Học viện; quan hệ tham gia không cấp quyền hành chính Quản lý khoa học; không quyết định cuối |
 | `LEADERSHIP_APPROVAL_AUTHORITY` | Toàn bộ hồ sơ trong scope lãnh đạo được cấp rõ ràng | Giám sát trạng thái, tiến độ, kinh phí hiện có; chỉ xem gói đánh giá nhạy cảm đã trình và quyết định cuối khi đủ điều kiện | Không sửa nội dung hồ sơ, không bỏ qua phản biện/tổng hợp, không tự quyết hồ sơ mình là PI/thành viên/phản biện |
 | `RESEARCH_OVERSIGHT_AUTHORITY` | Deputy Director: institutional research oversight plus internal researcher capabilities through record relationships | Explicit institutional scopes; read-only oversight; no final decisions | No protected reviewer data from oversight; conflict/disclosure checks still apply |
 | `RESEARCHER_INTERNAL_USER` | Các bản ghi do chính user tạo hoặc có quan hệ hợp lệ | Tạo bản nháp đề xuất, sửa bản nháp, nộp đề xuất, phản hồi bổ sung, tham gia đề tài và nộp báo cáo theo quan hệ | Không xem bản ghi không liên quan, không tự phân công phản biện/thư ký, không quyết định cuối |
@@ -114,7 +114,7 @@ nội dung/action, kể cả Head là participant; Head không được dùng qu
 
 Trong các bảng nghiệp vụ bên dưới, “Quản lý khoa học” trên proposal/project là
 operator có capability quản lý cụ thể; Staff bắt buộc có officer assignment tương
-ứng. Head được phân công/thu hồi officer, xem tổng hợp và trình gói đủ điều kiện; không suy ra
+ứng. Head được phân công/thu hồi officer, phân công đánh giá, soạn/chốt tổng hợp và trình gói đủ điều kiện; không suy ra
 toàn bộ action của Staff hay quyền quyết định lãnh đạo từ system role Head.
 
 Nghiệp vụ độc lập như đợt tiếp nhận và hồ sơ nhà khoa học tiếp tục dùng capability/
@@ -126,8 +126,8 @@ thêm officer relationship cho các domain khác trong thay đổi này.
 - Head owns officer assignment/reassignment/revocation within explicit scope and without conflict.
   Assignment takes effect at transaction time; prior rows and audit are retained. No automatic
   officer backfill preserves the former broad Staff grant. Unassigned records remain valid.
-- Head can read Staff operational summaries and submit a completed eligible review package;
-  routine reviewer assignment and consolidation remain assigned Staff operations. Head has
+- Head assigns reviewers after current-submission completeness confirmation, reads submitted reviews,
+  drafts and finalizes synthesis, then explicitly submits the complete package. Staff monitors reviews. Head has
   no final approval authority and cannot edit research content through management authority.
 - `nmphuong` maps to Head; `hdtien1` and `hdtien2` remain Staff; `tvtien` is Director;
   `vndinh` is Deputy Director (`RESEARCH_OVERSIGHT_AUTHORITY`). Local demo institutional
@@ -325,8 +325,8 @@ Assignment is allowed in `submitted`, `resubmitted`, or `under_review`; the firs
 assignment requires current submission completeness evidence and opens
 `under_review`. Revocation uses the same state boundary and requires a reason.
 PI and active team secretary/member, unresolved conflict context, inactive accounts,
-and incompatible, duplicate or overlapping active assignments are denied. Staff may select themselves if
-not a participant. Staff assignment/consolidation additionally requires current management-officer
+and incompatible, duplicate or overlapping active assignments are denied. Only scoped, conflict-free Head may assign or consolidate. Self-assignment, where otherwise eligible,
+removes synthesis authority through the same-proposal reviewer conflict. Staff monitoring requires current management-officer
 authority on that proposal;
 leadership with a reviewer assignment still cannot decide that proposal.
 Both duty types recheck account status, participation, workflow, dates and proposal

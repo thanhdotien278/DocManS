@@ -269,10 +269,10 @@ irrelevant to the viewer and the client must omit its entire workflow section.
 must remain disabled with the server reason. `proposal.review.submit` requires
 an active `ProposalReviewAssignment` for the exact proposal and current review
 round; account role or an assignment on another proposal is insufficient.
-`proposal.review.assign` and staff consolidation/routing require
-`SCIENTIFIC_MANAGEMENT_STAFF` plus an effective `PROPOSAL_MANAGEMENT_OFFICER`,
-explicit scope and capability on that proposal. Head oversight is a read basis,
-not an automatic grant of these operations. Final
+`proposal.review.assign`, consolidation, finalization and routing require
+`SCIENTIFIC_MANAGEMENT_HEAD`, explicit scope, no conflict and current completeness evidence.
+Synthesis requires all current required reviews; routing requires the finalized source-bound summary.
+Staff completeness/monitoring requires an effective `PROPOSAL_MANAGEMENT_OFFICER` and scope. Final
 `proposal.decision.approve`/`proposal.decision.reject` require
 `LEADERSHIP_APPROVAL_AUTHORITY` and the ready-for-approval state with no conflict;
 `SYSTEM_ADMIN` has no implicit business workflow capability. Researcher profile
@@ -285,7 +285,7 @@ responses never embed proposal review/assignment/approval sections.
 | PI/team member/team secretary before final disclosure | hidden | hidden | hidden | generic workflow status only |
 | Same audiences after final decision | hidden | hidden | hidden | `PublishedReviewSummaryV1` only |
 | Assigned reviewer | own identity only | own submitted/draft material only | hidden | own assignment DTO |
-| Head oversight within authorized scope | Only identities permitted by disclosure policy | Only if specifically permitted by disclosure policy | Only if permitted by disclosure policy | oversight data with current responsible Staff/unassigned state; participation conflicts retain PI/team restrictions |
+| Head within authorized scope, without participation/review conflict | visible for reviewer assignment and synthesis | submitted reviews for synthesis | submitted reviews for synthesis | operational counts plus Head synthesis; participant restrictions override this grant |
 | Staff with current management-officer assignment and scope, without conflict | visible as required | visible as required | visible as required | operational internal DTO |
 | Assigned approval authority/council member | visible only where decision duty requires | visible only where decision duty requires | visible as required | decision-duty DTO |
 | Unrelated actor | hidden | hidden | hidden | deny |
@@ -431,8 +431,7 @@ mutation; direct persistence is not a supported assignment path.
 
 Review queue, proposal/package/file reads and own review actions rely on the effective
 assignment and conflict checks, without assignee role or host-unit scope requirements.
-Staff assignment/consolidation requires the active proposal management-officer
-relationship and scope; the leadership decision conflict rule
+Head assignment/consolidation requires explicit host scope, no conflict and current completeness; Staff monitoring requires the active proposal management-officer relationship and scope; the leadership decision conflict rule
 remain unchanged. Revoke retains required nonblank `note` (max 2000 trimmed characters)
 and `contextVersion`. Assignment/revocation and audit are atomic; candidate conflict
 rejection commits only its failure audit. Preserve historical profile provenance.
@@ -487,6 +486,6 @@ never infer expenditure or add ledgers, payments, banking, invoices or ERP integ
 
 - `proposal.management-officer.assign` / `proposal.management-officer.revoke`: scoped, conflict-free Head; a resolved current officer is required to revoke.
 - `proposal.review.progress.read`: scoped Head/Director/Deputy operational counts and deadlines; assigned conflict-free Staff retains the existing detailed management view. Read-only oversight does not inherit review writes or decisions.
-- `proposal.review.submit-package`: scoped, conflict-free Head, under-review proposal, a saved Staff summary and all required reviews. The request carries `contextVersion`; it does not accept replacement summary content.
+- `proposal.review.submit-package`: scoped, conflict-free Head, under-review proposal, a finalized Head synthesis bound to the current submission and all required reviews. The request carries `contextVersion`; it does not accept replacement summary content.
 - Summary saves and final decisions also carry `contextVersion` and run within the proposal mutation boundary. Future or unexpired non-revoked review duties and persisted review activity prevent incompatible management/decision actions.
 - Capability `accessReasons` distinguishes institutional oversight, primary management officer and independent participation/reviewer access. Exact action IDs remain authoritative for the UI.

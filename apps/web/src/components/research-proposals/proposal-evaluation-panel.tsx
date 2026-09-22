@@ -17,6 +17,7 @@ import {
   revokeProposalReviewAssignment,
   isNotEntitled,
   saveProposalEvaluationSummary,
+  finalizeProposalEvaluationSummary,
   submitCompletedProposalPackage,
   type EvaluationApiError,
   type ProposalReviewProgress,
@@ -47,7 +48,7 @@ function reviewStatusLabel(status: string) {
  * Actions follow the backend record capability, so a blocked
  * control explains itself instead of disappearing (UX-DR27). The backend remains authoritative.
  */
-export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflowChange, canReadProgress, canAssignReviewers, canConsolidate, canSubmitPackage, blockedReason, consolidateBlockedReason, submitPackageBlockedReason, contextVersion }: { proposalId: string; proposalStatus: string; onWorkflowChange: () => Promise<void>; canReadProgress: boolean; canAssignReviewers: boolean; canConsolidate: boolean; canSubmitPackage: boolean; blockedReason: string; consolidateBlockedReason: string; submitPackageBlockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
+export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflowChange, canReadProgress, canAssignReviewers, canConsolidate, canFinalize, canSubmitPackage, blockedReason, consolidateBlockedReason, finalizeBlockedReason, submitPackageBlockedReason, contextVersion }: { proposalId: string; proposalStatus: string; onWorkflowChange: () => Promise<void>; canReadProgress: boolean; canAssignReviewers: boolean; canConsolidate: boolean; canFinalize: boolean; canSubmitPackage: boolean; blockedReason: string; consolidateBlockedReason: string; finalizeBlockedReason: string; submitPackageBlockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
   const [assignments, setAssignments] = useState<ProposalReviewAssignment[]>([]);
   const [progress, setProgress] = useState<ProposalReviewProgress | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
@@ -71,21 +72,18 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
   // overwrite a consolidation summary the user is still typing.
   const [summaryDirty, setSummaryDirty] = useState(false);
   const [pendingNames, setPendingNames] = useState<string[]>([]);
-  const [savingMode, setSavingMode] = useState<"" | "draft" | "ready">("");
+  const [savingMode, setSavingMode] = useState<"" | "draft" | "finalize" | "ready">("");
   const [message, setMessage] = useState("");
 
   async function refresh() {
     try {
-      if (canAssignReviewers || canConsolidate) {
-        setAssignments(await loadProposalReviewAssignments(proposalId));
-      } else {
-        setAssignments([]);
-      }
+      setAssignments([]);
       setProgress(null);
-      if (canConsolidate || canSubmitPackage || canReadProgress) {
+      if (canConsolidate || canFinalize || canSubmitPackage || canReadProgress) {
         try {
           const data = await loadProposalReviewProgress(proposalId);
           setProgress(data);
+          setAssignments(data.assignments);
           setSummaryError("");
           if (!summaryDirty) {
             setSummaryText(data.evaluationSummary?.summary ?? "");
@@ -120,9 +118,9 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
 
   useEffect(() => {
     void refresh();
-  }, [proposalId, canReadProgress, canAssignReviewers, canConsolidate, canSubmitPackage, contextVersion?.aggregateVersion]);
+  }, [proposalId, canReadProgress, canAssignReviewers, canConsolidate, canFinalize, canSubmitPackage, contextVersion?.aggregateVersion]);
 
-  const canManageReviewRound = canAssignReviewers || canConsolidate;
+  const canManageReviewRound = canAssignReviewers || canConsolidate || canFinalize || canSubmitPackage;
 
   if (state === "loading") {
     return <p className="state-message">Đang tải tiến độ đánh giá...</p>;
@@ -137,7 +135,10 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
   }
 
   const canAssign = canAssignReviewers && Boolean(contextVersion) && !isAssigning && !revokingId;
-  const isReadyForApproval = progress?.evaluationSummary?.status === "ready_for_approval";
+  const summaryStatus = progress?.evaluationSummary?.status;
+  const isFinalized = summaryStatus === "finalized";
+  const isReadyForApproval = summaryStatus === "ready_for_approval";
+  const canEditSummary = canConsolidate && !isFinalized && !isReadyForApproval;
 
   async function handleAssign(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -196,7 +197,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
     }
   }
 
-  async function handleSaveSummary(markReady: boolean) {
+  async function handleSaveSummary() {
     setSummaryError("");
     setPendingNames([]);
     setMessage("");
@@ -213,15 +214,16 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
       setSummaryError("Không xác định được phiên bản quyền của hồ sơ. Vui lòng tải lại.");
       return;
     }
-    if (markReady && !window.confirm("Gửi lãnh đạo phê duyệt? Vòng đánh giá sẽ được đóng lại.")) {
+    if (!progress?.allReviewsSubmitted) {
+      setSummaryError("Cần đủ 2 người phản biện, ít nhất 3 thành viên hội đồng và đầy đủ phiếu trước khi lưu tổng hợp.");
       return;
     }
 
-    setSavingMode(markReady ? "ready" : "draft");
+    setSavingMode("draft");
     try {
-      await saveProposalEvaluationSummary(proposalId, { summary: summaryText, recommendation, markReady, contextVersion });
+      await saveProposalEvaluationSummary(proposalId, { summary: summaryText, recommendation, contextVersion });
       setSummaryDirty(false);
-      setMessage(markReady ? "Đã gửi hồ sơ tới lãnh đạo phê duyệt." : "Đã lưu bản nháp tổng hợp.");
+      setMessage("Đã lưu bản nháp tổng hợp.");
       await refresh();
       await onWorkflowChange();
     } catch (error) {
@@ -233,8 +235,27 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
     }
   }
 
+  async function handleFinalizeSummary() {
+    if (!canFinalize || !progress?.allReviewsSubmitted || summaryStatus !== "draft" || !contextVersion) return;
+    if (!window.confirm("Chốt bản tổng hợp hiện tại? Sau khi chốt, nội dung và bằng chứng của gói sẽ không thể sửa.")) return;
+    setSummaryError("");
+    setMessage("");
+    setSavingMode("finalize");
+    try {
+      await finalizeProposalEvaluationSummary(proposalId, contextVersion);
+      setSummaryDirty(false);
+      setMessage("Đã chốt bản tổng hợp. Có thể trình gói đánh giá tới lãnh đạo.");
+      await refresh();
+      await onWorkflowChange();
+    } catch (error) {
+      setSummaryError(error instanceof Error ? error.message : "Không thể chốt bản tổng hợp.");
+    } finally {
+      setSavingMode("");
+    }
+  }
+
   async function handleSubmitCompletedPackage() {
-    if (!canSubmitPackage || !progress?.allReviewsSubmitted || !contextVersion) return;
+    if (!canSubmitPackage || !progress?.allReviewsSubmitted || summaryStatus !== "finalized" || !contextVersion) return;
     if (!window.confirm("Trình gói đánh giá đã hoàn tất tới lãnh đạo phê duyệt?")) return;
     setSummaryError("");
     setMessage("");
@@ -255,7 +276,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
     <>
       <SectionCard
         title={canManageReviewRound ? "Phân công đánh giá" : "Tiến độ đánh giá"}
-        subtitle={canManageReviewRound ? "Người phản biện và thành viên hội đồng được phân công cho hồ sơ này" : "Tổng quan vận hành trong phạm vi quyền được cấp"}
+        subtitle={canManageReviewRound ? "Người phản biện và thành viên hội đồng được phân công cho hồ sơ này" : "Theo dõi người được phân công, tiến độ và hạn xử lý"}
         action={<StatusBadge status={proposalStatus} />}
       >
         {progress ? <div className="meta-grid">
@@ -279,6 +300,11 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
           </div>
         </div> : null}
 
+        {progress ? <p className="record-meta" role="status">
+          Đã gửi {progress.submittedCount}/{progress.activeAssignmentCount} phiếu · Quá hạn: {progress.overdueCount ?? 0}.
+          {progress.readinessReasons?.length ? ` ${progress.readinessReasons.join(" ")}` : progress.allReviewsSubmitted ? " Đủ điều kiện tổng hợp." : ""}
+        </p> : null}
+
         {canManageReviewRound && assignError ? <p className="form-error" role="alert">{assignError}</p> : null}
         {canManageReviewRound && message ? (
           <p className="state-message success" role="status">
@@ -286,7 +312,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
           </p>
         ) : null}
 
-        {canManageReviewRound ? assignments.length ? (
+        {(canManageReviewRound || assignments.length > 0) ? assignments.length ? (
           <div className="table-wrap">
             <table className="data-table">
               <thead>
@@ -296,7 +322,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
                   <th>Hạn đánh giá</th>
                   <th>Trạng thái phân công</th>
                   {progress ? <th>Tình trạng phiếu</th> : null}
-                  <th>Thao tác</th>
+                  {canAssignReviewers ? <th>Thao tác</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -310,7 +336,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
                       <span className="record-meta">Người phân công: {assignment.assignedByDisplayName}</span>
                     </td>
                     <td>{assignment.assignmentRoleLabel}</td>
-                    <td>{formatDueDate(assignment.dueDate)}</td>
+                    <td>{formatDueDate(assignment.dueDate)}{assignment.isOverdue ? <span className="record-meta">Quá hạn</span> : null}</td>
                     <td>
                       <span className="record-title">{assignment.statusLabel}</span>
                       <span className="record-meta">Hiệu lực từ {formatIntakeDate(assignment.effectiveFrom)}</span>
@@ -330,7 +356,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
                         <span className="record-meta">Chưa gửi phiếu</span>
                       )}
                     </td> : null}
-                    <td>
+                    {canAssignReviewers ? <td>
                       {assignment.status === "assigned" || assignment.status === "completed" ? (
                         <button
                           className="button icon-button danger"
@@ -345,7 +371,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
                       ) : (
                         <span className="record-meta">{assignment.statusLabel}</span>
                       )}
-                    </td>
+                    </td> : null}
                   </tr>
                 ))}
               </tbody>
@@ -353,8 +379,8 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
           </div>
         ) : (
           <EmptyState
-            title="Chưa phân công người đánh giá"
-            message="Phân công người phản biện hoặc thành viên hội đồng để mở vòng đánh giá hồ sơ."
+            title="Chưa có người đánh giá được phân công"
+            message={canManageReviewRound ? "Phân công người phản biện hoặc thành viên hội đồng để mở vòng đánh giá hồ sơ." : "Chưa ghi nhận assignment hoặc hạn xử lý trong vòng đánh giá hiện tại."}
           />
         ) : (
           <div className="form-section-inline">
@@ -378,7 +404,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
           </div>
         )}
 
-        {canManageReviewRound ? <form className="admin-form compact-form" onSubmit={(event) => void handleAssign(event)}>
+        {canAssignReviewers ? <form className="admin-form compact-form" onSubmit={(event) => void handleAssign(event)}>
           <div className="section-mini-heading">Phân công mới</div>
           <label className="field"><span>Tìm theo tên hoặc tài khoản</span><input value={candidateQuery} onChange={(e) => setCandidateQuery(e.target.value)} /></label>
           <button className="button" type="button" disabled={!canAssign || isAssigning} onClick={() => void loadReviewerCandidates(proposalId, candidateQuery).then(setCandidates).catch((error) => setAssignError(error.message))}>Tìm người đánh giá</button>
@@ -414,7 +440,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
         </form> : null}
       </SectionCard>
 
-      {progress && (canConsolidate || canSubmitPackage || progress.evaluationSummary) ? <SectionCard title="Tổng hợp và trình phê duyệt" subtitle="Kết luận của chuyên viên trước khi gửi lãnh đạo phê duyệt">
+      {progress && (canConsolidate || canFinalize || canSubmitPackage || progress.evaluationSummary) ? <SectionCard title="Tổng hợp và trình phê duyệt" subtitle={canManageReviewRound ? "Trưởng phòng tổng hợp, chốt và trình gói đánh giá tới lãnh đạo" : "Theo dõi kết quả tổng hợp trong phạm vi được cấp"}>
         {progress.reviews.length ? (
           <div className="timeline">
             {progress.reviews.map((review) => (
@@ -457,7 +483,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
                 setSummaryText(event.target.value);
                 setSummaryDirty(true);
               }}
-              disabled={!canConsolidate}
+              disabled={!canEditSummary || !progress.allReviewsSubmitted}
             />
           </label>
           <label className="field">
@@ -468,7 +494,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
                 setRecommendation(event.target.value);
                 setSummaryDirty(true);
               }}
-              disabled={!canConsolidate}
+              disabled={!canEditSummary || !progress.allReviewsSubmitted}
             >
               <option value="">-- Chọn kết luận --</option>
               {!canConsolidate && recommendation && !progress.recommendations.some((option) => option.code === recommendation) ? <option value={recommendation}>{progress.evaluationSummary?.recommendationLabel ?? recommendation}</option> : null}
@@ -490,48 +516,51 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
           ) : null}
 
           <div className="button-row">
-            {canConsolidate ? <>
+            {canEditSummary ? <>
             <button
               className="button"
               type="button"
-              disabled={!canConsolidate || !contextVersion || savingMode !== ""}
-              onClick={() => void handleSaveSummary(false)}
+              disabled={!contextVersion || !progress.allReviewsSubmitted || savingMode !== ""}
+              onClick={() => void handleSaveSummary()}
             >
               <Save size={16} aria-hidden="true" />
               {savingMode === "draft" ? "Đang lưu" : "Lưu nháp tổng hợp"}
             </button>
-            <button
+            </> : null}
+            {canFinalize && summaryStatus === "draft" ? (<button
               className="button primary"
               type="button"
-              disabled={!canConsolidate || !contextVersion || isReadyForApproval || !progress.allReviewsSubmitted || savingMode !== ""}
-              onClick={() => void handleSaveSummary(true)}
+              disabled={!contextVersion || !progress.allReviewsSubmitted || savingMode !== ""}
+              onClick={() => void handleFinalizeSummary()}
             >
               <Send size={16} aria-hidden="true" />
-              {savingMode === "ready" ? "Đang gửi" : "Gửi lãnh đạo phê duyệt"}
+              {savingMode === "finalize" ? "Đang chốt" : "Chốt bản tổng hợp"}
             </button>
-            </> : null}
+            ) : null}
             {canSubmitPackage ? (
               <button
                 className="button primary"
                 type="button"
-                disabled={!contextVersion || !progress.evaluationSummary || !progress.allReviewsSubmitted || isReadyForApproval || savingMode !== ""}
+                disabled={!contextVersion || summaryStatus !== "finalized" || !progress.allReviewsSubmitted || isReadyForApproval || savingMode !== ""}
                 onClick={() => void handleSubmitCompletedPackage()}
-                title={!progress.allReviewsSubmitted ? submitPackageBlockedReason : undefined}
+                title={summaryStatus !== "finalized" ? "Cần chốt bản tổng hợp trước khi trình gói." : !progress.allReviewsSubmitted ? submitPackageBlockedReason : undefined}
               >
                 <Send size={16} aria-hidden="true" />
-                {savingMode === "ready" ? "Đang trình" : "Trình gói hoàn tất"}
+                {savingMode === "ready" ? "Đang trình" : "Gửi lãnh đạo phê duyệt"}
               </button>
             ) : null}
           </div>
-          {!canConsolidate && !canSubmitPackage ? (
-            <p className="record-meta">{consolidateBlockedReason || "Chỉ hồ sơ đang đánh giá hoặc chờ phê duyệt mới được tổng hợp kết quả."}</p>
+          {!canConsolidate && !canFinalize && !canSubmitPackage ? (
+            <p className="record-meta">{consolidateBlockedReason || "Trưởng phòng quản lý khoa học thực hiện tổng hợp, chốt và trình gói; chuyên viên chỉ theo dõi tiến độ."}</p>
           ) : canSubmitPackage && !progress.allReviewsSubmitted && !isReadyForApproval ? (
             <p className="record-meta">{submitPackageBlockedReason || "Chưa đủ phiếu đánh giá để trình gói hoàn tất."}</p>
+          ) : canFinalize && summaryStatus === "draft" && !progress.allReviewsSubmitted ? (
+            <p className="record-meta">{finalizeBlockedReason || "Chưa đủ phiếu đánh giá để chốt bản tổng hợp."}</p>
           ) : canConsolidate && !progress.allReviewsSubmitted && !isReadyForApproval ? (
             <p className="record-meta">
               {!progress.assignmentRequirementsMet
                 ? "Cần đúng 2 người phản biện và ít nhất 3 thành viên hội đồng trước khi gửi lãnh đạo phê duyệt."
-                : "Còn phiếu đánh giá chưa gửi nên chưa thể chuyển hồ sơ sang chờ phê duyệt."}
+                : "Còn phiếu đánh giá chưa gửi nên chưa thể lưu bản tổng hợp."}
             </p>
           ) : null}
         </form>

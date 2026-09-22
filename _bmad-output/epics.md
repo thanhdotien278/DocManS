@@ -104,10 +104,10 @@ mutation eligibility is unchanged; Deputy gains internal researcher eligibility.
 - FR14: The system can record immutable proposal submission history, including timestamps, submission state changes, PI actor context, and locked versions; post-submission edits, withdrawal, and reopening use explicit requests/actions rather than overwriting a submitted version.
 - FR15: Scientific management staff assigned as the current proposal management officer can review proposal completeness once per submitted/resubmitted version and request supplements with a stated reason and whole-calendar-day due date; repeat completeness confirmation for the current version is denied.
 - FR16: Principal investigators can view supplement requests, revise proposal content or attachments, and resubmit the proposal.
-- FR17: Scientific management staff can assign, revoke or change proposal reviewer/council evaluation positions for eligible active user accounts, regardless of assignee system role, host-unit scope or profile linkage; retain optional linked-profile provenance and enforce Staff scope and active `PROPOSAL_MANAGEMENT_OFFICER`, workflow, source-participation conflict, one active mutually exclusive evaluation position per person/context, non-overlapping lifecycle, mutation-time context revalidation, append-only history/audit and disclosure. See the authoritative compatibility/multiplicity definition in `docs/authorization-core-business-baseline.md`.
+- FR17: Scoped Scientific Management Head can assign, revoke or replace eligible active proposal reviewers/committee members after Staff confirms current-submission completeness. Preserve optional profile provenance, current-account/context validation, compatibility, lifecycle, immutable audit/history and disclosure. Staff monitoring never grants assignment authority.
 - FR18: Reviewers and committee members can access assigned proposals and submit scores, comments, and recommendations.
-- FR19: Scientific management staff assigned as the current proposal management officer can monitor review progress and consolidate evaluation outcomes.
-- FR19a: Scientific management staff assigned as the current proposal management officer can submit a completed, consolidated proposal dossier to the leadership approval authority; this action is labelled "Trình phê duyệt" / "Gửi lãnh đạo phê duyệt" and never grants final approve/reject authority.
+- FR19: Scientific management staff assigned as the current proposal management officer can monitor named assignments, deadlines, pending/overdue work and backend-derived completion/blockers. Scoped conflict-free Scientific Management Head alone creates, updates and finalizes synthesis after all required reviews are complete.
+- FR19a: Scoped conflict-free Scientific Management Head explicitly submits a finalized current review/synthesis package to Leadership. Draft save and finalization alone do not route the proposal; Staff has no synthesis/routing grant and Head has no final approve/reject authority.
 - FR20: Leadership or approval authority can review proposal history, evaluation outputs, and supporting files before making an approval decision.
 - FR21: Leadership or approval authority can approve, reject, or otherwise disposition a proposal according to workflow rules.
 - FR22: The system can treat proposal statuses as controlled states and restrict actions based on current proposal state.
@@ -2235,7 +2235,7 @@ So that tôi biết hồ sơ đã vào quy trình tiếp nhận.
 Đề xuất đã nộp có thể đi trọn luồng bổ sung, đánh giá độc lập, tổng hợp và ra
 quyết định với trạng thái, phân quyền và che giấu thông tin đúng chính sách.
 
-**Refinement 2026-09-20:** Proposal Review & Approval uses existing Stories
+**Refinement 2026-09-21:** The user-authorized Golden Flow moves assignment and synthesis to Head, retains Staff completeness/monitoring, and requires explicit synthesis finalization before submission. Governing policy reconciliation is an implementation prerequisite. Proposal Review & Approval uses existing Stories
 5.3 → 5.4 → 5.5 → 5.7 → 5.8, after 5.1–5.2. Story 5.6 is independent and
 not a prerequisite. No new epic/story is required. See the scoped
 [implementation plan](implementation-artifacts/epic-05-proposal-review-and-approval/implementation-plan.md)
@@ -2261,7 +2261,7 @@ So that hồ sơ chỉ vào đánh giá khi đáp ứng điều kiện hành ch�
 **Then** an effective `PROPOSAL_MANAGEMENT_OFFICER`, explicit scope, current state/context and no participation conflict are required
 **And** Head visibility or Staff participation alone cannot grant that action.
 
-**Given** proposal ở trạng thái đã nộp và trong organization scope
+**Given** proposal is `submitted` or `resubmitted` and in the Staff officer’s explicit organization scope
 **When** chuyên viên mở completeness review
 **Then** họ xem được structured data, submission package, checklist và file được phép
 **And** capability chỉ mở các action hợp lệ với state hiện hành.
@@ -2306,7 +2306,8 @@ So that đề xuất có thể tiếp tục quy trình đánh giá.
 
 **Given** hồ sơ đáp ứng yêu cầu và PI có `proposal.resubmit`
 **When** PI xác nhận nộp lại
-**Then** state chuyển atomically sang trạng thái tiếp nhận/kiểm tra tiếp theo
+**Then** state atomically becomes `resubmitted`, awaiting Staff completeness re-check
+**And** resubmission grants no review readiness; Head assignment is denied until current-submission completeness is confirmed
 **And** submission history ghi actor và version bộ hồ sơ.
 
 **Given** quá hạn hoặc relationship hết hiệu lực
@@ -2316,18 +2317,18 @@ So that đề xuất có thể tiếp tục quy trình đánh giá.
 
 ### Story 5.3: Phân công reviewer / thành viên hội đồng từ tài khoản [FR17, FR67a]
 
-As a chuyên viên quản lý khoa học,
+As a SCIENTIFIC_MANAGEMENT_HEAD,
 I want phân công tài khoản đủ điều kiện trên đề xuất đã kiểm tra đầy đủ,
 So that reviewer nhận đúng công việc và hồ sơ bắt đầu đánh giá độc lập.
 
 **Acceptance Criteria:**
 
-**Given** Staff searches reviewer candidates or assigns/revokes a review duty
+**Given** Head searches reviewer candidates or assigns/revokes a review duty
 **When** the backend evaluates the request
-**Then** it requires the Staff actor's effective `PROPOSAL_MANAGEMENT_OFFICER` and scope on this proposal, in addition to candidate eligibility and conflict checks
+**Then** it requires `SCIENTIFIC_MANAGEMENT_HEAD`, explicit scope on this proposal and current completeness evidence, in addition to candidate eligibility and conflict checks
 **And** changing participant relationships also rechecks existing management/evaluation conflicts; a cached preflight is never authority.
 
-**Given** staff có scope rõ ràng trên đơn vị chủ trì, không conflict và proposal ở
+**Given** Head có scope rõ ràng trên đơn vị chủ trì, không conflict và proposal ở
 `submitted`, `resubmitted` hoặc `under_review`
 **When** tìm candidate hoặc xác nhận phân công
 **Then** backend kiểm tra completeness của phiên bản nộp hiện tại, account active,
@@ -2337,12 +2338,12 @@ participation, duplicate, thời gian hiệu lực và context hiện hành
 
 **Given** account active bất kể system role, đơn vị hoặc liên kết Scientist Profile
 **When** account không là PI/team secretary/member và không có conflict/duplicate
-**Then** staff có thể giao `reviewer` hoặc `committee_member`, kể cả chính mình
+**Then** Head có thể giao `reviewer` hoặc `committee_member`, kể cả chính mình
 nếu đủ điều kiện; linked profile chỉ là provenance nullable, không tự tạo link
 **And** assignment cấp quyền đúng proposal dù assignee ngoài scope đơn vị chủ trì.
 
 **Given** phân công đầu tiên hợp lệ
-**When** staff xác nhận người, duty và hạn theo ngày
+**When** Head xác nhận người, duty và hạn theo ngày
 **Then** assignment, `submitted` / `resubmitted` → `under_review`, context version,
 history, audit và notification event được lưu atomically
 **And** phân công tiếp theo giữ `under_review`; reviewer nhận link vào công việc của mình.
@@ -2356,7 +2357,7 @@ khác nhau, cùng đủ submitted reviews (baseline hiện hành)
 **And** roster thiếu vẫn ở `under_review`, không tự trình duyệt.
 
 **Given** assignment cần thay thế trong state cho phép
-**When** staff thu hồi với lý do không rỗng và context mới nhất
+**When** Head thu hồi với lý do không rỗng và context mới nhất
 **Then** quyền từ assignment chấm dứt ngay; lịch sử và review đã gửi vẫn giữ;
 thay thế bằng revoke-then-assign, không ghi đè người cũ
 **And** active reviewer hoặc người đã lưu draft/submit evaluation không thể tự
@@ -2368,6 +2369,11 @@ không có authority
 **When** gọi API trực tiếp hoặc dùng capability cũ
 **Then** backend từ chối, không ghi dữ liệu nghiệp vụ một phần; notification không
 được phát cho mutation thất bại và không tiết lộ roster cho participant.
+
+**Given** an assigned Staff officer or another non-Head actor
+**When** candidate search, assignment, revocation or reassignment is requested
+**Then** backend denies the Head-only action regardless of frontend visibility
+**And** Staff retains only authorized operational monitoring.
 
 ### Story 5.4: Reviewer truy cập và nộp đánh giá của mình [FR18]
 
@@ -2420,62 +2426,60 @@ ghi history/audit và event cho staff, proposal vẫn `under_review`
 **Then** assignment không nâng disclosure sang dữ liệu nội bộ/phiếu của người khác;
 backend bỏ field bị ẩn và từ chối file ngoài package, không chỉ ẩn UI.
 
-### Story 5.5: Theo dõi, tổng hợp và trình phê duyệt [FR19, FR19a]
+### Story 5.5: Staff monitoring and Head synthesis/finalization/submission [FR19, FR19a]
 
-As a chuyên viên quản lý khoa học,
-I want theo dõi reviewer và tổng hợp kết quả,
-So that hồ sơ sẵn sàng được trình người có thẩm quyền.
+As an assigned Staff officer, I want to monitor review work;
+as a scoped Scientific Management Head, I want to synthesize completed reviews,
+finalize the synthesis and submit the package for a leadership decision.
 
 **Acceptance Criteria:**
 
-**Given** Staff monitors, consolidates or routes a proposal
-**When** a management read or mutation runs
-**Then** the current proposal officer assignment and scope are required, including after revocation/reassignment
-**And** Head oversight may monitor within authorized scope but does not itself grant consolidation/routing or leadership decision actions.
+**Given** Staff monitors a proposal
+**When** progress or operational queue data is requested
+**Then** current active officer assignment, explicit scope and no conflict are required
+**And** named assignments, status, pending/submitted counts N/M, deadlines, overdue work,
+completion and reasons synthesis remains blocked are returned by the backend.
 
-**Given** proposal có các assignment trong scope
-**When** chuyên viên mở review progress
-**Then** họ thấy trạng thái, hạn và completeness của từng assignment được phép
-**And** dashboard/list counts dùng cùng authorization/disclosure policy.
+**Given** Staff can monitor review progress
+**When** Staff attempts synthesis save, finalization or package submission
+**Then** backend denies the Head-only action and UI exposes no enabled write control.
 
-**Given** đủ đánh giá hợp lệ
-**When** chuyên viên tạo hoặc cập nhật consolidation
-**Then** hệ thống lưu bản tổng hợp có version từ các submitted reviews
-**And** không sửa raw review hoặc làm mất nguồn truy vết.
+**Given** Head has scope and no participation or current/historical review conflict
+**When** Head requests the review package or synthesis action
+**Then** backend authorizes the required submitted-review projection
+**And** every synthesis save/finalization requires all required valid current-round reviews;
+incomplete, revoked, stale or incompatible evidence cannot open synthesis.
 
-**Given** một review bị thu hồi, thay version hoặc context mismatch
-**When** consolidation được submit
-**Then** backend từ chối bản tổng hợp cũ và yêu cầu tải lại
-**And** không chuyển proposal sang bước trình duyệt.
+**Given** exactly two reviewers and at least three distinct committee members have
+submitted all required current-version reviews
+**When** Head creates or edits a draft synthesis
+**Then** the summary records actor, revision, source reviews and immutable evidence/audit
+**And** no reviewer submission is overwritten and the proposal stays `under_review`.
 
-**Given** PI, team member hoặc `TOPIC_SECRETARY` mở proposal
-**When** consolidation chưa được disclosure
-**Then** response chỉ cho biết trạng thái quy trình tổng quát
-**And** không trả raw score, comment, reviewer identity hoặc consolidation fields qua API, export, timeline hay notification.
+**Given** the synthesis draft has valid summary/recommendation and current evidence
+**When** Head explicitly finalizes it with current context
+**Then** its own lifecycle becomes finalized, with actor/time/revision and audit evidence
+**And** finalization alone does not submit the proposal or allow a leadership decision.
 
-**Given** external researcher là participant/viewer của proposal
-**When** consolidation chưa được disclosure
-**Then** response cũng không trả raw score, reviewer identity, conflict source hoặc review nội bộ
-**And** chỉ thông tin được phép cho relationship/assignment của external được hiển thị.
+**Given** a finalized synthesis bound to the current complete review package
+**When** Head explicitly submits to Leadership
+**Then** the locked backend mutation rechecks completeness, roster, submitted reviews,
+source version, scope/conflict and finalized evidence; persists the routed package;
+and transitions `under_review` → `ready_for_approval` with history/audit.
 
-**Given** staff không tham gia và không tự tổng hợp review của mình
-**When** xem tiến độ hoặc tổng hợp
-**Then** backend dùng cùng tập assignment/review hợp lệ cho counts, pending và average;
-review từ assignment đã thu hồi chỉ thuộc lịch sử, không tính vào kết quả hiện hành.
+**Given** a draft synthesis, changed source evidence or stale context
+**When** submission or final decision is attempted
+**Then** the backend rejects it without partial writes or duplicate history.
 
-**Given** đúng hai reviewer, ít nhất ba committee members, tất cả required reviews
-đã gửi hợp lệ và bản tổng hợp có summary/recommendation
-**When** staff xác nhận “Gửi lãnh đạo phê duyệt” với current context
-**Then** transaction recheck roster, nguồn review, authority/conflict và submission version;
-lưu immutable consolidation/package version và chuyển `under_review` → `ready_for_approval`
-**And** tạo history/audit và approval-request event; lưu nháp không chuyển state,
-review submission cuối cùng không tự trình và staff không có final-decision action.
+**Given** a finalized or submitted synthesis
+**When** an ordinary edit is attempted
+**Then** it is denied; any later reopening/revision requires an explicit approved workflow,
+never a silent overwrite or inferred policy.
 
-**Given** consolidation được chỉnh ở state matrix cho phép
-**When** lưu với context hợp lệ
-**Then** giữ phiên bản cũ, tạo phiên bản evidence mới và đổi context; nếu đã trình
-thì phải revalidate readiness, không âm thầm thay package mà leadership đã xem
-**And** stale/repeated routing không tạo event hoặc notification trùng.
+**Given** PI/team/secretary or an unauthorized external participant requests data
+**When** synthesis and review material have not been disclosed
+**Then** protected identity/score/comment/synthesis fields are omitted across every
+implemented API, file, history, list/count, export and notification projection.
 
 ### Story 5.6: Thư ký khoa học hỗ trợ hành chính cho quy trình đánh giá [FR6d]
 
@@ -2559,6 +2563,14 @@ I want ghi quyết định hợp lệ và công bố mức thông tin được p
 So that proposal kết thúc quy trình minh bạch mà không lộ phản biện nội bộ.
 
 **Acceptance Criteria:**
+
+**Given** Leadership attempts approve/reject
+**When** the backend evaluates the action inside the proposal mutation
+**Then** only active `LEADERSHIP_APPROVAL_AUTHORITY` with explicit scope and no
+participation/reviewer conflict may decide, after current completeness, all required
+submitted reviews, finalized synthesis and explicit package submission are rechecked
+**And** Staff, Head and `RESEARCH_OVERSIGHT_AUTHORITY` have no final decision authority.
+
 
 **Given** proposal ở `ready_for_approval`, actor không conflict và có exact decision action
 **When** họ approve hoặc reject với dữ liệu bắt buộc

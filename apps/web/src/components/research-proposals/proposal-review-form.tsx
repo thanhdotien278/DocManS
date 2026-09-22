@@ -169,6 +169,14 @@ export function ProposalReviewForm({ proposalId, onReviewSubmitted, canSubmitRev
         ? `Phiếu đã gửi và ở chế độ chỉ đọc · ${reviewPackage?.assignmentRoleLabel ?? "Phân công"}`
         : `Chấm điểm theo từng tiêu chí, nhận xét và chọn kết luận đề nghị · ${reviewPackage?.assignmentRoleLabel ?? "Phân công"}`}
     >
+      {reviewPackage ? <div className="form-section-inline">
+        <h3>{reviewPackage.proposal.title}</h3>
+        <p className="record-meta">Phiên bản nộp lúc {formatDate(reviewPackage.submissionEvidence?.submittedAt ?? reviewPackage.proposal.submittedAt)}</p>
+        <div className="section-mini-heading">Mục tiêu</div>
+        <p>{reviewPackage.proposal.objectives}</p>
+        <div className="section-mini-heading">Tóm tắt</div>
+        <p>{reviewPackage.proposal.summary}</p>
+      </div> : null}
       <form className="admin-form" onSubmit={(event) => void handleSubmit(event)}>
         <div className="form-section-inline">
           <div className="section-mini-heading">Điểm theo tiêu chí</div>

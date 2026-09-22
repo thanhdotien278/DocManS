@@ -63,7 +63,7 @@ describe("Story 1.8 proposal capability UI source behavior", () => {
     const evaluationSource = await readFile(new URL("../apps/web/src/components/research-proposals/proposal-evaluation-panel.tsx", import.meta.url), "utf8");
     assert.match(source, /showSubmitPanel = shouldRenderAction\("proposal\.submit"\)/);
     assert.match(source, /proposal\.viewerParticipation\?\.isOwner/);
-    assert.match(source, /showStaffProposalSummary = \(\["proposal\.completeness\.check", "proposal\.supplement\.request", "proposal\.review\.assign", "proposal\.review\.consolidate"\] as const\)\.some\(shouldRenderAction\)/);
+    assert.match(source, /showStaffProposalSummary = \(\["proposal\.completeness\.check", "proposal\.supplement\.request", "proposal\.review\.assign", "proposal\.review\.consolidate", "proposal\.review\.finalize", "proposal\.review\.submit-package"\] as const\)\.some\(shouldRenderAction\)/);
     assert.match(source, /type="date" lang="vi" value=\{supplementDueDate\}/);
     assert.match(source, /intakeDateToIso\(supplementDueDate, true\)/);
     assert.doesNotMatch(source, /type="datetime-local"/);
