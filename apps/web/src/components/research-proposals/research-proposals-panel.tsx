@@ -52,7 +52,7 @@ function defaultForm(hostOrganizationUnitId = ""): ProposalDraftInput {
   };
 }
 
-export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }) {
+export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { allowCreate: boolean; creationOnly?: boolean }) {
   const router = useRouter();
   const { account } = useSession();
   const initialHostScope = account?.organizationScopes?.[0]?.id ?? "";
@@ -72,7 +72,7 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
   async function refresh() {
     setState("loading");
     try {
-      const [proposalData, intakeData] = await Promise.all([loadResearchProposals(), allowCreate || account?.systemRole === "SCIENTIFIC_MANAGEMENT_STAFF" ? loadProposalIntakePeriods() : Promise.resolve([])]);
+      const [proposalData, intakeData] = await Promise.all([creationOnly ? Promise.resolve([]) : loadResearchProposals(), allowCreate || account?.systemRole === "SCIENTIFIC_MANAGEMENT_STAFF" ? loadProposalIntakePeriods() : Promise.resolve([])]);
       setProposals(proposalData);
       setIntakes(intakeData);
       setState("ready");
@@ -203,8 +203,8 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
   }
 
   return (
-    <div className="grid two-column">
-      <SectionCard title="Danh sách hồ sơ" subtitle="Theo dõi hồ sơ theo đợt tiếp nhận và trạng thái">
+    <div className={creationOnly ? "proposal-create-page" : "grid"}>
+      {!creationOnly ? <SectionCard title="Danh sách hồ sơ" subtitle="Theo dõi hồ sơ theo đợt tiếp nhận và trạng thái" action={allowCreate && intakes.some((intake) => intake.capabilities?.canCreateProposal) ? <Link className="button primary" href="/my-proposals/new"><Plus size={18} aria-hidden="true" />Tạo hồ sơ</Link> : undefined}>
         <div className="filter-bar">
           <label className="filter-field">
             <span>Từ khóa</span>
@@ -258,14 +258,15 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
           </p>
         ) : null}
 
-        {state === "loading" ? <p className="state-message">Đang tải hồ sơ...</p> : null}
-        {state === "error" ? <p className="state-message error">Không thể tải danh sách hồ sơ.</p> : null}
+        <div className="filter-summary"><span role="status">{state === "ready" ? `${filteredProposals.length} hồ sơ` : ""}</span>{[keyword, statusFilter, reviewQueue, managementOfficerFilter].some(Boolean) ? <button className="button" type="button" onClick={() => { setKeyword(""); setStatusFilter(""); setReviewQueue(""); setManagementOfficerFilter(""); }}>Xóa bộ lọc</button> : null}</div>
+        {state === "loading" ? <p className="state-message" role="status">Đang tải hồ sơ...</p> : null}
+        {state === "error" ? <p className="state-message error" role="alert">Không thể tải danh sách hồ sơ. <button className="button" type="button" onClick={() => void refresh()}>Thử lại</button></p> : null}
         {state === "ready" && filteredProposals.length === 0 ? (
           <EmptyState title="Chưa có hồ sơ phù hợp" message="Tạo hồ sơ nháp hoặc đổi điều kiện lọc để tiếp tục." />
         ) : null}
         {state === "ready" && filteredProposals.length > 0 ? (
           <>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Danh sách hồ sơ đề tài">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -350,10 +351,10 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
             </div>
           </>
         ) : null}
-      </SectionCard>
+      </SectionCard> : null}
 
-      {allowCreate && intakes.some((intake) => intake.capabilities?.canCreateProposal) ? (
-        <SectionCard title="Tạo hồ sơ nháp" subtitle="Lưu nhiều lần, sau đó hoàn thiện tài liệu và readiness ở màn hình chi tiết">
+      {creationOnly && allowCreate && intakes.some((intake) => intake.capabilities?.canCreateProposal) ? (
+        <SectionCard title="Tạo hồ sơ nháp" subtitle="Lưu nháp, sau đó hoàn thiện tài liệu và kiểm tra điều kiện nộp tại trang chi tiết.">
           <form className="admin-form" onSubmit={(event) => void handleCreateDraft(event)}>
             <div className="form-section-inline">
               <div className="section-mini-heading">
@@ -361,8 +362,8 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
                 Thông tin chung
               </div>
               <label className="field">
-                <span>Đợt tiếp nhận</span>
-                <select value={form.intakePeriodId ?? ""} onChange={(event) => setForm({ ...form, intakePeriodId: event.target.value })}>
+                <span>Đợt tiếp nhận *</span>
+                <select required value={form.intakePeriodId ?? ""} onChange={(event) => setForm({ ...form, intakePeriodId: event.target.value })}>
                   <option value="">Chọn đợt đang mở</option>
                   {intakes.filter((intake) => intake.capabilities?.canCreateProposal).map((intake) => (
                     <option key={intake.id} value={intake.id}>
@@ -373,8 +374,8 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
                 {formError.intakePeriodId ? <span className="field-error">{formError.intakePeriodId}</span> : null}
               </label>
               <label className="field">
-                <span>Tên đề tài</span>
-                <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
+                <span>Tên đề tài *</span>
+                <input required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
                 {formError.title ? <span className="field-error">{formError.title}</span> : null}
               </label>
             </div>
@@ -396,8 +397,8 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
                 </label>
               </div>
               <label className="field">
-                <span>Mã đơn vị chủ trì</span>
-                <select value={form.hostOrganizationUnitId} onChange={(e) => setForm({ ...form, hostOrganizationUnitId: e.target.value })}>
+                <span>Đơn vị chủ trì *</span>
+                <select required value={form.hostOrganizationUnitId} onChange={(e) => setForm({ ...form, hostOrganizationUnitId: e.target.value })}>
                   <option value="">Chọn đơn vị chủ trì</option>{account?.organizationScopes?.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
                 </select>
                 {formError.hostOrganizationUnitId ? <span className="field-error">{formError.hostOrganizationUnitId}</span> : null}
@@ -405,7 +406,7 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
             </div>
 
             <div className="form-section-inline">
-              <div className="section-mini-heading">Team đề tài và thời gian</div>
+              <div className="section-mini-heading">Nhóm nghiên cứu và thời gian</div>
               <div className="form-grid two">
                 <ProposalMembersEditor members={form.members ?? []} disabled={isSubmitting} onChange={(members) => setForm({ ...form, members })} />
                 <label className="field">
@@ -443,7 +444,7 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
               </label>
             </div>
 
-            {formError.submit ? <p className="form-error">{formError.submit}</p> : null}
+            {formError.submit ? <p className="form-error" role="alert">{formError.submit}</p> : null}
             {message ? <p className="state-message success">{message}</p> : null}
             <button className="button primary" type="submit" disabled={isSubmitting}>
               {isSubmitting ? <Save size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
@@ -451,14 +452,13 @@ export function ResearchProposalsPanel({ allowCreate }: { allowCreate: boolean }
             </button>
           </form>
         </SectionCard>
-      ) : (
+      ) : creationOnly ? (
         <SectionCard title="Phạm vi thao tác" subtitle="Quyền chỉnh sửa nội dung hồ sơ thuộc PI/chủ sở hữu">
           <p className="section-copy">
-            Danh sách này hiển thị hồ sơ trong phạm vi xử lý. Các thao tác nộp chính thức và sửa nội dung được backend kiểm soát theo vai trò,
-            chủ sở hữu và trạng thái hồ sơ.
+            {state === "loading" ? "Đang kiểm tra đợt tiếp nhận..." : state === "error" ? "Không thể tải đợt tiếp nhận. Vui lòng tải lại trang." : "Hiện chưa có đợt tiếp nhận cho phép bạn tạo hồ sơ."}
           </p>
         </SectionCard>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -58,7 +58,7 @@ function renderPanel(panel: DashboardPanel) {
         ) : undefined
       }
     >
-      <div className="table-wrap">
+      <div className="table-wrap" tabIndex={0} role="region" aria-label="Danh sách việc cần xử lý">
         <table className="data-table">
           <thead>
             <tr>

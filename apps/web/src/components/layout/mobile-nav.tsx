@@ -16,13 +16,13 @@ export function MobileNav() {
   const navigationItems = getNavigationItems(account.systemRole);
 
   return (
-    <details className="mobile-menu">
+    <details className="mobile-menu" key={pathname}>
       <summary>Menu điều hướng</summary>
-      <nav className="mobile-menu-links" aria-label="Điều hướng mobile">
+      <nav className="mobile-menu-links" aria-label="Điều hướng trên điện thoại">
         {navigationItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
-            <Link className={isActive ? "is-active" : ""} href={item.href} key={item.href}>
+            <Link className={isActive ? "is-active" : ""} href={item.href} key={item.href} aria-current={isActive ? "page" : undefined}>
               {item.label}
             </Link>
           );

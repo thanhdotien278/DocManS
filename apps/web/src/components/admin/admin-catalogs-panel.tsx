@@ -1,5 +1,6 @@
 "use client";
 
+import { Dialog } from "@/components/ui/dialog";
 import { useEffect, useRef, useState } from "react";
 import { Archive, BookPlus, Pencil, Save, Trash2, X } from "lucide-react";
 import { createCatalogItem, loadCatalogItems, softDeleteCatalogItem, updateCatalogItem, type CatalogItem } from "@/lib/admin-api";
@@ -16,6 +17,7 @@ const catalogTypes = [
 ];
 
 export function AdminCatalogsPanel() {
+  const [showCreate, setShowCreate] = useState(false);
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [selectedType, setSelectedType] = useState(catalogTypes[0].value);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
@@ -178,8 +180,8 @@ export function AdminCatalogsPanel() {
   }
 
   return (
-    <div className="grid two-column">
-      <SectionCard title="Danh mục dùng chung" subtitle="Quản lý các giá trị nền cho nghiệp vụ EP-01">
+    <div className="grid">
+      <SectionCard action={<button className="button primary" type="button" onClick={() => { setFormError(""); setMessage(""); setEditingItem(null); setShowCreate(true); }}>Thêm danh mục</button>} title="Danh mục dùng chung" subtitle="Quản lý các giá trị nền cho nghiệp vụ EP-01">
         <div className="filter-bar compact">
           <label className="filter-field">
             <span>Loại danh mục</span>
@@ -199,7 +201,7 @@ export function AdminCatalogsPanel() {
         ) : null}
         {state === "ready" && items.length > 0 ? (
           <>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Danh sách danh mục">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -223,7 +225,7 @@ export function AdminCatalogsPanel() {
                       </td>
                       <td>
                         <div className="row-actions">
-                          <button className="button icon-button" type="button" onClick={() => setEditingItem(item)} disabled={isSubmitting} title="Sửa danh mục">
+                          <button className="button icon-button" type="button" onClick={() => { setFormError(""); setMessage(""); setEditingItem(item); }} disabled={isSubmitting} title="Sửa danh mục">
                             <Pencil size={16} aria-hidden="true" />
                           </button>
                           {renderStatusActions(item)}
@@ -249,7 +251,7 @@ export function AdminCatalogsPanel() {
                   </div>
                   <span className="record-meta">{item.description || "Không có mô tả"}</span>
                   <div className="row-actions">
-                    <button className="button" type="button" onClick={() => setEditingItem(item)} disabled={isSubmitting}>
+                    <button className="button" type="button" onClick={() => { setFormError(""); setMessage(""); setEditingItem(item); }} disabled={isSubmitting}>
                       <Pencil size={16} aria-hidden="true" />
                       Sửa
                     </button>
@@ -266,7 +268,8 @@ export function AdminCatalogsPanel() {
         ) : null}
       </SectionCard>
 
-      <SectionCard title={editingItem ? "Sửa danh mục" : "Thêm danh mục"} subtitle="Mã danh mục dùng chữ, số, dấu gạch ngang hoặc gạch dưới">
+      {showCreate || editingItem ? <Dialog className="form-dialog" label={editingItem ? "Sửa danh mục" : "Thêm danh mục"} onClose={() => { setShowCreate(false); setEditingItem(null); }}>
+      <SectionCard action={<button className="button" type="button" onClick={() => { setShowCreate(false); setEditingItem(null); }}>Đóng</button>} title={editingItem ? "Sửa danh mục" : "Thêm danh mục"} subtitle="Mã danh mục dùng chữ, số, dấu gạch ngang hoặc gạch dưới">
         <form className="admin-form" key={editingItem?.id ?? "create"} onSubmit={(event) => (editingItem ? void handleEdit(event) : void handleCreate(event))}>
           <label className="field">
             <span>Mã danh mục</span>
@@ -294,6 +297,7 @@ export function AdminCatalogsPanel() {
           ) : null}
         </form>
       </SectionCard>
+      </Dialog> : null}
     </div>
   );
 }

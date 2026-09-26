@@ -162,7 +162,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   const showEvaluationProgress = showEvaluationPanel || canReadReviewProgress;
   const showReviewForm = shouldRenderAction("proposal.review.submit");
   const showDecisionPanel = shouldRenderAction("proposal.decision.approve") || shouldRenderAction("proposal.decision.reject");
-  const showManagementOfficerPanel = account?.systemRole === "SCIENTIFIC_MANAGEMENT_HEAD" && (shouldRenderAction("proposal.management-officer.assign") || shouldRenderAction("proposal.management-officer.revoke") || Boolean(proposal?.managementOfficer?.current));
+  const showManagementOfficerPanel = shouldRenderAction("proposal.management-officer.assign") || shouldRenderAction("proposal.management-officer.revoke");
   const showCompletenessCheck = shouldRenderAction("proposal.completeness.check");
   const showSubmitPanel = shouldRenderAction("proposal.submit");
   const showStaffProposalSummary = (["proposal.completeness.check", "proposal.supplement.request", "proposal.review.assign", "proposal.review.consolidate", "proposal.review.finalize", "proposal.review.submit-package"] as const).some(shouldRenderAction);

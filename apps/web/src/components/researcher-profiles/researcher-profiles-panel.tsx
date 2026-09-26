@@ -7,6 +7,7 @@ import { createResearcherProfile, getResearcherProfile, loadResearcherProfileCat
 const emptyForm: ResearcherProfileInput = { fullName: "", profileType: "INTERNAL", managementOrganizationUnitId: "", researchFieldIds: [], expertiseKeywords: [], publications: [], participations: [] };
 const levels = { ACADEMY_INSTITUTIONAL: "Cấp Học viện / cơ sở", MINISTRY: "Cấp Bộ", OTHER: "Cấp khác" };
 const historyActions: Record<string, string> = { CREATE: "Tạo hồ sơ", UPDATE: "Cập nhật hồ sơ", SELF_UPDATE: "Nhà nghiên cứu cập nhật", ACTIVATE: "Kích hoạt", DEACTIVATE: "Ngừng hoạt động", ACCOUNT_CREATED: "Tạo và liên kết tài khoản", ACCOUNT_LINKED: "Liên kết tài khoản", ACCOUNT_UNLINKED: "Hủy liên kết", ACCOUNT_RESET: "Gửi lại email kích hoạt" };
+type ProfileTab = "profile" | "account" | "history" | "preview";
 
 export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
   const [profiles, setProfiles] = useState<ResearcherProfileSummary[]>([]);
@@ -31,6 +32,7 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
   const [accountQuery, setAccountQuery] = useState("");
   const [accounts, setAccounts] = useState<Array<{ id: string; username: string; displayName: string }>>([]);
   const [selectedAccount, setSelectedAccount] = useState("");
+  const [profileTab, setProfileTab] = useState<ProfileTab>("profile");
   const loadVersion = useRef(0);
 
   const allowed = (action: string) => editing?.viewerAuthorization.allowedActions.some((value) => value === action) ?? false;
@@ -40,6 +42,7 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
   const accountProvisionOnCreate = !editing && !self && ((form.profileType ?? "INTERNAL") === "INTERNAL" || form.provisionAccount === true);
 
   function select(profile: ResearcherProfile) {
+    setProfileTab("profile");
     setEditing(profile);
     setForm({ fullName: profile.fullName, profileType: profile.profileType, managementOrganizationUnitId: profile.managementOrganization.id,
       externalAffiliation: profile.externalAffiliation, academicRankCatalogItemId: profile.academicRank?.id ?? "", academicDegreeCatalogItemId: profile.academicDegree?.id ?? "",
@@ -72,7 +75,7 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
   }
   useEffect(() => { void load(); return () => { loadVersion.current++; }; }, [self, filters]);
 
-  function startCreate() { setEditing(null); setForm({ ...emptyForm, managementOrganizationUnitId: organizations[0]?.id ?? "", provisionAccount: false }); setKeywords(""); setResearchFieldQuery(""); setResearchFieldOpen(false); setDuplicates([]); setHistory(null); setMessage(""); setError(""); }
+  function startCreate() { setProfileTab("profile"); setEditing(null); setForm({ ...emptyForm, managementOrganizationUnitId: organizations[0]?.id ?? "", provisionAccount: false }); setKeywords(""); setResearchFieldQuery(""); setResearchFieldOpen(false); setDuplicates([]); setHistory(null); setMessage(""); setError(""); }
   function field(key: keyof ResearcherProfileInput, value: string) { setForm((current) => ({ ...current, [key]: value })); }
   function filter(key: keyof typeof filters, value: string) { setFilters((current) => ({ ...current, [key]: value, ...(key === "page" ? {} : { page: "1" }) })); }
   async function perform(work: () => Promise<void>) { setBusy(true); setError(""); setMessage(""); try { await work(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể thực hiện thao tác."); } finally { setBusy(false); } }
@@ -111,6 +114,13 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
   function publicationField(index: number, key: keyof Publication, value: string | number | null) { setForm((current) => ({ ...current, publications: current.publications?.map((item, i) => i === index ? { ...item, [key]: value } : item) })); }
   function participationField(index: number, key: keyof Participation, value: string) { setForm((current) => ({ ...current, participations: current.participations?.map((item, i) => i === index ? { ...item, [key]: value } : item) })); }
 
+  const profileTabs: Array<{ id: ProfileTab; label: string }> = [
+    { id: "profile", label: "Thông tin & nghiên cứu" },
+    ...(!self ? [{ id: "account" as const, label: "Tài khoản" }] : []),
+    { id: "history", label: "Lịch sử" },
+    { id: "preview", label: "Bản in" }
+  ];
+
   return <div className="grid">
     {error ? <p className="state-message error" role="alert">{error}</p> : null}
     {message ? <p className="state-message success" role="status">{message}</p> : null}
@@ -124,11 +134,19 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
         <label className="field"><span>Đơn vị quản lý</span><select value={filters.organizationUnitId} onChange={(event) => filter("organizationUnitId", event.target.value)}><option value="">Tất cả đơn vị được cấp</option>{organizations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <label className="field"><span>Lĩnh vực</span><select value={filters.researchFieldId} onChange={(event) => filter("researchFieldId", event.target.value)}><option value="">Tất cả</option>{catalogs.researchFields.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       </div>
-      {!profiles.length && !loading ? <EmptyState title="Không có hồ sơ phù hợp" message="Thay đổi bộ lọc hoặc tạo hồ sơ trong phạm vi được cấp." /> : <div className="table-wrap"><table className="data-table"><thead><tr><th>Họ tên</th><th>Loại / đơn vị</th><th>Trạng thái</th><th>Tài khoản</th><th>Thao tác</th></tr></thead><tbody>{profiles.map((profile) => <tr key={profile.id}><td>{profile.fullName}</td><td>{profile.profileType === "EXTERNAL" ? "Bên ngoài" : "Nội bộ"}<br />{profile.managementOrganization.name}</td><td>{profile.status === "ACTIVE" ? "Hoạt động" : "Ngừng hoạt động"}</td><td>{accountLabel(profile.account)}</td><td><button className="button" disabled={busy} onClick={() => void perform(async () => select((await getResearcherProfile(profile.id)).profile))}>Xem / sửa</button></td></tr>)}</tbody></table></div>}
+      {!profiles.length && !loading ? <EmptyState title="Không có hồ sơ phù hợp" message="Thay đổi bộ lọc hoặc tạo hồ sơ trong phạm vi được cấp." /> : <div className="table-wrap" tabIndex={0} role="region" aria-label="Danh sách hồ sơ nhà khoa học"><table className="data-table"><thead><tr><th>Họ tên</th><th>Loại / đơn vị</th><th>Trạng thái</th><th>Tài khoản</th><th>Thao tác</th></tr></thead><tbody>{profiles.map((profile) => <tr key={profile.id}><td>{profile.fullName}</td><td>{profile.profileType === "EXTERNAL" ? "Bên ngoài" : "Nội bộ"}<br />{profile.managementOrganization.name}</td><td>{profile.status === "ACTIVE" ? "Hoạt động" : "Ngừng hoạt động"}</td><td>{accountLabel(profile.account)}</td><td><button className="button" disabled={busy} onClick={() => void perform(async () => select((await getResearcherProfile(profile.id)).profile))}>Xem / sửa</button></td></tr>)}</tbody></table></div>}
       <div className="mobile-list">{profiles.map((profile) => <article className="list-card" key={profile.id}><h3>{profile.fullName}</h3><p>{profile.profileType === "EXTERNAL" ? "Bên ngoài" : "Nội bộ"} · {profile.managementOrganization.name}</p><p>{profile.status === "ACTIVE" ? "Hoạt động" : "Ngừng hoạt động"} · {accountLabel(profile.account)}</p><button className="button" disabled={busy} onClick={() => void perform(async () => select((await getResearcherProfile(profile.id)).profile))}>Xem / sửa</button></article>)}</div>
       <div className="button-row"><button className="button" disabled={Number(filters.page) <= 1 || loading} onClick={() => filter("page", String(Number(filters.page) - 1))}>Trang trước</button><span>Trang {filters.page} · {total} hồ sơ</span><button className="button" disabled={Number(filters.page) * 20 >= total || loading} onClick={() => filter("page", String(Number(filters.page) + 1))}>Trang sau</button></div>
     </section> : null}
-    {self && !editing ? (!loading ? <EmptyState title="Chưa có hồ sơ được liên kết" message="Liên hệ cán bộ quản lý khoa học để kiểm tra liên kết tài khoản." /> : null) : <section className="section-card">
+    {editing ? <div className="profile-tabs" role="tablist" aria-label="Các phần hồ sơ nhà khoa học">
+      {profileTabs.map((tab, index) => <button id={`profile-tab-${tab.id}`} key={tab.id} className={`button ${profileTab === tab.id ? "primary" : ""}`} type="button" role="tab" aria-selected={profileTab === tab.id} aria-controls={profileTab === tab.id ? `profile-panel-${tab.id}` : undefined} tabIndex={profileTab === tab.id ? 0 : -1} onClick={() => setProfileTab(tab.id)} onKeyDown={(event) => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        const nextIndex = (index + (event.key === "ArrowRight" ? 1 : -1) + profileTabs.length) % profileTabs.length;
+        setProfileTab(profileTabs[nextIndex].id);
+        document.getElementById(`profile-tab-${profileTabs[nextIndex].id}`)?.focus();
+      }}>{tab.label}</button>)}
+    </div> : null}
+    {self && !editing ? (!loading ? <EmptyState title="Chưa có hồ sơ được liên kết" message="Liên hệ cán bộ quản lý khoa học để kiểm tra liên kết tài khoản." /> : null) : (!editing || profileTab === "profile") ? <section className="section-card" id="profile-panel-profile" role={editing ? "tabpanel" : undefined} aria-labelledby={editing ? "profile-tab-profile" : undefined}>
       <h2>{self ? "Hồ sơ của tôi" : editing ? editing.fullName : "Tạo hồ sơ độc lập"}</h2>
       <form onSubmit={(event) => { event.preventDefault(); void save(); }}>
         <fieldset disabled={busy || !editable} style={{ border: 0, padding: 0, minWidth: 0 }}>
@@ -182,8 +200,8 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
       </form>
       {duplicates.length ? <div className="state-message warning"><p>Có hồ sơ có thể trùng:</p><ul>{duplicates.map((item) => <li key={item.id}>{item.fullName}</li>)}</ul><button className="button" disabled={busy} onClick={() => void save(true)}>Xác nhận vẫn tạo hồ sơ</button></div> : null}
       {editing && !self ? <div className="button-row"><button className="button" disabled={busy || !allowed(editing.status === "ACTIVE" ? "researcher-profile.deactivate" : "researcher-profile.activate")} onClick={() => void perform(async () => { select((await setResearcherProfileStatus(editing.id, editing.status === "ACTIVE" ? "INACTIVE" : "ACTIVE", editing.viewerAuthorization.contextVersion)).profile); await load(); })}>{editing.status === "ACTIVE" ? "Ngừng hoạt động hồ sơ" : "Kích hoạt hồ sơ"}</button></div> : null}
-    </section>}
-    {editing && !self ? <section className="section-card"><h2>Tài khoản hệ thống / Quyền truy cập</h2>
+    </section> : null}
+    {editing && !self && profileTab === "account" ? <section className="section-card" id="profile-panel-account" role="tabpanel" aria-labelledby="profile-tab-account"><h2>Tài khoản hệ thống / Quyền truy cập</h2>
       <p>{editing.account ? `${editing.account.email ?? "Chưa có email"} — ${accountStatusLabel(editing.account.status)}${editing.account.username ? ` · ${editing.account.username}` : ""}` : "Nhà khoa học này chưa có quyền truy cập DocManS."}</p>
       {editing.credentialDelivery ? <p>Gửi email gần nhất: {editing.credentialDelivery.status === "ACCEPTED" ? "Máy chủ email đã nhận thư" : "Chưa xác nhận gửi"}{editing.credentialDelivery.expiresAt ? ` · Hết hạn ${new Date(editing.credentialDelivery.expiresAt).toLocaleString("vi-VN")}` : ""}</p> : null}
       <div className="form-grid two">
@@ -193,11 +211,28 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
       <div className="button-row"><button className="button primary" disabled={busy || !email || !allowed("researcher-profile.account.create")} onClick={() => void accountAction("")}>Tạo tài khoản và gửi email kích hoạt</button><button className="button" disabled={busy || !email || !allowed("researcher-profile.account.reset")} onClick={() => void accountAction("/resend-activation")}>Gửi lại email kích hoạt</button><button className="button" disabled={busy || !reason || !allowed("researcher-profile.account.unlink")} onClick={() => void accountAction("/unlink")}>Hủy liên kết</button></div>
       {!editing.account && allowed("researcher-profile.account.link") ? <div><h3>Liên kết tài khoản đã có</h3><label className="field"><span>Tìm tài khoản chưa liên kết</span><input value={accountQuery} onChange={(event) => setAccountQuery(event.target.value)} /></label><button className="button" disabled={busy} onClick={() => void perform(async () => { setAccounts((await profileRequest<{ accounts: typeof accounts }>(`/${editing.id}/account-candidates?keyword=${encodeURIComponent(accountQuery)}`)).accounts); setSelectedAccount(""); })}>Tìm tài khoản</button><label className="field"><span>Tài khoản phù hợp</span><select value={selectedAccount} onChange={(event) => setSelectedAccount(event.target.value)}><option value="">Chọn tài khoản</option>{accounts.map((item) => <option key={item.id} value={item.id}>{item.displayName} ({item.username})</option>)}</select></label><button className="button" disabled={busy || !selectedAccount} onClick={() => void accountAction("/link")}>Liên kết tài khoản</button></div> : null}
     </section> : null}
-    {editing ? <section className="section-card"><h2>Lịch sử hồ sơ</h2>
+    {editing && profileTab === "history" ? <section className="section-card" id="profile-panel-history" role="tabpanel" aria-labelledby="profile-tab-history"><h2>Lịch sử hồ sơ</h2>
       {editing.participations.filter((item) => item.status === "SUPERSEDED").map((item) => <details key={item.id}><summary>{item.projectTitle} — phiên bản trước</summary><p>{item.participationRole} · {levels[item.level]} · {item.startsOn || "—"} – {item.endsOn || "—"}</p><p>{item.notes}</p></details>)}
       <button className="button" disabled={busy || !allowed("researcher-profile.history.read")} onClick={() => void perform(async () => setHistory((await profileRequest<{ history: ProfileHistory[] }>(`/${editing.id}/history`)).history))}>Xem lịch sử thay đổi</button>
       {history?.map((item) => <details key={item.id}><summary>{new Date(item.createdAt).toLocaleString("vi-VN")} · {historyActions[item.action] ?? item.action}</summary><p>{item.reason}</p><HistoryFacts label="Trước" facts={item.beforeFacts} /><HistoryFacts label="Sau" facts={item.afterFacts} /></details>)}
       {history?.length === 0 ? <p>Chưa có lịch sử thay đổi.</p> : null}
+    </section> : null}
+    {editing && profileTab === "preview" ? <section className="section-card profile-print-preview" id="profile-panel-preview" role="tabpanel" aria-labelledby="profile-tab-preview">
+      <div className="section-header"><div><h2>Tóm tắt lý lịch khoa học</h2><p className="record-meta">Bản trình bày được tạo từ dữ liệu DocManS hiện có; không bổ sung trường nghiệp vụ mới.</p></div><button className="button" type="button" onClick={() => window.print()}>In hồ sơ</button></div>
+      <dl className="summary-grid">
+        <div><dt>Họ và tên</dt><dd>{form.fullName || "—"}</dd></div>
+        <div><dt>Đơn vị</dt><dd>{editing.managementOrganization.name}</dd></div>
+        <div><dt>Học hàm / học vị</dt><dd>{[editing.academicRank?.name, editing.academicDegree?.name].filter(Boolean).join(" · ") || "—"}</dd></div>
+        <div><dt>Chức vụ / vị trí</dt><dd>{form.position || form.title || "—"}</dd></div>
+        <div><dt>Email</dt><dd>{form.contactEmail || "—"}</dd></div>
+        <div><dt>Điện thoại</dt><dd>{form.contactPhone || "—"}</dd></div>
+        <div><dt>Lĩnh vực nghiên cứu</dt><dd>{selectedResearchFields.map((item) => item.name).join(", ") || "—"}</dd></div>
+        <div><dt>Chuyên môn / từ khóa</dt><dd>{keywords || "—"}</dd></div>
+      </dl>
+      <h3>Công bố</h3>
+      {form.publications?.filter((item) => item.status !== "INACTIVE").length ? <ol>{form.publications.filter((item) => item.status !== "INACTIVE").map((item, index) => <li key={item.id ?? index}>{item.title}{item.authors ? ` — ${item.authors}` : ""}{item.venue ? `, ${item.venue}` : ""}{item.publicationYear ? ` (${item.publicationYear})` : ""}</li>)}</ol> : <p>Chưa có công bố.</p>}
+      <h3>Quá trình tham gia nghiên cứu</h3>
+      {form.participations?.length ? <ul>{form.participations.map((item, index) => <li key={item.id ?? index}><strong>{item.projectTitle}</strong> — {item.participationRole}, {levels[item.level]}</li>)}</ul> : <p>Chưa có quá trình tham gia.</p>}
     </section> : null}
   </div>;
 }

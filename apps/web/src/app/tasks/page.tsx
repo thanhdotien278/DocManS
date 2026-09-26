@@ -32,7 +32,7 @@ export default function TasksPage() {
           ]}
         />
 
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0} role="region" aria-label="Danh sách nhiệm vụ">
           <table className="data-table">
             <thead>
               <tr>

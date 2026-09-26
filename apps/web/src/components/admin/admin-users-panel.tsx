@@ -1,5 +1,6 @@
 "use client";
 
+import { Dialog } from "@/components/ui/dialog";
 import { useEffect, useMemo, useState } from "react";
 import { Edit3, KeyRound, Lock, Save, Search, Unlock, UserPlus, X } from "lucide-react";
 import {
@@ -31,6 +32,7 @@ function readUserFilters(formElement: HTMLFormElement): UserFilterInput {
 }
 
 export function AdminUsersPanel() {
+  const [showCreate, setShowCreate] = useState(false);
   const [state, setState] = useState<LoadState>("loading");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [resultCount, setResultCount] = useState(0);
@@ -210,8 +212,8 @@ export function AdminUsersPanel() {
   }
 
   return (
-    <div className="grid two-column">
-      <SectionCard
+    <div className="grid">
+      <SectionCard action={<button className="button primary" type="button" onClick={() => { setFormError(""); setMessage(""); setEditingUser(null); setShowCreate(true); }}>Tạo tài khoản</button>}
         title="Tài khoản nội bộ"
         subtitle={`${resultCount} kết quả, ${activeCount} đang hoạt động`}
       >
@@ -289,7 +291,7 @@ export function AdminUsersPanel() {
         ) : null}
         {state === "ready" && users.length > 0 ? (
           <>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Danh sách tài khoản">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -315,7 +317,7 @@ export function AdminUsersPanel() {
                       </td>
                       <td>
                         <div className="button-row">
-                          <button className="button" type="button" onClick={() => setEditingUser(user)}>
+                          <button className="button" type="button" onClick={() => { setFormError(""); setMessage(""); setEditingUser(user); }}>
                             <Edit3 size={16} aria-hidden="true" />
                             Sửa
                           </button>
@@ -349,7 +351,7 @@ export function AdminUsersPanel() {
                     {roles.find((role) => role.code === user.systemRole)?.label ?? "Chưa xác định"} - {user.unit}
                   </span>
                   <div className="button-row">
-                    <button className="button" type="button" onClick={() => setEditingUser(user)}>
+                    <button className="button" type="button" onClick={() => { setFormError(""); setMessage(""); setEditingUser(user); }}>
                       <Edit3 size={16} aria-hidden="true" />
                       Sửa
                     </button>
@@ -370,7 +372,8 @@ export function AdminUsersPanel() {
         ) : null}
       </SectionCard>
 
-      <SectionCard
+      {showCreate || editingUser ? <Dialog className="form-dialog" label={editingUser ? "Cập nhật tài khoản" : "Tạo tài khoản"} onClose={() => { setShowCreate(false); setEditingUser(null); }}>
+      <SectionCard action={<button className="button" type="button" onClick={() => { setShowCreate(false); setEditingUser(null); }}>Đóng</button>}
         title={editingUser ? "Cập nhật tài khoản" : "Tạo tài khoản"}
         subtitle={editingUser ? editingUser.username : "Gán vai trò chính và phạm vi đơn vị ngay khi tạo"}
       >
@@ -473,6 +476,7 @@ export function AdminUsersPanel() {
           </form>
         )}
       </SectionCard>
+      </Dialog> : null}
     </div>
   );
 }
