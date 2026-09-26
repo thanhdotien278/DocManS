@@ -1,5 +1,6 @@
 import { Controller, Get, Module } from "@nestjs/common";
 import { AdminModule } from "./admin/admin.module.js";
+import { ApprovedProjectsModule } from "./approved-projects/approved-projects.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { FilesModule } from "./modules/files/files.module.js";
 import { ProposalEvaluationsModule } from "./proposal-evaluations/proposal-evaluations.module.js";
@@ -20,7 +21,7 @@ class HealthController {
 }
 
 @Module({
-  imports: [AuthModule, AdminModule, FilesModule, ProposalIntakePeriodsModule, ResearchProposalsModule, ProposalEvaluationsModule, ResearcherProfilesModule],
+  imports: [AuthModule, AdminModule, ApprovedProjectsModule, FilesModule, ProposalIntakePeriodsModule, ResearchProposalsModule, ProposalEvaluationsModule, ResearcherProfilesModule],
   controllers: [HealthController]
 })
 export class AppModule {}

@@ -87,7 +87,7 @@ mutation eligibility is unchanged; Deputy gains internal researcher eligibility.
 - FR4a: Authenticated users can change their own password, and authorized administrators can initiate a controlled password reset flow for internal users.
 - FR5: The system can enforce role-based access rules across all protected capabilities.
 - FR6: The system can enforce explicit organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports; Scientific Management Head can view all proposals/projects within explicitly authorized Scientific Management scope; Staff management visibility requires an effective record-level management-officer assignment. Parent/child units never imply scope.
-- FR6f: Distinguish `SCIENTIFIC_MANAGEMENT_HEAD` oversight from `SCIENTIFIC_MANAGEMENT_STAFF` management access. Head sees all proposals/projects in explicit Scientific Management scope; Staff needs an effective `PROPOSAL_MANAGEMENT_OFFICER` or `PROJECT_MANAGEMENT_OFFICER` on the exact record. Each record has at most one active primary officer; assignment, reassignment and revocation preserve history and audit, including concurrent changes. Neither role is final approval authority.
+- FR6f: Distinguish `SCIENTIFIC_MANAGEMENT_HEAD` oversight from `SCIENTIFIC_MANAGEMENT_STAFF` management access. Head sees all proposals/projects in explicit Scientific Management scope; Staff needs an effective `PROPOSAL_MANAGEMENT_OFFICER` or `PROJECT_MANAGEMENT_OFFICER` on the exact record. Each record has at most one active primary officer; assignment, reassignment and revocation preserve history and audit, including concurrent changes. Neither role has proposal final approval authority. During project execution, assigned Staff finally approves/rejects normal Project Adjustments and scoped Head finally approves/rejects Project Extensions after Staff preparation; Leadership decides neither.
 - FR6g: Preserve independent PI/member/secretary/reviewer/council/task access for Staff on other records without Scientific Management administrative actions. Backend capabilities identify the access basis. Deny participant + management officer/reviewer/evaluation or acceptance council/final decision, reviewer + final decision in the same round, and mutually exclusive council positions; check every relationship creation/change and protected action. Apply the same authorization/disclosure to list, detail, search, counts/facets, dashboards, reports/export, notifications, files and workflow/business history.
 - FR6a: The system can distinguish account-level system roles from record-scoped relationships or assignments, including owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer, so those relationships only grant permissions within the specific proposal, approved topic, council, review, ethics dossier, task, or related record context.
 - FR6b: Proposal creation, submission, and resubmission require the current owner-derived PI with active `RESEARCHER_INTERNAL_USER`; no proposal-submit delegation or delegated capability is supported.
@@ -117,7 +117,7 @@ mutation eligibility is unchanged; Deputy gains internal researcher eligibility.
 - FR26: Scientific management staff assigned as the current project management officer can review project progress reports, request follow-up where needed, and track unresolved issues.
 - FR27: Principal investigators can submit adjustment or extension requests for approved projects.
 - FR27a: Principal investigators can prepare and submit acceptance or final-review dossiers with required structured data, files, and readiness validation when the approved-project workflow requires a formal dossier before the authority decision.
-- FR28: Assigned project management staff can review and prepare adjustment, extension, acceptance, and final-review actions; leadership or approval authority makes the final decision when required by workflow.
+- FR28: Assigned project management staff can review and finally approve/reject Project Adjustment requests within the typed milestone/scope-plan/membership scope; the same Staff validates/prepares Project Extension requests; only scoped Scientific Management Head finally approves/rejects extensions. Leadership has no decision action for either Golden Flow 4 request type.
 - FR29: The system can identify delayed projects, upcoming deadlines, and projects waiting for administrative action.
 - FR30: The system can treat approved-project workflow states as controlled states and restrict actions based on current project state.
 - FR30a: Project members can view approved projects they participate in, including assigned responsibilities, relevant milestones, and permitted supporting files.
@@ -727,8 +727,8 @@ not a hidden state mutation.
 
 - Approval does not create a project automatically; staff explicitly confirms
   source, copied relationships, code, dates, milestones, and report calendar.
-- Project state badges cover tracking initialized, in progress, report due,
-  delayed, under adjustment, pending/under acceptance, paused, and completed.
+- Project state badges follow the canonical lifecycle; report due, delayed and
+  pending adjustment are derived or child-record flags, not project states.
 - Submitted reports and acceptance dossiers lock versions; adjustment and final
   decisions use separate operations and retain history.
 - Project member and external-researcher access, file access, task access,
@@ -1133,7 +1133,7 @@ behavior outside `docs/ux-ui-spec.md`.
 | S08 Reviewer assignment / reviewer evaluation | Assign reviewers and collect own evaluation. | Staff; assigned reviewer/council/ethics evaluator. | `/proposals/:id/assignments`, `/reviews/:assignmentId` | Candidate, conflict result, rubric, score, recommendation, whole-day effective dates/deadline. | Assignment/evaluation APIs. | No self-review; own assignment only; one submit/lock. | Loading, empty candidates, conflict-blocked, incomplete, submitted, error. | Date controls omit hours/minutes; conflict blocks confirmation; total is backend-calculated; other reviews remain hidden. |
 | S09 Result aggregation / leadership decision | Consolidate evidence and decide. | Staff; leadership authority. | `/proposals/:id/aggregation`, `/proposals/:id/decision` | Review counts, summary, package, history, conflict indicator. | Aggregation/decision package and decision APIs. | Staff cannot approve; conflicted authority cannot decide. | Loading, not-ready, blocked, confirm, error, immutable success. | Pending approval requires conditions; reject requires reason; decision is audited and read-only. |
 | S10 Project tracking overview | Operate approved project lifecycle. | Staff, leadership, PI, members, secretary. | `/projects`, `/projects/:id` | Source proposal, relationships, state, progress, risks, tabs. | Project detail/list and explicit create API. | Member scope; no automatic project creation; state-based actions. | Loading, empty, denied tab, delayed, read-only, success. | Project setup clearly separates copied data from source proposal and exposes next action. |
-| S11 Progress milestone / periodic report / adjustment-extension / acceptance-evaluation | Manage progress evidence and final review. | PI, staff, leadership, assigned evaluators. | Project subroutes. | Dates, progress, report period, evidence, request impact, dossier. | Milestone/report/adjustment/acceptance APIs. | Submitted versions lock; authority decisions separate. | Loading, due, overdue, invalid, blocked, success. | Overdue never silently changes project state; all decisions and evidence are traceable. |
+| S11 Progress milestone / periodic report / adjustment-extension / acceptance-evaluation | Manage progress evidence and request decisions. | PI, assigned project Staff, scoped Head, later acceptance actors. | Project subroutes. | Dates, progress, report period, evidence, typed adjustment impact, extension end date, dossier. | Milestone/report/adjustment/extension/acceptance APIs. | Submitted versions lock; Staff decides adjustments, Head decides extensions, Leadership has no GF4 request decision action. | Loading, due, overdue, invalid, blocked, success. | Overdue never silently changes project state; all decisions and evidence are traceable. |
 | S12 Task list / task detail / create-edit task | Create and update linked/standalone work. | Creators, managers, assignees, collaborators. | `/tasks`, `/tasks/:id`, `/tasks/new` | Linked record, owner, collaborators, priority, due, state, evidence. | Task APIs and linked-record authorization. | Task cannot widen linked-record access. | Loading, empty/no-match, validation, denied, overdue, success. | All task states use named transitions; completion/cancellation requires permitted action and audit. |
 | S13 File upload / file preview-download / file history | Upload, view/download, replace, and inspect history. | Authorized record viewers/managers. | `/records/:id/files` and detail tabs. | Name/type/size/uploader/time/version/status/effective date. | Files/related-documents APIs; private MinIO. | Reauthorize metadata/content; no direct object URL. | Selecting, validating, uploading/scanning, retry, denied, superseded, deleted. | Replace creates a version; download is audited where required; protected review files remain hidden. |
 | S14 Global search | Search core and supporting records. | All authenticated users in scope. | `/search` and local list filters. | Query, tabs, facets, state/unit/person/date, cursor. | Scoped search endpoint. | Auth before result/count/facet/suggestion. | Idle, typing, loading, no match, error, success. | Unauthorized records never affect count/facet/suggestion; result detail re-authorizes. |
@@ -1194,7 +1194,7 @@ state.
 | Approved | Final decision and project-creation-pending cue. | Staff explicitly creates project; proposal read-only. | Approval and project creation are separate events. |
 | Rejected | Final read-only package and permitted reason/history. | No edit/submit/approve unless explicit future policy. | Immutable decision; no hidden reopen button. |
 
-### Project tracking states
+### Project tracking states and derived/child-record flags
 
 | State | UI/backend task | Allowed/disabled action work | Audit/notification/edge cases |
 | --- | --- | --- | --- |
@@ -1202,7 +1202,8 @@ state.
 | In progress | Progress, milestones, reports, tasks, files. | Participants update assigned work; members cannot change authority/membership/final state. | Changes and evidence audited. |
 | Report due | Due banner and report CTA/queue. | PI submits; staff reviews/follows up. | Reminder/submission audit; does not imply acceptance. |
 | Delayed | Missed item, owner, risk, next action. | Reminder/escalate/update/request adjustment. | Derived overdue flag; never auto-pause/reject/close. |
-| Under adjustment | Request impact/assessment/decision. | PI submits; staff assesses; authority decides. | Direct date/budget/state mutation disabled; request retained. |
+| Pending adjustment (request flag) | Request impact/assessment/decision. | PI submits typed milestone/scope-plan/membership change; assigned Staff reviews and approves/rejects. Head and Leadership are read/monitor only. | Direct controlled-field edits disabled after activation; duration/end-date increase is not an adjustment. |
+| Pending extension (request flag) | Requested/current end date, validation package and decision. | PI submits later end date; assigned Staff validates/prepares; scoped Head approves/rejects. Leadership is read/monitor only. | Direct end-date edits disabled; no extension applies before Head decision. |
 | Pending acceptance | Dossier readiness and assignment progress. | PI submits; staff prepares; evaluator evaluates; aggregation required. | Version/assignment audit; missing evidence blocks. |
 | Under acceptance | Evaluation/aggregation/decision workspace. | Assigned evaluator/staff/authority actions by capability. | Conflict/disclosure checks; no completion before decision. |
 | Completed | Final outputs and closed timeline. | Read/report/export; normal edits disabled. | Completion decision immutable; formal reopen only if later policy exists. |
@@ -1318,6 +1319,48 @@ quyết định với trạng thái, phân quyền và che giấu thông tin đ�
 **FRs covered:** FR15, FR16, FR17, FR18, FR19, FR19a, FR20, FR21, FR22.
 
 ### Epic 6: Theo dõi và nghiệm thu đề tài đã phê duyệt
+
+Golden Flow 4 refinement: [Project Execution contract](../docs/contracts/project-execution.md).
+Implementation stories remain 6.x (the earlier product grouping calls this Epic 5).
+Stories 6.1–6.7 and execution/history portions of 6.10 form this vertical slice;
+6.8–6.9 acceptance/councils remain deferred. Assigned proposal Staff creates; Head separately assigns project Staff, who
+confirms setup. Leadership approval is the proposal gate before execution; after
+activation, assigned Staff owns progress-report review/acceptance and Project
+Adjustment approval, while scoped Head owns Project Extension approval. Leadership
+does not decide either project request type, and Head does not decide Project
+Adjustment.
+
+**Cross-story acceptance criteria:**
+
+- **Given** a confirmed execution project, **when** its active PI submits a report,
+  **then** the submitted revision and pinned evidence are immutable; **when** assigned
+  Staff returns it, **then** correction/resubmission creates a new revision.
+- **Given** a submitted Project Adjustment within the typed milestone/scope-plan/
+  governed-membership scope, **when** assigned project Staff reviews it, **then**
+  that Staff member alone approves or rejects it and approval applies the typed
+  change atomically; Head and Leadership decision actions are denied.
+- **Given** a submitted Project Extension with a requested end date later than the
+  current end date, **when** assigned Staff validates/prepares it, **then** a
+  scoped, unconflicted Head alone approves or rejects it and Leadership decision
+  actions are denied.
+- **Given** rejection, stale context, duplicate terminal decision, inactive actor,
+  prohibited conflict or missing authority, **when** mutation is attempted, **then**
+  no project deadline/plan changes and the backend returns the existing denial contract.
+- **Given** a missed deadline, **when** monitoring runs, **then** overdue is derived
+  and visible only within authorized scope, without changing project state.
+- **Given** a project participant or expired/revoked officer, **when** they attempt
+  administrative, adjustment, extension or final-decision actions, **then** unrelated
+  relationships do not supply those grants; generic status changes and approved-field
+  overwrites fail.
+- **Given** each material transition/evidence change, **when** it commits, **then**
+  append-only audit/history records actor/time/object/action/result/correlation and
+  relevant versions atomically; UI actions consume backend capabilities/denials.
+- **Given** seeded approved/prepared/executing projects, upcoming/overdue items,
+  draft/submitted reports and pending extension/adjustment, **when** the authorized
+  demo actors exercise the flow, **then** creation, activation, reporting, Staff
+  monitoring, Staff adjustment decisions and Head extension decisions can be
+  verified without relying on seed identities in policy.
+
 
 Chủ nhiệm, thành viên, chuyên viên và người có thẩm quyền có thể quản lý tiến
 độ, báo cáo, điều chỉnh, gia hạn, hồ sơ nghiệm thu và quyết định cuối của đề
@@ -2625,15 +2668,21 @@ So that dữ liệu và trách nhiệm được chuyển sang giai đoạn thự
 
 **Acceptance Criteria:**
 
-**Given** an approved proposal becomes a separate project
-**When** project management responsibility is established by an authorized actor
+**Given** Leadership has approved the exact immutable proposal submission/version
+**When** the current scoped proposal officer creates a separate project
 **Then** use a new `PROJECT_MANAGEMENT_OFFICER`, never shared or automatically copied proposal authority
-**And** the project may be unassigned; Staff project management access waits for an effective project assignment. The project-creation actor and officer-grant capability must be decided before implementation.
+**And** the project may be unassigned; Staff project management access waits for an effective project assignment. Head independently assigns the project officer, who confirms setup/activation. Creation grants no automatic project authority and execution cannot begin before activation.
 
 **Given** proposal có final decision được phê duyệt và chưa có project tương ứng
 **When** chuyên viên khởi tạo project
 **Then** hệ thống sao chép dữ liệu nguồn được quy định và lưu source proposal/version
 **And** tạo project state ban đầu trong một transaction.
+
+**Given** a preparing project has an independently assigned, active, scoped and
+conflict-free project officer
+**When** that assigned Staff member confirms setup
+**Then** the project changes to the execution state through `project.setup.confirm`
+**And** the activation, setup version and audit are committed atomically.
 
 **Given** proposal có owner-derived PI, `TOPIC_MEMBER` và `TOPIC_SECRETARY` đang hoạt động
 **When** project được tạo
@@ -2668,9 +2717,17 @@ So that kế hoạch thực hiện có người chịu trách nhiệm và hạn 
 **Then** backend validate timeline, assignment và organization rules
 **And** lưu project version, history và audit atomically.
 
-**Given** PI/chuyên viên thêm, đình chỉ hoặc kết thúc quan hệ project
-**When** lifecycle operation được thực hiện
-**Then** source project cập nhật status/effective interval bằng successor history
+**Given** project đã activated và actor muốn đổi governed membership hoặc important
+milestone/approved scope-plan
+**When** the actor attempts a direct project-field mutation
+**Then** backend denies the mutation and requires a typed Project Adjustment request
+**And** only the assigned project Staff's approval can apply that request.
+
+**Given** PI/chuyên viên thêm, đình chỉ hoặc kết thúc governed project membership
+**When** lifecycle operation được thực hiện after activation
+**Then** the direct mutation is denied and a typed Project Adjustment is required;
+  after assigned Staff approval, source project status/effective interval changes
+  by successor history
 **And** quyền của actor thay đổi tại request `asOf` tương ứng.
 
 **Given** topic team member mở detail
@@ -2701,7 +2758,7 @@ So that đơn vị quản lý có thể đánh giá tình hình thực hiện.
 **Then** shared files module tạo project/report association và version metadata
 **And** grant không mở quyền cho file type hoặc project khác.
 
-**Given** report đạt readiness và actor có `project.progress-report.submit`
+**Given** report đạt readiness và actor có `project.report.submit`
 **When** họ xác nhận nộp
 **Then** report chuyển state atomically, khóa version đã nộp và tạo history/audit
 **And** notification source event không chứa dữ liệu ngoài disclosure.
@@ -2752,6 +2809,12 @@ So that tôi có thể yêu cầu xử lý kịp thời.
 **Then** họ xem report version, evidence, milestone status và history được phép
 **And** có thể chấp nhận, yêu cầu follow-up hoặc ghi unresolved issue theo state machine.
 
+**Given** a submitted report is complete enough for administrative acceptance
+**When** the current assigned project Staff confirms review
+**Then** `project.report.accept` records Staff acceptance and returns the
+  report to the active execution record
+**And** Leadership has no report-approval action and project acceptance is not implied.
+
 **Given** milestone/report quá hạn, sắp đến hạn hoặc chờ hành động
 **When** project authorized query được gọi
 **Then** source project tính flags từ deadline/state hiện hành
@@ -2780,6 +2843,20 @@ So that thay đổi kế hoạch được xem xét chính thức.
 **Then** backend lưu draft có version
 **And** không thay đổi project plan hiện hành trước quyết định.
 
+**Given** the requested change is an important milestone, approved scope/plan or
+governed membership change
+**When** PI submits a Project Adjustment
+**Then** the request enters `submitted`; assigned Staff moves it to `under_staff_review`, carrying typed before/proposed
+  values, the source project version and pinned evidence
+**And** a duration or end-date increase is rejected as the wrong request type and
+  must be submitted through Project Extension.
+
+**Given** PI submits a Project Extension with a requested end date later than the
+current effective end date
+**When** the request passes readiness
+**Then** it enters `submitted`; assigned Staff validates it into `under_staff_validation` without changing the project end date
+**And** the request records the exact source project version and immutable evidence.
+
 **Given** request đạt readiness và actor có exact submit action
 **When** PI hợp lệ nộp
 **Then** request chuyển state atomically và ghi actor context
@@ -2795,30 +2872,54 @@ So that thay đổi kế hoạch được xem xét chính thức.
 **Then** backend áp dụng uniqueness/state rule và từ chối xung đột
 **And** không ghi đè request hiện hữu.
 
+**Given** an adjustment or extension has a stale project/request version, missing
+evidence, inactive actor or unresolved conflict
+**When** submission is attempted
+**Then** backend denies the mutation and applies no project-field change
+**And** the denial is audited without creating a partial request.
+
 ### Story 6.7: Quyết định điều chỉnh hoặc gia hạn [FR28]
 
-As a người có thẩm quyền,
-I want phê duyệt hoặc từ chối yêu cầu điều chỉnh/gia hạn,
-So that kế hoạch đề tài chỉ thay đổi qua quyết định hợp lệ.
+As a project-management decision actor,
+I want the correct scoped Staff or Head to approve or reject the request type,
+So that project changes use the documented separation of duties.
 
 **Acceptance Criteria:**
 
-**Given** request ở state chờ quyết định và actor có assignment/scope hợp lệ
-**When** actor mở hồ sơ
-**Then** họ xem current/proposed values, reason, files và history cần thiết
-**And** capability dùng context versions của cả project và request.
+**Given** a submitted Project Adjustment is in `under_staff_review`
+**When** the current assigned, scoped, unconflicted project Staff opens it
+**Then** they receive `project.adjustment.review` and the before/proposed values,
+  reason, files and history needed for the decision
+**And** `project.adjustment.approve` or `project.adjustment.reject` is the only
+  final decision path for that request.
 
-**Given** actor là PI, member, secretary hoặc có conflict trên project
+**Given** a submitted Project Extension is in `under_staff_validation`
+**When** the current assigned Staff validates and prepares a complete package
+**Then** the request moves to `ready_for_head_decision` with the source project and
+  request versions retained
+**And** Staff never has an extension final-decision action; only Head decides.
+
+**Given** actor là PI, member, secretary, Leadership, an unassigned Staff member,
+or has conflict on the project
 **When** họ cố quyết định
 **Then** conflict/non-delegable denial thắng mọi allow khác
 **And** action hiển thị bị khóa với lý do.
 
-**Given** actor hợp lệ approve
-**When** decision transaction thành công
-**Then** request và project plan/version được cập nhật atomically
-**And** history/audit ghi before/after, actor và decision reason.
+**Given** assigned Staff approves a Project Adjustment with current versions
+**When** the decision transaction succeeds
+**Then** request and the typed project plan/milestone/membership change are updated atomically
+**And** history/audit records before/after, actor and decision reason.
 
-**Given** actor reject hoặc context đã đổi
+**Given** scoped, unconflicted Head approves a Project Extension with current versions
+**When** the decision transaction succeeds
+**Then** request and effective project end date/version are updated atomically
+**And** history/audit records before/after, actor and decision reason.
+
+**Given** Leadership attempts to approve/reject an adjustment or extension
+**When** the request is in any processing or decision state
+**Then** backend returns `ACTION_NOT_GRANTED` and leaves the request and project unchanged.
+
+**Given** assigned Staff rejects an adjustment, Head rejects an extension, or context đã đổi
 **When** decision được gửi
 **Then** reject chỉ đổi request state và không thay project plan, hoặc mismatch từ chối toàn bộ
 **And** không tạo nhiều final decisions.

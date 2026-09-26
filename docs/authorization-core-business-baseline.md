@@ -48,9 +48,9 @@ qua quan hệ theo bản ghi.
 | System role | Phạm vi mặc định | Quyền/trách nhiệm chính | Giới hạn bắt buộc |
 | --- | --- | --- | --- |
 | `SYSTEM_ADMIN` | Toàn hệ thống cho dữ liệu nền tảng | Tài khoản, trạng thái tài khoản, system role, đơn vị/scope, danh mục nền tảng, cấu hình kỹ thuật, hỗ trợ truy vết vận hành | Không mặc nhiên xem/sửa dữ liệu nghiệp vụ, không phản biện, không phê duyệt, không mở lại hồ sơ |
-| `SCIENTIFIC_MANAGEMENT_HEAD` | Tất cả proposal/project trong phạm vi Quản lý khoa học được cấp rõ ràng | Trưởng phòng: xem hồ sơ, chuyên viên phụ trách, hồ sơ chưa phân công; lọc/nhóm theo chuyên viên, theo dõi khối lượng, trạng thái và hạn | Không phải `LEADERSHIP_APPROVAL_AUTHORITY`; quyền xem không tự cấp hành động quản trị hoặc quyết định cuối |
-| `SCIENTIFIC_MANAGEMENT_STAFF` | Chỉ proposal/project được phân công quản lý đang hiệu lực | Chuyên viên/trợ lý: kiểm tra, yêu cầu bổ sung, xác nhận đầy đủ và theo dõi đánh giá trên hồ sơ mình phụ trách; nghiệp vụ không gắn proposal/project theo scope riêng | Không tự có quyền toàn Học viện; quan hệ tham gia không cấp quyền hành chính Quản lý khoa học; không quyết định cuối |
-| `LEADERSHIP_APPROVAL_AUTHORITY` | Toàn bộ hồ sơ trong scope lãnh đạo được cấp rõ ràng | Giám sát trạng thái, tiến độ, kinh phí hiện có; chỉ xem gói đánh giá nhạy cảm đã trình và quyết định cuối khi đủ điều kiện | Không sửa nội dung hồ sơ, không bỏ qua phản biện/tổng hợp, không tự quyết hồ sơ mình là PI/thành viên/phản biện |
+| `SCIENTIFIC_MANAGEMENT_HEAD` | Tất cả proposal/project trong phạm vi Quản lý khoa học được cấp rõ ràng | Trưởng phòng: xem hồ sơ, chuyên viên phụ trách, hồ sơ chưa phân công; lọc/nhóm theo chuyên viên, theo dõi khối lượng, trạng thái và hạn; quyết định cuối Project Extension trong Golden Flow 4 | Không phải `LEADERSHIP_APPROVAL_AUTHORITY`; quyền xem không tự cấp hành động quản trị; không quyết định Project Adjustment |
+| `SCIENTIFIC_MANAGEMENT_STAFF` | Chỉ proposal/project được phân công quản lý đang hiệu lực | Chuyên viên/trợ lý: kiểm tra, yêu cầu bổ sung, xác nhận đầy đủ và theo dõi đánh giá trên hồ sơ mình phụ trách; quyết định cuối Project Adjustment trong Golden Flow 4; nghiệp vụ không gắn proposal/project theo scope riêng | Không tự có quyền toàn Học viện; quan hệ tham gia không cấp quyền hành chính Quản lý khoa học; không quyết định proposal, acceptance hoặc Project Extension |
+| `LEADERSHIP_APPROVAL_AUTHORITY` | Toàn bộ hồ sơ trong scope lãnh đạo được cấp rõ ràng | Phê duyệt/từ chối proposal trước khi project execution bắt đầu; xem/giám sát thông tin project theo disclosure | Không sửa nội dung hồ sơ, không bỏ qua phản biện/tổng hợp; không quyết định Project Adjustment hoặc Project Extension; không tự quyết hồ sơ mình là PI/thành viên/phản biện |
 | `RESEARCH_OVERSIGHT_AUTHORITY` | Deputy Director: institutional research oversight plus internal researcher capabilities through record relationships | Explicit institutional scopes; read-only oversight; no final decisions | No protected reviewer data from oversight; conflict/disclosure checks still apply |
 | `RESEARCHER_INTERNAL_USER` | Các bản ghi do chính user tạo hoặc có quan hệ hợp lệ | Tạo bản nháp đề xuất, sửa bản nháp, nộp đề xuất, phản hồi bổ sung, tham gia đề tài và nộp báo cáo theo quan hệ | Không xem bản ghi không liên quan, không tự phân công phản biện/thư ký, không quyết định cuối |
 | `EXTERNAL_RESEARCHER_USER` | Chỉ các bản ghi có quan hệ được cấp | Xem bản ghi liên quan, phản biện được giao hoặc đóng góp đề tài/task theo assignment | Không tạo/sửa/nộp đề xuất, không đổi PI/team/kinh phí/mục tiêu/trạng thái, không phân công hoặc quyết định cuối |
@@ -128,7 +128,8 @@ thêm officer relationship cho các domain khác trong thay đổi này.
   officer backfill preserves the former broad Staff grant. Unassigned records remain valid.
 - Head assigns reviewers after current-submission completeness confirmation, reads submitted reviews,
   drafts and finalizes synthesis, then explicitly submits the complete package. Staff monitors reviews. Head has
-  no final approval authority and cannot edit research content through management authority.
+  no proposal final approval authority and cannot directly edit research content through
+  management authority. Head extension decisions follow Golden Flow 4 §4.4.
 - `nmphuong` maps to Head; `hdtien1` and `hdtien2` remain Staff; `tvtien` is Director;
   `vndinh` is Deputy Director (`RESEARCH_OVERSIGHT_AUTHORITY`). Local demo institutional
   scope is granted explicitly for each internal unit, never inherited from an organization tree.
@@ -157,7 +158,8 @@ same current scope, relationship, conflict and disclosure checks before aggregat
 
 Director and Deputy Director require institutional research dashboard views of available
 proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
-funding and management workload. Only Director gets eligible decision queues. Head gets
+funding and management workload. Only Director gets eligible proposal decision queues. Project adjustment queues
+belong to assigned Staff and extension decision queues to Head. Head gets
 responsible-officer/unassigned filters and workload; Staff sees assigned management records.
 Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,
 used and remaining project funding and utilization are unavailable until their source exists;
@@ -375,12 +377,26 @@ nhận xét nội bộ trước khi chính sách công bố cho phép.
 
 ## 4.4. Đề tài đã được duyệt
 
+Golden Flow 4 is specified in the [Project Execution contract](contracts/project-execution.md).
+It preserves project-scoped `TOPIC_PI` (the requested `PROJECT_PI`) and assigned-Staff
+monitoring. Leadership approval is the gate before execution; after activation,
+reports are reviewed/accepted by assigned Staff, Project Adjustments are finally
+approved/rejected by assigned Staff, and Project Extensions are finally
+approved/rejected by the scoped Head. Leadership does not decide either project
+request type, and Head does not decide Project Adjustments. Submitted revisions and
+evidence are immutable; overdue is derived, never a project workflow state.
+Assigned proposal Staff creates; Head separately assigns project Staff, who confirms
+setup. Acceptance/council implementation belongs to the next flow.
+
 | Hành động | Quyền |
 | --- | --- |
-| Tạo đề tài từ đề xuất | Quản lý khoa học chủ động tạo và xác nhận; không tự động sinh record |
+| Tạo đề tài từ đề xuất | Staff phụ trách proposal hiện hành tạo từ proposal đã được Leadership phê duyệt; không tự động sinh record |
+| Phân công Staff đề tài / kích hoạt | Head phân công `PROJECT_MANAGEMENT_OFFICER`; Staff được phân công xác nhận setup và kích hoạt execution |
 | Sao chép PI/thành viên | Sao chép thành quan hệ mới của đề tài; thay đổi sau đó không sửa ngược đề xuất |
 | Quản lý mốc, báo cáo, evidence, task | Quản lý khoa học và participant/assignee đúng scope |
-| Yêu cầu điều chỉnh/gia hạn | PI tạo/gửi; Quản lý thẩm định; Lãnh đạo xác nhận khi thuộc thẩm quyền |
+| Báo cáo tiến độ | `TOPIC_PI`/`PROJECT_PI` nộp; assigned Staff review, accept hoặc request supplementation |
+| Project Adjustment | PI tạo/gửi; assigned Staff review và approve/reject. Scope: milestone, approved scope/plan, governed membership; không gồm tăng end date |
+| Project Extension | PI tạo/gửi; assigned Staff administrative validation/preparation; Head approve/reject. Leadership không quyết định |
 | Nộp kết quả cuối | PI hoặc delegation hợp lệ; sau nộp khóa phiên bản |
 | Nghiệm thu | Quản lý phân công hội đồng/phản biện; Quản lý tổng hợp; Lãnh đạo xác nhận khi yêu cầu |
 | Mở lại | Chỉ Quản lý khoa học; lý do + audit |

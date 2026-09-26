@@ -157,31 +157,36 @@ Quy tắc cố định trong flow:
   không sửa nội dung và không tự quyết bản ghi có xung đột.
 - Phê duyệt không tự động sinh project; Quản lý khoa học phải tạo và xác nhận.
 
-## 4. Luồng đề tài đã được duyệt
+## 4. Golden Flow 4 — project execution
+
+The [execution contract](contracts/project-execution.md) is normative. `PROJECT_PI`
+means the existing project-scoped `TOPIC_PI`, not another system role.
 
 ```mermaid
 flowchart TD
-  approved["Đề xuất đã phê duyệt"] --> prepare["Quản lý tạo đề tài<br/>copy PI/team thành quan hệ mới"]
-  prepare --> active["Chuẩn bị triển khai → Đang thực hiện"]
-  active --> work["Mốc / task / evidence / báo cáo<br/>theo participant hoặc assignee scope"]
-  work --> report["PI hoặc người được phép<br/>nộp báo cáo / kết quả"]
-  report --> staff_review["Quản lý thẩm định và theo dõi"]
-  staff_review --> delayed{"Quá hạn hoặc<br/>cần điều chỉnh?"}
-  delayed -- "Quá hạn" --> reminder["Đánh dấu + nhắc việc / escalation"] --> work
-  delayed -- "Điều chỉnh / gia hạn" --> request["PI gửi yêu cầu"] --> review_request["Quản lý thẩm định"]
-  review_request --> authority{"Cần lãnh đạo<br/>xác nhận?"}
-  authority -- "Có" --> leader_decision["Lãnh đạo phê duyệt / từ chối"] --> work
-  authority -- "Không" --> work
-  delayed -- "Không" --> final["Nộp kết quả cuối<br/>khóa phiên bản"]
-  active -. "Tạm dừng / tiếp tục theo action hợp lệ" .-> paused["Tạm dừng"]
-  paused -. "Tiếp tục" .-> active
-  final --> acceptance["Quản lý phân công hội đồng / phản biện"]
-  acceptance --> acceptance_review["Đánh giá nghiệm thu được giao"]
-  acceptance_review --> acceptance_summary["Quản lý tổng hợp"]
-  acceptance_summary --> accept_decision{"Lãnh đạo xác nhận<br/>khi thuộc thẩm quyền"}
-  accept_decision -- "Đạt" --> accepted["Đã nghiệm thu"] --> archive["Đóng / lưu trữ"]
-  accept_decision -- "Không đạt" --> not_achieved["Không đạt"] --> archive
+  approved["Leadership-approved proposal and immutable version"] --> create["Assigned proposal Staff creates preparing project"]
+  create --> assign["Head independently assigns project officer"]
+  assign --> activate["Assigned project Staff confirms setup/activation"]
+  activate --> execute["PI executes: milestones and reporting calendar"]
+  execute --> report["PI submits immutable report/evidence"]
+  report --> review["Assigned Staff reviews"]
+  review --> accepted["Staff accepts/records"] --> execute
+  review --> supplement["Staff requests supplement: new PI revision"] --> report
+  execute --> adjustment["PI submits controlled adjustment"]
+  adjustment --> staffDecision["Assigned Staff reviews then approves/rejects"]
+  staffDecision --> apply["Only approval atomically applies the change"] --> execute
+  execute --> extension["PI submits extension"]
+  extension --> prepare["Assigned Staff validates/prepares"]
+  prepare --> headDecision["Head appraises and approves/rejects"]
+  headDecision --> extend["Only Head approval atomically extends deadline"] --> execute
+  execute -. "Deadline missed" .-> overdue["Derived overdue flag: no workflow transition"]
 ```
+
+Leadership may monitor permitted project information but has no adjustment/extension
+decision. Head is not a normal-adjustment approver; Staff is not an extension approver.
+No direct controlled-field edits after activation. End-date increases require extension,
+never an adjustment workaround. All arrows require current backend capability, scope,
+account, relationship, assignment, conflict and version checks. Acceptance is next flow.
 
 ## 5. Luồng ngoại lệ và kiểm soát nghiệp vụ
 

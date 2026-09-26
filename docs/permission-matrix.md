@@ -38,8 +38,9 @@ document must be updated in the same change set.
   scope, including current responsible Staff, unassigned records, workload, status
   and deadlines; filter/group by responsible Staff.
 - Head assigns/reassigns/revokes officers, assigns/reassigns/revokes reviewer and
-  committee positions, drafts/finalizes synthesis, and submits eligible completed packages.
-  Head never receives final decisions.
+  committee positions, drafts/finalizes synthesis, submits eligible completed
+  proposal packages, and finally approves/rejects Project Extension requests in
+  Golden Flow 4. Head does not approve Project Adjustment requests.
 
 ### Scientific Management Staff / Chuyen vien quan ly khoa hoc
 
@@ -47,23 +48,29 @@ document must be updated in the same change set.
   monitoring, approved-project follow-up, reminders, and operational reporting.
 - Staff can monitor named reviewer/council assignments, deadlines, pending work and
   backend-derived blockers on assigned proposals. Reviewer assignment, synthesis,
-  finalization and package submission belong to the scoped Head.
+  finalization and proposal package submission belong to the scoped Head. Assigned
+  project Staff reviews/accepts progress reports and finally approves/rejects
+  Project Adjustment requests.
 - Default management scope: only proposals/projects with an effective
   `PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER` assignment to this
   Staff account, plus explicitly granted organization scope. Never institution-wide
   from role alone. Intake/profile operations retain their separate scope rules.
 - Staff can access other records through valid PI/member/secretary/reviewer/council/
   task relationships, with only that relationship's actions and disclosure.
-- Neither Staff nor Head has final approval/rejection authority from this role.
+- Neither Staff nor Head has proposal final approval authority from this management
+  role. Golden Flow 4 grants assigned Staff final Project Adjustment decisions and
+  scoped Head final Project Extension decisions only.
 
 ### Leadership / Approval Authority / Lanh dao / Nguoi phe duyet
 
-- Main responsibility: review decision-ready proposals, projects, reports, and
-  dashboard signals; approve, reject, or decide workflow actions under authority.
+- Main responsibility: review decision-ready proposals before project execution and
+  monitor authorized project information. Project Adjustment and Project Extension
+  decisions are outside this role in Golden Flow 4.
 - Default data scope: approval authority scope and permitted organization/unit
   scope.
-- Important limits: approval actions must follow workflow state rules and cannot
-  bypass required review, consolidation, or history.
+- Important limits: proposal approval actions must follow workflow state rules and
+  cannot bypass required review, consolidation, or history; Leadership cannot
+  approve/reject Project Adjustment or Project Extension requests.
 
 ### Research Oversight Authority / Pho Giam doc phu trach NCKH
 
@@ -217,8 +224,10 @@ never grants an action by itself.
 | Rejected | Decision history remains visible by scope; normal workflow actions stop unless policy allows appeal or reopen. |
 | Active project | Project tracking, milestone, evidence, report, and task actions follow project participation and staff scope. |
 | Delayed project | Follow-up, escalation, dashboard, and report actions remain scope-controlled. |
-| Waiting report | PI or permitted project member may submit required progress evidence. |
-| Waiting decision | Staff, leadership, or authority may review/decide according to action type. |
+| Waiting report submission (derived flag) | Active project PI submits the formal report; members may contribute evidence only through an explicit relationship capability. |
+| Report under review | Assigned project Staff reviews, accepts, or requests supplementation; Leadership only monitors permitted summaries. |
+| Pending adjustment | Active `TOPIC_PI` submits a typed milestone/scope-plan/membership request; assigned project Staff reviews and approves/rejects. Head and Leadership decision actions are denied. |
+| Pending extension | Active `TOPIC_PI` submits a later end-date request; assigned project Staff validates/prepares, then scoped Head approves/rejects. Leadership decision actions are denied. |
 | Completed/accepted | Records are mostly read-only except history, reporting, and explicitly allowed archival actions. |
 | Task open/in progress/completed/cancelled | Task action availability depends on current task state, assignee/collaborator scope, and linked-record permission. |
 
@@ -241,11 +250,13 @@ never grants an action by itself.
 | Approval/rejection decision | None | Read only; no final decision action | Approve/Reject with conflict check | Read result | Read result if participating | None | Approval authority scope, conflict policy scope | Ready for approval | Yes |
 | Approved project creation | None | Create/Manage | Read | Read own | Read if participating | None | Organization/unit scope | Approved | Yes |
 | Milestone/checkpoint management | None | Manage | Read/Review | Read/Update own allowed items | Read assigned or team-secretary-scoped items | None | Organization/unit scope, approved-topic participation scope | Active project | Yes for changes |
-| Progress report submission | None | Read/Review | Read | Submit own | Submit contribution if permitted by active team role | None | Own proposal/topic scope, approved-topic participation scope | Waiting report, active project | Yes |
+| Progress report submission | None | Read/Review | Read | Submit own | Evidence contribution only; no formal submission | None | Own proposal/topic scope, approved-topic participation scope | Waiting report, active project | Yes |
 | Project evidence upload | Read scoped | Read/Review | Read scoped | Create own | Create assigned team evidence | None | Approved-topic participation scope | Active project, waiting report | Yes |
-| Progress report review/follow-up | None | Review/Update | Read/Decide if authorized | Read/respond | Read/respond assigned | None | Organization/unit scope | Waiting decision, delayed project | Yes |
-| Adjustment/extension request | None | Read/Review | Read/Decide if authorized | Create/Submit own | None | None | Own proposal/project scope | Active project, delayed project | Yes |
-| Adjustment/extension decision | None | Review/Prepare | Approve/Reject with conflict check | Read result | Read result if participating | None | Approval authority scope, conflict policy scope | Waiting decision | Yes |
+| Progress report review/follow-up | None | Review/Accept/Request supplement | Read/Monitor | Read/respond | Read/respond assigned | None | Assigned project-officer scope | Submitted report, delayed project | Yes |
+| Project Adjustment request | None | Read/Review | Read/Monitor | Create/Submit own | None | None | Own approved-topic scope | Active project | Yes |
+| Project Adjustment decision | None | Approve/Reject with conflict check | None; Head may monitor only | Read result | Read result if participating | None | Assigned project-officer scope | `under_staff_review` | Yes |
+| Project Extension request | None | Read/Validate/Prepare | Read/Monitor | Create/Submit own | None | None | Own approved-topic scope | Active project | Yes |
+| Project Extension decision | None | Read result | Approve/Reject with conflict check | Read result | Read result if participating | None | Head Scientific Management scope, conflict policy scope | `ready_for_head_decision` | Yes |
 | Acceptance/final review | None | Review/Prepare | Approve/Reject with conflict check | Read/Submit required context | Read assigned | Review if assigned | Approval authority scope, reviewer assignment scope, conflict policy scope | Waiting decision, completed/accepted | Yes |
 | Task creation and assignment | Read scoped | Create/Assign | Create/Assign in authority scope | Create in own topic or team-scoped scope | None unless explicitly assigned | None | Task assignee/collaborator scope, linked record scope, conflict policy scope | Task open/in progress/completed/cancelled | Yes |
 | Task status/progress update | Read scoped | Update scoped | Review scoped | Update own/assigned | Update assigned | None | Task assignee/collaborator scope | Task open/in progress/completed/cancelled | Yes |
@@ -276,8 +287,8 @@ inherit the Staff column; Deputy never inherits Director decision cells. Apply t
 | Responsible officer / unassigned state | See current responsible Staff or unassigned; filter/group by officer | Own management responsibility only; no unassigned queue or other Staff workload through role alone |
 | Workload, status, deadlines, counts/facets, dashboard, reports/export | Authorized-scope aggregates, same record filters for drill-down/export | Management aggregates only for own assignments; participation/review queues retain their own access basis |
 | Assign/reassign/revoke primary officer | Head capability plus scope, current context and no conflict | Deny; no self-assignment or assignment of other officers |
-| Completeness, reviewer monitoring, synthesis, project administration | Assign/reassign/revoke reviewers and council members; draft/finalize/submit eligible synthesis packages; no final decision | Completeness and named review-progress monitoring only, with exact effective officer assignment, scope, state and no conflict |
-| Final approve/reject | Deny from Head role; reserved to leadership | Deny from Staff role; reserved to leadership |
+| Completeness, reviewer monitoring, synthesis, project administration | Assign/reassign/revoke reviewers and council members; draft/finalize/submit eligible proposal synthesis packages; manage project officers; final Project Extension decision with exact scope/conflict checks | Completeness and named review-progress monitoring; progress-report review/accept/supplement; final Project Adjustment decision with exact project-officer assignment, scope, state and no conflict |
+| Final approve/reject | Proposal decision: deny from Head role; Project Extension: approve/reject in `ready_for_head_decision`; Project Adjustment: deny | Proposal decision: deny from Staff role; Project Adjustment: approve/reject in `under_staff_review`; Project Extension: deny |
 | Notifications, files and workflow/business history | Re-authorize source record and disclosure for every surface | Same; officer revocation ends management access immediately, independent participation remains |
 
 A participant cannot simultaneously be the management officer, reviewer, evaluation/
@@ -384,18 +395,43 @@ Researcher profile pages never host these proposal workflow sections.
 
 ### 8.5 Approved Project Tracking
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Create approved project from approved proposal | None | Create | Read | Read own | Read if participating | None | Organization/unit scope | Approved | Yes | FR23, Story 4.1 |
-| View approved project detail | Read scoped | Read/Manage scoped | Read authority scoped | Read own | Read participating | Read if explicitly assigned | Organization/unit scope, project participation scope | Active project or later | No | FR30a, Story 4.1 |
-| Create/update milestones | None | Manage | Read scoped | Read own | Read assigned | None | Organization/unit scope | Active project | Yes | FR24, Story 4.2 |
-| Manage project members | None | Manage with conflict check | Read scoped | Read own | Read own participation | None | Organization/unit scope, conflict policy scope | Active project | Yes | FR24, FR30a, FR67a, Story 4.2 |
-| Submit progress report | None | Read/Review | Read scoped | Submit own | Submit contribution if permitted | None | Own proposal/project scope, project participation scope | Waiting report, active project | Yes | FR25, Story 4.3 |
-| Upload project evidence | Read scoped | Read/Review | Read scoped | Create own | Create assigned | None | Project participation scope | Waiting report, active project | Yes | FR25, FR30b, FR36, Story 4.3 |
-| Review progress report | None | Review/Update | Read/Decide if authorized | Read own | Read participating | None | Organization/unit scope | Waiting decision, delayed project | Yes when follow-up changes state | FR26, Story 4.4 |
-| Request adjustment or extension | None | Read/Review | Read scoped | Create/Submit own | None unless delegated | None | Own proposal/project scope | Active project, delayed project | Yes | FR27, Story 4.5 |
-| Decide adjustment, extension, acceptance, or final review | None | Review/Prepare | Approve/Reject with conflict check | Read result | Read result if participating | Review if assigned | Approval authority scope, conflict policy scope | Waiting decision, completed/accepted | Yes | FR28, FR67a, Story 4.5 |
-| Identify delayed projects and deadlines | Read scoped | Read/Review scoped | Read authority scoped | Read own | Read participating | None | Role and data scope | Delayed project, waiting report | No | FR29 |
+Golden Flow 4 is specified in the [Project Execution contract](contracts/project-execution.md).
+It preserves project-scoped `TOPIC_PI` (the requested `PROJECT_PI`) and assigned-Staff
+monitoring. Leadership approves the proposal before execution only. After activation,
+assigned Staff reviews/accepts reports and finally approves/rejects Project Adjustment;
+assigned Staff validates/prepares Project Extension and scoped Head finally
+approves/rejects it. Leadership has no decision action for either request type.
+Submitted revisions and evidence are immutable; overdue is derived, never a project
+workflow state. Assigned proposal Staff creates; Head separately assigns project Staff,
+who confirms setup. Acceptance/council implementation belongs to the next flow.
+
+Every grant below also requires active account, current context, exact scope,
+workflow and conflict checks. Staff means the current project officer; proposal
+officer access is not project authority. PI means active `TOPIC_PI`. Admin has no
+implicit business grant; Deputy has scoped operational oversight only. Members
+receive read/contribution capabilities only where their relationship permits.
+
+| Action | PI | Assigned Staff | Head | Leadership approval authority | State / invariant |
+| --- | --- | --- | --- | --- | --- |
+| Create/confirm project | None | Current scoped proposal officer creates; independently assigned project officer confirms | Assign project officer separately | Proposal approval precedes this flow; no project action | Approved immutable source; no automatic officer copy |
+| Assign/reassign/revoke project officer | None | None | Scoped, conflict-free | None | One current primary officer; history preserved |
+| View project/milestones/history | Own permitted data | Assigned scoped data | Scoped, including unassigned | Scoped disclosure | Same filters for list/detail/count/files |
+| Monitor deadlines | Own | Assigned scope | Scope | Operational scope | Overdue/report-due are derived flags |
+| Plan milestones/members during setup | Read | `project.setup.configure` for initial milestones/checkpoints/responsibilities | Read | Read | Confirm setup before execution; assigned project officer confirms |
+| Change controlled plan/membership after activation | Submit typed Project Adjustment | Review and approve/reject | Read/monitor only; no decision | Read/monitor only; no decision | No direct edits; scope is milestones, approved scope/plan, governed membership |
+| Create/edit report draft and submit/resubmit | Own | Read submitted only | Permitted read | Permitted read | Submitted revisions/evidence locked; return permits new revision |
+| Upload evidence | Own exact file grant | No PI-content overwrite | No PI-content overwrite | Monitoring metadata only | `project.evidence.contribute` for active member/secretary with responsibility for an open milestone; own unsubmitted file only; immutable submitted links |
+| Begin report review / record acceptance / request supplement | Read/respond | Administrative review; accept or request supplement | Read/monitor | Read/monitor only | Accepted report does not accept project or change plan |
+| Draft/submit Project Adjustment | Own | None | None | None | Typed milestone/scope-plan/membership values; no direct plan change |
+| Review/approve/reject Project Adjustment | Read result | Review; approve/reject | Read/monitor; denied decision | Read/monitor; denied decision | `under_staff_review`; Staff approval applies only the typed change atomically |
+| Draft/submit Project Extension | Own | None | None | None | Requested end date must be later; no end-date change on submission |
+| Validate/prepare Project Extension | None | Assigned scope | Read/monitor | Read/monitor only | `under_staff_validation` → `ready_for_head_decision`; package/evidence retained |
+| Approve/reject Project Extension | Read result | Read result | Scoped, conflict-free Head | Denied | `ready_for_head_decision`; Head decision atomically applies end date |
+
+Acceptance/final-review permissions remain in their governing next-flow stories;
+Golden Flow 4 introduces no acceptance/council endpoint. All mutations above are
+audited. FR23–30b map to implementation Epic 6 stories 6.1–6.7 and 6.10; member
+contributions remain distinct from formal PI submission under Story 6.4.
 
 ### 8.6 Tasks
 
@@ -615,7 +651,8 @@ same current scope, relationship, conflict and disclosure checks before aggregat
 
 Director and Deputy Director require institutional research dashboard views of available
 proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
-funding and management workload. Only Director gets eligible decision queues. Head gets
+funding and management workload. Only Director gets eligible proposal decision queues. Project adjustment queues
+belong to assigned Staff and extension decision queues to Head. Head gets
 responsible-officer/unassigned filters and workload; Staff sees assigned management records.
 Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,
 used and remaining project funding and utilization are unavailable until their source exists;

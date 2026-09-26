@@ -65,3 +65,12 @@
 - source_spec: `spec-proposal-review-approval-golden-flow.md`
   summary: Add browser or mock-fetch coverage for the decision request body.
   evidence: The typed client sends note, packageRevision and contextVersion; a dedicated browser/mock-fetch test is deferred until the local browser path is available.
+
+## Deferred from: code review (2026-09-26)
+
+- **No creation fallback when no active proposal officer exists.** Contract + spec require the current scoped proposal officer to create the project; if that assignment is revoked/expired before creation, nobody can create (Head can only assign project officers). Needs a decision on a fallback creator (e.g., Head or a re-assigned proposal officer).
+- **Open request permanently blocks all new requests.** `REQUEST_ALREADY_OPEN` (approved-projects.service.ts:501) rejects any new request while one is non-terminal, and no withdraw/cancel/expire path exists in contract or code. A stale draft or abandoned supplement_requested request freezes the project. Needs a withdraw or force-close action defined.
+- **No authority path for routine milestone/checkpoint maintenance post-activation.** FR24/Story 6.2 require ongoing milestone maintenance, but the contract scopes `project.setup.configure` to preparing and only "important milestone" changes route through adjustment — "important" is never defined, and code restricts adjustment milestone changes to `isImportant` milestones (service.ts:661). Ordinary milestones have no permitted edit path.
+- **No request path for shortening duration/end date.** Adjustments forbid end-date keys (EXTENSION_REQUIRED, service.ts:471-472) and extensions require a *later* end date (service.ts:494). Early completion or reduced timeline is impossible through any documented workflow. Needs a policy decision.
+- **Extension undecidable when all scoped Heads are conflicted/inactive.** Only a scoped, unconflicted Head can decide (service.ts:623-624); no escalation or delegated-decider path exists, and a stuck `ready_for_head_decision` request blocks all future requests. Needs an escalation policy.
+- **No abandon/cancel exit for a preparing project.** The state machine (architecture.md Approved Project State Machine) has no transition out of `preparing` except confirm; a wrongly created project persists forever. Needs a terminal transition or named retire action and owner.
