@@ -313,7 +313,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
         ) : null}
 
         {(canManageReviewRound || assignments.length > 0) ? assignments.length ? (
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Danh sách phân công đánh giá">
             <table className="data-table">
               <thead>
                 <tr>
@@ -386,7 +386,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
           <div className="form-section-inline">
             <div className="section-mini-heading">Hạn xử lý vòng đánh giá</div>
             {progress?.reviewDeadlines?.length ? (
-              <div className="table-wrap">
+              <div className="table-wrap" tabIndex={0} role="region" aria-label="Bảng tổng hợp đánh giá">
                 <table className="data-table">
                   <thead><tr><th>Vai trò</th><th>Trạng thái</th><th>Hạn đánh giá</th></tr></thead>
                   <tbody>

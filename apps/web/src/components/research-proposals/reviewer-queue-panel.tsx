@@ -64,7 +64,7 @@ export function ReviewerQueuePanel() {
         />
       ) : (
         <>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Danh sách phân công đánh giá">
             <table className="data-table">
               <thead>
                 <tr>

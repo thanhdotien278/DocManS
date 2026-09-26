@@ -84,7 +84,7 @@ export function ApprovalQueuePanel() {
 function ProposalRows({ proposals }: { proposals: ResearchProposal[] }) {
   return (
     <>
-      <div className="table-wrap">
+      <div className="table-wrap" tabIndex={0} role="region" aria-label="Danh sách hồ sơ chờ quyết định">
         <table className="data-table">
           <thead>
             <tr>

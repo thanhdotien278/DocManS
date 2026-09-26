@@ -1,5 +1,6 @@
 "use client";
 
+import { Dialog } from "@/components/ui/dialog";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, Edit3, Lock, Plus, Save, Search, Unlock } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -38,6 +39,7 @@ const emptyForm = {
 };
 
 export function ProposalIntakePeriodsPanel() {
+  const [showCreate, setShowCreate] = useState(false);
   const [options, setOptions] = useState<IntakeOptions>({ canCreate: false, organizationUnits: [] });
   const [state, setState] = useState<LoadState>("loading");
   const [periods, setPeriods] = useState<ProposalIntakePeriod[]>([]);
@@ -153,8 +155,8 @@ export function ProposalIntakePeriodsPanel() {
   }
 
   return (
-    <div className="grid two-column">
-      <SectionCard title="Danh sách đợt tiếp nhận" subtitle="Tìm, lọc và điều phối trạng thái nhận hồ sơ">
+    <div className="grid">
+      <SectionCard action={<button className="button primary" type="button" disabled={!options.canCreate} onClick={() => { setMessage(""); resetForm(); setShowCreate(true); }}>Tạo đợt tiếp nhận</button>} title="Danh sách đợt tiếp nhận" subtitle="Tìm, lọc và điều phối trạng thái nhận hồ sơ">
         <div className="filter-bar">
           <label className="filter-field">
             <span>Từ khóa</span>
@@ -182,7 +184,7 @@ export function ProposalIntakePeriodsPanel() {
         ) : null}
         {state === "ready" && filteredPeriods.length > 0 ? (
           <>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Danh sách đợt tiếp nhận">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -269,7 +271,8 @@ export function ProposalIntakePeriodsPanel() {
         ) : null}
       </SectionCard>
 
-      <SectionCard
+      {showCreate || editingId ? <Dialog className="form-dialog" label={editingId ? "Cập nhật đợt tiếp nhận" : "Tạo đợt tiếp nhận"} onClose={() => { setShowCreate(false); resetForm(); }}>
+      <SectionCard action={<button className="button" type="button" onClick={() => { setShowCreate(false); resetForm(); }}>Đóng</button>}
         title={editingId ? "Cập nhật đợt tiếp nhận" : "Tạo đợt tiếp nhận"}
         subtitle="Thiết lập thời gian, phạm vi áp dụng và danh sách tệp bắt buộc"
       >
@@ -342,6 +345,7 @@ export function ProposalIntakePeriodsPanel() {
           </fieldset>
         </form>
       </SectionCard>
+      </Dialog> : null}
     </div>
   );
 }
