@@ -21,7 +21,8 @@ rank, academic title and position; that profile does not grant management or dec
 
 ## Scope and management assignment
 
-Home unit is not organization scope. Head, Director and Deputy Director have explicit grants
+Home unit is not organization scope. `SCIENTIFIC_MANAGEMENT_HEAD`,
+`LEADERSHIP_APPROVAL_AUTHORITY` and `RESEARCH_OVERSIGHT_AUTHORITY` have explicit grants
 for all nine seeded internal units (`org-hvqy`, `org-bgq`, `org-khti`, `org-khqs`,
 `org-bqlkhqs`, `org-k30`, `org-k81`, `org-k82`, `org-k84`). No organization-tree inheritance
 is assumed. Staff has its existing seven-unit scope, but scope alone no longer grants
@@ -35,7 +36,7 @@ independently; it never supplies administrative actions. Conflicting participant
 cannot be assigned management responsibility. Do not create automatic officers to preserve
 older broad Staff access.
 
-A Director who is already a participant/reviewer retains the corresponding conflict and
+A `LEADERSHIP_APPROVAL_AUTHORITY` user who is already a participant/reviewer retains the corresponding conflict and
 cannot make the final decision. `vndinh` can read institutional records but receives no final
 approval/rejection actions. As PI of an eligible own proposal, the same account can create,
 edit and submit through ordinary researcher rules. Sensitive reviewer data remains protected.

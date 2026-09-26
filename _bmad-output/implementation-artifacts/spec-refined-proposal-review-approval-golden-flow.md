@@ -21,7 +21,7 @@ reviews do not block draft synthesis. Existing completion claims lack real UI ac
 
 **Approach:** Preserve the current proposal lifecycle and complete one cross-role journey:
 PI resubmits → assigned Staff confirms completeness → Head assigns → assignees review →
-Staff monitors → Head synthesizes, finalizes and submits → Director approves/rejects.
+Staff monitors → Head synthesizes, finalizes and submits → `LEADERSHIP_APPROVAL_AUTHORITY` approves/rejects.
 
 ## Boundaries & Constraints
 
@@ -33,7 +33,8 @@ mutation, audit and history. Backend derives readiness and repeats all gates at 
 Use normal UI/backend for both terminal outcomes and preserve unrelated `skills-lock.json`.
 
 **Never:** Add an Epic, workflow engine, parallel audit, duplicate proposal states or broad
-Staff authority. Do not overwrite submitted reviews/finalized evidence, infer Deputy decision
+Staff authority. Do not overwrite submitted reviews/finalized evidence, infer
+`RESEARCH_OVERSIGHT_AUTHORITY` decision
 power, invent review reopening or add an unsupported reminder-delivery system. No DB status
 edits, authorization bypass, reset/reseed of existing data or unrelated refactoring.
 
@@ -41,9 +42,9 @@ edits, authorization bypass, reset/reseed of existing data or unrelated refactor
 
 | Scenario | Input/state | Expected behavior | Failure |
 | --- | --- | --- | --- |
-| Both terminal paths | Resubmitted proposal, Staff check, Head roster, complete reviews, finalized synthesis, submitted package | Authorized Director approves or rejects; reviews/history/audit survive | Any missing gate denies atomically |
+| Both terminal paths | Resubmitted proposal, Staff check, Head roster, complete reviews, finalized synthesis, submitted package | Authorized `LEADERSHIP_APPROVAL_AUTHORITY` approves or rejects; reviews/history/audit survive | Any missing gate denies atomically |
 | Readiness | New resubmission without its own completeness evidence | No reviewer assignment; waiting for Staff | Backend workflow denial |
-| Actor separation | Staff assignment/synthesis; Deputy decision; participant/reviewer conflict | Denied even through direct API | Safe authorization reason |
+| Actor separation | Staff monitoring; Head assignment/synthesis; Oversight decision; participant/reviewer conflict | Denied even through direct API | Safe authorization reason |
 | Synthesis lifecycle | Incomplete reviews; draft submission; stale finalized sources | Denied; no silent package regeneration | Backend readiness/context reason |
 | Confidentiality | PI/team/unassigned user or oversight role probes internal fields | Only authorized projection; no raw review leaks | Deny or omit protected fields |
 
@@ -84,7 +85,7 @@ Exact paths and ordered changes are in the linked implementation plan.
   then it is denied while named progress/deadline access remains available.
 - Given a finalized package changes or is stale, when it is submitted or decided,
   then the backend rejects it; it never silently replaces the approved evidence.
-- Given an active eligible Director with a current finalized routed package, when each
+- Given an active eligible `LEADERSHIP_APPROVAL_AUTHORITY` with a current finalized routed package, when each
   approve/reject scenario runs through UI, then exactly the expected terminal state appears;
   all premature/conflicted/unauthorized decisions are rejected.
 - Given protected data is requested through an implemented sibling surface, when the

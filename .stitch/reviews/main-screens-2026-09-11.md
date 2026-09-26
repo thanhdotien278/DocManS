@@ -8,7 +8,7 @@ Eight requested screens are review drafts, not implementation-ready production c
 
 ## Architecture inspected
 
-- `docs/user-flows.md` read in full: five account roles; one active role; separate record relationships; submission, supplement, assigned review, leadership decision, explicit project creation and retained history.
+- `docs/user-flows.md` read in full: seven account roles; one active role; separate record relationships; submission, supplement, assigned review, leadership decision, explicit project creation and retained history.
 - `docs/diagrams/current-architecture.md`: Next.js → NestJS enforcement → PostgreSQL/Prisma and private MinIO through the API; no deployed Redis.
 - `apps/api/src/app.module.ts`: Auth, Admin, Files, Proposal Intake, Research Proposals, Proposal Evaluations, Delegations and Researcher Profiles modules.
 - `apps/web/src/components/layout/app-shell.tsx`: login/reset outside shell; session loading; Sidebar/MobileNav; institution, quick search, notifications and account/system-role/unit menu.
@@ -59,5 +59,4 @@ Global search /search for internal researcher. Labelled keyword query, explicit 
 
 ### 08 Users Roles — Tài khoản và vai trò
 
-System admin /users with Tài khoản and Vai trò & phạm vi sections visible. Account table username,name,status,EXACTLY one active system role,unit/scope,linked researcher profile. New/update/lock/reset account affordances; no hard delete. Show selected internal account settings inspector with one-role radio/select and scope plus save/cancel and explicit impact/confirmation warning. Canonical five roles SYSTEM_ADMIN,SCIENTIFIC_MANAGEMENT_STAFF,LEADERSHIP_APPROVAL_AUTHORITY,RESEARCHER_INTERNAL_USER,EXTERNAL_RESEARCHER_USER in read-only reference list. PI/member/secretary/reviewer are record relationships, NOT extra global roles; admin does not gain business access. No create custom role or wildcard permission matrix. Account locking revokes access immediately retaining profile/history. Sidebar platform administration only, no approval/business dossiers. Source user-flows1/5.3/7 and UX3.7.
-
+System admin /users with Tài khoản and Vai trò & phạm vi sections visible. Account table username,name,status,EXACTLY one active system role,unit/scope,linked researcher profile. New/update/lock/reset account affordances; no hard delete. Show selected internal account settings inspector with one-role radio/select and scope plus save/cancel and explicit impact/confirmation warning. Canonical seven roles `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, `EXTERNAL_RESEARCHER_USER` in the read-only reference list. PI/member/secretary/reviewer are record relationships, NOT extra global roles; admin does not gain business access. No create custom role or wildcard permission matrix. Account locking revokes access immediately retaining profile/history. Sidebar platform administration only, no approval/business dossiers. Source user-flows1/5.3/7 and UX3.7.

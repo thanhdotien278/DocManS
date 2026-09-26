@@ -231,7 +231,30 @@ never grants an action by itself.
 | Completed/accepted | Records are mostly read-only except history, reporting, and explicitly allowed archival actions. |
 | Task open/in progress/completed/cancelled | Task action availability depends on current task state, assignee/collaborator scope, and linked-record permission. |
 
-## 7. High-Level Role Matrix
+## 7. System-role comparison matrix
+
+The seven account-level roles below are the complete system-role comparison. `None`
+means denied/not applicable; a record relationship or assignment never creates a
+new system role. The action tables that follow intentionally use compact
+record-persona columns (PI, team, reviewer/council) and inherit this overlay.
+
+| Capability | `SYSTEM_ADMIN` | `SCIENTIFIC_MANAGEMENT_HEAD` | `SCIENTIFIC_MANAGEMENT_STAFF` | `LEADERSHIP_APPROVAL_AUTHORITY` | `RESEARCH_OVERSIGHT_AUTHORITY` | `RESEARCHER_INTERNAL_USER` | `EXTERNAL_RESEARCHER_USER` |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Account, role, scope and catalog administration | Manage | None | None | None | None | None | None |
+| Scientific-management portfolio visibility | Admin data only | Authorized scope, including unassigned/workload | Current officer assignments only | Authorized approval scope | Authorized oversight scope, read-only | Relationship/assignment only | Relationship/assignment only |
+| Proposal creation, submission and resubmission | None | None | None | None | Only when also the current internal PI relationship | Only as current owner-derived PI | None |
+| Reviewer/council assignment and synthesis | None | Assign/revoke; synthesize/finalize/route | Completeness and progress monitoring | Read routed package | Read permitted operational summaries | None | None |
+| Proposal final approval/rejection | None | None | None | Approve/reject eligible routed package | None | None | None |
+| Project adjustment / extension decisions | None | Extension only after Staff validation | Adjustment only; extension validation/preparation | None | None | Submit own request | Submit only where an explicit relationship permits |
+| Record-scoped review, council, task or evidence work | Only where explicitly granted | Only where explicitly granted | Only where explicitly granted | Only where explicitly granted | Only where explicitly granted | Own/related/assigned records | Related/assigned records only |
+
+## 8. Contextual permission matrix (record-persona shorthand)
+
+The module tables retain compact legacy columns for readable workflow scenarios;
+they are not a second role registry. Apply the complete seven-role comparison in
+section 7 first, then resolve PI/team/reviewer/council columns from the active
+record relationship or assignment. Missing or denied cells are explicit `None`,
+not implied permission.
 
 | Capability Group | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -244,9 +267,9 @@ never grants an action by itself.
 | Proposal completeness review | None | Review | Read | Read own | Read if participating | None | Organization/unit scope | Submitted, resubmitted | Yes when decision affects workflow |
 | Supplement request | None | Submit request | Read | Read/respond | Read if participating | None | Organization/unit scope | Submitted, needs supplement | Yes |
 | Proposal resubmission | None | Read | Read | Submit own | None | None | Own proposal/topic scope | Needs supplement | Yes |
-| Reviewer/committee assignment | None | Assign with conflict check | Read | None | None | Read assigned | Proposal capability, organization/unit scope, reviewer assignment scope, conflict policy scope | Submitted, resubmitted, under review | Yes |
+| Reviewer/committee assignment | None | Assign with conflict check | Read/Monitor | Read operational summary | None | Read assigned | Proposal capability, organization/unit scope, reviewer assignment scope, conflict policy scope | Submitted, resubmitted, under review | Yes |
 | Reviewer scoring and comments | None | Read/Review | Read | None unless policy allows result view | None | Review/Submit assigned | Reviewer assignment scope | Under review | Yes |
-| Evaluation consolidation / Trình phê duyệt | None | Review/Update and send completed dossier to leadership | Read | None | None | None | Proposal capability, organization/unit scope, conflict policy scope | Under review, ready for approval | Yes |
+| Evaluation consolidation / Trình phê duyệt | None | Review/Update and send completed dossier to leadership | Read/Monitor | Read operational summary | None | None | Proposal capability, organization/unit scope, conflict policy scope | Under review, ready for approval | Yes |
 | Approval/rejection decision | None | Read only; no final decision action | Approve/Reject with conflict check | Read result | Read result if participating | None | Approval authority scope, conflict policy scope | Ready for approval | Yes |
 | Approved project creation | None | Create/Manage | Read | Read own | Read if participating | None | Organization/unit scope | Approved | Yes |
 | Milestone/checkpoint management | None | Manage | Read/Review | Read/Update own allowed items | Read assigned or team-secretary-scoped items | None | Organization/unit scope, approved-topic participation scope | Active project | Yes for changes |
@@ -279,7 +302,8 @@ column; it cannot satisfy the Staff administrative grant. A revoked officer with
 another valid relationship retains only that relationship's allowed access.
 Independent intake, profile and other-domain actions retain their existing exact
 capability/scope checks and grant no proposal/project visibility. Head does not
-inherit the Staff column; Deputy never inherits Director decision cells. Apply this Head/Staff matrix:
+inherit the Staff column; `RESEARCH_OVERSIGHT_AUTHORITY` never inherits
+`LEADERSHIP_APPROVAL_AUTHORITY` decision cells. Apply this Head/Staff matrix:
 
 | Capability | `SCIENTIFIC_MANAGEMENT_HEAD` | `SCIENTIFIC_MANAGEMENT_STAFF` |
 | --- | --- | --- |
@@ -408,7 +432,7 @@ who confirms setup. Acceptance/council implementation belongs to the next flow.
 Every grant below also requires active account, current context, exact scope,
 workflow and conflict checks. Staff means the current project officer; proposal
 officer access is not project authority. PI means active `TOPIC_PI`. Admin has no
-implicit business grant; Deputy has scoped operational oversight only. Members
+implicit business grant; `RESEARCH_OVERSIGHT_AUTHORITY` has scoped operational oversight only. Members
 receive read/contribution capabilities only where their relationship permits.
 
 | Action | PI | Assigned Staff | Head | Leadership approval authority | State / invariant |
@@ -605,7 +629,8 @@ Unlinked accounts store null profile provenance; existing provenance remains int
 source of truth for this feature, including API/data fields, authorization,
 credential delivery, migration compatibility and history retention.
 
-- Scoped SYSTEM_ADMIN and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
+- Scoped `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD` and
+  `SCIENTIFIC_MANAGEMENT_STAFF` manage internal/external
   profiles independently of Accounts, including academic/contact information,
   position, military rank, expertise, publications and self-reported project
   history (title, role, Academy/institutional/Ministry/other level, dates, status,
@@ -627,7 +652,7 @@ credential delivery, migration compatibility and history retention.
 
 ### Researcher profile action matrix
 
-| Action | SYSTEM_ADMIN / SCIENTIFIC_MANAGEMENT_STAFF | Linked active account | Other account |
+| Action | SYSTEM_ADMIN / SCIENTIFIC_MANAGEMENT_HEAD / SCIENTIFIC_MANAGEMENT_STAFF | Linked active account | Other account |
 | --- | --- | --- | --- |
 | Directory/create/read/update/status | Exact granted organization scope | No directory; own profile through My Profile | Deny |
 | Publication/participation edits | Exact granted organization scope | Own profile only | Deny |
@@ -649,9 +674,9 @@ contract relationship, not a persisted orphan assignment. Dashboard showcase dat
 an institutional report or proof of authorization. Future source domains must apply the
 same current scope, relationship, conflict and disclosure checks before aggregates or drill-down.
 
-Director and Deputy Director require institutional research dashboard views of available
+`LEADERSHIP_APPROVAL_AUTHORITY` and `RESEARCH_OVERSIGHT_AUTHORITY` require institutional research dashboard views of available
 proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
-funding and management workload. Only Director gets eligible proposal decision queues. Project adjustment queues
+funding and management workload. Only `LEADERSHIP_APPROVAL_AUTHORITY` gets eligible proposal decision queues. Project adjustment queues
 belong to assigned Staff and extension decision queues to Head. Head gets
 responsible-officer/unassigned filters and workload; Staff sees assigned management records.
 Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,

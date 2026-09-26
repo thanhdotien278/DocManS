@@ -5,13 +5,13 @@ and submission workflow.
 
 ```mermaid
 flowchart TD
-  intake(["Quản lý: mở đợt tiếp nhận"])
+  intake(["SCIENTIFIC_MANAGEMENT_STAFF: mở đợt tiếp nhận"])
   create(["PI: tạo bản nháp"])
   edit(["PI: sửa bản nháp và tệp"])
   draft["Proposal: Nháp"]
   submit(["PI: nộp chính thức"])
   submitted["Proposal: Đã nộp"]
-  review(["Quản lý khoa học: kiểm tra đầy đủ và thủ tục"])
+  review(["SCIENTIFIC_MANAGEMENT_STAFF: kiểm tra đầy đủ và thủ tục"])
   complete{"Hồ sơ đủ điều kiện?"}
   missing["Yêu cầu bổ sung; nêu lý do và hạn"]
   correction(["PI: bổ sung hoặc chỉnh sửa"])

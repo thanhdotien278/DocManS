@@ -20,7 +20,7 @@ context:
 
 **Problem:** The repository has separate assignment, review, synthesis and decision surfaces, but the complete Resubmitted-to-Approved/Rejected journey is not yet proven or consistently enforced. Remaining gaps include package/version binding, transaction-time readiness and authority rechecks, server-filtered leadership work, and disclosure parity across sibling reads.
 
-**Approach:** Complete one authoritative cross-role flow using the existing proposal workflow, account-based assignment lifecycle, V1 capability/context contract, review rubric, audit history and shared proposal detail. Harden only the boundaries needed for staff assignment/monitoring/synthesis, reviewer package/submission, leadership queue/package and final approve/reject.
+**Approach:** Complete one authoritative cross-role flow using the existing proposal workflow, account-based assignment lifecycle, V1 capability/context contract, review rubric, audit history and shared proposal detail. Harden only the boundaries needed for Head assignment/synthesis, Staff monitoring, reviewer package/submission, leadership queue/package and final approve/reject.
 
 ## Boundaries & Constraints
 
@@ -32,8 +32,8 @@ context:
 
 | Scenario | Input / State | Expected Output / Behavior | Error Handling |
 |----------|--------------|---------------------------|----------------|
-| APPROVED_HAPPY_PATH | Complete resubmission; two reviewers and three committee members submit valid reviews; staff summary is ready | Scoped leadership queue shows the proposal; authorized Director approves; status, decision, audit and history become terminal | Any stale context or concurrent state change rejects the mutation without partial writes |
-| REJECTED_HAPPY_PATH | Same flow, leadership supplies a reason | Director rejects; status is `rejected`; reason and audit/history remain available to authorized readers | Missing rejection reason is a validation error |
+| APPROVED_HAPPY_PATH | Complete resubmission; two reviewers and three committee members submit valid reviews; Head synthesis is ready | Scoped leadership queue shows the proposal; authorized `LEADERSHIP_APPROVAL_AUTHORITY` approves; status, decision, audit and history become terminal | Any stale context or concurrent state change rejects the mutation without partial writes |
+| REJECTED_HAPPY_PATH | Same flow, leadership supplies a reason | `LEADERSHIP_APPROVAL_AUTHORITY` rejects; status is `rejected`; reason and audit/history remain available to authorized readers | Missing rejection reason is a validation error |
 | CONFLICT_OR_READINESS_DENIAL | PI/member/secretary/conflicting reviewer; missing assignment/review/summary; reviewer or non-authority attempts decision | Assignment, review, synthesis or decision is denied; protected data is not disclosed | Stable denial reason; failure audit where current audit rules require it |
 | LOCKED_REVIEW | Existing submitted review or revoked reviewer with persisted review | Review remains readable only through permitted projections and cannot be silently overwritten; historical conflict remains for consolidation/decision | Explicit workflow reopen is unavailable in this slice |
 
@@ -43,7 +43,7 @@ context:
 
 - `apps/api/src/proposal-evaluations/proposal-review-assignments.service.ts` -- account candidates, assignment/revocation lifecycle, queue, package and roster source; reuse its transaction and cardinality checks.
 - `apps/api/src/proposal-evaluations/proposal-reviews.service.ts` -- assignment-scoped rubric, draft save, submit lock, review audit and staff projection.
-- `apps/api/src/proposal-evaluations/proposal-evaluation-summary.service.ts` -- progress, cardinality/readiness, staff synthesis and route transitions; add authoritative version/context evidence here.
+- `apps/api/src/proposal-evaluations/proposal-evaluation-summary.service.ts` -- progress, cardinality/readiness, Head synthesis and route transitions; add authoritative version/context evidence here.
 - `apps/api/src/proposal-evaluations/proposal-decisions.service.ts` -- scoped decision package and guarded approve/reject; align package disclosure and transaction rechecks here.
 - `apps/api/src/proposal-evaluations/proposal-evaluation-support.ts` and `apps/api/src/permissions/proposal-capability-v1.ts` -- shared scope, conflict, workflow and capability rules; do not duplicate policy in controllers/UI.
 - `apps/api/src/research-proposals/research-proposals.service.ts` and `apps/api/src/modules/files/files.service.ts` -- proposal/list/detail/history/file disclosure seam; preserve reviewer redaction and close sibling-route leaks.
@@ -60,15 +60,15 @@ context:
 - [x] Run API/web builds, focused authorization/lifecycle checks, disposable-DB workflow checks and browser checks where the local stack permits.
 
 **Acceptance Criteria:**
-- Given a valid checked resubmission, when staff assigns eligible accounts, reviewers submit, staff synthesizes/routes and an authorized Director decides, then the proposal reaches exactly one terminal state with preserved reviews, decision, audit and workflow history.
+- Given a valid checked resubmission, when Head assigns eligible accounts, reviewers submit, Head synthesizes/routes and an authorized `LEADERSHIP_APPROVAL_AUTHORITY` decides, then the proposal reaches exactly one terminal state with preserved reviews, decision, audit and workflow history.
 - Given any missing cardinality, review, summary, scope, current officer, context, or conflict condition, when a protected mutation is attempted, then the backend rejects it atomically and the UI shows the backend denial reason.
-- Given a submitted review, revoked reviewer, PI/team member, Deputy/Head/Staff, or unrelated user, when protected review/package/list/file/history data is requested, then only the disclosure permitted by the current baseline is returned.
+- Given a submitted review, revoked reviewer, PI/team member, `RESEARCH_OVERSIGHT_AUTHORITY`/Head/Staff, or unrelated user, when protected review/package/list/file/history data is requested, then only the disclosure permitted by the current baseline is returned.
 - Given concurrent assignment, synthesis or decision attempts, when the proposal state/context changes first, then the stale writer cannot create a second assignment, readiness bypass or competing terminal decision.
 
 ## Implementation Notes
 
 - Evaluation assignments and submitted reviews now bind to the immutable current submission event. Review and synthesis evidence carries versioned snapshots; the database migration protects submitted review rows from direct edits.
-- Staff synthesis increments a package revision and stores the package evidence used for routing. Leadership decisions require that revision and re-check package/readiness/cardinality inside the locked mutation before creating the terminal decision, audit entry and history event.
+- Head synthesis increments a package revision and stores the package evidence used for routing. Leadership decisions require that revision and re-check package/readiness/cardinality inside the locked mutation before creating the terminal decision, audit entry and history event.
 - Leadership queue discovery is scoped by explicit organization IDs and only returns routed/terminal proposals. The leadership package keeps aggregate progress and synthesis while omitting reviewer identity, raw scores and confidential comments.
 - Added the `/reviews` staff/head route, package-aware reviewer workspace loading, and a typed server-filtered `/research-proposals/decision-queue` client path.
 - Focused regression coverage is in `../../tests/proposal-review-golden-flow.test.mjs`. Full-stack migration deployment was attempted against the configured local PostgreSQL but Prisma returned a schema-engine error; no reset or reseed was performed. Existing repository-wide failures remain outside this slice (stale role expectations and transaction mocks).

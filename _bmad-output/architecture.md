@@ -1705,9 +1705,9 @@ contract relationship, not a persisted orphan assignment. Dashboard showcase dat
 an institutional report or proof of authorization. Future source domains must apply the
 same current scope, relationship, conflict and disclosure checks before aggregates or drill-down.
 
-Director and Deputy Director require institutional research dashboard views of available
+`LEADERSHIP_APPROVAL_AUTHORITY` and `RESEARCH_OVERSIGHT_AUTHORITY` require institutional research dashboard views of available
 proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
-funding and management workload. Only Director gets eligible proposal decision queues. Project adjustment queues
+funding and management workload. Only `LEADERSHIP_APPROVAL_AUTHORITY` gets eligible proposal decision queues. Project adjustment queues
 belong to assigned Staff and extension decision queues to Head. Head gets
 responsible-officer/unassigned filters and workload; Staff sees assigned management records.
 Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,

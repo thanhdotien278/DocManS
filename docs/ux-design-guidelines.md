@@ -309,7 +309,7 @@ Chống xung đột lợi ích:
 
 - Trên proposal mà người dùng có context workflow nhưng bị conflict hoặc state chặn, action liên quan phải hiển thị disabled kèm lý do bằng ngôn ngữ dễ hiểu.
 - Nếu backend không cấp action vì người dùng không liên quan, UI bỏ toàn bộ section; không dựng thẻ workflow toàn cục trên trang hồ sơ nhà khoa học.
-- `Phiếu đánh giá của tôi` chỉ hiện với assignment đang hiệu lực trên đúng proposal/vòng đánh giá; `Phân công đánh giá` chỉ hiện với capability staff; `Trình phê duyệt` là action staff, còn `Phê duyệt`/`Từ chối` chỉ dành cho approval authority.
+- `Phiếu đánh giá của tôi` chỉ hiện với assignment đang hiệu lực trên đúng proposal/vòng đánh giá; `Phân công đánh giá` và `Trình phê duyệt` chỉ hiện với capability của `SCIENTIFIC_MANAGEMENT_HEAD`; `SCIENTIFIC_MANAGEMENT_STAFF` kiểm tra đầy đủ và theo dõi, còn `Phê duyệt`/`Từ chối` chỉ dành cho `LEADERSHIP_APPROVAL_AUTHORITY`.
 - Danh sách việc chờ xử lý phải loại sẵn các hồ sơ mà người dùng bị loại trừ, và nói rõ đã loại trừ.
 
 Cần tránh:
@@ -350,10 +350,10 @@ Khi thiết kế thêm màn hình hoặc tính năng mới:
 
 ## Scientific Management and Leadership capability presentation
 
-Head: officer assignment/reassignment/revocation, unassigned and staff workload filters, staff
-summary and eligible package submission. Staff: assigned-record management plus independent
-participation views. Director: institutional oversight and eligible final decisions. Deputy:
-internal researcher work plus read-only institutional oversight. Render backend actions and
+`SCIENTIFIC_MANAGEMENT_HEAD`: officer assignment/reassignment/revocation, unassigned and staff workload filters, staff
+summary and eligible package submission. `SCIENTIFIC_MANAGEMENT_STAFF`: assigned-record management plus independent
+participation views. `LEADERSHIP_APPROVAL_AUTHORITY`: institutional oversight and eligible final decisions.
+`RESEARCH_OVERSIGHT_AUTHORITY`: internal researcher work plus read-only institutional oversight. Render backend actions and
 access reasons; never derive a decision button from general oversight or record visibility.
 Confidential reviewer fields are omitted unless exact disclosure policy allows them. Dashboard
 showcases must be labelled demo; unavailable project/funding sources must not display invented

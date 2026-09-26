@@ -10,6 +10,11 @@ context: []
 
 <frozen-after-approval reason="User authorized documentation-first implementation">
 
+**Historical implementation record:** This completed slice predates the current
+Head/Staff authority split. Its staff-assignment wording describes the earlier
+implementation evidence only; current normative authority is defined by the
+canonical baseline, permission matrix and refined review-flow specification.
+
 ## Intent
 
 Complete the existing staff reviewer/council assignment feature with minimal

@@ -13,9 +13,10 @@ flowchart LR
     head["SCIENTIFIC_MANAGEMENT_HEAD"]
     staff["SCIENTIFIC_MANAGEMENT_STAFF"]
     leader["LEADERSHIP_APPROVAL_AUTHORITY"]
+    oversight["RESEARCH_OVERSIGHT_AUTHORITY"]
     internal["RESEARCHER_INTERNAL_USER"]
     external["EXTERNAL_RESEARCHER_USER"]
-    reviewer["Reviewer or council member"]
+    reviewer["Record assignment: reviewer or council member"]
   end
 
   intake(["Mở đợt tiếp nhận"])
@@ -60,6 +61,7 @@ flowchart LR
   internal -. "PI sở hữu bản nháp" .-> draft
   reviewer -. "Assignment đúng record" .-> review
   leader -. "Quyết định trong thẩm quyền" .-> decision
+  oversight -. "Giám sát chỉ đọc trong scope" .-> submitted
   external -. "Chỉ phần đóng góp được phân công" .-> draft
 ```
 

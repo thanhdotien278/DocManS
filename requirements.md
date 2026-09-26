@@ -100,7 +100,7 @@ mọi hồ sơ.
 | `SCIENTIFIC_MANAGEMENT_HEAD` | Xem tất cả proposal/project trong scope Quản lý khoa học được cấp; theo dõi chuyên viên phụ trách, chưa phân công, khối lượng, trạng thái và hạn | Không đồng nghĩa lãnh đạo phê duyệt; quyền xem không tự cấp action quản trị |
 | `SCIENTIFIC_MANAGEMENT_STAFF` | Vận hành proposal/project được phân công quản lý; đợt và hồ sơ nhà khoa học theo capability/scope riêng | Không có visibility toàn Học viện; không dùng participation để cấp quyền quản lý; không quyết định cuối |
 | `LEADERSHIP_APPROVAL_AUTHORITY` | Xem hồ sơ được trình và phê duyệt/từ chối theo thẩm quyền | Không sửa nội dung, bỏ qua đánh giá hoặc quyết định hồ sơ mình tham gia |
-| `RESEARCH_OVERSIGHT_AUTHORITY` | Deputy Director: institutional research oversight plus internal researcher capabilities through record relationships | Explicit institutional scopes; read-only oversight; no final decisions |
+| `RESEARCH_OVERSIGHT_AUTHORITY` | Institutional research oversight plus internal researcher capabilities through record relationships | Explicit institutional scopes; read-only oversight; no final decisions |
 | `RESEARCHER_INTERNAL_USER` | Khi là PI: tạo/sửa/nộp đề xuất và phản hồi bổ sung; ngoài ra tham gia đề tài hoặc review theo quan hệ | Không xem hồ sơ không liên quan hoặc quyết định cuối |
 | `EXTERNAL_RESEARCHER_USER` | Xem hồ sơ liên quan và thực hiện review hoặc đóng góp đề tài/task khi có assignment rõ ràng | Không tạo/sửa/nộp đề xuất, đổi PI/team/kinh phí/mục tiêu/trạng thái hoặc quyết định |
 
@@ -129,8 +129,9 @@ visibility/action. Head có bộ lọc/nhóm theo officer và chưa phân công,
 trạng thái/hạn; count, drill-down và export dùng cùng tập hồ sơ được phép.
 
 Head phân công/chuyển/thu hồi officer, đọc tổng hợp của Staff và trình gói hoàn tất.
-Director có giám sát và quyết định cuối khi đủ điều kiện, không có xung đột; Deputy có
-năng lực nghiên cứu nội bộ theo quan hệ và giám sát chỉ đọc, không có quyết định cuối.
+`LEADERSHIP_APPROVAL_AUTHORITY` có giám sát và quyết định cuối khi đủ điều kiện,
+không có xung đột; `RESEARCH_OVERSIGHT_AUTHORITY` có năng lực nghiên cứu nội bộ
+theo quan hệ và giám sát chỉ đọc, không có quyết định cuối.
 Phạm vi triển khai hiện tại và funding metadata tuân theo baseline §2.1; backend dự án,
 council establishment, dashboard/reporting chưa tồn tại không được mô tả là đã triển khai.
 
