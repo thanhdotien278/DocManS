@@ -43,15 +43,15 @@ status engine. Story 5.6 remains independent and unchanged.
    Require exactly two reviewers and at least three distinct committee members under the
    existing policy; all required current-version reviews must be submitted. No new proposal
    statuses: readiness is completeness evidence; synthesis lifecycle belongs to its summary.
-4. 5.7–5.8: decision package only after explicit submission; Director alone decides.
-   Deputy oversight, Head and Staff remain without final decisions.
+4. 5.7–5.8: decision package only after explicit submission; `LEADERSHIP_APPROVAL_AUTHORITY`
+   alone decides. `RESEARCH_OVERSIGHT_AUTHORITY`, Head and Staff remain without final decisions.
 5. Use two proposals for UI approve/reject journeys and record identifiers, actor steps,
    state transitions, audit/history evidence and exact checks run in the implementation plan.
 
 Required denials: assignment before readiness; PI/member/secretary reviewer; incompatible
 or duplicate assignment; unassigned access; wrong proposal/version review; silent submitted
-review edit; Staff assignment/synthesis; premature Head synthesis; premature leadership
-package/decision; Deputy decision; same-context reviewer decision; participant access to
+review edit; Staff monitoring; premature Head assignment/synthesis; premature leadership
+package/decision; Oversight decision; same-context reviewer decision; participant access to
 protected identities/scores/comments/synthesis through APIs, files, history, list/counts and
 any implemented notification/export surface. Missing surfaces remain identified backlog.
 

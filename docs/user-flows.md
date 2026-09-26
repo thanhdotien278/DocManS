@@ -42,7 +42,8 @@ flowchart LR
   account --> internal["RESEARCHER_INTERNAL_USER<br/>Bản ghi của mình / quan hệ hợp lệ"]
   account --> external["EXTERNAL_RESEARCHER_USER<br/>Chỉ bản ghi được cấp"]
 
-  record["Một proposal / approved topic / review / task"] --> pi["PROPOSAL_PI / TOPIC_PI / TOPIC_MEMBER"]
+  record["Một proposal / approved topic / review / task"] --> pi["PROPOSAL_PI / TOPIC_PI (owner-derived)"]
+  record --> member["TOPIC_MEMBER"]
   record --> secretary["TOPIC_SECRETARY"]
   record --> officer["PROPOSAL_MANAGEMENT_OFFICER / PROJECT_MANAGEMENT_OFFICER"]
   record --> reviewer["Reviewer / council member"]
@@ -109,7 +110,7 @@ flowchart LR
     create_project["Chủ động tạo đề tài<br/>từ đề xuất đã duyệt"]
   end
 
-  subgraph head["Trưởng phòng có scope, không xung đột"]
+  subgraph head["SCIENTIFIC_MANAGEMENT_HEAD có scope, không xung đột"]
     assign["Phân công phản biện / hội đồng<br/>+ conflict check"]
     consolidate["Đủ phiếu → Soạn tổng hợp → Chốt tổng hợp"]
     submit_for_approval["Trình lãnh đạo phê duyệt"]
@@ -128,7 +129,7 @@ flowchart LR
     score["Chấm / nhận xét / khuyến nghị"]
   end
 
-  subgraph leader_lane["Lãnh đạo / Approval authority"]
+  subgraph leader_lane["LEADERSHIP_APPROVAL_AUTHORITY"]
     decide{"Phê duyệt hoặc<br/>không phê duyệt?"}
   end
 
@@ -152,7 +153,7 @@ Quy tắc cố định trong flow:
 - `Phiếu đánh giá của tôi` chỉ xuất hiện trong proposal có assignment đang hiệu
   lực của chính người xem; assignment ở proposal khác, role researcher/council
   hoặc system role rộng không mở rộng context.
-- `Phân công đánh giá`, soạn/chốt tổng hợp và `Trình phê duyệt` chỉ dành cho Head có scope, capability, state và không xung đột. Staff có officer assignment kiểm tra đầy đủ và theo dõi tiến độ; không phân công hoặc tổng hợp.
+- `Phân công đánh giá`, soạn/chốt tổng hợp và `Trình phê duyệt` chỉ dành cho `SCIENTIFIC_MANAGEMENT_HEAD` có scope, capability, state và không xung đột. `SCIENTIFIC_MANAGEMENT_STAFF` có officer assignment kiểm tra đầy đủ và theo dõi tiến độ; không phân công hoặc tổng hợp.
 - Lãnh đạo chỉ quyết định ở trạng thái `Chờ quyết định`/`ready_for_approval`;
   không sửa nội dung và không tự quyết bản ghi có xung đột.
 - Phê duyệt không tự động sinh project; Quản lý khoa học phải tạo và xác nhận.
@@ -333,7 +334,7 @@ trạng thái. Không dùng cập nhật trạng thái trực tiếp để bypas
 
 ### Proposal reviewer / council assignment refinement
 
-Staff opens an eligible, completeness-checked proposal → searches active user
+Head opens an eligible, completeness-checked proposal → searches active user
 accounts → selects an eligible account and reviewer/committee-member duty →
 sets optional effective range/deadline → confirms → backend rechecks current
 eligibility and context → records assignment and audit in one transaction.
@@ -387,11 +388,12 @@ activation. Delivery failure branch: inspect pending/unknown status, confirm ema
 and issue a new activation token. Unlink branch: enter reason, end current link,
 retain history, remove My Profile access immediately.
 
-### Director and Deputy Director oversight
+### Leadership and research oversight
 
-Both open scoped institutional records and operational counts/status/deadlines. Director
-receives final decision actions only for eligible routed packages without participation/review
-conflicts. Deputy receives no final decision action; PI/member/reviewer work is evaluated
+Both open scoped institutional records and operational counts/status/deadlines.
+`LEADERSHIP_APPROVAL_AUTHORITY` receives final decision actions only for eligible routed
+packages without participation/review conflicts. `RESEARCH_OVERSIGHT_AUTHORITY` receives
+no final decision action; PI/member/reviewer work is evaluated
 independently. Head assigns Staff and reviewers, reads submitted reviews, drafts/finalizes synthesis and submits the completed package.
 Protected reviewer information is omitted from oversight responses. Project/dashboard/
 notification/report routes without operational backends remain design requirements.

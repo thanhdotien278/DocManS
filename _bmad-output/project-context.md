@@ -130,15 +130,19 @@ The phase 1 domain should be organized around these modules:
 
 Module boundaries should be explicit. Avoid generic “system”, “common business”, or catch-all service layers that hide domain ownership.
 
-Primary business roles to preserve across planning and implementation:
+Account-level system roles to preserve across planning and implementation are exactly:
 
-- system administrators
-- scientific management staff
-- leadership or approvers
-- principal investigators
-- project members
-- reviewers
-- council members
+- `SYSTEM_ADMIN`
+- `SCIENTIFIC_MANAGEMENT_HEAD`
+- `SCIENTIFIC_MANAGEMENT_STAFF`
+- `LEADERSHIP_APPROVAL_AUTHORITY`
+- `RESEARCH_OVERSIGHT_AUTHORITY`
+- `RESEARCHER_INTERNAL_USER`
+- `EXTERNAL_RESEARCHER_USER`
+
+Record-scoped relationships and assignments remain separate: `PROPOSAL_PI`,
+`TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council chair/secretary/member,
+ethics reviewer, task assignee, and management officer.
 
 # Scientific Management Head and Staff — finalized model
 
@@ -159,8 +163,9 @@ final-decision, same-round reviewer/decision and council-position conflicts at r
 changes and protected actions. Apply identical filtering to every read/derived-data surface,
 including files and workflow/business history. Missing/ambiguous context fails closed.
 
-Baseline §2.1 defines Head officer actions, Staff assignment restrictions, Director decisions and
-Deputy researcher/oversight separation. Intake/profile scope remains independent. Only existing
+Baseline §2.1 defines Head officer actions, Staff assignment restrictions,
+`LEADERSHIP_APPROVAL_AUTHORITY` decisions and `RESEARCH_OVERSIGHT_AUTHORITY`
+researcher/oversight separation. Intake/profile scope remains independent. Only existing
 proposal features are implemented; absent project/reporting sources remain planned.
 
 # Authorization And Security Rules
@@ -421,9 +426,9 @@ contract relationship, not a persisted orphan assignment. Dashboard showcase dat
 an institutional report or proof of authorization. Future source domains must apply the
 same current scope, relationship, conflict and disclosure checks before aggregates or drill-down.
 
-Director and Deputy Director require institutional research dashboard views of available
+`LEADERSHIP_APPROVAL_AUTHORITY` and `RESEARCH_OVERSIGHT_AUTHORITY` require institutional research dashboard views of available
 proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
-funding and management workload. Only Director gets eligible proposal decision queues. Project adjustment queues
+funding and management workload. Only `LEADERSHIP_APPROVAL_AUTHORITY` gets eligible proposal decision queues. Project adjustment queues
 belong to assigned Staff and extension decision queues to Head. Head gets
 responsible-officer/unassigned filters and workload; Staff sees assigned management records.
 Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,

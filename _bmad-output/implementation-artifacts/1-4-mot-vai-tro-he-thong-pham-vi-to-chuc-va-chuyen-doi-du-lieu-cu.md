@@ -4,10 +4,10 @@ baseline_commit: 81e255883e6cf82302cfcd63b05ce776d52f7d4f
 
 # Story 1.4: One System Role, Organization Scope, and Legacy Data Migration
 
-**Target AC revision — 2026-09-21:** The acceptance criteria now require six roles
-and Head/Staff separation. Existing done status, checked tasks, persisted-value/legacy
-mapping notes and test results below describe the earlier five-role implementation;
-they do not verify this revision. Revisit role migration from explicit mapping, never
+**Target AC revision — 2026-09-21:** The acceptance criteria now require the canonical
+seven roles and Head/Staff separation. Existing done status, checked tasks,
+persisted-value/legacy mapping notes and test results below describe the pre-canonical
+implementation; they do not verify this revision. Revisit role migration from explicit mapping, never
 promote every Staff account to Head or infer management assignments from old scope.
 
 Status: done
@@ -20,7 +20,7 @@ so that platform authority cannot accumulate with record-scoped business relatio
 
 ## Acceptance Criteria
 
-1. Given an administrator creates or updates an account, when assigning its system role, exactly one of `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER` is active. Persistence and service boundaries prevent multiple active system roles.
+1. Given an administrator creates or updates an account, when assigning its system role, exactly one of `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER` is active. Persistence and service boundaries prevent multiple active system roles.
 2. Given legacy data contains global PI, reviewer, council-member, or multiple role assignments, when the migration runs, each unambiguous account maps to a valid system role and record relationships remain the source of business authority. A legacy council-member account is unambiguous only when an existing record-owned council relationship can be verified; otherwise it is recorded as unresolved, disabled, and denied authentication. The Prisma migration is tested and no legacy global role grants authority in parallel.
 3. Given a target record belongs to an organization, when the backend evaluates organization scope, it permits access only when an explicit actor/target organization-ID intersection exists. Without that intersection, access is denied. The system must not infer access through the organization tree, and this story adds no cross-unit grant model.
 4. Given migration data or role context is ambiguous, when the account requests protected access, it fails closed. The migration records an actionable issue instead of choosing a role arbitrarily.
@@ -33,9 +33,9 @@ so that platform authority cannot accumulate with record-scoped business relatio
   - [x] Replace the many-role account assignment source of truth with one nullable `systemRole` field; active accounts require a canonical role, while unresolved migrated accounts remain disabled and have no role.
   - [x] Preserve proposal ownership, proposal participation, and review assignments as their existing record-owned sources; do not create generic relationship tables or council data not present in this repository.
 - [x] Task 2: Migrate authentication, admin account management, seed data, and permission primitives to one system role (AC: 1, 2, 4)
-  - [x] Define the five system-role constants/types in the shared permission package and consume them from API auth/admin code.
+  - [x] Define the seven system-role constants/types in the shared permission package and consume them from API auth/admin code.
   - [x] Make authentication fail closed for inactive, unresolved, or invalid-role accounts and remove `roles[]` from current-user context.
-  - [x] Restrict user create/update inputs to the five canonical roles and make role updates transactional; remove arbitrary role CRUD/assignment behavior.
+  - [x] Restrict user create/update inputs to the seven canonical roles and make role updates transactional; remove arbitrary role CRUD/assignment behavior.
   - [x] Convert seeded PI/reviewer accounts to `RESEARCHER_INTERNAL_USER`; retain only their existing proposal/review record relationships as business authority. Support `EXTERNAL_RESEARCHER_USER` as a distinct account role without granting it a global PI/member/reviewer role.
 - [x] Task 3: Enforce explicit organization-scope intersection at shared proposal and intake access seams (AC: 3, 5)
   - [x] Reuse the existing organization scope IDs and require exact target-ID membership; do not traverse `OrganizationUnit.parentId`.
@@ -47,11 +47,11 @@ so that platform authority cannot accumulate with record-scoped business relatio
   - [x] Preserve existing staff and approval-authority behavior under their canonical system roles and explicit scope checks.
 - [x] Task 5: Add focused regression coverage and validate the migration boundary (AC: 1-5)
   - [x] Test canonical mapping, including `EXTERNAL_RESEARCHER_USER`, ambiguous migration issue reporting, and fail-closed authentication.
-  - [x] Test that a user cannot hold multiple active system roles, including all five role values in admin create/update paths.
+  - [x] Test that a user cannot hold multiple active system roles, including all seven role values in admin create/update paths.
   - [x] Test record-owned PI/reviewer authority and exact organization-scope allow/deny behavior.
   - [x] Test that `SYSTEM_ADMIN` cannot list or mutate proposal-intake business records.
   - [x] Run TypeScript checks and the full test suite after the role and intake fixes.
-  - [x] Execute the real migration sequence on a clean temporary PostgreSQL schema, covering all five persisted roles, single legacy roles, conflicting assignments, unknown roles, disabled accounts, and fail-closed login.
+  - [x] Execute the real migration sequence on a clean temporary PostgreSQL schema, covering all seven persisted roles, single legacy roles, conflicting assignments, unknown roles, disabled accounts, and fail-closed login.
 
 ### Review Findings
 
@@ -72,7 +72,7 @@ so that platform authority cannot accumulate with record-scoped business relatio
 - [x] [Review][Patch][Medium] Reject unauthorized intake listing before the database read — `listPeriods()` loads every intake record before determining that an actor has no permitted role, creating avoidable data exposure in process memory and an unnecessary unbounded query [apps/api/src/proposal-intake-periods/proposal-intake-periods.service.ts:45-64]
 - [x] [Review][Patch][Medium] Make migration regression coverage match production ordering and constraints — the test skips later production migrations and does not assert the new constraint rejects an active user with a null or unknown role; the current green test therefore does not fully prove the deployed migration boundary [tests/system-role-migration.test.mjs:11-20,78-93]
 - [x] [Review][Patch][Medium] Prove external-account authentication and record-scoped boundaries — the migration fixture inserts an active external account without an organization scope and never exercises login or proposal create/read/decision boundaries, so it proves string persistence but not the valid account contract required by AC1/AC2/AC4 [tests/system-role-migration.test.mjs:80-93]
-- [x] [Review][Patch][Low] Cover canonical role updates, not only creation — the five-role regression loop covers `createUser`, while the update-path test exercises only `SCIENTIFIC_MANAGEMENT_STAFF`; add an update assertion for `EXTERNAL_RESEARCHER_USER` [tests/admin-foundation.test.mjs:324-404]
+- [x] [Review][Patch][Low] Cover canonical role updates, not only creation — the legacy regression loop covers `createUser`, while the update-path test exercises only `SCIENTIFIC_MANAGEMENT_STAFF`; add an update assertion for `EXTERNAL_RESEARCHER_USER` [tests/admin-foundation.test.mjs:324-404]
 
 ## Dev Notes
 

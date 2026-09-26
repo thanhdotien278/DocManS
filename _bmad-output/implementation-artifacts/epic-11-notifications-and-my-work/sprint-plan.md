@@ -1,6 +1,6 @@
 # Epic 11: Thông báo, nhắc việc và khu “Của tôi”
 
-**Authorization refinement — 2026-09-21:** Resolve Head oversight, officer management and participation/review access separately. Re-authorize notifications and work queues at dispatch/read; officer revocation removes management items without erasing independent participation. No role-wide Staff recipient set or count leakage. Finalized baseline §2.1 grants Head officer management and eligible package submission. Deputy has researcher eligibility plus read-only institutional oversight; Director alone has eligible final decisions. Proposal implementation is current; project/council/dashboard/reporting/notification backends absent from the repository remain backlog.
+**Authorization refinement — 2026-09-21:** Resolve Head oversight, officer management and participation/review access separately. Re-authorize notifications and work queues at dispatch/read; officer revocation removes management items without erasing independent participation. No role-wide Staff recipient set or count leakage. Finalized baseline §2.1 grants Head officer management and eligible package submission. `RESEARCH_OVERSIGHT_AUTHORITY` has researcher eligibility plus read-only institutional oversight; `LEADERSHIP_APPROVAL_AUTHORITY` alone has eligible final decisions. Proposal implementation is current; project/council/dashboard/reporting/notification backends absent from the repository remain backlog.
 
 - **Epic status:** `backlog`
 - **Canonical source:** [epics.md](../../epics.md)

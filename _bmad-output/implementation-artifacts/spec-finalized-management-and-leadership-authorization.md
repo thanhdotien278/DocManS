@@ -12,6 +12,14 @@ context:
   - '{project-root}/docs/permission-matrix.md'
 ---
 
+> **Historical implementation record:** This completed spec records the 2026-09-21
+> delivery slice. The current normative authority split is maintained by the approved
+> baseline, permission matrix and refined review-flow spec: `SCIENTIFIC_MANAGEMENT_HEAD`
+> owns reviewer assignment and synthesis; `SCIENTIFIC_MANAGEMENT_STAFF` confirms
+> completeness and monitors; `LEADERSHIP_APPROVAL_AUTHORITY` decides; and
+> `RESEARCH_OVERSIGHT_AUTHORITY` is read-only oversight unless an independent
+> relationship grants its own action.
+
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
 
 ## Intent
@@ -22,11 +30,11 @@ context:
 
 ## Boundaries & Constraints
 
-**Always:** One active system role; explicit organization scopes; independently evaluated relationships; current workflow/conflict/disclosure checks; backend authority; transactional history and audit; one active primary officer per record. Head assigns/reassigns/revokes responsibility and has management oversight, never final approval. Staff administrative actions require their effective officer assignment. Director has oversight plus eligible final decisions. Deputy Director has internal-researcher eligibility plus read-only institutional oversight, never role-derived management or final decisions.
+**Always:** One active system role; explicit organization scopes; independently evaluated relationships; current workflow/conflict/disclosure checks; backend authority; transactional history and audit; one active primary officer per record. Head assigns/reassigns/revokes responsibility and has management oversight, never final approval. Staff administrative actions require their effective officer assignment. `LEADERSHIP_APPROVAL_AUTHORITY` has oversight plus eligible final decisions. `RESEARCH_OVERSIGHT_AUTHORITY` has internal-researcher eligibility plus read-only institutional oversight, never role-derived management or final decisions.
 
 **Never:** Convert PI/reviewer/council/task responsibilities into account roles; inherit scope from organization hierarchy; automatically assign existing records to preserve broad Staff access; expose confidential reviews through oversight; rewrite historical migrations; build accounting/payments; refactor unrelated modules. Do not create or modify test files, per the user's latest instruction. Preserve unrelated `skills-lock.json`.
 
-**Approved scope decision (2026-09-21):** User chose option 1. Implement the model throughout existing operational features. Reconcile project/council/dashboard/search/reporting/notification contracts and design requirements, explicitly documenting absent backend capabilities. Do not create a project subsystem or orphan project assignments. `PROJECT_MANAGEMENT_OFFICER` remains a shared contract requirement until its owning domain exists. Existing proposal features must work end-to-end, including Head officer controls, staff assignment restrictions and Deputy participation. Existing independent intake/profile management remains available to Head as Scientific Management; do not conflate this with proposal actions. Head may review existing staff summaries and submit eligible completed packages to leadership; routine reviewer assignment/consolidation remains assigned Staff work. Existing unassigned records remain unassigned for Head to allocate. Institutional demo oversight uses explicit organization grants. Funding monitoring uses only existing proposal budget metadata; approved/used/remaining project funding is unavailable.
+**Approved scope decision (2026-09-21):** User chose option 1. Implement the model throughout existing operational features. Reconcile project/council/dashboard/search/reporting/notification contracts and design requirements, explicitly documenting absent backend capabilities. Do not create a project subsystem or orphan project assignments. `PROJECT_MANAGEMENT_OFFICER` remains a shared contract requirement until its owning domain exists. Existing proposal features must work end-to-end, including Head officer controls, Staff completeness/monitoring restrictions and Oversight participation. Existing independent intake/profile management remains available to Head as Scientific Management; do not conflate this with proposal actions. Head may review existing Staff summaries, assign reviewers, finalize synthesis and submit eligible completed packages to leadership. Existing unassigned records remain unassigned for Head to allocate. Institutional demo oversight uses explicit organization grants. Funding monitoring uses only existing proposal budget metadata; approved/used/remaining project funding is unavailable.
 
 ## I/O & Edge-Case Matrix
 
@@ -35,10 +43,10 @@ context:
 | Scoped Head | Reading records or changing officers | All managed-scope records visible; assignment actions require current scope, state and conflict checks |
 | Staff with active officer assignment | Managing that record | Existing management actions allowed only within scope and workflow |
 | Staff with participation/review only | Reading or acting | Only independent relationship capabilities; no administrative grant |
-| Director without conflict | Deciding eligible package | Final approval/rejection allowed only after mandatory review stages |
-| Director participating/reviewing | Attempting final decision | Deny |
-| Deputy Director | Reading unrelated scoped records | Oversight read only; omit protected reviewer details |
-| Deputy Director as PI/member | Performing researcher actions | Apply the relationship's capabilities independently of oversight |
+| `LEADERSHIP_APPROVAL_AUTHORITY` without conflict | Deciding eligible package | Final approval/rejection allowed only after mandatory review stages |
+| `LEADERSHIP_APPROVAL_AUTHORITY` participating/reviewing | Attempting final decision | Deny |
+| `RESEARCH_OVERSIGHT_AUTHORITY` | Reading unrelated scoped records | Oversight read only; omit protected reviewer details |
+| `RESEARCH_OVERSIGHT_AUTHORITY` as PI/member | Performing researcher actions | Apply the relationship's capabilities independently of oversight |
 | Competing officer assignments | Creating/reassigning | At most one active primary officer; retained previous rows and atomic audit |
 | Missing or ambiguous authority/conflict | Protected action | Fail closed |
 
@@ -53,7 +61,7 @@ context:
 - `apps/api/src/proposal-evaluations/` — assignment, reviews, consolidation and final decisions; apply officer checks at every management boundary without broadening disclosure.
 - `apps/api/prisma/schema.prisma`, `migrations/`, `seed.mjs` — string-valued system roles, proposal relationships and demo seed; no project aggregate exists.
 - `apps/web/src/lib/{session.ts,navigation.ts,research-proposals-api.ts}` and `components/research-proposals/` — labels, navigation and capability consumers.
-- `apps/web/src/app/dashboard/page.tsx` — currently hardcodes a Director showcase fixture; not an authenticated operational dashboard.
+- `apps/web/src/app/dashboard/page.tsx` — currently hardcodes a `LEADERSHIP_APPROVAL_AUTHORITY` showcase fixture; not an authenticated operational dashboard.
 - `docs/development/auth-seed-users.md` — local/demo identity documentation.
 
 ## Tasks & Acceptance
@@ -65,7 +73,7 @@ context:
 - [x] Add proposal officer persistence and a new migration with foreign keys, lifecycle history and database enforcement of one active primary officer. Project persistence is out of this approved scope; update its shared contract only.
 - [x] Add capability-guarded officer assignment/reassignment/revocation and UI controls; preserve actor/effective interval/reason/audit and context versions atomically. Check conflicts in both assignment and participant changes.
 - [x] Apply the same access predicate and disclosure to every implemented record-derived surface; expose explicit access reasons. Preserve separate researcher, review, management and decision capabilities.
-- [x] Update `seed.mjs`: `nmphuong` Head; `hdtien1`/`hdtien2` Staff; `tvtien` Director; `vndinh` Deputy Director with linked internal profile, explicit institutional scopes and existing demo-only credential policy. Never silently reassign existing operational records.
+- [x] Update `seed.mjs`: `nmphuong` `SCIENTIFIC_MANAGEMENT_HEAD`; `hdtien1`/`hdtien2` `SCIENTIFIC_MANAGEMENT_STAFF`; `tvtien` `LEADERSHIP_APPROVAL_AUTHORITY`; `vndinh` `RESEARCH_OVERSIGHT_AUTHORITY` with linked internal profile, explicit institutional scopes and existing demo-only credential policy. Never silently reassign existing operational records.
 
 **Acceptance Criteria:**
 - Given all seven roles, when authentication and capability resolution run, then each role is recognized and grants only its defined authority.

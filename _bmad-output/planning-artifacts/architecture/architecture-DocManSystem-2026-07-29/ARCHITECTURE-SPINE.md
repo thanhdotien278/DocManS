@@ -44,8 +44,9 @@ explicit scope; Staff management only through active `PROPOSAL_MANAGEMENT_OFFICE
 history. Domain resolvers retain independent participation access and deny conflicting
 management/evaluation/decision assignments at changes and actions. Head oversight exposes
 responsible Staff/unassigned/workload data without granting leadership decisions or hidden
-review data. All read/aggregate/file/history surfaces share these rules. Baseline §2.1 now defines Head officer management and completed-package submission, Director
-oversight plus eligible decisions, and Deputy internal-researcher eligibility plus read-only
+review data. All read/aggregate/file/history surfaces share these rules. Baseline §2.1 now defines Head officer management and completed-package submission,
+`LEADERSHIP_APPROVAL_AUTHORITY` oversight plus eligible decisions, and
+`RESEARCH_OVERSIGHT_AUTHORITY` internal-researcher eligibility plus read-only
 oversight. Proposal persistence is implemented; project/dashboard/reporting sources remain
 planned and must not be represented as operational.
 

@@ -100,7 +100,8 @@ Decisions recheck current actor/account, organization scope, active relationship
 assignments, conflict, workflow and project/request versions within the mutation
 transaction. Self-decision and participant final decisions are denied regardless
 of additional relationships. Staff adjustment authority and Head extension authority grant no proposal,
-council or acceptance decision rights. Leadership/Deputy cannot decide either request.
+council or acceptance decision rights. `LEADERSHIP_APPROVAL_AUTHORITY` and
+`RESEARCH_OVERSIGHT_AUTHORITY` cannot decide either request.
 Staff adjustment approval atomically applies only the submitted typed change and
 audits before/after. Head extension approval atomically records the decision,
 changes the effective end date, increments project version and audits
@@ -132,7 +133,7 @@ correlation conventions with policy/context versions; preserve denial audit too.
 
 Staff sees management records only with exact current project officer assignment
 AND explicit scope. Head sees scoped cases, including unassigned records. Leadership
-and Deputy operational oversight does not disclose private appraisal material.
+and `RESEARCH_OVERSIGHT_AUTHORITY` operational oversight does not disclose private appraisal material.
 Only eligible decision actors receive a complete submitted decision package.
 PI/members receive permitted feedback, not confidential management notes.
 Apply these rules equally to files, history, lists, filters, counts and queues.
@@ -167,8 +168,9 @@ and request-specific actions:
 | `project.extension.request-supplement` | Assigned Staff during validation or Head on prepared package |
 | `project.extension.approve`, `project.extension.reject` | Scoped Head; ready_for_head_decision |
 
-Head cannot decide adjustments; Staff cannot decide extensions; Leadership/Deputy
-cannot decide either. Enforce these denials in capabilities and direct APIs.
+Head cannot decide adjustments; Staff cannot decide extensions;
+`LEADERSHIP_APPROVAL_AUTHORITY` and `RESEARCH_OVERSIGHT_AUTHORITY` cannot decide either.
+Enforce these denials in capabilities and direct APIs.
 Use existing `allowedActions`, `blockedActions`, denial reasons and context tokens.
 Account lock, inactive/expired/revoked relationship and missing/ambiguous context
 remove mutation grants immediately. Backend is authoritative at mutation time.

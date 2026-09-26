@@ -140,8 +140,9 @@ The runtime role/action/relationship registries include the finalized model. Cap
 carry accessReasons alongside independent viewerRelationships, allowedActions and blockedActions.
 PROPOSAL_MANAGEMENT_OFFICER is persisted with transactional lifecycle/audit and a partial unique
 index. PROJECT_MANAGEMENT_OFFICER remains contract-only until the project aggregate exists.
-Head has officer management and eligible package submission; Deputy has read-only oversight and
-internal researcher eligibility. Disclosure and conflicts constrain each grant independently.
+Head has officer management and eligible package submission; `RESEARCH_OVERSIGHT_AUTHORITY`
+has read-only oversight and internal researcher eligibility. Disclosure and conflicts constrain
+each grant independently.
 
 ## 3. Relationship Type Registry
 
@@ -408,8 +409,8 @@ satisfy the gate.
 
 `GET /research-proposals/:id/assignable-reviewers?q=` returns `{ users }` with
 eligible account `id`, `displayName`, and `username`. Search matches display name
-or username and is restricted to unconflicted Staff with explicit scope and
-current `PROPOSAL_MANAGEMENT_OFFICER` on the proposal, in
+or username and is restricted to an unconflicted `SCIENTIFIC_MANAGEMENT_HEAD` with
+explicit scope on the proposal, in
 assignable states with current completeness evidence. Candidates may have any role,
 any organization scope and no Scientist Profile. PI/active team participants and
 accounts with a live duplicate assignment are excluded.
@@ -444,7 +445,7 @@ rejection commits only its failure audit. Preserve historical profile provenance
 source of truth for this feature, including API/data fields, authorization,
 credential delivery, migration compatibility and history retention.
 
-- Scoped SYSTEM_ADMIN and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
+- Scoped `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD` and `SCIENTIFIC_MANAGEMENT_STAFF` manage internal/external
   profiles independently of Accounts, including academic/contact information,
   position, military rank, expertise, publications and self-reported project
   history (title, role, Academy/institutional/Ministry/other level, dates, status,
@@ -453,10 +454,11 @@ credential delivery, migration compatibility and history retention.
   account selection, unlink and authorized credential reset/resend. Linking is
   one-to-one across all current links, including inactive records. Staff can
   provision only matching researcher roles in the profile's explicit scope.
-- Staff confirms the recipient email. The system generates and hashes a temporary
-  password, sends login information by configured SMTP, and requires a different
-  password before any normal authenticated API/UI feature. No plaintext credential
-  is persisted, returned to staff or placed in audit. SMTP acceptance is not proof
+- The scoped manager confirms the recipient email. The system generates and hashes a
+  single-use activation token, sends only a password-setup link by configured SMTP,
+  and keeps the account pending until activation. No temporary password or plaintext
+  credential is persisted, returned to staff or placed in audit. SMTP acceptance is
+  not proof
   of inbox delivery; a failed/uncertain send has an explicit new-credential retry.
 - My Profile uses the active Account's current link. Only own personal/scientific
   fields are editable; type, status, linkage and role/scope remain administrative.
@@ -476,9 +478,9 @@ contract relationship, not a persisted orphan assignment. Dashboard showcase dat
 an institutional report or proof of authorization. Future source domains must apply the
 same current scope, relationship, conflict and disclosure checks before aggregates or drill-down.
 
-Director and Deputy Director require institutional research dashboard views of available
+`LEADERSHIP_APPROVAL_AUTHORITY` and `RESEARCH_OVERSIGHT_AUTHORITY` require institutional research dashboard views of available
 proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
-funding and management workload. Only Director gets eligible decision queues. Head gets
+funding and management workload. Only `LEADERSHIP_APPROVAL_AUTHORITY` gets eligible decision queues. Head gets
 responsible-officer/unassigned filters and workload; Staff sees assigned management records.
 Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,
 used and remaining project funding and utilization are unavailable until their source exists;
@@ -487,7 +489,7 @@ never infer expenditure or add ledgers, payments, banking, invoices or ERP integ
 ### Existing proposal capability additions (2026-09-21)
 
 - `proposal.management-officer.assign` / `proposal.management-officer.revoke`: scoped, conflict-free Head; a resolved current officer is required to revoke.
-- `proposal.review.progress.read`: scoped Head/Director/Deputy operational counts and deadlines; assigned conflict-free Staff retains the existing detailed management view. Read-only oversight does not inherit review writes or decisions.
+- `proposal.review.progress.read`: scoped Head/`LEADERSHIP_APPROVAL_AUTHORITY`/`RESEARCH_OVERSIGHT_AUTHORITY` operational counts and deadlines; assigned conflict-free Staff retains the existing detailed management view. Read-only oversight does not inherit review writes or decisions.
 - `proposal.review.submit-package`: scoped, conflict-free Head, under-review proposal, a finalized Head synthesis bound to the current submission and all required reviews. The request carries `contextVersion`; it does not accept replacement summary content.
 - Summary saves and final decisions also carry `contextVersion` and run within the proposal mutation boundary. Future or unexpired non-revoked review duties and persisted review activity prevent incompatible management/decision actions.
 - Capability `accessReasons` distinguishes institutional oversight, primary management officer and independent participation/reviewer access. Exact action IDs remain authoritative for the UI.

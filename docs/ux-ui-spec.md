@@ -44,7 +44,7 @@ The target product baseline contains seven system roles (one active per account)
 | `SCIENTIFIC_MANAGEMENT_HEAD` | All proposals/projects within authorized Scientific Management scope; responsible Staff/unassigned/workload/status/deadlines |
 | `SCIENTIFIC_MANAGEMENT_STAFF` | Management operations on explicitly assigned proposals/projects only; other access through its own legitimate relationship |
 | `LEADERSHIP_APPROVAL_AUTHORITY` | Institutional oversight; final decision controls only for eligible routed records without conflict |
-| `RESEARCH_OVERSIGHT_AUTHORITY` | Deputy Director: institutional research oversight plus internal researcher capabilities through record relationships; no final decisions |
+| `RESEARCH_OVERSIGHT_AUTHORITY` | Institutional research oversight plus internal researcher capabilities through record relationships; no final decisions |
 | `RESEARCHER_INTERNAL_USER` | Researcher-owned and related records |
 | `EXTERNAL_RESEARCHER_USER` | Only explicitly related approved-topic/task records and assigned review work |
 
@@ -99,7 +99,7 @@ capabilities remain separately scoped and do not grant proposal/project visibili
 | User | Must accomplish quickly |
 | --- | --- |
 | System administrator | Maintain accounts, one active system role per account, organization scope, catalogs, configuration, and operational audit views without gaining implicit business-data access. |
-| Scientific management staff | Open/close intake periods, check completeness, request supplements, assign reviewers after conflict checks, monitor evaluations, consolidate results, create approved projects, track reports, and produce scoped reports. |
+| Scientific management staff | Open/close intake periods, check completeness, request supplements, monitor evaluations, create approved projects, track reports, and produce scoped reports. Reviewer assignment and synthesis are Head actions. |
 | Leadership / approval authority | See only decision-ready records, understand evidence and history quickly, approve or reject with the required reason, and monitor high-level operational risk. |
 | Principal investigator / internal researcher | Create a draft, complete required sections, upload evidence, submit, respond to supplements, track an approved project, submit reports, and request adjustments or acceptance. |
 | Topic team member | See only related proposal/topic information, responsibilities, permitted files, milestones, tasks, and contribution evidence. |
@@ -270,9 +270,9 @@ refresh after `CONTEXT_VERSION_MISMATCH`.
 | Submit confirmation `/proposals/:id/submit` | Current internal PI only | Final readiness checklist, version number, intake deadline, file summary, responsibility statement, immutable-version warning. | Confirm submit; cancel returns to edit; success shows timestamp and next state; failure keeps draft and lists correctable issues. Non-PI requests are denied without mutation. | Readiness is backend-calculated. `POST /research-proposals/:id/submit` with context token; audit actor; no direct status PATCH or delegation input. |
 | Supplement request `/proposals/:id/supplement` | Scientific management staff | Locked proposal snapshot, missing items, reason, response due date, instructions, prior requests. | Save/send request only while requestable; sent request becomes immutable history; empty state is not applicable. | Reason and whole-day due date required; due date must be future and within policy. `POST /research-proposals/:id/supplement-requests`; status becomes `supplement_requested` only through domain operation. |
 | Staff check `/proposals/:id/check` | Scientific management staff | Completeness checklist, field/file evidence, eligibility/readiness result, warnings, reviewer readiness, previous supplement history. | Mark complete once per submitted/resubmitted version or request supplement; after confirmation, keep the action visible but disabled with its reason. | Checklist version, required package, current-submission evidence, and decision are backend-owned. Repeat `POST /checks/complete` is denied; audit result and reason. |
-| Reviewer assignment `/proposals/:id/assignments` | Staff with assignment authority | Candidate researcher profile, assignment role, conflict result, whole-day effective dates/deadline, current assignments, assignment history. | Search candidate; run conflict check; assign, change, revoke, or complete assignment where allowed. Date inputs omit hours/minutes. Conflict result blocks assign and displays safe reason. | Candidate must be active and in permitted scope; no PI/member/conflicted reviewer; dates valid; assignment deadline valid. `GET /assignable-reviewers`, `POST/PATCH /review-assignments`; audit all changes. |
+| Reviewer assignment `/proposals/:id/assignments` | `SCIENTIFIC_MANAGEMENT_HEAD` with assignment authority | Candidate active account, assignment role, conflict result, whole-day effective dates/deadline, current assignments, assignment history. | Search candidate; run conflict check; assign, change, revoke, or complete assignment where allowed. Date inputs omit hours/minutes. Conflict result blocks assign and displays safe reason. | Candidate must be active and in permitted scope; no PI/member/conflicted reviewer; dates valid; assignment deadline valid. `GET /assignable-reviewers`, `POST/PATCH /review-assignments`; audit all changes. |
 | Reviewer evaluation `/reviews/:assignmentId` | Assigned reviewer/council member/ethics reviewer for own assignment | Authorized review package, rubric criteria, score inputs, total, comment, recommendation, due date, assignment status. | Save draft; submit once; after submit fields lock and a correction creates a controlled new review version if policy permits. Reviewer cannot see another review or consolidation. | Score within criterion range; all required criteria; comment/recommendation requirements; submit confirmation. `GET/PATCH/POST /review-assignments/:id/evaluation`; audit draft/submit and lock version. |
-| Result aggregation `/proposals/:id/aggregation` | Staff | Submitted-review count, expected count, allowed review material, calculated totals, missing/late reviews, staff summary, recommendation, readiness for leadership. | Save aggregation while consolidatable; mark ready only when required reviews/conditions pass; no raw review data shown to unauthorized viewers. | No manual total outside backend calculation; summary required; all assignment/context versions checked. `GET/PATCH/POST /aggregations`; transition to `ready_for_approval` is explicit and audited. |
+| Result aggregation `/proposals/:id/aggregation` | `SCIENTIFIC_MANAGEMENT_HEAD` | Submitted-review count, expected count, allowed review material, calculated totals, missing/late reviews, Head synthesis, recommendation, readiness for leadership. | Save synthesis while consolidatable; finalize and route only when required reviews/conditions pass; no raw review data shown to unauthorized viewers. | No manual total outside backend calculation; synthesis required; all assignment/context versions checked. `GET/PATCH/POST /aggregations`; transition to `ready_for_approval` is explicit and audited. |
 | Leadership decision `/proposals/:id/decision` | Leadership authority with eligible decision capability | Decision package: proposal snapshot, evaluation summary, permitted reviews, files, workflow timeline, conflict indicator, current status. | Approve or reject with confirmation. Reject requires reason. Conflict or wrong state leaves buttons visible but disabled with reason. Success shows decision and routes to read-only detail. | Decision only in `ready_for_approval`; no content editing; reject note required; backend rechecks state, conflict, scope, and version. `GET /decision-package`; `POST /decisions`; audit decision. |
 
 ### 3.5 Approved project and tracking screens
@@ -311,7 +311,7 @@ the viewer cannot access.
 | --- | --- | --- | --- | --- |
 | System administrator | Active/locked accounts, pending account changes, catalog/config warnings, audit review queue. | Incomplete account scope, pending activation, failed notification/configuration checks, audit anomalies if authorized. | Manage users, roles, units, catalogs, settings, audit. Small trend of platform operations only. | Proposal/project content, reviewer identity, scores, approval queues, and business data by default. |
 | Scientific Management Head | Authorized-scope proposals/projects, workload/status/deadlines and unassigned records. | Current responsible Staff or unassigned; filter/group by Staff, status and deadlines. | Drill down to the same authorized records; reports/exports retain officer filters and disclosure. | Final decisions, hidden review data, out-of-scope records, or operational mutations without explicit capability. |
-| Scientific management staff | Only own management assignments: new submissions, pending checks, supplements awaiting response, reviews pending/overdue, ready for approval, delayed projects, reports due. | Prioritize by due date and risk: submitted checks, missing reviewer submissions, aggregation, overdue milestones/reports, adjustment/acceptance preparation. | Open intake, proposal queue, assignment queue, create project from approved proposal, open reports, run operational report. Pipeline summary by intake/unit/field within current officer assignments. Participation/review queues use separate access bases. | Proposal final approval action from either Head or Staff role (project Staff adjustment and Head extension decisions remain permitted); conflict source and undisclosed review material outside policy. |
+| Scientific management staff | Only own management assignments: new submissions, pending checks, supplements awaiting response, reviews pending/overdue, ready for approval, delayed projects, reports due. | Prioritize by due date and risk: submitted checks, missing reviewer submissions, aggregation, overdue milestones/reports, adjustment/acceptance preparation. | Open intake, proposal queue, review-monitoring queue, create project from approved proposal, open reports, run operational report. Pipeline summary by intake/unit/field within current officer assignments. Participation/review queues use separate access bases. | Proposal final approval action from either Head or Staff role (project Staff adjustment and Head extension decisions remain permitted); conflict source and undisclosed review material outside policy. |
 | Leadership | Ready-for-decision records, overdue decision queue, delayed projects, reports/acceptance needing authority, high-priority risks. | Decision queue with due date, evidence completeness, conflict indicator, previous decision history; alerts are concise and action-oriented. | Open decision package, approve/reject eligible record, open scoped executive report. Trend by unit/field/status/time. | Editing proposal content, assigning reviewers, raw data outside decision disclosure, records not in approval scope, conflicted records. |
 | Principal investigator / internal researcher | Drafts, submitted proposals, supplement requests, active projects, reports due, tasks due/overdue. | “Cần tôi xử lý”: incomplete draft, response deadline, report deadline, adjustment/acceptance request status, assigned tasks. | Create draft when intake allows, open my proposals, submit supplement, submit report, open my tasks. Progress summaries for owned/related projects. | Unrelated proposals/projects, reviewer identity/raw review material before disclosure, staff-only aggregation, decision controls. |
 | Project member | Related projects, assigned milestones, assigned tasks, evidence awaiting upload, contribution deadlines. | Tasks and evidence explicitly assigned to the member; project alerts only at permitted disclosure level. | Open assigned project section, update task, upload permitted evidence. | PI-only submission controls, membership changes, protected files, unrelated records, final decisions. |
@@ -431,10 +431,10 @@ derived view rather than a canonical persisted state, the mapping is explicit.
 | Draft (`draft`) | Editable sections, readiness progress, unsaved/saved indicator, draft version. | Current internal PI edits/submits; an internal `TOPIC_SECRETARY` may upload permitted proposal files but cannot edit or submit the draft. | Review/approve/aggregate unavailable: proposal has not entered formal workflow; non-PI submit is denied. | Warn before submit that the version will lock; audit create/update. |
 | Submitted / pending check (`submitted`) | Locked submitted snapshot, “Đã nộp / Chờ kiểm tra”, submission time, next owner staff. | Staff checks; staff may request supplement in this state; PI reads and may request permitted post-submit action. | PI edit/submit disabled: submitted version is locked; reviewer assignment waits for check/policy. | Submission and check actions audit actor, version, and context. |
 | Needs supplement (`supplement_requested`) | Missing-item list, reason, due date, response action, prior version. | PI edits working revision and resubmits; staff reads request/history. | Final review/approval disabled until a valid resubmission/check; no endless direct status edits. | Request reason/due date and resubmission are immutable history. |
-| Eligible (`eligible`, derived) | Completeness/check result “Đủ điều kiện”, checklist evidence, ready-for-assignment cue. | Staff can proceed to assignment when the canonical workflow permits. | PI cannot approve/assign; leadership cannot decide before aggregation. | Eligibility/check result and checklist version audited; not a bypass state. |
-| Resubmitted (`resubmitted`) | New version marker, prior locked version link, staff check queue. | Staff checks and assigns according to policy. | PI cannot overwrite old submitted version; reviewer cannot act until under review. | New revision/resubmission audited with source version. |
-| In review (`under_review`) | Assignment progress, own reviewer action if applicable, due dates; disclosure-filtered reviews. | Assigned reviewer evaluates; staff monitors/assigns within allowed state; staff consolidates when rules permit. | PI/member cannot see raw reviews; unrelated users denied; reviewer cannot see another assignment. | Assignment, score draft/submit, revocation, and conflict events audited. |
-| Pending result aggregation (`under_review`, derived queue) | Submitted/expected review counts, missing/late list for staff, consolidation CTA. | Staff saves aggregation and completes it when required conditions pass. | Leadership decision disabled until aggregation is complete and record is ready. | Aggregation calculation and summary audited. |
+| Eligible (`eligible`, derived) | Completeness/check result “Đủ điều kiện”, checklist evidence, ready-for-assignment cue. | Staff confirms completeness; Head can assign when the canonical workflow permits. | PI cannot approve/assign; leadership cannot decide before aggregation. | Eligibility/check result and checklist version audited; not a bypass state. |
+| Resubmitted (`resubmitted`) | New version marker, prior locked version link, staff check queue. | Staff checks; Head assigns according to policy. | PI cannot overwrite old submitted version; reviewer cannot act until under review. | New revision/resubmission audited with source version. |
+| In review (`under_review`) | Assignment progress, own reviewer action if applicable, due dates; disclosure-filtered reviews. | Assigned reviewer evaluates; Staff monitors; Head assigns/revokes and consolidates when rules permit. | PI/member cannot see raw reviews; unrelated users denied; reviewer cannot see another assignment. | Assignment, score draft/submit, revocation, and conflict events audited. |
+| Pending result aggregation (`under_review`, derived queue) | Submitted/expected review counts, missing/late list for Head, synthesis CTA. | Head saves and finalizes synthesis when required conditions pass. | Leadership decision disabled until aggregation is complete and record is ready. | Aggregation calculation and synthesis audited. |
 | Pending approval (`ready_for_approval`) | Decision package, summary, allowed review disclosure, decision due date. | Leadership approves/rejects if authority, scope, state, conflict, and version pass. | Staff cannot final-approve; PI/member/reviewer cannot decide; conflicted authority blocked. | Approve/reject requires confirmation; rejection reason required; immutable decision. |
 | Approved (`approved`) | Final decision, decision date, source proposal, “project creation pending” unless project exists. | Staff explicitly creates/confirms approved project; authorized users read final disclosure. | No proposal content edit or direct state mutation; no automatic project creation assumed. | Approval and project creation are separate audit events. |
 | Rejected (`rejected`) | Decision reason permitted by disclosure, final state, history, read-only package. | Read history; any later request must use an explicit policy-supported flow. | Edit/submit/approve disabled because the decision is final unless a formal reopen policy exists. | Decision retained; do not delete or overwrite rejected version. |
@@ -453,7 +453,7 @@ permissions and audit events; there is no generic bypass-state button.
 | Delayed | Overdue flag, missed milestone/report, owner, suggested next action. | Staff may remind/escalate; authorized user may update or request adjustment. | System must not auto-pause, reject, or close the project. | Reminder/escalation audited; overdue flag is derived. |
 | Pending adjustment (request flag) | Request detail, impact, assessment, decision status. | PI submits; assigned Staff reviews and finally approves/rejects adjustments. Extensions follow a separate Staff preparation and Head decision path. | Direct approved-field edits are disabled after activation, including when no request is pending. | Request and decision history retained. |
 | Paused | Pause reason, effective date, next review date. | Authorized staff/authority can resume or take policy-supported action. | Normal progress entry may be limited by policy; no silent deadline reset. | Pause/resume reason and actor audited. |
-| Pending acceptance / under acceptance | Final dossier readiness, assignments, evaluation progress. | PI submits dossier; staff prepares; assigned evaluators evaluate; staff aggregates. | Project cannot be completed before required decision. | Dossier/version/assignment events audited. |
+| Pending acceptance / under acceptance | Final dossier readiness, assignments, evaluation progress. | PI submits dossier; Staff prepares; assigned evaluators evaluate; Head aggregates. | Project cannot be completed before required decision. | Dossier/version/assignment events audited. |
 | Completed | Acceptance result, final outputs, closed timeline. | Read, report, export, archive where allowed. | Normal project edit and new evidence additions disabled unless formal reopen. | Completion/acceptance decision immutable. |
 
 ### 7.3 Task states
@@ -536,18 +536,18 @@ non-requestable state disables the action with the backend reason.
 The UI must not offer an endless supplement loop when the canonical state does
 not allow another request.
 
-### Flow 5 — Staff assigns reviewer
+### Flow 5 — Head assigns reviewer
 
-1. Staff opens a checked/eligible proposal and chooses **Phân công**.
+1. `SCIENTIFIC_MANAGEMENT_HEAD` opens a checked/eligible proposal and chooses **Phân công**.
 2. Candidate search shows eligible active user accounts (ID, display name and
    username), regardless of system role, host-unit scope or profile linkage.
    Selection uses the account ID; a current profile link is optional provenance,
    never created by assignment. Empty results explain the current eligibility filters.
-3. Staff selects a candidate, assignment role, effective dates, and deadline.
+3. Head selects a candidate, assignment role, effective dates, and deadline.
 4. API runs conflict and scope checks and returns a safe result.
 5. Conflict blocks confirmation and explains the safe denial reason without
    exposing the conflict source to an unauthorized user.
-6. Staff confirms; assignment is created, candidate is notified, and the event
+6. Head confirms; assignment is created, candidate is notified, and the event
    is audited.
 
 Changing or revoking an assignment uses the same explicit operation and keeps
@@ -571,14 +571,14 @@ existing authorized assignment response; reviewer access still ends on revocatio
 After submission, the reviewer cannot edit the same version and cannot view
 other reviewers' content.
 
-### Flow 7 — Staff aggregates results
+### Flow 7 — Head aggregates results
 
-1. Staff opens the aggregation queue.
+1. Head opens the aggregation queue.
 2. Screen shows required/received review counts, late/missing assignments, and
    disclosure-safe evaluation material.
-3. Staff enters the structured summary and recommendation; totals remain
+3. Head enters the structured synthesis and recommendation; totals remain
    backend-calculated.
-4. If required conditions pass, staff confirms **Chuyển trình phê duyệt**.
+4. If required conditions pass, Head confirms **Chuyển trình phê duyệt**.
 5. API changes to `ready_for_approval`, creates the audit event, and notifies
    eligible leadership.
 
@@ -864,10 +864,11 @@ credential delivery, migration compatibility and history retention.
 
 Use backend accessReasons and allowedActions for Head officer controls and package submission.
 Show current officer or unassigned, an officer filter and visible-record workload counts on the
-existing proposal list. Deputy gets institutional reads and their independent PI/member actions,
+existing proposal list. `RESEARCH_OVERSIGHT_AUTHORITY` gets institutional reads and its independent PI/member actions,
 never final-decision buttons. Head reads Staff summary; oversight counts/deadlines omit reviewer
-identity/scores/comments. Both Director and Deputy institutional dashboards include proposal,
-project and funding indicators only when their source exists; Director alone has decision queues.
+identity/scores/comments. Both `LEADERSHIP_APPROVAL_AUTHORITY` and
+`RESEARCH_OVERSIGHT_AUTHORITY` institutional dashboards include proposal, project and funding
+indicators only when their source exists; `LEADERSHIP_APPROVAL_AUTHORITY` alone has decision queues.
 The current dashboard remains clearly labelled demo data. Project/funding/report/notification
 backends remain planned; requested proposal funding is the only current budget source.
 

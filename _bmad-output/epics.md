@@ -57,14 +57,15 @@ disclosure; unresolved context fails closed and important changes are audited.
 ### Scientific Management scope for all epic descriptions and stories
 
 FR6f–FR6g apply to both the delivery-epic summaries and numbered story backlog below.
-Every Staff proposal/project check, assignment, consolidation, follow-up or administrative
+Every Staff proposal/project check, follow-up or administrative
 operation requires the matching active management-officer relationship and explicit scope;
 participation/review access never supplies that authority. Independent intake/profile and
 other-domain capabilities retain their own scope and cannot widen proposal/project access.
 Head sees the authorized portfolio, assigns/reassigns/revokes responsible Staff, reviews
-Staff summaries and submits eligible completed packages. Director has oversight and final
-decisions only when eligible and conflict-free. Deputy has internal researcher eligibility
-and read-only institutional oversight. Project and other absent backends remain planned.
+Staff summaries and submits eligible completed packages. `LEADERSHIP_APPROVAL_AUTHORITY`
+has oversight and final decisions only when eligible and conflict-free.
+`RESEARCH_OVERSIGHT_AUTHORITY` has internal researcher eligibility and read-only
+institutional oversight. Project and other absent backends remain planned.
 
 | Requirement | Owning existing stories |
 | --- | --- |
@@ -72,9 +73,10 @@ and read-only institutional oversight. Project and other absent backends remain 
 | FR6g: independent access basis, bidirectional/action-time conflict, surface parity | 1.7–1.9, 2.4, 3.1–3.5, 4–7, 10.5–10.8, 11.1–11.5, 12.1–12.5 |
 | FR45a: Head oversight, officer filters, unassigned and workload/status/deadlines | Dashboard delivery Epic 8, reporting delivery Epic 9; Stories 12.1–12.5 |
 
-The seven-role registry includes Head and Deputy Director. Proposal officer history is
+The seven-role registry includes `SCIENTIFIC_MANAGEMENT_HEAD` and
+`RESEARCH_OVERSIGHT_AUTHORITY`. Proposal officer history is
 source-owned; no generic ACL is introduced. Existing records stay unassigned. Staff PI
-mutation eligibility is unchanged; Deputy gains internal researcher eligibility.
+mutation eligibility is unchanged; Oversight gains internal researcher eligibility.
 
 ## Requirements Inventory
 
@@ -598,8 +600,8 @@ researcher as disclosure-limited viewers.
 
 ### In scope
 
-Staff check, supplement, reviewer assignment, evaluation form, aggregation,
-staff `Trình phê duyệt` routing, decision package, leadership approve/reject
+Staff check and supplement; Head reviewer assignment, evaluation aggregation and
+`Trình phê duyệt` routing; decision package, leadership approve/reject
 confirmation, disclosure, decision history, and proposal state transitions.
 
 ### Out of scope / later
@@ -614,7 +616,7 @@ notifications, and state transition contracts from Epic 10.
 
 ### UX screens involved
 
-Staff check, reviewer assignment, reviewer evaluation, result aggregation,
+Staff check, Head reviewer assignment, reviewer evaluation, Head result aggregation,
 leadership decision, proposal detail review/history tabs.
 
 ### Backend/API needs
@@ -637,8 +639,9 @@ canonical; stories reference it rather than redefine pairwise rules.
 Researcher-profile pages never render proposal review/assignment/approval cards;
 proposal detail renders them only from backend capability and exact assignment
 context. `ACTION_NOT_GRANTED` omits a section; conflict/state blocks keep the
-relevant section disabled with its denial reason. Staff routing is not final
-approval, and `SYSTEM_ADMIN` gains no implicit proposal workflow action.
+relevant section disabled with its denial reason. Staff monitoring is not assignment,
+synthesis, routing or final approval; Head routing is not final approval, and
+`SYSTEM_ADMIN` gains no implicit proposal workflow action.
 
 ### Acceptance criteria
 
@@ -655,8 +658,8 @@ approval, and `SYSTEM_ADMIN` gains no implicit proposal workflow action.
   backend, and locks the submitted version.
 - Aggregation cannot move to pending approval until required reviews and summary
   conditions pass; missing/late review is actionable only for authorized staff.
-- Staff can send a completed dossier to leadership through `Trình phê duyệt`,
-  but cannot invoke final approve/reject actions.
+- Head can send a completed dossier to leadership through `Trình phê duyệt`; Staff
+  confirms completeness and monitors progress but cannot invoke final approve/reject actions.
 - Leadership approve/reject rechecks authority, scope, conflict, state, version,
   and disclosure; rejection requires a reason and creates an immutable audit.
 
@@ -665,9 +668,9 @@ approval, and `SYSTEM_ADMIN` gains no implicit proposal workflow action.
 | ID | Priority | Story/task |
 | --- | --- | --- |
 | 4.1 | MVP | Implement staff completeness check and supplement request. |
-| 4.2 | MVP | Implement candidate search, conflict preflight, reviewer assignment/change/revoke. |
+| 4.2 | MVP | Implement Head-owned candidate search, conflict preflight, reviewer assignment/change/revoke. |
 | 4.3 | MVP | Implement reviewer score form, save draft, submit-once lock, and disclosure. |
-| 4.4 | MVP | Implement staff aggregation with backend totals and readiness gate. |
+| 4.4 | MVP | Implement Head-owned aggregation with backend totals and readiness gate. |
 | 4.5 | MVP | Implement leadership decision package and approve/reject action. |
 | 4.6 | Should have | Add council/ethics evaluator variants using the same assignment/evaluation contracts. |
 
@@ -1130,8 +1133,8 @@ behavior outside `docs/ux-ui-spec.md`.
 | S05 Proposal detail | Canonical proposal detail workspace. | Authorized relationship/scope/assignment. | `/proposals/:id` | Header, relationship, tabs, files, timeline, capabilities. | Scoped detail API. | Disclosure-filtered DTO; stale context retained. | Loading, safe not-found/denied, stale, read-only, success. | PI gets the edit/submit workspace; staff gets a read-only proposal/team/schedule/budget summary; hidden tabs/data are omitted. |
 | S06 Create/edit proposal | Create/edit structured draft. | Current internal PI only. | `/proposals/new`, `/proposals/:id/edit` | Intake, participants, dates, objectives, budget, files, readiness. | Create/update proposal, catalogs, files. | Owner, system role, scope, state; submitted version locked. | Loading, incomplete, field/server error, locked, saved. | Save draft preserves values; invalid required fields focus first error; non-PI users cannot edit or submit. |
 | S07 Submit confirmation / supplement request / staff check | Confirm submit, request supplement, or perform staff check. | Current internal PI for submit/resubmit; scientific management staff for check/supplement. | Proposal action panels. | Readiness, version, reasons, whole-day due date, checklist. | Submit/resubmit/check/supplement operations. | Atomic state/context/conflict checks; proposal submit/resubmit are PI-only; one completeness check per submitted version. | Loading, blocked, stale, validation error, success. | Non-PI viewers do not receive the submit section; repeat completeness is disabled and denied; supplement reason/due date is immutable history. |
-| S08 Reviewer assignment / reviewer evaluation | Assign reviewers and collect own evaluation. | Staff; assigned reviewer/council/ethics evaluator. | `/proposals/:id/assignments`, `/reviews/:assignmentId` | Candidate, conflict result, rubric, score, recommendation, whole-day effective dates/deadline. | Assignment/evaluation APIs. | No self-review; own assignment only; one submit/lock. | Loading, empty candidates, conflict-blocked, incomplete, submitted, error. | Date controls omit hours/minutes; conflict blocks confirmation; total is backend-calculated; other reviews remain hidden. |
-| S09 Result aggregation / leadership decision | Consolidate evidence and decide. | Staff; leadership authority. | `/proposals/:id/aggregation`, `/proposals/:id/decision` | Review counts, summary, package, history, conflict indicator. | Aggregation/decision package and decision APIs. | Staff cannot approve; conflicted authority cannot decide. | Loading, not-ready, blocked, confirm, error, immutable success. | Pending approval requires conditions; reject requires reason; decision is audited and read-only. |
+| S08 Reviewer assignment / reviewer evaluation | Assign reviewers and collect own evaluation. | Head; assigned reviewer/council/ethics evaluator. | `/proposals/:id/assignments`, `/reviews/:assignmentId` | Candidate, conflict result, rubric, score, recommendation, whole-day effective dates/deadline. | Assignment/evaluation APIs. | No self-review; own assignment only; one submit/lock. | Loading, empty candidates, conflict-blocked, incomplete, submitted, error. | Date controls omit hours/minutes; conflict blocks confirmation; total is backend-calculated; other reviews remain hidden. |
+| S09 Result aggregation / leadership decision | Consolidate evidence and decide. | Head; leadership authority. | `/proposals/:id/aggregation`, `/proposals/:id/decision` | Review counts, synthesis, package, history, conflict indicator. | Aggregation/decision package and decision APIs. | Head cannot approve; conflicted authority cannot decide. | Loading, not-ready, blocked, confirm, error, immutable success. | Pending approval requires conditions; reject requires reason; decision is audited and read-only. |
 | S10 Project tracking overview | Operate approved project lifecycle. | Staff, leadership, PI, members, secretary. | `/projects`, `/projects/:id` | Source proposal, relationships, state, progress, risks, tabs. | Project detail/list and explicit create API. | Member scope; no automatic project creation; state-based actions. | Loading, empty, denied tab, delayed, read-only, success. | Project setup clearly separates copied data from source proposal and exposes next action. |
 | S11 Progress milestone / periodic report / adjustment-extension / acceptance-evaluation | Manage progress evidence and request decisions. | PI, assigned project Staff, scoped Head, later acceptance actors. | Project subroutes. | Dates, progress, report period, evidence, typed adjustment impact, extension end date, dossier. | Milestone/report/adjustment/extension/acceptance APIs. | Submitted versions lock; Staff decides adjustments, Head decides extensions, Leadership has no GF4 request decision action. | Loading, due, overdue, invalid, blocked, success. | Overdue never silently changes project state; all decisions and evidence are traceable. |
 | S12 Task list / task detail / create-edit task | Create and update linked/standalone work. | Creators, managers, assignees, collaborators. | `/tasks`, `/tasks/:id`, `/tasks/new` | Linked record, owner, collaborators, priority, due, state, evidence. | Task APIs and linked-record authorization. | Task cannot widen linked-record access. | Loading, empty/no-match, validation, denied, overdue, success. | All task states use named transitions; completion/cancellation requires permitted action and audit. |
@@ -1187,9 +1190,9 @@ state.
 | Submitted | Locked snapshot and pending-check queue. | Staff checks/supplements; PI read-only. | Submit/check audit; no post-submit overwrite. |
 | Pending check | Staff queue/checklist and next-owner strip. | Check complete or supplement; assignment/approval disabled. | Checklist version/audit; stale, conflict, closed-intake edge cases. |
 | Needs supplement | Missing items, reason, due date, response CTA. | PI revises working version/resubmits; final actions disabled. | Immutable request, reminder, overdue response flag. |
-| Eligible | Derived readiness/eligibility display. | Staff may assign when policy permits; PI/leadership cannot decide. | Checklist result audit; never a bypass state. |
-| In review | Assignment progress and reviewer own work. | Assigned evaluator submits; staff monitors/aggregates when ready; raw reviews hidden. | Assignment/evaluation/conflict audit; inactive assignment edge case. |
-| Pending result aggregation | Counts/missing/late reviews and summary form. | Staff aggregates/marks ready; leadership decision disabled. | Backend totals and readiness audit; source failure blocks completion. |
+| Eligible | Derived readiness/eligibility display. | Head may assign when policy permits; Staff monitors; PI/leadership cannot decide. | Checklist result audit; never a bypass state. |
+| In review | Assignment progress and reviewer own work. | Assigned evaluator submits; Staff monitors; Head aggregates when ready; raw reviews hidden. | Assignment/evaluation/conflict audit; inactive assignment edge case. |
+| Pending result aggregation | Counts/missing/late reviews and synthesis form. | Head aggregates/marks ready; leadership decision disabled. | Backend totals and readiness audit; source failure blocks completion. |
 | Pending approval | Decision package and due date. | Eligible leadership approves/rejects; all others disabled with reason. | Decision confirmation; conflict, stale version, and wrong-state rejection. |
 | Approved | Final decision and project-creation-pending cue. | Staff explicitly creates project; proposal read-only. | Approval and project creation are separate events. |
 | Rejected | Final read-only package and permitted reason/history. | No edit/submit/approve unless explicit future policy. | Immutable decision; no hidden reopen button. |
@@ -1204,7 +1207,7 @@ state.
 | Delayed | Missed item, owner, risk, next action. | Reminder/escalate/update/request adjustment. | Derived overdue flag; never auto-pause/reject/close. |
 | Pending adjustment (request flag) | Request impact/assessment/decision. | PI submits typed milestone/scope-plan/membership change; assigned Staff reviews and approves/rejects. Head and Leadership are read/monitor only. | Direct controlled-field edits disabled after activation; duration/end-date increase is not an adjustment. |
 | Pending extension (request flag) | Requested/current end date, validation package and decision. | PI submits later end date; assigned Staff validates/prepares; scoped Head approves/rejects. Leadership is read/monitor only. | Direct end-date edits disabled; no extension applies before Head decision. |
-| Pending acceptance | Dossier readiness and assignment progress. | PI submits; staff prepares; evaluator evaluates; aggregation required. | Version/assignment audit; missing evidence blocks. |
+| Pending acceptance | Dossier readiness and assignment progress. | PI submits; Staff checks and monitors; Head assigns/aggregates; evaluator evaluates. | Version/assignment audit; missing evidence blocks. |
 | Under acceptance | Evaluation/aggregation/decision workspace. | Assigned evaluator/staff/authority actions by capability. | Conflict/disclosure checks; no completion before decision. |
 | Completed | Final outputs and closed timeline. | Read/report/export; normal edits disabled. | Completion decision immutable; formal reopen only if later policy exists. |
 | Paused | Reason, effective date, next review date. | Authorized resume/policy action; normal progress may be limited. | Pause/resume reason audited; no silent deadline reset. |

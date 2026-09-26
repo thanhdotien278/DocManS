@@ -47,7 +47,21 @@ classification:
 
 DocManSystem, also referred to as RTMS, is a greenfield internal web application for the Military Medical Academy to manage the full lifecycle of university-level research topics and scientific project workflows. The product replaces fragmented handling through spreadsheets, email, disconnected files, and manual coordination with a single role-aware system that supports proposal intake, evaluation, approval, approved-project tracking, task execution, notifications, reminders, and executive reporting. The core business goal is not superficial digitization; it is to make workflow state, accountability, deadlines, and decision bottlenecks visible and controllable across the academy’s scientific management process.
 
-Phase 1 targets seven account-level system roles—system administrator, Scientific Management Head, Scientific Management Staff, leadership or approval authority, researcher/internal user, and external researcher user—plus record-scoped relationships and assignments. A proposal has one owner-derived `PROPOSAL_PI`; active proposal/topic team rows use only `TOPIC_SECRETARY` and `TOPIC_MEMBER`; an approved topic owner uses `TOPIC_PI`. Reviewer and council duties remain assignments. The product must preserve complex internal workflows rather than flatten them. It must support controlled state transitions, organization-scoped data access, role-based and state-based permissions, mandatory audit logging for critical actions, file traceability, and dashboard views filtered by the current user’s authority. The first release scope must cover the seven work items listed in `detaiHVQY.md` section 2.1 through 2.7: OMS proposal management, approved-project tracking, seminar and student research tracking, task management, executive dashboard, related-document management, and council/ethics management.
+Phase 1 targets exactly seven account-level system roles—`SYSTEM_ADMIN`,
+`SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`,
+`LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`,
+`RESEARCHER_INTERNAL_USER`, and `EXTERNAL_RESEARCHER_USER`—plus record-scoped
+relationships and assignments. A proposal has one owner-derived `PROPOSAL_PI`;
+active proposal/topic team rows use only `TOPIC_SECRETARY` and `TOPIC_MEMBER`; an
+approved topic owner uses `TOPIC_PI`. Reviewer and council duties remain assignments.
+The product must preserve complex internal workflows rather than flatten them. It
+must support controlled state transitions, organization-scoped data access,
+role-based and state-based permissions, mandatory audit logging for critical actions,
+file traceability, and dashboard views filtered by the current user’s authority. The
+first release scope must cover the seven work items listed in `detaiHVQY.md` section
+2.1 through 2.7: OMS proposal management, approved-project tracking, seminar and
+student research tracking, task management, executive dashboard, related-document
+management, and council/ethics management.
 
 This PRD assumes a modular-monolith phase 1 architecture and a strict implementation boundary: no microservices, no external identity integration in phase 1, no workflow engine, no deep financial subsystem, and no public submission portal. The expected operational outcome is a measurable reduction in incomplete proposal records, a strong increase in overdue visibility, faster reporting preparation, and a more auditable and disciplined research administration process.
 
@@ -68,7 +82,8 @@ The core insight is that the academy’s main pain is not lack of data entry too
 
 Proposal roles, officer lifecycle and access are implemented in this change. Project and other
 absent source backends remain contract/design scope. Head owns officer changes and submission
-of completed packages; Deputy is an eligible internal researcher plus read-only oversight.
+of completed packages; `RESEARCH_OVERSIGHT_AUTHORITY` is an eligible internal researcher plus
+read-only oversight.
 Staff PI mutations are not expanded. See baseline §2.1 for the finalized policy.
 
 ## Authorization Glossary
@@ -720,7 +735,7 @@ reviewer, and secretary authority remains record-scoped.
 
 - Proposal intake, supplement, review, approval, approved-project tracking, seminar/student research tracking, task management, related-document management, council/ethics management, notifications, and dashboard/reporting flows are all demonstrably available in phase 1 through test execution or controlled UAT scenarios.
 - Proposal, approved-project, seminar/student research, council/ethics, and task states are enforced as controlled workflows rather than free-form edits, verified by positive and negative workflow transition scenarios.
-- System administrator, scientific management staff, leadership, owner-derived PI, topic team member, reviewer, and council or committee member can each complete at least one primary role journey in verification scenarios without relying on external shadow tracking for the main workflow.
+- Each canonical system role plus owner-derived PI, topic team member, reviewer, and council or committee member can complete at least one primary journey in verification scenarios without relying on external shadow tracking for the main workflow.
 
 ### Governance Acceptance
 
@@ -932,9 +947,9 @@ contract relationship, not a persisted orphan assignment. Dashboard showcase dat
 an institutional report or proof of authorization. Future source domains must apply the
 same current scope, relationship, conflict and disclosure checks before aggregates or drill-down.
 
-Director and Deputy Director require institutional research dashboard views of available
+`LEADERSHIP_APPROVAL_AUTHORITY` and `RESEARCH_OVERSIGHT_AUTHORITY` require institutional research dashboard views of available
 proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
-funding and management workload. Only Director gets eligible proposal decision queues. Project adjustment queues
+funding and management workload. Only `LEADERSHIP_APPROVAL_AUTHORITY` gets eligible proposal decision queues. Project adjustment queues
 belong to assigned Staff and extension decision queues to Head. Head gets
 responsible-officer/unassigned filters and workload; Staff sees assigned management records.
 Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,

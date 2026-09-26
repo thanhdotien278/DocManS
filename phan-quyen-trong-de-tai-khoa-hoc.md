@@ -11,8 +11,9 @@ Staff vẫn tham gia hồ sơ khác qua quan hệ hợp lệ, nhưng không nh�
 Participant không đồng thời là officer/reviewer/evaluation hoặc acceptance council/
 final decision; reviewer không quyết định cùng vòng và các vị trí loại trừ trong hội
 đồng không được kiêm nhiệm. Kiểm tra khi thay đổi cả hai phía quan hệ và tại action;
-mọi surface dùng cùng authorization/disclosure. Quyền phân công officer và action
-vận hành Head còn chờ chốt theo baseline §2.1.
+mọi surface dùng cùng authorization/disclosure. `SCIENTIFIC_MANAGEMENT_HEAD` owns
+officer/reviewer assignment and synthesis/routing within the finalized baseline §2.1;
+`SCIENTIFIC_MANAGEMENT_STAFF` confirms completeness and monitors assigned reviews.
 
 Nên xử lý theo mô hình **một người nhiều vai trò, nhưng vai trò được gắn theo từng ngữ cảnh đề tài**, không gán cứng một người chỉ là “PI” hoặc chỉ là “thành viên”.
 
@@ -43,12 +44,13 @@ Nên tách thành 2 lớp:
 
 ```text
 System role:
-- System Admin
-- SCIENTIFIC_MANAGEMENT_HEAD
-- SCIENTIFIC_MANAGEMENT_STAFF
-- Leadership / Approval Authority
-- RESEARCHER_INTERNAL_USER
-- EXTERNAL_RESEARCHER_USER
+- `SYSTEM_ADMIN`
+- `SCIENTIFIC_MANAGEMENT_HEAD`
+- `SCIENTIFIC_MANAGEMENT_STAFF`
+- `LEADERSHIP_APPROVAL_AUTHORITY`
+- `RESEARCH_OVERSIGHT_AUTHORITY`
+- `RESEARCHER_INTERNAL_USER`
+- `EXTERNAL_RESEARCHER_USER`
 
 Proposal/topic participation role:
 - `PROPOSAL_PI` or `TOPIC_PI` (owner-derived)
@@ -403,6 +405,10 @@ Công việc hiện tại:
 
 ## 7. Ma trận quyền gợi ý
 
+The table below compares record personas, not system roles. The complete system-role
+set is the seven values listed in section 1; PI, member, secretary, reviewer and
+leadership columns here are contextual shorthand and never additional account roles.
+
 | Chức năng | PI | Thành viên | Thư ký khoa học | Reviewer | Staff | Leadership |
 |---|---:|---:|---:|---:|---:|---:|
 | Tạo proposal | Có, current internal PI | Không | Không | Không | Không | Không |
@@ -413,7 +419,7 @@ Công việc hiện tại:
 | Nộp báo cáo tiến độ | Có | Không hoặc đóng góp | Theo assignment | Không | Không | Không |
 | Gửi điều chỉnh/gia hạn | Có | Không | Theo assignment | Không | Không hoặc nhập thay | Không |
 | Chấm điểm proposal | Không | Không | Không | Có nếu assigned | Không | Không |
-| Tổng hợp đánh giá | Không | Không | Có nếu là thư ký hội đồng/staff được giao | Không | Có | Không |
+| Tổng hợp đánh giá | Không | Không | Có nếu là thư ký hội đồng được giao | Không | Chỉ theo dõi; Head tổng hợp | Không |
 | Approve/reject | Không | Không | Không | Không | Tùy quy trình | Có |
 | Quản lý hội đồng | Không | Không | Có trong council được phân công | Không | Có | Có theo quyền |
 | Xem dashboard | Không | Không | Không | Không | Chỉ hồ sơ có officer assignment + scope | Có theo authority scope |

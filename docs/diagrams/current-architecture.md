@@ -64,7 +64,7 @@ and audit logging remain enforced by the NestJS API.
 
 ```mermaid
 flowchart TD
-  intake(["Management: open intake period"])
+  intake(["SCIENTIFIC_MANAGEMENT_STAFF: open intake period"])
   draft(["PI: create and edit draft"])
   upload(["File service: upload through API"])
   submit(["PI: submit proposal"])
@@ -74,11 +74,11 @@ flowchart TD
   resubmit(["PI: review final content and resubmit"])
   review(["Assigned reviewer or council: review"])
   score(["Reviewer or council: score and comment"])
-  consolidate(["Management: consolidate evaluation"])
+  consolidate(["SCIENTIFIC_MANAGEMENT_HEAD: consolidate evaluation"])
   decision{"Leadership decision?"}
   approved["Proposal: approved"]
   rejected["Proposal: rejected"]
-  project(["Management: create project"])
+  project(["Assigned proposal Staff: create project"])
   task["Generate follow-up task"]
   archive["Close / archive; retain history"]
 

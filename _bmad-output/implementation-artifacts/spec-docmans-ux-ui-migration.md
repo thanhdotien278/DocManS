@@ -84,5 +84,5 @@ No irreversible database or external action was performed. The user requested th
 - `npm run typecheck` -- passed.
 - `node --test tests/docmans-ux-migration.test.mjs tests/proposal-capability-ui-source.test.mjs tests/project-execution-capability.test.mjs` -- passed, 15/15.
 - `npm run build` -- passed; web generated 27 routes and the API/Prisma build completed.
-- `npm test` with local database access -- 130 passed, 53 failed, 1 skipped. Failures are existing stale assertions/mocks, led by five-role/model-list expectations and proposal mocks without `tx.user.findUnique`; no test was weakened.
+- `npm test` with local database access -- 130 passed, 53 failed, 1 skipped. Failures are existing stale legacy role-count/model-list assertions and proposal mocks without `tx.user.findUnique`; no test was weakened.
 - Playwright CLI against the local web/API -- passed desktop admin and researcher shells, live users/profiles/proposals/create-route loads, modal Escape/focus restoration, profile arrow-key tabs/print preview, route-resetting mobile navigation, and 390 px page-overflow check (`scrollWidth === innerWidth`).

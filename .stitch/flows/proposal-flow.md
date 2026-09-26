@@ -9,6 +9,6 @@
 Design constraints: workflow transitions are named backend operations, every consequential action is audited, and a stale authorization context requires refresh before mutation. Sources: `docs/authorization-core-business-baseline.md`, `docs/permission-matrix.md`, `_bmad-output/architecture.md`, `docs/user-flows.md`.
 
 Head assigns an in-scope Staff officer and can submit completed Staff packages. Staff actions
-require that active assignment. Deputy Director may act as internal PI through their own
+require that active assignment. `RESEARCH_OVERSIGHT_AUTHORITY` may act as internal PI through their own
 relationship; institutional oversight alone exposes operational status, never final decisions
-or confidential reviewer fields. Director decisions require scope, eligible state and no conflict.
+or confidential reviewer fields. `LEADERSHIP_APPROVAL_AUTHORITY` decisions require scope, eligible state and no conflict.

@@ -16,12 +16,12 @@ confirmed completeness as `hdtien1`, assigned two reviewers (`researcher2`, `res
 and three committee members (`external1`–`external3`) as Head `nmphuong`, and submitted
 all ten reviews through UI. Reviewer draft/save and submitted read-only mode were checked.
 Staff monitoring showed 5/5 and named assignments on both records without synthesis controls.
-Head separately saved, finalized and submitted each synthesis; Director `tvtien` approved A
+Head separately saved, finalized and submitted each synthesis; `LEADERSHIP_APPROVAL_AUTHORITY` `tvtien` approved A
 and rejected B through UI. No direct database/status writes, reset or reseed were used.
 
 Final authenticated reads verified both terminal states, one decision each, package revision 2,
 five immutable submitted reviews bound to each current submission, Staff named monitoring,
-PI denial of internal endpoints, Deputy read-only oversight and redacted leadership progress.
+PI denial of internal endpoints, `RESEARCH_OVERSIGHT_AUTHORITY` read-only oversight and redacted leadership progress.
 Read-only persistence inspection confirmed completeness, review submission, completion threshold,
 synthesis draft/finalization/submission and decision history plus their corresponding audit actions.
 
@@ -34,7 +34,7 @@ synthesis draft/finalization/submission and decision history plus their correspo
 - `git diff --check`: passed.
 - Twenty live negative API assertions passed before synthesis: PI/member candidate conflict,
   duplicate/incompatible duty, Staff assignment and all synthesis actions, premature Head draft,
-  premature Director package/approval, Deputy approval, PI internal endpoints, unassigned review
+  premature leadership package/approval, Oversight approval, PI internal endpoints, unassigned review
   access, submitted-review edit, reviewer decision, and wrong-proposal context token.
 - One further live assertion denied submitting the saved synthesis draft before finalization.
 - Prior handoff evidence: Head assignment before completeness denied (400), Staff assignment denied (403).

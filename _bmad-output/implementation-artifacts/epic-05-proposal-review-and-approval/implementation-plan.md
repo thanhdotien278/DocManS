@@ -59,7 +59,7 @@ return-to-draft only if authorized by an existing rule; otherwise record the pol
 1. **Policy alignment:** update `CONTEXT.md`, `docs/authorization-core-business-baseline.md`,
    `docs/permission-matrix.md`, `docs/user-flows.md`, `_bmad-output/prd.md` and
    `_bmad-output/planning-artifacts/architecture/architecture-DocManSystem-2026-07-29/AUTHORIZATION-CONTRACTS.md`.
-   Reconcile active Staff assignment/synthesis statements in place. Historical reports stay historical.
+   Reconcile active Staff monitoring statements in place. Historical reports stay historical.
 2. **Backend authority:** in `apps/api/src/proposal-evaluations/proposal-evaluation-support.ts`
    and `proposal-review-assignments.service.ts`, separate Head writes from assigned Staff
    operational reads; trace every caller, preserve scope/conflict/current-account transaction gates.

@@ -14,6 +14,12 @@ context:
 
 <frozen-after-approval>
 
+**Historical verification record:** This completed slice predates the current
+Head/Staff authority split. Its Staff-assignment observations and five-role
+fixtures are retained as evidence of the earlier implementation, not as current
+normative permission grants. The canonical baseline and permission matrix govern
+present behavior.
+
 ## Intent
 
 **Authorization applicability — 2026-09-21:** Earlier implementation/demo evidence
