@@ -358,3 +358,19 @@ access reasons; never derive a decision button from general oversight or record 
 Confidential reviewer fields are omitted unless exact disclosure policy allows them. Dashboard
 showcases must be labelled demo; unavailable project/funding sources must not display invented
 operational totals. Funding remains research metadata, never accounting.
+
+## Golden Flow 4 — execution workspaces
+
+Use the [Project Execution contract](contracts/project-execution.md) for PI,
+assigned Staff, Head and Leadership monitoring screens/actions. Preserve the existing design
+system. My Projects and project detail expose approved source, members, milestones,
+reporting deadlines, immutable reports/evidence, requests and permitted history.
+Staff monitoring provides upcoming/overdue filters and administrative review;
+Staff reviews/decides adjustments and validates/prepares extensions; Head decides
+prepared extensions. Leadership sees only authorized monitoring information.
+
+Render actions from backend capabilities and explain blocked actions. Show loading,
+empty, error and stale-context states; confirm submission/escalation/decisions in
+accessible dialogs. Separate project-state badges from overdue/report/request flags.
+Never offer generic status edits or direct changes to approved controlled fields.
+No Leadership execution approval control or Head adjustment approval control exists.

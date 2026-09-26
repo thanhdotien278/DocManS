@@ -106,7 +106,9 @@ The canonical system-role set is `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`,
 `RESEARCHER_INTERNAL_USER`, `EXTERNAL_RESEARCHER_USER`, with one active role per account.
 Head sees all proposals/projects within explicitly authorized Scientific Management
 scope, including current officer, unassigned records, officer filters/groups and
-workload/status/deadlines. Neither Head nor Staff is leadership final approval authority.
+workload/status/deadlines. Neither Head nor Staff is proposal final approval authority. Golden Flow 4 grants
+assigned Staff adjustment decisions and scoped Head extension decisions; Leadership
+has no adjustment/extension decision.
 Head visibility alone does not grant operational mutations or unrestricted review data.
 
 Staff management reads/actions require an effective officer relationship on the exact
@@ -489,3 +491,24 @@ never infer expenditure or add ledgers, payments, banking, invoices or ERP integ
 - `proposal.review.submit-package`: scoped, conflict-free Head, under-review proposal, a finalized Head synthesis bound to the current submission and all required reviews. The request carries `contextVersion`; it does not accept replacement summary content.
 - Summary saves and final decisions also carry `contextVersion` and run within the proposal mutation boundary. Future or unexpired non-revoked review duties and persisted review activity prevent incompatible management/decision actions.
 - Capability `accessReasons` distinguishes institutional oversight, primary management officer and independent participation/reviewer access. Exact action IDs remain authoritative for the UI.
+
+## Golden Flow 4 — project execution integration boundary
+
+See [Project Execution contract](../../../../docs/contracts/project-execution.md).
+Preserve `TOPIC_PI` as the project relationship identifier (`PROJECT_PI` is the
+requested business label). Register exact named domain actions in the existing
+permission registry and capability schema when the documentation gate is complete.
+Use the same request-wide `asOf`, context tokens and denial ordering for project,
+report, request, history, evidence and every derived queue/count/filter.
+
+Assigned Staff administrative monitoring/report acceptance and normal adjustment
+review/final decisions are distinct from Staff extension preparation and Head
+extension final decisions. Leadership has no execution-change approval. `RESEARCH_OVERSIGHT_AUTHORITY`
+has no decision grant. Current project officer plus explicit scope is mandatory
+for Staff management actions; no proposal officer authority automatically carries
+into a project. Participant conflicts override administrative/decision grants.
+All protected mutations recheck current account/relationship/assignment/state and
+versions transactionally, including file finalization and revision immutability.
+Current scoped proposal officer creates; Head independently assigns the project
+officer, who confirms setup. Creation itself grants no project authority. Adjustment approval belongs to assigned Staff; extension approval belongs only to
+Head after Staff preparation. Unknown authority fails closed.

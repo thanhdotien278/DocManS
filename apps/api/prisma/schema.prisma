@@ -46,6 +46,21 @@ model User {
   createdEvaluationSummaries ProposalEvaluationSummary[] @relation("EvaluationSummaryCreator")
   updatedEvaluationSummaries ProposalEvaluationSummary[] @relation("EvaluationSummaryEditor")
   proposalDecisions ProposalDecision[] @relation("ProposalDecisionAuthority")
+  createdApprovedProjects ApprovedProject[] @relation("ApprovedProjectCreator")
+  confirmedApprovedProjects ApprovedProject[] @relation("ApprovedProjectConfirmer")
+  approvedProjectMembers ApprovedProjectMember[] @relation("ApprovedProjectMemberUser")
+  createdApprovedProjectMembers ApprovedProjectMember[] @relation("ApprovedProjectMemberCreator")
+  projectManagementOfficerAssignments ProjectManagementOfficer[] @relation("ProjectManagementOfficerUser")
+  assignedProjectManagementOfficers ProjectManagementOfficer[] @relation("ProjectManagementOfficerAssigner")
+  projectReports ProjectReportRevision[] @relation("ProjectReportAuthor")
+  reviewedProjectReports ProjectReportRevision[] @relation("ProjectReportReviewer")
+  projectRequests ProjectRequest[] @relation("ProjectRequestRequester")
+  decidedProjectRequests ProjectRequest[] @relation("ProjectRequestDecider")
+  preparedProjectRequests ProjectRequest[] @relation("ProjectRequestPreparer")
+  projectHistory ProjectHistory[] @relation("ProjectHistoryActor")
+  projectRequestHistory ProjectRequestHistory[] @relation("ProjectRequestHistoryActor")
+  createdProjectRequestRevisions ProjectRequestRevision[] @relation("ProjectRequestRevisionCreator")
+  createdProjectMilestones ProjectMilestone[] @relation("ProjectMilestoneCreator")
   createdResearcherProfiles ResearcherProfile[] @relation("ResearcherProfileCreator")
   updatedResearcherProfiles ResearcherProfile[] @relation("ResearcherProfileUpdater")
   researcherProfileAccountLinks ResearcherProfileAccountLink[] @relation("ProfileAccountLinkUser")
@@ -80,6 +95,7 @@ model OrganizationUnit {
   userScopes UserOrganizationScope[]
   proposalIntakePeriods ProposalIntakePeriod[]
   hostedResearchProposals ResearchProposal[]
+  approvedProjects ApprovedProject[]
   researcherProfiles ResearcherProfile[]
 
   @@index([parentId])
@@ -440,6 +456,7 @@ model ResearchProposal {
   reviews                ProposalReview[]
   evaluationSummary      ProposalEvaluationSummary?
   decisions              ProposalDecision[]
+  approvedProject        ApprovedProject?
 
   @@index([intakePeriodId])
   @@index([ownerId])
@@ -530,6 +547,8 @@ model FileRecord {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
   deletedAt         DateTime? @map("deleted_at")
+  projectReportEvidence ProjectReportEvidence[]
+  projectRequestEvidence ProjectRequestEvidence[]
 
   @@index([relatedEntityType, relatedEntityId])
   @@index([uploadedById])
@@ -550,6 +569,7 @@ model ProposalSubmissionEvent {
   submittedAt DateTime         @default(now()) @map("submitted_at")
   note        String?
   snapshot    Json?
+  approvedProjects ApprovedProject[] @relation("ProjectSourceSubmission")
 
   @@index([proposalId])
   @@index([actorId])
@@ -674,9 +694,286 @@ model ProposalDecision {
   packageSnapshot Json?        @map("package_snapshot")
   publicSummary Json?          @map("public_summary")
   createdAt   DateTime         @default(now()) @map("created_at")
+  approvedProjects ApprovedProject[] @relation("ProjectSourceDecision")
 
   @@index([proposalId])
   @@index([decidedById])
   @@index([decision])
   @@map("proposal_decisions")
+}
+
+/// Golden Flow 4: an approved proposal becomes an independent, explicitly activated project.
+model ApprovedProject {
+  id                         String   @id @default(uuid())
+  code                       String?  @unique
+  proposalId                String   @unique @map("proposal_id")
+  proposal                 ResearchProposal @relation(fields: [proposalId], references: [id], onDelete: Restrict)
+  sourceSubmissionEventId   String   @map("source_submission_event_id")
+  sourceSubmissionEvent     ProposalSubmissionEvent @relation("ProjectSourceSubmission", fields: [sourceSubmissionEventId], references: [id], onDelete: Restrict)
+  sourceDecisionId          String   @map("source_decision_id")
+  sourceDecision            ProposalDecision @relation("ProjectSourceDecision", fields: [sourceDecisionId], references: [id], onDelete: Restrict)
+  hostOrganizationUnitId    String   @map("host_organization_unit_id")
+  hostOrganizationUnit      OrganizationUnit @relation(fields: [hostOrganizationUnitId], references: [id], onDelete: Restrict)
+  title                     String
+  scopeSnapshot             Json     @map("scope_snapshot")
+  planSnapshot              Json?    @map("plan_snapshot")
+  status                    String   @default("preparing")
+  startDate                 DateTime? @db.Date @map("start_date")
+  endDate                   DateTime? @db.Date @map("end_date")
+  aggregateVersion          Int      @default(0) @map("aggregate_version")
+  relationshipVersion       Int      @default(0) @map("relationship_version")
+  conflictVersion           Int      @default(0) @map("conflict_version")
+  delegationVersion         Int      @default(0) @map("delegation_version")
+  authorizationContextUpdatedAt DateTime @default(now()) @map("authorization_context_updated_at")
+  createdById               String   @map("created_by_id")
+  createdBy                 User     @relation("ApprovedProjectCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  confirmedById             String?  @map("confirmed_by_id")
+  confirmedBy               User?    @relation("ApprovedProjectConfirmer", fields: [confirmedById], references: [id], onDelete: Restrict)
+  confirmedAt               DateTime? @map("confirmed_at")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+  members                   ApprovedProjectMember[]
+  managementOfficers       ProjectManagementOfficer[]
+  milestones                ProjectMilestone[]
+  checkpoints               ProjectCheckpoint[]
+  reports                   ProjectReportRevision[]
+  requests                  ProjectRequest[]
+  history                   ProjectHistory[]
+
+  @@index([hostOrganizationUnitId, status])
+  @@index([status, endDate])
+  @@map("approved_projects")
+}
+
+model ApprovedProjectMember {
+  id                String   @id @default(uuid())
+  projectId         String   @map("project_id")
+  project           ApprovedProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  userId            String?  @map("user_id")
+  user              User?    @relation("ApprovedProjectMemberUser", fields: [userId], references: [id], onDelete: Restrict)
+  sourceMemberId    String?  @map("source_member_id")
+  name              String
+  role              String
+  participationRole String   @default("TOPIC_MEMBER") @map("participation_role")
+  status            String   @default("ACTIVE")
+  effectiveFrom     DateTime @map("effective_from")
+  effectiveUntil    DateTime? @map("effective_until")
+  createdById       String   @map("created_by_id")
+  createdBy         User     @relation("ApprovedProjectMemberCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt         DateTime @default(now()) @map("created_at")
+  responsibleMilestones ProjectMilestone[] @relation("MilestoneResponsibleMember")
+
+  @@index([projectId, status, effectiveUntil])
+  @@index([userId, status, effectiveUntil])
+  @@map("approved_project_members")
+}
+
+model ProjectManagementOfficer {
+  id                       String   @id @default(uuid())
+  projectId               String   @map("project_id")
+  project                 ApprovedProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  officerUserId           String   @map("officer_user_id")
+  officer                 User     @relation("ProjectManagementOfficerUser", fields: [officerUserId], references: [id], onDelete: Restrict)
+  assignedById            String   @map("assigned_by_id")
+  assignedBy              User     @relation("ProjectManagementOfficerAssigner", fields: [assignedById], references: [id], onDelete: Restrict)
+  status                  String   @default("ACTIVE")
+  effectiveFrom          DateTime @map("effective_from")
+  effectiveUntil         DateTime? @map("effective_until")
+  reason                 String?
+  assignmentContextVersion Json?  @map("assignment_context_version")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  @@index([projectId, status, effectiveUntil])
+  @@index([officerUserId, status, effectiveUntil])
+  @@map("project_management_officers")
+}
+
+model ProjectMilestone {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  project     ApprovedProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  title       String
+  description String?
+  dueDate     DateTime @db.Date @map("due_date")
+  status      String   @default("open")
+  isImportant Boolean  @default(false) @map("is_important")
+  position    Int      @default(0)
+  createdById String   @map("created_by_id")
+  createdBy   User     @relation("ProjectMilestoneCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  responsibleMemberId String? @map("responsible_member_id")
+  responsibleMember ApprovedProjectMember? @relation("MilestoneResponsibleMember", fields: [responsibleMemberId], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  checkpoints ProjectCheckpoint[]
+
+  @@index([projectId, dueDate])
+  @@index([responsibleMemberId])
+  @@map("project_milestones")
+}
+
+model ProjectCheckpoint {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  project     ApprovedProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  milestoneId String?  @map("milestone_id")
+  milestone   ProjectMilestone? @relation(fields: [milestoneId], references: [id], onDelete: Restrict)
+  title       String
+  dueDate     DateTime @db.Date @map("due_date")
+  status      String   @default("open")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  reports     ProjectReportRevision[]
+
+  @@index([projectId, dueDate])
+  @@map("project_checkpoints")
+}
+
+model ProjectReportRevision {
+  id                    String   @id @default(uuid())
+  projectId             String   @map("project_id")
+  project               ApprovedProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  checkpointId          String?  @map("checkpoint_id")
+  checkpoint             ProjectCheckpoint? @relation(fields: [checkpointId], references: [id], onDelete: Restrict)
+  revision               Int
+  status                 String   @default("draft")
+  reportingPeriodStart   DateTime? @db.Date @map("reporting_period_start")
+  reportingPeriodEnd     DateTime? @db.Date @map("reporting_period_end")
+  deadline               DateTime? @db.Date
+  progressResults        String   @map("progress_results")
+  issuesRecommendations  String?  @map("issues_recommendations")
+  milestoneContext       Json?    @map("milestone_context")
+  authorId               String   @map("author_id")
+  author                 User     @relation("ProjectReportAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  reviewedById            String?  @map("reviewed_by_id")
+  reviewedBy              User?    @relation("ProjectReportReviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
+  reviewReason            String?  @map("review_reason")
+  responseDeadline        DateTime? @db.Date @map("response_deadline")
+  submittedAt             DateTime? @map("submitted_at")
+  submittedContextVersion Json?    @map("submitted_context_version")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+  evidence                ProjectReportEvidence[]
+
+  @@unique([projectId, revision])
+  @@index([projectId, status])
+  @@index([checkpointId, status])
+  @@map("project_report_revisions")
+}
+
+model ProjectReportEvidence {
+  id               String   @id @default(uuid())
+  reportRevisionId String   @map("report_revision_id")
+  reportRevision   ProjectReportRevision @relation(fields: [reportRevisionId], references: [id], onDelete: Restrict)
+  fileRecordId     String   @map("file_record_id")
+  fileRecord       FileRecord @relation(fields: [fileRecordId], references: [id], onDelete: Restrict)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@unique([reportRevisionId, fileRecordId])
+  @@map("project_report_evidence")
+}
+
+model ProjectRequest {
+  id                       String   @id @default(uuid())
+  projectId                String   @map("project_id")
+  project                  ApprovedProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  requestType              String   @map("request_type")
+  status                   String   @default("draft")
+  revision                 Int      @default(1)
+  requesterId              String   @map("requester_id")
+  requester                User     @relation("ProjectRequestRequester", fields: [requesterId], references: [id], onDelete: Restrict)
+  currentValues            Json     @map("current_values")
+  proposedValues           Json     @map("proposed_values")
+  reason                   String
+  submittedContextVersion  Json?    @map("submitted_context_version")
+  appraisal                Json?
+  decisionNote             String?  @map("decision_note")
+  responseDeadline         DateTime? @db.Date @map("response_deadline")
+  decisionById             String?  @map("decision_by_id")
+  decisionBy               User?    @relation("ProjectRequestDecider", fields: [decisionById], references: [id], onDelete: Restrict)
+  decidedAt                DateTime? @map("decided_at")
+  preparedById             String?  @map("prepared_by_id")
+  preparedBy               User?    @relation("ProjectRequestPreparer", fields: [preparedById], references: [id], onDelete: Restrict)
+  preparedAt               DateTime? @map("prepared_at")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+  revisions                ProjectRequestRevision[]
+  evidence                 ProjectRequestEvidence[]
+  history                  ProjectRequestHistory[]
+
+  @@index([projectId, requestType, status])
+  @@index([requesterId, status])
+  @@map("project_requests")
+}
+
+model ProjectRequestRevision {
+  id                 String   @id @default(uuid())
+  requestId          String   @map("request_id")
+  request            ProjectRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  revision           Int
+  status             String
+  currentValues     Json     @map("current_values")
+  proposedValues    Json     @map("proposed_values")
+  reason            String
+  contextVersion    Json?    @map("context_version")
+  createdById       String   @map("created_by_id")
+  createdBy         User     @relation("ProjectRequestRevisionCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  submittedAt       DateTime? @map("submitted_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  evidence          ProjectRequestEvidence[]
+
+  @@unique([requestId, revision])
+  @@map("project_request_revisions")
+}
+
+model ProjectRequestEvidence {
+  id                 String   @id @default(uuid())
+  requestId          String   @map("request_id")
+  request           ProjectRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  requestRevisionId  String   @map("request_revision_id")
+  requestRevision    ProjectRequestRevision @relation(fields: [requestRevisionId], references: [id], onDelete: Restrict)
+  fileRecordId       String   @map("file_record_id")
+  fileRecord         FileRecord @relation(fields: [fileRecordId], references: [id], onDelete: Restrict)
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@unique([requestRevisionId, fileRecordId])
+  @@index([requestId])
+  @@map("project_request_evidence")
+}
+
+model ProjectRequestHistory {
+  id         String   @id @default(uuid())
+  requestId  String   @map("request_id")
+  request    ProjectRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  actorId    String   @map("actor_id")
+  actor      User     @relation("ProjectRequestHistoryActor", fields: [actorId], references: [id], onDelete: Restrict)
+  action     String
+  fromStatus String?  @map("from_status")
+  toStatus   String?  @map("to_status")
+  reason     String?
+  beforeFacts Json?   @map("before_facts")
+  afterFacts  Json?   @map("after_facts")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([requestId, createdAt])
+  @@map("project_request_history")
+}
+
+model ProjectHistory {
+  id         String   @id @default(uuid())
+  projectId  String   @map("project_id")
+  project    ApprovedProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  actorId    String   @map("actor_id")
+  actor      User     @relation("ProjectHistoryActor", fields: [actorId], references: [id], onDelete: Restrict)
+  action     String
+  fromStatus String?  @map("from_status")
+  toStatus   String?  @map("to_status")
+  reason     String?
+  requestId  String?  @map("request_id")
+  beforeFacts Json?   @map("before_facts")
+  afterFacts  Json?   @map("after_facts")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([projectId, createdAt])
+  @@map("project_history")
 }

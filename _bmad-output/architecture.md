@@ -267,7 +267,9 @@ conflicts on both directions of relationship changes and at protected actions; r
 same-round reviewer/decision and mutually exclusive council-position checks. Head
 oversight never bypasses participant disclosure or conflict restrictions.
 
-Head owns officer changes and submission of eligible completed Staff packages; no final decisions.
+Head owns officer changes and submission of eligible proposal packages; no proposal
+final decisions. During project execution, assigned Staff finally decides adjustments
+and Head finally decides Staff-prepared extensions. Leadership monitors only.
 Migration adds proposal-owned officer history and role registry checks. Project officer persistence
 awaits the approved-project domain; no orphan generic assignment store is introduced.
 
@@ -520,7 +522,7 @@ disclosure requires a separately approved, versioned policy.
 - Use explicit action subpaths for workflow actions, for example:
   - `POST /api/v1/research-proposals/:id/submit`
   - `POST /api/v1/research-proposals/:id/request-supplement`
-  - `POST /api/v1/approved-projects/:id/request-adjustment`
+  - `POST /api/v1/projects/:id/requests/extension/:requestId/approve`
 
 **Code Naming Conventions:**
 
@@ -820,22 +822,34 @@ stateDiagram-v2
 
 ### Approved Project State Machine
 
+The baseline §4.4 and requirements §7.2 define the canonical business lifecycle.
+Project persistence does not yet define an enum; the labels below are business
+states, not a second set of executable enum names.
+
 ```mermaid
 stateDiagram-v2
-    [*] --> Active: createFromApprovedProposal
-    Active --> ReportingDue: checkpointDue
-    ReportingDue --> ReportSubmitted: submitProgressReport
-    ReportSubmitted --> UnderProgressReview: staffReview
-    UnderProgressReview --> Active: acceptReportOrFollowUpResolved
-    Active --> ChangeRequested: requestAdjustmentOrExtension
-    ReportingDue --> ChangeRequested: requestAdjustmentOrExtension
-    ChangeRequested --> Active: approveOrRejectChange
-    Active --> AcceptancePending: submitForAcceptance
-    AcceptancePending --> Accepted: acceptProject
-    Accepted --> FinalReviewPending: submitFinalReview
-    FinalReviewPending --> Closed: finalReviewDecision
-    Closed --> [*]
+    [*] --> Preparing: explicit creation from approved proposal/version
+    Preparing --> InProgress: confirm execution setup
+    InProgress --> Paused: authorized pause
+    Paused --> InProgress: authorized resume
+    InProgress --> AwaitingAcceptance: later acceptance flow
+    AwaitingAcceptance --> Accepted: later acceptance decision
+    AwaitingAcceptance --> Failed: later acceptance decision
+    Accepted --> Closed: later closure
+    Failed --> Closed: later closure
 ```
+
+`Preparing`, `InProgress`, `Paused`, `AwaitingAcceptance`, `Accepted`, `Failed`
+and `Closed` express the existing Vietnamese lifecycle labels; implementation
+must map each once using repository naming conventions. Report due, overdue,
+report review and pending adjustment are tracking flags or child-record states,
+never replacement project states. Pause is optional, not a mandatory stage.
+Report submission and request approval/rejection do not advance the project.
+Golden Flow 4 covers creation/setup and execution; acceptance/council/closure
+transitions remain outside its implementation scope.
+
+See [Golden Flow 4 contract](../docs/contracts/project-execution.md) for the
+execution boundary and finalized Staff adjustment and Head extension decision rules.
 
 ### Seminar And Student Research State Machine
 
@@ -1693,7 +1707,8 @@ same current scope, relationship, conflict and disclosure checks before aggregat
 
 Director and Deputy Director require institutional research dashboard views of available
 proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
-funding and management workload. Only Director gets eligible decision queues. Head gets
+funding and management workload. Only Director gets eligible proposal decision queues. Project adjustment queues
+belong to assigned Staff and extension decision queues to Head. Head gets
 responsible-officer/unassigned filters and workload; Staff sees assigned management records.
 Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,
 used and remaining project funding and utilization are unavailable until their source exists;

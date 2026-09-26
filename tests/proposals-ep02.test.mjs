@@ -501,15 +501,15 @@ describe("EP-02 proposal intake and submission behavior", () => {
     );
     assert.throws(() => requestProposalSupplementPipe.transform({ reason: "", dueDate: futureDate(7) }), BadRequestException);
     assert.throws(() => requestProposalSupplementPipe.transform({ reason: "Thiếu tài liệu", dueDate: "bad-date" }), BadRequestException);
-    assert.throws(
+    assert.doesNotThrow(
       () =>
         uploadFilePipe.transform({
           relatedEntityType: "approved_project",
           relatedEntityId: "project-1",
-          filePurpose: "proposal-form"
+          filePurpose: "PROJECT_EVIDENCE"
         }),
-      BadRequestException
     );
+    assert.throws(() => uploadFilePipe.transform({ relatedEntityType: "unknown", relatedEntityId: "record-1", filePurpose: "PROJECT_EVIDENCE" }), BadRequestException);
   });
 
   it("staff can create, open, and close intake periods with audit rows while PIs only see open applicable periods", async () => {

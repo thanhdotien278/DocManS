@@ -8,8 +8,10 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL is required for prisma seed. Set it explicitly before running npm run prisma:seed.");
 }
 
+const databaseSchema = new URL(databaseUrl).searchParams.get("schema") ?? "public";
+if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(databaseSchema)) throw new Error("Invalid DATABASE_URL schema");
 const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: databaseUrl })
+  adapter: new PrismaPg({ connectionString: databaseUrl, options: `-c search_path=${databaseSchema}` }, { schema: databaseSchema })
 });
 
 // Demo/local seed accounts. All seeded users share the password "1234"
@@ -400,5 +402,74 @@ await prisma.notificationTemplate.upsert({
     status: "active"
   }
 });
+
+// Golden Flow 4 local demonstration. Stable IDs and create-only guards preserve changes
+// made while exercising the workflow, including decisions and report revisions.
+const demoDay = (offset) => {
+  const value = new Date();
+  value.setUTCHours(0, 0, 0, 0);
+  value.setUTCDate(value.getUTCDate() + offset);
+  return value;
+};
+const demoNow = new Date();
+const demoIntake = await prisma.proposalIntakePeriod.upsert({
+  where: { code: "GF4-DEMO" }, update: {},
+  create: { id: "gf4-demo-intake", code: "GF4-DEMO", title: "Dữ liệu mẫu thực hiện đề tài", startsAt: demoDay(-90), endsAt: demoDay(180), status: "closed", requiredPackage: [] }
+});
+
+async function ensureApprovedDemoProposal(id, title) {
+  if (await prisma.researchProposal.findUnique({ where: { id } })) return;
+  await prisma.$transaction(async (tx) => {
+    await tx.researchProposal.create({ data: { id, intakePeriodId: demoIntake.id, ownerId: "user-pi", hostOrganizationUnitId: "org-khti", title, objectives: "Kiểm tra quy trình thực hiện đề tài", summary: "Dữ liệu mẫu Golden Flow 4", startDate: demoDay(-60), endDate: demoDay(120), status: "approved", submittedAt: demoNow, submittedById: "user-pi" } });
+    const submissionId = `${id}-submission`;
+    await tx.proposalSubmissionEvent.create({ data: { id: submissionId, proposalId: id, actorId: "user-pi", fromStatus: "draft", toStatus: "submitted", submittedAt: demoNow, snapshot: { id, ownerId: "user-pi", title, objectives: "Kiểm tra quy trình thực hiện đề tài", summary: "Dữ liệu mẫu Golden Flow 4", startDate: demoDay(-60).toISOString(), endDate: demoDay(120).toISOString(), hostOrganizationUnitId: "org-khti", members: [{ id: `${id}-source-member`, userId: "user-researcher1", name: "Nhà nghiên cứu nội bộ 1", role: "TOPIC_MEMBER", participationRole: "TOPIC_MEMBER" }] } } });
+    await tx.proposalDecision.create({ data: { id: `${id}-decision`, proposalId: id, decision: "approved", decidedById: "user-leadership", decidedAt: demoNow, fromStatus: "ready_for_approval", toStatus: "approved", packageSnapshot: { lifecycle: "finalized", submissionEventId: submissionId }, publicSummary: { decision: "approved" } } });
+    await tx.proposalManagementOfficer.create({ data: { id: `${id}-officer`, proposalId: id, officerUserId: "user-staff-hdtien1", assignedById: "user-staff", status: "ACTIVE", effectiveFrom: demoDay(-30) } });
+  });
+}
+
+await ensureApprovedDemoProposal("gf4-demo-source", "Đề tài mẫu đang thực hiện");
+await ensureApprovedDemoProposal("gf4-demo-ready", "Đề xuất đã duyệt — chờ tạo đề tài");
+
+if (!await prisma.approvedProject.findUnique({ where: { id: "gf4-demo-project" } })) {
+  await prisma.$transaction(async (tx) => {
+    const memberId = "gf4-demo-member";
+    const projectId = "gf4-demo-project";
+    const contextVersion = { domain: "approved-project", recordId: projectId, aggregateVersion: 1, relationshipVersion: 1, conflictVersion: 0, delegationVersion: 0, policyVersion: "v1" };
+    await tx.approvedProject.create({ data: { id: projectId, proposalId: "gf4-demo-source", sourceSubmissionEventId: "gf4-demo-source-submission", sourceDecisionId: "gf4-demo-source-decision", hostOrganizationUnitId: "org-khti", title: "Đề tài mẫu đang thực hiện", scopeSnapshot: { title: "Đề tài mẫu đang thực hiện", objectives: "Kiểm tra quy trình thực hiện đề tài", summary: "Dữ liệu mẫu Golden Flow 4" }, planSnapshot: { startDate: demoDay(-60).toISOString(), endDate: demoDay(120).toISOString() }, status: "executing", startDate: demoDay(-60), endDate: demoDay(120), aggregateVersion: 1, relationshipVersion: 1, createdById: "user-staff-hdtien1", confirmedById: "user-staff-hdtien2", confirmedAt: demoNow } });
+    await tx.approvedProjectMember.createMany({ data: [
+      { id: "gf4-demo-pi", projectId, userId: "user-pi", name: "TS. Phạm Anh Tuấn", role: "TOPIC_PI", participationRole: "TOPIC_PI", status: "ACTIVE", effectiveFrom: demoDay(-60), createdById: "user-staff-hdtien1" },
+      { id: memberId, projectId, userId: "user-researcher1", name: "Nhà nghiên cứu nội bộ 1", role: "TOPIC_MEMBER", participationRole: "TOPIC_MEMBER", status: "ACTIVE", effectiveFrom: demoDay(-60), createdById: "user-staff-hdtien1" }
+    ] });
+    await tx.projectManagementOfficer.create({ data: { id: "gf4-demo-project-officer", projectId, officerUserId: "user-staff-hdtien2", assignedById: "user-staff", status: "ACTIVE", effectiveFrom: demoDay(-30) } });
+    await tx.projectMilestone.createMany({ data: [
+      { id: "gf4-demo-milestone-overdue", projectId, title: "Mốc cần rà soát quá hạn", dueDate: demoDay(-5), status: "open", isImportant: true, position: 0, responsibleMemberId: "gf4-demo-pi", createdById: "user-staff-hdtien2" },
+      { id: "gf4-demo-milestone-upcoming", projectId, title: "Mốc sắp đến hạn", dueDate: demoDay(7), status: "open", isImportant: true, position: 1, responsibleMemberId: memberId, createdById: "user-staff-hdtien2" }
+    ] });
+    await tx.projectCheckpoint.createMany({ data: [
+      { id: "gf4-demo-checkpoint-overdue", projectId, milestoneId: "gf4-demo-milestone-overdue", title: "Báo cáo mốc quá hạn", dueDate: demoDay(-5), status: "open" },
+      { id: "gf4-demo-checkpoint-upcoming", projectId, milestoneId: "gf4-demo-milestone-upcoming", title: "Báo cáo mốc sắp đến hạn", dueDate: demoDay(7), status: "open" }
+    ] });
+    await tx.projectReportRevision.createMany({ data: [
+      { id: "gf4-demo-report-submitted", projectId, checkpointId: "gf4-demo-checkpoint-overdue", revision: 1, status: "submitted", reportingPeriodStart: demoDay(-30), reportingPeriodEnd: demoDay(-6), deadline: demoDay(-5), progressResults: "Báo cáo tiến độ mẫu đã nộp; chờ chuyên viên xem xét.", authorId: "user-pi", submittedAt: demoNow, submittedContextVersion: contextVersion },
+      { id: "gf4-demo-report-draft", projectId, checkpointId: "gf4-demo-checkpoint-upcoming", revision: 2, status: "draft", reportingPeriodStart: demoDay(-5), reportingPeriodEnd: demoDay(5), deadline: demoDay(7), progressResults: "Bản nháp báo cáo kỳ tiếp theo.", authorId: "user-pi" }
+    ] });
+    await tx.projectRequest.create({ data: { id: "gf4-demo-extension", projectId, requestType: "extension", status: "ready_for_head_decision", revision: 1, requesterId: "user-pi", currentValues: { endDate: demoDay(120).toISOString() }, proposedValues: { requestedEndDate: demoDay(150).toISOString().slice(0, 10) }, reason: "Cần thêm thời gian hoàn thiện kết quả mẫu.", submittedContextVersion: contextVersion, preparedById: "user-staff-hdtien2", preparedAt: demoNow, appraisal: { validationNote: "Đã kiểm tra hành chính" }, revisions: { create: { id: "gf4-demo-extension-revision", revision: 1, status: "submitted", currentValues: { endDate: demoDay(120).toISOString() }, proposedValues: { requestedEndDate: demoDay(150).toISOString().slice(0, 10) }, reason: "Cần thêm thời gian hoàn thiện kết quả mẫu.", contextVersion, createdById: "user-pi", submittedAt: demoNow } } } });
+    await tx.projectHistory.createMany({ data: [
+      { projectId, actorId: "user-staff-hdtien1", action: "project.created", toStatus: "preparing", reason: "Tạo từ đề xuất mẫu đã duyệt" },
+      { projectId, actorId: "user-staff", action: "project.officer.assign", reason: "Phân công chuyên viên đề tài mẫu" },
+      { projectId, actorId: "user-staff-hdtien2", action: "project.setup.confirm", fromStatus: "preparing", toStatus: "executing" },
+      { projectId, actorId: "user-pi", action: "project.report.submit", toStatus: "submitted" },
+      { projectId, actorId: "user-pi", action: "project.extension.submit", toStatus: "submitted", requestId: "gf4-demo-extension" },
+      { projectId, actorId: "user-staff-hdtien2", action: "project.extension.prepare", fromStatus: "under_staff_validation", toStatus: "ready_for_head_decision", requestId: "gf4-demo-extension" }
+    ] });
+    await tx.auditLog.createMany({ data: [
+      { action: "create-approved-project", result: "success", actorId: "user-staff-hdtien1", targetEntity: "approved-project", targetEntityId: projectId },
+      { action: "confirm-approved-project-setup", result: "success", actorId: "user-staff-hdtien2", targetEntity: "approved-project", targetEntityId: projectId },
+      { action: "submit-project-report", result: "success", actorId: "user-pi", targetEntity: "project-report-revision", targetEntityId: "gf4-demo-report-submitted" },
+      { action: "project.extension.prepare", result: "success", actorId: "user-staff-hdtien2", targetEntity: "project-request", targetEntityId: "gf4-demo-extension" }
+    ] });
+  });
+}
 
 await prisma.$disconnect();

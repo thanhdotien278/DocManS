@@ -743,6 +743,11 @@ summary:focus-visible {
   display: none;
 }
 
+.project-list {
+  display: grid;
+  gap: 12px;
+}
+
 .list-card {
   display: grid;
   gap: 10px;

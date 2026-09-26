@@ -94,6 +94,16 @@ approved-project backend is implemented (baseline §2.1).
 
 ## Workflow vocabulary
 
+Golden Flow 4 is specified in the [Project Execution contract](docs/contracts/project-execution.md).
+It preserves project-scoped `TOPIC_PI` (the requested `PROJECT_PI`). Assigned Staff
+reviews/accepts reports and finally approves/rejects normal adjustments; Head finally
+approves/rejects extensions after Staff validation/preparation. Leadership approves
+the source proposal only and has permitted read/monitor access during execution.
+Submitted revisions/evidence are immutable; overdue is derived, never a project state.
+Assigned proposal Staff creates; Head independently assigns project Staff, who confirms
+setup. Controlled fields change only through the appropriate approved request.
+Acceptance/council implementation belongs to the next flow.
+
 - **Draft** is editable working content; **submitted** content is the formal
   version under process and is not silently edited.
 - **Completeness checking**, **supplement request**, **resubmission**,

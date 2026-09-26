@@ -222,14 +222,26 @@ phải audit:
 
 ### 6.3 Theo dõi và nghiệm thu đề tài
 
+Golden Flow 4 is specified in the [Project Execution contract](docs/contracts/project-execution.md).
+It preserves project-scoped `TOPIC_PI` (the requested `PROJECT_PI`). Assigned Staff
+reviews/accepts reports and finally approves/rejects normal adjustments; Head finally
+approves/rejects extensions after Staff validation/preparation. Leadership approves
+the source proposal only and has permitted read/monitor access during execution.
+Submitted revisions/evidence are immutable; overdue is derived, never a project state.
+Assigned proposal Staff creates; Head independently assigns project Staff, who confirms
+setup. Controlled fields change only through the appropriate approved request.
+Acceptance/council implementation belongs to the next flow.
+
 - Nhân sự quản lý tạo và xác nhận hồ sơ đề tài từ đề xuất đã duyệt, kế thừa dữ
   liệu cần thiết nhưng không tự động sinh record ngoài quy trình.
 - Quản lý mốc tiến độ, kỳ báo cáo, tỷ lệ hoàn thành, khó khăn, minh chứng và
   cảnh báo chậm tiến độ.
 - PI nộp báo cáo định kỳ, hồ sơ điều chỉnh/gia hạn và hồ sơ kết quả cuối; thành
   viên chỉ cập nhật phần được giao.
-- Nhân sự quản lý thẩm định báo cáo, điều chỉnh, gia hạn, hồ sơ nghiệm thu;
-  lãnh đạo quyết định khi workflow yêu cầu.
+- Assigned project Staff reviews/accepts reports and reviews/finally decides normal
+  adjustments. Staff validates/prepares extensions; Head finally decides extensions.
+  Leadership approves the proposal before execution and monitors permitted project
+  information only. Acceptance authority remains the separate next workflow.
 - Phân công hội đồng/reviewer nghiệm thu, nhập nhận xét/kết quả, lưu biên bản,
   quyết định và sản phẩm cuối.
 

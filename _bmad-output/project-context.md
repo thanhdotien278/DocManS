@@ -67,6 +67,16 @@ Default implementation bias:
 
 # Architecture Constraints
 
+Golden Flow 4 is specified in the [Project Execution contract](../docs/contracts/project-execution.md).
+It preserves project-scoped `TOPIC_PI` (the requested `PROJECT_PI`). Assigned Staff
+reviews/accepts reports and finally approves/rejects normal adjustments; Head finally
+approves/rejects extensions after Staff validation/preparation. Leadership approves
+the source proposal only and has permitted read/monitor access during execution.
+Submitted revisions/evidence are immutable; overdue is derived, never a project state.
+Assigned proposal Staff creates; Head independently assigns project Staff, who confirms
+setup. Controlled fields change only through the appropriate approved request.
+Acceptance/council implementation belongs to the next flow.
+
 - Phase 1 architecture is a modular monolith.
 - Use one codebase with clear internal module boundaries.
 - Do not introduce microservices.
@@ -413,7 +423,8 @@ same current scope, relationship, conflict and disclosure checks before aggregat
 
 Director and Deputy Director require institutional research dashboard views of available
 proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
-funding and management workload. Only Director gets eligible decision queues. Head gets
+funding and management workload. Only Director gets eligible proposal decision queues. Project adjustment queues
+belong to assigned Staff and extension decision queues to Head. Head gets
 responsible-officer/unassigned filters and workload; Staff sees assigned management records.
 Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,
 used and remaining project funding and utilization are unavailable until their source exists;

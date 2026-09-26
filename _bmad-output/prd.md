@@ -81,7 +81,7 @@ Staff PI mutations are not expanded. See baseline §2.1 for the finalized policy
   access. `SCIENTIFIC_MANAGEMENT_HEAD` views proposals/projects across the
   explicitly authorized Scientific Management scope; `SCIENTIFIC_MANAGEMENT_STAFF`
   management access requires the current officer assignment on each record.
-  Workflow, conflict and disclosure checks still apply; neither role grants final decisions.
+  Workflow, conflict and disclosure checks still apply. Neither role grants proposal final approval. During project execution, assigned Staff finally decides normal Project Adjustments and scoped Head finally decides Project Extensions after Staff preparation; Leadership decides neither.
 - **Record participation role:** A relationship to one proposal or approved
   topic. `PROPOSAL_PI`/`TOPIC_PI` is owner-derived; team rows use only
   `TOPIC_SECRETARY` and `TOPIC_MEMBER`. Reviewer, council, ethics, and task
@@ -418,7 +418,8 @@ RTMS is a browser-based internal administrative web application optimized for mu
 - FR4a: Authenticated users can change their own password, and authorized administrators can initiate a controlled password reset flow for internal users.
 - FR5: The system can enforce role-based access rules across all protected capabilities.
 - FR6: The system can enforce explicit organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports; Scientific Management Head can view all proposals/projects within explicitly authorized Scientific Management scope; Staff management visibility requires an effective record-level management-officer assignment. Parent/child units never imply scope.
-- FR6f: Distinguish `SCIENTIFIC_MANAGEMENT_HEAD` oversight from `SCIENTIFIC_MANAGEMENT_STAFF` management access. Head sees all proposals/projects in explicit Scientific Management scope; Staff needs an effective `PROPOSAL_MANAGEMENT_OFFICER` or `PROJECT_MANAGEMENT_OFFICER` on the exact record. Each record has at most one active primary officer; assignment, reassignment and revocation preserve history and audit, including concurrent changes. Neither role is final approval authority.
+- FR6f: Distinguish `SCIENTIFIC_MANAGEMENT_HEAD` oversight from `SCIENTIFIC_MANAGEMENT_STAFF` management access. Head sees all proposals/projects in explicit Scientific Management scope; Staff needs an effective `PROPOSAL_MANAGEMENT_OFFICER` or `PROJECT_MANAGEMENT_OFFICER` on the exact record. Each record has at most one active primary officer; assignment, reassignment and revocation preserve history and audit, including concurrent changes. Neither role has proposal final approval authority; project Staff decides adjustments
+and Head decides extensions under Golden Flow 4.
 - FR6g: Preserve independent PI/member/secretary/reviewer/council/task access for Staff on other records without Scientific Management administrative actions. Backend capabilities identify the access basis. Deny participant + management officer/reviewer/evaluation or acceptance council/final decision, reviewer + final decision in the same round, and mutually exclusive council positions; check every relationship creation/change and protected action. Apply the same authorization/disclosure to list, detail, search, counts/facets, dashboards, reports/export, notifications, files and workflow/business history.
 - FR6a: The system can distinguish account-level system roles from record-scoped relationships or assignments, including owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer, so those relationships only grant permissions within the specific proposal, approved topic, council, review, ethics dossier, task, or related record context.
 - FR6b: Proposal creation, submission, and resubmission are owner-only actions requiring the current PI to be an active `RESEARCHER_INTERNAL_USER`; no proposal-submit delegation or delegated capability is supported.
@@ -455,12 +456,23 @@ RTMS is a browser-based internal administrative web application optimized for mu
 ### Approved Project Tracking
 
 - FR23: The system can create an approved-project record from an approved proposal while preserving relevant source data.
+
+Golden Flow 4 is specified in the [Project Execution contract](../docs/contracts/project-execution.md).
+It preserves project-scoped `TOPIC_PI` (the requested `PROJECT_PI`). Assigned Staff
+reviews/accepts reports and finally approves/rejects normal adjustments; Head finally
+approves/rejects extensions after Staff validation/preparation. Leadership approves
+the source proposal only and has permitted read/monitor access during execution.
+Submitted revisions/evidence are immutable; overdue is derived, never a project state.
+Assigned proposal Staff creates; Head independently assigns project Staff, who confirms
+setup. Controlled fields change only through the appropriate approved request.
+Acceptance/council implementation belongs to the next flow.
+
 - FR24: Assigned project management staff and independently authorized project participants can define and maintain project milestones and planned reporting checkpoints.
 - FR25: Principal investigators can submit periodic progress reports and supporting evidence for approved projects.
 - FR26: Scientific management staff assigned as the current project management officer can review project progress reports, request follow-up where needed, and track unresolved issues.
 - FR27: Principal investigators can submit adjustment or extension requests for approved projects.
 - FR27a: Principal investigators can prepare and submit acceptance or final-review dossiers with required structured data, files, and readiness validation when the approved-project workflow requires a formal dossier before the authority decision.
-- FR28: Assigned project management staff can review and prepare adjustment, extension, acceptance, and final-review actions; leadership or approval authority makes the final decision when required by workflow.
+- FR28: Assigned scoped project Staff reviews and finally approves/rejects normal adjustments. Staff validates/prepares extensions and scoped Head finally approves/rejects them. Leadership approves the source proposal and monitors permitted project information, but never decides execution adjustments/extensions. Acceptance/final-review decisions remain governed by their separate later workflow.
 - FR29: The system can identify delayed projects, upcoming deadlines, and projects waiting for administrative action.
 - FR30: The system can treat approved-project workflow states as controlled states and restrict actions based on current project state.
 - FR30a: `TOPIC_MEMBER` and `TOPIC_SECRETARY` users can view approved topics they participate in, including assigned responsibilities, relevant milestones, and permitted supporting files.
@@ -922,7 +934,8 @@ same current scope, relationship, conflict and disclosure checks before aggregat
 
 Director and Deputy Director require institutional research dashboard views of available
 proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
-funding and management workload. Only Director gets eligible decision queues. Head gets
+funding and management workload. Only Director gets eligible proposal decision queues. Project adjustment queues
+belong to assigned Staff and extension decision queues to Head. Head gets
 responsible-officer/unassigned filters and workload; Staff sees assigned management records.
 Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,
 used and remaining project funding and utilization are unavailable until their source exists;
