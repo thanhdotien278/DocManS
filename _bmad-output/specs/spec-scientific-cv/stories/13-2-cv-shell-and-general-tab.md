@@ -89,3 +89,7 @@ Field mapping (decided): A = `cv.personalInfo.avatarUrl` (URL input + 3x4 previe
 - `npm run typecheck` -- expected: no errors
 - `node --test tests/researcher-profiles-ui-source.test.mjs` -- expected: pass
 - `npm run build:web` -- expected: succeeds
+
+### Post-review manual verification (2026-10-11)
+
+Real app (API + Postgres, account test_internal01, 1440px and 375px): radio groups rendered ~1170px wide due to global `.field input`; tab bar overflowed at 1440px; blocked save gave no visible feedback at the bottom of the page. Fixed: natural-size inline radios, section A portrait box per screenshot, compact tabs, scroll/focus first invalid field and clear field error on edit. Re-verified save/reload, required-field blocking (no PATCH sent), section preservation on Tab 1 save, no page horizontal scroll at 375px.

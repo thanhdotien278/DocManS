@@ -122,6 +122,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [conflict, setConflict] = useState(false);
   const loadVersion = useRef(0);
+  const focusFieldError = useRef(false);
 
   const allowed = (action: string) => profile?.viewerAuthorization.allowedActions.some((value) => value === action) ?? false;
   const editable = allowed("researcher-profile.cv.update") && allowed(owner ? "researcher-profile.self.update" : "researcher-profile.update");
@@ -152,8 +153,23 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
 
   useEffect(() => { void loadProfile(); return () => { loadVersion.current++; }; }, [target]);
 
+  useEffect(() => {
+    if (!focusFieldError.current || tab !== "general" || busy) return;
+    focusFieldError.current = false;
+    const firstError = document.querySelector(".cv-general-tab .field-error");
+    const field = firstError?.closest(".field, .section-card")?.querySelector<HTMLElement>("input:not(:disabled), select:not(:disabled), textarea:not(:disabled), .table-wrap");
+    field?.scrollIntoView({ block: "center" });
+    field?.focus({ preventScroll: true });
+  }, [fieldErrors, tab, busy]);
+
   function changeDraft<K extends keyof CvGeneralDraft>(key: K, value: CvGeneralDraft[K]) {
     setDraft((current) => current ? { ...current, [key]: value } : current);
+    setFieldErrors((current) => {
+      if (!current[key]) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
   }
 
   function validate() {
@@ -167,6 +183,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
     if (!draft.organization.trim()) errors.organization = "Cần nhập Đơn vị quản lý / Đơn vị công tác.";
     if (draft.researchFieldIds.length === 0) errors.researchFieldIds = "Cần chọn ít nhất một Ngành/Lĩnh vực chính.";
     if (draft.languages.some((row) => !row.language.trim())) errors.languages = "Cần nhập Ngoại ngữ cho mọi dòng.";
+    focusFieldError.current = Object.keys(errors).length > 0;
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) setTab("general");
     return Object.keys(errors).length === 0;
@@ -216,6 +233,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
         } else {
           const nextErrors: Record<string, string> = {};
           for (const item of cause.errors) nextErrors[apiField(item.field)] = item.message;
+          focusFieldError.current = Object.keys(nextErrors).length > 0;
           setFieldErrors(nextErrors);
           if (cause.errors.length > 0) setTab("general");
           setError(cause.message);
