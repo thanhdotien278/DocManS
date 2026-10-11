@@ -313,6 +313,32 @@ for (const [type, code, name] of catalogs) {
   });
 }
 
+// Create missing demo identities only; never undo profile edits, deactivation or unlinking.
+const researcherField = await prisma.catalogItem.findUniqueOrThrow({ where: { type_code: { type: "research-field", code: "military-medicine" } } });
+for (const user of users.filter((user) => ["RESEARCHER_INTERNAL_USER", "EXTERNAL_RESEARCHER_USER"].includes(user.systemRole))) {
+  await prisma.$transaction(async (tx) => {
+    const profileId = `profile-${user.id}`;
+    const existing = await tx.researcherProfile.findFirst({ where: { OR: [{ id: profileId }, { linkedUserId: user.id }] } });
+    const previousLink = await tx.researcherProfileAccountLink.findFirst({ where: { userId: user.id } });
+    if (existing || previousLink) return;
+    const organization = await tx.organizationUnit.findFirstOrThrow({ where: { name: user.unit, status: "active" } });
+    await tx.researcherProfile.create({ data: {
+      id: profileId,
+      managementOrganizationUnitId: organization.id,
+      linkedUserId: user.id,
+      profileType: user.systemRole === "EXTERNAL_RESEARCHER_USER" ? "EXTERNAL" : "INTERNAL",
+      fullName: user.displayName,
+      fullNameKey: user.displayName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLocaleLowerCase("vi").replace(/\s+/g, " ").trim(),
+      status: "ACTIVE",
+      createdById: "user-admin",
+      updatedById: "user-admin",
+      researchFields: { create: { catalogItemId: researcherField.id } },
+      accountLinks: { create: { userId: user.id, effectiveFrom: new Date(), reason: "seed-researcher-account", createdById: "user-admin" } },
+      history: { create: { actorId: "user-admin", action: "CREATE", reason: "seed-researcher-account", afterFacts: { linkedUserId: user.id } } }
+    } });
+  });
+}
+
 const intakeStartsAt = new Date();
 intakeStartsAt.setDate(intakeStartsAt.getDate() - 1);
 const intakeEndsAt = new Date();

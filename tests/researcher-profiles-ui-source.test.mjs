@@ -1,8 +1,35 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import vm from "node:vm";
+import ts from "typescript";
+
+const loadFixture = async (path, dependencies = {}) => {
+  const exports = {};
+  const source = await readFile(path, "utf8");
+  vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, {
+    exports, require: (name) => {
+      if (name === "lucide-react") return {}; // Icons do not affect navigation destinations.
+      if (name in dependencies) return dependencies[name];
+      throw new Error(`Unexpected import: ${name}`);
+    }
+  });
+  return exports;
+};
 
 describe("Story 2.1 researcher profile UI source", () => {
+  it("gives external researchers all researcher tabs and a personal dashboard", async () => {
+    const shell = await loadFixture("apps/web/src/fixtures/shell-context.ts");
+    const navigation = await loadFixture("apps/web/src/lib/navigation.ts", { "@/fixtures/shell-context": shell });
+    const dashboard = await loadFixture("apps/web/src/fixtures/showcase-data.ts");
+    const external = navigation.getNavigationItems("EXTERNAL_RESEARCHER_USER");
+    const internal = navigation.getNavigationItems("RESEARCHER_INTERNAL_USER");
+    assert.deepEqual(external.map(({ href, label }) => ({ href, label })), internal.map(({ href, label }) => ({ href, label })));
+    assert.equal(external.length, 8);
+    assert.equal(dashboard.getDashboardSnapshot("EXTERNAL_RESEARCHER_USER").primaryActionHref, "/my-proposals");
+    assert.deepEqual(dashboard.getDashboardSnapshot("EXTERNAL_RESEARCHER_USER"), dashboard.getDashboardSnapshot("RESEARCHER_INTERNAL_USER"));
+  });
+
   it("provides labelled management states, capability-driven actions, and duplicate confirmation", async () => {
     const source = await readFile("apps/web/src/components/researcher-profiles/researcher-profiles-panel.tsx", "utf8");
     assert.match(source, /Họ và tên \*/);

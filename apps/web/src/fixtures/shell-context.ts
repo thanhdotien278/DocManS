@@ -329,7 +329,7 @@ export function getAccountById(accountId?: string | null) {
 }
 
 export function getNavigationItems(role: UserRole) {
-  return navigationByRole[role];
+  return navigationByRole[role === "EXTERNAL_RESEARCHER_USER" ? "RESEARCHER_INTERNAL_USER" : role];
 }
 
 export function getRouteDefinition(pathname: string) {

@@ -72,7 +72,7 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
   async function refresh() {
     setState("loading");
     try {
-      const [proposalData, intakeData] = await Promise.all([creationOnly ? Promise.resolve([]) : loadResearchProposals(), allowCreate || account?.systemRole === "SCIENTIFIC_MANAGEMENT_STAFF" ? loadProposalIntakePeriods() : Promise.resolve([])]);
+      const [proposalData, intakeData] = await Promise.all([creationOnly ? Promise.resolve([]) : loadResearchProposals(), (allowCreate && account?.systemRole !== "EXTERNAL_RESEARCHER_USER") || account?.systemRole === "SCIENTIFIC_MANAGEMENT_STAFF" ? loadProposalIntakePeriods() : Promise.resolve([])]);
       setProposals(proposalData);
       setIntakes(intakeData);
       setState("ready");
