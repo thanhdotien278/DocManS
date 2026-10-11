@@ -297,6 +297,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
   ],
   RESEARCHER_INTERNAL_USER: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/my-profile", label: "Lý lịch khoa học", icon: UserRoundSearch },
     { href: "/my-proposals", label: "Hồ sơ của tôi", icon: FileText },
     { href: "/my-projects", label: "Đề tài đang thực hiện", icon: FolderKanban },
     { href: "/periodic-reports", label: "Báo cáo định kỳ", icon: NotebookPen },

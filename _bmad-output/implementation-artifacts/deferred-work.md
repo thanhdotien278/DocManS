@@ -81,3 +81,9 @@
 - source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-1-cv-data-contract-storage-api.md`
   summary: Add an HTTP-level check that a >100 KB PATCH to /api/v1/researcher-profiles/my-profile is not rejected with 413.
   evidence: medium, unverified — no test boots the Nest app over HTTP; removing the parser line would pass all tests.
+- source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-2-cv-shell-and-general-tab.md`
+  summary: Owners cannot edit publications/participations from /my-profile until Story 13.4 fills CV Tab 4.
+  evidence: my-profile now renders ScientificCvWorkspace; Tab 4 is a placeholder per 13.2 spec.
+- source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-2-cv-shell-and-general-tab.md`
+  summary: Add a web runtime test harness to cover cvFromDraft section preservation, ProfileRequestError 409/400 mapping and required-field save blocking.
+  evidence: medium, unverified — only source-text regex tests exist for apps/web; a regression dropping CV sections on Tab 1 save would pass.
