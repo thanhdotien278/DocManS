@@ -6,6 +6,7 @@ import { getResearcherProfile, loadResearcherProfileCatalogs, ProfileRequestErro
 import { CvGeneralTab, mergeKeywords, type CvGeneralDraft } from "./cv-general-tab";
 import { CvEducationTab, CvWorkTab, type CvHistoryDraft } from "./cv-history-tabs";
 import { CvResearchTab, type CvResearchDraft } from "./cv-research-tab";
+import { CvRowEditing } from "./cv-row-table";
 
 type CvDraft = CvGeneralDraft & CvHistoryDraft & CvResearchDraft;
 type CvTab = "general" | "education" | "work" | "research" | "print";
@@ -159,6 +160,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
   const { refreshCurrentUser } = useSession();
   const [profile, setProfile] = useState<ResearcherProfile | null>(null);
   const [draft, setDraft] = useState<CvDraft | null>(null);
+  const [editingRows, setEditingRows] = useState<Record<string, number[]>>({});
   const [catalogs, setCatalogs] = useState<CvCatalogs>({ organizationUnits: [], researchFields: [], academicRanks: [], academicDegrees: [] });
   const [tab, setTab] = useState<CvTab>("general");
   const [loading, setLoading] = useState(true);
@@ -181,6 +183,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
     setLoading(true);
     setProfile(null);
     setDraft(null);
+    setEditingRows({});
     setError("");
     setMessage("");
     setFieldErrors({});
@@ -290,6 +293,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
       setProfile(result.profile);
       setDraft(draftFromProfile(result.profile));
       setMessage("Đã lưu lý lịch khoa học.");
+      setEditingRows({});
       if (owner) { window.dispatchEvent(new Event("researcher-avatar-updated")); void refreshCurrentUser(); }
       setFieldErrors({});
       onSaved?.(result.profile);
@@ -331,6 +335,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
       <div className="cv-tabs" role="tablist" aria-label="Các phần lý lịch khoa học">
         {tabs.map((item, index) => <button id={`cv-tab-${item.id}`} key={item.id} type="button" role="tab" className={`button ${tab === item.id ? "primary" : ""}`} aria-selected={tab === item.id} aria-controls={tab === item.id ? `cv-panel-${item.id}` : undefined} tabIndex={tab === item.id ? 0 : -1} onClick={() => setTab(item.id)} onKeyDown={(event) => { if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return; const nextIndex = (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length; setTab(tabs[nextIndex].id); document.getElementById(`cv-tab-${tabs[nextIndex].id}`)?.focus(); }}>{item.label}{item.count !== undefined ? <span className="cv-tab-badge" aria-label={`${item.count} dòng`}>{item.count}</span> : null}</button>)}
       </div>
+      <CvRowEditing.Provider value={{ rows: editingRows, set: (name, rows) => setEditingRows((current) => ({ ...current, [name]: rows })) }}>
       <form noValidate onSubmit={(event) => { event.preventDefault(); void save(); }}>
         <div id={`cv-panel-${tab}`} role="tabpanel" aria-labelledby={`cv-tab-${tab}`}>
           {tab === "general" ? <CvGeneralTab draft={draft} catalogs={catalogs} editable={editable && !busy} owner={owner} profileType={profile.profileType ?? "INTERNAL"} hasAccount={!!profile.account} usernameEditable={usernameEditable} errors={fieldErrors} onChange={changeDraft} /> : null}
@@ -344,6 +349,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
         {conflict ? <p className="state-message warning" role="alert"><button type="button" className="button" onClick={() => void loadProfile()}>Tải lại hồ sơ</button></p> : null}
         <div className="button-row"><button className="button primary" type="submit" disabled={busy || !editable}>{busy ? "Đang lưu…" : "Lưu lý lịch khoa học"}</button>{!editable ? <span className="record-meta">Bạn chỉ có quyền xem lý lịch khoa học.</span> : null}</div>
       </form>
+      </CvRowEditing.Provider>
     </section>
   </div>;
 }

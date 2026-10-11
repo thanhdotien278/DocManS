@@ -192,7 +192,7 @@ export function CvGeneralTab({ draft, catalogs, editable, owner, profileType, ha
     <section className="section-card">
       <h3>D. Ngoại ngữ sử dụng</h3>
       <p className="field-hint">Kê khai các ngoại ngữ sử dụng trong nghiên cứu khoa học và giảng dạy</p>
-      <CvRowTable rows={draft.languages} columns={[{ key: "language", label: "Ngoại ngữ *" }, { key: "proficiency", label: "Mức độ", options: [{ value: "Tốt", label: "Tốt" }, { value: "Khá", label: "Khá" }, { value: "Trung bình", label: "Trung bình" }] }, { key: "certificate", label: "Chứng chỉ" }]} disabled={!editable} onChange={updateLanguage} onAdd={() => onChange("languages", [...draft.languages, { language: "", proficiency: "", certificate: "" }])} onRemove={(index) => onChange("languages", draft.languages.filter((_, rowIndex) => rowIndex !== index))} addLabel="+ Thêm ngoại ngữ" />
+      <CvRowTable name="languages" rows={draft.languages} columns={[{ key: "language", label: "Ngoại ngữ *" }, { key: "proficiency", label: "Mức độ", options: [{ value: "Tốt", label: "Tốt" }, { value: "Khá", label: "Khá" }, { value: "Trung bình", label: "Trung bình" }] }, { key: "certificate", label: "Chứng chỉ" }]} disabled={!editable} onChange={updateLanguage} onAdd={() => onChange("languages", [...draft.languages, { language: "", proficiency: "", certificate: "" }])} onRemove={(index) => onChange("languages", draft.languages.filter((_, rowIndex) => rowIndex !== index))} addLabel="+ Thêm ngoại ngữ" />
       <FieldError field="languages" errors={errors} />
     </section>
 
