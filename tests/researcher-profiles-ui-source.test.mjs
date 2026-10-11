@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 import ts from "typescript";
+import * as jsxRuntime from "react/jsx-runtime";
+import { renderToStaticMarkup } from "react-dom/server";
 
 const loadFixture = async (path, dependencies = {}) => {
   const exports = {};
   const source = await readFile(path, "utf8");
-  vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, {
+  vm.runInNewContext(ts.transpileModule(source, { fileName: path, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, {
     exports, require: (name) => {
       if (name === "lucide-react") return {}; // Icons do not affect navigation destinations.
       if (name in dependencies) return dependencies[name];
@@ -103,5 +105,43 @@ describe("Story 2.1 researcher profile UI source", () => {
     assert.match(tabs, /Năm bắt đầu/);
     assert.doesNotMatch(tabs, /thesisTitle/);
     assert.doesNotMatch(workspace, /Lịch sử thay đổi hồ sơ/);
+  });
+  it("wires four research tables to the single save and keeps profile participations read-only", async () => {
+    const [workspace, research] = await Promise.all([
+      readFile("apps/web/src/components/researcher-profiles/scientific-cv/cv-workspace.tsx", "utf8"),
+      readFile("apps/web/src/components/researcher-profiles/scientific-cv/cv-research-tab.tsx", "utf8")
+    ]);
+    assert.doesNotMatch(workspace, /PlaceholderTab title="4\./);
+    assert.match(workspace, /<CvResearchTab draft=\{draft\} participations=\{profile.participations\} editable=\{editable && !busy\}/);
+    for (const section of ["publications", "intellectualProperty", "awards", "projects"]) {
+      assert.match(workspace, new RegExp(`errors\\.${section}\\s*=`));
+      assert.match(research, new RegExp(`errors\\.${section}`));
+      assert.match(research, new RegExp(`rows=\\{draft\\.${section}\\}`));
+    }
+    assert.equal((research.match(/disabled=\{!editable\}/g) ?? []).length, 4);
+    assert.match(workspace, /JSON.stringify\(draft.publications\) !== JSON.stringify\(previous.publications\)/);
+    assert.match(workspace, /input.publications = \[\.\.\.draft.publications.map\(compactRow\), \.\.\.profile.publications.filter/);
+    assert.match(workspace, /errors.publications \|\| errors.intellectualProperty \|\| errors.awards \|\| errors.projects/);
+    assert.match(workspace, /field.startsWith\("publications\."\)/);
+    assert.match(workspace, /curriculumVitae.researchExperience.\$\{section\}/);
+    assert.match(research, /row.status !== "SUPERSEDED"/);
+    assert.match(research, /<th>Tình trạng<\/th>/);
+    assert.match(research, /Các nhiệm vụ đã khai trong hồ sơ nhà khoa học\. Không nhập lại/);
+    assert.match(research, /<td>\{row.participationRole\}<\/td>/);
+    const { CvRowTable } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-row-table.tsx", { "react/jsx-runtime": jsxRuntime });
+    const { CvResearchTab } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-research-tab.tsx", { "react/jsx-runtime": jsxRuntime, "./cv-row-table": { CvRowTable } });
+    const markup = renderToStaticMarkup(jsxRuntime.jsx(CvResearchTab, {
+      draft: { publications: [{ title: "Bài báo", classification: "Phân loại cũ" }], intellectualProperty: [{ title: "Sáng chế" }], awards: [{ name: "Giải thưởng" }], projects: [{ projectTitle: "Đề tài", role: "Vai trò cũ" }] },
+      participations: [{ id: "active", projectTitle: "Nhiệm vụ đang làm", participationRole: "Thành viên", level: "MINISTRY", status: "ACTIVE" }, { id: "inactive", projectTitle: "Nhiệm vụ đã kết thúc", participationRole: "Chủ nhiệm", level: "OTHER", status: "INACTIVE" }, { id: "superseded", projectTitle: "Nhiệm vụ đã thay thế", participationRole: "Thành viên", level: "OTHER", status: "SUPERSEDED" }],
+      editable: false, errors: { projects: "Cần nhập Vai trò" }, onChange: () => assert.fail("Read-only view must not edit")
+    }));
+    assert.match(markup, /Nhiệm vụ đang làm/);
+    assert.match(markup, /Nhiệm vụ đã kết thúc/);
+    assert.match(markup, /Đã kết thúc/);
+    assert.doesNotMatch(markup, /Nhiệm vụ đã thay thế/);
+    assert.match(markup, /value="Phân loại cũ" selected/);
+    assert.match(markup, /value="Vai trò cũ" selected/);
+    assert.match(markup, /role="alert">Cần nhập Vai trò/);
+    for (const control of markup.matchAll(/<(?:input|select|textarea|button)\b[^>]*>/g)) assert.match(control[0], /disabled=""/);
   });
 });

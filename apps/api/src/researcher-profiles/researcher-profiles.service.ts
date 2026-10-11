@@ -601,15 +601,19 @@ export class ResearcherProfilesService {
 
   private async syncPublications(tx: Prisma.TransactionClient, profileId: string, inputs: ResearcherProfilePublicationInput[] | undefined, actorId: string) {
     if (!inputs) return;
+    const keptIds: string[] = [];
     for (const input of inputs) {
       if (!input.id) {
-        await tx.researcherProfilePublication.create({ data: { researcherProfileId: profileId, ...this.publicationCreateData(input, actorId) } });
+        const created = await tx.researcherProfilePublication.create({ data: { researcherProfileId: profileId, ...this.publicationCreateData(input, actorId) } });
+        keptIds.push(created.id);
         continue;
       }
       const current = await tx.researcherProfilePublication.findFirst({ where: { id: input.id, researcherProfileId: profileId } });
       if (!current) throw new NotFoundException({ message: "Không tìm thấy công bố trong hồ sơ." });
+      keptIds.push(input.id);
       await tx.researcherProfilePublication.update({ where: { id: input.id }, data: { ...this.publicationCreateData(input, actorId), createdById: current.createdById } });
     }
+    await tx.researcherProfilePublication.deleteMany({ where: { researcherProfileId: profileId, id: { notIn: keptIds } } });
   }
 
   private async syncParticipations(tx: Prisma.TransactionClient, profileId: string, inputs: ResearcherProfileParticipationInput[] | undefined, actorId: string) {

@@ -203,24 +203,25 @@ function avatarUrl(value: string | null | undefined, path: string) {
 }
 
 function publication(value: unknown, path: string): ResearcherProfilePublicationInput {
-  const input = record(value);
-  const title = text(input, "title", 1000, true)!;
+  if (!value || typeof value !== "object" || Array.isArray(value)) invalid([path]);
+  const input = value as Record<string, unknown>;
+  const title = cvRequiredText(input, "title", path);
   const year = input.publicationYear === undefined || input.publicationYear === null || input.publicationYear === "" ? null : input.publicationYear;
-  if (year !== null && (typeof year !== "number" || !Number.isInteger(year) || year < 1800 || year > 2200)) invalid(["publicationYear"]);
+  if (year !== null && (typeof year !== "number" || !Number.isInteger(year) || year < 1800 || year > 2200)) invalid([`${path}.publicationYear`]);
   const status = input.status === undefined ? "ACTIVE" : input.status;
-  if (status !== "ACTIVE" && status !== "INACTIVE") invalid(["status"]);
+  if (status !== "ACTIVE" && status !== "INACTIVE") invalid([`${path}.status`]);
   return {
-    id: input.id === undefined ? undefined : text(input, "id", 80, true),
+    id: input.id === undefined ? undefined : cvRequiredText(input, "id", path, 80),
     title,
-    venue: updateText(input, "venue", 1000),
+    venue: cvOptionalText(input, "venue", path, 1000),
     publicationYear: year as number | null,
-    doi: updateText(input, "doi", 1000),
-    authors: updateText(input, "authors", 1000),
-    issnIsbn: updateText(input, "issnIsbn", 1000),
-    classification: updateText(input, "classification", 1000),
-    proofUrl: safeUrl(updateText(input, "proofUrl", 1000), `${path}.proofUrl`),
+    doi: cvOptionalText(input, "doi", path, 1000),
+    authors: cvOptionalText(input, "authors", path, 1000),
+    issnIsbn: cvOptionalText(input, "issnIsbn", path, 1000),
+    classification: cvOptionalText(input, "classification", path, 1000),
+    proofUrl: safeUrl(cvOptionalText(input, "proofUrl", path, 1000), `${path}.proofUrl`),
     status,
-    notes: updateText(input, "notes", 4000)
+    notes: cvOptionalText(input, "notes", path, 4000)
   };
 }
 

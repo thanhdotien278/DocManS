@@ -63,7 +63,9 @@ are rejected. Entries are explicitly SELF_REPORTED and grant no business access.
 An ended participation uses INACTIVE. A correction marks the previous row
 SUPERSEDED and creates a successor; the earlier values remain accessible. Unchanged
 rows do not create new revisions. Publications can be inactivated, and before/after
-snapshots preserve corrections. There is no hard-delete endpoint.
+snapshots preserve corrections. A PATCH carrying `publications` supplies the full
+list; saved publications omitted from it are hard-deleted in the same transaction.
+INACTIVE publications must be sent back to survive.
 
 Operational proposal/project/reviewer participation remains source-owned and
 unchanged. Self-reported entries never claim to be verified source-domain history,
