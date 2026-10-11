@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { CvPortraitCropper } from "./cv-portrait-cropper";
 import { CvRowTable } from "./cv-row-table";
 import type { ResearcherCatalogItem, ScientificCurriculumVitaeLanguage } from "@/lib/researcher-profiles-api";
 
 export type CvGeneralDraft = {
   avatarUrl: string;
-  scientistType: "DOMESTIC" | "FOREIGN" | "";
   fullName: string;
   gender: "Nam" | "Nữ" | "Khác" | "";
   birthDate: string;
@@ -28,7 +28,8 @@ export type CvGeneralDraft = {
   academicDegreeCatalogItemId: string;
   englishAcademicTitle: string;
   researchFieldIds: string[];
-  expertiseKeywords: string;
+  expertiseKeywords: string[];
+  keywordInput: string;
   languages: ScientificCurriculumVitaeLanguage[];
   bankAccount: string;
   bankName: string;
@@ -43,23 +44,62 @@ type CvGeneralTabProps = {
   catalogs: { researchFields: ResearcherCatalogItem[]; academicRanks: ResearcherCatalogItem[]; academicDegrees: ResearcherCatalogItem[] };
   editable: boolean;
   owner: boolean;
-  scientistTypeLocked: boolean;
+  profileType: "INTERNAL" | "EXTERNAL";
+  hasAccount: boolean;
+  usernameEditable: boolean;
   errors: Record<string, string>;
   onChange: <K extends keyof CvGeneralDraft>(key: K, value: CvGeneralDraft[K]) => void;
 };
+
+const PORTRAIT_PREVIEW = /^(https?:\/\/|\/|data:image\/(jpeg|png|webp);base64,)/;
+const PORTRAIT_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+// Same comparison key as the API's normalizeResearcherKey (unique per profile), so near-duplicates never reach the server.
+const keywordKey = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLocaleLowerCase("vi").replace(/\s+/g, " ").trim();
+
+// Commits comma-separated text as keywords, ignoring blanks and duplicates (case/diacritic-insensitive).
+export function mergeKeywords(keywords: string[], text: string) {
+  const result = [...keywords];
+  for (const raw of text.split(",")) {
+    const keyword = raw.trim();
+    if (keyword && !result.some((item) => keywordKey(item) === keywordKey(keyword))) result.push(keyword);
+  }
+  return result;
+}
 
 function FieldError({ field, errors }: { field: string; errors: Record<string, string> }) {
   return errors[field] ? <small id={`cv-${field}-error`} className="field-error" role="alert">{errors[field]}</small> : null;
 }
 
-export function CvGeneralTab({ draft, catalogs, editable, owner, scientistTypeLocked, errors, onChange }: CvGeneralTabProps) {
+export function CvGeneralTab({ draft, catalogs, editable, owner, profileType, hasAccount, usernameEditable, errors, onChange }: CvGeneralTabProps) {
   const [researchFieldQuery, setResearchFieldQuery] = useState("");
+  const [portraitFile, setPortraitFile] = useState<File | null>(null);
+  const [portraitError, setPortraitError] = useState("");
+  const portraitInput = useRef<HTMLInputElement>(null);
   const [researchFieldOpen, setResearchFieldOpen] = useState(false);
   const selectedResearchFields = catalogs.researchFields.filter((item) => draft.researchFieldIds.includes(item.id));
   const visibleResearchFields = catalogs.researchFields.filter((item) => item.name.toLowerCase().includes(researchFieldQuery.trim().toLowerCase()));
 
   function toggleResearchField(id: string) {
     onChange("researchFieldIds", draft.researchFieldIds.includes(id) ? draft.researchFieldIds.filter((value) => value !== id) : [...draft.researchFieldIds, id]);
+  }
+
+  function pickPortrait(file: File | undefined) {
+    if (portraitInput.current) portraitInput.current.value = "";
+    if (!file) return;
+    if (!PORTRAIT_TYPES.includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setPortraitError("Chỉ nhận ảnh JPEG, PNG hoặc WebP tối đa 5 MB.");
+      return;
+    }
+    setPortraitError("");
+    setPortraitFile(file);
+  }
+
+  function typeKeywords(value: string) {
+    if (!value.includes(",")) return onChange("keywordInput", value);
+    const parts = value.split(",");
+    onChange("expertiseKeywords", mergeKeywords(draft.expertiseKeywords, parts.slice(0, -1).join(",")));
+    onChange("keywordInput", parts.at(-1) ?? "");
   }
 
   function updateLanguage(index: number, key: keyof ScientificCurriculumVitaeLanguage & string, value: string | number | null) {
@@ -71,19 +111,24 @@ export function CvGeneralTab({ draft, catalogs, editable, owner, scientistTypeLo
       <h3>A. Loại nhà khoa học &amp; Ảnh đại diện (3x4)</h3>
       <div className="form-grid">
         <div className="cv-portrait-field">
-          <div className="cv-portrait-box" aria-label="Khung xem trước ảnh chân dung 3x4">{/^(https?:\/\/|\/)/.test(draft.avatarUrl) ? <img src={draft.avatarUrl} alt="Ảnh chân dung 3x4" referrerPolicy="no-referrer" /> : <span>3 × 4</span>}</div>
-          <div><strong>Ảnh chân dung nhà khoa học (Khung chuẩn 3x4)</strong><small className="field-hint">Hiển thị trên hồ sơ nghiên cứu khoa học và trang in Lý lịch khoa học BM-06</small><label className="field" htmlFor="cv-avatar-url"><span>Đường dẫn ảnh chân dung (URL hoặc ảnh tải lên)</span><input id="cv-avatar-url" type="text" maxLength={2048} value={draft.avatarUrl} disabled={!editable} onChange={(event) => onChange("avatarUrl", event.target.value)} /><FieldError field="avatarUrl" errors={errors} /></label></div>
-        </div>
-        <fieldset className="field" disabled={!editable || scientistTypeLocked} aria-invalid={!!errors.scientistType} aria-describedby={errors.scientistType ? "cv-scientistType-error" : undefined}>
-          <legend>Loại nhà khoa học *</legend>
-          <div className="cv-radio-group">
-          <label><input type="radio" name="cv-scientist-type" value="DOMESTIC" checked={draft.scientistType === "DOMESTIC"} onChange={() => onChange("scientistType", "DOMESTIC")} /> Nhà khoa học trong nước</label>
-          <label><input type="radio" name="cv-scientist-type" value="FOREIGN" checked={draft.scientistType === "FOREIGN"} onChange={() => onChange("scientistType", "FOREIGN")} /> Nhà khoa học nước ngoài</label>
+          <div className="cv-portrait-box" aria-label="Khung xem trước ảnh chân dung 3x4">{PORTRAIT_PREVIEW.test(draft.avatarUrl) ? <img src={draft.avatarUrl} alt="Ảnh chân dung 3x4" referrerPolicy="no-referrer" /> : <span>3 × 4</span>}</div>
+          <div>
+            <strong>Ảnh chân dung nhà khoa học (Khung chuẩn 3x4)</strong><small className="field-hint">Hiển thị trên hồ sơ nghiên cứu khoa học và trang in Lý lịch khoa học BM-06</small>
+            <input ref={portraitInput} id="cv-avatar-file" type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => pickPortrait(event.target.files?.[0])} />
+            <div className="button-row">
+              <button type="button" className="button" disabled={!editable} onClick={() => portraitInput.current?.click()} aria-describedby={portraitError || errors.avatarUrl ? "cv-avatar-error" : undefined}>Tải ảnh lên</button>
+              {draft.avatarUrl ? <button type="button" className="button" disabled={!editable} onClick={() => onChange("avatarUrl", "")}>Xóa ảnh</button> : null}
+            </div>
+            {portraitError || errors.avatarUrl ? <small id="cv-avatar-error" className="field-error" role="alert">{portraitError || errors.avatarUrl}</small> : null}
           </div>
-          {scientistTypeLocked ? <small className="field-hint">Đã khóa sau khi liên kết tài khoản.</small> : null}
-          <FieldError field="scientistType" errors={errors} />
-        </fieldset>
+        </div>
+        <div className="field">
+          <span>Loại nhà khoa học</span>
+          <strong>{profileType === "EXTERNAL" ? "Nhà khoa học ngoài Học viện" : "Nhà khoa học trong Học viện"}</strong>
+          <small className="field-hint">Do Phòng QLKH xác định theo loại tài khoản</small>
+        </div>
       </div>
+      {portraitFile ? <CvPortraitCropper file={portraitFile} onCancel={() => setPortraitFile(null)} onApply={(dataUrl) => { setPortraitFile(null); onChange("avatarUrl", dataUrl); }} /> : null}
     </section>
 
     <section className="section-card">
@@ -105,7 +150,8 @@ export function CvGeneralTab({ draft, catalogs, editable, owner, scientistTypeLo
         <label className="field" htmlFor="cv-contact-email"><span>Email đăng nhập / liên hệ *</span><input id="cv-contact-email" type="email" required value={draft.contactEmail} disabled={!editable} aria-invalid={!!errors.contactEmail} aria-describedby={errors.contactEmail ? "cv-contactEmail-error" : undefined} onChange={(event) => onChange("contactEmail", event.target.value)} /><FieldError field="contactEmail" errors={errors} /></label>
         <label className="field" htmlFor="cv-contact-address"><span>Địa chỉ liên hệ</span><input id="cv-contact-address" value={draft.contactAddress} disabled={!editable} onChange={(event) => onChange("contactAddress", event.target.value)} /><FieldError field="contactAddress" errors={errors} /></label>
         <label className="field" htmlFor="cv-organization"><span>Đơn vị quản lý / Đơn vị công tác *</span><input id="cv-organization" required value={draft.organization} disabled={!editable} aria-invalid={!!errors.organization} aria-describedby={errors.organization ? "cv-organization-error" : undefined} onChange={(event) => onChange("organization", event.target.value)} /><small className="field-hint">Nhà khoa học tự đánh tên đơn vị trực tiếp theo lý lịch khoa học thay vì bắt buộc lựa chọn dropdown.</small><FieldError field="organization" errors={errors} /></label>
-        {owner ? <label className="field" htmlFor="cv-username"><span>Tên đăng nhập</span><input id="cv-username" value={draft.username} disabled={!editable} onChange={(event) => onChange("username", event.target.value)} /><FieldError field="username" errors={errors} /></label> : null}
+        {owner || (hasAccount && !usernameEditable) ? <label className="field" htmlFor="cv-username"><span>Tên đăng nhập</span><input id="cv-username" value={draft.username || "Chưa cấp"} readOnly disabled /><small className="field-hint">Do quản trị/Phòng QLKH cấp</small></label> : null}
+        {usernameEditable ? <label className="field" htmlFor="cv-username"><span>Tên đăng nhập</span><input id="cv-username" value={draft.username} maxLength={80} autoComplete="off" disabled={!editable} aria-invalid={!!errors.username} aria-describedby={errors.username ? "cv-username-error" : undefined} onChange={(event) => onChange("username", event.target.value)} /><FieldError field="username" errors={errors} /></label> : null}
       </div>
     </section>
 
@@ -126,7 +172,21 @@ export function CvGeneralTab({ draft, catalogs, editable, owner, scientistTypeLo
         {researchFieldOpen ? <div id="cv-research-fields-options" className="multi-select-menu" role="group" aria-label="Chọn lĩnh vực nghiên cứu">{visibleResearchFields.length ? visibleResearchFields.map((item) => <label key={item.id} className="multi-select-option"><input type="checkbox" checked={draft.researchFieldIds.includes(item.id)} disabled={!editable} onChange={() => toggleResearchField(item.id)} />{item.name}</label>) : <p className="field-hint">Không có lĩnh vực phù hợp.</p>}</div> : null}
         <small className="field-hint">Chọn một hoặc nhiều lĩnh vực chuyên môn của nhà khoa học.</small><FieldError field="researchFieldIds" errors={errors} />
       </div>
-      <label className="field" htmlFor="cv-expertise-keywords"><span>Từ khóa tương ứng với hướng nghiên cứu chính, chuyên môn hoạt động</span><input id="cv-expertise-keywords" value={draft.expertiseKeywords} disabled={!editable} placeholder="Phân cách bằng dấu phẩy" onChange={(event) => onChange("expertiseKeywords", event.target.value)} /><FieldError field="expertiseKeywords" errors={errors} /></label>
+      <div className="field">
+        <label htmlFor="cv-expertise-keywords">Từ khóa tương ứng với hướng nghiên cứu chính, chuyên môn hoạt động</label>
+        <div className="multi-select-control">
+          {draft.expertiseKeywords.length ? <div className="multi-select-chips" aria-label="Từ khóa đã nhập">{draft.expertiseKeywords.map((keyword) => <button key={keyword} type="button" className="multi-select-chip" disabled={!editable} onClick={() => onChange("expertiseKeywords", draft.expertiseKeywords.filter((item) => item !== keyword))} aria-label={`Bỏ từ khóa ${keyword}`}>#{keyword}<span aria-hidden="true">×</span></button>)}</div> : null}
+          <input id="cv-expertise-keywords" value={draft.keywordInput} disabled={!editable} placeholder="Nhập từ khóa rồi nhấn Enter hoặc dấu phẩy" aria-describedby={errors.expertiseKeywords ? "cv-expertiseKeywords-error" : undefined}
+            onChange={(event) => typeKeywords(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                if (!event.nativeEvent.isComposing) { onChange("expertiseKeywords", mergeKeywords(draft.expertiseKeywords, draft.keywordInput)); onChange("keywordInput", ""); }
+              } else if (event.key === "Backspace" && !draft.keywordInput && draft.expertiseKeywords.length) onChange("expertiseKeywords", draft.expertiseKeywords.slice(0, -1));
+            }} />
+        </div>
+        <FieldError field="expertiseKeywords" errors={errors} />
+      </div>
     </section>
 
     <section className="section-card">

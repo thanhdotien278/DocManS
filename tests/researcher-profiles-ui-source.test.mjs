@@ -75,6 +75,22 @@ describe("Story 2.1 researcher profile UI source", () => {
     assert.match(shell, /href: "\/my-profile", label: "Lý lịch khoa học"/);
   });
 
+  it("uploads and crops the portrait, derives scientist type, fixes the owner username, and edits keywords as chips", async () => {
+    const [workspace, general, cropper, appShell] = await Promise.all([
+      readFile("apps/web/src/components/researcher-profiles/scientific-cv/cv-workspace.tsx", "utf8"),
+      readFile("apps/web/src/components/researcher-profiles/scientific-cv/cv-general-tab.tsx", "utf8"),
+      readFile("apps/web/src/components/researcher-profiles/scientific-cv/cv-portrait-cropper.tsx", "utf8"),
+      readFile("apps/web/src/components/layout/app-shell.tsx", "utf8")
+    ]);
+    for (const label of ["Tải ảnh lên", "Xóa ảnh", "Nhà khoa học trong Học viện", "Nhà khoa học ngoài Học viện", "Do quản trị/Phòng QLKH cấp"]) assert.match(general, new RegExp(label));
+    assert.doesNotMatch(general, /cv-scientist-type"|cv-avatar-url/);
+    assert.match(cropper, /toDataURL\("image\/jpeg"/);
+    assert.match(workspace, /usernameEditable && draft\.username/);
+    assert.match(workspace, /mergeKeywords\(draft\.expertiseKeywords, draft\.keywordInput\)/);
+    assert.match(workspace, /dispatchEvent\(new Event\("researcher-avatar-updated"\)\)/);
+    assert.match(appShell, /researcher-profiles\/my-profile\/avatar\?v=/);
+  });
+
   it("edits CV education and work history with required-row validation", async () => {
     const [workspace, tabs] = await Promise.all([
       readFile("apps/web/src/components/researcher-profiles/scientific-cv/cv-workspace.tsx", "utf8"),

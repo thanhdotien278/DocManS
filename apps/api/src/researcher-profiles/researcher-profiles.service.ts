@@ -8,7 +8,7 @@ import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { assertResearcherProfileAction, canEditOwnResearcherProfile, canManageResearcherProfiles, hasResearcherProfileScope, projectResearcherProfileAuthorization } from "./researcher-profile-access.js";
-import type { CreateResearcherProfileDto, ResearcherProfileParticipationInput, ResearcherProfilePublicationInput, ScientificCurriculumVitae, UpdateResearcherProfileDto, ResearcherAccountInput } from "./researcher-profiles.dto.js";
+import { AVATAR_DATA_URL, normalizeResearcherKey, type CreateResearcherProfileDto, type ResearcherProfileParticipationInput, type ResearcherProfilePublicationInput, type UpdateResearcherProfileDto, type ResearcherAccountInput } from "./researcher-profiles.dto.js";
 import { MailService } from "../notifications/mail.service.js";
 
 type ProfileWithRelations = {
@@ -61,9 +61,7 @@ const profileInclude = {
 
 const ACTIVATION_TTL_MS = 48 * 60 * 60 * 1000;
 
-export function normalizeResearcherKey(value: string) {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLocaleLowerCase("vi").replace(/\s+/g, " ").trim();
-}
+export { normalizeResearcherKey };
 
 function normalizeEmail(value?: string | null) {
   return value?.trim().toLocaleLowerCase("en-US");
@@ -206,7 +204,6 @@ export class ResearcherProfilesService {
       assertResearcherProfileAction(actor, "researcher-profile.update", profile.managementOrganizationUnitId);
       if (input.curriculumVitae !== undefined) assertResearcherProfileAction(actor, "researcher-profile.cv.update", profile.managementOrganizationUnitId);
       this.assertProfileVersion(input.contextVersion, profile);
-      this.assertScientistTypeLocked(profile, input.curriculumVitae);
       if (input.profileType !== undefined && input.profileType !== profile.profileType && profile.linkedUserId) {
         throw new ConflictException({ message: "Không thể đổi loại hồ sơ khi hồ sơ đang liên kết tài khoản.", code: "PROFILE_ACCOUNT_ROLE_CONFLICT" });
       }
@@ -214,6 +211,7 @@ export class ResearcherProfilesService {
       const result = await tx.researcherProfile.updateMany({ where: { id, aggregateVersion: input.contextVersion.aggregateVersion }, data: { ...this.updateData(input), aggregateVersion: { increment: 1 }, updatedById: actor.id } });
       if (result.count !== 1) throw new ConflictException({ message: "Dữ liệu hồ sơ đã thay đổi. Vui lòng tải lại trước khi thử lại.", code: "CONTEXT_VERSION_MISMATCH", correlationId });
       if (Object.keys(this.childData(input)).length > 0) await tx.researcherProfile.update({ where: { id }, data: this.childData(input) as never });
+      if (input.username !== undefined) await this.setLinkedUsername(tx, actor, profile, input.username, correlationId);
       await this.syncPublications(tx, id, input.publications, actor.id);
       await this.syncParticipations(tx, id, input.participations, actor.id);
       const withChildren = (await tx.researcherProfile.findUnique({ where: { id }, include: profileInclude } as never)) as unknown as ProfileWithRelations;
@@ -306,7 +304,6 @@ export class ResearcherProfilesService {
       if (!profile || profile.linkedUserId !== actor.id || profile.status !== "ACTIVE") throw new ForbiddenException({ message: "Hồ sơ liên kết không tồn tại, đã ngừng hoạt động hoặc không còn hợp lệ." });
       this.assertProfileVersion(input.contextVersion, profile);
       if (input.curriculumVitae !== undefined) this.assertCvUpdate(actor, profile);
-      this.assertScientistTypeLocked(profile, input.curriculumVitae);
       await this.validateCatalogs(tx, safeInput);
       if (hasProfileChanges) {
         const result = await tx.researcherProfile.updateMany({ where: { id: profile.id, linkedUserId: actor.id, aggregateVersion: input.contextVersion.aggregateVersion }, data: { ...this.updateData(safeInput), aggregateVersion: { increment: 1 }, updatedById: actor.id } });
@@ -314,14 +311,6 @@ export class ResearcherProfilesService {
         if (Object.keys(this.childData(safeInput)).length > 0) await tx.researcherProfile.update({ where: { id: profile.id }, data: this.childData(safeInput) as never });
         await this.syncPublications(tx, profile.id, safeInput.publications, actor.id);
         await this.syncParticipations(tx, profile.id, safeInput.participations, actor.id);
-      }
-      if (input.username !== undefined && input.username !== activeUser.username) {
-        if (input.username) {
-          const existing = await tx.user.findUnique({ where: { usernameKey: input.username } });
-          if (existing && existing.id !== actor.id) throw new ConflictException({ message: "Tên đăng nhập đã tồn tại." });
-        }
-        await tx.user.update({ where: { id: actor.id }, data: { username: input.username, usernameKey: input.username } });
-        await this.auditLog.record({ action: "change-username", result: "success", actorId: actor.id, targetEntity: "user", targetEntityId: actor.id, username: input.username ?? undefined, correlationId, beforeFacts: { username: activeUser.username }, afterFacts: { username: input.username } }, tx);
       }
       const next = (await tx.researcherProfile.findUnique({ where: { id: profile.id }, include: profileInclude } as never)) as unknown as ProfileWithRelations;
       if (hasProfileChanges) {
@@ -661,11 +650,26 @@ export class ResearcherProfilesService {
     if (!projectResearcherProfileAuthorization(actor, profile).allowedActions.includes("researcher-profile.cv.update")) throw new ForbiddenException({ message: "Bạn không có quyền cập nhật lý lịch khoa học." });
   }
 
-  private assertScientistTypeLocked(profile: ProfileWithRelations, curriculumVitae: ScientificCurriculumVitae | null | undefined) {
-    if (!profile.linkedUserId || curriculumVitae === undefined) return;
-    const before = (profile.curriculumVitae as { personalInfo?: { scientistType?: string } } | null)?.personalInfo?.scientistType;
-    const after = curriculumVitae?.personalInfo?.scientistType;
-    if (before && before !== after) throw new BadRequestException({ message: "Không thể đổi loại nhà khoa học khi hồ sơ đang liên kết tài khoản.", errors: [{ field: "curriculumVitae.personalInfo.scientistType", message: "curriculumVitae.personalInfo.scientistType không thể thay đổi khi hồ sơ đã liên kết tài khoản." }] });
+  // Managers (researcher-profile.update) set the login name of a linked researcher account; owners cannot.
+  private async setLinkedUsername(tx: Prisma.TransactionClient, actor: SafeUserContext, profile: ProfileWithRelations, username: string | null, correlationId: string) {
+    const linked = profile.linkedUser;
+    if (!profile.linkedUserId || !linked) throw new BadRequestException({ message: "Hồ sơ chưa liên kết tài khoản.", errors: [{ field: "username", message: "Hồ sơ chưa liên kết tài khoản nên chưa thể cấp tên đăng nhập." }] });
+    if (profile.linkedUserId === actor.id || !["RESEARCHER_INTERNAL_USER", "EXTERNAL_RESEARCHER_USER"].includes(linked.systemRole ?? "")) throw new ForbiddenException({ message: "Không thể đổi tên đăng nhập của tài khoản này." });
+    if (username === linked.username) return;
+    if (username) {
+      const existing = await tx.user.findUnique({ where: { usernameKey: username } });
+      if (existing && existing.id !== linked.id) throw new ConflictException({ message: "Tên đăng nhập đã tồn tại.", errors: [{ field: "username", message: "Tên đăng nhập đã tồn tại." }] });
+    }
+    await tx.user.update({ where: { id: linked.id }, data: { username, usernameKey: username } });
+    await this.auditLog.record({ action: "change-username", result: "success", actorId: actor.id, targetEntity: "user", targetEntityId: linked.id, username: actor.username, correlationId, beforeFacts: { username: linked.username }, afterFacts: { username } }, tx);
+  }
+
+  async getMyAvatar(actor: SafeUserContext) {
+    const profile = await this.prisma.researcherProfile.findFirst({ where: { linkedUserId: actor.id }, select: { id: true, status: true, linkedUserId: true, curriculumVitae: true } });
+    const value = profile && canEditOwnResearcherProfile(actor, profile) ? (profile.curriculumVitae as { personalInfo?: { avatarUrl?: unknown } } | null)?.personalInfo?.avatarUrl : undefined;
+    const match = typeof value === "string" ? AVATAR_DATA_URL.exec(value) : null;
+    if (!match) throw new NotFoundException({ message: "Chưa có ảnh chân dung." });
+    return { contentType: `image/${match[1]}`, content: Buffer.from(match[2], "base64") };
   }
 
   private redactCurriculumVitae(value: unknown) {

@@ -68,7 +68,6 @@ export type ScientificCurriculumVitae = {
 
 export type ScientificCurriculumVitaePersonalInfo = {
   avatarUrl?: string | null;
-  scientistType: "DOMESTIC" | "FOREIGN";
   gender: "Nam" | "Nữ" | "Khác";
   birthDate?: string | null;
   birthPlace?: string | null;
@@ -155,12 +154,18 @@ function ids(input: Record<string, unknown>, field: string, required: boolean) {
   return [...new Set((value as string[]).map((item) => item.trim()))];
 }
 
+export function normalizeResearcherKey(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLocaleLowerCase("vi").replace(/\s+/g, " ").trim();
+}
+
 function keywords(input: Record<string, unknown>) {
   const value = input.expertiseKeywords;
   if (value === undefined) return undefined;
   if (!Array.isArray(value) || value.length > 64 || value.some((item) => typeof item !== "string" || item.length > 160)) invalid(["expertiseKeywords"]);
-  const result = [...new Set((value as string[]).map((item) => item.normalize("NFC").trim()).filter(Boolean))];
-  return result;
+  // Dedupe by the stored keywordKey (unique per profile), keeping the first spelling.
+  const byKey = new Map<string, string>();
+  for (const item of (value as string[]).map((keyword) => keyword.normalize("NFC").trim()).filter(Boolean)) if (!byKey.has(normalizeResearcherKey(item))) byKey.set(normalizeResearcherKey(item), item);
+  return [...byKey.values()];
 }
 
 function profileType(input: Record<string, unknown>) {
@@ -187,6 +192,13 @@ function publications(input: Record<string, unknown>) {
 
 function safeUrl(value: string | null | undefined, path: string) {
   if (value != null && !/^(https?:\/\/|\/)/i.test(value)) invalid([path]);
+  return value;
+}
+
+// Portrait: a URL/path or an inline 3x4 JPEG/PNG/WebP data URL produced by the client cropper.
+export const AVATAR_DATA_URL = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/;
+function avatarUrl(value: string | null | undefined, path: string) {
+  if (value != null && !AVATAR_DATA_URL.test(value) && (value.length > 2048 || !/^(https?:\/\/|\/(?!\/))/i.test(value))) invalid([path]);
   return value;
 }
 
@@ -348,17 +360,17 @@ function cvPersonalInfo(input: Record<string, unknown>) {
   const path = "curriculumVitae.personalInfo";
   const value = input.personalInfo;
   const personal = cvRecord(value, path, ["avatarUrl", "scientistType", "gender", "birthDate", "birthPlace", "nationality", "idNumber", "idIssueDate", "idIssuePlace", "englishAcademicTitle", "contactAddress", "organization", "bankAccount", "bankName", "bankBranch", "smartCaSerial", "shareDataAgreement", "languages"]);
+  // scientistType is derived from profileType now; still accepted from old payloads but never stored.
   const result: Record<string, unknown> = {
-    scientistType: cvEnum(personal.scientistType, `${path}.scientistType`, ["DOMESTIC", "FOREIGN"]),
     gender: cvEnum(personal.gender, `${path}.gender`, ["Nam", "Nữ", "Khác"]),
     idNumber: cvRequiredText(personal, "idNumber", path),
     organization: cvRequiredText(personal, "organization", path),
     shareDataAgreement: cvBoolean(personal, "shareDataAgreement", path, true)
   };
-  const textFields: Array<[string, number]> = [["avatarUrl", 2048], ["birthPlace", 1000], ["nationality", 1000], ["idIssuePlace", 1000], ["englishAcademicTitle", 1000], ["contactAddress", 1000], ["bankAccount", 1000], ["bankName", 1000], ["bankBranch", 1000], ["smartCaSerial", 1000]];
+  const textFields: Array<[string, number]> = [["avatarUrl", 400_000], ["birthPlace", 1000], ["nationality", 1000], ["idIssuePlace", 1000], ["englishAcademicTitle", 1000], ["contactAddress", 1000], ["bankAccount", 1000], ["bankName", 1000], ["bankBranch", 1000], ["smartCaSerial", 1000]];
   for (const [field, maxLength] of textFields) {
     const next = cvOptionalText(personal, field, path, maxLength);
-    if (next !== undefined) result[field] = field === "avatarUrl" ? safeUrl(next, `${path}.${field}`) : next;
+    if (next !== undefined) result[field] = field === "avatarUrl" ? avatarUrl(next, `${path}.${field}`) : next;
   }
   const birthDate = cvDate(personal, "birthDate", path);
   if (birthDate !== undefined) result.birthDate = birthDate;
@@ -482,7 +494,9 @@ function optionalCurriculumVitae(input: Record<string, unknown>) {
     const rows = cvRows(cv, "educationHistory", `${path}.educationHistory`, cvEducation);
     result.educationHistory = rows;
   }
-  if (Buffer.byteLength(JSON.stringify(result), "utf8") > 256 * 1024) invalid([path]);
+  // The portrait has its own 400 000-char cap, so it does not count against the 256 KB document budget.
+  const sized = result.personalInfo ? { ...result, personalInfo: { ...(result.personalInfo as Record<string, unknown>), avatarUrl: undefined } } : result;
+  if (Buffer.byteLength(JSON.stringify(sized), "utf8") > 256 * 1024) invalid([path]);
   return result as ScientificCurriculumVitae;
 }
 
@@ -531,6 +545,7 @@ export const updateResearcherProfilePipe: PipeTransform<unknown, UpdateResearche
     if (input.publications !== undefined) result.publications = publications(input);
     if (input.participations !== undefined) result.participations = participations(input);
     if (input.curriculumVitae !== undefined) result.curriculumVitae = optionalCurriculumVitae(input);
+    if ("username" in input) result.username = optionalUsername(input);
     if (Object.keys(result).length === 1) invalid(["body"]);
     return result as UpdateResearcherProfileDto;
   }
@@ -546,11 +561,9 @@ export const researcherProfileMutationPipe: PipeTransform<unknown, { contextVers
 export const updateMyProfilePipe: PipeTransform<unknown, UpdateResearcherProfileDto> = {
   transform(value) {
     const input = record(value);
-    const allowed = new Set(["contextVersion", "fullName", "externalAffiliation", "academicRankCatalogItemId", "academicDegreeCatalogItemId", "title", "position", "militaryRank", "contactEmail", "contactPhone", "contactNote", "researchFieldIds", "expertiseKeywords", "publications", "participations", "curriculumVitae", "username"]);
+    const allowed = new Set(["contextVersion", "fullName", "externalAffiliation", "academicRankCatalogItemId", "academicDegreeCatalogItemId", "title", "position", "militaryRank", "contactEmail", "contactPhone", "contactNote", "researchFieldIds", "expertiseKeywords", "publications", "participations", "curriculumVitae"]);
     if (Object.keys(input).some((key) => !allowed.has(key))) invalid(["administrativeFields"]);
-    const profileKeys = Object.keys(input).filter((key) => key !== "contextVersion" && key !== "username");
-    const base = profileKeys.length ? updateResearcherProfilePipe.transform(input, { type: "body" }) : researcherProfileMutationPipe.transform(input, { type: "body" });
-    return { ...base, username: optionalUsername(input) };
+    return updateResearcherProfilePipe.transform(input, { type: "body" });
   }
 };
 
