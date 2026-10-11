@@ -1,0 +1,37 @@
+- id: "13-1"
+  title: Hợp đồng dữ liệu lý lịch khoa học, lưu trữ và API
+  description: >-
+    Add the versioned curriculumVitae document, new migration, server-side validation, my-profile/manager read-write, new permission actions and sensitive-field projection and audit redaction (CAP-5, CAP-6 backend, constraints).
+  spec_checkpoint: true
+  invoke_dev_with: >-
+    Use bmad-build. Contract in cv-data-contract.md. Register new actions in access.ts, packages/permissions ts+js and docs/contracts/researcher-profile-access.md. Do not copy the review repo's passthrough object validation.
+- id: "13-2"
+  title: Tab "Thông tin chung" và khung Lý lịch khoa học
+  description: >-
+    Build the CV shell (5 tabs with counts, single save, contextVersion handling) and Tab 1 sections A–E including languages, bank/SmartCA and consent (CAP-1).
+  invoke_dev_with: >-
+    Per-tab components under researcher-profiles; match the screenshot; reuse existing form primitives; no 2.5k-line panel.
+- id: "13-3"
+  title: Tab quá trình đào tạo và quá trình công tác
+  description: >-
+    Editable row tables for education history and work history with summary, add/remove, validation and persistence (CAP-2).
+- id: "13-4"
+  title: Tab kinh nghiệm và thành tích nghiên cứu
+  description: >-
+    Publications, intellectual property, awards and projects with single-store reconciliation against existing publications/participations (CAP-3).
+  spec_checkpoint: true
+  invoke_dev_with: >-
+    Resolve the open question on reusing child tables before coding; record the decision in the story file.
+- id: "13-5"
+  title: Xem và in lý lịch khoa học BM-06 (VI/EN)
+  description: >-
+    A4 print view from saved data with VI/EN toggle, print stylesheet, and authorized access for owner and scoped managers (CAP-4).
+- id: "13-6"
+  title: Lịch sử thay đổi lý lịch khoa học
+  description: >-
+    Show CV changes in the change-history block with section-level, redacted summaries for owner and scoped managers (CAP-6 UI).
+- id: "13-7"
+  title: Seed lý lịch demo và bỏ dữ liệu giả khi khởi tạo hồ sơ
+  description: >-
+    Make seeded profile CVs conform to the contract and stop ensureProfileForResearcher-style bootstrap from fabricating personal data (CAP-7).
+  done_checkpoint: true

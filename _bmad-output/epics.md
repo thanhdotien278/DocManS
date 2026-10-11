@@ -165,6 +165,7 @@ mutation eligibility is unchanged; Oversight gains internal researcher eligibili
 - FR67a: The system enforces record/evaluation-context conflict, separation-of-duty and multiplicity policy in preflight and every authoritative assignment/decision mutation; the authorization baseline owns the compatibility matrix and stable reasons.
 - FR68: Users can search and filter researcher profiles by name, unit, field, expertise, status, participation history, and other authorized business attributes.
 - FR69: The system can preserve researcher profile history and audit important profile changes according to role and data-scope permissions.
+- FR70: Researchers can maintain a scientific CV (Lý lịch khoa học, form BM-06) on their researcher profile — general info, education, work history, research experience — validated server-side, with sensitive fields protected, and can view/print it in Vietnamese and English; authorized scoped managers can view it.
 
 ### NonFunctional Requirements
 
@@ -315,6 +316,7 @@ mutation eligibility is unchanged; Oversight gains internal researcher eligibili
 - FR67a: Epic 2 — Xung đột lợi ích và phân tách nhiệm vụ.
 - FR68: Epic 2 — Tìm kiếm hồ sơ nhà khoa học.
 - FR69: Epic 2 — Lịch sử và audit hồ sơ nhà khoa học.
+- FR70: Epic 13 — Lý lịch khoa học (BM-06).
 
 ## Canonical UX/UI Delivery Epics
 
@@ -1413,6 +1415,14 @@ Người dùng có thể tìm kiếm, theo dõi chỉ số, đi đến hồ sơ 
 trong đúng phạm vi được phép trên tất cả phân hệ đã hoàn thành.
 
 **FRs covered:** FR45, FR46, FR47, FR48, FR49.
+
+### Epic 13: Lý lịch khoa học (BM-06)
+
+Nhà khoa học lập, cập nhật, xem và in lý lịch khoa học chuẩn BM-06 ngay trên
+Hồ sơ của tôi; người quản lý có thẩm quyền trong phạm vi xem được; dữ liệu nhạy
+cảm được bảo vệ và thay đổi được truy vết.
+
+**FRs covered:** FR70.
 
 ## Epic 1: Truy cập hệ thống và quản trị phân quyền hợp nhất
 
@@ -4070,3 +4080,178 @@ credential delivery, migration compatibility and history retention.
   destination and role/scope remain administrative.
 - Profile/link/account/activation/username/account-status audit is preserved with
   safe transactional change facts.
+
+## Epic 13: Lý lịch khoa học (BM-06)
+
+Mở rộng Epic 2. Nguồn: [SPEC](specs/spec-scientific-cv/SPEC.md) và
+[hợp đồng dữ liệu](specs/spec-scientific-cv/cv-data-contract.md). Tham chiếu hành vi:
+`/Users/Super/DocManS-review` (không port nguyên trạng các lỗi đã ghi trong hợp đồng).
+Thứ tự thực hiện: 13.1 → 13.2 → 13.3 / 13.4 → 13.5 → 13.6 → 13.7.
+
+### Story 13.1: Hợp đồng dữ liệu lý lịch khoa học, lưu trữ và API [FR70]
+
+As a nhà khoa học,
+I want hệ thống lưu lý lịch khoa học có kiểm tra hợp lệ và bảo vệ dữ liệu nhạy cảm,
+So that thông tin của tôi đúng chuẩn BM-06 và không bị lộ hoặc ghi đè nhầm.
+
+**Acceptance Criteria:**
+
+**Given** migration mới được áp dụng
+**When** hồ sơ chưa có lý lịch được đọc
+**Then** `curriculumVitae` là rỗng hợp lệ (`cvSchemaVersion: 1`) và các migration cũ không bị sửa.
+
+**Given** chủ hồ sơ ACTIVE gửi `PATCH /api/v1/researcher-profiles/my-profile` kèm `curriculumVitae`
+**When** payload khớp hợp đồng
+**Then** hệ thống lưu, tăng `aggregateVersion`, và trả hồ sơ cập nhật.
+
+**Given** payload có khóa lạ, kiểu sai, năm ngoài khoảng, vượt giới hạn dòng/độ dài hoặc thiếu trường bắt buộc của dòng
+**When** gửi lên
+**Then** API trả 400 với lỗi theo trường và không lưu gì.
+
+**Given** `contextVersion` đã cũ
+**When** gửi cập nhật
+**Then** API trả 409 `CONTEXT_VERSION_MISMATCH`.
+
+**Given** người quản lý có exact org scope
+**When** đọc/sửa lý lịch qua `/:id`
+**Then** được phép theo action mới; vai trò lãnh đạo/giám sát, quản lý ngoài scope và SYSTEM_ADMIN ngoài scope bị từ chối.
+
+**Given** danh sách, tìm kiếm, ứng viên reviewer/hội đồng hoặc thông báo
+**When** trả hồ sơ
+**Then** không chứa trường nhạy cảm (tài khoản ngân hàng, số định danh, SmartCA, đồng ý chia sẻ, ảnh) và không ảnh hưởng eligibility.
+
+**Given** lý lịch được cập nhật
+**When** ghi audit và history
+**Then** facts chỉ ghi `{section, field, changed}` cho trường nhạy cảm, không ghi giá trị thô; ghi audit lỗi thì rollback thay đổi.
+
+**Given** action mới
+**When** đăng ký
+**Then** có đồng thời trong `researcher-profile-access.ts`, `packages/permissions` (ts+js) và `docs/contracts/researcher-profile-access.md`.
+
+### Story 13.2: Khung Lý lịch khoa học và tab Thông tin chung [FR70]
+
+As a nhà khoa học,
+I want điền thông tin chung của lý lịch trong một biểu mẫu có 5 tab,
+So that tôi cập nhật lý lịch ngay trong Hồ sơ của tôi.
+
+**Acceptance Criteria:**
+
+**Given** tôi mở `/my-profile`
+**When** trang tải
+**Then** thấy tiêu đề "Lý lịch khoa học của tôi", 5 tab (Thông tin chung; Quá trình đào tạo; Quá trình công tác & Kinh nghiệm chuyên môn; Kinh nghiệm & Thành tích nghiên cứu; Xem & In) với số dòng, nút "Xem & In", một nút "Lưu lý lịch khoa học", và khối "Lịch sử thay đổi hồ sơ".
+
+**Given** tab Thông tin chung
+**When** hiển thị
+**Then** có đủ mục A (loại nhà khoa học, ảnh 3x4 qua URL), B (thông tin cơ bản & công tác), C (học hàm, học vị, lĩnh vực, từ khóa), D (ngoại ngữ thêm/xóa dòng), E (ngân hàng, SmartCA, đồng ý chia sẻ, ghi chú).
+
+**Given** thiếu họ tên, giới tính, số định danh, email, đơn vị hoặc lĩnh vực chính
+**When** lưu
+**Then** chặn lưu và hiện lỗi cạnh trường; lỗi 400/409 từ API hiển thị đúng trường hoặc yêu cầu tải lại.
+
+**Given** tài khoản đã liên kết
+**When** xem loại nhà khoa học
+**Then** trường bị khóa theo quy tắc hiện có; người không có quyền sửa thấy chế độ chỉ đọc.
+
+**Given** các breakpoint bắt buộc
+**When** hiển thị
+**Then** không cuộn ngang toàn trang, có focus rõ và nhãn trường.
+
+### Story 13.3: Quá trình đào tạo và quá trình công tác [FR70]
+
+As a nhà khoa học,
+I want khai báo quá trình đào tạo và công tác dạng bảng,
+So that lý lịch phản ánh đầy đủ lộ trình học tập và làm việc.
+
+**Acceptance Criteria:**
+
+**Given** tab Quá trình đào tạo
+**When** thêm/sửa/xóa dòng (bậc, ngành, cơ sở, năm tốt nghiệp, hình thức, đề tài)
+**Then** thứ tự và nội dung được lưu và tải lại đúng; thiếu bậc/ngành/cơ sở bị từ chối ở client và server.
+
+**Given** tab Quá trình công tác
+**When** nhập tóm tắt và các dòng (thời gian, cơ quan, chức vụ, lĩnh vực)
+**Then** lưu dạng `workHistory.{summary,items}`; thiếu thời gian/cơ quan bị từ chối; dạng mảng cũ của prototype bị từ chối.
+
+**Given** số dòng thay đổi
+**When** thêm hoặc xóa
+**Then** huy hiệu đếm trên tab cập nhật.
+
+### Story 13.4: Kinh nghiệm và thành tích nghiên cứu [FR70]
+
+As a nhà khoa học,
+I want khai báo công bố, sở hữu trí tuệ, giải thưởng và đề tài,
+So that lý lịch thể hiện thành tích nghiên cứu mà không nhập trùng dữ liệu.
+
+**Acceptance Criteria:**
+
+**Given** câu hỏi mở về tái sử dụng bảng `publications`/`participations`
+**When** bắt đầu story
+**Then** quyết định được ghi vào file story trước khi code (spec checkpoint) và mỗi dữ liệu chỉ có một nơi lưu.
+
+**Given** 4 bảng (công bố, sở hữu trí tuệ, giải thưởng, đề tài)
+**When** thêm/sửa/xóa dòng
+**Then** dữ liệu lưu, tải lại đúng; trường bắt buộc (tiêu đề công bố/SHTT, tên giải, tên đề tài và vai trò) được kiểm tra ở server.
+
+**Given** dữ liệu công bố/tham gia đã có từ Story 2.1/profile completion
+**When** mở tab
+**Then** hiển thị không trùng lặp và không làm hỏng lịch sử tham gia nguồn có thẩm quyền (Story 2.3).
+
+### Story 13.5: Xem và in lý lịch khoa học BM-06 (VI/EN) [FR70]
+
+As a nhà khoa học hoặc người quản lý có thẩm quyền,
+I want xem và in lý lịch theo mẫu BM-06 tiếng Việt và tiếng Anh,
+So that tôi có bản chuẩn khổ A4 để nộp.
+
+**Acceptance Criteria:**
+
+**Given** lý lịch đã lưu
+**When** mở tab Xem & In
+**Then** bản xem dựng từ dữ liệu đã lưu (không phải bản đang sửa), có dấu "MẪU BM-06", ảnh 3x4 và đủ mục thông tin, đào tạo, công tác, nghiên cứu, ngân hàng/SmartCA.
+
+**Given** chuyển VI/EN
+**When** bấm nút
+**Then** nhãn và tiêu đề đổi ngôn ngữ, dữ liệu giữ nguyên; thiếu dữ liệu hiển thị trống nhất quán.
+
+**Given** bấm in
+**When** `window.print()`
+**Then** stylesheet in chỉ in giấy A4, ẩn điều hướng và nút.
+
+**Given** người xem không có quyền với hồ sơ
+**When** gọi trực tiếp
+**Then** không nhận dữ liệu lý lịch.
+
+### Story 13.6: Lịch sử thay đổi lý lịch khoa học [FR70]
+
+As a nhà khoa học hoặc người quản lý có thẩm quyền,
+I want xem ai đã đổi phần nào của lý lịch,
+So that thay đổi có thể được truy vết mà không lộ dữ liệu nhạy cảm.
+
+**Acceptance Criteria:**
+
+**Given** lý lịch được sửa
+**When** mở "Xem lịch sử thay đổi"
+**Then** mỗi mục nêu thời điểm, người sửa, loại tác động và danh sách phần/trường đã đổi (đào tạo, công tác, nghiên cứu, thông tin chung).
+
+**Given** trường nhạy cảm đổi
+**When** hiển thị lịch sử
+**Then** chỉ hiện "đã thay đổi", không hiện giá trị cũ/mới.
+
+**Given** chủ hồ sơ và quản lý trong scope
+**When** xem lịch sử
+**Then** chủ hồ sơ chỉ thấy các hành động cá nhân; người ngoài phạm vi bị từ chối.
+
+### Story 13.7: Seed lý lịch demo và bỏ dữ liệu giả khi khởi tạo hồ sơ [FR70]
+
+As a nhà phát triển và người kiểm thử,
+I want dữ liệu demo đúng hợp đồng và không có dữ liệu cá nhân bịa đặt,
+So that các tab hiển thị đầy đủ khi demo và tài khoản thật không bị ghi dữ liệu giả.
+
+**Acceptance Criteria:**
+
+**Given** seed chạy
+**When** mở `/my-profile` bằng tài khoản demo (TS. Phạm Anh Tuấn)
+**Then** cả 5 tab có dữ liệu và dữ liệu qua được kiểm tra hợp đồng.
+
+**Given** tài khoản nghiên cứu viên chưa có hồ sơ
+**When** truy cập `/my-profile` lần đầu
+**Then** hồ sơ nếu được tạo chỉ chứa dữ liệu đã biết từ tài khoản, không có số điện thoại, ngày sinh, số định danh hay chức danh bịa.
