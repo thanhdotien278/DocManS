@@ -69,6 +69,8 @@ export const PERMISSION_ACTION_IDS_V1 = [
     "project.history.read",
     "researcher-profile.activate",
     "researcher-profile.create",
+    "researcher-profile.cv.read",
+    "researcher-profile.cv.update",
     "researcher-profile.deactivate",
     "researcher-profile.read",
     "researcher-profile.update",

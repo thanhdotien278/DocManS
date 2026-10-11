@@ -36,6 +36,12 @@ Baseline §2.1 governs officer lifecycle, conflict checks and finalized role dec
   My Profile. Personal/contact, academic, position/rank, expertise, publication
   and participation fields are editable. Self requests containing type, status,
   management scope, account IDs, roles or other administrative fields are rejected.
+  The scientific CV uses the versioned contract in
+  `_bmad-output/specs/spec-scientific-cv/cv-data-contract.md`. The full actions
+  `researcher-profile.cv.read` and `researcher-profile.cv.update` are granted to
+  the active linked owner and to active `SYSTEM_ADMIN`,
+  `SCIENTIFIC_MANAGEMENT_HEAD` and `SCIENTIFIC_MANAGEMENT_STAFF` managers only
+  when their exact active organization scope matches the profile.
   Changing a contact email never changes account credentials or their destination.
 - Linking requires an active unlinked researcher account of the matching
   internal/external role and explicit scope on the profile organization. It never
@@ -47,8 +53,10 @@ Baseline §2.1 governs officer lifecycle, conflict checks and finalized role dec
 
 ## Publications and participation history
 
-Publications record title, venue, year, DOI, authors, status and notes. Participation
-records title/project, role, level (`ACADEMY_INSTITUTIONAL`, `MINISTRY`, `OTHER`),
+Publications record `title`, `venue`, `publicationYear` (1900–2100), `doi`,
+`authors`, `issnIsbn`, `classification`, `proofUrl`, `status` and `notes`. Each
+profile accepts up to 200 publication rows; ordinary strings are at most 1000
+characters and `notes` is at most 4000. Participation records title/project, role, level (`ACADEMY_INSTITUTIONAL`, `MINISTRY`, `OTHER`),
 start/end dates, ACTIVE/INACTIVE status and notes. Dates are ISO calendar dates in
 the API and native date inputs in the UI; impossible dates and end-before-start
 are rejected. Entries are explicitly SELF_REPORTED and grant no business access.
@@ -119,6 +127,7 @@ access returns 403; invalid input returns 400; missing mail configuration return
 | POST `/:id/activate`, `/:id/deactivate` | contextVersion | profile; history preserved |
 | GET `/my-profile` | no caller-selected account/profile ID | own linked active profile |
 | PATCH `/my-profile` | allowlisted personal/scientific fields + contextVersion | own updated profile |
+| GET/PATCH `/:id` or `/my-profile` with `curriculumVitae` | versioned CV document + contextVersion | CV is returned only with `researcher-profile.cv.read`; updates require `researcher-profile.cv.update` and replace the document |
 | GET `/:id/history` | none | latest 100 authorized history entries |
 | GET `/:id/account-candidates` | keyword | up to 50 matching unlinked accounts, minimum identity |
 | POST `/:id/account` | email, contextVersion | pending safe account, delivery status and activation expiry; never password/token |
@@ -132,6 +141,12 @@ activation issuance mutations increment aggregateVersion. Backend `allowedAction
 and `blockedActions` govern UI controls; navigation itself grants no authority.
 
 ## Audit and privacy
+
+The CV is stored as nullable JSONB with `cvSchemaVersion: 1`. List/search/candidate
+projections omit it. Audit and history include a redacted CV; portrait, identity,
+identity-issue, bank, SmartCA and data-sharing-consent fields are removed, while
+`cvChanges` records changed fields (`personalInfo` fields individually and other
+sections by section name). A failed audit append rolls back the CV mutation.
 
 Audit covers profile create/update/status; account provisioning; linkage/end;
 activation email issue/resend; activation complete; username change; account

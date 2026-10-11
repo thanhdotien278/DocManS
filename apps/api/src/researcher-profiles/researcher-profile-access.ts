@@ -10,6 +10,8 @@ export const RESEARCHER_PROFILE_ACTIONS = [
   "researcher-profile.account.unlink",
   "researcher-profile.activate",
   "researcher-profile.create",
+  "researcher-profile.cv.read",
+  "researcher-profile.cv.update",
   "researcher-profile.deactivate",
   "researcher-profile.history.read",
   "researcher-profile.participation.manage",
@@ -48,7 +50,7 @@ export function projectResearcherProfileAuthorization(actor: SafeUserContext, pr
   const own = canEditOwnResearcherProfile(actor, { ...profile, status: profile.status ?? "ACTIVE" });
   const allowedActions = RESEARCHER_PROFILE_ACTIONS.filter((action) => {
     if (action.startsWith("researcher-profile.self.")) return own;
-    if (own && ["researcher-profile.history.read", "researcher-profile.publication.manage", "researcher-profile.participation.manage"].includes(action)) return true;
+    if (own && ["researcher-profile.cv.read", "researcher-profile.cv.update", "researcher-profile.history.read", "researcher-profile.publication.manage", "researcher-profile.participation.manage"].includes(action)) return true;
     if (!canManageResearcherProfile(actor, action, profile.managementOrganizationUnitId)) return false;
     if (action === "researcher-profile.account.create" || action === "researcher-profile.account.link") return profile.status === "ACTIVE" && !profile.linkedUserId;
     if (action === "researcher-profile.account.unlink") return !!profile.linkedUserId && profile.linkedUserId !== actor.id && (actor.systemRole === "SYSTEM_ADMIN" || ["RESEARCHER_INTERNAL_USER", "EXTERNAL_RESEARCHER_USER"].includes(profile.linkedUser?.systemRole ?? ""));

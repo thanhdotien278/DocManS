@@ -74,3 +74,10 @@
 - **No request path for shortening duration/end date.** Adjustments forbid end-date keys (EXTENSION_REQUIRED, service.ts:471-472) and extensions require a *later* end date (service.ts:494). Early completion or reduced timeline is impossible through any documented workflow. Needs a policy decision.
 - **Extension undecidable when all scoped Heads are conflicted/inactive.** Only a scoped, unconflicted Head can decide (service.ts:623-624); no escalation or delegated-decider path exists, and a stuck `ready_for_head_decision` request blocks all future requests. Needs an escalation policy.
 - **No abandon/cancel exit for a preparing project.** The state machine (architecture.md Approved Project State Machine) has no transition out of `preparing` except confirm; a wrongly created project persists forever. Needs a terminal transition or named retire action and owner.
+
+- source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-1-cv-data-contract-storage-api.md`
+  summary: Declare `express` as a direct dependency (or switch to a Nest-native scoped body parser) for the researcher-profiles 4 MB JSON limit in apps/api/src/main.ts.
+  evidence: main.ts imports json/Router from express with @ts-ignore; express is only transitive via @nestjs/platform-express.
+- source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-1-cv-data-contract-storage-api.md`
+  summary: Add an HTTP-level check that a >100 KB PATCH to /api/v1/researcher-profiles/my-profile is not rejected with 413.
+  evidence: medium, unverified — no test boots the Nest app over HTTP; removing the parser line would pass all tests.
