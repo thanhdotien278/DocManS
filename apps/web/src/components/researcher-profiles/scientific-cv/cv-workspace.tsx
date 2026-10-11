@@ -6,6 +6,7 @@ import { getResearcherProfile, loadResearcherProfileCatalogs, ProfileRequestErro
 import { CvGeneralTab, mergeKeywords, type CvGeneralDraft } from "./cv-general-tab";
 import { CvEducationTab, CvWorkTab, type CvHistoryDraft } from "./cv-history-tabs";
 import { CvResearchTab, type CvResearchDraft } from "./cv-research-tab";
+import { CvPrintTab } from "./cv-print-tab";
 import { CvRowEditing } from "./cv-row-table";
 
 type CvDraft = CvGeneralDraft & CvHistoryDraft & CvResearchDraft;
@@ -147,10 +148,6 @@ function errorTabsOf(errors: Record<string, string>): CvTab[] {
   if (errors.workItems) tabs.push("work");
   if (errors.publications || errors.intellectualProperty || errors.awards || errors.projects) tabs.push("research");
   return tabs;
-}
-
-function PlaceholderTab({ title, message }: { title: string; message: string }) {
-  return <section className="section-card"><h3>{title}</h3><p className="record-meta">{message}</p></section>;
 }
 
 type ScientificCvWorkspaceProps = { target: string; onSaved?: (profile: ResearcherProfile) => void };
@@ -342,7 +339,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
           {tab === "education" ? <CvEducationTab draft={draft} editable={editable && !busy} errors={fieldErrors} onChange={changeDraft} /> : null}
           {tab === "work" ? <CvWorkTab draft={draft} editable={editable && !busy} errors={fieldErrors} onChange={changeDraft} /> : null}
           {tab === "research" ? <CvResearchTab draft={draft} participations={profile.participations} editable={editable && !busy} errors={fieldErrors} onChange={changeDraft} /> : null}
-          {tab === "print" ? <PlaceholderTab title="5. Xem & In Lý lịch khoa học" message="Bản xem và in BM-06 sẽ được bổ sung trong các phiên bản tiếp theo." /> : null}
+          {tab === "print" ? <CvPrintTab profile={profile} dirty={JSON.stringify(draft) !== JSON.stringify(draftFromProfile(profile))} /> : null}
         </div>
         {error ? <p className="state-message error" role="alert">{error}{errorTabs.filter((item) => item !== tab).map((item) => <button key={item} type="button" className="button" onClick={() => { focusFieldError.current = true; setTab(item); }}>Đi tới {tabLabels[item]}</button>)}</p> : null}
         {message ? <p className="state-message success" role="status">{message}</p> : null}

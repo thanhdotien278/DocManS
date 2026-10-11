@@ -97,3 +97,7 @@
 - source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-4-research-experience-and-achievements.md`
   summary: syncPublications updates every sent row, resetting updatedById/updatedAt on unchanged (incl. hidden INACTIVE) publications; skip unchanged rows like syncParticipations does.
   evidence: researcher-profiles.service.ts syncPublications calls update for every row with an id; pre-existing, now hit on every Tab 4 publication save.
+
+- source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-5-bm06-view-and-print-vi-en.md`
+  summary: The CV workspace's `dirty` flag (unsaved-edits note on Tab 5) is only verified by a source regex, not a rendered workspace test.
+  evidence: tests/researcher-profiles-ui-source.test.mjs never renders ScientificCvWorkspace; a drift between draftFromProfile and the draft state would show the note permanently without failing tests.
