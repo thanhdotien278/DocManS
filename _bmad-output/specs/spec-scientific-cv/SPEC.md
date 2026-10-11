@@ -15,7 +15,7 @@ A mandate and a gap: the Academy needs each researcher's scientific CV in the st
 ## Capabilities
 
 - **CAP-1**
-  - **intent:** A researcher edits Tab 1 "Thông tin chung" of their own CV: portrait (3x4), scientist type, identity and work info, academic title/degree, research fields and keywords, languages, bank account, SmartCA serial, data-sharing consent, notes.
+  - **intent:** A researcher edits Tab 1 "Thông tin chung" of their own CV: portrait (3x4 upload + crop), scientist type (read-only, derived from profileType: internal/external to the Academy), identity and work info, academic title/degree, research fields and keywords, languages, bank account, SmartCA serial, data-sharing consent, notes.
   - **success:** Saving through `/my-profile` persists every field; reload shows the same values; missing required fields (name, gender, ID number, email, unit, main research field) block save with field-level messages.
 - **CAP-2**
   - **intent:** A researcher maintains education history (Tab 2) and work history with summary (Tab 3) as add/remove/edit rows.
@@ -48,7 +48,7 @@ A mandate and a gap: the Academy needs each researcher's scientific CV in the st
 
 ## Non-goals
 
-- Portrait file upload or storage (URL/path only; file handling is Epic 3).
+- Portrait file storage in MinIO/files module (file handling is Epic 3); a client-cropped 300×400 JPEG data URL in `avatarUrl` is allowed (decided 2026-10-11).
 - Server-side PDF/DOCX generation; browser print of the A4 view is the output.
 - Sync or export to Cổng thông tin KH&CN, or any enforcement beyond recording the consent flag.
 - CV approval, signature, or versioned-snapshot workflow.
@@ -62,7 +62,7 @@ A researcher signs in, completes all five tabs of their CV, saves, prints a corr
 ## Assumptions
 
 - Tab 4 publications and projects reuse the existing `publications`/`participations` data where fields allow, so no datum has two stores; intellectual property and awards live in the CV document (resolved in story 13.4).
-- Portrait is a URL/path string, as in the review prototype and screenshot.
+- Portrait is a URL/path string or a client-cropped image data URL (see `cv-data-contract.md`); the owner's data-URL portrait is also the header avatar.
 - Redaction in audit/projection (not encryption at rest) meets the baseline unless the first open question is answered otherwise.
 
 ## Open Questions
