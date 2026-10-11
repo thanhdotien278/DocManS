@@ -26,6 +26,7 @@ context:
 - Tab badges for tabs 2–3 count draft rows (story AC: update on add/remove). `CvRowTable` selects show an unknown saved value as an extra option instead of rendering blank.
 - Files: `scientific-cv/cv-history-tabs.tsx` (new), `cv-workspace.tsx`, `cv-row-table.tsx`, `tests/researcher-profiles-ui-source.test.mjs`.
 - Post-review changes requested by the user: start/graduation years are dropdowns (current year → 1950) with new `educationHistory[].startYear` (API DTO + contract updated; save blocked when start > graduation); thesis column removed from the UI (API still accepts legacy `thesisTitle`); success/error messages render beside the save button and clear on edit; the "Lịch sử thay đổi hồ sơ" block was removed from the CV workspace (Story 13.6 must place CV history elsewhere).
+- Blocked-save fix: validation/API errors no longer auto-switch tabs; a "Chưa lưu…" banner beside the save button names the tabs with problems and offers "Đi tới …" buttons that focus the first invalid field.
 - Verified in the real app (account patuan): blank row blocked with no PATCH; saved education + work summary/items reload correctly.
 
 ## Review Triage Log
