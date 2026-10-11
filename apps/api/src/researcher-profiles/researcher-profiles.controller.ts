@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, UseGuards } from "@nestjs/common";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
 import { createResearcherProfilePipe, researcherAccountPipe, updateMyProfilePipe, type ResearcherAccountInput, researcherProfileMutationPipe, updateResearcherProfilePipe, type CreateResearcherProfileDto, type UpdateResearcherProfileDto } from "./researcher-profiles.dto.js";
@@ -22,6 +22,16 @@ export class ResearcherProfilesController {
   @Get("my-profile")
   async myProfile(@Req() request: RequestWithCurrentUser) {
     return { profile: await this.profilesService.getMyProfile(request.currentUser!) };
+  }
+
+  @Get("my-profile/avatar")
+  async myAvatar(@Req() request: RequestWithCurrentUser, @Res() response: { setHeader(name: string, value: string): void; send(content: Buffer): void }) {
+    const avatar = await this.profilesService.getMyAvatar(request.currentUser!);
+    response.setHeader("Content-Type", avatar.contentType);
+    response.setHeader("Content-Length", String(avatar.content.length));
+    response.setHeader("X-Content-Type-Options", "nosniff");
+    response.setHeader("Cache-Control", "private, no-cache");
+    response.send(avatar.content);
   }
 
   @Patch("my-profile")

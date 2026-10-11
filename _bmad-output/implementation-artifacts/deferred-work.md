@@ -87,3 +87,7 @@
 - source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-2-cv-shell-and-general-tab.md`
   summary: Add a web runtime test harness to cover cvFromDraft section preservation, ProfileRequestError 409/400 mapping and required-field save blocking.
   evidence: medium, unverified — only source-text regex tests exist for apps/web; a regression dropping CV sections on Tab 1 save would pass.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-cv-general-tab-avatar-type-username-keywords.md`
+  summary: The CV workspace's username payload rule (owner never sends, manager sends only on change) is only checked by a source-text test.
+  evidence: Payload is built inside the React component; no web runtime harness exists to execute it. A regression would make every owner CV save 400 on administrativeFields.

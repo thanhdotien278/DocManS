@@ -8,7 +8,6 @@ export type Participation = { id?: string; projectTitle: string; participationRo
 export type ScientificCurriculumVitaeLanguage = { language: string; proficiency?: string | null; certificate?: string | null };
 export type ScientificCurriculumVitaePersonalInfo = {
   avatarUrl?: string | null;
-  scientistType: "DOMESTIC" | "FOREIGN";
   gender: "Nam" | "Nữ" | "Khác";
   birthDate?: string | null;
   birthPlace?: string | null;

@@ -6,8 +6,7 @@ Source of the shape: `DocManS-review/apps/api/src/researcher-profiles/researcher
 
 | Field | Req | Notes |
 |---|---|---|
-| avatarUrl | no | URL/path string, max 2048, no upload |
-| scientistType | yes | `DOMESTIC` \| `FOREIGN`; mirrors `profileType`, locked once an account is linked |
+| avatarUrl | no | `http(s)://` or `/path` URL, or a cropped 300×400 `data:image/(jpeg\|png\|webp);base64,…` (≤ 400 000 chars, excluded from the 256 KB document budget); served to the owner at `GET my-profile/avatar` |
 | gender | yes | enum Nam/Nữ/Khác |
 | birthDate, birthPlace, nationality | no | |
 | idNumber | yes | SENSITIVE (CCCD/passport) |
@@ -20,6 +19,7 @@ Source of the shape: `DocManS-review/apps/api/src/researcher-profiles/researcher
 | shareDataAgreement | yes | boolean, default true; SENSITIVE (consent) |
 | languages[] | no | `{language (req), proficiency, certificate}` |
 
+Scientist type is not stored in the CV: it is derived from `profileType` (INTERNAL = trong Học viện, EXTERNAL = ngoài Học viện). A legacy `scientistType` key is accepted and discarded.
 Existing profile columns (name, email, phone, position, military rank, rank/degree catalogs, research fields, expertise keywords) stay on the profile and are **not** duplicated into the JSON.
 Tab 1 also carries free-text `note` ("Ghi chú hồ sơ").
 

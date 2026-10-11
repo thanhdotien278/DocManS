@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getResearcherProfile, loadResearcherProfileCatalogs, ProfileRequestError, updateResearcherProfile, type ResearcherProfile, type ResearcherProfileInput, type ScientificCurriculumVitae } from "@/lib/researcher-profiles-api";
-import { CvGeneralTab, type CvGeneralDraft } from "./cv-general-tab";
+import { CvGeneralTab, mergeKeywords, type CvGeneralDraft } from "./cv-general-tab";
 import { CvEducationTab, CvWorkTab, type CvHistoryDraft } from "./cv-history-tabs";
 
 type CvDraft = CvGeneralDraft & CvHistoryDraft;
@@ -17,7 +17,6 @@ function draftFromProfile(profile: ResearcherProfile): CvDraft {
   const personal = profile.curriculumVitae?.personalInfo;
   return {
     avatarUrl: text(personal?.avatarUrl),
-    scientistType: personal?.scientistType ?? "",
     fullName: profile.fullName,
     gender: personal?.gender ?? "",
     birthDate: text(personal?.birthDate),
@@ -39,7 +38,8 @@ function draftFromProfile(profile: ResearcherProfile): CvDraft {
     academicDegreeCatalogItemId: text(profile.academicDegree?.id),
     englishAcademicTitle: text(personal?.englishAcademicTitle),
     researchFieldIds: profile.researchFields.map((field) => field.id),
-    expertiseKeywords: profile.expertiseKeywords.join(", "),
+    expertiseKeywords: [...profile.expertiseKeywords],
+    keywordInput: "",
     languages: personal?.languages ? personal.languages.map((language) => ({ ...language })) : [],
     bankAccount: text(personal?.bankAccount),
     bankName: text(personal?.bankName),
@@ -81,6 +81,7 @@ function cvFromDraft(profile: ResearcherProfile, draft: CvDraft): ScientificCurr
   setOptional("bankName", draft.bankName);
   setOptional("bankBranch", draft.bankBranch);
   setOptional("smartCaSerial", draft.smartCaSerial);
+  delete personalInfo.scientistType; // legacy key; the type is derived from profileType
   if (draft.languages.length || Object.prototype.hasOwnProperty.call(previousPersonalInfo, "languages")) personalInfo.languages = draft.languages;
   else delete personalInfo.languages;
   const next: ScientificCurriculumVitae = { ...existing, cvSchemaVersion: 1 };
@@ -97,7 +98,6 @@ function cvFromDraft(profile: ResearcherProfile, draft: CvDraft): ScientificCurr
     ...next,
     personalInfo: {
       ...personalInfo,
-      scientistType: draft.scientistType,
       gender: draft.gender as "Nam" | "Nữ" | "Khác",
       idNumber: draft.idNumber.trim(),
       organization: draft.organization.trim(),
@@ -111,7 +111,6 @@ function apiField(field: string) {
   if (field === "curriculumVitae.personalInfo.gender") return "gender";
   if (field === "curriculumVitae.personalInfo.idNumber") return "idNumber";
   if (field === "curriculumVitae.personalInfo.organization") return "organization";
-  if (field === "curriculumVitae.personalInfo.scientistType") return "scientistType";
   if (field.startsWith("curriculumVitae.personalInfo.languages")) return "languages";
   if (field.startsWith("curriculumVitae.personalInfo.")) return field.slice("curriculumVitae.personalInfo.".length);
   if (field.startsWith("curriculumVitae.educationHistory")) return "educationHistory";
@@ -154,7 +153,8 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
 
   const allowed = (action: string) => profile?.viewerAuthorization.allowedActions.some((value) => value === action) ?? false;
   const editable = allowed("researcher-profile.cv.update") && allowed(owner ? "researcher-profile.self.update" : "researcher-profile.update");
-  const scientistTypeLocked = !!profile?.account && !!profile.curriculumVitae?.personalInfo?.scientistType;
+  // The API only lets managers rename linked researcher accounts (never their own or other roles).
+  const usernameEditable = !owner && ["RESEARCHER_INTERNAL_USER", "EXTERNAL_RESEARCHER_USER"].includes(profile?.account?.systemRole ?? "");
 
   async function loadProfile() {
     const version = ++loadVersion.current;
@@ -205,7 +205,6 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
   function validate() {
     if (!draft) return false;
     const errors: Record<string, string> = {};
-    if (!draft.scientistType) errors.scientistType = "Cần chọn Loại nhà khoa học.";
     if (!draft.fullName.trim()) errors.fullName = "Cần nhập Họ và tên.";
     if (!draft.gender) errors.gender = "Cần chọn Giới tính.";
     if (!draft.idNumber.trim()) errors.idNumber = "Cần nhập Mã định danh.";
@@ -242,8 +241,8 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
     setErrorTabs([]);
     try {
       const previous = draftFromProfile(profile);
-      const expertiseKeywords = draft.expertiseKeywords.split(",").map((keyword) => keyword.trim()).filter(Boolean);
-      const previousKeywords = previous.expertiseKeywords.split(",").map((keyword) => keyword.trim()).filter(Boolean);
+      const expertiseKeywords = mergeKeywords(draft.expertiseKeywords, draft.keywordInput);
+      const previousKeywords = previous.expertiseKeywords;
       const sameFields = draft.researchFieldIds.length === previous.researchFieldIds.length && draft.researchFieldIds.every((field, index) => field === previous.researchFieldIds[index]);
       const sameKeywords = expertiseKeywords.length === previousKeywords.length && expertiseKeywords.every((keyword, index) => keyword === previousKeywords[index]);
       const input: Partial<ResearcherProfileInput> & { contextVersion: ResearcherProfile["viewerAuthorization"]["contextVersion"] } = { curriculumVitae: cvFromDraft(profile, draft), contextVersion: profile.viewerAuthorization.contextVersion };
@@ -258,12 +257,13 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
       if (draft.contactPhone !== previous.contactPhone) input.contactPhone = draft.contactPhone.trim() || null;
       if (!sameFields) input.researchFieldIds = draft.researchFieldIds;
       if (!sameKeywords) input.expertiseKeywords = expertiseKeywords;
-      if (owner && draft.username !== previous.username) input.username = draft.username.trim() || null;
+      if (usernameEditable && draft.username.trim() !== previous.username) input.username = draft.username.trim() || null;
       const result = await updateResearcherProfile(target, input);
       if (version !== loadVersion.current) return;
       setProfile(result.profile);
       setDraft(draftFromProfile(result.profile));
       setMessage("Đã lưu lý lịch khoa học.");
+      if (owner) window.dispatchEvent(new Event("researcher-avatar-updated"));
       setFieldErrors({});
       onSaved?.(result.profile);
     } catch (cause) {
@@ -307,7 +307,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
       </div>
       <form noValidate onSubmit={(event) => { event.preventDefault(); void save(); }}>
         <div id={`cv-panel-${tab}`} role="tabpanel" aria-labelledby={`cv-tab-${tab}`}>
-          {tab === "general" ? <CvGeneralTab draft={draft} catalogs={catalogs} editable={editable && !busy} owner={owner} scientistTypeLocked={scientistTypeLocked} errors={fieldErrors} onChange={changeDraft} /> : null}
+          {tab === "general" ? <CvGeneralTab draft={draft} catalogs={catalogs} editable={editable && !busy} owner={owner} profileType={profile.profileType ?? "INTERNAL"} hasAccount={!!profile.account} usernameEditable={usernameEditable} errors={fieldErrors} onChange={changeDraft} /> : null}
           {tab === "education" ? <CvEducationTab draft={draft} editable={editable && !busy} errors={fieldErrors} onChange={changeDraft} /> : null}
           {tab === "work" ? <CvWorkTab draft={draft} editable={editable && !busy} errors={fieldErrors} onChange={changeDraft} /> : null}
           {tab === "research" ? <PlaceholderTab title="4. Kinh nghiệm & Thành tích nghiên cứu" message="Nội dung kinh nghiệm và thành tích nghiên cứu sẽ được bổ sung trong các phiên bản tiếp theo." /> : null}

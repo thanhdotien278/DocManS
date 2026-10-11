@@ -1,10 +1,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { BadRequestException, ConflictException, ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { isPermissionActionV1 } from "../packages/permissions/src/index.js";
 import { createResearcherProfilePipe, updateMyProfilePipe, updateResearcherProfilePipe } from "../dist/apps/api/researcher-profiles/researcher-profiles.dto.js";
 import { normalizeResearcherKey, ResearcherProfilesService } from "../dist/apps/api/researcher-profiles/researcher-profiles.service.js";
 import { projectResearcherProfileAuthorization } from "../dist/apps/api/researcher-profiles/researcher-profile-access.js";
+import { ResearcherProfilesController } from "../dist/apps/api/researcher-profiles/researcher-profiles.controller.js";
 
 const staff = {
   id: "staff-1",
@@ -153,7 +154,13 @@ function createFakePrisma({ profiles = [], failAudit = false } = {}) {
       async findUnique({ where }) {
         if (where.id) return store.users.find((user) => user.id === where.id) ?? null;
         if (where.credentialEmail) return store.users.find((user) => user.credentialEmail === where.credentialEmail) ?? null;
+        if (where.usernameKey) return store.users.find((user) => user.usernameKey === where.usernameKey) ?? null;
         return null;
+      },
+      async update({ where, data }) {
+        const user = store.users.find((item) => item.id === where.id);
+        Object.assign(user, data);
+        return user;
       },
       async create({ data }) {
         const created = {
@@ -269,7 +276,7 @@ function validCv(overrides = {}) {
     workHistory: { summary: "Nghiên cứu", items: [{ period: "2001-2020", organization: "Đơn vị 1" }] },
     researchExperience: { intellectualProperty: [{ title: "Sáng chế" }], awards: [{ name: "Giải thưởng" }], projects: [{ projectTitle: "Đề tài", role: "Chủ nhiệm" }] },
     ...overrides,
-    personalInfo: { scientistType: "DOMESTIC", gender: "Nam", idNumber: "ID-001", organization: "Đơn vị 1", shareDataAgreement: true, bankAccount: "123456", avatarUrl: "/avatar.jpg", ...overrides.personalInfo }
+    personalInfo: { gender: "Nam", idNumber: "ID-001", organization: "Đơn vị 1", shareDataAgreement: true, bankAccount: "123456", avatarUrl: "/avatar.jpg", ...overrides.personalInfo }
   };
 }
 
@@ -328,7 +335,6 @@ describe("Story 2.1 researcher profile contracts", () => {
       ["unknown nested row key", { ...validCv(), educationHistory: [{ ...validCv().educationHistory[0], extra: true }] }, "curriculumVitae.educationHistory.0.extra"],
       ["legacy work history array", { ...validCv(), workHistory: [] }, "curriculumVitae.workHistory"],
       ["missing education major", { ...validCv(), educationHistory: [{ degreeLevel: "Đại học", institution: "Học viện Quân y" }] }, "curriculumVitae.educationHistory.0.major"],
-      ["missing personal scientist type", { ...validCv(), personalInfo: { ...validCv().personalInfo, scientistType: undefined } }, "curriculumVitae.personalInfo.scientistType"],
       ["missing personal gender", { ...validCv(), personalInfo: { ...validCv().personalInfo, gender: undefined } }, "curriculumVitae.personalInfo.gender"],
       ["missing personal identity", { ...validCv(), personalInfo: { ...validCv().personalInfo, idNumber: undefined } }, "curriculumVitae.personalInfo.idNumber"],
       ["missing personal organization", { ...validCv(), personalInfo: { ...validCv().personalInfo, organization: undefined } }, "curriculumVitae.personalInfo.organization"],
@@ -339,6 +345,10 @@ describe("Story 2.1 researcher profile contracts", () => {
       ["invalid year", { ...validCv(), educationHistory: [{ ...validCv().educationHistory[0], graduationYear: 1949 }] }, "curriculumVitae.educationHistory.0.graduationYear"],
       ["invalid date", { ...validCv(), personalInfo: { ...validCv().personalInfo, birthDate: "2020-02-30" } }, "curriculumVitae.personalInfo.birthDate"],
       ["unsafe avatar URL", validCv({ personalInfo: { avatarUrl: "javascript:alert(1)" } }), "curriculumVitae.personalInfo.avatarUrl"],
+      ["protocol-relative avatar URL", validCv({ personalInfo: { avatarUrl: "//evil.test/a.jpg" } }), "curriculumVitae.personalInfo.avatarUrl"],
+      ["long plain avatar URL", validCv({ personalInfo: { avatarUrl: `https://example.test/${"a".repeat(2048)}` } }), "curriculumVitae.personalInfo.avatarUrl"],
+      ["svg avatar data URL", validCv({ personalInfo: { avatarUrl: "data:image/svg+xml;base64,PHN2Zz4=" } }), "curriculumVitae.personalInfo.avatarUrl"],
+      ["oversized avatar data URL", validCv({ personalInfo: { avatarUrl: `data:image/jpeg;base64,${"A".repeat(1_000_000)}` } }), "curriculumVitae.personalInfo.avatarUrl"],
       ["unsafe intellectual property proof URL", validCv({ researchExperience: { intellectualProperty: [{ title: "Sáng chế", proofUrl: "data:text/html,unsafe" }] } }), "curriculumVitae.researchExperience.intellectualProperty.0.proofUrl"],
       ["unsafe award proof URL", validCv({ researchExperience: { awards: [{ name: "Giải thưởng", proofUrl: "javascript:alert(1)" }] } }), "curriculumVitae.researchExperience.awards.0.proofUrl"],
       ["list limit", { ...validCv(), educationHistory: Array.from({ length: 201 }, () => ({ degreeLevel: "Đại học", major: "Y khoa", institution: "Học viện Quân y" })) }, "curriculumVitae.educationHistory"],
@@ -353,6 +363,7 @@ describe("Story 2.1 researcher profile contracts", () => {
         return true;
       });
     }
+    assert.deepEqual(updateResearcherProfilePipe.transform({ contextVersion: contextVersion(), expertiseKeywords: ["Y học", "y hoc", " Y  HỌC ", "Nội soi"] }).expertiseKeywords, ["Y học", "Nội soi"]);
     const normalized = updateMyProfilePipe.transform({ contextVersion: contextVersion(), curriculumVitae: validCv({ personalInfo: { gender: ` ${"Nữ".normalize("NFD")} ` } }) });
     assert.equal(normalized.curriculumVitae.personalInfo.gender, "Nữ");
   });
@@ -452,17 +463,24 @@ describe("Story 2.1 researcher profile contracts", () => {
     }
   });
 
-  it("locks scientistType after an account is linked and rolls back CV updates when audit fails", async () => {
-    const linked = profile({ linkedUserId: researcher.id, curriculumVitae: validCv() });
-    const { prisma, audit } = createFakePrisma({ profiles: [linked], failAudit: true });
-    const { service } = createService(prisma, audit);
-    await assert.rejects(() => service.updateProfile(staff, "profile-1", { curriculumVitae: validCv({ personalInfo: { scientistType: "FOREIGN" } }), contextVersion: contextVersion() }), BadRequestException);
-    assert.equal(prisma.store.profiles[0].curriculumVitae.personalInfo.scientistType, "DOMESTIC");
-
+  it("drops legacy scientistType, stores and serves a data-URL portrait, and rolls back CV updates when audit fails", async () => {
+    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+    const avatarUrl = `data:image/jpeg;base64,${jpeg.toString("base64")}`;
+    const parsed = updateResearcherProfilePipe.transform({ contextVersion: contextVersion(), curriculumVitae: validCv({ personalInfo: { scientistType: "FOREIGN", avatarUrl: `data:image/jpeg;base64,${"A".repeat(300_000)}` } }) });
+    assert.equal("scientistType" in parsed.curriculumVitae.personalInfo, false);
+    const ownerProfile = profile({ linkedUserId: researcher.id, curriculumVitae: { ...validCv(), personalInfo: { ...validCv().personalInfo, scientistType: "DOMESTIC" } } });
+    const { prisma, audit } = createFakePrisma({ profiles: [ownerProfile] });
     prisma.store.users.push({ ...researcher, status: "active", mustChangePassword: false, organizationScopes: [{ organizationUnitId: "org-1", organizationUnit: { id: "org-1", code: "ORG1", name: "Đơn vị 1", status: "active" } }] });
-    const ownerInput = updateMyProfilePipe.transform({ contextVersion: contextVersion(), curriculumVitae: validCv({ personalInfo: { scientistType: "FOREIGN" } }) });
-    await assert.rejects(() => service.updateMyProfile(researcher, ownerInput), BadRequestException);
-    assert.equal(prisma.store.profiles[0].curriculumVitae.personalInfo.scientistType, "DOMESTIC");
+    const { service } = createService(prisma, audit);
+    await service.updateMyProfile(researcher, updateMyProfilePipe.transform({ contextVersion: contextVersion(), curriculumVitae: validCv({ personalInfo: { scientistType: "FOREIGN", avatarUrl } }) }));
+    assert.equal("scientistType" in prisma.store.profiles[0].curriculumVitae.personalInfo, false);
+    const headers = {};
+    let body;
+    await new ResearcherProfilesController(service).myAvatar({ currentUser: researcher }, { setHeader(name, value) { headers[name] = value; }, send(content) { body = content; } });
+    assert.deepEqual(body, jpeg);
+    assert.deepEqual(headers, { "Content-Type": "image/jpeg", "Content-Length": String(jpeg.length), "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-cache" });
+    prisma.store.profiles[0].curriculumVitae.personalInfo.avatarUrl = "/logo.png";
+    await assert.rejects(() => service.getMyAvatar(researcher), NotFoundException);
 
     const available = createFakePrisma({ profiles: [profile()], failAudit: true });
     const availableService = createService(available.prisma, available.audit).service;
@@ -516,6 +534,29 @@ describe("Story 2.1 researcher profile contracts", () => {
     const { service } = createService(prisma, audit);
     await assert.rejects(() => service.getProfile(outOfScopeStaff, "profile-1"), ForbiddenException);
     await assert.rejects(() => service.updateProfile(leadership, "profile-1", { curriculumVitae: validCv(), contextVersion: contextVersion() }), ForbiddenException);
+  });
+
+  it("rejects self username changes and lets a scoped manager set a linked researcher's username", async () => {
+    assert.throws(() => updateMyProfilePipe.transform({ contextVersion: contextVersion(), username: "nva" }), (error) => {
+      assert.deepEqual(error.getResponse().errors.map((item) => item.field), ["administrativeFields"]);
+      return true;
+    });
+    const linkedUser = { ...researcher, username: null, usernameKey: null, status: "active", mustChangePassword: false, organizationScopes: [] };
+    const { prisma, audit } = createFakePrisma({ profiles: [profile({ linkedUserId: researcher.id }), profile({ id: "profile-unlinked" }), profile({ id: "profile-staff", linkedUserId: "head-2" })] });
+    prisma.store.users.push(linkedUser, { id: "other-user", username: "taken", usernameKey: "taken" }, { id: "head-2", username: "head", usernameKey: "head", systemRole: "SCIENTIFIC_MANAGEMENT_HEAD", status: "active" });
+    const { service } = createService(prisma, audit);
+    const saved = await service.updateProfile(staff, "profile-1", updateResearcherProfilePipe.transform({ contextVersion: contextVersion(), username: " NVA " }));
+    assert.equal(linkedUser.username, "nva");
+    assert.equal(saved.profile.account.username, "nva");
+    assert.equal(prisma.store.audits.find((item) => item.action === "change-username").targetEntityId, researcher.id);
+    await assert.rejects(() => service.updateProfile(staff, "profile-1", updateResearcherProfilePipe.transform({ contextVersion: contextVersion(1), username: "taken" })), (error) => {
+      assert.ok(error instanceof ConflictException);
+      assert.deepEqual(error.getResponse().errors.map((item) => item.field), ["username"]);
+      return true;
+    });
+    assert.equal(linkedUser.username, "nva");
+    await assert.rejects(() => service.updateProfile(staff, "profile-unlinked", updateResearcherProfilePipe.transform({ contextVersion: contextVersion(0, "profile-unlinked"), username: "abc" })), BadRequestException);
+    await assert.rejects(() => service.updateProfile(staff, "profile-staff", updateResearcherProfilePipe.transform({ contextVersion: contextVersion(0, "profile-staff"), username: "abc" })), ForbiddenException);
   });
 
   it("rolls back the observable create when the required audit append fails", async () => {

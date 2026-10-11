@@ -4,11 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { useSession } from "@/components/auth/session-provider";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { NavLink } from "@/components/layout/nav-link";
 import { getNavigationItems } from "@/lib/navigation";
+import { getApiBaseUrl } from "@/lib/session";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -45,7 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="topbar-actions">
             <details className="user-menu">
               <summary className="user-chip" aria-label="Người dùng hiện tại">
-                <span className="avatar">{account.initials}</span>
+                {account.researcherProfileId ? <HeaderAvatar initials={account.initials} /> : <span className="avatar">{account.initials}</span>}
                 <div>
                   <span className="user-name">{account.name}</span>
                   <span className="user-role">
@@ -74,6 +76,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="content" id="main-content" tabIndex={-1}>{children}</main>
     </div>
   );
+}
+
+// Shows the researcher's saved CV portrait; falls back to initials when there is none (404) or it fails to load.
+function HeaderAvatar({ initials }: { initials: string }) {
+  const [version, setVersion] = useState(0);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const refresh = () => { setFailed(false); setVersion((value) => value + 1); };
+    window.addEventListener("researcher-avatar-updated", refresh);
+    return () => window.removeEventListener("researcher-avatar-updated", refresh);
+  }, []);
+
+  if (failed) return <span className="avatar">{initials}</span>;
+  return <span className="avatar"><img src={`${getApiBaseUrl()}/researcher-profiles/my-profile/avatar?v=${version}`} alt="" onError={() => setFailed(true)} /></span>;
 }
 
 export function BrandMark() {
