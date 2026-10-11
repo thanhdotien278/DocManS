@@ -50,18 +50,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {account.researcherProfileId ? <HeaderAvatar initials={account.initials} /> : <span className="avatar">{account.initials}</span>}
                 <div>
                   <span className="user-name">{account.name}</span>
-                  <span className="user-role">
-                    {account.systemRoleLabel} - {account.unit}
-                  </span>
+                  <span className="user-role">{account.unit}</span>
                 </div>
                 <ChevronDown className="user-caret" size={16} aria-hidden="true" />
               </summary>
               <div className="user-menu-panel">
                 <p className="user-menu-heading">{account.name}</p>
-                <p className="user-menu-meta">
-                  {account.systemRoleLabel} - {account.unit}
-                </p>
-                {account.researcherProfileId ? <a className="button" href="/my-profile">Hồ sơ của tôi</a> : null}
+                <p className="user-menu-meta">{account.unit}</p>
                 <a className="button" href="/change-password">Đổi mật khẩu</a>
                 <LogoutButton />
               </div>

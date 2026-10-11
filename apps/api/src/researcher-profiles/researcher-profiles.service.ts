@@ -123,7 +123,9 @@ export class ResearcherProfilesService {
   async listCatalogs(actor: SafeUserContext) {
     if (!canManageResearcherProfiles(actor)) await this.getMyProfile(actor);
     const items = await this.prisma.catalogItem.findMany({ where: { status: "active", deletedAt: null, type: { in: ["research-field", "academic-rank", "academic-degree"] } }, orderBy: [{ type: "asc" }, { name: "asc" }] });
+    const units = await this.prisma.organizationUnit.findMany({ where: { status: "active", code: { not: "EXT" } }, select: { name: true }, orderBy: { name: "asc" } });
     return {
+      organizationUnits: units.map((unit) => unit.name),
       researchFields: items.filter((item) => item.type === "research-field"),
       academicRanks: items.filter((item) => item.type === "academic-rank"),
       academicDegrees: items.filter((item) => item.type === "academic-degree")
@@ -212,6 +214,7 @@ export class ResearcherProfilesService {
       if (result.count !== 1) throw new ConflictException({ message: "Dữ liệu hồ sơ đã thay đổi. Vui lòng tải lại trước khi thử lại.", code: "CONTEXT_VERSION_MISMATCH", correlationId });
       if (Object.keys(this.childData(input)).length > 0) await tx.researcherProfile.update({ where: { id }, data: this.childData(input) as never });
       if (input.username !== undefined) await this.setLinkedUsername(tx, actor, profile, input.username, correlationId);
+      if (input.fullName !== undefined && profile.linkedUserId) await tx.user.update({ where: { id: profile.linkedUserId }, data: { displayName: input.fullName } });
       await this.syncPublications(tx, id, input.publications, actor.id);
       await this.syncParticipations(tx, id, input.participations, actor.id);
       const withChildren = (await tx.researcherProfile.findUnique({ where: { id }, include: profileInclude } as never)) as unknown as ProfileWithRelations;
@@ -309,6 +312,7 @@ export class ResearcherProfilesService {
         const result = await tx.researcherProfile.updateMany({ where: { id: profile.id, linkedUserId: actor.id, aggregateVersion: input.contextVersion.aggregateVersion }, data: { ...this.updateData(safeInput), aggregateVersion: { increment: 1 }, updatedById: actor.id } });
         if (result.count !== 1) throw new ConflictException({ message: "Dữ liệu hồ sơ đã thay đổi. Vui lòng tải lại trước khi thử lại.", code: "CONTEXT_VERSION_MISMATCH", correlationId });
         if (Object.keys(this.childData(safeInput)).length > 0) await tx.researcherProfile.update({ where: { id: profile.id }, data: this.childData(safeInput) as never });
+        if (safeInput.fullName !== undefined) await tx.user.update({ where: { id: actor.id }, data: { displayName: safeInput.fullName } });
         await this.syncPublications(tx, profile.id, safeInput.publications, actor.id);
         await this.syncParticipations(tx, profile.id, safeInput.participations, actor.id);
       }

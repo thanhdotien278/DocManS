@@ -1,0 +1,372 @@
+[
+ [
+  "org-benh-vien-quan-y-103",
+  "HVQY-BENH-VIEN-QUAN-Y-103",
+  "Bệnh viện Quân y 103"
+ ],
+ [
+  "org-benh-vien-bong-quoc-gia-le-huu-trac",
+  "HVQY-BENH-VIEN-BONG-QUOC-GIA-LE-HUU-TRAC",
+  "Bệnh viện Bỏng Quốc gia Lê Hữu Trác"
+ ],
+ [
+  "org-vien-mo-phoi-lam-sang-quan-doi",
+  "HVQY-VIEN-MO-PHOI-LAM-SANG-QUAN-DOI",
+  "Viện Mô phôi lâm sàng Quân đội"
+ ],
+ [
+  "org-phong-chinh-tri",
+  "HVQY-PHONG-CHINH-TRI",
+  "Phòng Chính trị"
+ ],
+ [
+  "org-van-phong",
+  "HVQY-VAN-PHONG",
+  "Văn phòng"
+ ],
+ [
+  "org-phong-hau-can-ky-thuat",
+  "HVQY-PHONG-HAU-CAN-KY-THUAT",
+  "Phòng Hậu cần – Kỹ thuật"
+ ],
+ [
+  "org-phong-dao-tao",
+  "HVQY-PHONG-DAO-TAO",
+  "Phòng Đào tạo"
+ ],
+ [
+  "org-phong-trang-bi-vat-tu",
+  "HVQY-PHONG-TRANG-BI-VAT-TU",
+  "Phòng Trang bị – Vật tư"
+ ],
+ [
+  "org-phong-tai-chinh",
+  "HVQY-PHONG-TAI-CHINH",
+  "Phòng Tài chính"
+ ],
+ [
+  "org-phong-thong-tin-khoa-hoc-quan-su",
+  "HVQY-PHONG-THONG-TIN-KHOA-HOC-QUAN-SU",
+  "Phòng Thông tin Khoa học Quân sự"
+ ],
+ [
+  "org-phong-sau-dai-hoc",
+  "HVQY-PHONG-SAU-DAI-HOC",
+  "Phòng Sau đại học"
+ ],
+ [
+  "org-phong-khao-thi-va-bao-dam-chat-luong-gd-dt",
+  "HVQY-PHONG-KHAO-THI-VA-BAO-DAM-CHAT-LUONG-GD-DT",
+  "Phòng Khảo thí và Bảo đảm chất lượng GD&ĐT"
+ ],
+ [
+  "org-tap-chi-y-duoc-hoc-quan-su",
+  "HVQY-TAP-CHI-Y-DUOC-HOC-QUAN-SU",
+  "Tạp chí Y dược học Quân sự"
+ ],
+ [
+  "org-ban-quan-ly-du-an",
+  "HVQY-BAN-QUAN-LY-DU-AN",
+  "Ban Quản lý dự án"
+ ],
+ [
+  "org-thanh-tra",
+  "HVQY-THANH-TRA",
+  "Thanh tra"
+ ],
+ [
+  "org-phan-hieu-phia-nam",
+  "HVQY-PHAN-HIEU-PHIA-NAM",
+  "Phân hiệu phía Nam"
+ ],
+ [
+  "org-trung-tam-nghien-cuu-ung-dung-san-xuat-thuoc",
+  "HVQY-TRUNG-TAM-NGHIEN-CUU-UNG-DUNG-SAN-XUAT-THUOC",
+  "Trung tâm nghiên cứu ứng dụng sản xuất thuốc"
+ ],
+ [
+  "org-vien-dao-tao-duoc",
+  "HVQY-VIEN-DAO-TAO-DUOC",
+  "Viện đào tạo Dược"
+ ],
+ [
+  "org-trung-tam-dao-tao-nghien-cuu-doc-hoc-va-phong-xa",
+  "HVQY-TRUNG-TAM-DAO-TAO-NGHIEN-CUU-DOC-HOC-VA-PHONG-XA",
+  "Trung tâm Đào tạo, nghiên cứu Độc học và Phóng xạ"
+ ],
+ [
+  "org-khoa-ly-luan-mac-le-nin",
+  "HVQY-KHOA-LY-LUAN-MAC-LE-NIN",
+  "Khoa Lý luận Mác – Lê-nin"
+ ],
+ [
+  "org-bo-mon-sinh-hoc-va-di-truyen-y-hoc",
+  "HVQY-BO-MON-SINH-HOC-VA-DI-TRUYEN-Y-HOC",
+  "Bộ môn Sinh học và di truyền y học"
+ ],
+ [
+  "org-bo-mon-sinh-ly",
+  "HVQY-BO-MON-SINH-LY",
+  "Bộ môn Sinh lý"
+ ],
+ [
+  "org-bo-mon-sinh-ly-benh",
+  "HVQY-BO-MON-SINH-LY-BENH",
+  "Bộ môn Sinh lý bệnh"
+ ],
+ [
+  "org-bo-mon-giai-phau",
+  "HVQY-BO-MON-GIAI-PHAU",
+  "Bộ môn Giải phẫu"
+ ],
+ [
+  "org-bo-mon-phau-thuat-thuc-hanh-thuc-nghiem",
+  "HVQY-BO-MON-PHAU-THUAT-THUC-HANH-THUC-NGHIEM",
+  "Bộ môn Phẫu thuật thực hành, thực nghiệm"
+ ],
+ [
+  "org-bo-mon-ky-sinh-trung-va-con-trung",
+  "HVQY-BO-MON-KY-SINH-TRUNG-VA-CON-TRUNG",
+  "Bộ môn Ký sinh trùng và Côn trùng"
+ ],
+ [
+  "org-bo-mon-mien-dich",
+  "HVQY-BO-MON-MIEN-DICH",
+  "Bộ môn Miễn dịch"
+ ],
+ [
+  "org-khoa-chi-huy-tham-muu-quan-y",
+  "HVQY-KHOA-CHI-HUY-THAM-MUU-QUAN-Y",
+  "Khoa Chỉ huy tham mưu Quân y"
+ ],
+ [
+  "org-khoa-quan-su",
+  "HVQY-KHOA-QUAN-SU",
+  "Khoa Quân sự"
+ ],
+ [
+  "org-khoa-y-hoc-quan-binh-chung",
+  "HVQY-KHOA-Y-HOC-QUAN-BINH-CHUNG",
+  "Khoa Y học Quân binh chủng"
+ ],
+ [
+  "org-khoa-ve-sinh-quan-doi",
+  "HVQY-KHOA-VE-SINH-QUAN-DOI",
+  "Khoa Vệ sinh Quân đội"
+ ],
+ [
+  "org-khoa-dich-te-hoc-quan-su",
+  "HVQY-KHOA-DICH-TE-HOC-QUAN-SU",
+  "Khoa Dịch tễ học Quân sự"
+ ],
+ [
+  "org-bo-mon-khoa-tieu-hoa",
+  "HVQY-BO-MON-KHOA-TIEU-HOA",
+  "Bộ môn – Khoa Tiêu hóa"
+ ],
+ [
+  "org-bo-mon-khoa-tim-mach",
+  "HVQY-BO-MON-KHOA-TIM-MACH",
+  "Bộ môn – Khoa Tim mạch"
+ ],
+ [
+  "org-bo-mon-khoa-khop-noi-tiet",
+  "HVQY-BO-MON-KHOA-KHOP-NOI-TIET",
+  "Bộ môn – Khoa Khớp – Nội tiết"
+ ],
+ [
+  "org-bo-mon-khoa-than-loc-mau",
+  "HVQY-BO-MON-KHOA-THAN-LOC-MAU",
+  "Bộ môn – Khoa Thận – Lọc máu"
+ ],
+ [
+  "org-bo-mon-trung-tam-noi-ho-hap",
+  "HVQY-BO-MON-TRUNG-TAM-NOI-HO-HAP",
+  "Bộ môn – Trung tâm Nội hô hấp"
+ ],
+ [
+  "org-bo-mon-than-kinh",
+  "HVQY-BO-MON-THAN-KINH",
+  "Bộ môn Thần kinh"
+ ],
+ [
+  "org-bo-mon-truyen-nhiem",
+  "HVQY-BO-MON-TRUYEN-NHIEM",
+  "Bộ môn Truyền nhiễm"
+ ],
+ [
+  "org-bo-mon-tam-than",
+  "HVQY-BO-MON-TAM-THAN",
+  "Bộ môn Tâm thần"
+ ],
+ [
+  "org-bo-mon-noi-da-chien",
+  "HVQY-BO-MON-NOI-DA-CHIEN",
+  "Bộ môn Nội dã chiến"
+ ],
+ [
+  "org-bo-mon-khoa-da-lieu",
+  "HVQY-BO-MON-KHOA-DA-LIEU",
+  "Bộ môn Khoa Da liễu"
+ ],
+ [
+  "org-bo-mon-khoa-y-hoc-co-truyen",
+  "HVQY-BO-MON-KHOA-Y-HOC-CO-TRUYEN",
+  "Bộ môn Khoa Y học cổ truyền"
+ ],
+ [
+  "org-bo-mon-khoa-nhi",
+  "HVQY-BO-MON-KHOA-NHI",
+  "Bộ môn Khoa Nhi"
+ ],
+ [
+  "org-bo-mon-khoa-vat-ly-tri-lieu-phuc-hoi-chuc-nang",
+  "HVQY-BO-MON-KHOA-VAT-LY-TRI-LIEU-PHUC-HOI-CHUC-NANG",
+  "Bộ môn Khoa Vật lý trị liệu – Phục hồi chức năng"
+ ],
+ [
+  "org-bo-mon-trung-tam-ung-buou",
+  "HVQY-BO-MON-TRUNG-TAM-UNG-BUOU",
+  "Bộ môn – Trung tâm Ung bướu"
+ ],
+ [
+  "org-bo-mon-trung-tam-chan-thuong-chinh-hinh",
+  "HVQY-BO-MON-TRUNG-TAM-CHAN-THUONG-CHINH-HINH",
+  "Bộ môn Trung tâm Chấn thương chỉnh hình"
+ ],
+ [
+  "org-bo-mon-phau-thuat-tieu-hoa",
+  "HVQY-BO-MON-PHAU-THUAT-TIEU-HOA",
+  "Bộ môn Phẫu thuật tiêu hóa"
+ ],
+ [
+  "org-bo-mon-bong-va-y-hoc-tham-hoa",
+  "HVQY-BO-MON-BONG-VA-Y-HOC-THAM-HOA",
+  "Bộ môn Bỏng và Y học thảm họa"
+ ],
+ [
+  "org-bo-mon-phau-thuat-tao-hinh-va-tham-my",
+  "HVQY-BO-MON-PHAU-THUAT-TAO-HINH-VA-THAM-MY",
+  "Bộ môn Phẫu thuật tạo hình và thẩm mỹ"
+ ],
+ [
+  "org-bo-mon-khoa-mat",
+  "HVQY-BO-MON-KHOA-MAT",
+  "Bộ môn Khoa Mắt"
+ ],
+ [
+  "org-bo-mon-khoa-gay-me",
+  "HVQY-BO-MON-KHOA-GAY-ME",
+  "Bộ môn Khoa Gây mê"
+ ],
+ [
+  "org-bo-mon-khoa-tai-mui-hong",
+  "HVQY-BO-MON-KHOA-TAI-MUI-HONG",
+  "Bộ môn Khoa Tai – Mũi – Họng"
+ ],
+ [
+  "org-bo-mon-khoa-ngoai-tiet-nieu",
+  "HVQY-BO-MON-KHOA-NGOAI-TIET-NIEU",
+  "Bộ môn Khoa Ngoại Tiết niệu"
+ ],
+ [
+  "org-bo-mon-khoa-phau-thuat-ham-mat-va-tao-hinh",
+  "HVQY-BO-MON-KHOA-PHAU-THUAT-HAM-MAT-VA-TAO-HINH",
+  "Bộ môn Khoa Phẫu thuật hàm mặt và Tạo hình"
+ ],
+ [
+  "org-bo-mon-khoa-phau-thuat-than-kinh",
+  "HVQY-BO-MON-KHOA-PHAU-THUAT-THAN-KINH",
+  "Bộ môn Khoa Phẫu thuật thần kinh"
+ ],
+ [
+  "org-bo-mon-khoa-phu-san",
+  "HVQY-BO-MON-KHOA-PHU-SAN",
+  "Bộ môn Khoa Phụ sản"
+ ],
+ [
+  "org-bo-mon-trung-tam-hoi-suc-cap-cuu-va-chong-doc",
+  "HVQY-BO-MON-TRUNG-TAM-HOI-SUC-CAP-CUU-VA-CHONG-DOC",
+  "Bộ môn Trung tâm Hồi sức cấp cứu và chống độc"
+ ],
+ [
+  "org-bo-mon-khoa-phau-thuat-long-nguc",
+  "HVQY-BO-MON-KHOA-PHAU-THUAT-LONG-NGUC",
+  "Bộ môn Khoa Phẫu thuật lồng ngực"
+ ],
+ [
+  "org-bo-mon-khoa-rang-mieng",
+  "HVQY-BO-MON-KHOA-RANG-MIENG",
+  "Bộ môn Khoa Răng miệng"
+ ],
+ [
+  "org-bo-mon-khoa-ngoai-da-chien",
+  "HVQY-BO-MON-KHOA-NGOAI-DA-CHIEN",
+  "Bộ môn – Khoa Ngoại dã chiến"
+ ],
+ [
+  "org-bo-mon-trung-tam-huyet-hoc-truyen-mau",
+  "HVQY-BO-MON-TRUNG-TAM-HUYET-HOC-TRUYEN-MAU",
+  "Bộ môn – Trung tâm Huyết học truyền máu"
+ ],
+ [
+  "org-bo-mon-khoa-sinh-hoa",
+  "HVQY-BO-MON-KHOA-SINH-HOA",
+  "Bộ môn Khoa Sinh hóa"
+ ],
+ [
+  "org-bo-mon-giai-phau-benh",
+  "HVQY-BO-MON-GIAI-PHAU-BENH",
+  "Bộ môn Giải phẫu bệnh"
+ ],
+ [
+  "org-bo-mon-dieu-duong",
+  "HVQY-BO-MON-DIEU-DUONG",
+  "Bộ môn Điều dưỡng"
+ ],
+ [
+  "org-bo-mon-khoa-vi-sinh-y-hoc",
+  "HVQY-BO-MON-KHOA-VI-SINH-Y-HOC",
+  "Bộ môn – Khoa Vi sinh y học"
+ ],
+ [
+  "org-bo-mon-khoa-dinh-duong",
+  "HVQY-BO-MON-KHOA-DINH-DUONG",
+  "Bộ môn – Khoa Dinh dưỡng"
+ ],
+ [
+  "org-bo-mon-trung-tam-chan-doan-hinh-anh",
+  "HVQY-BO-MON-TRUNG-TAM-CHAN-DOAN-HINH-ANH",
+  "Bộ môn – Trung tâm Chẩn đoán hình ảnh"
+ ],
+ [
+  "org-bo-mon-khoa-chan-doan-chuc-nang",
+  "HVQY-BO-MON-KHOA-CHAN-DOAN-CHUC-NANG",
+  "Bộ môn – Khoa chẩn đoán chức năng"
+ ],
+ [
+  "org-he-1",
+  "HVQY-HE-1",
+  "Hệ 1"
+ ],
+ [
+  "org-he-2",
+  "HVQY-HE-2",
+  "Hệ 2"
+ ],
+ [
+  "org-he-3",
+  "HVQY-HE-3",
+  "Hệ 3"
+ ],
+ [
+  "org-he-4",
+  "HVQY-HE-4",
+  "Hệ 4"
+ ],
+ [
+  "org-he-5",
+  "HVQY-HE-5",
+  "Hệ 5"
+ ]
+]
