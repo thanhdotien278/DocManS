@@ -11,8 +11,8 @@ Run `npm run db:setup` for a new local database, or `npm run prisma:seed` after 
 | `hdtien1`, `hdtien2` | `SCIENTIFIC_MANAGEMENT_STAFF` | Trợ lý/Chuyên viên KHQS: manage only proposals actively assigned to that account |
 | `tvtien` | `LEADERSHIP_APPROVAL_AUTHORITY` | Giám đốc: oversight plus eligible final decisions, subject to conflicts |
 | `vndinh` | `RESEARCH_OVERSIGHT_AUTHORITY` | Thiếu tướng PGS. TS. Vũ Nhất Định — Phó Giám đốc phụ trách NCKH; read-only institutional oversight plus independent researcher capabilities |
-| `patuan`, `nmtrung`, `researcher1`, `researcher2`, `researcher3` | `RESEARCHER_INTERNAL_USER` | Researcher accounts; PI/member/reviewer/council responsibilities come from record relationships |
-| `external1`, `external2`, `external3` | `EXTERNAL_RESEARCHER_USER` | Assigned external research/review work only |
+| `patuan`, `nmtrung`, `int1`–`int3` | `RESEARCHER_INTERNAL_USER` | Researcher accounts; PI/member/reviewer/council responsibilities come from record relationships |
+| `ex1`–`ex3` | `EXTERNAL_RESEARCHER_USER` | Assigned external research/review work only |
 
 Check `apps/api/prisma/seed.mjs` for the complete current seed identity list. Titles shown
 in demo content are not system roles. Each account retains exactly one active system role.
