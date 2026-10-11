@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getResearcherProfile, loadResearcherProfileCatalogs, profileRequest, ProfileRequestError, updateResearcherProfile, type ProfileHistory, type ResearcherProfile, type ResearcherProfileInput, type ScientificCurriculumVitae } from "@/lib/researcher-profiles-api";
+import { getResearcherProfile, loadResearcherProfileCatalogs, ProfileRequestError, updateResearcherProfile, type ResearcherProfile, type ResearcherProfileInput, type ScientificCurriculumVitae } from "@/lib/researcher-profiles-api";
 import { CvGeneralTab, type CvGeneralDraft } from "./cv-general-tab";
 import { CvEducationTab, CvWorkTab, type CvHistoryDraft } from "./cv-history-tabs";
-import { HistoryFacts, historyActions } from "./cv-history";
 
 type CvDraft = CvGeneralDraft & CvHistoryDraft;
 type CvTab = "general" | "education" | "work" | "research" | "print";
@@ -138,7 +137,6 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
   const [draft, setDraft] = useState<CvDraft | null>(null);
   const [catalogs, setCatalogs] = useState<CvCatalogs>({ researchFields: [], academicRanks: [], academicDegrees: [] });
   const [tab, setTab] = useState<CvTab>("general");
-  const [history, setHistory] = useState<ProfileHistory[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -166,7 +164,6 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
       setProfile(result.profile);
       setDraft(draftFromProfile(result.profile));
       setCatalogs(nextCatalogs);
-      setHistory(null);
       setConflict(false);
     } catch (cause) {
       if (version === loadVersion.current) setError(cause instanceof Error ? cause.message : "Không thể tải lý lịch khoa học.");
@@ -188,6 +185,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
 
   // Loosely typed so both tab components (each owning a slice of CvDraft) can pass their own typed onChange.
   function changeDraft(key: keyof CvDraft, value: unknown) {
+    setMessage("");
     setDraft((current) => current ? { ...current, [key]: value } : current);
     setFieldErrors((current) => {
       if (!current[key]) return current;
@@ -209,7 +207,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
     if (draft.researchFieldIds.length === 0) errors.researchFieldIds = "Cần chọn ít nhất một Ngành/Lĩnh vực chính.";
     if (draft.languages.some((row) => !row.language.trim())) errors.languages = "Cần nhập Ngoại ngữ cho mọi dòng.";
     if (draft.educationHistory.some((row) => !row.degreeLevel.trim() || !row.major.trim() || !row.institution.trim())) errors.educationHistory = "Cần nhập Bậc đào tạo, Ngành đào tạo và Cơ sở đào tạo cho mọi dòng.";
-    else if (draft.educationHistory.some((row) => row.graduationYear != null && (!Number.isInteger(row.graduationYear) || row.graduationYear < 1950 || row.graduationYear > 2100))) errors.educationHistory = "Năm tốt nghiệp phải nằm trong khoảng 1950–2100.";
+    else if (draft.educationHistory.some((row) => row.startYear != null && row.graduationYear != null && row.startYear > row.graduationYear)) errors.educationHistory = "Năm bắt đầu không được sau Năm tốt nghiệp.";
     if (draft.workItems.some((row) => !row.period.trim() || !row.organization.trim())) errors.workItems = "Cần nhập Thời gian và Cơ quan / Đơn vị cho mọi dòng.";
     focusFieldError.current = Object.keys(errors).length > 0;
     setFieldErrors(errors);
@@ -248,7 +246,6 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
       if (version !== loadVersion.current) return;
       setProfile(result.profile);
       setDraft(draftFromProfile(result.profile));
-      setHistory(null);
       setMessage("Đã lưu lý lịch khoa học.");
       setFieldErrors({});
       onSaved?.(result.profile);
@@ -272,23 +269,6 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
     }
   }
 
-  async function loadHistory() {
-    if (!profile || !allowed("researcher-profile.history.read")) return;
-    const version = loadVersion.current;
-    setBusy(true);
-    setError("");
-    try {
-      const result = await profileRequest<{ history: ProfileHistory[] }>(`/${profile.id}/history`);
-      if (version !== loadVersion.current) return;
-      setHistory(result.history);
-    } catch (cause) {
-      if (version !== loadVersion.current) return;
-      setError(cause instanceof Error ? cause.message : "Không thể tải lịch sử thay đổi.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   if (loading) return <p role="status">Đang tải lý lịch khoa học…</p>;
   if (!profile || !draft) return <div className="state-message error" role="alert">{error || "Không tìm thấy lý lịch khoa học."}</div>;
 
@@ -305,9 +285,6 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
   ];
 
   return <div className="grid cv-workspace">
-    {error ? <p className="state-message error" role="alert">{error}</p> : null}
-    {message ? <p className="state-message success" role="status">{message}</p> : null}
-    {conflict ? <p className="state-message warning" role="alert"><button type="button" className="button" onClick={() => void loadProfile()}>Tải lại hồ sơ</button></p> : null}
     <section className="section-card">
       <div className="section-header"><div><h2>{owner ? "Lý lịch khoa học của tôi" : profile.fullName}</h2><p className="record-meta">Chuẩn hóa theo Cổng thông tin Khoa học &amp; Công nghệ Quốc gia (STM - Bộ KH&amp;CN) &amp; Học viện Quân y</p></div><button type="button" className="button" onClick={() => setTab("print")}>Xem &amp; In Lý lịch khoa học</button></div>
       <div className="cv-tabs" role="tablist" aria-label="Các phần lý lịch khoa học">
@@ -321,14 +298,11 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
           {tab === "research" ? <PlaceholderTab title="4. Kinh nghiệm & Thành tích nghiên cứu" message="Nội dung kinh nghiệm và thành tích nghiên cứu sẽ được bổ sung trong các phiên bản tiếp theo." /> : null}
           {tab === "print" ? <PlaceholderTab title="5. Xem & In Lý lịch khoa học" message="Bản xem và in BM-06 sẽ được bổ sung trong các phiên bản tiếp theo." /> : null}
         </div>
+        {error ? <p className="state-message error" role="alert">{error}</p> : null}
+        {message ? <p className="state-message success" role="status">{message}</p> : null}
+        {conflict ? <p className="state-message warning" role="alert"><button type="button" className="button" onClick={() => void loadProfile()}>Tải lại hồ sơ</button></p> : null}
         <div className="button-row"><button className="button primary" type="submit" disabled={busy || !editable}>{busy ? "Đang lưu…" : "Lưu lý lịch khoa học"}</button>{!editable ? <span className="record-meta">Bạn chỉ có quyền xem lý lịch khoa học.</span> : null}</div>
       </form>
-    </section>
-    <section className="section-card">
-      <h2>Lịch sử thay đổi hồ sơ</h2>
-      <button type="button" className="button" disabled={busy || !allowed("researcher-profile.history.read")} onClick={() => void loadHistory()}>Xem lịch sử thay đổi</button>
-      {history?.map((item) => <details key={item.id}><summary>{new Date(item.createdAt).toLocaleString("vi-VN")} · {historyActions[item.action] ?? item.action}</summary><p>{item.reason}</p><HistoryFacts label="Trước" facts={item.beforeFacts} /><HistoryFacts label="Sau" facts={item.afterFacts} /></details>)}
-      {history?.length === 0 ? <p>Chưa có lịch sử thay đổi.</p> : null}
     </section>
   </div>;
 }

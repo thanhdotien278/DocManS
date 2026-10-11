@@ -26,7 +26,7 @@ export type ScientificCurriculumVitaePersonalInfo = {
   shareDataAgreement: boolean;
   languages?: ScientificCurriculumVitaeLanguage[];
 };
-export type ScientificCurriculumVitaeEducation = { degreeLevel: string; major: string; institution: string; graduationYear?: number | null; trainingMode?: string | null; thesisTitle?: string | null };
+export type ScientificCurriculumVitaeEducation = { degreeLevel: string; major: string; institution: string; startYear?: number | null; graduationYear?: number | null; trainingMode?: string | null };
 export type ScientificCurriculumVitaeWorkItem = { period: string; organization: string; position?: string | null; workField?: string | null };
 export type ScientificCurriculumVitaeWorkHistory = { summary?: string | null; items?: ScientificCurriculumVitaeWorkItem[] };
 export type ScientificCurriculumVitaeIntellectualProperty = { title: string; authors?: string | null; issueYear?: number | null; patentNumber?: string | null; issueAgency?: string | null; proofUrl?: string | null; notes?: string | null };

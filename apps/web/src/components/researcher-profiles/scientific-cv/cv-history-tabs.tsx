@@ -17,6 +17,8 @@ type CvHistoryTabProps = {
 };
 
 const degreeLevels = ["Đại học", "Thạc sĩ", "Tiến sĩ", "Bác sĩ nội trú", "Bác sĩ CKII", "Bác sĩ CKI", "Sau tiến sĩ"].map((value) => ({ value, label: value }));
+const currentYear = new Date().getFullYear();
+const years = Array.from({ length: currentYear - 1949 }, (_, index) => String(currentYear - index)).map((value) => ({ value, label: value }));
 const trainingModes = ["Chính quy", "Vừa làm vừa học", "Liên kết quốc tế", "Khác"].map((value) => ({ value, label: value }));
 
 function replaceRow<Row extends object>(rows: Row[], index: number, key: keyof Row, value: string | number | null) {
@@ -36,9 +38,9 @@ export function CvEducationTab({ draft, editable, errors, onChange }: CvHistoryT
         { key: "degreeLevel", label: "Bậc đào tạo *", options: degreeLevels },
         { key: "major", label: "Ngành đào tạo (Chuyên ngành) *", placeholder: "Y đa khoa, Dược, v.v." },
         { key: "institution", label: "Cơ sở đào tạo *", placeholder: "Học viện Quân y, ĐH Y Hà Nội..." },
-        { key: "graduationYear", label: "Năm tốt nghiệp", type: "number" },
-        { key: "trainingMode", label: "Hình thức đào tạo", options: trainingModes },
-        { key: "thesisTitle", label: "Tên luận án / đề tài", placeholder: "Đề tài luận văn / luận án tốt nghiệp" }
+        { key: "startYear", label: "Năm bắt đầu", type: "number", options: years },
+        { key: "graduationYear", label: "Năm tốt nghiệp", type: "number", options: years },
+        { key: "trainingMode", label: "Hình thức đào tạo", options: trainingModes }
       ]}
       disabled={!editable}
       onChange={(index, key, value) => onChange("educationHistory", replaceRow(draft.educationHistory, index, key, value))}

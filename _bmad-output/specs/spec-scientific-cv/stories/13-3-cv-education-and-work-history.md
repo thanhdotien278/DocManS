@@ -25,6 +25,7 @@ context:
 - Draft state lives in `cv-workspace.tsx` (`educationHistory`, `workSummary`, `workItems`); `cvFromDraft` writes `educationHistory` and `workHistory` back, preserving the null-vs-delete convention for untouched sections.
 - Tab badges for tabs 2–3 count draft rows (story AC: update on add/remove). `CvRowTable` selects show an unknown saved value as an extra option instead of rendering blank.
 - Files: `scientific-cv/cv-history-tabs.tsx` (new), `cv-workspace.tsx`, `cv-row-table.tsx`, `tests/researcher-profiles-ui-source.test.mjs`.
+- Post-review changes requested by the user: start/graduation years are dropdowns (current year → 1950) with new `educationHistory[].startYear` (API DTO + contract updated; save blocked when start > graduation); thesis column removed from the UI (API still accepts legacy `thesisTitle`); success/error messages render beside the save button and clear on edit; the "Lịch sử thay đổi hồ sơ" block was removed from the CV workspace (Story 13.6 must place CV history elsewhere).
 - Verified in the real app (account patuan): blank row blocked with no PATCH; saved education + work summary/items reload correctly.
 
 ## Review Triage Log
