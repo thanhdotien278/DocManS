@@ -18,6 +18,10 @@ Check `apps/api/prisma/seed.mjs` for the complete current seed identity list. Ti
 in demo content are not system roles. Each account retains exactly one active system role.
 `vndinh` links to an active INTERNAL researcher profile with the supplied name, military
 rank, academic title and position; that profile does not grant management or decision power.
+Seeded internal/external researchers without a profile or prior link receive an active,
+linked scientific profile with the demo research field Y học quân sự. Existing profiles and historical links are
+preserved, including inactive or deliberately unlinked profiles. External researchers
+share the researcher navigation; backend relationships and capabilities still govern access.
 
 ## Scope and management assignment
 

@@ -292,11 +292,12 @@ export function getDashboardSnapshot(role: UserRole): DashboardSnapshot {
         primaryActionHref: "/proposals"
       };
     }
+    case "EXTERNAL_RESEARCHER_USER":
     case "RESEARCHER_INTERNAL_USER":
       return {
         eyebrow: "Công việc cá nhân",
-        title: "Dashboard chủ nhiệm đề tài",
-        description: "Tổng hợp hồ sơ, đề tài đang thực hiện, báo cáo định kỳ và công việc được giao cho chủ nhiệm.",
+        title: "Dashboard nhà nghiên cứu",
+        description: "Tổng hợp hồ sơ, đề tài đang tham gia, báo cáo định kỳ và công việc được giao.",
         primaryActionLabel: "Mở hồ sơ của tôi",
         primaryActionHref: "/my-proposals",
         kpis: [
