@@ -236,6 +236,7 @@ model ResearcherProfile {
   updatedBy                  User          @relation("ResearcherProfileUpdater", fields: [updatedById], references: [id])
   createdAt                  DateTime      @default(now()) @map("created_at")
   updatedAt                  DateTime      @updatedAt @map("updated_at")
+  curriculumVitae            Json?         @map("curriculum_vitae")
   researchFields             ResearcherProfileField[]
   expertiseKeywords          ResearcherProfileExpertiseKeyword[]
   proposalReviewAssignments  ProposalReviewAssignment[] @relation("ReviewAssignmentProfile")
@@ -278,6 +279,9 @@ model ResearcherProfilePublication {
   publicationYear     Int?             @map("publication_year")
   doi                 String?
   authors             String?
+  issnIsbn            String?          @map("issn_isbn")
+  classification      String?
+  proofUrl            String?          @map("proof_url")
   status              String           @default("ACTIVE")
   notes               String?
   createdById         String           @map("created_by_id")
