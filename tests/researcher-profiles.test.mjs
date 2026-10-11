@@ -190,6 +190,11 @@ function createFakePrisma({ profiles = [], failAudit = false } = {}) {
         store.publications.push(publication);
         return publication;
       },
+      async deleteMany({ where }) {
+        const before = store.publications.length;
+        store.publications = store.publications.filter((row) => row.researcherProfileId !== where.researcherProfileId || where.id.notIn.includes(row.id));
+        return { count: before - store.publications.length };
+      },
       async findFirst({ where }) {
         return store.publications.find((publication) => Object.entries(where).every(([key, value]) => publication[key] === value)) ?? null;
       },
@@ -409,10 +414,20 @@ describe("Story 2.1 researcher profile contracts", () => {
       assert.equal(createInput({ publications: [{ title: "Bài viết", proofUrl }] }).publications[0].proofUrl, proofUrl);
     }
     assert.throws(() => createInput({ publications: [{ title: "Bài viết", notes: "x".repeat(4001) }] }), BadRequestException);
+    for (const [field, row] of [["title", { title: "" }], ["publicationYear", { title: "Bài", publicationYear: 1 }], ["status", { title: "Bài", status: "OTHER" }], ["authors", { title: "Bài", authors: 5 }]]) {
+      assert.throws(() => createInput({ publications: [row] }), (error) => {
+        assert.ok(error instanceof BadRequestException);
+        assert.equal(error.getResponse().errors[0].field, `publications.0.${field}`);
+        return true;
+      });
+    }
 
     const { prisma, audit } = createFakePrisma({ profiles: [profile()] });
     const { service } = createService(prisma, audit);
-    const saved = await service.updateProfile(staff, "profile-1", updateResearcherProfilePipe.transform({ contextVersion: contextVersion(), publications: [publication] }));
+    const saved = await service.updateProfile(staff, "profile-1", updateResearcherProfilePipe.transform({ contextVersion: contextVersion(), publications: [publication], curriculumVitae: validCv() }));
+    const reloaded = await service.getProfile(staff, "profile-1");
+    assert.deepEqual(reloaded.curriculumVitae.researchExperience, validCv().researchExperience);
+    assert.equal(reloaded.publications[0].title, publication.title);
     const publicationId = saved.profile.publications[0].id;
     const updatedPublication = { ...publication, id: publicationId, issnIsbn: "ISBN 9876-5432", classification: "Q2", proofUrl: "https://example.test/proof-v2" };
     const updated = await service.updateProfile(staff, "profile-1", updateResearcherProfilePipe.transform({ contextVersion: contextVersion(saved.profile.aggregateVersion), publications: [updatedPublication] }));
@@ -420,6 +435,32 @@ describe("Story 2.1 researcher profile contracts", () => {
     assert.equal(persisted.publicationYear, 1899);
     assert.deepEqual({ issnIsbn: persisted.issnIsbn, classification: persisted.classification, proofUrl: persisted.proofUrl }, { issnIsbn: updatedPublication.issnIsbn, classification: updatedPublication.classification, proofUrl: updatedPublication.proofUrl });
     assert.deepEqual({ issnIsbn: updated.profile.publications[0].issnIsbn, classification: updated.profile.publications[0].classification, proofUrl: updated.profile.publications[0].proofUrl }, { issnIsbn: updatedPublication.issnIsbn, classification: updatedPublication.classification, proofUrl: updatedPublication.proofUrl });
+    const added = await service.updateProfile(staff, "profile-1", updateResearcherProfilePipe.transform({
+      contextVersion: contextVersion(updated.profile.aggregateVersion),
+      publications: [updatedPublication, { title: "Giữ B" }, { title: "Ẩn C", status: "INACTIVE" }]
+    }));
+    const kept = added.profile.publications.filter((row) => row.id !== publicationId);
+    const removed = await service.updateProfile(staff, "profile-1", updateResearcherProfilePipe.transform({
+      contextVersion: contextVersion(added.profile.aggregateVersion), publications: kept
+    }));
+    assert.deepEqual(removed.profile.publications.map((row) => row.title), ["Giữ B", "Ẩn C"]);
+    assert.equal(prisma.store.publications.some((row) => row.id === publicationId), false);
+    assert.equal(prisma.store.publications.find((row) => row.title === "Ẩn C").status, "INACTIVE");
+    const deletionAudit = prisma.store.audits.at(-1);
+    assert.equal(deletionAudit.beforeFacts.publications.length, 3);
+    assert.equal(deletionAudit.afterFacts.publications.length, 2);
+    prisma.store.publications.push({ ...prisma.store.publications[0], id: "foreign-publication", researcherProfileId: "profile-other" });
+    const beforeForeign = structuredClone(prisma.store);
+    await assert.rejects(() => service.updateProfile(staff, "profile-1", updateResearcherProfilePipe.transform({
+      contextVersion: contextVersion(removed.profile.aggregateVersion),
+      publications: [{ ...kept[0], title: "Must roll back" }, { id: "foreign-publication", title: "Foreign" }]
+    })), NotFoundException);
+    assert.deepEqual(prisma.store, beforeForeign);
+    const unchanged = await service.updateProfile(staff, "profile-1", updateResearcherProfilePipe.transform({ contextVersion: contextVersion(removed.profile.aggregateVersion), title: "TS" }));
+    assert.equal(unchanged.profile.publications.length, 2);
+    const cleared = await service.updateProfile(staff, "profile-1", updateResearcherProfilePipe.transform({ contextVersion: contextVersion(unchanged.profile.aggregateVersion), publications: [] }));
+    assert.deepEqual(cleared.profile.publications, []);
+    assert.equal(prisma.store.publications[0].id, "foreign-publication");
   });
 
   it("reads an empty CV, saves the whole document, redacts sensitive facts, and keeps CV out of list rows", async () => {

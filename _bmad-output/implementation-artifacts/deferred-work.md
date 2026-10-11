@@ -91,3 +91,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-cv-general-tab-avatar-type-username-keywords.md`
   summary: The CV workspace's username payload rule (owner never sends, manager sends only on change) is only checked by a source-text test.
   evidence: Payload is built inside the React component; no web runtime harness exists to execute it. A regression would make every owner CV save 400 on administrativeFields.
+- source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-4-research-experience-and-achievements.md`
+  summary: CV workspace save logic (INACTIVE publication re-append, cvFromDraft researchExperience assembly, apiField/errorTabsOf routing) has only source-regex tests; add an executed workspace render/save harness.
+  evidence: verification-gap review 13.4 — removing the INACTIVE append would hard-delete hidden publications with no failing executed test; module-private helpers and AGENTS.md ban on test-only exports block a cheap unit test.
+- source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-4-research-experience-and-achievements.md`
+  summary: syncPublications updates every sent row, resetting updatedById/updatedAt on unchanged (incl. hidden INACTIVE) publications; skip unchanged rows like syncParticipations does.
+  evidence: researcher-profiles.service.ts syncPublications calls update for every row with an id; pre-existing, now hit on every Tab 4 publication save.

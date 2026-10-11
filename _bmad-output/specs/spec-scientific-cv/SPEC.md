@@ -61,7 +61,7 @@ A researcher signs in, completes all five tabs of their CV, saves, prints a corr
 
 ## Assumptions
 
-- Tab 4 publications and projects reuse the existing `publications`/`participations` data where fields allow, so no datum has two stores; intellectual property and awards live in the CV document (resolved in story 13.4).
+- Tab 4 publications stay in `researcher_profile_publications`; a supplied PATCH list is the full list, deleting omitted saved rows transactionally. INACTIVE publications are hidden in Tab 4 and sent back unchanged. Projects, intellectual property and awards live only in `curriculumVitae.researchExperience`; non-SUPERSEDED profile participations are shown read-only with status, are already declared in the researcher profile, and must not be re-entered (decided 2026-10-12, story 13.4).
 - Portrait is a URL/path string or a client-cropped image data URL (see `cv-data-contract.md`); the owner's data-URL portrait is also the header avatar.
 - Redaction in audit/projection (not encryption at rest) meets the baseline unless the first open question is answered otherwise.
 
@@ -69,6 +69,5 @@ A researcher signs in, completes all five tabs of their CV, saves, prints a corr
 
 - Must bank, ID number, and SmartCA be encrypted at rest?
 - Is `shareDataAgreement` consumed by any flow (export to the national portal), or recorded only?
-- Do CV Tab 4 publications/projects reuse the child tables (participations lack managementAgency/code, level enum) or stay CV-only rows?
 - Is server-side PDF export required?
 - Which BM-06 fields are mandatory beyond name, gender, ID number, email, unit, main research field?
