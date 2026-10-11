@@ -69,15 +69,17 @@ export function CvGeneralTab({ draft, catalogs, editable, owner, scientistTypeLo
   return <div className="cv-general-tab">
     <section className="section-card">
       <h3>A. Loại nhà khoa học &amp; Ảnh đại diện (3x4)</h3>
-      <div className="form-grid two">
+      <div className="form-grid">
         <div className="cv-portrait-field">
-          <label className="field" htmlFor="cv-avatar-url"><span>Đường dẫn ảnh chân dung (URL hoặc ảnh tải lên)</span><input id="cv-avatar-url" type="text" maxLength={2048} value={draft.avatarUrl} disabled={!editable} onChange={(event) => onChange("avatarUrl", event.target.value)} /><FieldError field="avatarUrl" errors={errors} /></label>
-          <div className="field"><span>Ảnh chân dung nhà khoa học (Khung chuẩn 3x4)</span><div className="cv-portrait-box" aria-label="Khung xem trước ảnh chân dung 3x4">{/^(https?:\/\/|\/)/.test(draft.avatarUrl) ? <img src={draft.avatarUrl} alt="Ảnh chân dung 3x4" referrerPolicy="no-referrer" /> : <span>3 × 4</span>}</div></div>
+          <div className="cv-portrait-box" aria-label="Khung xem trước ảnh chân dung 3x4">{/^(https?:\/\/|\/)/.test(draft.avatarUrl) ? <img src={draft.avatarUrl} alt="Ảnh chân dung 3x4" referrerPolicy="no-referrer" /> : <span>3 × 4</span>}</div>
+          <div><strong>Ảnh chân dung nhà khoa học (Khung chuẩn 3x4)</strong><small className="field-hint">Hiển thị trên hồ sơ nghiên cứu khoa học và trang in Lý lịch khoa học BM-06</small><label className="field" htmlFor="cv-avatar-url"><span>Đường dẫn ảnh chân dung (URL hoặc ảnh tải lên)</span><input id="cv-avatar-url" type="text" maxLength={2048} value={draft.avatarUrl} disabled={!editable} onChange={(event) => onChange("avatarUrl", event.target.value)} /><FieldError field="avatarUrl" errors={errors} /></label></div>
         </div>
         <fieldset className="field" disabled={!editable || scientistTypeLocked} aria-invalid={!!errors.scientistType} aria-describedby={errors.scientistType ? "cv-scientistType-error" : undefined}>
           <legend>Loại nhà khoa học *</legend>
+          <div className="cv-radio-group">
           <label><input type="radio" name="cv-scientist-type" value="DOMESTIC" checked={draft.scientistType === "DOMESTIC"} onChange={() => onChange("scientistType", "DOMESTIC")} /> Nhà khoa học trong nước</label>
           <label><input type="radio" name="cv-scientist-type" value="FOREIGN" checked={draft.scientistType === "FOREIGN"} onChange={() => onChange("scientistType", "FOREIGN")} /> Nhà khoa học nước ngoài</label>
+          </div>
           {scientistTypeLocked ? <small className="field-hint">Đã khóa sau khi liên kết tài khoản.</small> : null}
           <FieldError field="scientistType" errors={errors} />
         </fieldset>
@@ -145,8 +147,10 @@ export function CvGeneralTab({ draft, catalogs, editable, owner, scientistTypeLo
       <fieldset className="field" disabled={!editable}>
         <legend>Bạn có đồng ý chia sẻ dữ liệu? *</legend>
         <small className="field-hint">Cho phép liên thông dữ liệu nghiên cứu khoa học với Cổng thông tin Khoa học &amp; Công nghệ Quốc gia (STM - Bộ KH&amp;CN).</small>
-        <label><input type="radio" name="cv-share-data" checked={draft.shareDataAgreement} onChange={() => onChange("shareDataAgreement", true)} /> Đồng ý</label>
-        <label><input type="radio" name="cv-share-data" checked={!draft.shareDataAgreement} onChange={() => onChange("shareDataAgreement", false)} /> Không đồng ý</label>
+        <div className="cv-radio-group">
+          <label><input type="radio" name="cv-share-data" checked={draft.shareDataAgreement} onChange={() => onChange("shareDataAgreement", true)} /> Đồng ý</label>
+          <label><input type="radio" name="cv-share-data" checked={!draft.shareDataAgreement} onChange={() => onChange("shareDataAgreement", false)} /> Không đồng ý</label>
+        </div>
         <FieldError field="shareDataAgreement" errors={errors} />
       </fieldset>
       <label className="field" htmlFor="cv-note"><span>Ghi chú hồ sơ</span><textarea id="cv-note" rows={4} maxLength={4000} value={draft.note} disabled={!editable} onChange={(event) => onChange("note", event.target.value)} /><FieldError field="note" errors={errors} /></label>
