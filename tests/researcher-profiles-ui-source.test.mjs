@@ -148,4 +148,43 @@ describe("Story 2.1 researcher profile UI source", () => {
     assert.match(markup, /role="alert">Cần nhập Vai trò/);
     for (const control of markup.matchAll(/<(?:input|select|textarea|button)\b[^>]*>/g)) assert.match(control[0], /disabled=""/);
   });
+
+  it("renders the saved CV as a BM-06 paper in Vietnamese and English and hides it without cv.read", async () => {
+    const workspace = await readFile("apps/web/src/components/researcher-profiles/scientific-cv/cv-workspace.tsx", "utf8");
+    assert.match(workspace, /<CvPrintTab profile=\{profile\} dirty=/);
+    assert.doesNotMatch(workspace, /PlaceholderTab/);
+    const render = async (lang, profile, dirty = false) => {
+      const { CvPrintTab } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-print-tab.tsx", {
+        react: { ...react, useState: (initial) => [lang ?? initial, () => {}] }, "react/jsx-runtime": jsxRuntime,
+        "./cv-research-tab": { levels: { MINISTRY: "Cấp Bộ", OTHER: "Cấp khác" } }
+      });
+      return renderToStaticMarkup(jsxRuntime.jsx(CvPrintTab, { profile, dirty }));
+    };
+    const base = { fullName: "Nguyễn Văn A", researchFields: [], expertiseKeywords: [], publications: [], participations: [], managementOrganization: { id: "u", code: "U", name: "Phòng QLKH" } };
+    const saved = {
+      ...base, contactEmail: "a@hvqy.vn",
+      publications: [{ title: "Bài báo hiện hành", doi: "10.1/x", status: "ACTIVE" }, { title: "Bài báo đã ẩn", status: "INACTIVE" }],
+      participations: [{ projectTitle: "Nhiệm vụ cấp Bộ", participationRole: "Thành viên", level: "MINISTRY", startsOn: "2020-03-01", status: "ACTIVE" }, { projectTitle: "Nhiệm vụ đã xong", participationRole: "Chủ nhiệm", level: "OTHER", status: "INACTIVE" }, { projectTitle: "Nhiệm vụ đã thay thế", participationRole: "Thành viên", level: "OTHER", status: "SUPERSEDED" }],
+      curriculumVitae: { cvSchemaVersion: 1, note: "Ghi chú đã lưu", personalInfo: { avatarUrl: "/portrait.jpg", englishAcademicTitle: "Prof. Dr.", gender: "Nữ", idNumber: "001", organization: "Khoa Nội", birthDate: "1980-05-07", shareDataAgreement: true, bankAccount: "123456", smartCaSerial: "SCA-9" }, researchExperience: { intellectualProperty: [{ title: "Sáng chế X" }], awards: [{ name: "Giải Y", awardYear: 2020, endYear: 2021 }], projects: [{ projectTitle: "Đề tài CV", role: "Chủ nhiệm" }] } }
+    };
+    const vi = await render("VI", saved, true);
+    for (const text of ["MẪU BM-06", "NGUYỄN VĂN A", "07/05/1980", "Khoa Nội", "Bài báo hiện hành", "DOI: 10.1/x", "Số TK: 123456", "Serial SmartCA: SCA-9", "Sáng chế X", "2020 – 2021", "Đề tài CV", "Nhiệm vụ cấp Bộ", "Cấp Bộ", "01/03/2020 – —", "Đã kết thúc", "Đang tham gia", "Ghi chú đã lưu", "Các thay đổi chưa lưu không được hiển thị"]) assert.ok(vi.includes(text), text);
+    for (const text of ["Bài báo đã ẩn", "Nhiệm vụ đã thay thế"]) assert.ok(!vi.includes(text), text);
+    assert.ok(vi.indexOf("Đề tài CV") < vi.indexOf("Nhiệm vụ cấp Bộ"));
+    assert.match(vi, /<img src="\/portrait\.jpg"/);
+    assert.ok(!vi.includes("Prof. Dr."));
+    const en = await render("EN", saved);
+    for (const text of ["FORM BM-06", "CURRICULUM VITAE", "2. Intellectual property", "Sáng chế X", "3. Awards and honours", "Giải Y", "V. OTHER INFORMATION", "Account No.: 123456", "Prof. Dr.", "Ministry level", "Ongoing", "Completed"]) assert.ok(en.includes(text), text);
+    assert.ok(!en.includes("MẪU BM-06") && !en.includes("Các thay đổi chưa lưu") && !en.includes("Cấp Bộ") && !en.includes("Đang tham gia"));
+    const empty = await render("VI", { ...base, curriculumVitae: { cvSchemaVersion: 1 } });
+    assert.match(empty, /Giới tính:<\/b> —/);
+    assert.match(empty, /Quốc tịch:<\/b> —/);
+    assert.match(empty, /Phòng QLKH/);
+    assert.ok(!empty.includes("<img"));
+    for (const text of ["Chưa kê khai quá trình đào tạo.", "Chưa có văn bằng sở hữu trí tuệ.", "Chưa có giải thưởng / danh hiệu.", "Chưa có nhiệm vụ KH&amp;CN."]) assert.ok(empty.includes(text), text);
+    for (const invented of ["Việt Nam", "Chính quy", "Cục Sở hữu trí tuệ", "Sử dụng tốt", "Đã nghiệm thu", "12. Tài khoản", "V. THÔNG TIN KHÁC"]) assert.ok(!empty.includes(invented), invented);
+    const denied = await render("VI", { ...base, contactEmail: "a@hvqy.vn" });
+    assert.match(denied, /Bạn không có quyền xem lý lịch khoa học/);
+    assert.ok(!denied.includes("cv-paper") && !denied.includes("NGUYỄN VĂN A") && !denied.includes("a@hvqy.vn"));
+  });
 });

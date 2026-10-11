@@ -2079,6 +2079,38 @@ summary:focus-visible {
   .cv-portrait-field { grid-template-columns: minmax(0, 1fr); }
 }
 .cv-workspace > .section-card:first-child { min-width: 0; }
+/* BM-06 paper: fixed A4 width on screen, scrolls sideways inside its frame on narrow viewports. */
+.cv-print { display: grid; gap: 12px; min-width: 0; }
+.cv-print-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.cv-print-frame { overflow-x: auto; border-radius: var(--radius); background: var(--surface-muted); padding: 16px; }
+.cv-paper { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 15mm 20mm 25mm; background: #fff; color: #000; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); font-family: "Times New Roman", Times, serif; font-size: 13px; line-height: 1.45; }
+.cv-paper h2, .cv-paper h3, .cv-paper h4 { color: #000; break-after: avoid; }
+.cv-paper h3 { margin: 18px 0 8px; font-size: 14px; text-transform: uppercase; }
+.cv-paper h4 { margin: 10px 0 4px; font-size: 13px; }
+.cv-paper p { margin: 4px 0; }
+.cv-paper-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
+.cv-paper-form { font-size: 12px; font-weight: 700; }
+.cv-paper-annex { font-size: 11px; font-style: italic; }
+.cv-paper-nation { display: grid; justify-items: center; font-size: 13px; text-align: center; }
+.cv-paper-nation span { width: 140px; height: 1px; margin-top: 4px; background: #000; }
+.cv-paper-title { margin: 20px 0 2px; font-size: 20px; text-align: center; }
+.cv-paper-subtitle { font-style: italic; text-align: center; }
+.cv-paper-general { display: grid; grid-template-columns: minmax(0, 1fr) 30mm; gap: 16px; align-items: start; }
+.cv-paper-row { display: grid; grid-template-columns: 48mm minmax(0, 1fr); gap: 6px; margin-bottom: 4px; }
+.cv-paper-row > span:last-child { overflow-wrap: anywhere; }
+.cv-paper-label { font-weight: 700; }
+.cv-paper-photo { display: grid; width: 30mm; height: 40mm; margin-top: 18px; place-items: center; overflow: hidden; border: 1px solid #000; font-size: 11px; font-style: italic; }
+.cv-paper-photo img { width: 100%; height: 100%; object-fit: cover; }
+.cv-paper-table { width: 100%; margin: 6px 0 12px; border-collapse: collapse; font-size: 12px; }
+.cv-paper-table th, .cv-paper-table td { border: 1px solid #000; padding: 4px 6px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.cv-paper-table th { text-align: center; }
+.cv-paper-table td:first-child { text-align: center; }
+.cv-paper-table tr { break-inside: avoid; }
+.cv-paper-empty, .cv-paper-pledge { font-style: italic; }
+.cv-paper-note { white-space: pre-line; }
+.cv-paper-signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 32px; text-align: center; break-inside: avoid; }
+.cv-paper-sign-note { font-size: 12px; font-style: italic; }
+.cv-paper .cv-paper-sign-name { margin-top: 56px; font-weight: 700; }
 .profile-print-preview ol,
 .profile-print-preview ul { display: grid; gap: 8px; padding-left: 24px; }
 
@@ -2105,6 +2137,14 @@ summary:focus-visible {
   body:has(.profile-print-preview) .page-header,
   .grid:has(> .profile-print-preview) > :not(.profile-print-preview) { display: none !important; }
   .profile-print-preview { border: 0; box-shadow: none; }
+}
+
+/* Printing Tab 5: keep only the BM-06 paper (every non-ancestor of it is hidden) on the named A4 page. */
+@page cv { size: A4 portrait; margin: 20mm 15mm 20mm 25mm; }
+@media print {
+  body:has(.cv-paper) :has(.cv-paper) > :not(:has(.cv-paper)):not(.cv-paper) { display: none !important; }
+  body:has(.cv-paper) :has(.cv-paper) { display: block !important; max-width: none !important; min-width: 0 !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; }
+  .cv-paper { page: cv; width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
 }
 
 .avatar { overflow: hidden; }

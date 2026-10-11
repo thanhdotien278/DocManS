@@ -23,7 +23,7 @@ const years = Array.from({ length: currentYear - 1949 }, (_, index) => String(cu
 const classifications = ["ISI/Scopus", "Quốc tế khác", "Trong nước (HĐGSNN)", "Báo cáo hội nghị", "Sách/Chuyên khảo", "Khác"].map((value) => ({ value, label: value }));
 const roles = ["Chủ nhiệm", "Thư ký", "Thành viên chính", "Thành viên"].map((value) => ({ value, label: value }));
 const statuses = ["Đang thực hiện", "Đã nghiệm thu", "Tạm dừng"].map((value) => ({ value, label: value }));
-const levels = { ACADEMY_INSTITUTIONAL: "Cấp Học viện / cơ sở", MINISTRY: "Cấp Bộ", OTHER: "Cấp khác" };
+export const levels = { ACADEMY_INSTITUTIONAL: "Cấp Học viện / cơ sở", MINISTRY: "Cấp Bộ", OTHER: "Cấp khác" };
 
 function replaceRow<Row extends object>(rows: Row[], index: number, key: keyof Row, value: string | number | null) {
   return rows.map((row, rowIndex) => rowIndex === index ? { ...row, [key]: value } : row);
