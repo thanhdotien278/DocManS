@@ -88,7 +88,7 @@ export type ScientificCurriculumVitaePersonalInfo = {
 };
 
 export type ScientificCurriculumVitaeLanguage = { language: string; proficiency?: string | null; certificate?: string | null };
-export type ScientificCurriculumVitaeEducation = { degreeLevel: string; major: string; institution: string; graduationYear?: number | null; trainingMode?: string | null; thesisTitle?: string | null };
+export type ScientificCurriculumVitaeEducation = { degreeLevel: string; major: string; institution: string; startYear?: number | null; graduationYear?: number | null; trainingMode?: string | null; thesisTitle?: string | null };
 export type ScientificCurriculumVitaeWorkHistory = { summary?: string | null; items?: ScientificCurriculumVitaeWorkItem[] };
 export type ScientificCurriculumVitaeWorkItem = { period: string; organization: string; position?: string | null; workField?: string | null };
 export type ScientificCurriculumVitaeResearchExperience = {
@@ -370,12 +370,14 @@ function cvPersonalInfo(input: Record<string, unknown>) {
 }
 
 function cvEducation(value: unknown, path: string): ScientificCurriculumVitaeEducation {
-  const input = cvRecord(value, path, ["degreeLevel", "major", "institution", "graduationYear", "trainingMode", "thesisTitle"]);
+  const input = cvRecord(value, path, ["degreeLevel", "major", "institution", "startYear", "graduationYear", "trainingMode", "thesisTitle"]);
   const result: Record<string, unknown> = {
     degreeLevel: cvRequiredText(input, "degreeLevel", path),
     major: cvRequiredText(input, "major", path),
     institution: cvRequiredText(input, "institution", path)
   };
+  const startYear = cvYear(input, "startYear", path, 1950);
+  if (startYear !== undefined) result.startYear = startYear;
   const graduationYear = cvYear(input, "graduationYear", path, 1950);
   if (graduationYear !== undefined) result.graduationYear = graduationYear;
   // shortcut: the contract names degreeLevel/trainingMode as enums without listing members; enforce their bounded string shape until it does.

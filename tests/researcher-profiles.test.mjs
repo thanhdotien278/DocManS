@@ -265,7 +265,7 @@ function contextVersion(aggregateVersion = 0, recordId = "profile-1") {
 function validCv(overrides = {}) {
   return {
     cvSchemaVersion: 1,
-    educationHistory: [{ degreeLevel: "Đại học", major: "Y khoa", institution: "Học viện Quân y", graduationYear: 2000, trainingMode: "Chính quy" }],
+    educationHistory: [{ degreeLevel: "Đại học", major: "Y khoa", institution: "Học viện Quân y", startYear: 1996, graduationYear: 2000, trainingMode: "Chính quy" }],
     workHistory: { summary: "Nghiên cứu", items: [{ period: "2001-2020", organization: "Đơn vị 1" }] },
     researchExperience: { intellectualProperty: [{ title: "Sáng chế" }], awards: [{ name: "Giải thưởng" }], projects: [{ projectTitle: "Đề tài", role: "Chủ nhiệm" }] },
     ...overrides,

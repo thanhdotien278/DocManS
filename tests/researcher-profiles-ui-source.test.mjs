@@ -84,5 +84,8 @@ describe("Story 2.1 researcher profile UI source", () => {
     for (const field of ["educationHistory", "workItems"]) assert.match(workspace, new RegExp(`errors\\.${field}\\s*=`));
     assert.match(workspace, /next\.workHistory = \{/);
     assert.doesNotMatch(workspace, /PlaceholderTab title="[23]\./);
+    assert.match(tabs, /Năm bắt đầu/);
+    assert.doesNotMatch(tabs, /thesisTitle/);
+    assert.doesNotMatch(workspace, /Lịch sử thay đổi hồ sơ/);
   });
 });
