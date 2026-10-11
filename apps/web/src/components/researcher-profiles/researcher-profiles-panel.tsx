@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ScientificCvWorkspace } from "@/components/researcher-profiles/scientific-cv/cv-workspace";
+import { HistoryFacts, historyActions } from "@/components/researcher-profiles/scientific-cv/cv-history";
 import { createResearcherProfile, getResearcherProfile, loadResearcherProfileCatalogs, loadResearcherProfiles, profileRequest, setResearcherProfileStatus, updateResearcherProfile, type Participation, type ProfileHistory, type Publication, type ResearcherProfile, type ResearcherProfileInput, type ResearcherProfileSummary, type ResearcherOrganization } from "@/lib/researcher-profiles-api";
 
 const emptyForm: ResearcherProfileInput = { fullName: "", profileType: "INTERNAL", managementOrganizationUnitId: "", researchFieldIds: [], expertiseKeywords: [], publications: [], participations: [] };
 const levels = { ACADEMY_INSTITUTIONAL: "Cấp Học viện / cơ sở", MINISTRY: "Cấp Bộ", OTHER: "Cấp khác" };
-const historyActions: Record<string, string> = { CREATE: "Tạo hồ sơ", UPDATE: "Cập nhật hồ sơ", SELF_UPDATE: "Nhà nghiên cứu cập nhật", ACTIVATE: "Kích hoạt", DEACTIVATE: "Ngừng hoạt động", ACCOUNT_CREATED: "Tạo và liên kết tài khoản", ACCOUNT_LINKED: "Liên kết tài khoản", ACCOUNT_UNLINKED: "Hủy liên kết", ACCOUNT_RESET: "Gửi lại email kích hoạt" };
-type ProfileTab = "profile" | "account" | "history" | "preview";
+type ProfileTab = "profile" | "account" | "history" | "preview" | "cv";
 
 export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
   const [profiles, setProfiles] = useState<ResearcherProfileSummary[]>([]);
@@ -117,6 +118,7 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
   const profileTabs: Array<{ id: ProfileTab; label: string }> = [
     { id: "profile", label: "Thông tin & nghiên cứu" },
     ...(!self ? [{ id: "account" as const, label: "Tài khoản" }] : []),
+    ...(!self && editing && allowed("researcher-profile.cv.read") ? [{ id: "cv" as const, label: "Lý lịch khoa học" }] : []),
     { id: "history", label: "Lịch sử" },
     { id: "preview", label: "Bản in" }
   ];
@@ -217,6 +219,7 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
       {history?.map((item) => <details key={item.id}><summary>{new Date(item.createdAt).toLocaleString("vi-VN")} · {historyActions[item.action] ?? item.action}</summary><p>{item.reason}</p><HistoryFacts label="Trước" facts={item.beforeFacts} /><HistoryFacts label="Sau" facts={item.afterFacts} /></details>)}
       {history?.length === 0 ? <p>Chưa có lịch sử thay đổi.</p> : null}
     </section> : null}
+    {editing && !self && profileTab === "cv" ? <section id="profile-panel-cv" role="tabpanel" aria-labelledby="profile-tab-cv"><ScientificCvWorkspace target={editing.id} onSaved={(profile) => { select(profile); setProfileTab("cv"); }} /></section> : null}
     {editing && profileTab === "preview" ? <section className="section-card profile-print-preview" id="profile-panel-preview" role="tabpanel" aria-labelledby="profile-tab-preview">
       <div className="section-header"><div><h2>Tóm tắt lý lịch khoa học</h2><p className="record-meta">Bản trình bày được tạo từ dữ liệu DocManS hiện có; không bổ sung trường nghiệp vụ mới.</p></div><button className="button" type="button" onClick={() => window.print()}>In hồ sơ</button></div>
       <dl className="summary-grid">
@@ -243,10 +246,4 @@ function accountLabel(account: ResearcherProfile["account"]) {
 
 function accountStatusLabel(status: string) {
   return status === "active" ? "Đang hoạt động" : status === "pending_activation" ? "Chờ kích hoạt" : "Đã khóa";
-}
-
-function HistoryFacts({ label, facts }: { label: string; facts?: Record<string, unknown> }) {
-  if (!facts) return null;
-  const names: Record<string, string> = { fullName: "Họ tên", title: "Chức danh", position: "Chức vụ", militaryRank: "Quân hàm", contactEmail: "Email", contactPhone: "Điện thoại", contactNote: "Ghi chú", externalAffiliation: "Đơn vị công tác", linkedUserId: "Tài khoản liên kết", status: "Trạng thái", profileType: "Loại hồ sơ" };
-  return <div><strong>{label}</strong><dl>{Object.entries(names).filter(([key]) => facts[key] != null).map(([key, name]) => <div key={key}><dt>{name}</dt><dd>{String(facts[key])}</dd></div>)}</dl>{Array.isArray(facts.publications) ? <ul>{(facts.publications as Publication[]).map((item, i) => <li key={i}>{item.title} · {item.venue} · {item.publicationYear} · {item.authors} · {item.doi} · {item.status} · {item.notes}</li>)}</ul> : null}{Array.isArray(facts.participations) ? <ul>{(facts.participations as Participation[]).map((item, i) => <li key={i}>{item.projectTitle} · {item.participationRole} · {levels[item.level]} · {item.startsOn?.slice(0, 10)} – {item.endsOn?.slice(0, 10)} · {item.status} · {item.notes}</li>)}</ul> : null}</div>;
 }
