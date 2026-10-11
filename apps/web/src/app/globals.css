@@ -2114,3 +2114,6 @@ summary:focus-visible {
 .cv-cropper-frame { position: relative; overflow: hidden; margin: 0 auto; border-radius: var(--radius); background: var(--surface-muted); cursor: grab; touch-action: none; user-select: none; }
 .cv-cropper-frame img { position: absolute; top: 0; left: 0; max-width: none; transform-origin: 0 0; pointer-events: none; }
 .cv-cropper-frame > span { display: grid; height: 100%; place-items: center; }
+
+/* Header avatar: ~3/4 of the user chip height (chip is ~68px tall with the two-line role text). */
+.topbar-row-main .user-chip .avatar { width: 52px; height: 52px; font-size: 22px; }

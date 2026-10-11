@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSession } from "@/components/auth/session-provider";
 import { getResearcherProfile, loadResearcherProfileCatalogs, ProfileRequestError, updateResearcherProfile, type ResearcherProfile, type ResearcherProfileInput, type ScientificCurriculumVitae } from "@/lib/researcher-profiles-api";
 import { CvGeneralTab, mergeKeywords, type CvGeneralDraft } from "./cv-general-tab";
 import { CvEducationTab, CvWorkTab, type CvHistoryDraft } from "./cv-history-tabs";
@@ -137,9 +138,10 @@ type ScientificCvWorkspaceProps = { target: string; onSaved?: (profile: Research
 
 export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspaceProps) {
   const owner = target === "my-profile";
+  const { refreshCurrentUser } = useSession();
   const [profile, setProfile] = useState<ResearcherProfile | null>(null);
   const [draft, setDraft] = useState<CvDraft | null>(null);
-  const [catalogs, setCatalogs] = useState<CvCatalogs>({ researchFields: [], academicRanks: [], academicDegrees: [] });
+  const [catalogs, setCatalogs] = useState<CvCatalogs>({ organizationUnits: [], researchFields: [], academicRanks: [], academicDegrees: [] });
   const [tab, setTab] = useState<CvTab>("general");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -263,7 +265,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
       setProfile(result.profile);
       setDraft(draftFromProfile(result.profile));
       setMessage("Đã lưu lý lịch khoa học.");
-      if (owner) window.dispatchEvent(new Event("researcher-avatar-updated"));
+      if (owner) { window.dispatchEvent(new Event("researcher-avatar-updated")); void refreshCurrentUser(); }
       setFieldErrors({});
       onSaved?.(result.profile);
     } catch (cause) {

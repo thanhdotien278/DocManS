@@ -452,7 +452,7 @@ describe("Story 2.1 researcher profile contracts", () => {
     const editedCv = structuredClone(initialCv);
     editedCv.personalInfo.bankAccount = "654321";
     const editedInput = updateMyProfilePipe.transform({ contextVersion: contextVersion(saved.profile.aggregateVersion, "profile-owner"), curriculumVitae: editedCv });
-    await service.updateMyProfile(researcher, editedInput);
+    const edited = await service.updateMyProfile(researcher, editedInput);
     const latestAudit = prisma.store.audits.at(-1);
     assert.deepEqual(latestAudit.afterFacts.cvChanges, [{ section: "personalInfo", field: "bankAccount", changed: true }]);
     const history = await service.listHistory(researcher, "profile-owner");
@@ -461,6 +461,8 @@ describe("Story 2.1 researcher profile contracts", () => {
     for (const facts of [latestAudit.beforeFacts, latestAudit.afterFacts, history.at(-1).beforeFacts, history.at(-1).afterFacts]) {
       for (const field of sensitiveFields) assert.equal(field in facts.curriculumVitae.personalInfo, false, `${field} leaked`);
     }
+    await service.updateMyProfile(researcher, updateMyProfilePipe.transform({ contextVersion: contextVersion(edited.profile.aggregateVersion, "profile-owner"), fullName: "Tên Mới" }));
+    assert.equal(prisma.store.users.find((user) => user.id === researcher.id).displayName, "Tên Mới");
   });
 
   it("drops legacy scientistType, stores and serves a data-URL portrait, and rolls back CV updates when audit fails", async () => {

@@ -83,7 +83,7 @@ export async function profileRequest<T>(path: string, init?: RequestInit): Promi
   return body as T;
 }
 export const loadResearcherProfiles = (query: Record<string, string>) => profileRequest<{ profiles: ResearcherProfileSummary[]; organizationOptions: ResearcherOrganization[]; total: number; pageSize: number; canCreate: boolean }>(`?${new URLSearchParams(query)}`);
-export const loadResearcherProfileCatalogs = () => profileRequest<{ researchFields: ResearcherCatalogItem[]; academicRanks: ResearcherCatalogItem[]; academicDegrees: ResearcherCatalogItem[] }>("/catalogs");
+export const loadResearcherProfileCatalogs = () => profileRequest<{ organizationUnits: string[]; researchFields: ResearcherCatalogItem[]; academicRanks: ResearcherCatalogItem[]; academicDegrees: ResearcherCatalogItem[] }>("/catalogs");
 export const getResearcherProfile = (id: string) => profileRequest<{ profile: ResearcherProfile }>(`/${id}`);
 export const createResearcherProfile = (input: ResearcherProfileInput) => profileRequest<{ profile: ResearcherProfile | null; requiresConfirmation: boolean; duplicateCandidates: Array<{ id: string; fullName: string; managementOrganization: ResearcherOrganization }> }>("", { method: "POST", body: JSON.stringify(input) });
 export const updateResearcherProfile = (id: string, input: Partial<ResearcherProfileInput> & { contextVersion: ContextVersionTokenV1 }) => profileRequest<{ profile: ResearcherProfile }>(`/${id}`, { method: "PATCH", body: JSON.stringify(input) });

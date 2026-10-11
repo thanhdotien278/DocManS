@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
@@ -187,7 +188,10 @@ const additionalOrganizationScopes = {
   "user-oversight-vndinh": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-bgq").map(([id]) => id)
 };
 
-for (const [id, code, name] of organizationUnits) {
+// Units published on hocvienquany.vn; kept out of `organizationUnits` so they do not widen seeded account scopes.
+const hvqyOrganizationUnits = JSON.parse(readFileSync(new URL("./hvqy-organization-units.json", import.meta.url), "utf8"));
+
+for (const [id, code, name] of [...organizationUnits, ...hvqyOrganizationUnits]) {
   await prisma.organizationUnit.upsert({
     where: { code },
     update: { name, status: "active" },
