@@ -120,9 +120,14 @@ function apiField(field: string) {
   return field;
 }
 
-function firstErrorTab(errors: Record<string, string>): CvTab {
-  if (Object.keys(errors).some((key) => key !== "educationHistory" && key !== "workItems")) return "general";
-  return errors.educationHistory ? "education" : "work";
+const tabLabels: Partial<Record<CvTab, string>> = { general: "1. Thông tin chung", education: "2. Quá trình đào tạo", work: "3. Quá trình công tác & Kinh nghiệm chuyên môn" };
+
+function errorTabsOf(errors: Record<string, string>): CvTab[] {
+  const tabs: CvTab[] = [];
+  if (Object.keys(errors).some((key) => key !== "educationHistory" && key !== "workItems")) tabs.push("general");
+  if (errors.educationHistory) tabs.push("education");
+  if (errors.workItems) tabs.push("work");
+  return tabs;
 }
 
 function PlaceholderTab({ title, message }: { title: string; message: string }) {
@@ -144,6 +149,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [conflict, setConflict] = useState(false);
   const loadVersion = useRef(0);
+  const [errorTabs, setErrorTabs] = useState<CvTab[]>([]);
   const focusFieldError = useRef(false);
 
   const allowed = (action: string) => profile?.viewerAuthorization.allowedActions.some((value) => value === action) ?? false;
@@ -158,6 +164,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
     setError("");
     setMessage("");
     setFieldErrors({});
+    setErrorTabs([]);
     try {
       const [result, nextCatalogs] = await Promise.all([getResearcherProfile(target), loadResearcherProfileCatalogs()]);
       if (version !== loadVersion.current) return;
@@ -211,8 +218,17 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
     if (draft.workItems.some((row) => !row.period.trim() || !row.organization.trim())) errors.workItems = "Cần nhập Thời gian và Cơ quan / Đơn vị cho mọi dòng.";
     focusFieldError.current = Object.keys(errors).length > 0;
     setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) setTab(firstErrorTab(errors));
-    return Object.keys(errors).length === 0;
+    return blockSave(errors);
+  }
+
+  // Keeps the user on the current tab and says plainly that nothing was saved and where to fix it.
+  function blockSave(errors: Record<string, string>) {
+    const tabs = errorTabsOf(errors);
+    setErrorTabs(tabs);
+    if (tabs.length === 0) return true;
+    focusFieldError.current = tabs.includes(tab);
+    setError(`Chưa lưu lý lịch khoa học. Cần bổ sung hoặc sửa thông tin ở: ${tabs.map((item) => tabLabels[item]).join("; ")}.`);
+    return false;
   }
 
   async function save() {
@@ -223,6 +239,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
     setError("");
     setMessage("");
     setConflict(false);
+    setErrorTabs([]);
     try {
       const previous = draftFromProfile(profile);
       const expertiseKeywords = draft.expertiseKeywords.split(",").map((keyword) => keyword.trim()).filter(Boolean);
@@ -258,10 +275,8 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
         } else {
           const nextErrors: Record<string, string> = {};
           for (const item of cause.errors) nextErrors[apiField(item.field)] = item.message;
-          focusFieldError.current = Object.keys(nextErrors).length > 0;
           setFieldErrors(nextErrors);
-          if (cause.errors.length > 0) setTab(firstErrorTab(nextErrors));
-          setError(cause.message);
+          if (cause.errors.length === 0 || blockSave(nextErrors)) setError(cause.message);
         }
       } else setError(cause instanceof Error ? cause.message : "Không thể lưu lý lịch khoa học.");
     } finally {
@@ -298,7 +313,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
           {tab === "research" ? <PlaceholderTab title="4. Kinh nghiệm & Thành tích nghiên cứu" message="Nội dung kinh nghiệm và thành tích nghiên cứu sẽ được bổ sung trong các phiên bản tiếp theo." /> : null}
           {tab === "print" ? <PlaceholderTab title="5. Xem & In Lý lịch khoa học" message="Bản xem và in BM-06 sẽ được bổ sung trong các phiên bản tiếp theo." /> : null}
         </div>
-        {error ? <p className="state-message error" role="alert">{error}</p> : null}
+        {error ? <p className="state-message error" role="alert">{error}{errorTabs.filter((item) => item !== tab).map((item) => <button key={item} type="button" className="button" onClick={() => { focusFieldError.current = true; setTab(item); }}>Đi tới {tabLabels[item]}</button>)}</p> : null}
         {message ? <p className="state-message success" role="status">{message}</p> : null}
         {conflict ? <p className="state-message warning" role="alert"><button type="button" className="button" onClick={() => void loadProfile()}>Tải lại hồ sơ</button></p> : null}
         <div className="button-row"><button className="button primary" type="submit" disabled={busy || !editable}>{busy ? "Đang lưu…" : "Lưu lý lịch khoa học"}</button>{!editable ? <span className="record-meta">Bạn chỉ có quyền xem lý lịch khoa học.</span> : null}</div>
