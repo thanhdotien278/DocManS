@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { getResearcherProfile, loadResearcherProfileCatalogs, profileRequest, ProfileRequestError, updateResearcherProfile, type ProfileHistory, type ResearcherProfile, type ResearcherProfileInput, type ScientificCurriculumVitae } from "@/lib/researcher-profiles-api";
 import { CvGeneralTab, type CvGeneralDraft } from "./cv-general-tab";
+import { CvEducationTab, CvWorkTab, type CvHistoryDraft } from "./cv-history-tabs";
 import { HistoryFacts, historyActions } from "./cv-history";
 
+type CvDraft = CvGeneralDraft & CvHistoryDraft;
 type CvTab = "general" | "education" | "work" | "research" | "print";
 type CvCatalogs = Awaited<ReturnType<typeof loadResearcherProfileCatalogs>>;
 
@@ -12,7 +14,7 @@ function text(value: string | null | undefined) {
   return value ?? "";
 }
 
-function draftFromProfile(profile: ResearcherProfile): CvGeneralDraft {
+function draftFromProfile(profile: ResearcherProfile): CvDraft {
   const personal = profile.curriculumVitae?.personalInfo;
   return {
     avatarUrl: text(personal?.avatarUrl),
@@ -45,11 +47,20 @@ function draftFromProfile(profile: ResearcherProfile): CvGeneralDraft {
     bankBranch: text(personal?.bankBranch),
     smartCaSerial: text(personal?.smartCaSerial),
     shareDataAgreement: personal?.shareDataAgreement ?? true,
-    note: text(profile.curriculumVitae?.note)
+    note: text(profile.curriculumVitae?.note),
+    educationHistory: (profile.curriculumVitae?.educationHistory ?? []).map((row) => ({ ...row })),
+    workSummary: text(profile.curriculumVitae?.workHistory?.summary),
+    workItems: (profile.curriculumVitae?.workHistory?.items ?? []).map((row) => ({ ...row }))
   };
 }
 
-function cvFromDraft(profile: ResearcherProfile, draft: CvGeneralDraft): ScientificCurriculumVitae {
+// Trims strings and drops empty optional values so rows match the API contract.
+function compactRow<Row extends object>(row: Row): Row {
+  const entries = Object.entries(row).map(([key, value]) => [key, typeof value === "string" ? value.trim() : value] as const);
+  return Object.fromEntries(entries.filter(([, value]) => value !== "" && value !== null && value !== undefined)) as Row;
+}
+
+function cvFromDraft(profile: ResearcherProfile, draft: CvDraft): ScientificCurriculumVitae {
   const existing = profile.curriculumVitae ?? { cvSchemaVersion: 1 as const };
   const personalInfo = { ...(existing.personalInfo ?? {}) } as Record<string, unknown>;
   const previousPersonalInfo = (existing.personalInfo ?? {}) as Record<string, unknown>;
@@ -77,6 +88,12 @@ function cvFromDraft(profile: ResearcherProfile, draft: CvGeneralDraft): Scienti
   if (draft.note.trim()) next.note = draft.note.trim();
   else if (Object.prototype.hasOwnProperty.call(existing, "note")) next.note = null;
   else delete next.note;
+  const hadEducation = Object.prototype.hasOwnProperty.call(existing, "educationHistory");
+  if (draft.educationHistory.length || hadEducation) next.educationHistory = draft.educationHistory.map(compactRow);
+  const workSummary = draft.workSummary.trim();
+  if (workSummary || draft.workItems.length || Object.prototype.hasOwnProperty.call(existing, "workHistory")) {
+    next.workHistory = { ...(workSummary ? { summary: workSummary } : {}), items: draft.workItems.map(compactRow) };
+  }
   return {
     ...next,
     personalInfo: {
@@ -98,8 +115,15 @@ function apiField(field: string) {
   if (field === "curriculumVitae.personalInfo.scientistType") return "scientistType";
   if (field.startsWith("curriculumVitae.personalInfo.languages")) return "languages";
   if (field.startsWith("curriculumVitae.personalInfo.")) return field.slice("curriculumVitae.personalInfo.".length);
+  if (field.startsWith("curriculumVitae.educationHistory")) return "educationHistory";
+  if (field.startsWith("curriculumVitae.workHistory")) return "workItems";
   if (field.startsWith("researchFieldIds")) return "researchFieldIds";
   return field;
+}
+
+function firstErrorTab(errors: Record<string, string>): CvTab {
+  if (Object.keys(errors).some((key) => key !== "educationHistory" && key !== "workItems")) return "general";
+  return errors.educationHistory ? "education" : "work";
 }
 
 function PlaceholderTab({ title, message }: { title: string; message: string }) {
@@ -111,7 +135,7 @@ type ScientificCvWorkspaceProps = { target: string; onSaved?: (profile: Research
 export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspaceProps) {
   const owner = target === "my-profile";
   const [profile, setProfile] = useState<ResearcherProfile | null>(null);
-  const [draft, setDraft] = useState<CvGeneralDraft | null>(null);
+  const [draft, setDraft] = useState<CvDraft | null>(null);
   const [catalogs, setCatalogs] = useState<CvCatalogs>({ researchFields: [], academicRanks: [], academicDegrees: [] });
   const [tab, setTab] = useState<CvTab>("general");
   const [history, setHistory] = useState<ProfileHistory[] | null>(null);
@@ -154,15 +178,16 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
   useEffect(() => { void loadProfile(); return () => { loadVersion.current++; }; }, [target]);
 
   useEffect(() => {
-    if (!focusFieldError.current || tab !== "general" || busy) return;
+    if (!focusFieldError.current || busy) return;
     focusFieldError.current = false;
-    const firstError = document.querySelector(".cv-general-tab .field-error");
+    const firstError = document.querySelector("[role=tabpanel] .field-error");
     const field = firstError?.closest(".field, .section-card")?.querySelector<HTMLElement>("input:not(:disabled), select:not(:disabled), textarea:not(:disabled), .table-wrap");
     field?.scrollIntoView({ block: "center" });
     field?.focus({ preventScroll: true });
   }, [fieldErrors, tab, busy]);
 
-  function changeDraft<K extends keyof CvGeneralDraft>(key: K, value: CvGeneralDraft[K]) {
+  // Loosely typed so both tab components (each owning a slice of CvDraft) can pass their own typed onChange.
+  function changeDraft(key: keyof CvDraft, value: unknown) {
     setDraft((current) => current ? { ...current, [key]: value } : current);
     setFieldErrors((current) => {
       if (!current[key]) return current;
@@ -183,9 +208,12 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
     if (!draft.organization.trim()) errors.organization = "Cần nhập Đơn vị quản lý / Đơn vị công tác.";
     if (draft.researchFieldIds.length === 0) errors.researchFieldIds = "Cần chọn ít nhất một Ngành/Lĩnh vực chính.";
     if (draft.languages.some((row) => !row.language.trim())) errors.languages = "Cần nhập Ngoại ngữ cho mọi dòng.";
+    if (draft.educationHistory.some((row) => !row.degreeLevel.trim() || !row.major.trim() || !row.institution.trim())) errors.educationHistory = "Cần nhập Bậc đào tạo, Ngành đào tạo và Cơ sở đào tạo cho mọi dòng.";
+    else if (draft.educationHistory.some((row) => row.graduationYear != null && (!Number.isInteger(row.graduationYear) || row.graduationYear < 1950 || row.graduationYear > 2100))) errors.educationHistory = "Năm tốt nghiệp phải nằm trong khoảng 1950–2100.";
+    if (draft.workItems.some((row) => !row.period.trim() || !row.organization.trim())) errors.workItems = "Cần nhập Thời gian và Cơ quan / Đơn vị cho mọi dòng.";
     focusFieldError.current = Object.keys(errors).length > 0;
     setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) setTab("general");
+    if (Object.keys(errors).length > 0) setTab(firstErrorTab(errors));
     return Object.keys(errors).length === 0;
   }
 
@@ -235,7 +263,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
           for (const item of cause.errors) nextErrors[apiField(item.field)] = item.message;
           focusFieldError.current = Object.keys(nextErrors).length > 0;
           setFieldErrors(nextErrors);
-          if (cause.errors.length > 0) setTab("general");
+          if (cause.errors.length > 0) setTab(firstErrorTab(nextErrors));
           setError(cause.message);
         }
       } else setError(cause instanceof Error ? cause.message : "Không thể lưu lý lịch khoa học.");
@@ -264,8 +292,8 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
   if (loading) return <p role="status">Đang tải lý lịch khoa học…</p>;
   if (!profile || !draft) return <div className="state-message error" role="alert">{error || "Không tìm thấy lý lịch khoa học."}</div>;
 
-  const educationCount = profile.curriculumVitae?.educationHistory?.length ?? 0;
-  const workCount = profile.curriculumVitae?.workHistory?.items?.length ?? 0;
+  const educationCount = draft.educationHistory.length;
+  const workCount = draft.workItems.length;
   const research = profile.curriculumVitae?.researchExperience;
   const researchCount = (research?.intellectualProperty?.length ?? 0) + (research?.awards?.length ?? 0) + (research?.projects?.length ?? 0) + profile.publications.filter((publication) => publication.status !== "INACTIVE").length;
   const tabs: Array<{ id: CvTab; label: string; count?: number }> = [
@@ -288,8 +316,8 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
       <form noValidate onSubmit={(event) => { event.preventDefault(); void save(); }}>
         <div id={`cv-panel-${tab}`} role="tabpanel" aria-labelledby={`cv-tab-${tab}`}>
           {tab === "general" ? <CvGeneralTab draft={draft} catalogs={catalogs} editable={editable && !busy} owner={owner} scientistTypeLocked={scientistTypeLocked} errors={fieldErrors} onChange={changeDraft} /> : null}
-          {tab === "education" ? <PlaceholderTab title="2. Quá trình đào tạo" message="Nội dung quá trình đào tạo sẽ được bổ sung trong các phiên bản tiếp theo." /> : null}
-          {tab === "work" ? <PlaceholderTab title="3. Quá trình công tác & Kinh nghiệm chuyên môn" message="Nội dung quá trình công tác sẽ được bổ sung trong các phiên bản tiếp theo." /> : null}
+          {tab === "education" ? <CvEducationTab draft={draft} editable={editable && !busy} errors={fieldErrors} onChange={changeDraft} /> : null}
+          {tab === "work" ? <CvWorkTab draft={draft} editable={editable && !busy} errors={fieldErrors} onChange={changeDraft} /> : null}
           {tab === "research" ? <PlaceholderTab title="4. Kinh nghiệm & Thành tích nghiên cứu" message="Nội dung kinh nghiệm và thành tích nghiên cứu sẽ được bổ sung trong các phiên bản tiếp theo." /> : null}
           {tab === "print" ? <PlaceholderTab title="5. Xem & In Lý lịch khoa học" message="Bản xem và in BM-06 sẽ được bổ sung trong các phiên bản tiếp theo." /> : null}
         </div>

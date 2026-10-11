@@ -31,7 +31,7 @@ export function CvRowTable<Row extends object>({ rows, columns, onChange, onAdd,
         <tbody>{rows.length ? rows.map((row, index) => <tr key={index}>
           <td>{index + 1}</td>
           {columns.map((column) => <td key={column.key}>
-            {column.options ? <select value={String(row[column.key] ?? "")} disabled={disabled} aria-label={`${column.label} dòng ${index + 1}`} onChange={(event) => update(index, column, event.target.value)}><option value="">Chọn</option>{column.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
+            {column.options ? <select value={String(row[column.key] ?? "")} disabled={disabled} aria-label={`${column.label} dòng ${index + 1}`} onChange={(event) => update(index, column, event.target.value)}><option value="">Chọn</option>{[...column.options, ...(row[column.key] && !column.options.some((option) => option.value === row[column.key]) ? [{ value: String(row[column.key]), label: String(row[column.key]) }] : [])].map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
               : column.type === "textarea" ? <textarea rows={2} value={String(row[column.key] ?? "")} placeholder={column.placeholder} disabled={disabled} aria-label={`${column.label} dòng ${index + 1}`} onChange={(event) => update(index, column, event.target.value)} />
                 : <input type={column.type ?? "text"} value={String(row[column.key] ?? "")} placeholder={column.placeholder} disabled={disabled} aria-label={`${column.label} dòng ${index + 1}`} onChange={(event) => update(index, column, event.target.value)} />}
           </td>)}

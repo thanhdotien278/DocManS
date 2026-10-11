@@ -74,4 +74,15 @@ describe("Story 2.1 researcher profile UI source", () => {
     assert.match(managerPanel, /select\(profile\); setProfileTab\("cv"\)/);
     assert.match(shell, /href: "\/my-profile", label: "Lý lịch khoa học"/);
   });
+
+  it("edits CV education and work history with required-row validation", async () => {
+    const [workspace, tabs] = await Promise.all([
+      readFile("apps/web/src/components/researcher-profiles/scientific-cv/cv-workspace.tsx", "utf8"),
+      readFile("apps/web/src/components/researcher-profiles/scientific-cv/cv-history-tabs.tsx", "utf8")
+    ]);
+    for (const label of ["Bậc đào tạo *", "Ngành đào tạo (Chuyên ngành) *", "Cơ sở đào tạo *", "Thời gian *", "Cơ quan / Đơn vị *", "Tóm tắt chuyên môn"]) assert.match(tabs, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    for (const field of ["educationHistory", "workItems"]) assert.match(workspace, new RegExp(`errors\\.${field}\\s*=`));
+    assert.match(workspace, /next\.workHistory = \{/);
+    assert.doesNotMatch(workspace, /PlaceholderTab title="[23]\./);
+  });
 });
