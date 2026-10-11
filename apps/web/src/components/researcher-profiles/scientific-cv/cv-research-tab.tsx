@@ -39,7 +39,7 @@ export function CvResearchTab({ draft, participations, editable, errors, onChang
     <section className="section-card">
       <h3>Công bố khoa học</h3>
       {errors.publications ? <small className="field-error" role="alert">{errors.publications}</small> : null}
-      <CvRowTable rows={draft.publications} columns={[
+      <CvRowTable name="publications" rows={draft.publications} columns={[
         { key: "authors", label: "Tác giả" },
         { key: "publicationYear", label: "Năm công bố", type: "number", options: years },
         { key: "title", label: "Tên công trình / Bài báo *" },
@@ -58,7 +58,7 @@ export function CvResearchTab({ draft, participations, editable, errors, onChang
     <section className="section-card">
       <h3>Sở hữu trí tuệ</h3>
       {errors.intellectualProperty ? <small className="field-error" role="alert">{errors.intellectualProperty}</small> : null}
-      <CvRowTable rows={draft.intellectualProperty} columns={[
+      <CvRowTable name="intellectualProperty" rows={draft.intellectualProperty} columns={[
         { key: "title", label: "Tên văn bằng / Sáng chế *" },
         { key: "authors", label: "Tác giả" },
         { key: "issueYear", label: "Năm cấp", type: "number", options: years },
@@ -75,7 +75,7 @@ export function CvResearchTab({ draft, participations, editable, errors, onChang
     <section className="section-card">
       <h3>Giải thưởng / Danh hiệu</h3>
       {errors.awards ? <small className="field-error" role="alert">{errors.awards}</small> : null}
-      <CvRowTable rows={draft.awards} columns={[
+      <CvRowTable name="awards" rows={draft.awards} columns={[
         { key: "name", label: "Tên giải thưởng / Danh hiệu *" },
         { key: "awardYear", label: "Năm", type: "number", options: years },
         { key: "endYear", label: "Đến năm", type: "number", options: years },
@@ -91,7 +91,7 @@ export function CvResearchTab({ draft, participations, editable, errors, onChang
     <section className="section-card">
       <h3>Nhiệm vụ / Chương trình nghiên cứu</h3>
       {errors.projects ? <small className="field-error" role="alert">{errors.projects}</small> : null}
-      <CvRowTable rows={draft.projects} columns={[
+      <CvRowTable name="projects" rows={draft.projects} columns={[
         { key: "projectTitle", label: "Tên nhiệm vụ, Chương trình *" },
         { key: "managementAgency", label: "Cơ quan quản lý" },
         { key: "code", label: "Mã số" },

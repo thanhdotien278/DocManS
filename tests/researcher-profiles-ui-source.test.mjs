@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 import ts from "typescript";
+import * as react from "react";
 import * as jsxRuntime from "react/jsx-runtime";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -128,7 +129,7 @@ describe("Story 2.1 researcher profile UI source", () => {
     assert.match(research, /<th>Tình trạng<\/th>/);
     assert.match(research, /Các nhiệm vụ đã khai trong hồ sơ nhà khoa học\. Không nhập lại/);
     assert.match(research, /<td>\{row.participationRole\}<\/td>/);
-    const { CvRowTable } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-row-table.tsx", { "react/jsx-runtime": jsxRuntime });
+    const { CvRowTable } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-row-table.tsx", { react, "react/jsx-runtime": jsxRuntime });
     const { CvResearchTab } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-research-tab.tsx", { "react/jsx-runtime": jsxRuntime, "./cv-row-table": { CvRowTable } });
     const markup = renderToStaticMarkup(jsxRuntime.jsx(CvResearchTab, {
       draft: { publications: [{ title: "Bài báo", classification: "Phân loại cũ" }], intellectualProperty: [{ title: "Sáng chế" }], awards: [{ name: "Giải thưởng" }], projects: [{ projectTitle: "Đề tài", role: "Vai trò cũ" }] },
@@ -139,8 +140,11 @@ describe("Story 2.1 researcher profile UI source", () => {
     assert.match(markup, /Nhiệm vụ đã kết thúc/);
     assert.match(markup, /Đã kết thúc/);
     assert.doesNotMatch(markup, /Nhiệm vụ đã thay thế/);
-    assert.match(markup, /value="Phân loại cũ" selected/);
-    assert.match(markup, /value="Vai trò cũ" selected/);
+    // Saved rows render as text with a "Sửa" action instead of inputs.
+    assert.match(markup, /<td>Phân loại cũ<\/td>/);
+    assert.match(markup, /<td>Vai trò cũ<\/td>/);
+    assert.match(markup, /aria-label="Sửa dòng 1"/);
+    assert.doesNotMatch(markup, /aria-label="Tên công trình/);
     assert.match(markup, /role="alert">Cần nhập Vai trò/);
     for (const control of markup.matchAll(/<(?:input|select|textarea|button)\b[^>]*>/g)) assert.match(control[0], /disabled=""/);
   });

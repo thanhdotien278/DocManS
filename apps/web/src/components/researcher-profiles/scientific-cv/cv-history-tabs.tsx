@@ -33,7 +33,7 @@ export function CvEducationTab({ draft, editable, errors, onChange }: CvHistoryT
   return <section className="section-card cv-tab-panel">
     <h3>2. Quá trình đào tạo</h3>
     {errors.educationHistory ? <small className="field-error" role="alert">{errors.educationHistory}</small> : null}
-    <CvRowTable rows={draft.educationHistory}
+    <CvRowTable name="educationHistory" rows={draft.educationHistory}
       columns={[
         { key: "degreeLevel", label: "Bậc đào tạo *", options: degreeLevels },
         { key: "major", label: "Ngành đào tạo (Chuyên ngành) *", placeholder: "Y đa khoa, Dược, v.v." },
@@ -60,7 +60,7 @@ export function CvWorkTab({ draft, editable, errors, onChange }: CvHistoryTabPro
     </label>
     <h4>Quá trình công tác</h4>
     {errors.workItems ? <small className="field-error" role="alert">{errors.workItems}</small> : null}
-    <CvRowTable rows={draft.workItems}
+    <CvRowTable name="workItems" rows={draft.workItems}
       columns={[
         { key: "period", label: "Thời gian *", placeholder: "2015 - nay" },
         { key: "organization", label: "Cơ quan / Đơn vị *" },
