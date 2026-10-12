@@ -80,7 +80,7 @@ Decisions (user, 2026-10-12):
 ## Implementation Notes
 
 - Backend: nullable `publication_type` (migration `20261012010000_cv_publication_type`), DTO/service/API type carry it as free text (options are UI-only, like `classification`). New `cv-publications-section.tsx` replaces the publications `CvRowTable`; `CvRowTable` and the other three sections are untouched. Drawer uses the house `Dialog`; delete confirm is a second `Dialog` opened from the row. Authors are stored as the existing `authors` string joined by ", "; legacy values are split on `,`/`;` and de-duplicated when the Drawer opens.
-- Verification: `npm run build:api && node --test tests/researcher-profiles.test.mjs tests/researcher-profiles-ui-source.test.mjs` 24/24; `npm run typecheck` clean. Manual real-app checks (add/edit/delete/reload, keyboard, 375px) were NOT run: the migration is not applied to the dev DB and the running API on :4000 predates the change.
+- Verification: `npm run build:api && node --test tests/researcher-profiles.test.mjs tests/researcher-profiles-ui-source.test.mjs` 24/24; `npm run typecheck` clean. Real-app check (seed researcher on :3000, API :4000 with the migration applied): blank-title block, add with author bubbles, CV save and reload round-trip incl. publicationType, edit prefill, discard prompt, delete confirm and save, 375px full-width Drawer without horizontal scroll, no nested forms. Not run: keyboard-only pass, upload (deferred).
 
 ## Spec Change Log
 
@@ -88,7 +88,7 @@ Decisions (user, 2026-10-12):
 
 | # | Source | Finding | Verdict | Route / evidence |
 |---|---|---|---|---|
-| 1 | edge | Drawer `<form>` is nested in the workspace form; its submit bubbles and the CV PATCH fires on every Lưu | high | patch — `stopPropagation` in the Drawer `onSubmit` |
+| 1 | edge | Drawer `<form>` is nested in the workspace form; its submit bubbles and the CV PATCH fires on every Lưu | high | patch — first `stopPropagation`; the real-app run still showed a hydration error and a page reload from the nested `<form>`, so the Drawer now has no `<form>` (Lưu is a button; Enter in single-line fields submits) |
 | 2 | edge | After delete the opener row is gone, focus drops to body | medium | patch — focus the Add button after delete |
 | 3 | edge | Legacy duplicate authors give duplicate bubbles/keys | low | patch — de-duplicate in `formOf` |
 | 4 | edge | Backspace during IME composition can remove a bubble | low | patch — `isComposing` guard |
