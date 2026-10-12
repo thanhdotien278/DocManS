@@ -118,7 +118,7 @@ export function CvGeneralTab({ draft, catalogs, editable, owner, profileType, ha
             <input ref={portraitInput} id="cv-avatar-file" type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => pickPortrait(event.target.files?.[0])} />
             <div className="button-row">
               <button type="button" className="button" disabled={!editable} onClick={() => portraitInput.current?.click()} aria-describedby={portraitError || errors.avatarUrl ? "cv-avatar-error" : undefined}>Tải ảnh lên</button>
-              {draft.avatarUrl ? <button type="button" className="button" disabled={!editable} onClick={() => onChange("avatarUrl", "")}>Xóa ảnh</button> : null}
+              {draft.avatarUrl ? <button type="button" className="button" disabled={!editable} onClick={() => { if (window.confirm("Xóa ảnh đại diện?")) onChange("avatarUrl", ""); }}>Xóa ảnh</button> : null}
             </div>
             {portraitError || errors.avatarUrl ? <small id="cv-avatar-error" className="field-error" role="alert">{portraitError || errors.avatarUrl}</small> : null}
           </div>

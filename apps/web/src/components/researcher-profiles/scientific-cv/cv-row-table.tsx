@@ -46,7 +46,7 @@ export function CvRowTable<Row extends object>({ name, rows, columns, onChange, 
               : column.type === "textarea" ? <textarea rows={2} value={String(row[column.key] ?? "")} placeholder={column.placeholder} disabled={disabled} aria-label={`${column.label} dòng ${index + 1}`} onChange={(event) => update(index, column, event.target.value)} />
                 : <input type={column.type ?? "text"} value={String(row[column.key] ?? "")} placeholder={column.placeholder} disabled={disabled} aria-label={`${column.label} dòng ${index + 1}`} onChange={(event) => update(index, column, event.target.value)} />}
           </td>)}
-          <td>{editing.includes(index) ? null : <button type="button" className="button" disabled={disabled} aria-label={`Sửa dòng ${index + 1}`} onClick={() => setEditing([...editing, index])}>Sửa</button>}<button type="button" className="button" disabled={disabled} aria-label={`Xóa dòng ${index + 1}`} onClick={() => { setEditing(editing.filter((item) => item !== index).map((item) => item > index ? item - 1 : item)); onRemove(index); }}>Xóa</button></td>
+          <td>{editing.includes(index) ? null : <button type="button" className="button" disabled={disabled} aria-label={`Sửa dòng ${index + 1}`} onClick={() => setEditing([...editing, index])}>Sửa</button>}<button type="button" className="button" disabled={disabled} aria-label={`Xóa dòng ${index + 1}`} onClick={() => { if (!window.confirm(`Xóa dòng ${index + 1}?`)) return; setEditing(editing.filter((item) => item !== index).map((item) => item > index ? item - 1 : item)); onRemove(index); }}>Xóa</button></td>
         </tr>) : <tr><td colSpan={columns.length + 2}>{emptyMessage}</td></tr>}</tbody>
       </table>
     </div>
