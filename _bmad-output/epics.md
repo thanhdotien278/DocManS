@@ -4206,7 +4206,7 @@ So that tôi có bản chuẩn khổ A4 để nộp.
 
 **Given** lý lịch đã lưu
 **When** mở tab Xem & In
-**Then** bản xem dựng từ dữ liệu đã lưu (không phải bản đang sửa), có dấu "MẪU BM-06", ảnh 3x4 và đủ mục thông tin, đào tạo, công tác, nghiên cứu, ngân hàng/SmartCA.
+**Then** bản xem dựng từ dữ liệu đã lưu (không phải bản đang sửa), có dấu "MẪU BM-06", ảnh 3x4 và đủ mục thông tin, đào tạo, công tác, nghiên cứu; không in CCCD, ngày/nơi cấp, ngân hàng, SmartCA (quyết định 2026-10-12, xem `specs/spec-scientific-cv/quyet-dinh-va-kiem-thu.md`).
 
 **Given** chuyển VI/EN
 **When** bấm nút

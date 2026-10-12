@@ -51,7 +51,8 @@ type CvGeneralTabProps = {
   onChange: <K extends keyof CvGeneralDraft>(key: K, value: CvGeneralDraft[K]) => void;
 };
 
-const PORTRAIT_PREVIEW = /^(https?:\/\/|\/|data:image\/(jpeg|png|webp);base64,)/;
+// Only same-origin paths and inline images: an external URL would let its host see every viewer's IP.
+export const PORTRAIT_PREVIEW = /^(\/(?!\/)|data:image\/(jpeg|png|webp);base64,)/;
 const PORTRAIT_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 // Same comparison key as the API's normalizeResearcherKey (unique per profile), so near-duplicates never reach the server.
@@ -111,7 +112,7 @@ export function CvGeneralTab({ draft, catalogs, editable, owner, profileType, ha
       <h3>A. Loại nhà khoa học &amp; Ảnh đại diện (3x4)</h3>
       <div className="form-grid">
         <div className="cv-portrait-field">
-          <div className="cv-portrait-box" aria-label="Khung xem trước ảnh chân dung 3x4">{PORTRAIT_PREVIEW.test(draft.avatarUrl) ? <img src={draft.avatarUrl} alt="Ảnh chân dung 3x4" referrerPolicy="no-referrer" /> : <span>3 × 4</span>}</div>
+          <div className="cv-portrait-box" aria-label="Khung xem trước ảnh chân dung 3x4">{PORTRAIT_PREVIEW.test(draft.avatarUrl) ? <img src={draft.avatarUrl} alt="Ảnh chân dung 3x4" /> : <span>3 × 4</span>}</div>
           <div>
             <strong>Ảnh chân dung nhà khoa học (Khung chuẩn 3x4)</strong><small className="field-hint">Hiển thị trên hồ sơ nghiên cứu khoa học và trang in Lý lịch khoa học BM-06</small>
             <input ref={portraitInput} id="cv-avatar-file" type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => pickPortrait(event.target.files?.[0])} />

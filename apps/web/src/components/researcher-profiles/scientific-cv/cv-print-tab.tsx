@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ResearcherProfile } from "@/lib/researcher-profiles-api";
+import { PORTRAIT_PREVIEW } from "./cv-general-tab";
 import { levels } from "./cv-research-tab";
 
 type Lang = "VI" | "EN";
@@ -11,9 +12,9 @@ const labels = {
     form: "MẪU BM-06", annex: "Phụ lục II ban hành kèm theo quy định quản lý KH&CN", nation: "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", motto: "Độc lập - Tự do - Hạnh phúc",
     title: "LÝ LỊCH KHOA HỌC", subtitle: "(Cá nhân thực hiện nhiệm vụ khoa học và công nghệ)",
     general: "I. THÔNG TIN CHUNG", fullName: "1. Họ và tên:", birthDate: "2. Ngày sinh:", gender: "Giới tính:", birthPlace: "Nơi sinh:", nationality: "Quốc tịch:",
-    idNumber: "3. Số CCCD/Hộ chiếu:", idIssueDate: "Ngày cấp:", idIssuePlace: "Nơi cấp:", rankPosition: "4. Quân hàm / Chức vụ:", academic: "5. Học hàm, học vị:",
-    organization: "6. Cơ quan công tác:", address: "7. Địa chỉ liên hệ:", phoneEmail: "8. Điện thoại / Email:", fields: "9. Lĩnh vực nghiên cứu:", keywords: "10. Từ khóa chuyên môn:",
-    languages: "11. Ngoại ngữ sử dụng:", bank: "12. Tài khoản / SmartCA:", bankAccount: "Số TK", bankName: "Ngân hàng", bankBranch: "Chi nhánh", smartCa: "Serial SmartCA",
+    rankPosition: "3. Quân hàm / Chức vụ:", academic: "4. Học hàm, học vị:",
+    organization: "5. Cơ quan công tác:", address: "6. Địa chỉ liên hệ:", phoneEmail: "7. Điện thoại / Email:", fields: "8. Lĩnh vực nghiên cứu:", keywords: "9. Từ khóa chuyên môn:",
+    languages: "10. Ngoại ngữ sử dụng:",
     education: "II. QUÁ TRÌNH ĐÀO TẠO", no: "TT", degree: "Bậc đào tạo", major: "Ngành đào tạo (Chuyên ngành)", institution: "Cơ sở đào tạo", years: "Thời gian", mode: "Hình thức đào tạo", noEducation: "Chưa kê khai quá trình đào tạo.",
     work: "III. QUÁ TRÌNH CÔNG TÁC VÀ KINH NGHIỆM CHUYÊN MÔN", summary: "1. Tóm tắt hoạt động chuyên môn:", workItems: "2. Quá trình công tác:", period: "Thời gian", workOrganization: "Cơ quan / Đơn vị công tác", position: "Chức vụ", workField: "Lĩnh vực công tác", noWork: "Chưa kê khai quá trình công tác.",
     research: "IV. KINH NGHIỆM VÀ THÀNH TÍCH NGHIÊN CỨU", publications: "1. Công bố khoa học", authors: "Tác giả", year: "Năm", pubTitle: "Tên công trình / Bài báo", venue: "Tạp chí / NXB", issn: "ISSN/ISBN, DOI", classification: "Phân loại", proof: "Minh chứng", noPublications: "Chưa có công bố khoa học.",
@@ -28,9 +29,9 @@ const labels = {
     form: "FORM BM-06", annex: "Annex II - S&T Personnel Curriculum Vitae", nation: "SOCIALIST REPUBLIC OF VIETNAM", motto: "Independence - Freedom - Happiness",
     title: "CURRICULUM VITAE", subtitle: "(Scientific and Technological Profile)",
     general: "I. PERSONAL INFORMATION", fullName: "1. Full name:", birthDate: "2. Date of birth:", gender: "Gender:", birthPlace: "Place of birth:", nationality: "Nationality:",
-    idNumber: "3. ID / Passport No.:", idIssueDate: "Issue date:", idIssuePlace: "Place of issue:", rankPosition: "4. Military rank / Position:", academic: "5. Academic title:",
-    organization: "6. Affiliation:", address: "7. Contact address:", phoneEmail: "8. Phone / Email:", fields: "9. Research fields:", keywords: "10. Keywords:",
-    languages: "11. Languages:", bank: "12. Bank account / SmartCA:", bankAccount: "Account No.", bankName: "Bank", bankBranch: "Branch", smartCa: "SmartCA serial",
+    rankPosition: "3. Military rank / Position:", academic: "4. Academic title:",
+    organization: "5. Affiliation:", address: "6. Contact address:", phoneEmail: "7. Phone / Email:", fields: "8. Research fields:", keywords: "9. Keywords:",
+    languages: "10. Languages:",
     education: "II. EDUCATION", no: "No.", degree: "Degree", major: "Major", institution: "Institution", years: "Years", mode: "Training mode", noEducation: "No education history recorded.",
     work: "III. EMPLOYMENT AND PROFESSIONAL EXPERIENCE", summary: "1. Professional summary:", workItems: "2. Employment history:", period: "Period", workOrganization: "Organization", position: "Position", workField: "Field of work", noWork: "No employment history recorded.",
     research: "IV. RESEARCH EXPERIENCE AND ACHIEVEMENTS", publications: "1. Scientific publications", authors: "Authors", year: "Year", pubTitle: "Title", venue: "Journal / Publisher", issn: "ISSN/ISBN, DOI", classification: "Classification", proof: "Evidence", noPublications: "No publications recorded.",
@@ -88,8 +89,8 @@ export function CvPrintTab({ profile, dirty }: CvPrintTabProps) {
   const personal = cv.personalInfo;
   const research = cv.researchExperience;
   const academic = [profile.academicRank?.name, profile.academicDegree?.name, profile.title];
-  const hasBank = !!(personal?.bankAccount || personal?.bankName || personal?.bankBranch || personal?.smartCaSerial);
   const participations = profile.participations.filter((row) => row.status !== "SUPERSEDED");
+  const portrait = personal?.avatarUrl && PORTRAIT_PREVIEW.test(personal.avatarUrl) ? personal.avatarUrl : null;
 
   return <div className="cv-print cv-tab-panel">
     <div className="cv-print-toolbar">
@@ -114,7 +115,6 @@ export function CvPrintTab({ profile, dirty }: CvPrintTabProps) {
             <h3>{L.general}</h3>
             <Row label={L.fullName}><strong>{profile.fullName.toLocaleUpperCase("vi")}</strong></Row>
             <Row label={L.birthDate}>{formatDate(personal?.birthDate)}; <b>{L.gender}</b> {show(personal?.gender)}; <b>{L.birthPlace}</b> {show(personal?.birthPlace)}; <b>{L.nationality}</b> {show(personal?.nationality)}</Row>
-            <Row label={L.idNumber}>{show(personal?.idNumber)}; <b>{L.idIssueDate}</b> {formatDate(personal?.idIssueDate)}; <b>{L.idIssuePlace}</b> {show(personal?.idIssuePlace)}</Row>
             <Row label={L.rankPosition}>{show(profile.militaryRank)} / {show(profile.position)}</Row>
             <Row label={L.academic}>{joined(lang === "EN" ? [personal?.englishAcademicTitle, ...academic] : academic, ", ")}</Row>
             <Row label={L.organization}>{show(personal?.organization || profile.externalAffiliation || profile.managementOrganization?.name)}</Row>
@@ -126,14 +126,8 @@ export function CvPrintTab({ profile, dirty }: CvPrintTabProps) {
               const detail = [item.proficiency, item.certificate].filter(Boolean).join(" - ");
               return detail ? `${item.language} (${detail})` : item.language;
             }), "; ")}</Row>
-            {hasBank ? <Row label={L.bank}>{joined([
-              personal?.bankAccount && `${L.bankAccount}: ${personal.bankAccount}`,
-              personal?.bankName && `${L.bankName}: ${personal.bankName}`,
-              personal?.bankBranch && `${L.bankBranch}: ${personal.bankBranch}`,
-              personal?.smartCaSerial && `${L.smartCa}: ${personal.smartCaSerial}`
-            ], " | ")}</Row> : null}
           </div>
-          <div className="cv-paper-photo" aria-hidden={personal?.avatarUrl ? undefined : true}>{personal?.avatarUrl ? <img src={personal.avatarUrl} alt={profile.fullName} referrerPolicy="no-referrer" /> : null}</div>
+          <div className="cv-paper-photo" aria-hidden={portrait ? undefined : true}>{portrait ? <img src={portrait} alt={profile.fullName} /> : null}</div>
         </div>
 
         <h3>{L.education}</h3>

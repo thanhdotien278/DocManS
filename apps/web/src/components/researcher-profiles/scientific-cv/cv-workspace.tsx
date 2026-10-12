@@ -67,6 +67,11 @@ function compactRow<Row extends object>(row: Row): Row {
   return Object.fromEntries(entries.filter(([, value]) => value !== "" && value !== null && value !== undefined)) as Row;
 }
 
+// Typing into an empty optional field and clearing it leaves "" where the saved row had no value; that is not an edit.
+function draftKey(draft: CvDraft) {
+  return JSON.stringify(draft, (_key, value) => value === "" || value === null ? undefined : value);
+}
+
 function cvFromDraft(profile: ResearcherProfile, draft: CvDraft): ScientificCurriculumVitae {
   const existing = profile.curriculumVitae ?? { cvSchemaVersion: 1 as const };
   const personalInfo = { ...(existing.personalInfo ?? {}) } as Record<string, unknown>;
@@ -339,7 +344,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
           {tab === "education" ? <CvEducationTab draft={draft} editable={editable && !busy} errors={fieldErrors} onChange={changeDraft} /> : null}
           {tab === "work" ? <CvWorkTab draft={draft} editable={editable && !busy} errors={fieldErrors} onChange={changeDraft} /> : null}
           {tab === "research" ? <CvResearchTab draft={draft} participations={profile.participations} editable={editable && !busy} errors={fieldErrors} onChange={changeDraft} /> : null}
-          {tab === "print" ? <CvPrintTab profile={profile} dirty={JSON.stringify(draft) !== JSON.stringify(draftFromProfile(profile))} /> : null}
+          {tab === "print" ? <CvPrintTab profile={profile} dirty={draftKey(draft) !== draftKey(draftFromProfile(profile))} /> : null}
         </div>
         {error ? <p className="state-message error" role="alert">{error}{errorTabs.filter((item) => item !== tab).map((item) => <button key={item} type="button" className="button" onClick={() => { focusFieldError.current = true; setTab(item); }}>Đi tới {tabLabels[item]}</button>)}</p> : null}
         {message ? <p className="state-message success" role="status">{message}</p> : null}
