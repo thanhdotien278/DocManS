@@ -18,6 +18,7 @@ Source of the shape: `DocManS-review/apps/api/src/researcher-profiles/researcher
 | smartCaSerial | no | SENSITIVE |
 | shareDataAgreement | yes | boolean, default true; SENSITIVE (consent) |
 | languages[] | no | `{language (req), proficiency, certificate}` |
+| otherResearchFields[] | no | Free-text main research fields typed beyond the catalog; non-empty strings (≤200 chars) |
 
 Scientist type is not stored in the CV: it is derived from `profileType` (INTERNAL = trong Học viện, EXTERNAL = ngoài Học viện). A legacy `scientistType` key is accepted and discarded.
 Existing profile columns (name, email, phone, position, military rank, rank/degree catalogs, research fields, expertise keywords) stay on the profile and are **not** duplicated into the JSON.

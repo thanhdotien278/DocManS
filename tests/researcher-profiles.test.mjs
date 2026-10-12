@@ -347,6 +347,7 @@ describe("Story 2.1 researcher profile contracts", () => {
       ["null work history", { ...validCv(), workHistory: null }, "curriculumVitae.workHistory"],
       ["null history list", { ...validCv(), educationHistory: null }, "curriculumVitae.educationHistory"],
       ["null personal list", { ...validCv(), personalInfo: { ...validCv().personalInfo, languages: null } }, "curriculumVitae.personalInfo.languages"],
+      ["blank other research field", validCv({ personalInfo: { otherResearchFields: ["Toán cao cấp", " "] } }), "curriculumVitae.personalInfo.otherResearchFields.1"],
       ["invalid year", { ...validCv(), educationHistory: [{ ...validCv().educationHistory[0], graduationYear: 1949 }] }, "curriculumVitae.educationHistory.0.graduationYear"],
       ["invalid date", { ...validCv(), personalInfo: { ...validCv().personalInfo, birthDate: "2020-02-30" } }, "curriculumVitae.personalInfo.birthDate"],
       ["unsafe avatar URL", validCv({ personalInfo: { avatarUrl: "javascript:alert(1)" } }), "curriculumVitae.personalInfo.avatarUrl"],
@@ -371,6 +372,7 @@ describe("Story 2.1 researcher profile contracts", () => {
     assert.deepEqual(updateResearcherProfilePipe.transform({ contextVersion: contextVersion(), expertiseKeywords: ["Y học", "y hoc", " Y  HỌC ", "Nội soi"] }).expertiseKeywords, ["Y học", "Nội soi"]);
     const normalized = updateMyProfilePipe.transform({ contextVersion: contextVersion(), curriculumVitae: validCv({ personalInfo: { gender: ` ${"Nữ".normalize("NFD")} ` } }) });
     assert.equal(normalized.curriculumVitae.personalInfo.gender, "Nữ");
+    assert.deepEqual(updateMyProfilePipe.transform({ contextVersion: contextVersion(), curriculumVitae: validCv({ personalInfo: { otherResearchFields: ["Toán cao cấp"] } }) }).curriculumVitae.personalInfo.otherResearchFields, ["Toán cao cấp"]);
   });
 
   it("validates Tab 4 publication metadata and contract limits", async () => {

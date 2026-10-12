@@ -2065,8 +2065,12 @@ summary:focus-visible {
   font-size: 11px;
   font-weight: 900;
 }
-.cv-portrait-field { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; align-items: center; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
-.cv-portrait-box { display: grid; width: 96px; aspect-ratio: 3 / 4; align-items: center; justify-items: center; overflow: hidden; border: 1px dashed var(--border); border-radius: var(--radius); background: var(--surface-muted); color: var(--text-secondary); font-size: 12px; }
+.cv-identity-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; min-width: 0; }
+.cv-portrait-field { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 16px; align-items: center; }
+.cv-researcher-type { display: grid; align-content: center; gap: 10px; border-left: 1px solid var(--border); padding-left: 24px; }
+.cv-researcher-type-card { display: flex; gap: 12px; align-items: center; border: 1px solid var(--border); border-radius: var(--radius); background: var(--primary-soft); padding: 14px; }
+.cv-researcher-type-card small { display: block; color: var(--text-secondary); }
+.cv-portrait-box { display: grid; width: 120px; aspect-ratio: 3 / 4; align-items: center; justify-items: center; overflow: hidden; border: 1px dashed var(--border); border-radius: var(--radius); background: var(--surface-muted); color: var(--text-secondary); font-size: 12px; }
 .cv-portrait-box img { width: 100%; height: 100%; object-fit: cover; }
 .cv-general-tab { display: grid; gap: 16px; }
 .cv-general-tab .section-card { box-shadow: none; }
@@ -2076,7 +2080,8 @@ summary:focus-visible {
 .cv-general-tab fieldset label { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
 .cv-general-tab input[type="radio"], .cv-general-tab input[type="checkbox"] { width: auto; min-height: auto; padding: 0; flex: 0 0 auto; }
 @media (max-width: 639px) {
-  .cv-portrait-field { grid-template-columns: minmax(0, 1fr); }
+  .cv-identity-grid, .cv-portrait-field { grid-template-columns: minmax(0, 1fr); }
+  .cv-researcher-type { border-left: 0; border-top: 1px solid var(--border); padding: 16px 0 0; }
 }
 .cv-workspace > .section-card:first-child { min-width: 0; }
 /* BM-06 paper: fixed A4 width on screen, scrolls sideways inside its frame on narrow viewports. */

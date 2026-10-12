@@ -41,3 +41,9 @@
     Replace the inline-editable publications table on Tab 4 with a read-only list and a right-side Drawer add/edit form, add publicationType, keep proofUrl as evidence link (CAP-3 UX).
   invoke_dev_with: >-
     Use bmad-build. Reuse components/ui/dialog.tsx; edit existing tests only. Real evidence file upload is deferred.
+- id: "13-9"
+  title: Bảng chỉ đọc với Drawer thêm/sửa cho mọi danh sách lý lịch khoa học
+  description: >-
+    Apply the 13.8 read-only table + right-side add/edit Drawer + delete-confirm pattern to every CV list section (languages, education, work history, IP, awards, projects; publications adopts the shared shell) and to the manager profile form's publications and participations lists.
+  invoke_dev_with: >-
+    Use bmad-build. Convert CvRowTable in place; share the Drawer frame and delete dialog with publications; edit existing tests only.

@@ -24,6 +24,7 @@ export type ScientificCurriculumVitaePersonalInfo = {
   smartCaSerial?: string | null;
   shareDataAgreement: boolean;
   languages?: ScientificCurriculumVitaeLanguage[];
+  otherResearchFields?: string[];
 };
 export type ScientificCurriculumVitaeEducation = { degreeLevel: string; major: string; institution: string; startYear?: number | null; graduationYear?: number | null; trainingMode?: string | null };
 export type ScientificCurriculumVitaeWorkItem = { period: string; organization: string; position?: string | null; workField?: string | null };

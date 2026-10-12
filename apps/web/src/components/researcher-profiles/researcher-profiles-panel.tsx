@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ScientificCvWorkspace } from "@/components/researcher-profiles/scientific-cv/cv-workspace";
 import { HistoryFacts, historyActions } from "@/components/researcher-profiles/scientific-cv/cv-history";
+import { CvRowTable } from "@/components/researcher-profiles/scientific-cv/cv-row-table";
 import { createResearcherProfile, getResearcherProfile, loadResearcherProfileCatalogs, loadResearcherProfiles, profileRequest, setResearcherProfileStatus, updateResearcherProfile, type Participation, type ProfileHistory, type Publication, type ResearcherProfile, type ResearcherProfileInput, type ResearcherProfileSummary, type ResearcherOrganization } from "@/lib/researcher-profiles-api";
 
 const emptyForm: ResearcherProfileInput = { fullName: "", profileType: "INTERNAL", managementOrganizationUnitId: "", researchFieldIds: [], expertiseKeywords: [], publications: [], participations: [] };
@@ -112,8 +113,6 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
     });
   }
 
-  function publicationField(index: number, key: keyof Publication, value: string | number | null) { setForm((current) => ({ ...current, publications: current.publications?.map((item, i) => i === index ? { ...item, [key]: value } : item) })); }
-  function participationField(index: number, key: keyof Participation, value: string) { setForm((current) => ({ ...current, participations: current.participations?.map((item, i) => i === index ? { ...item, [key]: value } : item) })); }
 
   const profileTabs: Array<{ id: ProfileTab; label: string }> = [
     { id: "profile", label: "Thông tin & nghiên cứu" },
@@ -175,28 +174,29 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
           </div>
           <label className="field"><span>Chuyên môn / từ khóa</span><input value={keywords} onChange={(event) => setKeywords(event.target.value)} placeholder="Phân cách bằng dấu phẩy" /></label>
           <label className="field"><span>Ghi chú</span><textarea value={form.contactNote ?? ""} onChange={(event) => field("contactNote", event.target.value)} /></label>
-          <h3>Danh sách công bố</h3>
-          {form.publications?.map((item, index) => <fieldset key={item.id ?? `new-${index}`} className="section-card"><legend>Công bố {index + 1}</legend><div className="form-grid two">
-            <label className="field"><span>Tên công bố *</span><input required value={item.title} onChange={(event) => publicationField(index, "title", event.target.value)} /></label>
-            <label className="field"><span>Tạp chí / nơi công bố</span><input value={item.venue ?? ""} onChange={(event) => publicationField(index, "venue", event.target.value)} /></label>
-            <label className="field"><span>Năm công bố</span><input type="number" min={1800} max={2200} value={item.publicationYear ?? ""} onChange={(event) => publicationField(index, "publicationYear", event.target.value ? Number(event.target.value) : null)} /></label>
-            <label className="field"><span>DOI</span><input value={item.doi ?? ""} onChange={(event) => publicationField(index, "doi", event.target.value)} /></label>
-            <label className="field"><span>Tác giả</span><input value={item.authors ?? ""} onChange={(event) => publicationField(index, "authors", event.target.value)} /></label>
-            <label className="field"><span>Trạng thái công bố</span><select value={item.status ?? "ACTIVE"} onChange={(event) => publicationField(index, "status", event.target.value)}><option value="ACTIVE">Hiển thị</option><option value="INACTIVE">Lưu lịch sử</option></select></label>
-            <label className="field"><span>Ghi chú công bố</span><textarea value={item.notes ?? ""} onChange={(event) => publicationField(index, "notes", event.target.value)} /></label>
-          </div>{!item.id ? <button type="button" className="button" onClick={() => setForm((current) => ({ ...current, publications: current.publications?.filter((_, i) => i !== index) }))}>Bỏ mục chưa lưu</button> : null}</fieldset>)}
-          <button type="button" className="button" onClick={() => setForm((current) => ({ ...current, publications: [...(current.publications ?? []), { title: "", status: "ACTIVE" }] }))}>Thêm công bố</button>
-          <h3>Quá trình tham gia nghiên cứu</h3><p className="record-meta">Thông tin tự khai, không cấp quyền trên đề tài. Các phiên bản trước được giữ trong lịch sử.</p>
-          {form.participations?.map((item, index) => <fieldset key={item.id ?? `new-${index}`} className="section-card"><legend>Tham gia {index + 1}</legend><div className="form-grid two">
-            <label className="field"><span>Tên đề tài / dự án *</span><input required value={item.projectTitle} onChange={(event) => participationField(index, "projectTitle", event.target.value)} /></label>
-            <label className="field"><span>Vai trò *</span><input required value={item.participationRole} onChange={(event) => participationField(index, "participationRole", event.target.value)} /></label>
-            <label className="field"><span>Cấp đề tài *</span><select value={item.level} onChange={(event) => participationField(index, "level", event.target.value)}>{Object.entries(levels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-            <label className="field"><span>Trạng thái tham gia</span><select value={item.status ?? "ACTIVE"} onChange={(event) => participationField(index, "status", event.target.value)}><option value="ACTIVE">Đang tham gia</option><option value="INACTIVE">Đã kết thúc</option></select></label>
-            <label className="field"><span>Ngày bắt đầu</span><input type="date" value={item.startsOn ?? ""} onChange={(event) => participationField(index, "startsOn", event.target.value)} /></label>
-            <label className="field"><span>Ngày kết thúc</span><input type="date" value={item.endsOn ?? ""} min={item.startsOn ?? undefined} onChange={(event) => participationField(index, "endsOn", event.target.value)} /></label>
-            <label className="field"><span>Ghi chú tham gia</span><textarea value={item.notes ?? ""} onChange={(event) => participationField(index, "notes", event.target.value)} /></label>
-          </div>{!item.id ? <button type="button" className="button" onClick={() => setForm((current) => ({ ...current, participations: current.participations?.filter((_, i) => i !== index) }))}>Bỏ mục chưa lưu</button> : null}</fieldset>)}
-          <button type="button" className="button" onClick={() => setForm((current) => ({ ...current, participations: [...(current.participations ?? []), { projectTitle: "", participationRole: "", level: "ACADEMY_INSTITUTIONAL", status: "ACTIVE" }] }))}>Thêm quá trình tham gia</button>
+          <CvRowTable<Publication> name="profile-publications" title="Danh sách công bố" rows={form.publications ?? []} columns={[
+            { key: "title", label: "Tên công bố *", header: "Tên", required: true, maxLength: 1000 },
+            { key: "publicationYear", label: "Năm công bố", header: "Năm", type: "number", min: 1800, max: 2200 },
+            { key: "venue", label: "Tạp chí / nơi công bố", header: "Tạp chí", maxLength: 1000 },
+            { key: "status", label: "Trạng thái công bố", header: "Trạng thái", required: true, options: [{ value: "ACTIVE", label: "Hiển thị" }, { value: "INACTIVE", label: "Lưu lịch sử" }] },
+            { key: "doi", label: "DOI", maxLength: 1000, table: false },
+            { key: "authors", label: "Tác giả", maxLength: 1000, table: false },
+            { key: "notes", label: "Ghi chú công bố", type: "textarea", maxLength: 4000, table: false }
+          ]} editable={editable && !busy} canDelete={(row) => !row.id} commitLabel="Lưu hồ sơ"
+            onChange={(rows) => setForm((current) => ({ ...current, publications: rows }))}
+            newRow={() => ({ title: "", status: "ACTIVE" })} addLabel="Thêm công bố" emptyMessage="Chưa có công bố." />
+          <CvRowTable<Participation> name="profile-participations" title="Quá trình tham gia nghiên cứu" hint="Thông tin tự khai, không cấp quyền trên đề tài. Các phiên bản trước được giữ trong lịch sử." rows={form.participations ?? []} columns={[
+            { key: "projectTitle", label: "Tên đề tài / dự án *", header: "Tên đề tài", required: true, maxLength: 500 },
+            { key: "participationRole", label: "Vai trò *", required: true, maxLength: 240 },
+            { key: "level", label: "Cấp đề tài *", header: "Cấp", required: true, options: Object.entries(levels).map(([value, label]) => ({ value, label })) },
+            { key: "status", label: "Trạng thái tham gia", header: "Trạng thái", required: true, options: [{ value: "ACTIVE", label: "Đang tham gia" }, { value: "INACTIVE", label: "Đã kết thúc" }] },
+            { key: "startsOn", label: "Ngày bắt đầu", type: "date", table: false },
+            { key: "endsOn", label: "Ngày kết thúc", header: "Từ ngày–Đến ngày", type: "date", cell: (row) => `${row.startsOn || "—"} – ${row.endsOn || "—"}` },
+            { key: "notes", label: "Ghi chú tham gia", type: "textarea", maxLength: 1000, table: false }
+          ]} editable={editable && !busy} canDelete={(row) => !row.id} commitLabel="Lưu hồ sơ"
+            validate={(row) => row.startsOn && row.endsOn && row.startsOn > row.endsOn ? { endsOn: "Ngày kết thúc không được trước Ngày bắt đầu." } : {}}
+            onChange={(rows) => setForm((current) => ({ ...current, participations: rows }))}
+            newRow={() => ({ projectTitle: "", participationRole: "", level: "ACADEMY_INSTITUTIONAL", status: "ACTIVE" })} addLabel="Thêm quá trình tham gia" emptyMessage="Chưa có quá trình tham gia." />
           <div className="button-row"><button className="button primary" type="submit">{busy ? "Đang lưu…" : "Lưu hồ sơ"}</button></div>
         </fieldset>
       </form>

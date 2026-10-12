@@ -21,32 +21,22 @@ const currentYear = new Date().getFullYear();
 const years = Array.from({ length: currentYear - 1949 }, (_, index) => String(currentYear - index)).map((value) => ({ value, label: value }));
 const trainingModes = ["Chính quy", "Vừa làm vừa học", "Liên kết quốc tế", "Khác"].map((value) => ({ value, label: value }));
 
-function replaceRow<Row extends object>(rows: Row[], index: number, key: keyof Row, value: string | number | null) {
-  return rows.map((row, rowIndex) => rowIndex === index ? { ...row, [key]: value } : row);
-}
-
-function removeRow<Row>(rows: Row[], index: number) {
-  return rows.filter((_, rowIndex) => rowIndex !== index);
-}
-
 export function CvEducationTab({ draft, editable, errors, onChange }: CvHistoryTabProps) {
   return <section className="section-card cv-tab-panel">
-    <h3>2. Quá trình đào tạo</h3>
-    {errors.educationHistory ? <small className="field-error" role="alert">{errors.educationHistory}</small> : null}
-    <CvRowTable name="educationHistory" rows={draft.educationHistory}
+    <CvRowTable name="educationHistory" title="2. Quá trình đào tạo" rows={draft.educationHistory}
       columns={[
-        { key: "degreeLevel", label: "Bậc đào tạo *", options: degreeLevels },
-        { key: "major", label: "Ngành đào tạo (Chuyên ngành) *", placeholder: "Y đa khoa, Dược, v.v." },
-        { key: "institution", label: "Cơ sở đào tạo *", placeholder: "Học viện Quân y, ĐH Y Hà Nội..." },
-        { key: "startYear", label: "Năm bắt đầu", type: "number", options: years },
-        { key: "graduationYear", label: "Năm tốt nghiệp", type: "number", options: years },
-        { key: "trainingMode", label: "Hình thức đào tạo", options: trainingModes }
+        { key: "degreeLevel", label: "Bậc đào tạo *", required: true, options: degreeLevels },
+        { key: "major", label: "Ngành đào tạo (Chuyên ngành) *", header: "Ngành", required: true, maxLength: 1000, placeholder: "Y đa khoa, Dược, v.v." },
+        { key: "institution", label: "Cơ sở đào tạo *", required: true, maxLength: 1000, placeholder: "Học viện Quân y, ĐH Y Hà Nội..." },
+        { key: "startYear", label: "Năm bắt đầu", type: "number", options: years, table: false },
+        { key: "graduationYear", label: "Năm tốt nghiệp", header: "Năm", type: "number", options: years, cell: (row) => row.startYear || row.graduationYear ? `${row.startYear ?? "—"} – ${row.graduationYear ?? "—"}` : "—" },
+        { key: "trainingMode", label: "Hình thức đào tạo", options: trainingModes, table: false }
       ]}
-      disabled={!editable}
-      onChange={(index, key, value) => onChange("educationHistory", replaceRow(draft.educationHistory, index, key, value))}
-      onAdd={() => onChange("educationHistory", [...draft.educationHistory, { degreeLevel: "", major: "", institution: "" }])}
-      onRemove={(index) => onChange("educationHistory", removeRow(draft.educationHistory, index))}
-      addLabel="+ Thêm quá trình đào tạo"
+      validate={(row) => row.startYear != null && row.graduationYear != null && row.startYear > row.graduationYear ? { graduationYear: "Năm tốt nghiệp không được trước Năm bắt đầu." } : {}}
+      editable={editable} error={errors.educationHistory}
+      onChange={(rows) => onChange("educationHistory", rows)}
+      newRow={() => ({ degreeLevel: "", major: "", institution: "" })}
+      addLabel="Thêm quá trình đào tạo"
       emptyMessage="Chưa có thông tin quá trình đào tạo." />
   </section>;
 }
@@ -58,20 +48,17 @@ export function CvWorkTab({ draft, editable, errors, onChange }: CvHistoryTabPro
       <textarea rows={4} value={draft.workSummary} disabled={!editable} onChange={(event) => onChange("workSummary", event.target.value)} />
       <small className="record-meta">Tóm tắt về công việc chính, lĩnh vực chuyên môn, kinh nghiệm R&amp;D, chuyển giao công nghệ, quản lý nhiệm vụ KH&amp;CN hoặc đổi mới sáng tạo.</small>
     </label>
-    <h4>Quá trình công tác</h4>
-    {errors.workItems ? <small className="field-error" role="alert">{errors.workItems}</small> : null}
-    <CvRowTable name="workItems" rows={draft.workItems}
+    <CvRowTable name="workItems" title="Quá trình công tác" heading="h4" rows={draft.workItems}
       columns={[
-        { key: "period", label: "Thời gian *", placeholder: "2015 - nay" },
-        { key: "organization", label: "Cơ quan / Đơn vị *" },
-        { key: "position", label: "Chức vụ" },
-        { key: "workField", label: "Lĩnh vực công tác" }
+        { key: "period", label: "Thời gian *", required: true, maxLength: 1000, placeholder: "2015 - nay" },
+        { key: "organization", label: "Cơ quan / Đơn vị *", header: "Cơ quan/Đơn vị", required: true, maxLength: 1000 },
+        { key: "position", label: "Chức vụ", maxLength: 1000 },
+        { key: "workField", label: "Lĩnh vực công tác", maxLength: 1000, table: false }
       ]}
-      disabled={!editable}
-      onChange={(index, key, value) => onChange("workItems", replaceRow(draft.workItems, index, key, value))}
-      onAdd={() => onChange("workItems", [...draft.workItems, { period: "", organization: "" }])}
-      onRemove={(index) => onChange("workItems", removeRow(draft.workItems, index))}
-      addLabel="+ Thêm quá trình công tác"
+      editable={editable} error={errors.workItems}
+      onChange={(rows) => onChange("workItems", rows)}
+      newRow={() => ({ period: "", organization: "" })}
+      addLabel="Thêm quá trình công tác"
       emptyMessage="Chưa có thông tin quá trình công tác." />
   </section>;
 }
