@@ -111,6 +111,20 @@ describe("Story 2.1 researcher profile UI source", () => {
     assert.match(tabs, /Năm bắt đầu/);
     assert.doesNotMatch(tabs, /thesisTitle/);
     assert.doesNotMatch(workspace, /Lịch sử thay đổi hồ sơ/);
+    // CV history lives in a Drawer opened from the header, only for viewers allowed to read history.
+    assert.match(workspace, /allowed\("researcher-profile\.history\.read"\) \? <button type="button" className="button" onClick=\{\(\) => setHistoryOpen\(true\)\}>Lịch sử thay đổi<\/button>/);
+    assert.match(workspace, /<CvHistoryDrawer profileId=\{profile\.id\}/);
+    const { HistoryChanges } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-history.tsx", { react, "react/jsx-runtime": jsxRuntime, "lucide-react": { X: () => null }, "@/components/ui/dialog": { Dialog: () => null }, "@/lib/researcher-profiles-api": { profileRequest: () => undefined } });
+    const historyMarkup = renderToStaticMarkup(jsxRuntime.jsx(HistoryChanges, {
+      before: { fullName: "A", publications: [{ title: "Cũ" }] },
+      after: { fullName: "A", publications: [{ title: "Mới" }], cvChanges: [{ section: "personalInfo", field: "bankAccount", changed: true }, { section: "personalInfo", field: "gender", changed: true }, { section: "workHistory", field: "workHistory", changed: true }, { section: "future", field: "x", changed: true }] }
+    }));
+    assert.match(historyMarkup, /<li>1\. Thông tin chung — Số tài khoản: đã thay đổi, giá trị được ẩn<\/li>/);
+    assert.match(historyMarkup, /<li>1\. Thông tin chung — Giới tính<\/li>/);
+    assert.match(historyMarkup, /<li>3\. Quá trình công tác &amp; Kinh nghiệm chuyên môn<\/li>/);
+    assert.match(historyMarkup, /<li>4\. Kinh nghiệm &amp; Thành tích nghiên cứu — Công bố khoa học<\/li>/);
+    assert.match(historyMarkup, /<li>future\.x<\/li>/);
+    assert.doesNotMatch(historyMarkup, /Họ tên|personalInfo\./);
   });
   it("wires four research tables to the single save and keeps profile participations read-only", async () => {
     const [workspace, research] = await Promise.all([

@@ -1,5 +1,5 @@
 # generated: 2026-07-29T17:30:00+07:00
-# last_updated: 2026-10-12T09:00:00+07:00
+# last_updated: 2026-10-13T09:00:00+07:00
 # project: DocManSystem
 # project_key: NOKEY
 # tracking_system: file-system
@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -135,7 +135,7 @@ development_status:
   13-3-education-and-work-history: done
   13-4-research-experience-and-achievements: review
   13-5-bm06-view-and-print-vi-en: review
-  13-6-cv-change-history: backlog
+  13-6-cv-change-history: review
   13-7-cv-demo-seed-and-no-fake-bootstrap: in-progress
   13-8-publications-drawer: review
   13-9-cv-list-sections-drawer: review

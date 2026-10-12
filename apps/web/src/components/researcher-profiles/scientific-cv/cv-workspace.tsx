@@ -7,6 +7,7 @@ import { CvGeneralTab, mergeKeywords, type CvGeneralDraft } from "./cv-general-t
 import { CvEducationTab, CvWorkTab, type CvHistoryDraft } from "./cv-history-tabs";
 import { CvResearchTab, type CvResearchDraft } from "./cv-research-tab";
 import { CvPrintTab } from "./cv-print-tab";
+import { CvHistoryDrawer } from "./cv-history";
 import { withScheme } from "./cv-row-table";
 
 type CvDraft = CvGeneralDraft & CvHistoryDraft & CvResearchDraft;
@@ -174,6 +175,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [conflict, setConflict] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const loadVersion = useRef(0);
   const [errorTabs, setErrorTabs] = useState<CvTab[]>([]);
   const focusFieldError = useRef(false);
@@ -188,6 +190,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
     setLoading(true);
     setProfile(null);
     setDraft(null);
+    setHistoryOpen(false);
     setError("");
     setMessage("");
     setFieldErrors({});
@@ -334,7 +337,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
 
   return <div className="grid cv-workspace">
     <section className="section-card">
-      <div className="section-header"><div><h2>{owner ? "Lý lịch khoa học của tôi" : profile.fullName}</h2><p className="record-meta">Chuẩn hóa theo Cổng thông tin Khoa học &amp; Công nghệ Quốc gia (STM - Bộ KH&amp;CN) &amp; Học viện Quân y</p></div><button type="button" className="button" onClick={() => setTab("print")}>Xem &amp; In Lý lịch khoa học</button></div>
+      <div className="section-header"><div><h2>{owner ? "Lý lịch khoa học của tôi" : profile.fullName}</h2><p className="record-meta">Chuẩn hóa theo Cổng thông tin Khoa học &amp; Công nghệ Quốc gia (STM - Bộ KH&amp;CN) &amp; Học viện Quân y</p></div><div className="button-row">{allowed("researcher-profile.history.read") ? <button type="button" className="button" onClick={() => setHistoryOpen(true)}>Lịch sử thay đổi</button> : null}<button type="button" className="button" onClick={() => setTab("print")}>Xem &amp; In Lý lịch khoa học</button></div></div>
       <div className="cv-tabs" role="tablist" aria-label="Các phần lý lịch khoa học">
         {tabs.map((item, index) => <button id={`cv-tab-${item.id}`} key={item.id} type="button" role="tab" className={`button ${tab === item.id ? "primary" : ""}`} aria-selected={tab === item.id} aria-controls={tab === item.id ? `cv-panel-${item.id}` : undefined} tabIndex={tab === item.id ? 0 : -1} onClick={() => setTab(item.id)} onKeyDown={(event) => { if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return; const nextIndex = (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length; setTab(tabs[nextIndex].id); document.getElementById(`cv-tab-${tabs[nextIndex].id}`)?.focus(); }}>{item.label}{item.count !== undefined ? <span className="cv-tab-badge" aria-label={`${item.count} dòng`}>{item.count}</span> : null}</button>)}
       </div>
@@ -352,5 +355,6 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
         <div className="button-row"><button className="button primary" type="submit" disabled={busy || !editable}>{busy ? "Đang lưu…" : "Lưu lý lịch khoa học"}</button>{!editable ? <span className="record-meta">Bạn chỉ có quyền xem lý lịch khoa học.</span> : null}</div>
       </form>
     </section>
+    {historyOpen ? <CvHistoryDrawer profileId={profile.id} onClose={() => setHistoryOpen(false)} /> : null}
   </div>;
 }
