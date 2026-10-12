@@ -119,7 +119,7 @@ export function CvPublicationsSection({ rows, editable, error, onChange }: CvPub
     </div>
 
     {drawer ? <Dialog className="form-dialog cv-drawer-dialog" label={drawer.index === null ? "Thêm công bố khoa học" : "Sửa công bố khoa học"} onClose={requestClose} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); requestClose(); } }}>
-      <form className="section-card" noValidate onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); submit(); }}>
+      <div className="section-card" role="group" aria-label={drawer.index === null ? "Thêm công bố khoa học" : "Sửa công bố khoa học"} onKeyDown={(event) => { if (event.key === "Enter" && event.target instanceof HTMLInputElement && event.target.id !== "cv-pub-authors" && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); } }}>
         <div className="section-header">
           <h3>{drawer.index === null ? "Thêm công bố khoa học" : "Sửa công bố khoa học"}</h3>
           <button type="button" className="icon-button" aria-label="Đóng" onClick={requestClose}><X size={16} aria-hidden="true" /></button>
@@ -170,10 +170,10 @@ export function CvPublicationsSection({ rows, editable, error, onChange }: CvPub
         <div className="field"><label htmlFor="cv-pub-notes">Ghi chú</label><textarea id="cv-pub-notes" rows={3} value={form.notes} onChange={(event) => set("notes", event.target.value)} /></div>
         <p className="field-hint">Lưu chỉ cập nhật bản nháp; bấm &quot;Lưu lý lịch khoa học&quot; để lưu chính thức.</p>
         <div className="button-row">
-          <button type="submit" className="button primary">Lưu</button>
+          <button type="button" className="button primary" onClick={submit}>Lưu</button>
           <button type="button" className="button" onClick={requestClose}>Hủy</button>
         </div>
-      </form>
+      </div>
     </Dialog> : null}
 
     {deleting !== null && rows[deleting] ? <Dialog className="form-dialog cv-cropper-dialog" label="Xóa công bố" aria-describedby="cv-pub-delete-text" onClose={() => setDeleting(null)}>
