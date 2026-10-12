@@ -30,13 +30,13 @@ degreeLevel (req, enum Đại học … Sau tiến sĩ), major (req), institutio
 `summary` (text) and `items[]`: period (req), organization (req), position, workField. (The review seed wrongly used an array; reject that shape.)
 
 ## Tab 4 — `researchExperience`
-- Profile `publications[]` (not a JSON researchExperience key): title (req), authors, publicationYear, venue, issnIsbn, doi, classification, proofUrl, notes — stored only in `researcher_profile_publications`. PATCH sends the full list only when changed; omitted saved rows are hard-deleted in the same transaction. INACTIVE rows are hidden and sent back unchanged.
+- Profile `publications[]` (not a JSON researchExperience key): title (req), authors, publicationYear, venue, issnIsbn, doi, publicationType, classification, proofUrl, notes — stored only in `researcher_profile_publications`. PATCH sends the full list only when changed; omitted saved rows are hard-deleted in the same transaction. INACTIVE rows are hidden and sent back unchanged.
 - intellectualProperty[]: title (req), authors, issueYear, patentNumber, issueAgency, proofUrl, notes.
 - awards[]: name (req), awardYear, endYear, grantingAgency, proofUrl, notes.
 - projects[]: projectTitle (req), managementAgency, code, role (req), period, status, notes — stored only in `curriculumVitae.researchExperience.projects` (no migration).
 
 Non-SUPERSEDED profile `participations` are read-only on Tab 4 (title, role, level, dates, status); they are already declared in the researcher profile and must not be re-entered.
-Publication classification options: ISI/Scopus, Quốc tế khác, Trong nước (HĐGSNN), Báo cáo hội nghị, Sách/Chuyên khảo, Khác. Project role options: Chủ nhiệm, Thư ký, Thành viên chính, Thành viên. Project status options: Đang thực hiện, Đã nghiệm thu, Tạm dừng. These are free text; unknown stored values remain visible. Year dropdowns run from current year down to 1950.
+Publication type options (`publicationType`, nullable): Bài báo khoa học, Báo cáo hội nghị, Sách/Chuyên khảo, Khác. `authors` stays one string, names joined by ", " (the UI edits it as name bubbles and splits legacy values on commas/semicolons). Evidence is the `proofUrl` link only; file upload for publications is deferred. Publication classification options: ISI/Scopus, Quốc tế khác, Trong nước (HĐGSNN), Báo cáo hội nghị, Sách/Chuyên khảo, Khác. Project role options: Chủ nhiệm, Thư ký, Thành viên chính, Thành viên. Project status options: Đang thực hiện, Đã nghiệm thu, Tạm dừng. These are free text; unknown stored values remain visible. Year dropdowns run from current year down to 1950.
 
 ## Limits
 Each list ≤ 200 rows; each string ≤ 1000 (notes ≤ 4000); document ≤ 256 KB.

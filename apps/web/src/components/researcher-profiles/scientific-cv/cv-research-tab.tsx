@@ -1,5 +1,6 @@
 "use client";
 
+import { CvPublicationsSection } from "./cv-publications-section";
 import { CvRowTable } from "./cv-row-table";
 import type { Participation, Publication, ScientificCurriculumVitaeIntellectualProperty, ScientificCurriculumVitaeAward, ScientificCurriculumVitaeProject } from "@/lib/researcher-profiles-api";
 
@@ -20,7 +21,6 @@ type CvResearchTabProps = {
 
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: currentYear - 1949 }, (_, index) => String(currentYear - index)).map((value) => ({ value, label: value }));
-const classifications = ["ISI/Scopus", "Quốc tế khác", "Trong nước (HĐGSNN)", "Báo cáo hội nghị", "Sách/Chuyên khảo", "Khác"].map((value) => ({ value, label: value }));
 const roles = ["Chủ nhiệm", "Thư ký", "Thành viên chính", "Thành viên"].map((value) => ({ value, label: value }));
 const statuses = ["Đang thực hiện", "Đã nghiệm thu", "Tạm dừng"].map((value) => ({ value, label: value }));
 export const levels = { ACADEMY_INSTITUTIONAL: "Cấp Học viện / cơ sở", MINISTRY: "Cấp Bộ", OTHER: "Cấp khác" };
@@ -36,25 +36,7 @@ function removeRow<Row>(rows: Row[], index: number) {
 export function CvResearchTab({ draft, participations, editable, errors, onChange }: CvResearchTabProps) {
   const visibleParticipations = participations.filter((row) => row.status !== "SUPERSEDED");
   return <div className="grid cv-tab-panel">
-    <section className="section-card">
-      <h3>Công bố khoa học</h3>
-      {errors.publications ? <small className="field-error" role="alert">{errors.publications}</small> : null}
-      <CvRowTable name="publications" rows={draft.publications} columns={[
-        { key: "authors", label: "Tác giả" },
-        { key: "publicationYear", label: "Năm công bố", type: "number", options: years },
-        { key: "title", label: "Tên công trình / Bài báo *" },
-        { key: "venue", label: "Tạp chí / NXB" },
-        { key: "issnIsbn", label: "ISSN/ISBN" },
-        { key: "doi", label: "DOI" },
-        { key: "classification", label: "Phân loại", options: classifications },
-        { key: "proofUrl", label: "Minh chứng" },
-        { key: "notes", label: "Ghi chú", type: "textarea" }
-      ]} disabled={!editable}
-        onChange={(index, key, value) => onChange("publications", replaceRow(draft.publications, index, key, value))}
-        onAdd={() => onChange("publications", [...draft.publications, { title: "", status: "ACTIVE" }])}
-        onRemove={(index) => onChange("publications", removeRow(draft.publications, index))}
-        addLabel="+ Thêm công bố khoa học" />
-    </section>
+    <CvPublicationsSection rows={draft.publications} editable={editable} error={errors.publications} onChange={(rows) => onChange("publications", rows)} />
     <section className="section-card">
       <h3>Sở hữu trí tuệ</h3>
       {errors.intellectualProperty ? <small className="field-error" role="alert">{errors.intellectualProperty}</small> : null}

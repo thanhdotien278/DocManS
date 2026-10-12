@@ -43,7 +43,7 @@ type ProfileWithRelations = {
   credentialDeliveries: Array<{ id: string; status: string; recipientEmail: string; expiresAt: Date | null; createdAt: Date }>;
   linkedUserId: string | null;
   linkedUser: { id: string; username: string | null; displayName: string; status: string; systemRole: string | null; mustChangePassword: boolean; credentialEmail: string | null } | null;
-  publications: Array<{ id: string; title: string; venue: string | null; publicationYear: number | null; doi: string | null; authors: string | null; issnIsbn: string | null; classification: string | null; proofUrl: string | null; status: string; notes: string | null; createdAt: Date; updatedAt: Date }>;
+  publications: Array<{ id: string; title: string; venue: string | null; publicationYear: number | null; doi: string | null; authors: string | null; issnIsbn: string | null; publicationType: string | null; classification: string | null; proofUrl: string | null; status: string; notes: string | null; createdAt: Date; updatedAt: Date }>;
   participations: Array<{ id: string; projectTitle: string; participationRole: string; level: string; startsOn: Date | null; endsOn: Date | null; status: string; notes: string | null; sourceType: string; sourceRecordId: string | null; supersedesId: string | null; createdAt: Date; updatedAt: Date }>;
 };
 
@@ -573,6 +573,7 @@ export class ResearcherProfilesService {
       doi: input.doi ?? null,
       authors: input.authors ?? null,
       issnIsbn: input.issnIsbn ?? null,
+      publicationType: input.publicationType ?? null,
       classification: input.classification ?? null,
       proofUrl: input.proofUrl ?? null,
       status: input.status ?? "ACTIVE",

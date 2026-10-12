@@ -35,3 +35,9 @@
   description: >-
     Make seeded profile CVs conform to the contract and stop ensureProfileForResearcher-style bootstrap from fabricating personal data (CAP-7).
   done_checkpoint: true
+- id: "13-8"
+  title: Danh sách công bố khoa học với Drawer thêm/sửa
+  description: >-
+    Replace the inline-editable publications table on Tab 4 with a read-only list and a right-side Drawer add/edit form, add publicationType, keep proofUrl as evidence link (CAP-3 UX).
+  invoke_dev_with: >-
+    Use bmad-build. Reuse components/ui/dialog.tsx; edit existing tests only. Real evidence file upload is deferred.
