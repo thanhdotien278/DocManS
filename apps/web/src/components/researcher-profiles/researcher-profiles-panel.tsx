@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ScientificCvWorkspace } from "@/components/researcher-profiles/scientific-cv/cv-workspace";
-import { HistoryFacts, historyActions } from "@/components/researcher-profiles/scientific-cv/cv-history";
+import { HistoryChanges, HistoryFacts, historyActions } from "@/components/researcher-profiles/scientific-cv/cv-history";
 import { CvRowTable } from "@/components/researcher-profiles/scientific-cv/cv-row-table";
 import { createResearcherProfile, getResearcherProfile, loadResearcherProfileCatalogs, loadResearcherProfiles, profileRequest, setResearcherProfileStatus, updateResearcherProfile, type Participation, type ProfileHistory, type Publication, type ResearcherProfile, type ResearcherProfileInput, type ResearcherProfileSummary, type ResearcherOrganization } from "@/lib/researcher-profiles-api";
 
@@ -216,7 +216,7 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
     {editing && profileTab === "history" ? <section className="section-card" id="profile-panel-history" role="tabpanel" aria-labelledby="profile-tab-history"><h2>Lịch sử hồ sơ</h2>
       {editing.participations.filter((item) => item.status === "SUPERSEDED").map((item) => <details key={item.id}><summary>{item.projectTitle} — phiên bản trước</summary><p>{item.participationRole} · {levels[item.level]} · {item.startsOn || "—"} – {item.endsOn || "—"}</p><p>{item.notes}</p></details>)}
       <button className="button" disabled={busy || !allowed("researcher-profile.history.read")} onClick={() => void perform(async () => setHistory((await profileRequest<{ history: ProfileHistory[] }>(`/${editing.id}/history`)).history))}>Xem lịch sử thay đổi</button>
-      {history?.map((item) => <details key={item.id}><summary>{new Date(item.createdAt).toLocaleString("vi-VN")} · {historyActions[item.action] ?? item.action}</summary><p>{item.reason}</p><HistoryFacts label="Trước" facts={item.beforeFacts} /><HistoryFacts label="Sau" facts={item.afterFacts} /></details>)}
+      {history?.map((item) => <details key={item.id}><summary>{new Date(item.createdAt).toLocaleString("vi-VN")} · {historyActions[item.action] ?? item.action}</summary><p>{item.reason}</p><HistoryChanges before={item.beforeFacts} after={item.afterFacts} /><HistoryFacts label="Trước" facts={item.beforeFacts} /><HistoryFacts label="Sau" facts={item.afterFacts} /></details>)}
       {history?.length === 0 ? <p>Chưa có lịch sử thay đổi.</p> : null}
     </section> : null}
     {editing && !self && profileTab === "cv" ? <section id="profile-panel-cv" role="tabpanel" aria-labelledby="profile-tab-cv"><ScientificCvWorkspace target={editing.id} onSaved={(profile) => { select(profile); setProfileTab("cv"); }} /></section> : null}
