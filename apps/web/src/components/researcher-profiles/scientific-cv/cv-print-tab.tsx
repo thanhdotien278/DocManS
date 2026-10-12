@@ -17,7 +17,7 @@ const labels = {
     languages: "10. Ngoại ngữ sử dụng:",
     education: "II. QUÁ TRÌNH ĐÀO TẠO", no: "TT", degree: "Bậc đào tạo", major: "Ngành đào tạo (Chuyên ngành)", institution: "Cơ sở đào tạo", years: "Thời gian", mode: "Hình thức đào tạo", noEducation: "Chưa kê khai quá trình đào tạo.",
     work: "III. QUÁ TRÌNH CÔNG TÁC VÀ KINH NGHIỆM CHUYÊN MÔN", summary: "1. Tóm tắt hoạt động chuyên môn:", workItems: "2. Quá trình công tác:", period: "Thời gian", workOrganization: "Cơ quan / Đơn vị công tác", position: "Chức vụ", workField: "Lĩnh vực công tác", noWork: "Chưa kê khai quá trình công tác.",
-    research: "IV. KINH NGHIỆM VÀ THÀNH TÍCH NGHIÊN CỨU", publications: "1. Công bố khoa học", authors: "Tác giả", year: "Năm", pubTitle: "Tên công trình / Bài báo", venue: "Tạp chí / NXB", issn: "ISSN/ISBN, DOI", classification: "Phân loại", proof: "Minh chứng", noPublications: "Chưa có công bố khoa học.",
+    research: "IV. KINH NGHIỆM VÀ THÀNH TÍCH NGHIÊN CỨU", publications: "1. Công bố khoa học", authors: "Tác giả", year: "Năm", pubTitle: "Tên công trình", pubYear: "Năm công bố", venue: "Tên tạp chí", noPublications: "Chưa có công bố khoa học.",
     ip: "2. Văn bằng bảo hộ quyền sở hữu trí tuệ", ipTitle: "Tên văn bằng / Sáng chế", patentNumber: "Số bằng", issueAgency: "Cơ quan cấp", noIp: "Chưa có văn bằng sở hữu trí tuệ.",
     awards: "3. Giải thưởng KH&CN, danh hiệu chuyên môn", awardName: "Tên giải thưởng / Danh hiệu", grantingAgency: "Cơ quan trao tặng", noAwards: "Chưa có giải thưởng / danh hiệu.",
     projects: "4. Chủ nhiệm / tham gia nhiệm vụ, chương trình KH&CN", projectTitle: "Tên nhiệm vụ, Chương trình", agency: "Cơ quan quản lý / Cấp", code: "Mã số", role: "Vai trò", status: "Tình trạng", noProjects: "Chưa có nhiệm vụ KH&CN.", levels, active: "Đang tham gia", inactive: "Đã kết thúc",
@@ -34,7 +34,7 @@ const labels = {
     languages: "10. Languages:",
     education: "II. EDUCATION", no: "No.", degree: "Degree", major: "Major", institution: "Institution", years: "Years", mode: "Training mode", noEducation: "No education history recorded.",
     work: "III. EMPLOYMENT AND PROFESSIONAL EXPERIENCE", summary: "1. Professional summary:", workItems: "2. Employment history:", period: "Period", workOrganization: "Organization", position: "Position", workField: "Field of work", noWork: "No employment history recorded.",
-    research: "IV. RESEARCH EXPERIENCE AND ACHIEVEMENTS", publications: "1. Scientific publications", authors: "Authors", year: "Year", pubTitle: "Title", venue: "Journal / Publisher", issn: "ISSN/ISBN, DOI", classification: "Classification", proof: "Evidence", noPublications: "No publications recorded.",
+    research: "IV. RESEARCH EXPERIENCE AND ACHIEVEMENTS", publications: "1. Scientific publications", authors: "Authors", year: "Year", pubTitle: "Title", pubYear: "Year", venue: "Journal", noPublications: "No publications recorded.",
     ip: "2. Intellectual property", ipTitle: "Patent / Certificate title", patentNumber: "Number", issueAgency: "Issuing agency", noIp: "No intellectual property recorded.",
     awards: "3. Awards and honours", awardName: "Award / Honour", grantingAgency: "Granting agency", noAwards: "No awards recorded.",
     projects: "4. Research projects and programmes", projectTitle: "Project / Programme title", agency: "Managing agency / Level", code: "Code", role: "Role", status: "Status", noProjects: "No research projects recorded.", levels: { ACADEMY_INSTITUTIONAL: "Academy / institutional level", MINISTRY: "Ministry level", OTHER: "Other level" }, active: "Ongoing", inactive: "Completed",
@@ -142,8 +142,8 @@ export function CvPrintTab({ profile, dirty }: CvPrintTabProps) {
 
         <h3>{L.research}</h3>
         <h4>{L.publications}</h4>
-        <Table head={[L.no, L.authors, L.year, L.pubTitle, L.venue, L.issn, L.classification, L.proof]} empty={L.noPublications}
-          rows={profile.publications.filter((item) => item.status !== "INACTIVE").map((item) => [show(item.authors), show(item.publicationYear), item.title, show(item.venue), joined([item.issnIsbn, item.doi && `DOI: ${item.doi}`], "; "), show(item.classification), show(item.proofUrl)])} />
+        <Table head={[L.no, L.pubTitle, L.pubYear, L.venue]} empty={L.noPublications}
+          rows={profile.publications.filter((item) => item.status !== "INACTIVE").map((item) => [item.title, show(item.publicationYear), show(item.venue)])} />
         <h4>{L.ip}</h4>
         <Table head={[L.no, L.ipTitle, L.authors, L.year, L.patentNumber, L.issueAgency]} empty={L.noIp}
           rows={(research?.intellectualProperty ?? []).map((item) => [item.title, show(item.authors), show(item.issueYear), show(item.patentNumber), show(item.issueAgency)])} />

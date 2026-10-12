@@ -219,8 +219,8 @@ describe("Story 2.1 researcher profile UI source", () => {
       curriculumVitae: { cvSchemaVersion: 1, note: "Ghi chú đã lưu", personalInfo: { avatarUrl: "/portrait.jpg", englishAcademicTitle: "Prof. Dr.", gender: "Nữ", idNumber: "079080001234", idIssueDate: "2021-04-10", idIssuePlace: "Cục Cảnh sát QLHC", organization: "Khoa Nội", birthDate: "1980-05-07", shareDataAgreement: true, bankAccount: "1234567890", bankName: "Ngân hàng Quân đội", bankBranch: "Chi nhánh Hà Đông", smartCaSerial: "SCA-9" }, researchExperience: { intellectualProperty: [{ title: "Sáng chế X" }], awards: [{ name: "Giải Y", awardYear: 2020, endYear: 2021 }], projects: [{ projectTitle: "Đề tài CV", role: "Chủ nhiệm" }] } }
     };
     const vi = await render("VI", saved, true);
-    for (const text of ["MẪU BM-06", "NGUYỄN VĂN A", "07/05/1980", "Khoa Nội", "Bài báo hiện hành", "DOI: 10.1/x", "Sáng chế X", "2020 – 2021", "Đề tài CV", "Nhiệm vụ cấp Bộ", "Cấp Bộ", "01/03/2020 – —", "Đã kết thúc", "Đang tham gia", "Ghi chú đã lưu", "Các thay đổi chưa lưu không được hiển thị"]) assert.ok(vi.includes(text), text);
-    for (const text of ["Bài báo đã ẩn", "Nhiệm vụ đã thay thế"]) assert.ok(!vi.includes(text), text);
+    for (const text of ["MẪU BM-06", "NGUYỄN VĂN A", "07/05/1980", "Khoa Nội", "Bài báo hiện hành", "Tên công trình", "Năm công bố", "Tên tạp chí", "Sáng chế X", "2020 – 2021", "Đề tài CV", "Nhiệm vụ cấp Bộ", "Cấp Bộ", "01/03/2020 – —", "Đã kết thúc", "Đang tham gia", "Ghi chú đã lưu", "Các thay đổi chưa lưu không được hiển thị"]) assert.ok(vi.includes(text), text);
+    for (const text of ["Bài báo đã ẩn", "Nhiệm vụ đã thay thế", "DOI: 10.1/x", "Phân loại"]) assert.ok(!vi.includes(text), text);
     assert.ok(vi.indexOf("Đề tài CV") < vi.indexOf("Nhiệm vụ cấp Bộ"));
     assert.match(vi, /<img src="\/portrait\.jpg"/);
     assert.ok(!vi.includes("Prof. Dr."));
