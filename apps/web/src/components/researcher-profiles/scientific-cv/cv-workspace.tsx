@@ -5,6 +5,7 @@ import { useSession } from "@/components/auth/session-provider";
 import { getResearcherProfile, loadResearcherProfileCatalogs, ProfileRequestError, updateResearcherProfile, type ResearcherProfile, type ResearcherProfileInput, type ScientificCurriculumVitae } from "@/lib/researcher-profiles-api";
 import { CvGeneralTab, mergeKeywords, type CvGeneralDraft } from "./cv-general-tab";
 import { CvEducationTab, CvWorkTab, type CvHistoryDraft } from "./cv-history-tabs";
+import { withScheme } from "./cv-publications-section";
 import { CvResearchTab, type CvResearchDraft } from "./cv-research-tab";
 import { CvPrintTab } from "./cv-print-tab";
 import { CvRowEditing } from "./cv-row-table";
@@ -61,9 +62,9 @@ function draftFromProfile(profile: ResearcherProfile): CvDraft {
   };
 }
 
-// Trims strings and drops empty optional values so rows match the API contract.
+// Trims strings, adds https:// to scheme-less proofUrl, and drops empty optional values so rows match the API contract.
 function compactRow<Row extends object>(row: Row): Row {
-  const entries = Object.entries(row).map(([key, value]) => [key, typeof value === "string" ? value.trim() : value] as const);
+  const entries = Object.entries(row).map(([key, value]) => [key, typeof value === "string" ? (key === "proofUrl" ? withScheme(value) : value.trim()) : value] as const);
   return Object.fromEntries(entries.filter(([, value]) => value !== "" && value !== null && value !== undefined)) as Row;
 }
 
