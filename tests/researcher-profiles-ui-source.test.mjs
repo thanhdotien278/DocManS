@@ -13,7 +13,7 @@ const loadFixture = async (path, dependencies = {}) => {
   vm.runInNewContext(ts.transpileModule(source, { fileName: path, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, {
     exports, require: (name) => {
       if (name in dependencies) return dependencies[name];
-      if (name === "lucide-react") return {}; // Icons do not affect navigation destinations.
+      if (name === "lucide-react") return new Proxy({}, { get: () => () => null }); // Icons do not affect navigation destinations.
       throw new Error(`Unexpected import: ${name}`);
     }
   });
@@ -69,8 +69,13 @@ describe("Story 2.1 researcher profile UI source", () => {
     for (const field of ["fullName", "gender", "idNumber", "contactEmail", "organization", "researchFieldIds"]) assert.match(workspace, new RegExp(`errors\\.${field}\\s*=`));
     assert.match(source, /researcher-profile\.cv\.update/);
     assert.match(source, /CONTEXT_VERSION_MISMATCH/);
-    assert.match(source, /<th>TT<\/th>/);
-    assert.match(source, /aria-label={`Xóa dòng \$\{index \+ 1\}`}/);
+    // List sections are read-only tables edited through the shared Drawer; Enter in the Drawer never submits the outer form.
+    assert.match(rowTable, /export function CvDrawer/);
+    assert.match(rowTable, /export function CvDeleteDialog/);
+    assert.match(rowTable, /aria-label={`Xóa dòng \$\{index \+ 1\}: \$\{summary\(row\)\}`}/);
+    assert.match(rowTable, /event\.key !== "Enter"[\s\S]*event\.preventDefault\(\);\s*if \(!event\.nativeEvent\.isComposing\) onSave\(\)/);
+    assert.doesNotMatch(rowTable, /<form/);
+    assert.match(managerPanel, /<CvRowTable<Participation>[\s\S]*editable=\{editable && !busy\} canDelete=\{\(row\) => !row\.id\}/);
     assert.match(ownerPage, /ScientificCvWorkspace target="my-profile"/);
     assert.match(managerPanel, /allowed\("researcher-profile\.cv\.read"\)/);
     assert.match(managerPanel, /<ScientificCvWorkspace target=\{editing\.id\}/);
@@ -119,7 +124,7 @@ describe("Story 2.1 researcher profile UI source", () => {
       assert.match(research, new RegExp(`errors\\.${section}`));
       assert.match(research, new RegExp(`rows=\\{draft\\.${section}\\}`));
     }
-    assert.equal((research.match(/disabled=\{!editable\}/g) ?? []).length, 3);
+    assert.equal((research.match(/editable=\{editable\} error=/g) ?? []).length, 4);
     assert.match(research, /<CvPublicationsSection rows=\{draft\.publications\} editable=\{editable\}/);
     assert.match(workspace, /JSON.stringify\(draft.publications\) !== JSON.stringify\(previous.publications\)/);
     assert.match(workspace, /input.publications = \[\.\.\.draft.publications.map\(compactRow\), \.\.\.profile.publications.filter/);
@@ -130,8 +135,9 @@ describe("Story 2.1 researcher profile UI source", () => {
     assert.match(research, /<th>Tình trạng<\/th>/);
     assert.match(research, /Các nhiệm vụ đã khai trong hồ sơ nhà khoa học\. Không nhập lại/);
     assert.match(research, /<td>\{row.participationRole\}<\/td>/);
-    const { CvRowTable } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-row-table.tsx", { react, "react/jsx-runtime": jsxRuntime });
-    const { CvPublicationsSection } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-publications-section.tsx", { react, "react/jsx-runtime": jsxRuntime, "@/components/ui/dialog": { Dialog: () => null }, "lucide-react": { Pencil: () => null, Plus: () => null, Trash2: () => null, X: () => null } });
+    const rowTable = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-row-table.tsx", { react, "react/jsx-runtime": jsxRuntime, "@/components/ui/dialog": { Dialog: () => null } });
+    const { CvRowTable } = rowTable;
+    const { CvPublicationsSection } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-publications-section.tsx", { react, "react/jsx-runtime": jsxRuntime, "./cv-row-table": rowTable, "lucide-react": { Pencil: () => null, Plus: () => null, Trash2: () => null } });
     const { CvResearchTab } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-research-tab.tsx", { "react/jsx-runtime": jsxRuntime, "./cv-row-table": { CvRowTable }, "./cv-publications-section": { CvPublicationsSection } });
     const publication = { title: "Bài báo", publicationType: "Báo cáo hội nghị", authors: "A. Nguyễn, B. Trần", doi: "10.1000/x", proofUrl: "https://example.test/p" };
     const markup = renderToStaticMarkup(jsxRuntime.jsx(CvResearchTab, {
@@ -157,19 +163,32 @@ describe("Story 2.1 researcher profile UI source", () => {
     const unsafeMarkup = renderToStaticMarkup(jsxRuntime.jsx(CvPublicationsSection, { rows: [{ title: "Bài lạ", doi: "javascript:alert(1)", proofUrl: "ftp://x" }], editable: false, onChange: () => undefined }));
     assert.doesNotMatch(unsafeMarkup, /href=/);
     assert.match(unsafeMarkup, /javascript:alert\(1\)/);
-    // Saved rows render as text with a "Sửa" action instead of inputs.
+    // Every list is a read-only table; without edit permission no Add/Edit/Delete control renders.
     assert.match(markup, /<td>Vai trò cũ<\/td>/);
-    assert.match(markup, /aria-label="Sửa dòng 1"/);
-    assert.doesNotMatch(markup, /aria-label="Tên công trình/);
     assert.match(markup, /role="alert">Cần nhập Vai trò/);
-    for (const control of markup.matchAll(/<(?:input|select|textarea|button)\b[^>]*>/g)) assert.match(control[0], /disabled=""/);
+    assert.doesNotMatch(markup, /<(?:input|select|textarea|button)\b/);
+    assert.doesNotMatch(markup, /<th>Thao tác<\/th>/);
+    const editableResearch = renderToStaticMarkup(jsxRuntime.jsx(CvResearchTab, {
+      draft: { publications: [], intellectualProperty: [{ title: "Sáng chế", proofUrl: "javascript:x" }], awards: [], projects: [{ projectTitle: "Đề tài", role: "Chủ nhiệm", status: "Đã nghiệm thu", notes: "Chỉ trong Drawer" }] },
+      participations: [], editable: true, errors: {}, onChange: () => undefined
+    }));
+    for (const label of ["Thêm sở hữu trí tuệ", "Thêm giải thưởng / danh hiệu", "Thêm nhiệm vụ / chương trình"]) assert.match(editableResearch, new RegExp(`<button type="button" class="button primary">${label}</button>`));
+    assert.match(editableResearch, /aria-label="Sửa dòng 1: Đề tài"/);
+    assert.match(editableResearch, /aria-label="Xóa dòng 1: Đề tài"/);
+    assert.match(editableResearch, /<th>Tên<\/th><th>Vai trò<\/th><th>Thời gian<\/th><th>Tình trạng<\/th><th>Thao tác<\/th>/);
+    assert.match(editableResearch, /<td>javascript:x<\/td>/);
+    assert.doesNotMatch(editableResearch, /<input|Chỉ trong Drawer/);
+    // The panel rule: saved rows (with id) cannot be deleted.
+    const panelMarkup = renderToStaticMarkup(jsxRuntime.jsx(CvRowTable, { name: "p", title: "Danh sách công bố", rows: [{ id: "saved", title: "Đã lưu" }, { title: "Mới" }], columns: [{ key: "title", label: "Tên công bố *", required: true }], editable: true, canDelete: (row) => !row.id, onChange: () => undefined, newRow: () => ({ title: "" }) }));
+    assert.doesNotMatch(panelMarkup, /Xóa dòng 1/);
+    assert.match(panelMarkup, /aria-label="Xóa dòng 2: Mới"/);
   });
 
   it("renders the saved CV as a BM-06 paper in Vietnamese and English and hides it without cv.read", async () => {
     const workspace = await readFile("apps/web/src/components/researcher-profiles/scientific-cv/cv-workspace.tsx", "utf8");
     assert.match(workspace, /<CvPrintTab profile=\{profile\} dirty=/);
     assert.doesNotMatch(workspace, /PlaceholderTab/);
-    const { CvRowTable } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-row-table.tsx", { react, "react/jsx-runtime": jsxRuntime });
+    const { CvRowTable } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-row-table.tsx", { react, "react/jsx-runtime": jsxRuntime, "@/components/ui/dialog": { Dialog: () => null } });
     const generalTab = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-general-tab.tsx", { react, "react/jsx-runtime": jsxRuntime, "./cv-portrait-cropper": {}, "./cv-row-table": { CvRowTable } });
     const render = async (lang, profile, dirty = false) => {
       const { CvPrintTab } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-print-tab.tsx", {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Globe, Landmark, Trash2, Upload } from "lucide-react";
 import { CvPortraitCropper } from "./cv-portrait-cropper";
 import { CvRowTable } from "./cv-row-table";
 import type { ResearcherCatalogItem, ScientificCurriculumVitaeLanguage } from "@/lib/researcher-profiles-api";
@@ -28,6 +29,7 @@ export type CvGeneralDraft = {
   academicDegreeCatalogItemId: string;
   englishAcademicTitle: string;
   researchFieldIds: string[];
+  otherResearchFields: string[];
   expertiseKeywords: string[];
   keywordInput: string;
   languages: ScientificCurriculumVitaeLanguage[];
@@ -85,6 +87,22 @@ export function CvGeneralTab({ draft, catalogs, editable, owner, profileType, ha
     onChange("researchFieldIds", draft.researchFieldIds.includes(id) ? draft.researchFieldIds.filter((value) => value !== id) : [...draft.researchFieldIds, id]);
   }
 
+  // Typed text becomes a bubble: a catalog name selects that item, anything else is kept as a free-text field.
+  function commitResearchFields(text: string) {
+    let ids = draft.researchFieldIds;
+    const others: string[] = [];
+    for (const raw of text.split(",")) {
+      const name = raw.trim();
+      if (!name) continue;
+      const match = catalogs.researchFields.find((item) => item.name.toLowerCase() === name.toLowerCase());
+      if (match) ids = ids.includes(match.id) ? ids : [...ids, match.id];
+      else others.push(name);
+    }
+    if (ids !== draft.researchFieldIds) onChange("researchFieldIds", ids);
+    const merged = mergeKeywords(draft.otherResearchFields, others.join(","));
+    if (merged.length !== draft.otherResearchFields.length) onChange("otherResearchFields", merged);
+  }
+
   function pickPortrait(file: File | undefined) {
     if (portraitInput.current) portraitInput.current.value = "";
     if (!file) return;
@@ -103,30 +121,28 @@ export function CvGeneralTab({ draft, catalogs, editable, owner, profileType, ha
     onChange("keywordInput", parts.at(-1) ?? "");
   }
 
-  function updateLanguage(index: number, key: keyof ScientificCurriculumVitaeLanguage & string, value: string | number | null) {
-    onChange("languages", draft.languages.map((row, rowIndex) => rowIndex === index ? { ...row, [key]: value === null ? null : String(value) } : row));
-  }
-
   return <div className="cv-general-tab">
     <section className="section-card">
       <h3>A. Loại nhà khoa học &amp; Ảnh đại diện (3x4)</h3>
-      <div className="form-grid">
+      <div className="cv-identity-grid">
         <div className="cv-portrait-field">
           <div className="cv-portrait-box" aria-label="Khung xem trước ảnh chân dung 3x4">{PORTRAIT_PREVIEW.test(draft.avatarUrl) ? <img src={draft.avatarUrl} alt="Ảnh chân dung 3x4" /> : <span>3 × 4</span>}</div>
           <div>
-            <strong>Ảnh chân dung nhà khoa học (Khung chuẩn 3x4)</strong><small className="field-hint">Hiển thị trên hồ sơ nghiên cứu khoa học và trang in Lý lịch khoa học BM-06</small>
+            <strong>Ảnh chân dung nhà khoa học (Khung chuẩn 3x4)</strong><small className="field-hint">Định dạng: JPG, PNG, WebP. Tối đa 5MB.</small>
             <input ref={portraitInput} id="cv-avatar-file" type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => pickPortrait(event.target.files?.[0])} />
             <div className="button-row">
-              <button type="button" className="button" disabled={!editable} onClick={() => portraitInput.current?.click()} aria-describedby={portraitError || errors.avatarUrl ? "cv-avatar-error" : undefined}>Tải ảnh lên</button>
-              {draft.avatarUrl ? <button type="button" className="button" disabled={!editable} onClick={() => { if (window.confirm("Xóa ảnh đại diện?")) onChange("avatarUrl", ""); }}>Xóa ảnh</button> : null}
+              <button type="button" className="button" disabled={!editable} onClick={() => portraitInput.current?.click()} aria-describedby={portraitError || errors.avatarUrl ? "cv-avatar-error" : undefined}><Upload size={16} aria-hidden="true" />Tải ảnh lên</button>
+              {draft.avatarUrl ? <button type="button" className="button danger" disabled={!editable} onClick={() => { if (window.confirm("Xóa ảnh đại diện?")) onChange("avatarUrl", ""); }}><Trash2 size={16} aria-hidden="true" />Xóa ảnh</button> : null}
             </div>
             {portraitError || errors.avatarUrl ? <small id="cv-avatar-error" className="field-error" role="alert">{portraitError || errors.avatarUrl}</small> : null}
           </div>
         </div>
-        <div className="field">
-          <span>Loại nhà khoa học</span>
-          <strong>{profileType === "EXTERNAL" ? "Nhà khoa học ngoài Học viện" : "Nhà khoa học trong Học viện"}</strong>
-          <small className="field-hint">Do Phòng QLKH xác định theo loại tài khoản</small>
+        <div className="cv-researcher-type">
+          <strong>Loại nhà khoa học</strong>
+          <div className="cv-researcher-type-card">
+            {profileType === "EXTERNAL" ? <Globe size={22} aria-hidden="true" /> : <Landmark size={22} aria-hidden="true" />}
+            <div><strong>{profileType === "EXTERNAL" ? "Nhà khoa học ngoài Học viện" : "Nhà khoa học trong Học viện"}</strong><small>{profileType === "EXTERNAL" ? "(External researcher)" : "(Internal researcher)"}</small></div>
+          </div>
         </div>
       </div>
       {portraitFile ? <CvPortraitCropper file={portraitFile} onCancel={() => setPortraitFile(null)} onApply={(dataUrl) => { setPortraitFile(null); onChange("avatarUrl", dataUrl); }} /> : null}
@@ -146,7 +162,6 @@ export function CvGeneralTab({ draft, catalogs, editable, owner, profileType, ha
         <label className="field" htmlFor="cv-external-affiliation"><span>Cơ quan / Đơn vị công tác cụ thể (theo lý lịch khoa học)</span><input id="cv-external-affiliation" value={draft.externalAffiliation} disabled={!editable} onChange={(event) => onChange("externalAffiliation", event.target.value)} /><FieldError field="externalAffiliation" errors={errors} /></label>
         <label className="field" htmlFor="cv-position"><span>Chức vụ hiện tại</span><input id="cv-position" value={draft.position} disabled={!editable} onChange={(event) => onChange("position", event.target.value)} /><FieldError field="position" errors={errors} /></label>
         <label className="field" htmlFor="cv-military-rank"><span>Quân hàm (HVQY)</span><input id="cv-military-rank" value={draft.militaryRank} disabled={!editable} onChange={(event) => onChange("militaryRank", event.target.value)} /><FieldError field="militaryRank" errors={errors} /></label>
-        <label className="field" htmlFor="cv-title"><span>Chức danh khoa học khác</span><input id="cv-title" value={draft.title} disabled={!editable} onChange={(event) => onChange("title", event.target.value)} /><FieldError field="title" errors={errors} /></label>
         <label className="field" htmlFor="cv-contact-phone"><span>Điện thoại di động</span><input id="cv-contact-phone" type="tel" value={draft.contactPhone} disabled={!editable} onChange={(event) => onChange("contactPhone", event.target.value)} /><FieldError field="contactPhone" errors={errors} /></label>
         <label className="field" htmlFor="cv-contact-email"><span>Email đăng nhập / liên hệ *</span><input id="cv-contact-email" type="email" required value={draft.contactEmail} disabled={!editable} aria-invalid={!!errors.contactEmail} aria-describedby={errors.contactEmail ? "cv-contactEmail-error" : undefined} onChange={(event) => onChange("contactEmail", event.target.value)} /><FieldError field="contactEmail" errors={errors} /></label>
         <label className="field" htmlFor="cv-contact-address"><span>Địa chỉ liên hệ</span><input id="cv-contact-address" value={draft.contactAddress} disabled={!editable} onChange={(event) => onChange("contactAddress", event.target.value)} /><FieldError field="contactAddress" errors={errors} /></label>
@@ -166,12 +181,22 @@ export function CvGeneralTab({ draft, catalogs, editable, owner, profileType, ha
       <div className="field researcher-field-picker">
         <span id="cv-research-fields-label">Ngành / Lĩnh vực nghiên cứu chính *</span>
         <div className="multi-select-control" role="group" aria-labelledby="cv-research-fields-label">
-          {selectedResearchFields.length ? <div className="multi-select-chips" aria-label="Lĩnh vực đã chọn">{selectedResearchFields.map((item) => <button key={item.id} type="button" className="multi-select-chip" disabled={!editable} onClick={() => toggleResearchField(item.id)} aria-label={`Bỏ ${item.name}`}>{item.name}<span aria-hidden="true">×</span></button>)}</div> : null}
-          <input type="search" value={researchFieldQuery} placeholder={selectedResearchFields.length ? "Tìm lĩnh vực" : "Chưa chọn"} disabled={!editable} onFocus={() => setResearchFieldOpen(true)} onChange={(event) => { setResearchFieldQuery(event.target.value); setResearchFieldOpen(true); }} onKeyDown={(event) => { if (event.key === "Escape") setResearchFieldOpen(false); }} aria-controls="cv-research-fields-options" aria-expanded={researchFieldOpen} aria-labelledby="cv-research-fields-label" aria-invalid={!!errors.researchFieldIds} aria-describedby={errors.researchFieldIds ? "cv-researchFieldIds-error" : undefined} />
+          {selectedResearchFields.length || draft.otherResearchFields.length ? <div className="multi-select-chips" aria-label="Lĩnh vực đã chọn">{selectedResearchFields.map((item) => <button key={item.id} type="button" className="multi-select-chip" disabled={!editable} onClick={() => toggleResearchField(item.id)} aria-label={`Bỏ ${item.name}`}>{item.name}<span aria-hidden="true">×</span></button>)}{draft.otherResearchFields.map((name) => <button key={`other-${name}`} type="button" className="multi-select-chip" disabled={!editable} onClick={() => onChange("otherResearchFields", draft.otherResearchFields.filter((item) => item !== name))} aria-label={`Bỏ ${name}`}>{name}<span aria-hidden="true">×</span></button>)}</div> : null}
+          <input type="search" value={researchFieldQuery} placeholder={selectedResearchFields.length || draft.otherResearchFields.length ? "Tìm hoặc nhập lĩnh vực" : "Chưa chọn"} disabled={!editable} onFocus={() => setResearchFieldOpen(true)}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value.includes(",")) { const parts = value.split(","); commitResearchFields(parts.slice(0, -1).join(",")); setResearchFieldQuery(parts.at(-1) ?? ""); }
+              else setResearchFieldQuery(value);
+              setResearchFieldOpen(true);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setResearchFieldOpen(false);
+              else if (event.key === "Enter") { event.preventDefault(); if (!event.nativeEvent.isComposing) { commitResearchFields(researchFieldQuery); setResearchFieldQuery(""); } }
+            }} aria-controls="cv-research-fields-options" aria-expanded={researchFieldOpen} aria-labelledby="cv-research-fields-label" aria-invalid={!!errors.researchFieldIds} aria-describedby={errors.researchFieldIds ? "cv-researchFieldIds-error" : undefined} />
           <button type="button" className="multi-select-toggle" disabled={!editable} onClick={() => setResearchFieldOpen((value) => !value)} aria-expanded={researchFieldOpen} aria-controls="cv-research-fields-options">Chọn</button>
         </div>
         {researchFieldOpen ? <div id="cv-research-fields-options" className="multi-select-menu" role="group" aria-label="Chọn lĩnh vực nghiên cứu">{visibleResearchFields.length ? visibleResearchFields.map((item) => <label key={item.id} className="multi-select-option"><input type="checkbox" checked={draft.researchFieldIds.includes(item.id)} disabled={!editable} onChange={() => toggleResearchField(item.id)} />{item.name}</label>) : <p className="field-hint">Không có lĩnh vực phù hợp.</p>}</div> : null}
-        <small className="field-hint">Chọn một hoặc nhiều lĩnh vực chuyên môn của nhà khoa học.</small><FieldError field="researchFieldIds" errors={errors} />
+        <small className="field-hint">Chọn gợi ý hoặc nhập lĩnh vực rồi nhấn Enter hoặc dấu phẩy để thêm.</small><FieldError field="researchFieldIds" errors={errors} />
       </div>
       <div className="field">
         <label htmlFor="cv-expertise-keywords">Từ khóa tương ứng với hướng nghiên cứu chính, chuyên môn hoạt động</label>
@@ -191,10 +216,7 @@ export function CvGeneralTab({ draft, catalogs, editable, owner, profileType, ha
     </section>
 
     <section className="section-card">
-      <h3>D. Ngoại ngữ sử dụng</h3>
-      <p className="field-hint">Kê khai các ngoại ngữ sử dụng trong nghiên cứu khoa học và giảng dạy</p>
-      <CvRowTable name="languages" rows={draft.languages} columns={[{ key: "language", label: "Ngoại ngữ *" }, { key: "proficiency", label: "Mức độ", options: [{ value: "Tốt", label: "Tốt" }, { value: "Khá", label: "Khá" }, { value: "Trung bình", label: "Trung bình" }] }, { key: "certificate", label: "Chứng chỉ" }]} disabled={!editable} onChange={updateLanguage} onAdd={() => onChange("languages", [...draft.languages, { language: "", proficiency: "", certificate: "" }])} onRemove={(index) => onChange("languages", draft.languages.filter((_, rowIndex) => rowIndex !== index))} addLabel="+ Thêm ngoại ngữ" />
-      <FieldError field="languages" errors={errors} />
+      <CvRowTable name="languages" title="D. Ngoại ngữ sử dụng" hint="Kê khai các ngoại ngữ sử dụng trong nghiên cứu khoa học và giảng dạy" rows={draft.languages} columns={[{ key: "language", label: "Ngoại ngữ *", required: true, maxLength: 1000 }, { key: "proficiency", label: "Mức độ", options: [{ value: "Tốt", label: "Tốt" }, { value: "Khá", label: "Khá" }, { value: "Trung bình", label: "Trung bình" }] }, { key: "certificate", label: "Chứng chỉ", maxLength: 1000 }]} editable={editable} error={errors.languages} onChange={(rows) => onChange("languages", rows)} newRow={() => ({ language: "" })} addLabel="Thêm ngoại ngữ" />
     </section>
 
     <section className="section-card">

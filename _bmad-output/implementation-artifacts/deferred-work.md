@@ -109,3 +109,6 @@
 - source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-8-publications-drawer.md`
   summary: Add a DOM test harness to cover the publications Drawer interactions (add/edit keeps id and status, author bubbles, delete removes the right row, discard prompt).
   evidence: verification-gap review 13.8 — the repo has no jsdom/browser harness, `Dialog` is stubbed in the UI test, and AGENTS.md forbids test-only production seams; only static rendering is tested.
+- source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-9-cv-list-sections-drawer.md`
+  summary: Automated tests for the shared CvRowTable Drawer interactions (required/year-order/URL errors, unchanged save, delete confirm, Enter not submitting the outer form).
+  evidence: Same gap as 13.8 — no jsdom/browser harness in the repo; these matrix rows were verified only in the real app; static rendering is tested.

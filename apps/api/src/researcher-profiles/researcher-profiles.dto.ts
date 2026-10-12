@@ -85,6 +85,7 @@ export type ScientificCurriculumVitaePersonalInfo = {
   smartCaSerial?: string | null;
   shareDataAgreement: boolean;
   languages?: ScientificCurriculumVitaeLanguage[];
+  otherResearchFields?: string[];
 };
 
 export type ScientificCurriculumVitaeLanguage = { language: string; proficiency?: string | null; certificate?: string | null };
@@ -362,7 +363,7 @@ function cvLanguage(value: unknown, path: string): ScientificCurriculumVitaeLang
 function cvPersonalInfo(input: Record<string, unknown>) {
   const path = "curriculumVitae.personalInfo";
   const value = input.personalInfo;
-  const personal = cvRecord(value, path, ["avatarUrl", "scientistType", "gender", "birthDate", "birthPlace", "nationality", "idNumber", "idIssueDate", "idIssuePlace", "englishAcademicTitle", "contactAddress", "organization", "bankAccount", "bankName", "bankBranch", "smartCaSerial", "shareDataAgreement", "languages"]);
+  const personal = cvRecord(value, path, ["avatarUrl", "scientistType", "gender", "birthDate", "birthPlace", "nationality", "idNumber", "idIssueDate", "idIssuePlace", "englishAcademicTitle", "contactAddress", "organization", "bankAccount", "bankName", "bankBranch", "smartCaSerial", "shareDataAgreement", "languages", "otherResearchFields"]);
   // scientistType is derived from profileType now; still accepted from old payloads but never stored.
   const result: Record<string, unknown> = {
     gender: cvEnum(personal.gender, `${path}.gender`, ["Nam", "Nữ", "Khác"]),
@@ -381,6 +382,8 @@ function cvPersonalInfo(input: Record<string, unknown>) {
   if (idIssueDate !== undefined) result.idIssueDate = idIssueDate;
   const languages = cvRows(personal, "languages", `${path}.languages`, cvLanguage);
   if (languages !== undefined) result.languages = languages;
+  const otherResearchFields = cvRows(personal, "otherResearchFields", `${path}.otherResearchFields`, (item, itemPath) => cvText(item, itemPath, 200, true)!);
+  if (otherResearchFields !== undefined) result.otherResearchFields = otherResearchFields;
   return result as ScientificCurriculumVitaePersonalInfo;
 }
 

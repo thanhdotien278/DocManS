@@ -120,7 +120,7 @@ export function CvPrintTab({ profile, dirty }: CvPrintTabProps) {
             <Row label={L.organization}>{show(personal?.organization || profile.externalAffiliation || profile.managementOrganization?.name)}</Row>
             <Row label={L.address}>{show(personal?.contactAddress)}</Row>
             <Row label={L.phoneEmail}>{show(profile.contactPhone)} / {show(profile.contactEmail)}</Row>
-            <Row label={L.fields}>{joined(profile.researchFields.map((field) => field.name), "; ")}</Row>
+            <Row label={L.fields}>{joined([...profile.researchFields.map((field) => field.name), ...(personal?.otherResearchFields ?? [])], "; ")}</Row>
             <Row label={L.keywords}>{joined(profile.expertiseKeywords, "; ")}</Row>
             <Row label={L.languages}>{joined((personal?.languages ?? []).map((item) => {
               const detail = [item.proficiency, item.certificate].filter(Boolean).join(" - ");
