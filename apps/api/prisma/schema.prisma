@@ -281,6 +281,7 @@ model ResearcherProfilePublication {
   doi                 String?
   authors             String?
   issnIsbn            String?          @map("issn_isbn")
+  publicationType     String?          @map("publication_type")
   classification      String?
   proofUrl            String?          @map("proof_url")
   status              String           @default("ACTIVE")

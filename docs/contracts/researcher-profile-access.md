@@ -54,7 +54,7 @@ Baseline §2.1 governs officer lifecycle, conflict checks and finalized role dec
 ## Publications and participation history
 
 Publications record `title`, `venue`, `publicationYear` (1900–2100), `doi`,
-`authors`, `issnIsbn`, `classification`, `proofUrl`, `status` and `notes`. Each
+`authors`, `issnIsbn`, `publicationType` (nullable: Bài báo khoa học, Báo cáo hội nghị, Sách/Chuyên khảo, Khác), `classification`, `proofUrl`, `status` and `notes`. Each
 profile accepts up to 200 publication rows; ordinary strings are at most 1000
 characters and `notes` is at most 4000. Participation records title/project, role, level (`ACADEMY_INSTITUTIONAL`, `MINISTRY`, `OTHER`),
 start/end dates, ACTIVE/INACTIVE status and notes. Dates are ISO calendar dates in

@@ -61,7 +61,7 @@ A researcher signs in, completes all five tabs of their CV, saves, prints a corr
 
 ## Assumptions
 
-- Tab 4 publications stay in `researcher_profile_publications`; a supplied PATCH list is the full list, deleting omitted saved rows transactionally. INACTIVE publications are hidden in Tab 4 and sent back unchanged. Projects, intellectual property and awards live only in `curriculumVitae.researchExperience`; non-SUPERSEDED profile participations are shown read-only with status, are already declared in the researcher profile, and must not be re-entered (decided 2026-10-12, story 13.4).
+- Tab 4 publications stay in `researcher_profile_publications`; a supplied PATCH list is the full list, deleting omitted saved rows transactionally. INACTIVE publications are hidden in Tab 4 and sent back unchanged. Projects, intellectual property and awards live only in `curriculumVitae.researchExperience`; non-SUPERSEDED profile participations are shown read-only with status, are already declared in the researcher profile, and must not be re-entered (decided 2026-10-12, story 13.4). Tab 4 publications are a read-only list edited through one right-side Drawer (story 13.8): the Drawer applies to the in-page draft, the CV save commits it; a nullable `publicationType` was added; evidence stays the `proofUrl` link (file upload deferred).
 - Portrait is a URL/path string or a client-cropped image data URL (see `cv-data-contract.md`); the owner's data-URL portrait is also the header avatar.
 - Redaction in audit/projection (not encryption at rest) meets the baseline unless the first open question is answered otherwise.
 

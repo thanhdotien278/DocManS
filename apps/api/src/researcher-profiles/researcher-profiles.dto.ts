@@ -31,6 +31,7 @@ export type ResearcherProfilePublicationInput = {
   doi?: string | null;
   authors?: string | null;
   issnIsbn?: string | null;
+  publicationType?: string | null;
   classification?: string | null;
   proofUrl?: string | null;
   status?: "ACTIVE" | "INACTIVE";
@@ -218,6 +219,7 @@ function publication(value: unknown, path: string): ResearcherProfilePublication
     doi: cvOptionalText(input, "doi", path, 1000),
     authors: cvOptionalText(input, "authors", path, 1000),
     issnIsbn: cvOptionalText(input, "issnIsbn", path, 1000),
+    publicationType: cvOptionalText(input, "publicationType", path, 1000),
     classification: cvOptionalText(input, "classification", path, 1000),
     proofUrl: safeUrl(cvOptionalText(input, "proofUrl", path, 1000), `${path}.proofUrl`),
     status,

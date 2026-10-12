@@ -378,6 +378,7 @@ describe("Story 2.1 researcher profile contracts", () => {
       title: "Nghiên cứu khoa học",
       publicationYear: 1899,
       issnIsbn: "ISSN 1234-5678",
+      publicationType: "Báo cáo hội nghị",
       classification: "Q1",
       proofUrl: "https://example.test/proof",
       notes: "Ghi chú"
@@ -391,6 +392,7 @@ describe("Story 2.1 researcher profile contracts", () => {
       doi: undefined,
       authors: undefined,
       issnIsbn: "ISSN 1234-5678",
+      publicationType: "Báo cáo hội nghị",
       classification: "Q1",
       proofUrl: "https://example.test/proof",
       status: "ACTIVE",
@@ -428,6 +430,7 @@ describe("Story 2.1 researcher profile contracts", () => {
     const reloaded = await service.getProfile(staff, "profile-1");
     assert.deepEqual(reloaded.curriculumVitae.researchExperience, validCv().researchExperience);
     assert.equal(reloaded.publications[0].title, publication.title);
+    assert.equal(reloaded.publications[0].publicationType, "Báo cáo hội nghị");
     const publicationId = saved.profile.publications[0].id;
     const updatedPublication = { ...publication, id: publicationId, issnIsbn: "ISBN 9876-5432", classification: "Q2", proofUrl: "https://example.test/proof-v2" };
     const updated = await service.updateProfile(staff, "profile-1", updateResearcherProfilePipe.transform({ contextVersion: contextVersion(saved.profile.aggregateVersion), publications: [updatedPublication] }));

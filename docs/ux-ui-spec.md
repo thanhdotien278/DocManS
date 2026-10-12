@@ -854,6 +854,7 @@ credential delivery, migration compatibility and history retention.
   manager-confirmed recipient email, optional username, create-and-email,
   eligible existing-account search/select, reasoned unlink or credential resend.
   Buttons consume backend capabilities. Errors preserve entered form data.
+- CV Tab 4 publications: a read-only list (title, authors as bubbles, year, type, venue, DOI, evidence link, row actions) with one right-side Drawer for add/edit built on the house `Dialog`. Only the title is required; authors are a comma/Enter bubble input; delete asks for confirmation in a separate dialog. Drawer "Lưu" updates the in-page draft; the CV save commits it. Evidence is the `proofUrl` link (opens in a new tab); file upload is deferred. Without edit permission no Add/Edit/Delete controls render.
 - `/my-profile`: the same personal/scientific editor, with administrative fields
   and account operations excluded. Missing/inactive link has a safe support state.
 - Mandatory change: login routes to `/change-password`; middleware, app shell and

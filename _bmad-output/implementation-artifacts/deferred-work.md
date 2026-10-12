@@ -101,3 +101,11 @@
 - source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-5-bm06-view-and-print-vi-en.md`
   summary: The CV workspace's `dirty` flag (unsaved-edits note on Tab 5) is only verified by a source regex, not a rendered workspace test.
   evidence: tests/researcher-profiles-ui-source.test.mjs never renders ScientificCvWorkspace; a drift between draftFromProfile and the draft state would show the note permanently without failing tests.
+
+- source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-8-publications-drawer.md`
+  summary: Real evidence file upload/preview/download for researcher-profile publications (files API entity type, authz, publication-to-file link).
+  evidence: Split from the publications Drawer refactor (2026-10-12). The files module only supports research_proposal/approved_project and a new publication has no id until the CV PATCH; the Drawer ships with the existing proofUrl link instead.
+
+- source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-8-publications-drawer.md`
+  summary: Add a DOM test harness to cover the publications Drawer interactions (add/edit keeps id and status, author bubbles, delete removes the right row, discard prompt).
+  evidence: verification-gap review 13.8 — the repo has no jsdom/browser harness, `Dialog` is stubbed in the UI test, and AGENTS.md forbids test-only production seams; only static rendering is tested.

@@ -240,7 +240,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
     if (draft.educationHistory.some((row) => !row.degreeLevel.trim() || !row.major.trim() || !row.institution.trim())) errors.educationHistory = "Cần nhập Bậc đào tạo, Ngành đào tạo và Cơ sở đào tạo cho mọi dòng.";
     else if (draft.educationHistory.some((row) => row.startYear != null && row.graduationYear != null && row.startYear > row.graduationYear)) errors.educationHistory = "Năm bắt đầu không được sau Năm tốt nghiệp.";
     if (draft.workItems.some((row) => !row.period.trim() || !row.organization.trim())) errors.workItems = "Cần nhập Thời gian và Cơ quan / Đơn vị cho mọi dòng.";
-    if (draft.publications.some((row) => !row.title.trim())) errors.publications = "Cần nhập Tên công trình / Bài báo cho mọi dòng.";
+    if (draft.publications.some((row) => !row.title.trim())) errors.publications = "Cần nhập Tên công bố cho mọi dòng.";
     if (draft.intellectualProperty.some((row) => !row.title.trim())) errors.intellectualProperty = "Cần nhập Tên văn bằng / Sáng chế cho mọi dòng.";
     if (draft.awards.some((row) => !row.name.trim())) errors.awards = "Cần nhập Tên giải thưởng / Danh hiệu cho mọi dòng.";
     if (draft.projects.some((row) => !row.projectTitle.trim() || !row.role.trim())) errors.projects = "Cần nhập Tên nhiệm vụ, Chương trình và Vai trò cho mọi dòng.";

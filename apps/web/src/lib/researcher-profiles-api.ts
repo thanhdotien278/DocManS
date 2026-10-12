@@ -3,7 +3,7 @@ import type { ContextVersionTokenV1, ViewerAuthorizationV1 } from "@rtms/permiss
 
 export type ResearcherCatalogItem = { id: string; code: string; name: string; type: string };
 export type ResearcherOrganization = { id: string; code: string; name: string };
-export type Publication = { id?: string; title: string; venue?: string | null; publicationYear?: number | null; doi?: string | null; authors?: string | null; issnIsbn?: string | null; classification?: string | null; proofUrl?: string | null; status?: "ACTIVE" | "INACTIVE"; notes?: string | null };
+export type Publication = { id?: string; title: string; venue?: string | null; publicationYear?: number | null; doi?: string | null; authors?: string | null; issnIsbn?: string | null; publicationType?: string | null; classification?: string | null; proofUrl?: string | null; status?: "ACTIVE" | "INACTIVE"; notes?: string | null };
 export type Participation = { id?: string; projectTitle: string; participationRole: string; level: "ACADEMY_INSTITUTIONAL" | "MINISTRY" | "OTHER"; startsOn?: string | null; endsOn?: string | null; status?: "ACTIVE" | "INACTIVE" | "SUPERSEDED"; notes?: string | null; supersedesId?: string | null };
 export type ScientificCurriculumVitaeLanguage = { language: string; proficiency?: string | null; certificate?: string | null };
 export type ScientificCurriculumVitaePersonalInfo = {

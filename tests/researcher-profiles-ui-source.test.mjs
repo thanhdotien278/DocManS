@@ -12,8 +12,8 @@ const loadFixture = async (path, dependencies = {}) => {
   const source = await readFile(path, "utf8");
   vm.runInNewContext(ts.transpileModule(source, { fileName: path, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, {
     exports, require: (name) => {
-      if (name === "lucide-react") return {}; // Icons do not affect navigation destinations.
       if (name in dependencies) return dependencies[name];
+      if (name === "lucide-react") return {}; // Icons do not affect navigation destinations.
       throw new Error(`Unexpected import: ${name}`);
     }
   });
@@ -119,7 +119,8 @@ describe("Story 2.1 researcher profile UI source", () => {
       assert.match(research, new RegExp(`errors\\.${section}`));
       assert.match(research, new RegExp(`rows=\\{draft\\.${section}\\}`));
     }
-    assert.equal((research.match(/disabled=\{!editable\}/g) ?? []).length, 4);
+    assert.equal((research.match(/disabled=\{!editable\}/g) ?? []).length, 3);
+    assert.match(research, /<CvPublicationsSection rows=\{draft\.publications\} editable=\{editable\}/);
     assert.match(workspace, /JSON.stringify\(draft.publications\) !== JSON.stringify\(previous.publications\)/);
     assert.match(workspace, /input.publications = \[\.\.\.draft.publications.map\(compactRow\), \.\.\.profile.publications.filter/);
     assert.match(workspace, /errors.publications \|\| errors.intellectualProperty \|\| errors.awards \|\| errors.projects/);
@@ -130,9 +131,11 @@ describe("Story 2.1 researcher profile UI source", () => {
     assert.match(research, /Các nhiệm vụ đã khai trong hồ sơ nhà khoa học\. Không nhập lại/);
     assert.match(research, /<td>\{row.participationRole\}<\/td>/);
     const { CvRowTable } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-row-table.tsx", { react, "react/jsx-runtime": jsxRuntime });
-    const { CvResearchTab } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-research-tab.tsx", { "react/jsx-runtime": jsxRuntime, "./cv-row-table": { CvRowTable } });
+    const { CvPublicationsSection } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-publications-section.tsx", { react, "react/jsx-runtime": jsxRuntime, "@/components/ui/dialog": { Dialog: () => null }, "lucide-react": { Pencil: () => null, Plus: () => null, Trash2: () => null, X: () => null } });
+    const { CvResearchTab } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-research-tab.tsx", { "react/jsx-runtime": jsxRuntime, "./cv-row-table": { CvRowTable }, "./cv-publications-section": { CvPublicationsSection } });
+    const publication = { title: "Bài báo", publicationType: "Báo cáo hội nghị", authors: "A. Nguyễn, B. Trần", doi: "10.1000/x", proofUrl: "https://example.test/p" };
     const markup = renderToStaticMarkup(jsxRuntime.jsx(CvResearchTab, {
-      draft: { publications: [{ title: "Bài báo", classification: "Phân loại cũ" }], intellectualProperty: [{ title: "Sáng chế" }], awards: [{ name: "Giải thưởng" }], projects: [{ projectTitle: "Đề tài", role: "Vai trò cũ" }] },
+      draft: { publications: [publication], intellectualProperty: [{ title: "Sáng chế" }], awards: [{ name: "Giải thưởng" }], projects: [{ projectTitle: "Đề tài", role: "Vai trò cũ" }] },
       participations: [{ id: "active", projectTitle: "Nhiệm vụ đang làm", participationRole: "Thành viên", level: "MINISTRY", status: "ACTIVE" }, { id: "inactive", projectTitle: "Nhiệm vụ đã kết thúc", participationRole: "Chủ nhiệm", level: "OTHER", status: "INACTIVE" }, { id: "superseded", projectTitle: "Nhiệm vụ đã thay thế", participationRole: "Thành viên", level: "OTHER", status: "SUPERSEDED" }],
       editable: false, errors: { projects: "Cần nhập Vai trò" }, onChange: () => assert.fail("Read-only view must not edit")
     }));
@@ -140,8 +143,21 @@ describe("Story 2.1 researcher profile UI source", () => {
     assert.match(markup, /Nhiệm vụ đã kết thúc/);
     assert.match(markup, /Đã kết thúc/);
     assert.doesNotMatch(markup, /Nhiệm vụ đã thay thế/);
+    // Publications render as a read-only list: author bubbles, type, evidence link, and no editing controls without permission.
+    assert.match(markup, /<td>Báo cáo hội nghị<\/td>/);
+    assert.match(markup, /<span class="multi-select-chip">A\. Nguyễn<\/span><span class="multi-select-chip">B\. Trần<\/span>/);
+    assert.match(markup, /<a href="https:\/\/doi\.org\/10\.1000\/x" target="_blank" rel="noopener noreferrer">/);
+    assert.match(markup, /<a href="https:\/\/example\.test\/p" target="_blank" rel="noopener noreferrer">Xem<\/a>/);
+    assert.doesNotMatch(markup, /Thêm công bố|Sửa công bố|Xóa công bố|id="cv-pub-/);
+    const editableMarkup = renderToStaticMarkup(jsxRuntime.jsx(CvPublicationsSection, { rows: [publication], editable: true, onChange: () => undefined }));
+    assert.match(editableMarkup, /Thêm công bố/);
+    assert.match(editableMarkup, /aria-label="Sửa công bố 1: Bài báo"/);
+    assert.match(editableMarkup, /aria-label="Xóa công bố 1: Bài báo"/);
+    assert.doesNotMatch(editableMarkup, /<input/);
+    const unsafeMarkup = renderToStaticMarkup(jsxRuntime.jsx(CvPublicationsSection, { rows: [{ title: "Bài lạ", doi: "javascript:alert(1)", proofUrl: "ftp://x" }], editable: false, onChange: () => undefined }));
+    assert.doesNotMatch(unsafeMarkup, /href=/);
+    assert.match(unsafeMarkup, /javascript:alert\(1\)/);
     // Saved rows render as text with a "Sửa" action instead of inputs.
-    assert.match(markup, /<td>Phân loại cũ<\/td>/);
     assert.match(markup, /<td>Vai trò cũ<\/td>/);
     assert.match(markup, /aria-label="Sửa dòng 1"/);
     assert.doesNotMatch(markup, /aria-label="Tên công trình/);
