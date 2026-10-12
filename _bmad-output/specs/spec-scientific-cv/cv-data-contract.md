@@ -6,7 +6,7 @@ Source of the shape: `DocManS-review/apps/api/src/researcher-profiles/researcher
 
 | Field | Req | Notes |
 |---|---|---|
-| avatarUrl | no | `http(s)://` or `/path` URL, or a cropped 300×400 `data:image/(jpeg\|png\|webp);base64,…` (≤ 400 000 chars, excluded from the 256 KB document budget); served to the owner at `GET my-profile/avatar` |
+| avatarUrl | no | `http(s)://` or `/path` URL, or a cropped 300×400 `data:image/(jpeg\|png\|webp);base64,…` (≤ 400 000 chars, excluded from the 256 KB document budget); served to the owner at `GET my-profile/avatar`; the UI displays only `/path` and `data:image` values (external URLs are stored but never loaded) |
 | gender | yes | enum Nam/Nữ/Khác |
 | birthDate, birthPlace, nationality | no | |
 | idNumber | yes | SENSITIVE (CCCD/passport) |
@@ -42,7 +42,7 @@ Publication classification options: ISI/Scopus, Quốc tế khác, Trong nước
 Each list ≤ 200 rows; each string ≤ 1000 (notes ≤ 4000); document ≤ 256 KB.
 
 ## Redaction classes
-- SENSITIVE fields above: omitted from list/search/candidate/notification projections; history/audit facts record `{section, field, changed: true}` only.
+- SENSITIVE fields above: omitted from list/search/candidate/notification projections; history/audit facts record `{section, field, changed: true}` only. They are also never shown on the BM-06 view/print paper.
 - Everything else in the CV: owner + scoped managers; audit facts may include non-sensitive values.
 
 ## Known review-repo defects not to port

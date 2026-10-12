@@ -153,10 +153,12 @@ describe("Story 2.1 researcher profile UI source", () => {
     const workspace = await readFile("apps/web/src/components/researcher-profiles/scientific-cv/cv-workspace.tsx", "utf8");
     assert.match(workspace, /<CvPrintTab profile=\{profile\} dirty=/);
     assert.doesNotMatch(workspace, /PlaceholderTab/);
+    const { CvRowTable } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-row-table.tsx", { react, "react/jsx-runtime": jsxRuntime });
+    const generalTab = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-general-tab.tsx", { react, "react/jsx-runtime": jsxRuntime, "./cv-portrait-cropper": {}, "./cv-row-table": { CvRowTable } });
     const render = async (lang, profile, dirty = false) => {
       const { CvPrintTab } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-print-tab.tsx", {
         react: { ...react, useState: (initial) => [lang ?? initial, () => {}] }, "react/jsx-runtime": jsxRuntime,
-        "./cv-research-tab": { levels: { MINISTRY: "Cấp Bộ", OTHER: "Cấp khác" } }
+        "./cv-research-tab": { levels: { MINISTRY: "Cấp Bộ", OTHER: "Cấp khác" } }, "./cv-general-tab": generalTab
       });
       return renderToStaticMarkup(jsxRuntime.jsx(CvPrintTab, { profile, dirty }));
     };
@@ -165,16 +167,25 @@ describe("Story 2.1 researcher profile UI source", () => {
       ...base, contactEmail: "a@hvqy.vn",
       publications: [{ title: "Bài báo hiện hành", doi: "10.1/x", status: "ACTIVE" }, { title: "Bài báo đã ẩn", status: "INACTIVE" }],
       participations: [{ projectTitle: "Nhiệm vụ cấp Bộ", participationRole: "Thành viên", level: "MINISTRY", startsOn: "2020-03-01", status: "ACTIVE" }, { projectTitle: "Nhiệm vụ đã xong", participationRole: "Chủ nhiệm", level: "OTHER", status: "INACTIVE" }, { projectTitle: "Nhiệm vụ đã thay thế", participationRole: "Thành viên", level: "OTHER", status: "SUPERSEDED" }],
-      curriculumVitae: { cvSchemaVersion: 1, note: "Ghi chú đã lưu", personalInfo: { avatarUrl: "/portrait.jpg", englishAcademicTitle: "Prof. Dr.", gender: "Nữ", idNumber: "001", organization: "Khoa Nội", birthDate: "1980-05-07", shareDataAgreement: true, bankAccount: "123456", smartCaSerial: "SCA-9" }, researchExperience: { intellectualProperty: [{ title: "Sáng chế X" }], awards: [{ name: "Giải Y", awardYear: 2020, endYear: 2021 }], projects: [{ projectTitle: "Đề tài CV", role: "Chủ nhiệm" }] } }
+      curriculumVitae: { cvSchemaVersion: 1, note: "Ghi chú đã lưu", personalInfo: { avatarUrl: "/portrait.jpg", englishAcademicTitle: "Prof. Dr.", gender: "Nữ", idNumber: "079080001234", idIssueDate: "2021-04-10", idIssuePlace: "Cục Cảnh sát QLHC", organization: "Khoa Nội", birthDate: "1980-05-07", shareDataAgreement: true, bankAccount: "1234567890", bankName: "Ngân hàng Quân đội", bankBranch: "Chi nhánh Hà Đông", smartCaSerial: "SCA-9" }, researchExperience: { intellectualProperty: [{ title: "Sáng chế X" }], awards: [{ name: "Giải Y", awardYear: 2020, endYear: 2021 }], projects: [{ projectTitle: "Đề tài CV", role: "Chủ nhiệm" }] } }
     };
     const vi = await render("VI", saved, true);
-    for (const text of ["MẪU BM-06", "NGUYỄN VĂN A", "07/05/1980", "Khoa Nội", "Bài báo hiện hành", "DOI: 10.1/x", "Số TK: 123456", "Serial SmartCA: SCA-9", "Sáng chế X", "2020 – 2021", "Đề tài CV", "Nhiệm vụ cấp Bộ", "Cấp Bộ", "01/03/2020 – —", "Đã kết thúc", "Đang tham gia", "Ghi chú đã lưu", "Các thay đổi chưa lưu không được hiển thị"]) assert.ok(vi.includes(text), text);
+    for (const text of ["MẪU BM-06", "NGUYỄN VĂN A", "07/05/1980", "Khoa Nội", "Bài báo hiện hành", "DOI: 10.1/x", "Sáng chế X", "2020 – 2021", "Đề tài CV", "Nhiệm vụ cấp Bộ", "Cấp Bộ", "01/03/2020 – —", "Đã kết thúc", "Đang tham gia", "Ghi chú đã lưu", "Các thay đổi chưa lưu không được hiển thị"]) assert.ok(vi.includes(text), text);
     for (const text of ["Bài báo đã ẩn", "Nhiệm vụ đã thay thế"]) assert.ok(!vi.includes(text), text);
     assert.ok(vi.indexOf("Đề tài CV") < vi.indexOf("Nhiệm vụ cấp Bộ"));
     assert.match(vi, /<img src="\/portrait\.jpg"/);
     assert.ok(!vi.includes("Prof. Dr."));
+    // Identity, bank and SmartCA values never reach the printed paper, in either language (user decision 2026-10-12).
+    for (const markup of [vi, await render("EN", saved)]) {
+      for (const secret of ["079080001234", "10/04/2021", "Cục Cảnh sát QLHC", "1234567890", "Ngân hàng Quân đội", "Chi nhánh Hà Đông", "SCA-9", "CCCD", "SmartCA", "Passport"]) assert.ok(!markup.includes(secret), secret);
+    }
+    // External portrait URLs are not loaded, so the image host never sees who opens the CV.
+    for (const avatarUrl of ["https://tracker.example/p.jpg", "//tracker.example/p.jpg"]) {
+      const external = await render("VI", { ...saved, curriculumVitae: { ...saved.curriculumVitae, personalInfo: { ...saved.curriculumVitae.personalInfo, avatarUrl } } });
+      assert.ok(!external.includes("<img") && !external.includes("tracker.example"), avatarUrl);
+    }
     const en = await render("EN", saved);
-    for (const text of ["FORM BM-06", "CURRICULUM VITAE", "2. Intellectual property", "Sáng chế X", "3. Awards and honours", "Giải Y", "V. OTHER INFORMATION", "Account No.: 123456", "Prof. Dr.", "Ministry level", "Ongoing", "Completed"]) assert.ok(en.includes(text), text);
+    for (const text of ["FORM BM-06", "CURRICULUM VITAE", "2. Intellectual property", "Sáng chế X", "3. Awards and honours", "Giải Y", "V. OTHER INFORMATION", "Prof. Dr.", "Ministry level", "Ongoing", "Completed"]) assert.ok(en.includes(text), text);
     assert.ok(!en.includes("MẪU BM-06") && !en.includes("Các thay đổi chưa lưu") && !en.includes("Cấp Bộ") && !en.includes("Đang tham gia"));
     const empty = await render("VI", { ...base, curriculumVitae: { cvSchemaVersion: 1 } });
     assert.match(empty, /Giới tính:<\/b> —/);

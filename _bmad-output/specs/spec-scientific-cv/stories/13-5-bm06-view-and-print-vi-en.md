@@ -20,7 +20,9 @@ context:
 **Approach:** Port the review repo's BM-06 print layout (`DocManS-review/.../researcher-profiles-panel.tsx:1722-2300`, CSS `themes/science-profile.css:176-350,463-500`) as one data-driven component with a VI/EN label table, rendered from the saved `profile` (never the draft), plus a print stylesheet that prints only the A4 paper.
 
 Decisions (planning, 2026-10-12):
-- Sensitive fields: ID number/issue date/place, bank account/name/branch and SmartCA serial are printed when present — epics.md 13.5 AC requires "ngân hàng/SmartCA"; viewers are already limited to owner + scoped managers by `researcher-profile.cv.read`.
+- Sensitive fields: ID number/issue date/place, bank account/name/branch and SmartCA serial are **never** shown on the view/print paper, in either language. _(Amended by user 2026-10-12 during walkthrough, replacing the epics.md "ngân hàng/SmartCA" AC; see `../quyet-dinh-va-kiem-thu.md` QĐ-13.5-01.)_
+- Portrait: only same-origin paths and in-app `data:image` portraits are displayed; external `http(s)` URLs leave the box empty so no third-party host is contacted (Tab 1 preview too). _(User 2026-10-12, QĐ-13.5-02.)_
+- The unsaved-edits note treats an empty field and an absent value as equal. _(User 2026-10-12, QĐ-13.5-03.)_
 - Missing data prints "—" consistently (epics AC "thiếu dữ liệu hiển thị trống nhất quán"). Do NOT port the review's invented fallbacks ("Học viện Quân y", gender "Nam", "Việt Nam", "Chính quy", "Cục Sở hữu trí tuệ", "Sử dụng tốt"/"Fluent", "Đã nghiệm thu").
 - English layout covers every section the Vietnamese one does (the review's EN dropped IP, awards, note). Data values are printed as stored (not translated); only labels/titles change.
 
@@ -28,7 +30,7 @@ Decisions (planning, 2026-10-12):
 
 **Always:**
 - Sections: header (MẪU BM-06 / FORM BM-06 mark, national motto, title), I general info with 3x4 photo box (`personalInfo.avatarUrl`, else empty box), II education (degree, major, institution, start–graduation year, training mode), III work summary + items, IV.1 ACTIVE publications (authors, year, title, venue, ISSN/ISBN + DOI, classification, proof URL), IV.2 intellectual property, IV.3 awards (year–endYear), IV.4 CV `projects` then non-SUPERSEDED participations (level labels and ACTIVE = Đang tham gia / INACTIVE = Đã kết thúc as Tab 4), V note (only when present), VI commitment, signature blocks with full name.
-- General info: full name (upper case), birth date/gender/birthplace/nationality, ID + issue date/place, military rank/position, academic rank/degree/title (EN also `englishAcademicTitle`), organization (`personalInfo.organization`, else `externalAffiliation`, else `managementOrganization.name`), address, phone/email, research fields, keywords, languages, bank + SmartCA row only when present.
+- General info: full name (upper case), birth date/gender/birthplace/nationality, military rank/position, academic rank/degree/title (EN also `englishAcademicTitle`), organization (`personalInfo.organization`, else `externalAffiliation`, else `managementOrganization.name`), address, phone/email, research fields, keywords, languages (rows numbered 1–10).
 - ISO dates are formatted by splitting the string (`YYYY-MM-DD` → `DD/MM/YYYY`), never `new Date()`.
 - A `.no-print` note says the view shows saved data; when the draft differs from the saved profile it also says unsaved edits are not shown.
 - Without `researcher-profile.cv.read` (no `curriculumVitae` in the payload) Tab 5 shows a message and no CV content.
@@ -88,6 +90,8 @@ Decisions (planning, 2026-10-12):
 - Verification: `node --test tests/researcher-profiles-ui-source.test.mjs` 8/8; `npm run typecheck` clean. Real app on :3000 — patuan Tab 5 VI and EN render, toggle does not submit the form; headless Chrome `page.pdf` (print media, `preferCSSPageSize`) as patuan (VI and EN) and as nmphuong via the manager panel CV tab: A4 portrait (594.96 x 841.92 pt), first page starts with "MẪU BM-06", no app chrome/tabs/buttons/notes in the PDF text; sparse CV spills signatures onto page 2. At 375px the document has no horizontal scroll and the paper frame scrolls (focusable region). Saved-only check in the real app: clicking Tabs 1–4 without edits shows no unsaved note; editing Họ và tên on Tab 1 keeps the saved name on the paper and shows the note (reloaded, nothing saved). Portrait `<img>` covered by the unit fixture only; a real portrait was not printed. `tests/docmans-ux-migration.test.mjs` / `files-route.test.mjs` have the same 4 failures on the baseline (stash-verified), unrelated.
 
 ## Spec Change Log
+
+- 2026-10-12 (walkthrough, user): removed identity/bank/SmartCA from the paper, blocked external portrait URLs, normalized the dirty comparison. Avoids printing sensitive data and third-party portrait requests. KEEP: single VI/EN layout, saved-data rendering, `:has` print block, named A4 page.
 
 ## Review Triage Log
 
