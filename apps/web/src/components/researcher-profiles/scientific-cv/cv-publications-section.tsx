@@ -33,12 +33,15 @@ function addAuthors(authors: string[], text: string) {
 }
 
 const formOf = (row?: Publication): Form => ({
-  title: row?.title ?? "", publicationType: row?.publicationType ?? "", year: row?.publicationYear ? String(row.publicationYear) : "", venue: row?.venue ?? "",
-  authors: addAuthors([], row?.authors ?? ""), authorInput: "", issnIsbn: row?.issnIsbn ?? "", doi: row?.doi ?? "", classification: row?.classification ?? "", proofUrl: row?.proofUrl ?? "", notes: row?.notes ?? ""
+  title: row?.title ?? "", publicationType: row ? row.publicationType ?? "" : types[0], year: row?.publicationYear ? String(row.publicationYear) : "", venue: row?.venue ?? "",
+  authors: addAuthors([], row?.authors ?? ""), authorInput: "", issnIsbn: row?.issnIsbn ?? "", doi: row?.doi ?? "", classification: row ? row.classification ?? "" : "Trong nước (HĐGSNN)", proofUrl: row?.proofUrl ?? "", notes: row?.notes ?? ""
 });
 
 // null (not undefined) so an unchanged round-trip equals the server row and the CV save still sends only real changes.
 const orNull = (value: string) => value.trim() || null;
+
+// The API only accepts http(s) or site-relative links; a bare host like "tinhte.vn" gets https:// instead of failing the whole CV save.
+export const withScheme = (value: string) => { const v = value.trim(); return v && !/^([a-z][a-z0-9+.-]*:|\/)/i.test(v) ? `https://${v}` : v; };
 
 function doiHref(doi: string) {
   const value = doi.trim();
@@ -84,7 +87,7 @@ export function CvPublicationsSection({ rows, editable, error, onChange }: CvPub
     const saved: Publication = {
       ...(drawer.index === null ? { status: "ACTIVE" as const } : rows[drawer.index]),
       title: form.title.trim(), publicationType: orNull(form.publicationType), publicationYear: form.year ? Number(form.year) : null, venue: orNull(form.venue),
-      authors: authors.join(", ") || null, issnIsbn: orNull(form.issnIsbn), doi: orNull(form.doi), classification: orNull(form.classification), proofUrl: orNull(form.proofUrl), notes: orNull(form.notes)
+      authors: authors.join(", ") || null, issnIsbn: orNull(form.issnIsbn), doi: orNull(form.doi), classification: orNull(form.classification), proofUrl: orNull(withScheme(form.proofUrl)), notes: orNull(form.notes)
     };
     onChange(drawer.index === null ? [...rows, saved] : rows.map((row, index) => index === drawer.index ? saved : row));
     setDrawer(null);
