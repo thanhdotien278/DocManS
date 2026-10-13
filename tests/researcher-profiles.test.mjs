@@ -409,6 +409,7 @@ describe("Story 2.1 researcher profile contracts", () => {
       ["oversized avatar data URL", validCv({ personalInfo: { avatarUrl: `data:image/jpeg;base64,${"A".repeat(1_000_000)}` } }), "curriculumVitae.personalInfo.avatarUrl"],
       ["unsafe intellectual property proof URL", validCv({ researchExperience: { intellectualProperty: [{ title: "Sáng chế", proofUrl: "data:text/html,unsafe" }] } }), "curriculumVitae.researchExperience.intellectualProperty.0.proofUrl"],
       ["unsafe award proof URL", validCv({ researchExperience: { awards: [{ name: "Giải thưởng", proofUrl: "javascript:alert(1)" }] } }), "curriculumVitae.researchExperience.awards.0.proofUrl"],
+      ["award end year before award year", validCv({ researchExperience: { awards: [{ name: "Giải thưởng", awardYear: 2021, endYear: 2020 }] } }), "curriculumVitae.researchExperience.awards.0.endYear"],
       ["list limit", { ...validCv(), educationHistory: Array.from({ length: 201 }, () => ({ degreeLevel: "Đại học", major: "Y khoa", institution: "Học viện Quân y" })) }, "curriculumVitae.educationHistory"],
       ["string limit", { ...validCv(), workHistory: { summary: "x".repeat(4001) } }, "curriculumVitae.workHistory.summary"],
       ["document limit", { ...validCv(), educationHistory: Array.from({ length: 200 }, () => ({ degreeLevel: "x".repeat(1000), major: "x".repeat(1000), institution: "x".repeat(1000), trainingMode: "x".repeat(1000), thesisTitle: "x".repeat(1000) })) }, "curriculumVitae"],
@@ -511,7 +512,11 @@ describe("Story 2.1 researcher profile contracts", () => {
     await assert.rejects(() => service.updateProfile(staff, "profile-1", updateResearcherProfilePipe.transform({
       contextVersion: contextVersion(removed.profile.aggregateVersion),
       publications: [{ ...kept[0], title: "Must roll back" }, { id: "foreign-publication", title: "Foreign" }]
-    })), NotFoundException);
+    })), (error) => {
+      assert.ok(error instanceof NotFoundException);
+      assert.deepEqual(error.getResponse().errors.map((item) => item.field), ["publications.1.id"]);
+      return true;
+    });
     assert.deepEqual(prisma.store, beforeForeign);
     const unchanged = await service.updateProfile(staff, "profile-1", updateResearcherProfilePipe.transform({ contextVersion: contextVersion(removed.profile.aggregateVersion), title: "TS" }));
     assert.equal(unchanged.profile.publications.length, 2);

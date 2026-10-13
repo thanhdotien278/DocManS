@@ -248,6 +248,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
     if (draft.publications.some((row) => !row.title.trim())) errors.publications = "Cần nhập Tên công bố cho mọi dòng.";
     if (draft.intellectualProperty.some((row) => !row.title.trim())) errors.intellectualProperty = "Cần nhập Tên văn bằng / Sáng chế cho mọi dòng.";
     if (draft.awards.some((row) => !row.name.trim())) errors.awards = "Cần nhập Tên giải thưởng / Danh hiệu cho mọi dòng.";
+    else if (draft.awards.some((row) => row.awardYear != null && row.endYear != null && row.endYear < row.awardYear)) errors.awards = "Đến năm không được trước Năm.";
     if (draft.projects.some((row) => !row.projectTitle.trim() || !row.role.trim())) errors.projects = "Cần nhập Tên nhiệm vụ, Chương trình và Vai trò cho mọi dòng.";
     focusFieldError.current = Object.keys(errors).length > 0;
     setFieldErrors(errors);

@@ -92,16 +92,16 @@ Decisions (user, 2026-10-12):
 | 3 | edge | Whitespace-only optional publication field → opaque 400 | low | patch — send `draft.publications.map(compactRow)` |
 | 4 | edge | `docs/contracts/researcher-profile-access.md` still says no hard delete | medium | patch — contract doc updated |
 | 5 | blind | Stray blank lines in new UI test | low | patch |
-| 6 | verif-gap, blind | INACTIVE re-append, `cvFromDraft` researchExperience assembly, `apiField`/`errorTabsOf` routing only regex-tested | medium (verified gap) | defer — needs a workspace render/save harness; AGENTS.md forbids test-only exports |
+| 6 | verif-gap, blind | INACTIVE re-append, `cvFromDraft` researchExperience assembly, `apiField`/`errorTabsOf` routing only regex-tested | medium (verified gap) | fixed 2026-10-13 — UI test now runs `ScientificCvWorkspace` with hook stubs and drives its form/onChange handlers; mutation-checked (INACTIVE append, publications diff, `apiField`, `errorTabsOf`) and the duplicated source regexes were dropped. No production export added |
 | 7 | edge | Server deletes omitted INACTIVE rows; preservation is client-only | low | reject — frozen intent defines full-list semantics; manager panel always sends all rows |
 | 8 | blind | Every publication row's `updatedById/updatedAt` rewritten on save, incl. hidden rows | low | defer — pre-existing `syncPublications` update-all behaviour (panel did the same) |
 | 9 | blind | Hidden INACTIVE row failing validation blocks save | maybe-false | reject — validation limits unchanged from 13.1, rows were saved under them; would be low |
-| 10 | blind, edge | Award `endYear` < `awardYear` accepted | low | reject — rare; fix adds a guard not in contract |
+| 10 | blind, edge | Award `endYear` < `awardYear` accepted | low | fixed 2026-10-13 — `cvAward` rejects `endYear < awardYear` at `…awards.<i>.endYear`; workspace blocks save with "Đến năm không được trước Năm."; rule added to cv-data-contract |
 | 11 | blind | No warning that "Xóa" on saved publication hard-deletes | low | reject — user chose hard delete; save is the explicit commit |
 | 12 | blind | `years`/`levels` constants duplicated | low | reject — cosmetic |
 | 13 | blind | Server-managed fields echoed in publication payload | low | reject — DTO ignores them; no named harm |
 | 14 | blind | `errorTabsOf` lists research keys twice | low | reject — cosmetic |
-| 15 | edge | 404 with no field errors gives no tab link | low | reject — only stale/foreign ids; contextVersion guards stale |
+| 15 | edge | 404 with no field errors gives no tab link | low | fixed 2026-10-13 — `syncPublications` 404 carries `errors: [publications.<i>.id]`, so the workspace routes it to Tab 4 with the "Đi tới 4." link |
 | 16 | edge | `curriculumVitae.researchExperience` root errors map to general | low | reject — client always sends an object; rare |
 
 ## Verification
@@ -109,6 +109,8 @@ Decisions (user, 2026-10-12):
 **Commands:**
 - `npm run build:api && node --test tests/researcher-profiles.test.mjs tests/researcher-profiles-ui-source.test.mjs` -- all pass.
 - `npm run typecheck` -- no errors.
+
+- Review follow-up (2026-10-13): `npm run build:api && node --test tests/researcher-profiles.test.mjs tests/researcher-profiles-ui-source.test.mjs` 27/27 pass; `npm run typecheck` pass.
 
 **Manual checks:**
 - Real app as a researcher: add/remove rows in all four sections, delete a saved publication, reload.
