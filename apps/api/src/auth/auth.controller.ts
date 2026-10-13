@@ -44,8 +44,8 @@ export class AuthController {
 
   @Get("me")
   @UseGuards(SessionAuthGuard)
-  me(@Req() request: any) {
-    return { user: request.currentUser };
+  async me(@Req() request: any) {
+    return { user: await this.authService.getCurrentUserView(request.currentUser) };
   }
 
   @Post("change-password")

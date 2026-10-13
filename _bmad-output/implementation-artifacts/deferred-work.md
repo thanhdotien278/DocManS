@@ -112,3 +112,7 @@
 - source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-10-own-cv-for-science-managers.md`
   summary: Post-login landing (HEAD/STAFF → /dashboard, linked researchers → /my-profile) in login-form.tsx has no automated test.
   evidence: The repo has only source-text tests for web components and no runtime harness, so inverting `managesScience` would ship undetected; verified manually on 2026-10-13.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-header-chip-cv-identity.md`
+  summary: Add a DB-backed check for AuthStore.findProfileDisplay (ACTIVE-only filter, rank/degree codes, CV organization path).
+  evidence: auth tests use a fake store, so dropping the status filter or renaming a column would pass every test; the SQL was only run by hand against local Postgres.

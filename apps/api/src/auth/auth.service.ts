@@ -1,13 +1,34 @@
 import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { AuditLogService } from "./audit-log.service.js";
 import { AuthRateLimitService } from "./auth-rate-limit.service.js";
-import { AuthStore } from "./auth.store.js";
+import { AuthStore, type ProfileDisplayRow } from "./auth.store.js";
 import { PasswordService } from "./password.service.js";
-import { AUTH_FAILURE_MESSAGE, type LoginRequest } from "./auth.types.js";
+import { AUTH_FAILURE_MESSAGE, type LoginRequest, type SafeUserContext } from "./auth.types.js";
 import { validateNewPassword } from "./password-request.pipe.js";
 
 const DUMMY_PASSWORD_HASH =
   "scrypt:rtms-dummy-user:96634051871e68281b278b3fd4750c99b588a7de2d52473164898e8c8bef8317235443d642c5ecb4b92a434ad6fad6909a16e0642697c58222e82b92e3437589";
+
+const TITLE_ABBREVIATIONS: Record<string, string> = {
+  professor: "GS.",
+  "associate-professor": "PGS.",
+  doctor: "TS.",
+  master: "ThS.",
+  bscki: "BSCKI.",
+  bsckii: "BSCKII."
+};
+const KNOWN_TITLE_PARTS = new Set(Object.values(TITLE_ABBREVIATIONS).map((title) => title.slice(0, -1)));
+// Covers "TS.", "TS" and the common joined form "PGS.TS.".
+const isTitleToken = (token: string) => token.split(".").filter(Boolean).every((part) => KNOWN_TITLE_PARTS.has(part));
+
+/** Display-only: "GS. TS. <name>" (rank before degree) and the CV unit, falling back to the scope unit. */
+function composeProfileDisplay(row: ProfileDisplayRow, scopeUnit: string) {
+  const prefixes = [row.rankCode, row.degreeCode].map((code) => (code ? TITLE_ABBREVIATIONS[code] : undefined)).filter(Boolean);
+  const displayFullName = prefixes.length
+    ? [...prefixes, ...row.fullName.split(/\s+/).filter((token) => token && !isTitleToken(token))].join(" ")
+    : row.fullName;
+  return { displayFullName, displayUnit: row.organization?.trim() || scopeUnit };
+}
 
 type RequestContext = {
   ip?: string;
@@ -95,6 +116,12 @@ export class AuthService {
     const user = session ? await this.authStore.findUserById(session.userId) : null;
 
     return user?.status === "active" && session?.credentialVersion === user.credentialVersion ? this.authStore.toSafeUser(user) : null;
+  }
+
+  /** `/auth/me` response only; never feeds `request.currentUser`, audit facts, or authorization. */
+  async getCurrentUserView(user: SafeUserContext) {
+    const profile = await this.authStore.findProfileDisplay(user.id);
+    return profile ? { ...user, ...composeProfileDisplay(profile, user.unit) } : user;
   }
 
   async listAuditLogs() {

@@ -4,6 +4,8 @@ import { SYSTEM_ROLES, type AuthSession, type InternalUser, type SafeUserContext
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
 
+export type ProfileDisplayRow = { fullName: string; rankCode: string | null; degreeCode: string | null; organization: string | null };
+
 @Injectable()
 export class AuthStore {
   constructor(private readonly prisma: PrismaService) {}
@@ -31,6 +33,19 @@ export class AuthStore {
     });
 
     return user ? this.toInternalUser(user) : null;
+  }
+
+  /** `/auth/me` only. Reads just the CV organization path so the (possibly ~1 MB) CV JSON never leaves the DB. */
+  async findProfileDisplay(userId: string): Promise<ProfileDisplayRow | null> {
+    const rows = await this.prisma.$queryRaw<ProfileDisplayRow[]>`
+      SELECT p.full_name AS "fullName", r.code AS "rankCode", d.code AS "degreeCode",
+             p.curriculum_vitae #>> '{personalInfo,organization}' AS "organization"
+      FROM researcher_profiles p
+      LEFT JOIN catalog_items r ON r.id = p.academic_rank_catalog_item_id
+      LEFT JOIN catalog_items d ON d.id = p.academic_degree_catalog_item_id
+      WHERE p.linked_user_id = ${userId} AND p.status = 'ACTIVE'
+      LIMIT 1`;
+    return rows[0] ?? null;
   }
 
   toSafeUser(user: InternalUser): SafeUserContext {

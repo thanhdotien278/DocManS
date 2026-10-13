@@ -10,6 +10,9 @@ export type CurrentUser = {
   displayName: string;
   systemRole: SystemRole;
   unit: string;
+  /** Display-only, from `/auth/me` for a user with an active researcher profile. */
+  displayFullName?: string;
+  displayUnit?: string;
   organizationScopes?: Array<{
     id: string;
     code: string;
@@ -41,10 +44,10 @@ export function toShellAccount(user: CurrentUser): ShellAccount {
     researcherProfileId: user.researcherProfileId,
     id: user.id,
     username: user.username,
-    name: user.displayName,
+    name: user.displayFullName ?? user.displayName,
     systemRole: user.systemRole,
     systemRoleLabel: getSystemRoleLabel(user.systemRole),
-    unit: user.unit,
+    unit: user.displayUnit ?? user.unit,
     initials: user.displayName.trim().charAt(0).toUpperCase() || "U",
     organizationScopes: user.organizationScopes
   };
