@@ -4,7 +4,7 @@ import { BadRequestException, ConflictException, ForbiddenException, NotFoundExc
 import { isPermissionActionV1 } from "../packages/permissions/src/index.js";
 import { createResearcherProfilePipe, updateMyProfilePipe, updateResearcherProfilePipe } from "../dist/apps/api/researcher-profiles/researcher-profiles.dto.js";
 import { normalizeResearcherKey, ResearcherProfilesService } from "../dist/apps/api/researcher-profiles/researcher-profiles.service.js";
-import { projectResearcherProfileAuthorization } from "../dist/apps/api/researcher-profiles/researcher-profile-access.js";
+import { linkableAccountRoles, projectResearcherProfileAuthorization } from "../dist/apps/api/researcher-profiles/researcher-profile-access.js";
 import { ResearcherProfilesController } from "../dist/apps/api/researcher-profiles/researcher-profiles.controller.js";
 
 const staff = {
@@ -324,6 +324,58 @@ describe("Story 2.1 researcher profile contracts", () => {
       "researcher-profile.update"
     ]);
     assert.equal(capability.contextVersion.domain, "researcher-profile");
+    // A linked owner (here an in-scope HEAD) never sees activate/deactivate on their own profile, active or not.
+    const head = { ...staff, id: "head-1", systemRole: "SCIENTIFIC_MANAGEMENT_HEAD" };
+    for (const status of ["ACTIVE", "INACTIVE"]) {
+      const own = projectResearcherProfileAuthorization(head, profile({ linkedUserId: head.id, status })).allowedActions;
+      assert.equal(own.includes("researcher-profile.activate") || own.includes("researcher-profile.deactivate"), false, status);
+    }
+    // Only SYSTEM_ADMIN may link HEAD/STAFF accounts, and only to INTERNAL profiles.
+    assert.deepEqual(linkableAccountRoles(admin, "INTERNAL"), ["RESEARCHER_INTERNAL_USER", "SCIENTIFIC_MANAGEMENT_HEAD", "SCIENTIFIC_MANAGEMENT_STAFF"]);
+    assert.deepEqual(linkableAccountRoles(admin, "EXTERNAL"), ["EXTERNAL_RESEARCHER_USER"]);
+    assert.deepEqual(linkableAccountRoles(staff, "INTERNAL"), ["RESEARCHER_INTERNAL_USER"]);
+    assert.deepEqual(linkableAccountRoles(head, "INTERNAL"), ["RESEARCHER_INTERNAL_USER"]);
+    // HEAD-linked profile: in-scope peers lose manager writes, SYSTEM_ADMIN keeps them, the owner keeps self/cv grants.
+    const headLinked = profile({ linkedUserId: head.id, linkedUser: { systemRole: "SCIENTIFIC_MANAGEMENT_HEAD", status: "active" } });
+    const writes = ["researcher-profile.update", "researcher-profile.deactivate", "researcher-profile.cv.update"];
+    const peer = projectResearcherProfileAuthorization(staff, headLinked).allowedActions;
+    assert.deepEqual(writes.filter((action) => peer.includes(action)), []);
+    assert.equal(peer.includes("researcher-profile.cv.read"), true);
+    assert.deepEqual(writes.filter((action) => projectResearcherProfileAuthorization(admin, headLinked).allowedActions.includes(action)), writes);
+    const owner = projectResearcherProfileAuthorization(head, headLinked).allowedActions;
+    assert.equal(owner.includes("researcher-profile.cv.update") && owner.includes("researcher-profile.self.update"), true);
+    assert.equal(owner.includes("researcher-profile.update"), false);
+  });
+
+  it("rejects a linked owner changing their own profile status with 403", async () => {
+    const head = { ...staff, id: "head-1", systemRole: "SCIENTIFIC_MANAGEMENT_HEAD" };
+    const { prisma, audit } = createFakePrisma({ profiles: [profile({ linkedUserId: head.id })] });
+    prisma.store.users.push({ ...head, status: "active", mustChangePassword: false, organizationScopes: [{ organizationUnitId: "org-1", organizationUnit: { id: "org-1", code: "ORG1", name: "Đơn vị 1", status: "active" } }] });
+    const { service } = createService(prisma, audit);
+    const contextVersion = projectResearcherProfileAuthorization(head, profile()).contextVersion;
+    await assert.rejects(service.setStatus(head, "profile-1", "INACTIVE", contextVersion), (error) => error instanceof ForbiddenException && /tự thay đổi trạng thái/.test(error.getResponse().message));
+    assert.equal(prisma.store.audits.length, 0);
+    // A STAFF peer cannot edit (or rename the account of) the HEAD-linked profile.
+    await assert.rejects(service.updateProfile(staff, "profile-1", updateResearcherProfilePipe.transform({ contextVersion, fullName: "Đổi tên" })), ForbiddenException);
+    assert.equal(prisma.store.audits.length, 0);
+    assert.equal(prisma.store.users.find((user) => user.id === head.id).displayName, head.displayName);
+  });
+
+  it("links HEAD accounts only for SYSTEM_ADMIN on INTERNAL profiles", async () => {
+    const scopes = [{ organizationUnitId: "org-1", organizationUnit: { id: "org-1", code: "ORG1", name: "Đơn vị 1", status: "active" } }];
+    const head = { ...staff, id: "head-1", systemRole: "SCIENTIFIC_MANAGEMENT_HEAD", status: "active", mustChangePassword: false, organizationScopes: scopes };
+    const attempt = async (actor, profileType) => {
+      const { prisma, audit } = createFakePrisma({ profiles: [profile({ profileType })] });
+      prisma.store.users.push(head, { ...admin, status: "active", mustChangePassword: false, organizationScopes: scopes });
+      const { service } = createService(prisma, audit);
+      const result = await service.linkResearcherAccount(actor, "profile-1", { userId: head.id, contextVersion: projectResearcherProfileAuthorization(actor, profile()).contextVersion });
+      return { result, prisma };
+    };
+    const { result, prisma } = await attempt(admin, "INTERNAL");
+    assert.equal(result.profile.linkedUserId ?? prisma.store.profiles[0].linkedUserId, head.id);
+    assert.equal(prisma.store.audits.some((entry) => entry.action === "link-researcher-account"), true);
+    await assert.rejects(attempt(staff, "INTERNAL"), ConflictException);
+    await assert.rejects(attempt(admin, "EXTERNAL"), ConflictException);
   });
 
   it("projects CV actions only for the owner or an exact-scope manager", () => {
