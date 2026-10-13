@@ -36,8 +36,11 @@ function safeUser(user = activeUser) {
   };
 }
 
-function createAuthStore({ user = activeUser, activeSession = { id: "session-1", userId: "user-1" } } = {}) {
+function createAuthStore({ user = activeUser, activeSession = { id: "session-1", userId: "user-1" }, profile = null } = {}) {
   return {
+    async findProfileDisplay(userId) {
+      return userId === activeUser.id ? profile : null;
+    },
     createdSessions: [],
     revokedSessions: [],
     passwordChanges: [],
@@ -204,6 +207,26 @@ describe("auth API behavior", () => {
         UnauthorizedException
       );
     }
+  });
+
+  it("/auth/me adds CV unit and academic-title name for a linked active profile, display only", async () => {
+    const me = async (profile) => {
+      const { service } = createService({ store: createAuthStore({ profile }) });
+      const request = { currentUser: safeUser() };
+      const body = await new AuthController(service).me(request);
+      assert.deepEqual(request.currentUser, safeUser());
+      return body.user;
+    };
+    const profile = { fullName: "Nguyễn Minh Phương", rankCode: "professor", degreeCode: "doctor", organization: "Ban Quản lý KHQS" };
+
+    assert.deepEqual(await me(null), safeUser());
+    assert.deepEqual(await me(profile), { ...safeUser(), displayFullName: "GS. TS. Nguyễn Minh Phương", displayUnit: "Ban Quản lý KHQS" });
+    assert.equal((await me({ ...profile, fullName: "TS. Nguyễn Minh Phương" })).displayFullName, "GS. TS. Nguyễn Minh Phương");
+    assert.equal((await me({ ...profile, fullName: "Thiếu tướng PGS. TS. Vũ Nhất Định" })).displayFullName, "GS. TS. Thiếu tướng Vũ Nhất Định");
+    assert.equal((await me({ ...profile, fullName: "PGS.TS Nguyễn Minh Phương" })).displayFullName, "GS. TS. Nguyễn Minh Phương");
+    assert.equal((await me({ ...profile, rankCode: null, degreeCode: "other" })).displayFullName, "Nguyễn Minh Phương");
+    assert.equal((await me({ ...profile, organization: "   " })).displayUnit, activeUser.unit);
+    assert.equal((await me({ ...profile, organization: null })).displayUnit, activeUser.unit);
   });
 
   it("malformed session cookies fail closed instead of throwing", async () => {
