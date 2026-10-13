@@ -453,6 +453,7 @@ function cvAward(value: unknown, path: string): ScientificCurriculumVitaeAward {
     const year = cvYear(input, field, path);
     if (year !== undefined) result[field] = year;
   }
+  if (result.awardYear != null && result.endYear != null && (result.endYear as number) < (result.awardYear as number)) invalid([`${path}.endYear`]);
   const notes = cvOptionalText(input, "notes", path, 4000);
   if (notes !== undefined) result.notes = notes;
   return result as ScientificCurriculumVitaeAward;

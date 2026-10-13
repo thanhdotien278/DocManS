@@ -33,7 +33,7 @@ degreeLevel (req, enum Đại học … Sau tiến sĩ), major (req), institutio
 ## Tab 4 — `researchExperience`
 - Profile `publications[]` (not a JSON researchExperience key): title (req), authors, publicationYear, venue, issnIsbn, doi, publicationType, classification, proofUrl, notes — stored only in `researcher_profile_publications`. PATCH sends the full list only when changed; omitted saved rows are hard-deleted in the same transaction. INACTIVE rows are hidden and sent back unchanged.
 - intellectualProperty[]: title (req), authors, issueYear, patentNumber, issueAgency, proofUrl, notes.
-- awards[]: name (req), awardYear, endYear, grantingAgency, proofUrl, notes.
+- awards[]: name (req), awardYear, endYear, grantingAgency, proofUrl, notes. When both years are set, endYear must not be before awardYear.
 - projects[]: projectTitle (req), managementAgency, code, role (req), period, status, notes — stored only in `curriculumVitae.researchExperience.projects` (no migration).
 
 Non-SUPERSEDED profile `participations` are read-only on Tab 4 (title, role, level, dates, status); they are already declared in the researcher profile and must not be re-entered.

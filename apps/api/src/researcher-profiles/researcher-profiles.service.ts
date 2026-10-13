@@ -608,14 +608,15 @@ export class ResearcherProfilesService {
   private async syncPublications(tx: Prisma.TransactionClient, profileId: string, inputs: ResearcherProfilePublicationInput[] | undefined, actorId: string) {
     if (!inputs) return;
     const keptIds: string[] = [];
-    for (const input of inputs) {
+    for (const [index, input] of inputs.entries()) {
       if (!input.id) {
         const created = await tx.researcherProfilePublication.create({ data: { researcherProfileId: profileId, ...this.publicationCreateData(input, actorId) } });
         keptIds.push(created.id);
         continue;
       }
       const current = await tx.researcherProfilePublication.findFirst({ where: { id: input.id, researcherProfileId: profileId } });
-      if (!current) throw new NotFoundException({ message: "Không tìm thấy công bố trong hồ sơ." });
+      // The row path lets the CV workspace route the error to Tab 4 like a validation error.
+      if (!current) throw new NotFoundException({ message: "Không tìm thấy công bố trong hồ sơ.", errors: [{ field: `publications.${index}.id`, message: "Công bố không còn trong hồ sơ. Vui lòng tải lại." }] });
       keptIds.push(input.id);
       await tx.researcherProfilePublication.update({ where: { id: input.id }, data: { ...this.publicationCreateData(input, actorId), createdById: current.createdById } });
     }

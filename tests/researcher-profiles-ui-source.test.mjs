@@ -141,11 +141,6 @@ describe("Story 2.1 researcher profile UI source", () => {
     }
     assert.equal((research.match(/editable=\{editable\} error=/g) ?? []).length, 4);
     assert.match(research, /<CvPublicationsSection rows=\{draft\.publications\} editable=\{editable\}/);
-    assert.match(workspace, /JSON.stringify\(draft.publications\) !== JSON.stringify\(previous.publications\)/);
-    assert.match(workspace, /input.publications = \[\.\.\.draft.publications.map\(compactRow\), \.\.\.profile.publications.filter/);
-    assert.match(workspace, /errors.publications \|\| errors.intellectualProperty \|\| errors.awards \|\| errors.projects/);
-    assert.match(workspace, /field.startsWith\("publications\."\)/);
-    assert.match(workspace, /curriculumVitae.researchExperience.\$\{section\}/);
     assert.match(research, /row.status !== "SUPERSEDED"/);
     assert.match(research, /<th>Tình trạng<\/th>/);
     assert.match(research, /Các nhiệm vụ đã khai trong hồ sơ nhà khoa học\. Không nhập lại/);
@@ -197,6 +192,60 @@ describe("Story 2.1 researcher profile UI source", () => {
     const panelMarkup = renderToStaticMarkup(jsxRuntime.jsx(CvRowTable, { name: "p", title: "Danh sách công bố", rows: [{ id: "saved", title: "Đã lưu" }, { title: "Mới" }], columns: [{ key: "title", label: "Tên công bố *", required: true }], editable: true, canDelete: (row) => !row.id, onChange: () => undefined, newRow: () => ({ title: "" }) }));
     assert.doesNotMatch(panelMarkup, /Xóa dòng 1/);
     assert.match(panelMarkup, /aria-label="Xóa dòng 2: Mới"/);
+    // Executed save path: the workspace runs with index-keyed hook stubs and its JSX tree is walked for handlers.
+    class ProfileRequestError extends Error { constructor(message, status, code, errors = []) { super(message); Object.assign(this, { status, code, errors }); } }
+    const hooks = []; const effects = []; const sent = []; let hook = 0; let reply;
+    const fakeReact = {
+      useState: (initial) => { const key = hook++; if (!(key in hooks)) hooks[key] = initial; return [hooks[key], (value) => { hooks[key] = typeof value === "function" ? value(hooks[key]) : value; }]; },
+      useRef: (initial) => { const key = hook++; if (!(key in hooks)) hooks[key] = { current: initial }; return hooks[key]; },
+      useEffect: (effect) => { effects.push(effect); }
+    };
+    const cvProfile = {
+      id: "profile-1", fullName: "Nguyễn Văn A", contactEmail: "a@hvqy.vn", researchFields: [{ id: "field-1" }], expertiseKeywords: [], participations: [],
+      viewerAuthorization: { allowedActions: ["researcher-profile.cv.update", "researcher-profile.update"], contextVersion: { aggregateVersion: 1 } },
+      publications: [{ id: "pub-a", title: "A", status: "ACTIVE" }, { id: "pub-hidden", title: "Ẩn", status: "INACTIVE" }],
+      curriculumVitae: { cvSchemaVersion: 1, personalInfo: { gender: "Nữ", idNumber: "001", organization: "Khoa Nội" }, researchExperience: { awards: [{ name: "Giải cũ" }] } }
+    };
+    const generalTab = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-general-tab.tsx", { react, "react/jsx-runtime": jsxRuntime, "./cv-portrait-cropper": {}, "./cv-row-table": rowTable });
+    const { ScientificCvWorkspace } = await loadFixture("apps/web/src/components/researcher-profiles/scientific-cv/cv-workspace.tsx", {
+      react: fakeReact, "react/jsx-runtime": jsxRuntime, "@/components/auth/session-provider": { useSession: () => ({ refreshCurrentUser: () => undefined }) },
+      "@/lib/researcher-profiles-api": { ProfileRequestError, getResearcherProfile: async () => ({ profile: cvProfile }), loadResearcherProfileCatalogs: async () => ({ organizationUnits: [], researchFields: [], academicRanks: [], academicDegrees: [] }), updateResearcherProfile: async (_target, input) => { sent.push(input); return reply(); } },
+      "./cv-general-tab": generalTab, "./cv-history-tabs": {}, "./cv-research-tab": { CvResearchTab }, "./cv-print-tab": {}, "./cv-history": {}, "./cv-row-table": rowTable
+    });
+    const find = (node, match) => {
+      if (Array.isArray(node)) return node.map((child) => find(child, match)).find(Boolean);
+      if (!node || typeof node !== "object") return undefined;
+      return match(node) ? node : find(node.props?.children, match);
+    };
+    const flush = () => new Promise((resolve) => setImmediate(resolve));
+    const plain = (value) => JSON.parse(JSON.stringify(value)); // vm-realm objects fail deepStrictEqual on prototype alone
+    const render = () => { hook = 0; return ScientificCvWorkspace({ target: "profile-1" }); };
+    const openTab = (id) => find(render(), (node) => node.props?.id === `cv-tab-${id}`).props.onClick();
+    const submit = async () => { find(render(), (node) => node.type === "form").props.onSubmit({ preventDefault: () => undefined }); await flush(); await flush(); };
+    render(); effects[0](); await flush();
+    reply = async () => ({ profile: cvProfile });
+    await submit();
+    assert.equal("publications" in sent[0], false, "unchanged publications are not sent");
+    assert.deepEqual(plain(sent[0].curriculumVitae.researchExperience), { awards: [{ name: "Giải cũ" }] }, "absent CV sections stay absent");
+    openTab("research");
+    const researchTab = () => find(render(), (node) => node.type === CvResearchTab);
+    researchTab().props.onChange("publications", []);
+    researchTab().props.onChange("awards", [{ name: "Giải", awardYear: 2021, endYear: 2020 }]);
+    await submit();
+    assert.equal(sent.length, 1, "inverted award years block the save");
+    assert.equal(researchTab().props.errors.awards, "Đến năm không được trước Năm.");
+    researchTab().props.onChange("awards", [{ name: "Giải", awardYear: 2020, endYear: 2021 }]);
+    openTab("general");
+    reply = async () => { throw new ProfileRequestError("Không tìm thấy công bố trong hồ sơ.", 404, undefined, [{ field: "publications.0.id", message: "Công bố không còn trong hồ sơ. Vui lòng tải lại." }]); };
+    await submit();
+    assert.deepEqual(plain(sent[1].publications), [cvProfile.publications[1]], "removing A keeps the hidden INACTIVE row");
+    assert.deepEqual(plain(sent[1].curriculumVitae.researchExperience), { awards: [{ name: "Giải", awardYear: 2020, endYear: 2021 }] });
+    const goTo = (tree) => find(tree, (node) => node.type === "button" && String([].concat(node.props.children).join("")).startsWith("Đi tới"));
+    assert.equal([].concat(goTo(render()).props.children).join(""), "Đi tới 4. Kinh nghiệm & Thành tích nghiên cứu", "a stale publication id routes to Tab 4");
+    reply = async () => { throw new ProfileRequestError("Dữ liệu hồ sơ nhà khoa học không hợp lệ.", 400, undefined, [{ field: "curriculumVitae.researchExperience.awards.0.proofUrl", message: "Liên kết không hợp lệ." }]); };
+    await submit();
+    goTo(render()).props.onClick();
+    assert.deepEqual(plain(researchTab().props.errors), { awards: "Liên kết không hợp lệ." });
   });
 
   it("renders the saved CV as a BM-06 paper in Vietnamese and English and hides it without cv.read", async () => {
