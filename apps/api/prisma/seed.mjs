@@ -280,6 +280,30 @@ if (existingOversightLink) {
   await prisma.researcherProfileAccountLink.create({ data: { researcherProfileId: oversightProfile.id, userId: "user-oversight-vndinh", status: "ACTIVE", effectiveFrom: new Date(), reason: "seed-oversight-account", createdById: "user-admin" } });
 }
 
+// Story 13.10: science-management demo accounts get their own INTERNAL CV profile. Create-only, name and unit only.
+for (const [userId, profileId] of [["user-staff", "profile-staff-nmphuong"], ["user-staff-hdtien1", "profile-staff-hdtien1"], ["user-staff-hdtien2", "profile-staff-hdtien2"]]) {
+  const user = users.find((candidate) => candidate.id === userId);
+  await prisma.$transaction(async (tx) => {
+    const existing = await tx.researcherProfile.findFirst({ where: { OR: [{ id: profileId }, { linkedUserId: userId }] } });
+    const previousLink = await tx.researcherProfileAccountLink.findFirst({ where: { userId } });
+    if (existing || previousLink) return;
+    const organization = await tx.organizationUnit.findFirstOrThrow({ where: { name: user.unit, status: "active" } });
+    await tx.researcherProfile.create({ data: {
+      id: profileId,
+      managementOrganizationUnitId: organization.id,
+      linkedUserId: userId,
+      profileType: "INTERNAL",
+      fullName: user.displayName,
+      fullNameKey: user.displayName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLocaleLowerCase("vi").replace(/\s+/g, " ").trim(),
+      status: "ACTIVE",
+      createdById: "user-admin",
+      updatedById: "user-admin",
+      accountLinks: { create: { userId, effectiveFrom: new Date(), reason: "seed-management-account", createdById: "user-admin" } },
+      history: { create: { actorId: "user-admin", action: "CREATE", reason: "seed-management-account", afterFacts: { linkedUserId: userId } } }
+    } });
+  });
+}
+
 const catalogs = [
   ["research-field", "military-medicine", "Y học quân sự"],
   ["research-field", "basic-medicine", "Y học cơ sở"],

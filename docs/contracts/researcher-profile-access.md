@@ -50,6 +50,21 @@ Baseline §2.1 governs officer lifecycle, conflict checks and finalized role dec
   administration remains in the SYSTEM_ADMIN account-management interface.
   SYSTEM_ADMIN may detach a legacy elevated-account link to repair identity linkage;
   this never changes that account, its credentials, role or scope.
+- Story 13.10 (2026-10-13): an active SYSTEM_ADMIN may also link an active, unlinked
+  `SCIENTIFIC_MANAGEMENT_HEAD` / `SCIENTIFIC_MANAGEMENT_STAFF` account with explicit scope on
+  the profile organization to an INTERNAL profile, so that account maintains its own CV
+  through My Profile ("Lý lịch khoa học"). HEAD/STAFF managers still link only researcher-role
+  accounts, EXTERNAL profiles accept only `EXTERNAL_RESEARCHER_USER`, and nobody links
+  themselves. The rule is enforced server-side: `account-candidates` omits ineligible
+  accounts and `account/link` rejects them with 409. No profile is ever created on My Profile access.
+- A linked owner never activates or deactivates their own profile: `activate`/`deactivate`
+  are absent from their `allowedActions` and the API returns 403, whatever the profile status.
+- When the linked account is HEAD/STAFF, the manager-write actions (update, activate,
+  deactivate, cv.update, publication.manage, participation.manage) go only to an in-scope
+  SYSTEM_ADMIN. Scoped HEAD/STAFF managers keep read, cv.read and history.read; the owner keeps
+  their self/cv/history grants through My Profile. The projection omits these actions and
+  `PATCH /:id`, `/:id/activate` and `/:id/deactivate` return 403, checked before and inside the
+  transaction.
 
 ## Publications and participation history
 

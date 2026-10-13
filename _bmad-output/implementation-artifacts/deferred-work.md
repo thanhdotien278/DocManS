@@ -112,3 +112,6 @@
 - source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-9-cv-list-sections-drawer.md`
   summary: Automated tests for the shared CvRowTable Drawer interactions (required/year-order/URL errors, unchanged save, delete confirm, Enter not submitting the outer form).
   evidence: Same gap as 13.8 — no jsdom/browser harness in the repo; these matrix rows were verified only in the real app; static rendering is tested.
+- source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-10-own-cv-for-science-managers.md`
+  summary: Post-login landing (HEAD/STAFF → /dashboard, linked researchers → /my-profile) in login-form.tsx has no automated test.
+  evidence: The repo has only source-text tests for web components and no runtime harness, so inverting `managesScience` would ship undetected; verified manually on 2026-10-13.

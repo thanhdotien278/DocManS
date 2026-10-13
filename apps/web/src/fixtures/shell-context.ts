@@ -277,6 +277,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
   ],
   SCIENTIFIC_MANAGEMENT_HEAD: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/my-profile", label: "Lý lịch khoa học", icon: UserRoundSearch },
     { href: "/proposals", label: "Quản lý đề tài", icon: Files },
     { href: "/researcher-profiles", label: "Hồ sơ nhà khoa học", icon: UserRoundSearch },
     { href: "/intakes", label: "Đợt tiếp nhận", icon: CalendarRange },
@@ -287,6 +288,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
   ],
   SCIENTIFIC_MANAGEMENT_STAFF: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/my-profile", label: "Lý lịch khoa học", icon: UserRoundSearch },
     { href: "/proposals", label: "Quản lý đề tài", icon: Files },
     { href: "/researcher-profiles", label: "Hồ sơ nhà khoa học", icon: UserRoundSearch },
     { href: "/intakes", label: "Đợt tiếp nhận", icon: CalendarRange },

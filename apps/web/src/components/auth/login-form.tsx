@@ -39,7 +39,9 @@ export function LoginForm() {
     }
 
     startTransition(() => {
-      router.replace(refreshedAccount.mustChangePassword ? "/change-password" : refreshedAccount.researcherProfileId ? "/my-profile" : "/dashboard");
+      // Science-management staff keep their dashboard landing even after their own CV profile is linked (Story 13.10).
+      const managesScience = refreshedAccount.systemRole === "SCIENTIFIC_MANAGEMENT_HEAD" || refreshedAccount.systemRole === "SCIENTIFIC_MANAGEMENT_STAFF";
+      router.replace(refreshedAccount.mustChangePassword ? "/change-password" : refreshedAccount.researcherProfileId && !managesScience ? "/my-profile" : "/dashboard");
       router.refresh();
     });
   }

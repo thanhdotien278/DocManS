@@ -24,6 +24,19 @@ export const RESEARCHER_PROFILE_ACTIONS = [
 
 export const RESEARCHER_PROFILE_MANAGER_ROLES = ["SYSTEM_ADMIN", "SCIENTIFIC_MANAGEMENT_HEAD", "SCIENTIFIC_MANAGEMENT_STAFF"] as const;
 
+// Only a SYSTEM_ADMIN may link elevated (HEAD/STAFF) accounts, and only to INTERNAL profiles.
+export function linkableAccountRoles(actor: SafeUserContext, profileType?: string | null) {
+  if (profileType === "EXTERNAL") return ["EXTERNAL_RESEARCHER_USER"];
+  return actor.systemRole === "SYSTEM_ADMIN" ? ["RESEARCHER_INTERNAL_USER", "SCIENTIFIC_MANAGEMENT_HEAD", "SCIENTIFIC_MANAGEMENT_STAFF"] : ["RESEARCHER_INTERNAL_USER"];
+}
+
+const ELEVATED_LINKED_WRITE_ACTIONS: readonly string[] = ["researcher-profile.update", "researcher-profile.activate", "researcher-profile.deactivate", "researcher-profile.cv.update", "researcher-profile.publication.manage", "researcher-profile.participation.manage"];
+
+// Manager writes on a profile linked to a HEAD/STAFF account belong to SYSTEM_ADMIN only (Story 13.10).
+export function deniesElevatedLinkedWrite(actor: SafeUserContext, action: string, profile: { linkedUser?: { systemRole: string | null } | null }) {
+  return actor.systemRole !== "SYSTEM_ADMIN" && ELEVATED_LINKED_WRITE_ACTIONS.includes(action) && ["SCIENTIFIC_MANAGEMENT_HEAD", "SCIENTIFIC_MANAGEMENT_STAFF"].includes(profile.linkedUser?.systemRole ?? "");
+}
+
 export function hasResearcherProfileScope(actor: SafeUserContext, organizationId: string) {
   return actor.organizationScopes.some((scope) => scope.id === organizationId);
 }
@@ -52,9 +65,11 @@ export function projectResearcherProfileAuthorization(actor: SafeUserContext, pr
     if (action.startsWith("researcher-profile.self.")) return own;
     if (own && ["researcher-profile.cv.read", "researcher-profile.cv.update", "researcher-profile.history.read", "researcher-profile.publication.manage", "researcher-profile.participation.manage"].includes(action)) return true;
     if (!canManageResearcherProfile(actor, action, profile.managementOrganizationUnitId)) return false;
+    if (deniesElevatedLinkedWrite(actor, action, profile)) return false;
     if (action === "researcher-profile.account.create" || action === "researcher-profile.account.link") return profile.status === "ACTIVE" && !profile.linkedUserId;
     if (action === "researcher-profile.account.unlink") return !!profile.linkedUserId && profile.linkedUserId !== actor.id && (actor.systemRole === "SYSTEM_ADMIN" || ["RESEARCHER_INTERNAL_USER", "EXTERNAL_RESEARCHER_USER"].includes(profile.linkedUser?.systemRole ?? ""));
     if (action === "researcher-profile.account.reset") return profile.status === "ACTIVE" && !!profile.linkedUserId && profile.linkedUserId !== actor.id && profile.linkedUser?.status === "pending_activation" && profile.linkedUser?.systemRole === (profile.profileType === "EXTERNAL" ? "EXTERNAL_RESEARCHER_USER" : "RESEARCHER_INTERNAL_USER");
+    if ((action === "researcher-profile.activate" || action === "researcher-profile.deactivate") && profile.linkedUserId === actor.id) return false;
     return true;
   }).sort();
   const blockedActions = RESEARCHER_PROFILE_ACTIONS.filter((action) => !allowedActions.includes(action)).map((action) => ({
