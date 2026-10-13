@@ -2,7 +2,7 @@
 title: 'Story 13.7 — CV demo seed and no fabricated bootstrap'
 type: 'feature'
 created: '2026-10-12'
-status: 'in-progress'
+status: 'review'
 route: 'oneshot'
 review_loop_iteration: 0
 context:
@@ -38,3 +38,8 @@ Tests, in `tests/researcher-profiles.test.mjs`:
 
 ## Implementation Notes
 
+
+- Deviation (user, 2026-10-13): the demo CVs target `int2` (`profile-user-researcher2`, INTERNAL) and `ex1` (`profile-user-external1`, EXTERNAL) instead of `patuan`. The frozen Intent above is unchanged.
+- `apps/api/prisma/demo-cvs.json` holds one entry per profile id: `contactEmail` and `curriculumVitae` (Tab 1–3 plus `intellectualProperty` and `awards`; no publications or projects, pending 13-4). Sensitive values are `DEMO-*`; emails are `*.demo@example.invalid`.
+- `seed.mjs` writes an entry only while that profile's `curriculumVitae` is null, fills `contactEmail` only when null, and bumps `aggregateVersion`. Verified against the local DB: first run wrote both, second run changed nothing.
+- Tests in `tests/researcher-profiles.test.mjs`: demo JSON round-trips through `updateMyProfilePipe` unchanged; the existing denial test now also asserts `getMyProfile`/`updateMyProfile` for an unlinked account return 403 with no profile, history or audit writes.

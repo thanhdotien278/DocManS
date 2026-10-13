@@ -1,5 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { isPermissionActionV1 } from "../packages/permissions/src/index.js";
 import { createResearcherProfilePipe, updateMyProfilePipe, updateResearcherProfilePipe } from "../dist/apps/api/researcher-profiles/researcher-profiles.dto.js";
@@ -639,6 +640,19 @@ describe("Story 2.1 researcher profile contracts", () => {
     const { service } = createService(prisma, audit);
     await assert.rejects(() => service.getProfile(outOfScopeStaff, "profile-1"), ForbiddenException);
     await assert.rejects(() => service.updateProfile(leadership, "profile-1", { curriculumVitae: validCv(), contextVersion: contextVersion() }), ForbiddenException);
+    // Story 13.7: an account without a linked profile is denied and nothing is created on first access.
+    await assert.rejects(() => service.getMyProfile(researcher), ForbiddenException);
+    await assert.rejects(() => service.updateMyProfile(researcher, updateMyProfilePipe.transform({ contextVersion: contextVersion(), curriculumVitae: validCv() })), ForbiddenException);
+    assert.equal(prisma.store.profiles.length, 1);
+    assert.deepEqual([prisma.store.histories.length, prisma.store.audits.length], [0, 0]);
+  });
+
+  it("keeps the seeded demo CVs valid against the real CV pipe", () => {
+    const demoCvs = JSON.parse(readFileSync(new URL("../apps/api/prisma/demo-cvs.json", import.meta.url), "utf8"));
+    for (const [profileId, demo] of Object.entries(demoCvs)) {
+      const parsed = updateMyProfilePipe.transform({ contextVersion: contextVersion(0, profileId), curriculumVitae: demo.curriculumVitae });
+      assert.deepEqual(parsed.curriculumVitae, demo.curriculumVitae);
+    }
   });
 
   it("rejects self username changes and lets a scoped manager set a linked researcher's username", async () => {
