@@ -2,7 +2,7 @@
 title: 'Story 13.7 — CV demo seed and no fabricated bootstrap'
 type: 'feature'
 created: '2026-10-12'
-status: 'review'
+status: 'done'
 route: 'oneshot'
 review_loop_iteration: 0
 context:

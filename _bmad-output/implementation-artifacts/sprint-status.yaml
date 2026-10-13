@@ -129,15 +129,15 @@ development_status:
   12-4-bao-cao-tong-hop-theo-pham-vi-nghiep-vu: backlog
   12-5-xuat-excel-pdf-co-kiem-soat-va-truy-vet: backlog
   epic-12-retrospective: optional
-  epic-13: in-progress
+  epic-13: done
   13-1-cv-data-contract-storage-api: done
   13-2-cv-shell-and-general-tab: done
   13-3-education-and-work-history: done
   13-4-research-experience-and-achievements: done
-  13-5-bm06-view-and-print-vi-en: review
-  13-6-cv-change-history: review
-  13-7-cv-demo-seed-and-no-fake-bootstrap: review
-  13-8-publications-drawer: review
-  13-9-cv-list-sections-drawer: review
-  13-10-own-cv-for-science-managers: review
+  13-5-bm06-view-and-print-vi-en: done
+  13-6-cv-change-history: done
+  13-7-cv-demo-seed-and-no-fake-bootstrap: done
+  13-8-publications-drawer: done
+  13-9-cv-list-sections-drawer: done
+  13-10-own-cv-for-science-managers: done
   epic-13-retrospective: optional
