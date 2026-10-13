@@ -367,6 +367,21 @@ for (const user of users.filter((user) => ["RESEARCHER_INTERNAL_USER", "EXTERNAL
   });
 }
 
+// Story 13.7: demo CVs for int2 and ex1. Written once, only while the profile has no CV, so user edits are never overwritten.
+const demoCvs = JSON.parse(readFileSync(new URL("./demo-cvs.json", import.meta.url), "utf8"));
+for (const [profileId, demo] of Object.entries(demoCvs)) {
+  await prisma.$transaction(async (tx) => {
+    const profile = await tx.researcherProfile.findUnique({ where: { id: profileId } });
+    if (!profile || profile.curriculumVitae !== null) return;
+    await tx.researcherProfile.update({ where: { id: profileId }, data: {
+      curriculumVitae: demo.curriculumVitae,
+      ...(profile.contactEmail ? {} : { contactEmail: demo.contactEmail, contactEmailKey: demo.contactEmail.toLocaleLowerCase("en-US") }),
+      aggregateVersion: { increment: 1 },
+      updatedById: "user-admin"
+    } });
+  });
+}
+
 const intakeStartsAt = new Date();
 intakeStartsAt.setDate(intakeStartsAt.getDate() - 1);
 const intakeEndsAt = new Date();

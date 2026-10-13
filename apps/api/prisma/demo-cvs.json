@@ -1,0 +1,94 @@
+{
+  "profile-user-researcher2": {
+    "contactEmail": "int2.demo@example.invalid",
+    "curriculumVitae": {
+      "cvSchemaVersion": 1,
+      "personalInfo": {
+        "gender": "Nữ",
+        "birthDate": "1985-03-15",
+        "birthPlace": "Hà Nội",
+        "nationality": "Việt Nam",
+        "idNumber": "DEMO-ID-000002",
+        "idIssueDate": "2021-06-01",
+        "idIssuePlace": "DEMO - Cục Cảnh sát QLHC",
+        "englishAcademicTitle": "Dr.",
+        "contactAddress": "Địa chỉ demo, Hà Đông, Hà Nội",
+        "organization": "Khoa Toán - Tin học",
+        "bankAccount": "DEMO-0000000002",
+        "bankName": "Ngân hàng DEMO",
+        "bankBranch": "Chi nhánh DEMO",
+        "smartCaSerial": "DEMO-SMARTCA-0002",
+        "shareDataAgreement": true,
+        "languages": [
+          { "language": "Tiếng Anh", "proficiency": "Thành thạo", "certificate": "IELTS 7.0 (demo)" },
+          { "language": "Tiếng Pháp", "proficiency": "Cơ bản" }
+        ]
+      },
+      "educationHistory": [
+        { "degreeLevel": "Đại học", "major": "Toán - Tin", "institution": "Đại học Demo", "startYear": 2003, "graduationYear": 2007, "trainingMode": "Chính quy" },
+        { "degreeLevel": "Thạc sĩ", "major": "Khoa học dữ liệu", "institution": "Đại học Demo", "startYear": 2008, "graduationYear": 2010, "trainingMode": "Chính quy" },
+        { "degreeLevel": "Tiến sĩ", "major": "Toán ứng dụng", "institution": "Học viện Demo", "startYear": 2011, "graduationYear": 2015, "trainingMode": "Chính quy" }
+      ],
+      "workHistory": {
+        "summary": "Giảng dạy và nghiên cứu về toán ứng dụng và phân tích dữ liệu y sinh (dữ liệu demo).",
+        "items": [
+          { "period": "2015 - 2020", "organization": "Khoa Toán - Tin học", "position": "Giảng viên", "workField": "Toán ứng dụng" },
+          { "period": "2020 - nay", "organization": "Khoa Toán - Tin học", "position": "Giảng viên chính", "workField": "Phân tích dữ liệu y sinh" }
+        ]
+      },
+      "researchExperience": {
+        "intellectualProperty": [
+          { "title": "Giải pháp hữu ích demo về phân tích dữ liệu y sinh", "authors": "Nhà nghiên cứu nội bộ 2", "issueYear": 2022, "patentNumber": "DEMO-GPHI-001", "issueAgency": "Cục Sở hữu trí tuệ (demo)" }
+        ],
+        "awards": [
+          { "name": "Giải thưởng nghiên cứu trẻ demo", "awardYear": 2019, "endYear": 2019, "grantingAgency": "Học viện (demo)" }
+        ]
+      }
+    }
+  },
+  "profile-user-external1": {
+    "contactEmail": "ex1.demo@example.invalid",
+    "curriculumVitae": {
+      "cvSchemaVersion": 1,
+      "personalInfo": {
+        "gender": "Nam",
+        "birthDate": "1978-09-20",
+        "birthPlace": "Hải Phòng",
+        "nationality": "Việt Nam",
+        "idNumber": "DEMO-ID-000003",
+        "idIssueDate": "2020-02-10",
+        "idIssuePlace": "DEMO - Cục Cảnh sát QLHC",
+        "englishAcademicTitle": "Assoc. Prof.",
+        "contactAddress": "Địa chỉ demo, Cầu Giấy, Hà Nội",
+        "organization": "Viện Nghiên cứu Demo (ngoài Học viện)",
+        "bankAccount": "DEMO-0000000003",
+        "bankName": "Ngân hàng DEMO",
+        "bankBranch": "Chi nhánh DEMO",
+        "smartCaSerial": "DEMO-SMARTCA-0003",
+        "shareDataAgreement": true,
+        "languages": [
+          { "language": "Tiếng Anh", "proficiency": "Tốt", "certificate": "TOEFL 95 (demo)" }
+        ]
+      },
+      "educationHistory": [
+        { "degreeLevel": "Đại học", "major": "Dược học", "institution": "Đại học Dược Demo", "startYear": 1996, "graduationYear": 2001, "trainingMode": "Chính quy" },
+        { "degreeLevel": "Tiến sĩ", "major": "Hóa dược", "institution": "Đại học Demo (nước ngoài)", "startYear": 2004, "graduationYear": 2008, "trainingMode": "Liên kết quốc tế" }
+      ],
+      "workHistory": {
+        "summary": "Nghiên cứu hóa dược và phát triển thuốc tại viện nghiên cứu (dữ liệu demo).",
+        "items": [
+          { "period": "2008 - 2016", "organization": "Viện Nghiên cứu Demo", "position": "Nghiên cứu viên", "workField": "Hóa dược" },
+          { "period": "2016 - nay", "organization": "Viện Nghiên cứu Demo", "position": "Trưởng phòng", "workField": "Phát triển thuốc" }
+        ]
+      },
+      "researchExperience": {
+        "intellectualProperty": [
+          { "title": "Bằng độc quyền sáng chế demo về hợp chất dược", "authors": "Nhà nghiên cứu bên ngoài 1", "issueYear": 2018, "patentNumber": "DEMO-SC-002", "issueAgency": "Cục Sở hữu trí tuệ (demo)" }
+        ],
+        "awards": [
+          { "name": "Bằng khen demo của Bộ Y tế", "awardYear": 2020, "endYear": 2021, "grantingAgency": "Bộ Y tế (demo)" }
+        ]
+      }
+    }
+  }
+}
