@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
-import { assignProjectOfficerPipe, createProjectPipe, projectDecisionPipe, projectMutationPipe, projectReportPipe, projectReportReviewPipe, projectReportSubmissionPipe, projectRequestPipe, readRequestType, revokeProjectOfficerPipe } from "./approved-projects.dto.js";
+import { assignProjectOfficerPipe, createProjectPipe, projectDecisionPipe, projectMutationPipe, projectReportPipe, projectReportReviewPipe, projectReportSubmissionPipe, projectRequestPipe, projectWithdrawPipe, readRequestType, revokeProjectOfficerPipe } from "./approved-projects.dto.js";
 import { ApprovedProjectsService } from "./approved-projects.service.js";
 
 function filters(value: Record<string, string>) {
@@ -85,4 +85,7 @@ export class ApprovedProjectsController {
 
   @Post(":id/requests/:type/:requestId/reject")
   async reject(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("type") type: string, @Param("requestId") requestId: string, @Body(projectDecisionPipe) body: any) { return { request: await this.projects.decideRequest(req.currentUser!, id, readRequestType(type), "reject", { ...body, requestId }) }; }
+
+  @Post(":id/requests/:type/:requestId/withdraw")
+  async withdraw(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("type") type: string, @Param("requestId") requestId: string, @Body(projectWithdrawPipe) body: any) { return { request: await this.projects.withdrawRequest(req.currentUser!, id, readRequestType(type), { ...body, requestId }) }; }
 }

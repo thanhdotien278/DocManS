@@ -68,12 +68,12 @@
 
 ## Deferred from: code review (2026-09-26)
 
-- **No creation fallback when no active proposal officer exists.** Contract + spec require the current scoped proposal officer to create the project; if that assignment is revoked/expired before creation, nobody can create (Head can only assign project officers). Needs a decision on a fallback creator (e.g., Head or a re-assigned proposal officer).
-- **Open request permanently blocks all new requests.** `REQUEST_ALREADY_OPEN` (approved-projects.service.ts:501) rejects any new request while one is non-terminal, and no withdraw/cancel/expire path exists in contract or code. A stale draft or abandoned supplement_requested request freezes the project. Needs a withdraw or force-close action defined.
-- **No authority path for routine milestone/checkpoint maintenance post-activation.** FR24/Story 6.2 require ongoing milestone maintenance, but the contract scopes `project.setup.configure` to preparing and only "important milestone" changes route through adjustment — "important" is never defined, and code restricts adjustment milestone changes to `isImportant` milestones (service.ts:661). Ordinary milestones have no permitted edit path.
-- **No request path for shortening duration/end date.** Adjustments forbid end-date keys (EXTENSION_REQUIRED, service.ts:471-472) and extensions require a *later* end date (service.ts:494). Early completion or reduced timeline is impossible through any documented workflow. Needs a policy decision.
-- **Extension undecidable when all scoped Heads are conflicted/inactive.** Only a scoped, unconflicted Head can decide (service.ts:623-624); no escalation or delegated-decider path exists, and a stuck `ready_for_head_decision` request blocks all future requests. Needs an escalation policy.
-- **No abandon/cancel exit for a preparing project.** The state machine (architecture.md Approved Project State Machine) has no transition out of `preparing` except confirm; a wrongly created project persists forever. Needs a terminal transition or named retire action and owner.
+- **No creation fallback when no active proposal officer exists.** Contract + spec require the current scoped proposal officer to create the project; if that assignment is revoked/expired before creation, nobody can create (Head can only assign project officers). Needs a decision on a fallback creator (e.g., Head or a re-assigned proposal officer). **Documented 2026-10-14 (spec-gf4-deferred-gaps):** Head reassigns the proposal officer on the approved proposal (existing action, no status gate) and that officer creates the project; see project-execution contract §Approved decisions.
+- **Open request permanently blocks all new requests.** `REQUEST_ALREADY_OPEN` (approved-projects.service.ts:502) rejects any new request while one is non-terminal, and no withdraw/cancel/expire path exists in contract or code. A stale draft or abandoned supplement_requested request freezes the project. Needs a withdraw or force-close action defined. **Resolved 2026-10-14 (spec-gf4-deferred-gaps):** requester PI withdraws any non-terminal request (`project.adjustment.withdraw` / `project.extension.withdraw`, terminal status `withdrawn`), which frees the project for a new request.
+- **No authority path for routine milestone/checkpoint maintenance post-activation.** FR24/Story 6.2 require ongoing milestone maintenance, but the contract scopes `project.setup.configure` to preparing and only "important milestone" changes route through adjustment — "important" is never defined, and code restricts adjustment milestone changes to `isImportant` milestones (service.ts:661). Ordinary milestones have no permitted edit path. → planned: see split entry from spec-gf4-deferred-gaps.md (2026-10-14)
+- **No request path for shortening duration/end date.** Adjustments forbid end-date keys (EXTENSION_REQUIRED, service.ts:471-472) and extensions require a *later* end date (service.ts:494). Early completion or reduced timeline is impossible through any documented workflow. Needs a policy decision. → planned: see split entry from spec-gf4-deferred-gaps.md (2026-10-14)
+- **Extension undecidable when all scoped Heads are conflicted/inactive.** Only a scoped, unconflicted Head can decide (service.ts:623-624); no escalation or delegated-decider path exists, and a stuck `ready_for_head_decision` request blocks all future requests. Needs an escalation policy. **Documented 2026-10-14 (spec-gf4-deferred-gaps):** known limitation for the next flow; the requester PI can withdraw the stuck request to unblock the project.
+- **No abandon/cancel exit for a preparing project.** The state machine (architecture.md Approved Project State Machine) has no transition out of `preparing` except confirm; a wrongly created project persists forever. Needs a terminal transition or named retire action and owner. → planned: see split entry from spec-gf4-deferred-gaps.md (2026-10-14)
 
 - source_spec: `_bmad-output/specs/spec-scientific-cv/stories/13-1-cv-data-contract-storage-api.md`
   summary: Declare `express` as a direct dependency (or switch to a Nest-native scoped body parser) for the researcher-profiles 4 MB JSON limit in apps/api/src/main.ts.
@@ -116,3 +116,23 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-header-chip-cv-identity.md`
   summary: Add a DB-backed check for AuthStore.findProfileDisplay (ACTIVE-only filter, rank/degree codes, CV organization path).
   evidence: auth tests use a fake store, so dropping the status filter or renaming a column would pass every test; the SQL was only run by hand against local Postgres.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-gf4-deferred-gaps.md`
+  summary: GF4 — scoped Head cancels a `preparing` project (terminal `cancelled`, required reason, officer ENDED, versions bumped) and the same approved proposal can seed a new project (drop `approved_projects_proposal_id_key`, partial unique index `WHERE status <> 'cancelled'`, 1:N Prisma relation, project-list source filter ignores cancelled, `approaching` gated by active status, officer assign/revoke denied when cancelled).
+  evidence: User decision 2026-10-13; split from the GF4 gaps spec on 2026-10-14 to keep each spec reviewable. Review notes: Head member → ACTION_NOT_GRANTED, evaluator conflict → CONFLICT_DENIED; ProposalManagementOfficer untouched.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-gf4-deferred-gaps.md`
+  summary: GF4 — assigned Staff edits non-important, non-completed milestones (title/description/dueDate/responsibleMemberId, null allowed; never isImportant/status/position) and open checkpoints not linked to an important milestone (title/dueDate) while executing/paused; dates within [startDate, endDate]; relationshipVersion bumped when responsibility changes.
+  evidence: User decision 2026-10-13; split on 2026-10-14. A direct edit bumps aggregateVersion, so pending requests fail decision with CONTEXT_VERSION_MISMATCH; recovery is request-supplement → PI resubmit.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-gf4-deferred-gaps.md`
+  summary: GF4 — an adjustment may shorten `endDate` (YYYY-MM-DD, earlier than the non-null current date, ≥ startDate); Staff approval also sets `planSnapshot.endDate`; reject when any open milestone/checkpoint or non-accepted report period ends after the new date (re-queried after applying the request's milestoneChanges, which are validated against the new date); add endDate to adjustment currentValues; all 4 `assertAdjustmentValues` callers take `project`.
+  evidence: User decision 2026-10-13; split on 2026-10-14. Increases stay extension-only (EXTENSION_REQUIRED).
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-gf4-deferred-gaps.md`
+  summary: Add a DB-backed check that the `project_requests_status_check` migration accepts `withdrawn`.
+  evidence: Service tests use an in-memory Prisma fake that does not enforce CHECK constraints; the migration was verified only by a manual deploy to a disposable DB plus an HTTP smoke run (2026-10-14).
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-gf4-deferred-gaps.md`
+  summary: When a PI-change flow is introduced, let the current active PI (or Staff) close requests created by the previous PI.
+  evidence: Withdraw requires requesterId === actor; unreachable today because no GF4 path ends or replaces TOPIC_PI (adjustment cannot end TOPIC_PI, service.ts:698), but a future PI change would recreate the frozen-project problem.

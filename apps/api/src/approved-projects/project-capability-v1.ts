@@ -7,8 +7,8 @@ export const PROJECT_ACTIONS: PermissionActionV1[] = [
   "project.read", "project.monitor", "project.setup.configure", "project.setup.confirm", "project.officer.assign", "project.officer.revoke",
   "project.report.draft", "project.report.submit", "project.report.review", "project.report.request-supplement", "project.report.accept",
   "project.evidence.contribute",
-  "project.adjustment.create", "project.adjustment.edit-draft", "project.adjustment.submit", "project.adjustment.review", "project.adjustment.request-supplement", "project.adjustment.approve", "project.adjustment.reject",
-  "project.extension.create", "project.extension.edit-draft", "project.extension.submit", "project.extension.validate", "project.extension.prepare", "project.extension.request-supplement", "project.extension.approve", "project.extension.reject",
+  "project.adjustment.create", "project.adjustment.edit-draft", "project.adjustment.submit", "project.adjustment.review", "project.adjustment.request-supplement", "project.adjustment.approve", "project.adjustment.reject", "project.adjustment.withdraw",
+  "project.extension.create", "project.extension.edit-draft", "project.extension.submit", "project.extension.validate", "project.extension.prepare", "project.extension.request-supplement", "project.extension.approve", "project.extension.reject", "project.extension.withdraw",
   "project.history.read"
 ];
 
@@ -21,6 +21,8 @@ export const PROJECT_STATUSES = {
   failed: "failed",
   closed: "closed"
 } as const;
+
+export const TERMINAL_REQUEST_STATUSES = ["approved", "rejected", "withdrawn"];
 
 export type ProjectOfficerFact = {
   officerUserId: string;
@@ -118,6 +120,7 @@ function projectActionDenial(action: PermissionActionV1, input: ProjectCapabilit
   if (action === "project.report.review") return input.canOperate && (!input.report || ["submitted", "under_review"].includes(input.report.status)) ? null : blocked(input.report && !["submitted", "under_review"].includes(input.report.status) ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
   if (action === "project.report.request-supplement") return input.canOperate && (!input.report || ["submitted", "under_review"].includes(input.report.status)) ? null : blocked(input.report && !["submitted", "under_review"].includes(input.report.status) ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
   if (action === "project.report.accept") return input.canOperate && (!input.report || input.report.status === "under_review") ? null : blocked(input.report && input.report.status !== "under_review" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
+  if (action === "project.adjustment.withdraw" || action === "project.extension.withdraw") return withdrawDenial(action === "project.adjustment.withdraw" ? "adjustment" : "extension", input);
   if (action.startsWith("project.adjustment.")) {
     if (["project.adjustment.create", "project.adjustment.edit-draft", "project.adjustment.submit"].includes(action)) return input.canPi && input.isPi ? null : blocked(input.inExecution ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");
     if (action === "project.adjustment.review") return input.canOperate && (!input.request || (input.request.requestType === "adjustment" && input.request.status === "submitted")) ? null : blocked(input.request && input.request.requestType === "adjustment" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
@@ -132,6 +135,15 @@ function projectActionDenial(action: PermissionActionV1, input: ProjectCapabilit
     if (action === "project.extension.approve" || action === "project.extension.reject") return input.canHeadDecide && (!input.request || (input.request.requestType === "extension" && input.request.status === "ready_for_head_decision")) ? null : blocked(input.request && input.request.requestType === "extension" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
   }
   return blocked("ACTION_NOT_GRANTED");
+}
+
+// Requester PI may withdraw while executing or paused (not canPi, which is executing-only).
+function withdrawDenial(requestType: string, input: ProjectCapabilityInput & { isPi: boolean; inExecution: boolean }) {
+  if (!input.isPi) return blocked("ACTION_NOT_GRANTED");
+  if (!input.inExecution) return blocked("WORKFLOW_STATE_DENIED");
+  if (!input.request) return null;
+  if (input.request.requesterId !== input.actor.id) return blocked("ACTION_NOT_GRANTED");
+  return input.request.requestType === requestType && !TERMINAL_REQUEST_STATUSES.includes(input.request.status) ? null : blocked("WORKFLOW_STATE_DENIED");
 }
 
 export function projectContextVersion(project: Record<string, any>) {

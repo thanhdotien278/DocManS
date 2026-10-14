@@ -51,3 +51,26 @@ test("responsible member can contribute evidence but cannot submit or approve", 
   const unassigned = projectViewerAuthorizationV1({ actor: actor("member", "RESEARCHER_INTERNAL_USER"), project, participant: { isParticipant: true, role: "TOPIC_MEMBER" } });
   assert(!has(unassigned, "project.evidence.contribute"));
 });
+
+test("only the requesting PI withdraws an open request while executing or paused", () => {
+  const pi = actor("pi", "RESEARCHER_INTERNAL_USER");
+  const open = { requestType: "extension", status: "ready_for_head_decision", requesterId: "pi" };
+  for (const status of ["executing", "paused"]) {
+    const view = projectViewerAuthorizationV1({ actor: pi, project: { ...project, status }, request: open });
+    assert(has(view, "project.extension.withdraw"), status);
+    assert(!has(view, "project.adjustment.withdraw"), "wrong type");
+  }
+  assert(has(projectViewerAuthorizationV1({ actor: pi, project, request: { ...open, requestType: "adjustment", status: "under_staff_review" } }), "project.adjustment.withdraw"));
+  assert(!has(projectViewerAuthorizationV1({ actor: pi, project: { ...project, status: "preparing" } }), "project.adjustment.withdraw"));
+  for (const status of ["approved", "rejected", "withdrawn"]) assert(!has(projectViewerAuthorizationV1({ actor: pi, project, request: { ...open, status } }), "project.extension.withdraw"), status);
+  assert(!has(projectViewerAuthorizationV1({ actor: pi, project, request: { ...open, requesterId: "other-pi" } }), "project.extension.withdraw"));
+  for (const view of [
+    projectViewerAuthorizationV1({ actor: actor("staff", "SCIENTIFIC_MANAGEMENT_STAFF"), project, projectOfficer: officer, request: open }),
+    projectViewerAuthorizationV1({ actor: actor("head", "SCIENTIFIC_MANAGEMENT_HEAD"), project, request: open }),
+    projectViewerAuthorizationV1({ actor: actor("leader", "LEADERSHIP_APPROVAL_AUTHORITY"), project, request: open }),
+    projectViewerAuthorizationV1({ actor: actor("member", "RESEARCHER_INTERNAL_USER"), project, participant: { isParticipant: true, role: "TOPIC_MEMBER" }, request: open })
+  ]) {
+    assert(!has(view, "project.extension.withdraw"));
+    assert(!has(view, "project.adjustment.withdraw"));
+  }
+});

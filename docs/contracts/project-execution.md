@@ -65,16 +65,25 @@ remain immutable. Administrative acceptance records a report, not scientific
 project acceptance, scope approval or authorization to change deadlines.
 
 Adjustment lifecycle: `draft` → `submitted` → `under_staff_review` →
-`approved` / `rejected`, with `supplement_requested` and PI resubmission as
-needed. Assigned project Staff validates, reviews and makes the final decision.
+`approved` / `rejected`, or terminal `withdrawn` (requester PI, before a
+decision), with `supplement_requested` and PI resubmission as needed. Assigned project Staff validates, reviews and makes the final decision.
 There is no Head appraisal or Leadership decision stage for an adjustment.
 
 Extension lifecycle: `draft` → `submitted` → `under_staff_validation` →
-`ready_for_head_decision` → `approved` / `rejected`, with supplementation and a
+`ready_for_head_decision` → `approved` / `rejected`, or terminal `withdrawn`
+(requester PI, before a decision), with supplementation and a
 new PI revision when required. Assigned project Staff performs administrative
 validation and prepares the package; only the scoped, unconflicted Head makes the
 final decision. Leadership has no extension decision action. There is no
 arbitrary status-setting endpoint.
+
+Withdrawal (both request types): the active PI who is the requester may withdraw a
+request in any non-terminal status (`draft`, `submitted`, `under_staff_review`,
+`supplement_requested`, `under_staff_validation`, `ready_for_head_decision`) while
+the project is executing or paused, with a required reason. `withdrawn` is terminal
+like `approved`/`rejected`: it cannot be decided, edited or resumed, and it no longer
+counts as the one open request, so the PI can create a new one. Withdrawal changes no
+approved project value; submitted revisions and evidence are kept unchanged.
 
 Reports include project/checkpoint, reporting period/deadline, progress/results,
 issues/recommendations, milestone context, author, revision and pinned evidence.
@@ -106,7 +115,9 @@ Staff adjustment approval atomically applies only the submitted typed change and
 audits before/after. Head extension approval atomically records the decision,
 changes the effective end date, increments project version and audits
 before/after. Rejection leaves the plan unchanged. Reject stale/conflicting
-requests and safely reject duplicate terminal decisions. Changing an affected
+requests and safely reject duplicate terminal decisions. A project allows one open
+request at a time; only a decision or the requester PI's withdrawal closes it. Staff,
+Head, Leadership and members cannot withdraw. Changing an affected
 approved baseline requires a fresh request review; never apply stale deltas.
 
 ## Deadlines, files, audit and disclosure
@@ -167,6 +178,7 @@ and request-specific actions:
 | `project.extension.prepare` | Assigned scoped Staff; under_staff_validation → ready_for_head_decision |
 | `project.extension.request-supplement` | Assigned Staff during validation or Head on prepared package |
 | `project.extension.approve`, `project.extension.reject` | Scoped Head; ready_for_head_decision |
+| `project.adjustment.withdraw`, `project.extension.withdraw` | Active PI who is the requester; project executing/paused; request non-terminal; required reason → `withdrawn` |
 
 Head cannot decide adjustments; Staff cannot decide extensions;
 `LEADERSHIP_APPROVAL_AUTHORITY` and `RESEARCH_OVERSIGHT_AUTHORITY` cannot decide either.
@@ -200,6 +212,14 @@ inputs. React must not derive authority from a role or relationship string.
   finally approves/rejects them. Only Head approval changes the extended end date.
 - Leadership approval is the source proposal gate only. Leadership may monitor
   authorized project information but cannot decide execution changes/extensions.
+- Decision 2026-10-13 (withdraw): the requesting active PI may withdraw an open
+  adjustment/extension request (terminal `withdrawn`); this unblocks the project.
+- Decision 2026-10-13 (no proposal officer): when no active proposal officer exists,
+  Head reassigns the proposal officer on the approved proposal (existing action, no
+  status gate) and that officer creates the project. No other fallback creator.
+- Decision 2026-10-13 (undecidable extension): an extension cannot be decided when no
+  scoped, unconflicted Head exists. This is a known limitation for the next flow; the
+  requester PI withdraws the request to unblock the project.
 - These user-approved rules replace the earlier Head-appraisal/Leadership-decision
   assumption. No authority question remains. Acceptance/councils remain next flow.
 
