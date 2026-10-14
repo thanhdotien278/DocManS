@@ -2,7 +2,7 @@
 title: 'Golden Flow 4 — Project Execution'
 type: 'feature'
 created: '2026-09-22'
-status: 'in-progress'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: a7dc9c40e6a5e1148ee4d6a8fae635523daff37f
@@ -129,3 +129,13 @@ logged at /tmp/docmans-gf4-baseline-tests.log. Local database: 24 migrations cur
   existing frontend checks, `npm test`, `npm run build`.
 - Browser demonstration: PI report → Staff; PI adjustment → Staff decision; PI
   extension → Staff preparation → Head decision; Leadership and other denied paths.
+
+**Results (2026-10-14, with spec-gf4-deferred-gaps):**
+- `npx prisma validate` -- valid. Migration `20261014000000_project_request_withdrawn` applied to a disposable DB (`prisma migrate deploy`), then local dev (`npm run prisma:deploy`); `npm run prisma:seed` -- ok.
+- `npm run typecheck`, `npm run build` -- pass.
+- `node --test tests/approved-project-withdraw.test.mjs tests/project-execution-capability.test.mjs` -- 8/8 pass.
+- `npm test` -- 206 tests, 151 pass, 54 fail, 1 skip; the failing set is identical to the 2026-10-13 baseline (no new failures).
+- Demo on local API :4001 / web :3001 with seeded accounts, 2026-10-14:
+  - Browser UI: PI withdraw → new extension → submit; Staff validate → prepare; Head approve (end date 21/1/2027 → 31/3/2027); Staff/Head see no withdraw control.
+  - Browser-session API calls: PI adjustment → Staff review → approve (scope applied); Staff report accept; Staff withdraw → 403; Leadership has no decide/withdraw actions.
+- Known gaps carried in deferred-work.md: cancel of a preparing project, routine milestone maintenance, end-date shortening, Head-conflict escalation; acceptance (6.8–6.9) is the next flow.

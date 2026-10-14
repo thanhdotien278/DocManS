@@ -1,5 +1,5 @@
 # generated: 2026-07-29T17:30:00+07:00
-# last_updated: 2026-10-13T09:00:00+07:00
+# last_updated: 2026-10-14T09:00:00+07:00
 # project: DocManSystem
 # project_key: NOKEY
 # tracking_system: file-system
@@ -71,17 +71,17 @@ development_status:
   5-7-lanh-dao-xem-ho-so-trinh-quyet-dinh: backlog
   5-8-phe-duyet-tu-choi-va-cong-bo-ket-qua-de-xuat: backlog
   epic-5-retrospective: optional
-  epic-6: backlog
-  6-1-khoi-tao-de-tai-tu-proposal-duoc-phe-duyet: backlog
-  6-2-quan-ly-thanh-vien-trach-nhiem-milestone-va-checkpoint: backlog
-  6-3-chu-nhiem-nop-bao-cao-tien-do-va-bang-chung: backlog
-  6-4-thanh-vien-dong-gop-tep-va-minh-chung-trong-pham-vi-duoc-giao: backlog
-  6-5-ra-soat-bao-cao-va-theo-doi-cham-tien-do: backlog
-  6-6-gui-yeu-cau-dieu-chinh-hoac-gia-han: backlog
-  6-7-quyet-dinh-dieu-chinh-hoac-gia-han: backlog
+  epic-6: in-progress
+  6-1-khoi-tao-de-tai-tu-proposal-duoc-phe-duyet: in-progress
+  6-2-quan-ly-thanh-vien-trach-nhiem-milestone-va-checkpoint: in-progress
+  6-3-chu-nhiem-nop-bao-cao-tien-do-va-bang-chung: in-progress
+  6-4-thanh-vien-dong-gop-tep-va-minh-chung-trong-pham-vi-duoc-giao: in-progress
+  6-5-ra-soat-bao-cao-va-theo-doi-cham-tien-do: in-progress
+  6-6-gui-yeu-cau-dieu-chinh-hoac-gia-han: in-progress
+  6-7-quyet-dinh-dieu-chinh-hoac-gia-han: in-progress
   6-8-chuan-bi-va-nop-ho-so-nghiem-thu-hoac-danh-gia-cuoi: backlog
   6-9-ra-soat-va-quyet-dinh-nghiem-thu-hoac-danh-gia-cuoi: backlog
-  6-10-trang-thai-lich-su-va-truy-van-duoc-phan-quyen-cua-de-tai: backlog
+  6-10-trang-thai-lich-su-va-truy-van-duoc-phan-quyen-cua-de-tai: in-progress
   epic-6-retrospective: optional
   epic-7: backlog
   7-1-tao-cong-viec-doc-lap-hoac-lien-ket-ho-so: backlog

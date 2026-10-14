@@ -8,7 +8,7 @@ import { getOrganizationScopeIds, isLeadership, isResearchOversightAuthority, is
 import { isRelationshipActiveAt } from "../proposals-shared/proposal-participation.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { assertProposalContext } from "../proposals-shared/proposal-mutation.js";
-import { projectContextVersion, projectViewerAuthorizationV1, PROJECT_STATUSES, type ProjectOfficerFact } from "./project-capability-v1.js";
+import { projectContextVersion, projectViewerAuthorizationV1, PROJECT_STATUSES, TERMINAL_REQUEST_STATUSES, type ProjectOfficerFact } from "./project-capability-v1.js";
 
 const PREPARING = PROJECT_STATUSES.preparing;
 const EXECUTING = PROJECT_STATUSES.executing;
@@ -173,7 +173,7 @@ export class ApprovedProjectsService {
         evidence: (report.evidence ?? []).map((item: AnyRecord) => ({ id: item.id, fileRecordId: item.fileRecordId, file: item.fileRecord ? { id: item.fileRecord.id, originalFileName: item.fileRecord.originalFileName, mimeType: item.fileRecord.mimeType, sizeBytes: item.fileRecord.sizeBytes, status: item.fileRecord.status } : null }))
       }) : ({ id: report.id, checkpointId: report.checkpointId, status: report.status, revision: report.revision, deadline: report.deadline?.toISOString?.() ?? null, submittedAt: report.submittedAt?.toISOString?.() ?? null })),
       requests: (project.requests ?? []).map((request: AnyRecord) => detailedCases && (!isHead || request.requestType === EXTENSION) ? ({
-        id: request.id, projectId: request.projectId, requestType: request.requestType, status: request.status, revision: request.revision, requester: request.requester,
+        id: request.id, projectId: request.projectId, requestType: request.requestType, status: request.status, revision: request.revision, requesterId: request.requesterId, requester: request.requester,
         currentValues: request.currentValues, proposedValues: request.proposedValues, reason: request.reason, decisionNote: request.decisionNote, responseDeadline: request.responseDeadline?.toISOString?.() ?? null, decidedAt: request.decidedAt?.toISOString?.() ?? null,
         appraisal: actor && ((isScientificManagementStaff(actor) && request.requestType === ADJUSTMENT) || (isScientificManagementHead(actor) && request.requestType === EXTENSION)) ? request.appraisal : undefined,
         preparedAt: request.preparedAt?.toISOString?.() ?? null, preparedBy: request.preparedBy, revisions: request.revisions, evidence: (request.evidence ?? []).map((item: AnyRecord) => ({ id: item.id, requestRevisionId: item.requestRevisionId, fileRecordId: item.fileRecordId, file: item.fileRecord ? { id: item.fileRecord.id, originalFileName: item.fileRecord.originalFileName, mimeType: item.fileRecord.mimeType, sizeBytes: item.fileRecord.sizeBytes, status: item.fileRecord.status } : null }))
@@ -499,7 +499,7 @@ export class ApprovedProjectsService {
   private async createRequest(actor: SafeUserContext, projectId: string, requestType: typeof ADJUSTMENT | typeof EXTENSION, input: AnyRecord) {
     return this.mutate(actor, projectId, input.contextVersion, async (tx, currentActor, project) => {
       this.assertProjectPi(currentActor, project);
-      if (project.requests.some((request: AnyRecord) => !["approved", "rejected"].includes(request.status))) throw new ConflictException({ code: "REQUEST_ALREADY_OPEN", message: "Đề tài đã có yêu cầu thay đổi chưa kết thúc." });
+      if (project.requests.some((request: AnyRecord) => !TERMINAL_REQUEST_STATUSES.includes(request.status))) throw new ConflictException({ code: "REQUEST_ALREADY_OPEN", message: "Đề tài đã có yêu cầu thay đổi chưa kết thúc." });
       const currentValues = requestType === EXTENSION ? { endDate: project.endDate } : { scope: project.scopeSnapshot, plan: project.planSnapshot, milestones: project.milestones, members: (project.members ?? []).map((member: AnyRecord) => ({ id: member.id, userId: member.userId, name: member.name, role: member.role, participationRole: member.participationRole, status: member.status })) };
       const proposedValues = input.proposedValues as AnyRecord;
       if (!proposedValues || typeof proposedValues !== "object" || Array.isArray(proposedValues)) throw new BadRequestException({ message: "proposedValues không hợp lệ." });
@@ -642,6 +642,20 @@ export class ApprovedProjectsService {
       const status = decision === "approve" ? "approved" : "rejected";
       const updated = await tx.projectRequest.update({ where: { id: request.id }, data: { status, decisionById: currentActor.id, decidedAt: now, decisionNote: input.reason ?? input.note ?? null } });
       await this.recordRequestAction(tx, currentActor, project, request, decision, status, { before: request.currentValues, after: decision === "approve" ? nextValues : null, reason: input.reason ?? input.note ?? null });
+      return updated;
+    });
+  }
+
+  async withdrawRequest(actor: SafeUserContext, projectId: string, requestType: typeof ADJUSTMENT | typeof EXTENSION, input: AnyRecord) {
+    return this.mutate(actor, projectId, input.contextVersion, async (tx, currentActor, project) => {
+      this.assertProjectPi(currentActor, project, false);
+      if (![EXECUTING, PROJECT_STATUSES.paused].includes(project.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Đề tài không ở trạng thái thực hiện hoặc tạm dừng." });
+      const request = await this.findRequest(tx, project, input.requestId);
+      if (request.requesterId !== currentActor.id) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Chỉ PI đã tạo yêu cầu mới được rút yêu cầu." });
+      if (request.requestType !== requestType || TERMINAL_REQUEST_STATUSES.includes(request.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Yêu cầu đã kết thúc hoặc không đúng loại." });
+      // Revisions and evidence stay untouched; only the request status becomes terminal.
+      const updated = await tx.projectRequest.update({ where: { id: request.id }, data: { status: "withdrawn" } });
+      await this.recordRequestAction(tx, currentActor, project, request, "withdraw", "withdrawn", { reason: input.reason });
       return updated;
     });
   }

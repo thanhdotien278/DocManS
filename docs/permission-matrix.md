@@ -451,6 +451,7 @@ receive read/contribution capabilities only where their relationship permits.
 | Draft/submit Project Extension | Own | None | None | None | Requested end date must be later; no end-date change on submission |
 | Validate/prepare Project Extension | None | Assigned scope | Read/monitor | Read/monitor only | `under_staff_validation` → `ready_for_head_decision`; package/evidence retained |
 | Approve/reject Project Extension | Read result | Read result | Scoped, conflict-free Head | Denied | `ready_for_head_decision`; Head decision atomically applies end date |
+| Withdraw Project Adjustment / Extension (`project.adjustment.withdraw`, `project.extension.withdraw`) | Own request only, active PI requester, required reason | Denied | Denied | Denied | Project `executing`/`paused`; any non-terminal request → terminal `withdrawn`; revisions/evidence unchanged; members denied |
 
 Acceptance/final-review permissions remain in their governing next-flow stories;
 Golden Flow 4 introduces no acceptance/council endpoint. All mutations above are

@@ -9,7 +9,7 @@ export type ProjectRecord = {
   milestones: Array<{ id: string; title: string; dueDate: string; isImportant: boolean; status: string; responsibleMemberId?: string | null }>;
   checkpoints: Array<{ id: string; title: string; dueDate: string; status: string }>;
   reports: Array<{ id: string; revision: number; status: string; checkpointId?: string; reportingPeriodStart?: string; reportingPeriodEnd?: string; progressResults?: string; issuesRecommendations?: string; reviewReason?: string; responseDeadline?: string; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }> }>;
-  requests: Array<{ id: string; requestType: "adjustment" | "extension"; status: string; revision?: number; reason?: string; proposedValues?: Record<string, unknown>; decisionNote?: string; responseDeadline?: string; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }> }>;
+  requests: Array<{ id: string; requestType: "adjustment" | "extension"; status: string; revision?: number; requesterId?: string; reason?: string; proposedValues?: Record<string, unknown>; decisionNote?: string; responseDeadline?: string; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }> }>;
   history: Array<{ id: string; action: string; reason?: string; createdAt: string }>;
   overdue: boolean; approaching: boolean; nearestDeadline: string | null; viewerAuthorization: ViewerAuthorizationV1;
 };
