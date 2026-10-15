@@ -5,7 +5,7 @@ export class ProjectMutationDto { contextVersion?: unknown; }
 export class CreateProjectDto extends ProjectMutationDto { proposalId!: string; }
 export class AssignProjectOfficerDto extends ProjectMutationDto { officerUserId!: string; reason?: string; }
 export class RevokeProjectOfficerDto extends ProjectMutationDto { reason!: string; }
-export class ProjectReportDto extends ProjectMutationDto { reportId?: string; checkpointId?: string; reportingPeriodStart?: Date; reportingPeriodEnd?: Date; deadline?: Date; progressResults!: string; issuesRecommendations?: string; milestoneContext?: unknown; evidenceFileIds?: string[]; }
+export class ProjectReportDto extends ProjectMutationDto { reportId?: string; checkpointId?: string | null; reportingPeriodStart?: Date; reportingPeriodEnd?: Date; deadline?: Date; progressResults!: string; issuesRecommendations?: string; milestoneContext?: unknown; evidenceFileIds?: string[]; }
 export class ProjectReportReviewDto extends ProjectMutationDto { reportId?: string; reason?: string; responseDeadline?: Date; }
 export class ProjectReportSubmissionDto extends ProjectMutationDto { evidenceFileIds?: string[]; }
 export class ProjectRequestDto extends ProjectMutationDto { requestId?: string; currentValues?: unknown; proposedValues!: unknown; reason!: string; evidenceFileIds?: string[]; }
@@ -37,7 +37,8 @@ export const projectReportPipe: PipeTransform<unknown, ProjectReportDto> = { tra
   const input = record(value);
   const result: ProjectReportDto = {
     reportId: input.reportId === undefined ? undefined : readText(input.reportId, "reportId", 80),
-    checkpointId: input.checkpointId === undefined || input.checkpointId === "" ? undefined : readText(input.checkpointId, "checkpointId", 80),
+    // null moves an existing draft to a general report (no checkpoint).
+    checkpointId: input.checkpointId === null ? null : input.checkpointId === undefined || input.checkpointId === "" ? undefined : readText(input.checkpointId, "checkpointId", 80),
     reportingPeriodStart: readOptionalDate(input.reportingPeriodStart, "reportingPeriodStart"),
     reportingPeriodEnd: readOptionalDate(input.reportingPeriodEnd, "reportingPeriodEnd"),
     deadline: readOptionalDate(input.deadline, "deadline"),

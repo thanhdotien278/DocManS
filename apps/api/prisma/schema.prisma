@@ -857,6 +857,9 @@ model ProjectReportRevision {
   responseDeadline        DateTime? @db.Date @map("response_deadline")
   submittedAt             DateTime? @map("submitted_at")
   submittedContextVersion Json?    @map("submitted_context_version")
+  supersedesReportId      String?  @unique @map("supersedes_report_id")
+  supersedes              ProjectReportRevision? @relation("ProjectReportSupersedes", fields: [supersedesReportId], references: [id], onDelete: Restrict)
+  supersededBy            ProjectReportRevision? @relation("ProjectReportSupersedes")
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
   evidence                ProjectReportEvidence[]

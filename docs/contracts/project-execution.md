@@ -61,7 +61,8 @@ Assigned Staff begins administrative review and records acceptance or requests
 supplementation (`supplement_requested`) with a reason and response deadline.
 Only active PI can revise and resubmit. A return creates a new editable revision;
 resubmission returns to `submitted`. The earlier submitted content and evidence
-remain immutable. Administrative acceptance records a report, not scientific
+remain immutable; when the correction draft is created, the returned revision
+becomes terminal `superseded` and the new revision links to it (`supersedesReportId`). Administrative acceptance records a report, not scientific
 project acceptance, scope approval or authorization to change deadlines.
 
 Adjustment lifecycle: `draft` → `submitted` → `under_staff_review` →
@@ -119,6 +120,10 @@ requests and safely reject duplicate terminal decisions. A project allows one op
 request at a time; only a decision or the requester PI's withdrawal closes it. Staff,
 Head, Leadership and members cannot withdraw. Changing an affected
 approved baseline requires a fresh request review; never apply stale deltas.
+The affected baseline is only what the request depends on (`currentValues`): the end
+date for an extension; the touched scope/plan keys, touched milestones and, for
+membership changes, the active member set for an adjustment. Unrelated changes such as
+report acceptance or officer reassignment do not stale an open request.
 
 ## Deadlines, files, audit and disclosure
 
@@ -128,7 +133,10 @@ facts. An unresolved past-due milestone/report remains visible with its original
 deadline. A deadline miss never rejects, pauses, closes or advances a project.
 Use repository date-only conventions for calendar-day inputs. Approaching/overdue
 filters, counts and detail use the same authorized source query. An item is
-approaching when its nearest open deadline falls within 14 days.
+approaching when its nearest open deadline falls within 14 days. A deadline is a UTC
+calendar day and is overdue only after that day has ended; a checkpoint with a
+submitted, under-review or accepted report is not an open deadline. Only preparing,
+executing or paused projects are flagged.
 
 Evidence references immutable file versions and exact report/request revisions.
 Reuse shared upload/finalize/download/version infrastructure and reauthorize every

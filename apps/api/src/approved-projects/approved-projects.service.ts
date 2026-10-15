@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
@@ -17,6 +18,7 @@ const REPORT_SUBMITTED = "submitted";
 const REPORT_UNDER_REVIEW = "under_review";
 const REPORT_SUPPLEMENT = "supplement_requested";
 const REPORT_ACCEPTED = "accepted";
+const REPORT_SUPERSEDED = "superseded";
 const ADJUSTMENT = "adjustment";
 const EXTENSION = "extension";
 
@@ -102,9 +104,10 @@ export class ApprovedProjectsService {
     const projectPi = (project.members ?? []).find((member: any) => member.participationRole === "TOPIC_PI" && isRelationshipActiveAt(member, new Date()));
     const participant = !!actorMember && actorMember.participationRole !== "TOPIC_PI";
     const responsibleMember = !!actorMember && project.milestones.some((milestone: AnyRecord) => milestone.responsibleMemberId === actorMember.id && milestone.status !== "completed");
-    const capability = projectViewerAuthorizationV1({ actor, project: { ...project, ownerId: projectPi?.userId ?? "" }, projectOfficer: officer, participant: { isParticipant: participant, role: actorMember?.participationRole, effectiveFrom: actorMember?.effectiveFrom?.toISOString?.(), effectiveUntil: actorMember?.effectiveUntil?.toISOString?.() }, responsibleMember });
+    const authorize = (item: AnyRecord = {}) => projectViewerAuthorizationV1({ actor, project: { ...project, ownerId: projectPi?.userId ?? "" }, projectOfficer: officer, participant: { isParticipant: participant, role: actorMember?.participationRole, effectiveFrom: actorMember?.effectiveFrom?.toISOString?.(), effectiveUntil: actorMember?.effectiveUntil?.toISOString?.() }, responsibleMember, ...item });
+    const capability = authorize();
     if (!capability.allowedActions.includes("project.read")) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Không có quyền xem đề tài này." });
-    return { project, officer, capability };
+    return { project, officer, capability, authorize };
   }
 
   async listProjects(actor: SafeUserContext, options: { overdue?: boolean; approaching?: boolean } = {}) {
@@ -115,7 +118,7 @@ export class ApprovedProjectsService {
     for (const project of records) {
       try {
         const loaded = await this.loadAuthorized(this.prisma, actor, project.id);
-        const response = this.toProjectResponse(loaded.project, loaded.capability, loaded.officer, actor);
+        const response = this.toProjectResponse(loaded.project, loaded.capability, loaded.officer, actor, loaded.authorize);
         if (options.overdue !== undefined && response.overdue !== options.overdue) continue;
         if (options.approaching !== undefined && response.approaching !== options.approaching) continue;
         visible.push(response);
@@ -128,7 +131,7 @@ export class ApprovedProjectsService {
 
   async getProject(actor: SafeUserContext, projectId: string) {
     const loaded = await this.loadAuthorized(this.prisma, actor, projectId);
-    return this.toProjectResponse(loaded.project, loaded.capability, loaded.officer, actor);
+    return this.toProjectResponse(loaded.project, loaded.capability, loaded.officer, actor, loaded.authorize);
   }
 
   async listMonitoring(actor: SafeUserContext, options: { overdue?: boolean; approaching?: boolean } = {}) {
@@ -136,17 +139,22 @@ export class ApprovedProjectsService {
     return this.listProjects(actor, options);
   }
 
-  private toProjectResponse(project: AnyRecord, capability: AnyRecord, officer: AnyRecord | null, actor?: SafeUserContext) {
+  private toProjectResponse(project: AnyRecord, capability: AnyRecord, officer: AnyRecord | null, actor?: SafeUserContext, authorize?: (item: AnyRecord) => AnyRecord) {
     const now = new Date();
     const member = (project.members ?? []).find((item: AnyRecord) => item.userId === actor?.id && isRelationshipActiveAt(item, now));
     const isPi = member?.participationRole === "TOPIC_PI";
     const isOfficer = !!actor && isScientificManagementStaff(actor) && officer?.officerUserId === actor.id;
     const isHead = !!actor && isScientificManagementHead(actor);
     const detailedCases = isPi || isOfficer || isHead;
-    const deadlines = [project.endDate, ...(project.checkpoints ?? []).filter((item: any) => item.status !== "completed").map((item: any) => item.dueDate), ...(project.milestones ?? []).filter((item: any) => item.status !== "completed").map((item: any) => item.dueDate)].filter((value): value is Date => value instanceof Date);
+    // A checkpoint whose report is already submitted no longer counts as an owed deadline.
+    const reported = new Set((project.reports ?? []).filter((item: any) => [REPORT_SUBMITTED, REPORT_UNDER_REVIEW, REPORT_ACCEPTED].includes(item.status)).map((item: any) => item.checkpointId));
+    const deadlines = [project.endDate, ...(project.checkpoints ?? []).filter((item: any) => item.status !== "completed" && !reported.has(item.id)).map((item: any) => item.dueDate), ...(project.milestones ?? []).filter((item: any) => item.status !== "completed").map((item: any) => item.dueDate)].filter((value): value is Date => value instanceof Date);
     const nearest = deadlines.sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
-    const overdue = !!nearest && nearest.getTime() < now.getTime() && [PREPARING, EXECUTING, PROJECT_STATUSES.paused].includes(project.status);
-    const approaching = !!nearest && !overdue && nearest.getTime() - now.getTime() <= 14 * 86400000;
+    const active = [PREPARING, EXECUTING, PROJECT_STATUSES.paused].includes(project.status);
+    // Deadlines are UTC calendar days: overdue only once the whole due day has ended.
+    const overdue = active && !!nearest && nearest.getTime() + 86400000 <= now.getTime();
+    const approaching = active && !!nearest && !overdue && nearest.getTime() - now.getTime() <= 14 * 86400000;
+    const itemActions = (item: AnyRecord, prefix: string) => authorize ? authorize(item).allowedActions.filter((action: string) => action.startsWith(prefix) && !action.endsWith(".create")) : [];
     return {
       id: project.id,
       code: project.code,
@@ -161,23 +169,25 @@ export class ApprovedProjectsService {
       scope: project.scopeSnapshot,
       plan: project.planSnapshot,
       members: (project.members ?? []).map((member: any) => ({ ...member, effectiveFrom: member.effectiveFrom?.toISOString?.() ?? null, effectiveUntil: member.effectiveUntil?.toISOString?.() ?? null })),
-      officer: officer ? { id: officer.id, officerUserId: officer.officerUserId, status: officer.status, effectiveFrom: officer.effectiveFrom?.toISOString?.() ?? null, effectiveUntil: officer.effectiveUntil?.toISOString?.() ?? null } : null,
+      officer: officer ? { id: officer.id, officerUserId: officer.officerUserId, displayName: (project.managementOfficers ?? []).find((row: AnyRecord) => row.id === officer.id)?.officer?.displayName ?? null, status: officer.status, effectiveFrom: officer.effectiveFrom?.toISOString?.() ?? null, effectiveUntil: officer.effectiveUntil?.toISOString?.() ?? null } : null,
       milestones: project.milestones ?? [],
       checkpoints: project.checkpoints ?? [],
       reports: (project.reports ?? []).map((report: AnyRecord) => detailedCases ? ({
         id: report.id, projectId: report.projectId, checkpointId: report.checkpointId, revision: report.revision, status: report.status,
         reportingPeriodStart: report.reportingPeriodStart?.toISOString?.() ?? null, reportingPeriodEnd: report.reportingPeriodEnd?.toISOString?.() ?? null, deadline: report.deadline?.toISOString?.() ?? null,
         progressResults: report.progressResults, issuesRecommendations: report.issuesRecommendations, milestoneContext: report.milestoneContext, author: report.author,
-        reviewedBy: report.reviewedBy, reviewReason: actor && (isScientificManagementStaff(actor) || isScientificManagementHead(actor)) ? report.reviewReason : undefined,
+        reviewedBy: report.reviewedBy, reviewReason: report.reviewReason, supersedesReportId: report.supersedesReportId ?? null,
         responseDeadline: report.responseDeadline?.toISOString?.() ?? null, submittedAt: report.submittedAt?.toISOString?.() ?? null,
-        evidence: (report.evidence ?? []).map((item: AnyRecord) => ({ id: item.id, fileRecordId: item.fileRecordId, file: item.fileRecord ? { id: item.fileRecord.id, originalFileName: item.fileRecord.originalFileName, mimeType: item.fileRecord.mimeType, sizeBytes: item.fileRecord.sizeBytes, status: item.fileRecord.status } : null }))
-      }) : ({ id: report.id, checkpointId: report.checkpointId, status: report.status, revision: report.revision, deadline: report.deadline?.toISOString?.() ?? null, submittedAt: report.submittedAt?.toISOString?.() ?? null })),
+        evidence: (report.evidence ?? []).map((item: AnyRecord) => ({ id: item.id, fileRecordId: item.fileRecordId, file: item.fileRecord ? { id: item.fileRecord.id, originalFileName: item.fileRecord.originalFileName, mimeType: item.fileRecord.mimeType, sizeBytes: item.fileRecord.sizeBytes, status: item.fileRecord.status } : null })),
+        allowedActions: itemActions({ report: { status: report.status, authorId: report.authorId } }, "project.report.")
+      }) : ({ id: report.id, checkpointId: report.checkpointId, status: report.status, revision: report.revision, deadline: report.deadline?.toISOString?.() ?? null, submittedAt: report.submittedAt?.toISOString?.() ?? null, allowedActions: [] })),
       requests: (project.requests ?? []).map((request: AnyRecord) => detailedCases && (!isHead || request.requestType === EXTENSION) ? ({
         id: request.id, projectId: request.projectId, requestType: request.requestType, status: request.status, revision: request.revision, requesterId: request.requesterId, requester: request.requester,
         currentValues: request.currentValues, proposedValues: request.proposedValues, reason: request.reason, decisionNote: request.decisionNote, responseDeadline: request.responseDeadline?.toISOString?.() ?? null, decidedAt: request.decidedAt?.toISOString?.() ?? null,
         appraisal: actor && ((isScientificManagementStaff(actor) && request.requestType === ADJUSTMENT) || (isScientificManagementHead(actor) && request.requestType === EXTENSION)) ? request.appraisal : undefined,
-        preparedAt: request.preparedAt?.toISOString?.() ?? null, preparedBy: request.preparedBy, revisions: request.revisions, evidence: (request.evidence ?? []).map((item: AnyRecord) => ({ id: item.id, requestRevisionId: item.requestRevisionId, fileRecordId: item.fileRecordId, file: item.fileRecord ? { id: item.fileRecord.id, originalFileName: item.fileRecord.originalFileName, mimeType: item.fileRecord.mimeType, sizeBytes: item.fileRecord.sizeBytes, status: item.fileRecord.status } : null }))
-      }) : ({ id: request.id, requestType: request.requestType, status: request.status, createdAt: request.createdAt?.toISOString?.() ?? null, decidedAt: request.decidedAt?.toISOString?.() ?? null })),
+        preparedAt: request.preparedAt?.toISOString?.() ?? null, preparedBy: request.preparedBy, revisions: request.revisions, evidence: (request.evidence ?? []).map((item: AnyRecord) => ({ id: item.id, requestRevisionId: item.requestRevisionId, fileRecordId: item.fileRecordId, file: item.fileRecord ? { id: item.fileRecord.id, originalFileName: item.fileRecord.originalFileName, mimeType: item.fileRecord.mimeType, sizeBytes: item.fileRecord.sizeBytes, status: item.fileRecord.status } : null })),
+        allowedActions: itemActions({ request: { requestType: request.requestType, status: request.status, requesterId: request.requesterId } }, `project.${request.requestType}.`)
+      }) : ({ id: request.id, requestType: request.requestType, status: request.status, createdAt: request.createdAt?.toISOString?.() ?? null, decidedAt: request.decidedAt?.toISOString?.() ?? null, allowedActions: [] })),
       history: (project.history ?? []).map((item: AnyRecord) => ({ id: item.id, action: item.action, fromStatus: item.fromStatus, toStatus: item.toStatus, reason: detailedCases ? item.reason : undefined, createdAt: item.createdAt?.toISOString?.() ?? null, beforeFacts: isOfficer || isHead ? item.beforeFacts : undefined, afterFacts: isOfficer || isHead ? item.afterFacts : undefined })),
       overdue,
       approaching,
@@ -242,12 +252,13 @@ export class ApprovedProjectsService {
     return this.mutate(actor, projectId, input.contextVersion, async (tx, currentActor, project) => {
       if (project.status !== PREPARING) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Đề tài không còn ở trạng thái chuẩn bị triển khai." });
       await this.assertOfficer(tx, currentActor, project);
+      if (!project.milestones.length && !project.checkpoints.length) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Cần thiết lập ít nhất một mốc hoặc điểm báo cáo trước khi xác nhận." });
       const now = await readTransactionClockV1(tx);
       const updated = await tx.approvedProject.update({ where: { id: project.id }, data: { status: EXECUTING, confirmedAt: now, confirmedById: currentActor.id, aggregateVersion: { increment: 1 }, relationshipVersion: { increment: 1 }, authorizationContextUpdatedAt: now } });
       await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.setup.confirm", fromStatus: PREPARING, toStatus: EXECUTING, reason: input.reason ?? "Xác nhận thiết lập đề tài", beforeFacts: { status: PREPARING }, afterFacts: { status: EXECUTING } } });
       await new AuditLogService(tx).record({ action: "confirm-approved-project-setup", result: "success", actorId: currentActor.id, targetEntity: "approved-project", targetEntityId: project.id, username: currentActor.username, beforeFacts: { status: PREPARING }, afterFacts: { status: EXECUTING } });
       const loaded = await this.loadAuthorized(tx, currentActor, updated.id);
-      return this.toProjectResponse(loaded.project, loaded.capability, loaded.officer, currentActor);
+      return this.toProjectResponse(loaded.project, loaded.capability, loaded.officer, currentActor, loaded.authorize);
     });
   }
 
@@ -269,7 +280,10 @@ export class ApprovedProjectsService {
       for (const item of input.checkpoints) {
         const milestoneId = item?.milestonePosition === undefined ? null : milestones[item.milestonePosition]?.id;
         if (item?.milestonePosition !== undefined && !milestoneId) throw new BadRequestException({ message: "Mốc liên kết không hợp lệ." });
-        await tx.projectCheckpoint.create({ data: { projectId: project.id, milestoneId, title: requiredText(item?.title, "title"), dueDate: projectDay(item?.dueDate) } });
+        const dueDate = projectDay(item?.dueDate);
+        if (project.startDate && dueDate < project.startDate) throw new BadRequestException({ message: "Hạn điểm báo cáo phải nằm trong thời gian đề tài." });
+        if (project.endDate && dueDate > project.endDate) throw new BadRequestException({ code: "EXTENSION_REQUIRED" });
+        await tx.projectCheckpoint.create({ data: { projectId: project.id, milestoneId, title: requiredText(item?.title, "title"), dueDate } });
       }
       const now = await readTransactionClockV1(tx);
       await tx.approvedProject.update({ where: { id: project.id }, data: { aggregateVersion: { increment: 1 }, authorizationContextUpdatedAt: now } });
@@ -316,7 +330,7 @@ export class ApprovedProjectsService {
       const current = await this.currentOfficer(tx, project.id);
       if (!current) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Đề tài chưa có chuyên viên đang phụ trách." });
       const now = await readTransactionClockV1(tx);
-      await tx.projectManagementOfficer.update({ where: { id: (current as AnyRecord).id }, data: { status: "REVOKED", effectiveUntil: now, reason: input.reason } });
+      await tx.projectManagementOfficer.update({ where: { id: (current as AnyRecord).id }, data: { status: "REVOKED", effectiveUntil: now } });
       await tx.approvedProject.update({ where: { id: project.id }, data: { relationshipVersion: { increment: 1 }, authorizationContextUpdatedAt: now } });
       await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.officer.revoke", reason: input.reason, beforeFacts: { officerUserId: current.officerUserId }, afterFacts: { officerUserId: null } } });
       await new AuditLogService(tx).record({ action: "revoke-project-management-officer", result: "success", actorId: currentActor.id, targetEntity: "approved-project", targetEntityId: project.id, username: currentActor.username, reason: input.reason, beforeFacts: { officerUserId: current.officerUserId }, afterFacts: { officerUserId: null } });
@@ -344,7 +358,7 @@ export class ApprovedProjectsService {
 
   private assertReportPeriod(project: AnyRecord, checkpointId: string | null, start: Date | null, end: Date | null, currentId?: string) {
     if (!(start instanceof Date) || !(end instanceof Date) || end < start || (project.startDate && start < project.startDate) || (project.endDate && end > project.endDate)) throw new BadRequestException({ code: "REPORT_PERIOD_INVALID", message: "Kỳ báo cáo phải nằm trong thời gian đề tài." });
-    if (project.reports.some((item: AnyRecord) => item.id !== currentId && item.checkpointId === checkpointId && ![REPORT_SUPPLEMENT].includes(item.status) && item.reportingPeriodStart && item.reportingPeriodEnd && start <= item.reportingPeriodEnd && end >= item.reportingPeriodStart)) throw new ConflictException({ code: "REPORT_PERIOD_OVERLAP", message: "Kỳ báo cáo trùng với phiên bản đang xử lý." });
+    if (project.reports.some((item: AnyRecord) => item.id !== currentId && item.checkpointId === checkpointId && ![REPORT_SUPPLEMENT, REPORT_SUPERSEDED].includes(item.status) && item.reportingPeriodStart && item.reportingPeriodEnd && start <= item.reportingPeriodEnd && end >= item.reportingPeriodStart)) throw new ConflictException({ code: "REPORT_PERIOD_OVERLAP", message: "Kỳ báo cáo trùng với phiên bản đang xử lý." });
   }
 
   private async assertUsableEvidence(tx: any, projectId: string, fileIds: string[] | undefined, expectedEntityId?: string) {
@@ -384,18 +398,23 @@ export class ApprovedProjectsService {
       const report = await this.findReport(tx, project, input.reportId);
       if (input.deadline) throw new BadRequestException({ code: "CONTROLLED_FIELD_DENIED" });
       if (report.authorId !== currentActor.id) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Chỉ tác giả PI được sửa báo cáo." });
+      if (report.status === REPORT_SUPERSEDED) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Phiên bản này đã có bản sửa; hãy cập nhật bản nháp mới." });
       if (![REPORT_DRAFT, REPORT_SUPPLEMENT].includes(report.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Bản báo cáo đã nộp được giữ nguyên; hãy tạo phiên bản mới sau khi yêu cầu bổ sung." });
-      const checkpointId = input.checkpointId ?? report.checkpointId;
-      if (checkpointId) {
-        const checkpoint = await tx.projectCheckpoint.findUnique({ where: { id: checkpointId } });
-        if (!checkpoint || checkpoint.projectId !== project.id || checkpoint.status !== "open") throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED" });
-      }
+      const checkpointId = input.checkpointId === undefined ? report.checkpointId : input.checkpointId;
+      const checkpoint = checkpointId ? await tx.projectCheckpoint.findUnique({ where: { id: checkpointId } }) : null;
+      if (checkpointId && (!checkpoint || checkpoint.projectId !== project.id || checkpoint.status !== "open")) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED" });
+      const deadline = checkpoint?.dueDate ?? project.endDate;
       this.assertReportPeriod(project, checkpointId, input.reportingPeriodStart ?? report.reportingPeriodStart, input.reportingPeriodEnd ?? report.reportingPeriodEnd, report.id);
       const now = await readTransactionClockV1(tx);
-      const next = report.status === REPORT_SUPPLEMENT
-        ? await tx.projectReportRevision.create({ data: { projectId: project.id, checkpointId, revision: await this.nextReportRevision(tx, project.id), status: REPORT_DRAFT, reportingPeriodStart: input.reportingPeriodStart ?? report.reportingPeriodStart, reportingPeriodEnd: input.reportingPeriodEnd ?? report.reportingPeriodEnd, deadline: report.deadline, progressResults: input.progressResults ?? report.progressResults, issuesRecommendations: input.issuesRecommendations ?? report.issuesRecommendations, milestoneContext: input.milestoneContext ?? report.milestoneContext, authorId: currentActor.id, createdAt: now } })
-        : await tx.projectReportRevision.update({ where: { id: report.id }, data: { checkpointId, reportingPeriodStart: input.reportingPeriodStart ?? report.reportingPeriodStart, reportingPeriodEnd: input.reportingPeriodEnd ?? report.reportingPeriodEnd, progressResults: input.progressResults ?? report.progressResults, issuesRecommendations: input.issuesRecommendations ?? report.issuesRecommendations, milestoneContext: input.milestoneContext ?? report.milestoneContext } });
-      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.report.edit-draft", reason: report.status === REPORT_SUPPLEMENT ? "Tạo phiên bản báo cáo sửa theo yêu cầu bổ sung" : "Cập nhật bản nháp báo cáo", afterFacts: { reportId: next.id, revision: next.revision } } });
+      const correction = report.status === REPORT_SUPPLEMENT;
+      const next = correction
+        ? await tx.projectReportRevision.create({ data: { projectId: project.id, checkpointId, revision: await this.nextReportRevision(tx, project.id), status: REPORT_DRAFT, supersedesReportId: report.id, reportingPeriodStart: input.reportingPeriodStart ?? report.reportingPeriodStart, reportingPeriodEnd: input.reportingPeriodEnd ?? report.reportingPeriodEnd, deadline, progressResults: input.progressResults ?? report.progressResults, issuesRecommendations: input.issuesRecommendations ?? report.issuesRecommendations, milestoneContext: input.milestoneContext ?? report.milestoneContext, authorId: currentActor.id, createdAt: now } })
+        : await tx.projectReportRevision.update({ where: { id: report.id }, data: { checkpointId, deadline, reportingPeriodStart: input.reportingPeriodStart ?? report.reportingPeriodStart, reportingPeriodEnd: input.reportingPeriodEnd ?? report.reportingPeriodEnd, progressResults: input.progressResults ?? report.progressResults, issuesRecommendations: input.issuesRecommendations ?? report.issuesRecommendations, milestoneContext: input.milestoneContext ?? report.milestoneContext } });
+      // The answered revision keeps its content; only its status records that a correction replaced it.
+      if (correction) await tx.projectReportRevision.update({ where: { id: report.id }, data: { status: REPORT_SUPERSEDED } });
+      const facts = { reportId: next.id, revision: next.revision, supersedesReportId: correction ? report.id : null };
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.report.edit-draft", fromStatus: correction ? REPORT_SUPPLEMENT : REPORT_DRAFT, toStatus: REPORT_DRAFT, reason: correction ? "Tạo phiên bản báo cáo sửa theo yêu cầu bổ sung" : "Cập nhật bản nháp báo cáo", afterFacts: facts } });
+      await new AuditLogService(tx).record({ action: "edit-project-report-draft", result: "success", actorId: currentActor.id, targetEntity: "project-report-revision", targetEntityId: next.id, username: currentActor.username, beforeFacts: { reportId: report.id, status: report.status }, afterFacts: facts });
       return next;
     });
   }
@@ -406,6 +425,7 @@ export class ApprovedProjectsService {
       const report = await this.findReport(tx, project, input.reportId);
       if (report.authorId !== currentActor.id || report.status !== REPORT_DRAFT) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Chỉ bản nháp của PI mới được nộp." });
       if (report.checkpointId && report.checkpoint?.status !== "open") throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Mốc báo cáo đã đóng." });
+      if (!report.progressResults?.trim()) throw new BadRequestException({ message: "Cần nhập kết quả và tiến độ trước khi nộp báo cáo." });
       this.assertReportPeriod(project, report.checkpointId, report.reportingPeriodStart, report.reportingPeriodEnd, report.id);
       const fileIds = Array.isArray(input.evidenceFileIds) ? input.evidenceFileIds : [];
       const files = await this.assertUsableEvidence(tx, project.id, fileIds, report.id);
@@ -500,11 +520,11 @@ export class ApprovedProjectsService {
     return this.mutate(actor, projectId, input.contextVersion, async (tx, currentActor, project) => {
       this.assertProjectPi(currentActor, project);
       if (project.requests.some((request: AnyRecord) => !TERMINAL_REQUEST_STATUSES.includes(request.status))) throw new ConflictException({ code: "REQUEST_ALREADY_OPEN", message: "Đề tài đã có yêu cầu thay đổi chưa kết thúc." });
-      const currentValues = requestType === EXTENSION ? { endDate: project.endDate } : { scope: project.scopeSnapshot, plan: project.planSnapshot, milestones: project.milestones, members: (project.members ?? []).map((member: AnyRecord) => ({ id: member.id, userId: member.userId, name: member.name, role: member.role, participationRole: member.participationRole, status: member.status })) };
       const proposedValues = input.proposedValues as AnyRecord;
       if (!proposedValues || typeof proposedValues !== "object" || Array.isArray(proposedValues)) throw new BadRequestException({ message: "proposedValues không hợp lệ." });
       if (requestType === ADJUSTMENT) this.assertAdjustmentValues(proposedValues);
       else this.assertExtensionValues(project, proposedValues);
+      const currentValues = requestBaseline(project, requestType, proposedValues);
       const now = await readTransactionClockV1(tx);
       const request = await tx.projectRequest.create({ data: { projectId: project.id, requestType, status: "draft", revision: 1, requesterId: currentActor.id, currentValues, proposedValues, reason: input.reason, submittedContextVersion: projectContextVersion(project), appraisal: null } });
       const revision = await tx.projectRequestRevision.create({ data: { requestId: request.id, revision: 1, status: "draft", currentValues, proposedValues, reason: input.reason, createdById: currentActor.id, createdAt: now } });
@@ -531,12 +551,14 @@ export class ApprovedProjectsService {
       if (request.requestType !== requestType || request.requesterId !== currentActor.id || !["draft", "supplement_requested"].includes(request.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Yêu cầu không còn là bản nháp của PI." });
       const proposedValues = input.proposedValues as AnyRecord;
       if (requestType === ADJUSTMENT) this.assertAdjustmentValues(proposedValues); else this.assertExtensionValues(project, proposedValues);
-      const currentValues = request.currentValues;
+      const currentValues = requestBaseline(project, requestType, proposedValues);
       const nextRevision = request.revision + 1;
       const now = await readTransactionClockV1(tx);
       const revision = await tx.projectRequestRevision.create({ data: { requestId: request.id, revision: nextRevision, status: "draft", currentValues, proposedValues, reason: input.reason, createdById: currentActor.id, createdAt: now } });
       const updated = await tx.projectRequest.update({ where: { id: request.id }, data: { status: "draft", revision: nextRevision, currentValues, proposedValues, reason: input.reason, submittedContextVersion: projectContextVersion(project), appraisal: null, preparedById: null, preparedAt: null, responseDeadline: null } });
       await tx.projectRequestHistory.create({ data: { requestId: request.id, actorId: currentActor.id, action: `project.${requestType}.edit-draft`, fromStatus: request.status, toStatus: "draft", reason: input.reason, afterFacts: { revision: nextRevision } } });
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: `project.${requestType}.edit-draft`, fromStatus: request.status, toStatus: "draft", reason: input.reason, requestId: request.id, afterFacts: { requestId: request.id, revision: nextRevision } } });
+      await new AuditLogService(tx).record({ action: `edit-project-${requestType}-draft`, result: "success", actorId: currentActor.id, targetEntity: "project-request", targetEntityId: request.id, username: currentActor.username, reason: input.reason, beforeFacts: { status: request.status, revision: request.revision }, afterFacts: { status: "draft", revision: nextRevision, proposedValues } });
       return { ...updated, revisions: [revision] };
     });
   }
@@ -546,16 +568,16 @@ export class ApprovedProjectsService {
       this.assertProjectPi(currentActor, project);
       const request = await this.findRequest(tx, project, input.requestId);
       if (request.requestType !== requestType || request.requesterId !== currentActor.id || request.status !== "draft") throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Chỉ bản nháp của PI mới được nộp." });
-      const draftContext = request.submittedContextVersion as AnyRecord | null;
-      if (!draftContext || draftContext.aggregateVersion !== project.aggregateVersion || draftContext.relationshipVersion !== project.relationshipVersion) throw new ConflictException({ code: "CONTEXT_VERSION_MISMATCH", message: "Đề tài đã thay đổi từ khi tạo bản nháp. Vui lòng tạo yêu cầu mới." });
       const values = request.proposedValues as AnyRecord;
       if (requestType === ADJUSTMENT) this.assertAdjustmentValues(values); else this.assertExtensionValues(project, values);
+      const currentValues = requestBaseline(project, requestType, values);
+      if (!sameBaseline(request.currentValues, currentValues)) throw new ConflictException({ code: "CONTEXT_VERSION_MISMATCH", message: "Giá trị đã duyệt liên quan đã thay đổi từ khi soạn bản nháp. Vui lòng sửa bản nháp hoặc rút yêu cầu." });
       const now = await readTransactionClockV1(tx);
       const nextStatus = "submitted";
-      const revision = await tx.projectRequestRevision.update({ where: { requestId_revision: { requestId: request.id, revision: request.revision } }, data: { status: "submitted", submittedAt: now, contextVersion: projectContextVersion(project) } });
+      const revision = await tx.projectRequestRevision.update({ where: { requestId_revision: { requestId: request.id, revision: request.revision } }, data: { status: "submitted", submittedAt: now, currentValues, contextVersion: projectContextVersion(project) } });
       const files = await this.assertUsableEvidence(tx, project.id, input.evidenceFileIds, request.id);
       if (files.length) await tx.projectRequestEvidence.createMany({ data: files.map((file: AnyRecord) => ({ requestId: request.id, requestRevisionId: revision.id, fileRecordId: file.id })) });
-      const updated = await tx.projectRequest.update({ where: { id: request.id }, data: { status: nextStatus, submittedContextVersion: projectContextVersion(project) } });
+      const updated = await tx.projectRequest.update({ where: { id: request.id }, data: { status: nextStatus, currentValues, submittedContextVersion: projectContextVersion(project) } });
       await tx.projectRequestHistory.create({ data: { requestId: request.id, actorId: currentActor.id, action: `project.${requestType}.submit`, fromStatus: "draft", toStatus: nextStatus, reason: request.reason, afterFacts: { revision: request.revision, contextVersion: projectContextVersion(project) } } });
       await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: `project.${requestType}.submit`, fromStatus: "draft", toStatus: nextStatus, requestId: request.id, afterFacts: { revision: request.revision } } });
       await new AuditLogService(tx).record({ action: `submit-project-${requestType}`, result: "success", actorId: currentActor.id, targetEntity: "project-request", targetEntityId: request.id, username: currentActor.username, afterFacts: { status: nextStatus, revision: request.revision } });
@@ -630,10 +652,11 @@ export class ApprovedProjectsService {
       if (decision === "reject" && !input.reason) throw new BadRequestException({ message: "Cần lý do từ chối." });
       const submitted = request.revisions.find((revision: AnyRecord) => revision.revision === request.revision);
       if (!submitted || submitted.status !== "submitted") throw new ConflictException({ code: "CONTEXT_VERSION_MISMATCH" });
-      const expected = request.submittedContextVersion as AnyRecord;
-      if (!expected || expected.aggregateVersion !== project.aggregateVersion || expected.relationshipVersion !== project.relationshipVersion) throw new ConflictException({ code: "CONTEXT_VERSION_MISMATCH" });
       const nextValues = submitted.proposedValues as AnyRecord;
-      const next = requestType === ADJUSTMENT ? this.adjustmentUpdate(project, nextValues) : { endDate: this.assertExtensionValues(project, nextValues) };
+      // Only a change to the values this request depends on makes it stale (not report acceptance or officer reassignment).
+      if (!sameBaseline(submitted.currentValues, requestBaseline(project, requestType, nextValues))) throw new ConflictException({ code: "CONTEXT_VERSION_MISMATCH", message: "Giá trị đã duyệt liên quan đã thay đổi; yêu cầu cần được bổ sung và xem xét lại." });
+      const endDate = requestType === EXTENSION ? this.assertExtensionValues(project, nextValues) : null;
+      const next = endDate ? { endDate, planSnapshot: { ...(project.planSnapshot ?? {}), endDate: endDate.toISOString() } } : this.adjustmentUpdate(project, nextValues);
       const now = await readTransactionClockV1(tx);
       if (decision === "approve") {
         if (requestType === ADJUSTMENT) await this.applyAdjustmentChanges(tx, currentActor, project, nextValues, now);
@@ -691,12 +714,14 @@ export class ApprovedProjectsService {
       if (!Object.keys(data).length) throw new BadRequestException({ code: "ADJUSTMENT_SCOPE_DENIED" });
       await tx.projectMilestone.update({ where: { id: milestone.id }, data });
     }
+    // Re-read so a milestone reassigned above no longer pins the member it moved away from.
+    const milestones = values.membershipChanges ? await tx.projectMilestone.findMany({ where: { projectId: project.id } }) : project.milestones;
     for (const change of values.membershipChanges ?? []) {
       if (!change || typeof change !== "object" || Array.isArray(change)) throw new BadRequestException({ code: "ADJUSTMENT_SCOPE_DENIED" });
       if (change.action === "end" && Object.keys(change).every((key) => ["action", "memberId"].includes(key))) {
         const member = project.members.find((item: AnyRecord) => item.id === change.memberId && item.participationRole !== "TOPIC_PI" && isRelationshipActiveAt(item, now));
         if (!member) throw new BadRequestException({ code: "ADJUSTMENT_SCOPE_DENIED" });
-        if (project.milestones.some((item: AnyRecord) => item.responsibleMemberId === member.id && item.status !== "completed")) throw new BadRequestException({ code: "MEMBER_RESPONSIBILITY_ACTIVE", message: "Cần chuyển trách nhiệm mốc trước khi kết thúc thành viên." });
+        if (milestones.some((item: AnyRecord) => item.responsibleMemberId === member.id && item.status !== "completed")) throw new BadRequestException({ code: "MEMBER_RESPONSIBILITY_ACTIVE", message: "Cần chuyển trách nhiệm mốc trước khi kết thúc thành viên." });
         await tx.approvedProjectMember.update({ where: { id: member.id }, data: { status: "ENDED", effectiveUntil: now } });
       } else if (change.action === "add" && Object.keys(change).every((key) => ["action", "userId", "name", "participationRole"].includes(key))) {
         if (!["TOPIC_MEMBER", "TOPIC_SECRETARY"].includes(change.participationRole)) throw new BadRequestException({ code: "ADJUSTMENT_SCOPE_DENIED" });
@@ -725,6 +750,25 @@ export class ApprovedProjectsService {
     await new AuditLogService(tx).record({ action: name, result: "success", actorId: actor.id, targetEntity: "project-request", targetEntityId: request.id, username: actor.username, reason: facts.reason ?? facts.note ?? undefined, beforeFacts: facts.before ?? { status: request.status }, afterFacts: facts.after ?? { status: toStatus } });
   }
 }
+
+// The approved values a request depends on: end date for an extension; the touched scope/plan keys,
+// touched milestones and (for membership changes) the active member set for an adjustment.
+function requestBaseline(project: AnyRecord, requestType: string, values: AnyRecord) {
+  if (requestType === EXTENSION) return plainJson({ endDate: project.endDate ?? null });
+  const pick = (source: AnyRecord | null, keys: string[]) => Object.fromEntries(keys.map((key) => [key, source?.[key] ?? null]));
+  const byId = (left: AnyRecord, right: AnyRecord) => String(left.id).localeCompare(String(right.id));
+  const touched = new Set((values.milestoneChanges ?? []).map((change: AnyRecord) => change.id));
+  return plainJson({
+    ...(values.scope ? { scope: pick(project.scopeSnapshot, Object.keys(values.scope)) } : {}),
+    ...(values.plan ? { plan: pick(project.planSnapshot, Object.keys(values.plan)) } : {}),
+    ...(values.milestoneChanges ? { milestones: (project.milestones ?? []).filter((item: AnyRecord) => touched.has(item.id)).map((item: AnyRecord) => ({ id: item.id, title: item.title, description: item.description ?? null, dueDate: item.dueDate, responsibleMemberId: item.responsibleMemberId ?? null, status: item.status, isImportant: item.isImportant })).sort(byId) } : {}),
+    ...(values.membershipChanges ? { members: (project.members ?? []).filter((item: AnyRecord) => isRelationshipActiveAt(item, new Date())).map((item: AnyRecord) => ({ id: item.id, userId: item.userId ?? null, participationRole: item.participationRole })).sort(byId) } : {})
+  });
+}
+
+// Stored JSONB reorders keys and turns dates into strings, so compare normalized values.
+function plainJson(value: unknown) { return JSON.parse(JSON.stringify(value ?? null)); }
+function sameBaseline(stored: unknown, current: unknown) { return isDeepStrictEqual(plainJson(stored), plainJson(current)); }
 
 function assertProjectContext(expected: unknown, project: AnyRecord) {
   const current = projectContextVersion(project as any);

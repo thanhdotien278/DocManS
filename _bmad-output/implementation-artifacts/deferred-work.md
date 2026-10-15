@@ -136,3 +136,34 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-gf4-deferred-gaps.md`
   summary: When a PI-change flow is introduced, let the current active PI (or Staff) close requests created by the previous PI.
   evidence: Withdraw requires requesterId === actor; unreachable today because no GF4 path ends or replaces TOPIC_PI (adjustment cannot end TOPIC_PI, service.ts:698), but a future PI change would recreate the frozen-project problem.
+
+## Deferred from: code review of spec-golden-flow-4-project-execution.md (2026-10-14)
+
+- Two active TOPIC_PI rows are possible if a source snapshot member carries TOPIC_PI (createFromApprovedProposal, service.ts:215; no partial unique index). Unverified (maybe-false, would be medium): check whether proposal members can carry participationRole TOPIC_PI.
+- `listProjects` has no pagination and deep-loads every candidate project about 3 times (service.ts:110); a scale issue.
+- Supplement `responseDeadline` (report and request) is stored but never enforced or surfaced as overdue; needs a late-response policy.
+- PI actions depend on host-org scope as well as active TOPIC_PI membership (project-capability-v1.ts:69); confirm the policy.
+- (code review batch 2, frontend) Staff/Head workspaces lack the contract's reporting calendar, unassigned/officer views and prepared-extension queue; `GET /projects/monitor` is unused by the web client.
+- (code review batch 2, frontend) The project setup form creates only one milestone+checkpoint; multi-milestone setup UI is missing.
+- (code review batch 2, frontend) No executed test for the UI action→route mapping (`requestAction`, `canItem` in project-detail.tsx); the repo has no component or e2e harness for apps/web.
+- source_spec: `_bmad-output/implementation-artifacts/spec-golden-flow-4-project-execution.md`
+  summary: Adjustment requests stored with the pre-batch-1 full-snapshot `currentValues` can never be decided (CONTEXT_VERSION_MISMATCH).
+  evidence: `decideRequest`/`submitRequest` compare against the new narrow baseline; settle by checking for in-flight adjustments in any real DB or backfilling.
+- source_spec: `_bmad-output/implementation-artifacts/spec-golden-flow-4-project-execution.md`
+  summary: `requestBaseline` checks member activity with the wall clock instead of the transaction clock.
+  evidence: approved-projects.service.ts requestBaseline uses `new Date()`; a natural effectiveUntil expiry can stale a request.
+- source_spec: `_bmad-output/implementation-artifacts/spec-golden-flow-4-project-execution.md`
+  summary: Setup milestones are not bounded by the project start date (checkpoints are).
+  evidence: configureSetup checks milestone dueDate against endDate only.
+- source_spec: `_bmad-output/implementation-artifacts/spec-golden-flow-4-project-execution.md`
+  summary: `protect_project_report_revision` trigger lets a non-draft report be set back to `draft` and then edited.
+  evidence: Trigger guards content only while OLD.status <> 'draft' and never guards status; unverified against the real DB.
+- source_spec: `_bmad-output/implementation-artifacts/spec-golden-flow-4-project-execution.md`
+  summary: Legacy `supplement_requested` reports with an existing correction are not backfilled to `superseded`.
+  evidence: Migration 20261015000000 adds the status without a backfill.
+- source_spec: `_bmad-output/implementation-artifacts/spec-golden-flow-4-project-execution.md`
+  summary: Overdue flag persists after an on-time submit when a milestone shares the checkpoint's due date.
+  evidence: toProjectResponse removes reported checkpoints but not their milestones from deadlines.
+- source_spec: `_bmad-output/implementation-artifacts/spec-golden-flow-4-project-execution.md`
+  summary: Accepting a report may stale a pending adjustment that touches the completed milestone (maybe-false).
+  evidence: Milestone baseline includes status; needs a service test on a touched milestone.

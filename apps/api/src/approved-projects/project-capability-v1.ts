@@ -115,26 +115,43 @@ function projectActionDenial(action: PermissionActionV1, input: ProjectCapabilit
   if (action === "project.monitor") return input.canMonitor ? null : blocked("ACTION_NOT_GRANTED");
   if (action === "project.setup.configure" || action === "project.setup.confirm") return input.canOperate && input.project.status === PROJECT_STATUSES.preparing ? null : blocked(input.project.status === PROJECT_STATUSES.preparing ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");
   if (action === "project.officer.assign" || action === "project.officer.revoke") return input.canHeadDecide ? null : blocked("ACTION_NOT_GRANTED");
-  if (action === "project.report.draft" || action === "project.report.submit") return input.canPi && input.isPi ? null : blocked(input.inExecution ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");
+  if (action === "project.report.draft" || action === "project.report.submit") {
+    if (!(input.canPi && input.isPi)) return blocked(input.inExecution ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");
+    return input.report ? piItemDenial(input.report.authorId, input.report.status, action === "project.report.submit", input) : null;
+  }
   if (action === "project.evidence.contribute") return input.project.status === PROJECT_STATUSES.executing && input.scoped && (input.isPi || (input.participantActive && input.responsibleMember)) ? null : blocked(input.inExecution ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");
-  if (action === "project.report.review") return input.canOperate && (!input.report || ["submitted", "under_review"].includes(input.report.status)) ? null : blocked(input.report && !["submitted", "under_review"].includes(input.report.status) ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
+  if (action === "project.report.review") return input.canOperate && (!input.report || input.report.status === "submitted") ? null : blocked(input.report && input.report.status !== "submitted" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
   if (action === "project.report.request-supplement") return input.canOperate && (!input.report || ["submitted", "under_review"].includes(input.report.status)) ? null : blocked(input.report && !["submitted", "under_review"].includes(input.report.status) ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
   if (action === "project.report.accept") return input.canOperate && (!input.report || input.report.status === "under_review") ? null : blocked(input.report && input.report.status !== "under_review" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
   if (action === "project.adjustment.withdraw" || action === "project.extension.withdraw") return withdrawDenial(action === "project.adjustment.withdraw" ? "adjustment" : "extension", input);
   if (action.startsWith("project.adjustment.")) {
-    if (["project.adjustment.create", "project.adjustment.edit-draft", "project.adjustment.submit"].includes(action)) return input.canPi && input.isPi ? null : blocked(input.inExecution ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");
+    if (["project.adjustment.create", "project.adjustment.edit-draft", "project.adjustment.submit"].includes(action)) return piRequestDenial("adjustment", action, input);
     if (action === "project.adjustment.review") return input.canOperate && (!input.request || (input.request.requestType === "adjustment" && input.request.status === "submitted")) ? null : blocked(input.request && input.request.requestType === "adjustment" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
     if (action === "project.adjustment.request-supplement") return input.canOperate && (!input.request || (input.request.requestType === "adjustment" && ["submitted", "under_staff_review"].includes(input.request.status))) ? null : blocked(input.request && input.request.requestType === "adjustment" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
     if (action === "project.adjustment.approve" || action === "project.adjustment.reject") return input.canOperate && (!input.request || (input.request.requestType === "adjustment" && input.request.status === "under_staff_review")) ? null : blocked(input.request && input.request.requestType === "adjustment" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
   }
   if (action.startsWith("project.extension.")) {
-    if (["project.extension.create", "project.extension.edit-draft", "project.extension.submit"].includes(action)) return input.canPi && input.isPi ? null : blocked(input.inExecution ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");
+    if (["project.extension.create", "project.extension.edit-draft", "project.extension.submit"].includes(action)) return piRequestDenial("extension", action, input);
     if (action === "project.extension.validate") return input.canOperate && (!input.request || (input.request.requestType === "extension" && input.request.status === "submitted")) ? null : blocked(input.request && input.request.requestType === "extension" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
     if (action === "project.extension.prepare") return input.canOperate && (!input.request || (input.request.requestType === "extension" && input.request.status === "under_staff_validation")) ? null : blocked(input.request && input.request.requestType === "extension" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
+    if (action === "project.extension.request-supplement" && !input.request) return input.canOperate || input.canHeadDecide ? null : blocked("ACTION_NOT_GRANTED");
     if (action === "project.extension.request-supplement") return (input.canOperate && !!input.request && input.request.requestType === "extension" && ["submitted", "under_staff_validation"].includes(input.request.status)) || (input.canHeadDecide && !!input.request && input.request.requestType === "extension" && input.request.status === "ready_for_head_decision") ? null : blocked(input.request && input.request.requestType === "extension" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
     if (action === "project.extension.approve" || action === "project.extension.reject") return input.canHeadDecide && (!input.request || (input.request.requestType === "extension" && input.request.status === "ready_for_head_decision")) ? null : blocked(input.request && input.request.requestType === "extension" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
   }
   return blocked("ACTION_NOT_GRANTED");
+}
+
+// With a report/request in context, PI draft actions also need authorship and an editable state.
+function piItemDenial(ownerId: string, status: string, submit: boolean, input: ProjectCapabilityInput) {
+  if (ownerId !== input.actor.id) return blocked("ACTION_NOT_GRANTED");
+  return (submit ? ["draft"] : ["draft", "supplement_requested"]).includes(status) ? null : blocked("WORKFLOW_STATE_DENIED");
+}
+
+function piRequestDenial(requestType: string, action: PermissionActionV1, input: ProjectCapabilityInput & { isPi: boolean; canPi: boolean; inExecution: boolean }) {
+  if (!(input.canPi && input.isPi)) return blocked(input.inExecution ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");
+  if (!input.request || action.endsWith(".create")) return null;
+  if (input.request.requestType !== requestType) return blocked("WORKFLOW_STATE_DENIED");
+  return piItemDenial(input.request.requesterId, input.request.status, action.endsWith(".submit"), input);
 }
 
 // Requester PI may withdraw while executing or paused (not canPi, which is executing-only).
