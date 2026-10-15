@@ -29,8 +29,8 @@ export function CvEducationTab({ draft, editable, errors, onChange }: CvHistoryT
         { key: "major", label: "Ngành đào tạo (Chuyên ngành) *", header: "Ngành", required: true, maxLength: 1000, placeholder: "Y đa khoa, Dược, v.v." },
         { key: "institution", label: "Cơ sở đào tạo *", required: true, maxLength: 1000, placeholder: "Học viện Quân y, ĐH Y Hà Nội..." },
         { key: "startYear", label: "Năm bắt đầu", type: "number", options: years, table: false },
-        { key: "graduationYear", label: "Năm tốt nghiệp", header: "Năm", type: "number", options: years, cell: (row) => row.startYear || row.graduationYear ? `${row.startYear ?? "—"} – ${row.graduationYear ?? "—"}` : "—" },
-        { key: "trainingMode", label: "Hình thức đào tạo", options: trainingModes, table: false }
+        { key: "graduationYear", label: "Năm tốt nghiệp", header: "Thời gian", type: "number", options: years, cell: (row) => row.startYear || row.graduationYear ? `${row.startYear ?? "—"} – ${row.graduationYear ?? "—"}` : "—" },
+        { key: "trainingMode", label: "Hình thức đào tạo", options: trainingModes, cell: (row) => row.trainingMode || "—" }
       ]}
       validate={(row) => row.startYear != null && row.graduationYear != null && row.startYear > row.graduationYear ? { graduationYear: "Năm tốt nghiệp không được trước Năm bắt đầu." } : {}}
       editable={editable} error={errors.educationHistory}
@@ -53,7 +53,7 @@ export function CvWorkTab({ draft, editable, errors, onChange }: CvHistoryTabPro
         { key: "period", label: "Thời gian *", required: true, maxLength: 1000, placeholder: "2015 - nay" },
         { key: "organization", label: "Cơ quan / Đơn vị *", header: "Cơ quan/Đơn vị", required: true, maxLength: 1000 },
         { key: "position", label: "Chức vụ", maxLength: 1000 },
-        { key: "workField", label: "Lĩnh vực công tác", maxLength: 1000, table: false }
+        { key: "workField", label: "Lĩnh vực công tác", maxLength: 1000, cell: (row) => row.workField || "—" }
       ]}
       editable={editable} error={errors.workItems}
       onChange={(rows) => onChange("workItems", rows)}
