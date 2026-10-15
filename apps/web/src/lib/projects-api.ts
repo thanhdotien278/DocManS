@@ -4,15 +4,41 @@ import { isViewerAuthorizationV1, type PermissionActionV1, type ViewerAuthorizat
 export type ProjectRecord = {
   id: string; proposalId: string; title: string; status: string; startDate: string | null; endDate: string | null;
   scope: Record<string, unknown>; plan: Record<string, unknown> | null;
-  hostOrganizationUnit?: { name: string }; officer?: { officerUserId: string } | null;
+  hostOrganizationUnit?: { name: string }; officer?: { officerUserId: string; displayName?: string | null } | null;
   members: Array<{ id: string; name: string; participationRole: string; status: string; userId?: string }>;
   milestones: Array<{ id: string; title: string; dueDate: string; isImportant: boolean; status: string; responsibleMemberId?: string | null }>;
   checkpoints: Array<{ id: string; title: string; dueDate: string; status: string }>;
-  reports: Array<{ id: string; revision: number; status: string; checkpointId?: string; reportingPeriodStart?: string; reportingPeriodEnd?: string; progressResults?: string; issuesRecommendations?: string; reviewReason?: string; responseDeadline?: string; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }> }>;
-  requests: Array<{ id: string; requestType: "adjustment" | "extension"; status: string; revision?: number; requesterId?: string; reason?: string; proposedValues?: Record<string, unknown>; decisionNote?: string; responseDeadline?: string; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }> }>;
+  reports: Array<{ id: string; revision: number; status: string; checkpointId?: string; reportingPeriodStart?: string; reportingPeriodEnd?: string; progressResults?: string; issuesRecommendations?: string; reviewReason?: string; responseDeadline?: string; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }>; allowedActions: PermissionActionV1[] }>;
+  requests: Array<{ id: string; requestType: "adjustment" | "extension"; status: string; revision?: number; requesterId?: string; reason?: string; proposedValues?: Record<string, unknown>; decisionNote?: string; responseDeadline?: string; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }>; allowedActions: PermissionActionV1[] }>;
   history: Array<{ id: string; action: string; reason?: string; createdAt: string }>;
   overdue: boolean; approaching: boolean; nearestDeadline: string | null; viewerAuthorization: ViewerAuthorizationV1;
 };
+
+const PROJECT_STATUS_LABELS: Record<string, string> = { preparing: "Chuẩn bị triển khai", executing: "Đang thực hiện", paused: "Tạm dừng", pending_acceptance: "Chờ nghiệm thu", accepted: "Đã nghiệm thu", failed: "Không đạt", closed: "Đóng/lưu trữ" };
+const REPORT_STATUS_LABELS: Record<string, string> = { draft: "Bản nháp", submitted: "Đã nộp", under_review: "Đang xem xét", supplement_requested: "Yêu cầu bổ sung", accepted: "Đã chấp nhận", superseded: "Đã có bản sửa" };
+const REQUEST_STATUS_LABELS: Record<string, string> = { draft: "Bản nháp", submitted: "Đã nộp", under_staff_review: "Chuyên viên đang xem xét", under_staff_validation: "Chuyên viên đang kiểm tra", ready_for_head_decision: "Chờ Trưởng phòng quyết định", supplement_requested: "Yêu cầu bổ sung", approved: "Đã phê duyệt", rejected: "Đã từ chối", withdrawn: "Đã rút" };
+const MILESTONE_STATUS_LABELS: Record<string, string> = { open: "Đang mở", completed: "Hoàn thành" };
+const ROLE_LABELS: Record<string, string> = { TOPIC_PI: "Chủ nhiệm đề tài", TOPIC_MEMBER: "Thành viên", TOPIC_SECRETARY: "Thư ký" };
+const MEMBER_STATUS_LABELS: Record<string, string> = { ACTIVE: "Đang tham gia", ENDED: "Đã kết thúc" };
+const HISTORY_ACTION_LABELS: Record<string, string> = {
+  "project.created": "Tạo đề tài", "project.officer.assign": "Phân công chuyên viên", "project.officer.revoke": "Thu hồi phân công chuyên viên",
+  "project.setup.configure": "Thiết lập mốc", "project.setup.confirm": "Xác nhận bắt đầu thực hiện",
+  "project.report.draft": "Tạo bản nháp báo cáo", "project.report.edit-draft": "Cập nhật báo cáo", "project.report.submit": "Nộp báo cáo",
+  "project.report.review": "Bắt đầu xem xét báo cáo", "project.report.request-supplement": "Yêu cầu bổ sung báo cáo", "project.report.accept": "Chấp nhận báo cáo"
+};
+const REQUEST_ACTION_LABELS: Record<string, string> = { create: "Tạo yêu cầu", "edit-draft": "Cập nhật yêu cầu", submit: "Nộp yêu cầu", review: "Bắt đầu xem xét yêu cầu", validate: "Kiểm tra hành chính", prepare: "Trình Trưởng phòng", "request-supplement": "Yêu cầu bổ sung", approve: "Phê duyệt", reject: "Từ chối", withdraw: "Rút yêu cầu" };
+// Unknown codes fall back to the raw value so new states stay visible instead of blank.
+export const projectStatusLabel = (value: string) => PROJECT_STATUS_LABELS[value] ?? value;
+export const reportStatusLabel = (value: string) => REPORT_STATUS_LABELS[value] ?? value;
+export const requestStatusLabel = (value: string) => REQUEST_STATUS_LABELS[value] ?? value;
+export const milestoneStatusLabel = (value: string) => MILESTONE_STATUS_LABELS[value] ?? value;
+export const participationRoleLabel = (value: string) => ROLE_LABELS[value] ?? value;
+export const memberStatusLabel = (value: string) => MEMBER_STATUS_LABELS[value] ?? value;
+export function historyActionLabel(value: string) {
+  const request = /^project\.(adjustment|extension)\.(.+)$/.exec(value);
+  if (request) return `${REQUEST_ACTION_LABELS[request[2]] ?? request[2]} ${request[1] === "extension" ? "gia hạn" : "điều chỉnh"}`;
+  return HISTORY_ACTION_LABELS[value] ?? value;
+}
 
 export function projectCapability(project: ProjectRecord) {
   const value = project.viewerAuthorization;
@@ -20,6 +46,8 @@ export function projectCapability(project: ProjectRecord) {
 }
 
 export function canProject(project: ProjectRecord, action: PermissionActionV1) { return !!projectCapability(project)?.allowedActions.includes(action); }
+// Per-item actions computed by the API for this viewer and this report/request.
+export function canItem(item: { allowedActions?: PermissionActionV1[] }, action: PermissionActionV1) { return !!item.allowedActions?.includes(action); }
 export function projectDenial(project: ProjectRecord, action: PermissionActionV1) { return projectCapability(project)?.blockedActions.find((item) => item.action === action)?.reason ?? "Quyền thao tác chưa được xác minh. Vui lòng tải lại."; }
 
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
