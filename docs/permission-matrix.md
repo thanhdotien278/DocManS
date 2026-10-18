@@ -1,18 +1,24 @@
 # Permission Matrix - DocManSystem / RTMS
 
-> **Approved decision baseline:** [`docs/authorization-core-business-baseline.md`](./authorization-core-business-baseline.md)
-> is the latest product decision record for system roles, record-scoped roles,
-> workflow and core business behavior. This matrix remains the detailed
-> implementation matrix; any conflicting assumption must be reconciled against
-> the baseline before coding.
+> Bản tiếng Việt: [`permission-matrix.vi.md`](./permission-matrix.vi.md). Sửa file này thì
+> sửa cả bản tiếng Việt trong cùng thay đổi.
+
+> **Cập nhật 18/10/2026 — 10 vai trò hệ thống.** Nguồn quyết định hiện hành là
+> `docs/Ma_tran-phan-qquyen-DocManS.pdf` (ma trận đối chiếu code API ngày 15/10/2026)
+> và tài liệu thiết kế `docs/design/phan-cap-va-trinh-duyet.md` (hiện nằm trên nhánh
+> `tuan/DocManS`, chưa merge vào `DocManS`). Khi mâu thuẫn, mục 7 của file này thắng.
+>
+> Các tài liệu sau vẫn mô tả mô hình 7 vai trò cũ và **chờ đồng bộ**, không dùng làm
+> nguồn quyết định cho phần mâu thuẫn:
+> [`authorization-core-business-baseline.md`](./authorization-core-business-baseline.md),
+> [`contracts/project-execution.md`](contracts/project-execution.md),
+> [`contracts/researcher-profile-access.md`](contracts/researcher-profile-access.md).
 
 ## 1. Purpose
 
 This document is the detailed phase 1 permission matrix for DocManSystem / RTMS.
 It defines role-based, data-scope, state-based, and audit expectations for
-implementation, review, testing, and QA. The approved product decisions are
-maintained in the linked baseline so that future UX and code work has one
-explicit decision source.
+implementation, review, testing, and QA.
 
 Use this document as the source of truth when implementing backend policies,
 API guards, UI action visibility, dashboard queries, export queries, file access
@@ -21,154 +27,144 @@ flows, workflow transitions, and authorization test cases.
 If PRD, requirements, story scope, roles, or workflow states change, this
 document must be updated in the same change set.
 
-## 2. Canonical Roles
+## 2. Canonical System Roles
 
-### System Administrator / Quan tri he thong
+Each account has **exactly one** system role. Effective permission additionally
+depends on the user's organization/unit scope and the user's relationship with each
+proposal/project (11 record-relationship types; 83 V1 authorization action codes per
+the 15/10/2026 code audit).
 
-- Main responsibility: manage accounts, roles, organization scopes, shared
-  catalogs, system configuration, and operational traceability support.
-- Default data scope: all system scope for administrative data.
-- Important limits: administrative power does not automatically grant business
-  approval authority unless that authority is explicitly assigned by policy.
+| Abbr. | Vietnamese title | System role code | Group |
+| --- | --- | --- | --- |
+| QT | Quản trị hệ thống | `SYSTEM_ADMIN` | Platform |
+| GĐ | Giám đốc Học viện | `LEADERSHIP_APPROVAL_AUTHORITY` | Ban giám đốc (BGĐ) |
+| PGĐ-KH | Phó Giám đốc phụ trách Khoa học | `SCIENCE_DEPUTY_DIRECTOR` | Ban giám đốc |
+| PGĐ-TD | Phó Giám đốc khác, chỉ theo dõi | `RESEARCH_OVERSIGHT_AUTHORITY` | Ban giám đốc |
+| TP | Trưởng phòng KHQS | `RESEARCH_MANAGEMENT_HEAD` | Phòng KHQS |
+| PP | Phó phòng KHQS | `RESEARCH_MANAGEMENT_DEPUTY_HEAD` | Phòng KHQS |
+| TB | Trưởng ban QLKH (một người) | `RESEARCH_BOARD_HEAD` | Phòng KHQS |
+| CV | Chuyên viên QLKH | `RESEARCH_MANAGEMENT_STAFF` | Phòng KHQS |
+| NCV | Nhà nghiên cứu nội bộ | `RESEARCHER_INTERNAL_USER` | Researcher |
+| NNB | Nhà nghiên cứu bên ngoài | `EXTERNAL_RESEARCHER_USER` | Researcher |
 
-### Scientific Management Head / Truong phong quan ly khoa hoc
+Role renames versus the former 7-role model: `SCIENTIFIC_MANAGEMENT_HEAD` →
+`RESEARCH_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF` → `RESEARCH_MANAGEMENT_STAFF`.
+New roles: `SCIENCE_DEPUTY_DIRECTOR`, `RESEARCH_MANAGEMENT_DEPUTY_HEAD`,
+`RESEARCH_BOARD_HEAD`. `RESEARCH_OVERSIGHT_AUTHORITY` now means only the other Deputy
+Directors who monitor; it is no longer the Science Deputy Director.
 
-- System role: `SCIENTIFIC_MANAGEMENT_HEAD`, distinct from leadership authority.
-- Can view all proposals/projects within explicitly authorized Scientific Management
-  scope, including current responsible Staff, unassigned records, workload, status
-  and deadlines; filter/group by responsible Staff.
-- Head assigns/reassigns/revokes officers, assigns/reassigns/revokes reviewer and
-  committee positions, drafts/finalizes synthesis, submits eligible completed
-  proposal packages, and finally approves/rejects Project Extension requests in
-  Golden Flow 4. Head does not approve Project Adjustment requests.
+### QT — System Administrator
 
-### Scientific Management Staff / Chuyen vien quan ly khoa hoc
+- Platform administration only: accounts, roles, units, catalogs, configuration,
+  researcher-profile provisioning/linking, scientific document management.
+- Has no scientific CV, no business dashboard, cannot be assigned as reviewer,
+  council or IRB member, and has no business decision authority.
 
-- Main responsibility: operate proposal intake, completeness review, reviewer
-  monitoring, approved-project follow-up, reminders, and operational reporting.
-- Staff can monitor named reviewer/council assignments, deadlines, pending work and
-  backend-derived blockers on assigned proposals. Reviewer assignment, synthesis,
-  finalization and proposal package submission belong to the scoped Head. Assigned
-  project Staff reviews/accepts progress reports and finally approves/rejects
-  Project Adjustment requests.
-- Default management scope: only proposals/projects with an effective
-  `PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER` assignment to this
-  Staff account, plus explicitly granted organization scope. Never institution-wide
-  from role alone. Intake/profile operations retain their separate scope rules.
-- Staff can access other records through valid PI/member/secretary/reviewer/council/
-  task relationships, with only that relationship's actions and disclosure.
-- Neither Staff nor Head has proposal final approval authority from this management
-  role. Golden Flow 4 grants assigned Staff final Project Adjustment decisions and
-  scoped Head final Project Extension decisions only.
+### GĐ — Giám đốc Học viện
 
-### Leadership / Approval Authority / Lanh dao / Nguoi phe duyet
+- The only role that approves topics (proposal) with their funding, and approves
+  contract liquidation (thanh lý).
+- Can also sign everything PGĐ-KH signs: evaluation/acceptance/IRB council
+  establishment, IRB certificate, project extension and adjustment.
+- Sees every project in the Academy and per-project funding; manages funding,
+  disbursement and settlement.
 
-- Main responsibility: review decision-ready proposals before project execution and
-  monitor authorized project information. Project Adjustment and Project Extension
-  decisions are outside this role in Golden Flow 4.
-- Default data scope: approval authority scope and permitted organization/unit
-  scope.
-- Important limits: proposal approval actions must follow workflow state rules and
-  cannot bypass required review, consolidation, or history; Leadership cannot
-  approve/reject Project Adjustment or Project Extension requests.
+### PGĐ-KH — Phó Giám đốc phụ trách Khoa học
 
-### Research Oversight Authority / Pho Giam doc phu trach NCKH
+- Signs council establishment (evaluation, acceptance, IRB), IRB certificate,
+  project extension and adjustment (without funding change).
+- Does not approve topics, funding or liquidation; does not manage funding.
+- Sees every project in the Academy and per-project funding.
 
-- Institutional proposal/project oversight inside explicit scopes, read-only unless an
-  independent PI/member/reviewer relationship grants its own action.
-- Internal researcher eligibility includes draft creation and PI edit/submit/resubmit.
-- Deny all role-derived final proposal/rejection, council establishment, funding and acceptance decisions.
-- Only operational review counts/status/deadlines are disclosed from oversight. Sensitive
-  identity, scores, comments and internal consolidation require separate disclosure authority.
+### PGĐ-TD — Phó Giám đốc khác, chỉ theo dõi
 
-### External Researcher User / Nha nghien cuu ben ngoai
+- Monitoring only: progress, counts and **aggregate** funding reports (note 7).
+- Cannot view per-record funding and signs nothing.
 
-- Main responsibility: work only on explicitly related records, approved-topic/task
-  contributions, or assigned review work.
-- Default data scope: explicit record relationship or assignment scope only.
-- Important limits: cannot create or formally submit proposals, edit submitted
-  versions, change PI/members/objective/budget/status, assign users, or make a
-  final decision. This account-level role never replaces a record relationship.
+### TP — Trưởng phòng KHQS
 
-### Record-scoped business personas
+- Approves every submission dossier (tờ trình) before it goes to BGĐ.
+- Assigns topic segments (mảng) to CV, assigns/reassigns/revokes the responsible CV
+  on proposals and projects, coordinates every proposal within unit scope.
+- May also perform CV-level evaluation work (reviewer/council assignment, synthesis,
+  IRB council, drafting tờ trình) within unit scope.
+- Sees every project in the Academy; manages funding Academy-wide.
+- Does not perform completeness checks or supplement requests.
 
-The following headings are business relationships/personas, not account-level
-system roles. A user with one of the seven system roles may hold one or more of
-these relationships on different records.
+### PP — Phó phòng KHQS
 
-#### Principal Investigator / Chu nhiem de tai
+- Monitoring only (progress, counts) within unit scope. No step in the tờ trình
+  flow and no approval, even when TP is absent.
+- Sees per-project funding only for projects in which PP is PI/member (note 4).
 
-- Main responsibility: create proposal drafts, submit proposals, respond to
-  supplement requests, track approved projects, submit progress reports, and
-  request adjustments or extensions.
-- Default data scope: own proposal and approved-topic scope. Proposal creation,
-  submission, and resubmission remain PI-only.
-- Important limits: cannot edit submitted proposals unless the workflow state
-  allows supplement, resubmission, or another explicit domain action.
+### TB — Trưởng ban QLKH
 
-#### Topic Team Member / Thanh vien de tai
+- Reviews CV-authored tờ trình, then forwards to TP or returns to the author.
+- Assigns/revokes the responsible CV within unit scope; performs completeness,
+  supplement, reviewer/council assignment, synthesis, IRB council and tờ trình
+  drafting within unit scope.
+- Sees every project in the Academy; manages funding Academy-wide.
 
-- Main responsibility: participate in proposal or approved-topic work, view
-  permitted information, update assigned work, and contribute evidence/files.
-- Default data scope: `TOPIC_MEMBER` participation scope and task
-  assignee/collaborator scope.
-- Important limits: cannot access projects, files, reports, or tasks outside
-  participation or assignment scope.
+### CV — Chuyên viên QLKH
 
-#### Reviewer / Committee Member / Reviewer / Hoi dong
+- Works only on proposals/projects to which CV is currently assigned as responsible
+  officer (note 3): completeness, supplement request, reviewer/council invitation,
+  synthesis, IRB council, drafting tờ trình, daily project operations (milestone
+  setup, report review, appraising adjustment/extension, acceptance, products,
+  drafting liquidation, project closing), funding within assignment.
+- Creates/opens/closes intake periods; manages researcher profiles in unit scope;
+  manages student research (NCKH sinh viên) in unit scope.
+- Never operates on records assigned to another CV.
 
-- Main responsibility: access assigned proposal/review records, submit scores,
-  comments, recommendations, and participate in controlled evaluation or
-  acceptance workflows.
-- Default data scope: reviewer assignment scope.
-- Important limits: cannot see unassigned proposals and cannot change another
-  reviewer or committee member's review.
+### NCV — Nhà nghiên cứu nội bộ
+
+- Creates, edits and submits proposals as PI; PI and member work on own projects.
+- Reviewer, council member/secretary or IRB member only when assigned (notes 5, 6).
+- Registers student research as supervising lecturer.
+
+### NNB — Nhà nghiên cứu bên ngoài
+
+- Cannot create proposals, cannot see intake periods, cannot be PI.
+- Participates only as reviewer, council/IRB member, council secretary or project
+  member through an explicit record relationship.
 
 ### Record-Scoped Participation And Assignment Roles
 
-The seven canonical account roles are `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`,
-`SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`,
-`RESEARCHER_INTERNAL_USER`, and `EXTERNAL_RESEARCHER_USER`. Scientific work roles such
-as `PROPOSAL_PI`, `TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer,
-council chair, council secretary, council member, and ethics reviewer must be
-resolved in the context of a specific proposal, approved topic, council, ethics
-dossier, review, task, or related business record. A proposal has one
-`PROPOSAL_PI` derived from `ownerId`; its team contains only
+Scientific work roles such as `PROPOSAL_PI`, `TOPIC_PI`, `TOPIC_SECRETARY`,
+`TOPIC_MEMBER`, reviewer, council chair, council secretary, council member, IRB
+member/secretary and responsible officer must be resolved in the context of a specific
+proposal, approved topic, council, IRB dossier, review, task, or related business
+record. A proposal has one `PROPOSAL_PI` derived from `ownerId`; its team contains only
 `TOPIC_SECRETARY` and `TOPIC_MEMBER`.
 
-Do not grant global access by assigning `PROPOSAL_PI`, `TOPIC_PI`,
-`TOPIC_MEMBER`, `TOPIC_SECRETARY`, `REVIEWER`, or similar participation labels
-directly to a user account. Backend authorization must calculate effective
-permission from system role, organization/unit scope, record participation
-role, assignment scope, workflow state, and conflict policy.
-
-Common record-scoped roles:
+Do not grant global access by assigning participation labels directly to a user
+account. Backend authorization calculates effective permission from system role,
+organization/unit scope, record relationship, assignment, workflow state, and
+conflict policy.
 
 | Role Type | Examples | Scope Boundary | Important Limits |
 | --- | --- | --- | --- |
-| Management responsibility | `PROPOSAL_MANAGEMENT_OFFICER`, `PROJECT_MANAGEMENT_OFFICER` | One proposal/project | At most one active primary Staff officer per record; history/audit retained on assign/reassign/revoke. |
-| Proposal participation | `PROPOSAL_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | One proposal | Does not grant access to unrelated proposals; PI is derived from `ownerId`. |
-| Approved-topic participation | `TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | One approved topic | Team permissions depend on active relationship and workflow state. |
-| Review assignment | Reviewer, committee reviewer | One proposal, ethics dossier, or review package | Assignment-scoped only; no access to unassigned records. |
-| Council membership | Chair, secretary, member, reviewer | One council | Council secretary cannot approve/reject unless separately authorized by policy. |
+| Management responsibility | `PROPOSAL_MANAGEMENT_OFFICER`, `PROJECT_MANAGEMENT_OFFICER` (a CV) | One proposal/project | At most one active responsible CV per record; auto-assigned by segment on submission, or assigned by TP/TB; history/audit retained. |
+| Proposal participation | `PROPOSAL_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | One proposal | No access to unrelated proposals; PI is derived from `ownerId`. |
+| Approved-topic participation | `TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | One approved topic | Depends on active relationship and workflow state. |
+| Review assignment | Evaluation reviewer / evaluation council member | One proposal | Invited from any account with a scientific CV (every role except QT, including GĐ, PGĐ, TP, PP, TB, CV); must accept invitation; scores; reads records outside own unit. |
+| Council / IRB membership | Chair, secretary, member, IRB member, IRB secretary | One council / IRB dossier | IRB members invited from any account with a scientific CV; council secretary writes synthesis/minutes but does not score. |
 | Task assignment | Owner, assignee, collaborator | One task and linked record | Task access still depends on linked-record permission. |
 
 ## 3. External Researcher User Overlay
 
-The detailed matrices below retain PI, topic-team, and reviewer columns as
-compact record-context shorthand. Apply this overlay to every row in addition
-to the seven account-level system roles:
+Apply this overlay to every row in addition to the system-role matrix:
 
 | Capability | `EXTERNAL_RESEARCHER_USER` rule |
 | --- | --- |
 | Authentication and account context | May sign in only while active; the session exposes the external system role and never invents PI/member/reviewer authority. |
-| Profile and account administration | No user, role, scope, profile, account-link, catalog, or configuration management. A profile may exist independently of login. |
-| Proposal discovery and detail | Read only proposals with an explicit active relationship or assignment, using the record disclosure rules. Same unit, name, or another record relationship does not grant access. |
-| Proposal draft | Read only when an explicit relationship permits; no create, edit, submit, or resubmit authority. |
-| Submission and decisions | No proposal creation, formal submission, resubmission, reviewer assignment, consolidation, approval, rejection, reopen, or final decision. |
-| Review work | Read and submit only an explicitly assigned review package, subject to assignment lifecycle and disclosure. No unassigned records, other reviewers' work, reviewer assignment, or same-record decision. |
-| Project, task, and file work | Read or contribute only where a separate active record relationship/assignment grants the exact action. Task/file access never widens linked-record scope. |
-| Dashboard, search, export, notification, and history | Include only records already visible through the same relationship/assignment policy; no privileged audit, hidden conflict source, reviewer identity, raw review, or out-of-scope metadata. |
+| Profile and account administration | No user, role, scope, profile, account-link, catalog, or configuration management. Own scientific CV self-update only. |
+| Intake periods | Cannot see intake periods. |
+| Proposal discovery and detail | Read only proposals with an explicit active reviewer/council/IRB assignment or project-member relationship. Same unit, name, or another record relationship does not grant access. |
+| Proposal draft and submission | No create, edit, submit, or resubmit authority; never PI. |
+| Review work | Read and submit only an explicitly assigned and accepted review package; council secretary of the record may write synthesis/minutes (note 6). |
+| Project, task, and file work | Member milestone-progress updates and reads only where an active relationship grants the exact action. |
+| Dashboard, search, export, notification, and history | Only records already visible through the same relationship/assignment policy. |
 
 The backend rechecks role, scope, relationship/assignment, workflow state,
 conflict, and any applicable delegation contract at mutation time. Proposal
@@ -177,17 +173,17 @@ never grants an action by itself.
 
 ## 4. Permission Legend
 
-| Permission | Meaning |
+| Symbol / Permission | Meaning |
 | --- | --- |
-| None | No access. |
-| Read | View list, detail, metadata, or status where scope allows. |
-| Create | Create a new record or draft in an allowed workflow state. |
-| Update | Edit an existing record in an allowed workflow state. |
-| Submit | Formally submit a draft, report, request, score, or comment. |
+| ✓ | Allowed (superscript = condition note). |
+| ◐n | Conditional, see note n. |
+| Xem / Read | View only. |
+| — / None | Denied. |
+| Create / Update / Submit | Create, edit, or formally submit in an allowed workflow state. |
 | Review | Review completeness, progress, evidence, scores, or business context. |
-| Assign | Assign reviewers, committee members, task owners, or collaborators. |
-| Approve/Reject | Make an authority decision that changes workflow outcome. |
-| Manage | Full operational management for the capability within allowed scope. |
+| Assign | Assign reviewers, council members, officers, task owners, or collaborators. |
+| Approve/Reject / Ký | Authority decision that changes workflow outcome. |
+| Manage | Full operational management within allowed scope. |
 | Export | Generate or download report/export output within allowed scope. |
 | Audit/View History | View workflow history, audit logs, or timeline records where allowed. |
 
@@ -195,456 +191,480 @@ never grants an action by itself.
 
 | Scope Rule | Definition |
 | --- | --- |
-| All system scope | The role can access the capability across the system where this does not violate a business-decision boundary. |
-| Organization/unit scope | Access is limited to permitted organization or unit boundaries. |
-| Assigned staff scope | Management access requires an effective `PROPOSAL_MANAGEMENT_OFFICER` or `PROJECT_MANAGEMENT_OFFICER` on the exact record plus explicit organization scope; operating on a record in the past is not a grant. |
-| Head oversight scope | All proposals/projects within explicitly authorized Scientific Management scope, subject to conflict/disclosure; not final-decision or blanket mutation authority. |
-| Approval authority scope | Access is limited to records the leadership or approval authority is allowed to decide or inspect. |
-| Own proposal/topic scope | Access is limited to proposals or approved topics owned by the principal investigator. |
-| Proposal participation scope | Access is limited to proposals where the user has an active `PROPOSAL_PI`, `TOPIC_MEMBER`, or `TOPIC_SECRETARY` relationship. |
-| Approved-topic participation scope | Access is limited to approved topics where the user has an active `TOPIC_PI`, `TOPIC_MEMBER`, or `TOPIC_SECRETARY` relationship. |
-| Reviewer assignment scope | Access is limited to proposals, reviews, or committee work assigned to the reviewer or committee member. |
-| Council membership scope | Access is limited to councils, council records, or ethics dossiers where the user has a valid council membership or assignment. |
-| Task assignee/collaborator scope | Access is limited to tasks where the user is owner, assignee, collaborator, creator, or otherwise explicitly authorized. |
-| Conflict policy scope | Access or assignment is denied when the actor has a conflicting role on the same business record, such as PI self-review or authority self-approval. |
+| Platform scope | QT administrative data only; never business records. |
+| Unit scope (note 1) | Limited to the user's granted organization/unit scope. Proposals always follow unit scope. |
+| Submitted-in-unit scope (note 2) | Proposals already in workflow (submitted or later) within unit scope. |
+| Academy-wide project scope | BGĐ (GĐ, PGĐ-KH), TP and TB view every project in the Academy; TP and TB manage funding Academy-wide. Other project operations remain unit-scoped. |
+| Assigned officer scope (note 3) | Only records where the CV is the current responsible officer; past assignment grants nothing. |
+| Own participation scope (note 4) | Only records where the user is PI or member. PP sees per-project funding only for such projects. |
+| Reviewer / council / IRB assignment scope (note 5) | Only when assigned as reviewer, council or IRB member; may read records outside own unit. |
+| Council secretary scope (note 6) | Secretary of the council of that record: synthesis and minutes, no scoring. |
+| Aggregate-only scope (note 7) | PGĐ-TD dashboard: aggregate figures; per-project/proposal funding columns stay empty. |
+| Conflict policy scope | Denied when the actor has a conflicting relationship on the same record (see §7.3). |
 
 ## 6. State Rules
 
 | State Rule | Authorization Meaning |
 | --- | --- |
-| Draft | Proposal draft content may be created or updated only by the current internal PI; no team member, secretary, staff user, external researcher, or delegate can create or submit it. |
-| Open intake | New proposal drafts or submissions may be accepted when intake rules match user scope. |
+| Draft | Proposal draft content may be created or updated only by its current PI (any role except QT/NNB); no team member, secretary, delegate or manager edits or submits it. |
+| Open intake | Intake periods created/opened/closed by TP or CV; visible to every role except QT and NNB. |
 | Closed intake | New submissions are blocked; read access remains scope-controlled. |
-| Submitted | Proposal is locked from normal draft edits and moves into controlled review workflow. |
+| Submitted | Locked from draft edits; system auto-assigns a responsible CV by segment (level + nature); unmatched records show "Chưa có người phụ trách" for TP to assign. |
 | Needs supplement | PI may revise only the requested content or files allowed by workflow. |
-| Resubmitted | Proposal returns to controlled staff/review workflow after PI response. |
-| Under review | Assigned reviewers can perform review actions; unrelated users cannot access review material. |
-| Ready for approval | Approval authority can decide; non-authority users cannot approve or reject. |
-| Approved | Approved-project creation or tracking may begin through explicit domain actions. |
-| Rejected | Decision history remains visible by scope; normal workflow actions stop unless policy allows appeal or reopen. |
-| Active project | Project tracking, milestone, evidence, report, and task actions follow project participation and staff scope. |
-| Delayed project | Follow-up, escalation, dashboard, and report actions remain scope-controlled. |
-| Waiting report submission (derived flag) | Active project PI submits the formal report; members may contribute evidence only through an explicit relationship capability. |
-| Report under review | Assigned project Staff reviews, accepts, or requests supplementation; Leadership only monitors permitted summaries. |
-| Pending adjustment | Active `TOPIC_PI` submits a typed milestone/scope-plan/membership request; assigned project Staff reviews and approves/rejects. Head and Leadership decision actions are denied. |
-| Pending extension | Active `TOPIC_PI` submits a later end-date request; assigned project Staff validates/prepares, then scoped Head approves/rejects. Leadership decision actions are denied. |
-| Completed/accepted | Records are mostly read-only except history, reporting, and explicitly allowed archival actions. |
-| Task open/in progress/completed/cancelled | Task action availability depends on current task state, assignee/collaborator scope, and linked-record permission. |
+| Resubmitted | Returns to the responsible CV's workflow. |
+| Under review | Assigned, accepted reviewers perform review actions; unrelated users cannot access review material. |
+| Tờ trình in routing | CV drafts → TB reviews → TP approves → BGĐ signs. Return at any step goes back to the author with a mandatory reason. |
+| Ready for approval | Only GĐ decides topic + funding approval. |
+| Approved / Rejected | Approved-project creation may begin; decision history remains visible by scope. |
+| Active project | Daily operations by the assigned CV; PI and members act per relationship. |
+| Waiting report submission (derived flag) | PI submits the formal report; members update only milestones they are responsible for. |
+| Report under review | Assigned CV reviews, accepts, or requests supplementation (no tờ trình). |
+| Pending adjustment / extension | PI submits; assigned CV appraises and drafts tờ trình; TB → TP → GĐ or PGĐ-KH signs. Code state names `under_staff_review`, `under_staff_validation`, `ready_for_head_decision` belong to the former flow and must be synchronized with the code. |
+| Liquidation | CV drafts liquidation minutes → TB → TP → only GĐ signs. |
+| Completed/accepted | Mostly read-only except history, reporting, and allowed archival actions. |
+| Task open/in progress/completed/cancelled | Depends on task state, assignee/collaborator scope, and linked-record permission. |
 
-## 7. System-role comparison matrix
+## 7. System-role matrix (authoritative)
 
-The seven account-level roles below are the complete system-role comparison. `None`
-means denied/not applicable; a record relationship or assignment never creates a
-new system role. The action tables that follow intentionally use compact
-record-persona columns (PI, team, reviewer/council) and inherit this overlay.
+Source: `docs/Ma_tran-phan-qquyen-DocManS.pdf`. `—` means denied; a record relationship
+never creates a new system role.
 
-| Capability | `SYSTEM_ADMIN` | `SCIENTIFIC_MANAGEMENT_HEAD` | `SCIENTIFIC_MANAGEMENT_STAFF` | `LEADERSHIP_APPROVAL_AUTHORITY` | `RESEARCH_OVERSIGHT_AUTHORITY` | `RESEARCHER_INTERNAL_USER` | `EXTERNAL_RESEARCHER_USER` |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Account, role, scope and catalog administration | Manage | None | None | None | None | None | None |
-| Scientific-management portfolio visibility | Admin data only | Authorized scope, including unassigned/workload | Current officer assignments only | Authorized approval scope | Authorized oversight scope, read-only | Relationship/assignment only | Relationship/assignment only |
-| Proposal creation, submission and resubmission | None | None | None | None | Only when also the current internal PI relationship | Only as current owner-derived PI | None |
-| Reviewer/council assignment and synthesis | None | Assign/revoke; synthesize/finalize/route | Completeness and progress monitoring | Read routed package | Read permitted operational summaries | None | None |
-| Proposal final approval/rejection | None | None | None | Approve/reject eligible routed package | None | None | None |
-| Project adjustment / extension decisions | None | Extension only after Staff validation | Adjustment only; extension validation/preparation | None | None | Submit own request | Submit only where an explicit relationship permits |
-| Record-scoped review, council, task or evidence work | Only where explicitly granted | Only where explicitly granted | Only where explicitly granted | Only where explicitly granted | Only where explicitly granted | Own/related/assigned records | Related/assigned records only |
+### 7.1 Function × role
+
+| Chức năng | QT | GĐ | PGĐ-KH | PGĐ-TD | TP | PP | TB | CV | NCV | NNB |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **Quản trị và tài khoản** | | | | | | | | | | |
+| Quản lý tài khoản, vai trò, đơn vị, danh mục, cấu hình | ✓ | — | — | — | — | — | — | — | — | — |
+| Quản lý hồ sơ nhà khoa học (tạo, cấp hoặc liên kết tài khoản) | ✓ | — | — | — | ✓¹ | — | — | ✓¹ | — | — |
+| Có lý lịch khoa học, tự cập nhật | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Quản lý văn bản khoa học | ✓ | — | — | — | ✓ | — | ✓ | ✓ | — | — |
+| **Đợt tiếp nhận** | | | | | | | | | | |
+| Tạo, mở, đóng đợt | — | — | — | — | ✓ | — | — | ✓ | — | — |
+| Xem đợt đang mở | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| **Hồ sơ đề xuất** | | | | | | | | | | |
+| Tạo, sửa, nộp đề xuất (tư cách chủ nhiệm) | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| Xem hồ sơ | — | Xem² | Xem² | Xem¹ | Xem¹ | Xem¹ | Xem¹ | ◐3 | ◐4 | ◐5 |
+| Giao hoặc thu hồi chuyên viên phụ trách hồ sơ, phân mảng | — | — | — | — | ✓¹ | — | ✓¹ | — | — | — |
+| Kiểm tra đầy đủ, yêu cầu bổ sung | — | — | — | — | — | — | ✓¹ | ◐3 | — | — |
+| Phân công phản biện, lập hội đồng đánh giá | — | — | — | — | ✓¹ | — | ✓¹ | ◐3 | — | — |
+| Chấm phiếu đánh giá | — | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 |
+| Tổng hợp, chốt, trình kết quả đánh giá | — | — | — | — | ✓¹ | — | ✓¹ | ◐3 | ◐6 | ◐6 |
+| Xem tiến độ đánh giá | — | Xem¹ | Xem¹ | Xem¹ | Xem¹ | Xem¹ | Xem¹ | ◐3 | — | — |
+| Lập hội đồng IRB (mời thành viên), trình kết luận IRB | — | — | — | — | ✓¹ | — | ✓¹ | ◐3 | — | — |
+| Nhận xét IRB (thành viên), lập kết luận IRB (thư ký) | — | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 |
+| **Tờ trình qua Phòng KHQS** | | | | | | | | | | |
+| Lập tờ trình | — | — | — | — | ✓¹ | — | ✓¹ | ◐3 | — | — |
+| Rà soát, trình Trưởng phòng (bước Trưởng ban) | — | — | — | — | — | — | ✓¹ | — | — | — |
+| Duyệt, trình Ban giám đốc (bước Trưởng phòng) | — | — | — | — | ✓¹ | — | — | — | — | — |
+| Ký thành lập hội đồng đánh giá, IRB, nghiệm thu; cấp giấy IRB; gia hạn, điều chỉnh | — | ✓ | ✓ | — | — | — | — | — | — | — |
+| Phê duyệt đề tài và kinh phí; phê duyệt thanh lý | — | ✓ | — | — | — | — | — | — | — | — |
+| **Đề tài đang thực hiện** | | | | | | | | | | |
+| Xem và theo dõi đề tài | — | ✓ | ✓ | Xem¹ | Xem | Xem¹ | Xem | Xem¹ | ◐4 | ◐4 |
+| Xem chi tiết kinh phí từng đề tài | — | ✓ | ✓ | — | ✓ | ◐4 | ✓ | ◐3 | ◐4 | ◐4 |
+| Quản lý kinh phí, giải ngân, quyết toán | — | ✓ | — | — | ✓ | — | ✓ | ◐3 | — | — |
+| Giao hoặc thu hồi chuyên viên phụ trách đề tài | — | — | — | — | ✓¹ | — | ✓¹ | — | — | — |
+| Nghiệp vụ hằng ngày: thiết lập mốc, xét báo cáo, thẩm định điều chỉnh, gia hạn, nghiệm thu, sản phẩm, lập thanh lý, đóng đề tài | — | — | — | — | — | — | — | ◐3 | — | — |
+| Việc của chủ nhiệm: báo cáo, xin điều chỉnh hoặc gia hạn, nộp nghiệm thu, nộp sản phẩm | — | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | — |
+| Cập nhật tiến độ mốc mình phụ trách (thành viên) | — | — | — | — | — | — | — | — | ◐4 | ◐4 |
+| **Đề tài sinh viên NCKH** | | | | | | | | | | |
+| Đăng ký đề tài (giảng viên hướng dẫn) | — | — | — | — | — | — | — | ✓ | ✓ | — |
+| Duyệt, quản lý, hoàn thành | — | — | — | — | — | — | — | ✓¹ | — | — |
+| **Tổng quan** | | | | | | | | | | |
+| Dashboard nghiệp vụ, xuất Excel | — | ✓ | ✓ | ✓⁷ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+### 7.2 Condition notes
+
+1. Only within the user's unit scope.
+2. Proposals already in workflow (submitted or later), within unit scope.
+3. Only proposals/projects to which the CV is currently assigned as responsible officer.
+4. Only proposals/projects where the user is PI or member. PP sees per-project funding
+   only for projects PP participates in.
+5. Only when assigned as reviewer, council member or IRB member; may read records
+   outside own unit. Evaluation reviewers/council members and IRB members are invited
+   from every account with a scientific CV (every role except QT); anyone invited to the
+   evaluation council scores. Record participants cannot be invited. A council member
+   or reviewer cannot sign or decide on that same record (§7.3, §8).
+   *Changed 18/10/2026 by product decision; the PDF limited evaluation reviewers to
+   NCV/NNB and scoring to CV/NCV/NNB.*
+6. Council secretary of that record: drafts synthesis and minutes, does not score.
+7. Not defined in the PDF legend. Per `docs/design/phan-cap-va-trinh-duyet.md` §5:
+   PGĐ-TD sees aggregate figures only; per-project/proposal funding stays empty.
+
+### 7.3 General rules
+
+- **Conflict of interest.** PI, member or reviewer of a proposal/project cannot use
+  management authority on that same record (assignment, completeness check,
+  synthesis, decision, funding).
+- **Two-way anonymity.** PI and reviewers cannot view the record's action log.
+- **Tờ trình flow.** CV drafts → TB reviews → TP approves → BGĐ signs. A TB-authored
+  tờ trình goes straight to TP; a TP-authored one still passes the TB step. Return at
+  any step goes back to the author (mandatory reason). TB/TP never review a tờ trình
+  they authored and handle only tờ trình within their unit scope.
+- **Signatures.** Only GĐ signs topic approval, funding and liquidation. GĐ or PGĐ-KH
+  signs evaluation/acceptance/IRB council establishment, IRB certificate, extension
+  and adjustment.
+- **Project view scope.** BGĐ, TP and TB see every project in the Academy; TP and TB
+  manage funding Academy-wide; other project operations stay within unit scope.
+  Proposals always follow unit scope.
+- **PP** only monitors and has no step in the tờ trình flow.
+- **NNB** creates no proposal and sees no intake period; participates as reviewer,
+  IRB member or project member.
+- **QT** only administers the platform: no scientific CV, no business dashboard,
+  cannot be assigned as reviewer.
+- Unit titles (Trưởng khoa, Chủ nhiệm Bộ môn, …) are display-only and grant no
+  permission.
+- Higher roles may see what lower roles see; lower roles never change a higher
+  role's decision. The backend enforces every permission.
+
+### 7.4 Tờ trình procedures
+
+| Procedure | Starts from | BGĐ signer |
+| --- | --- | --- |
+| Evaluation council establishment | Council tờ trình after every member accepted | GĐ or PGĐ-KH |
+| Topic and funding approval | Finalized evaluation package | GĐ only |
+| IRB council / IRB certificate | IRB council proposal / IRB conclusion | GĐ or PGĐ-KH |
+| Acceptance council | Acceptance council proposal | GĐ or PGĐ-KH |
+| Project extension | CV appraisal of the extension request | GĐ or PGĐ-KH |
+| Project adjustment (no funding change) | CV appraisal of the adjustment request | GĐ or PGĐ-KH |
+| Contract liquidation | Draft liquidation minutes | GĐ only |
+
+Small tasks the CV completes without routing: completeness confirmation, supplement
+request, reviewer assignment, invitation follow-up, progress report review.
 
 ## 8. Contextual permission matrix (record-persona shorthand)
 
-The module tables retain compact legacy columns for readable workflow scenarios;
-they are not a second role registry. Apply the complete seven-role comparison in
-section 7 first, then resolve PI/team/reviewer/council columns from the active
-record relationship or assignment. Missing or denied cells are explicit `None`,
-not implied permission.
+Columns are grouped by role; resolve them against §7 first. "Phòng KHQS" means TP¹/TB¹
+for coordination and CV³ for record operations unless the cell names a role. "BGĐ"
+means the signer from §7.4. Missing or denied cells are explicit `None`.
 
-| Capability Group | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required |
+| Capability Group | QT | Phòng KHQS (TP / TB / CV) | BGĐ (GĐ / PGĐ-KH / PGĐ-TD) | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Council / IRB | Scope Rule | State Rule | Audit Required |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| User, role, organization administration | Manage | None | None | None | None | None | All system scope | Any | Yes |
-| Shared catalogs and configuration | Manage | Read | Read | Read where needed | Read where needed | Read where needed | All system scope | Any | Yes for changes |
-| Proposal intake period management | Manage | Manage | Read | Read applicable | None | None | Organization/unit scope | Draft, open intake, closed intake | Yes |
-| Proposal draft creation and editing | None | Read scoped | Read scoped | Create/Update own | None | None | Own proposal scope | Draft | Yes |
-| Proposal attachment upload/view/download | Read scoped | Read scoped | Read scoped | Create/Read own | Secretary: Create/Read; Member: Read | Read assigned | Record-level scope | Draft, needs supplement, under review | Yes for important file actions |
-| Proposal formal submission | None | None | None | Submit own | None | None | Own proposal/topic scope | Draft, open intake | Yes |
-| Proposal completeness review | None | Review | Read | Read own | Read if participating | None | Organization/unit scope | Submitted, resubmitted | Yes when decision affects workflow |
-| Supplement request | None | Submit request | Read | Read/respond | Read if participating | None | Organization/unit scope | Submitted, needs supplement | Yes |
-| Proposal resubmission | None | Read | Read | Submit own | None | None | Own proposal/topic scope | Needs supplement | Yes |
-| Reviewer/committee assignment | None | Assign with conflict check | Read/Monitor | Read operational summary | None | Read assigned | Proposal capability, organization/unit scope, reviewer assignment scope, conflict policy scope | Submitted, resubmitted, under review | Yes |
-| Reviewer scoring and comments | None | Read/Review | Read | None unless policy allows result view | None | Review/Submit assigned | Reviewer assignment scope | Under review | Yes |
-| Evaluation consolidation / Trình phê duyệt | None | Review/Update and send completed dossier to leadership | Read/Monitor | Read operational summary | None | None | Proposal capability, organization/unit scope, conflict policy scope | Under review, ready for approval | Yes |
-| Approval/rejection decision | None | Read only; no final decision action | Approve/Reject with conflict check | Read result | Read result if participating | None | Approval authority scope, conflict policy scope | Ready for approval | Yes |
-| Approved project creation | None | Create/Manage | Read | Read own | Read if participating | None | Organization/unit scope | Approved | Yes |
-| Milestone/checkpoint management | None | Manage | Read/Review | Read/Update own allowed items | Read assigned or team-secretary-scoped items | None | Organization/unit scope, approved-topic participation scope | Active project | Yes for changes |
-| Progress report submission | None | Read/Review | Read | Submit own | Evidence contribution only; no formal submission | None | Own proposal/topic scope, approved-topic participation scope | Waiting report, active project | Yes |
-| Project evidence upload | Read scoped | Read/Review | Read scoped | Create own | Create assigned team evidence | None | Approved-topic participation scope | Active project, waiting report | Yes |
-| Progress report review/follow-up | None | Review/Accept/Request supplement | Read/Monitor | Read/respond | Read/respond assigned | None | Assigned project-officer scope | Submitted report, delayed project | Yes |
-| Project Adjustment request | None | Read/Review | Read/Monitor | Create/Submit own | None | None | Own approved-topic scope | Active project | Yes |
-| Project Adjustment decision | None | Approve/Reject with conflict check | None; Head may monitor only | Read result | Read result if participating | None | Assigned project-officer scope | `under_staff_review` | Yes |
-| Project Extension request | None | Read/Validate/Prepare | Read/Monitor | Create/Submit own | None | None | Own approved-topic scope | Active project | Yes |
-| Project Extension decision | None | Read result | Approve/Reject with conflict check | Read result | Read result if participating | None | Head Scientific Management scope, conflict policy scope | `ready_for_head_decision` | Yes |
-| Acceptance/final review | None | Review/Prepare | Approve/Reject with conflict check | Read/Submit required context | Read assigned | Review if assigned | Approval authority scope, reviewer assignment scope, conflict policy scope | Waiting decision, completed/accepted | Yes |
-| Task creation and assignment | Read scoped | Create/Assign | Create/Assign in authority scope | Create in own topic or team-scoped scope | None unless explicitly assigned | None | Task assignee/collaborator scope, linked record scope, conflict policy scope | Task open/in progress/completed/cancelled | Yes |
-| Task status/progress update | Read scoped | Update scoped | Review scoped | Update own/assigned | Update assigned | None | Task assignee/collaborator scope | Task open/in progress/completed/cancelled | Yes |
-| File replace/version history | Read scoped | Update scoped | Read scoped | Update own allowed files | Update assigned allowed files | Read assigned | Record-level scope | State-dependent | Yes |
-| Workflow history/timeline view | Audit/View History | Audit/View History scoped | Audit/View History scoped | Read own | Read participating | Read assigned | Same as source record | Any | No for read unless policy requires |
-| Audit log search/view | Audit/View History | Audit/View History scoped if authorized | Audit/View History scoped if authorized | None | None | None | All system scope, organization/unit scope | Any | No for read unless policy requires |
-| In-app notifications | Manage templates | Read own/manage operational events | Read own | Read own | Read own | Read own | User-specific scope | Any | No for read |
-| Email notifications | Manage templates | Trigger by workflow | Receive | Receive | Receive | Receive | Recipient permission scope | Any | Operational trace recommended |
-| Reminder jobs/work queue | Manage configuration | Manage scoped queues | Read scoped queues | Read own queue | Read own queue | Read own queue | Role, scope, assignment | Any | Operational trace recommended |
-| Dashboard view | Read all/admin dashboard | Read scoped dashboard | Read authority dashboard | Read own/project dashboard | Read assigned/project dashboard | Read assigned review dashboard | Role and data scope | Any | No for read |
-| Search/filter | Read scoped | Read scoped | Read scoped | Read own | Read participating | Read assigned | Role and data scope | Any | No for read |
-| Report export Excel/PDF | Export all allowed reports | Export scoped reports | Export authority reports | Export own/project reports if allowed | Export assigned data if allowed | Export assigned reviews if allowed | Role and data scope | Any | Yes for export |
+| User, role, organization administration | Manage | None | None | None | None | None | Platform scope | Any | Yes |
+| Shared catalogs and configuration | Manage | Read | Read | Read where needed | Read where needed | Read where needed | Platform scope | Any | Yes for changes |
+| Proposal intake period management | None | TP, CV: Manage; TB, PP: Read | Read open periods | Read applicable | None | None | Unit scope | Draft, open intake, closed intake | Yes |
+| Proposal draft creation and editing | None | None from management role | None from management role | Create/Update own (any role except QT/NNB) | None | None | Own proposal scope | Draft | Yes |
+| Proposal attachment upload/view/download | None | Read (TP/TB/PP¹, CV³) | Read (GĐ/PGĐ-KH², PGĐ-TD¹) | Create/Read own | Secretary: Create/Read; Member: Read | Read assigned | Record-level scope | Draft, needs supplement, under review | Yes for important file actions |
+| Proposal formal submission | None | None | None | Submit own | None | None | Own proposal scope | Draft, open intake | Yes |
+| Proposal completeness review | None | TB¹, CV³: Review | None | Read own | Read if participating | None | Unit / assigned officer scope | Submitted, resubmitted | Yes |
+| Supplement request | None | TB¹, CV³: Submit request | None | Read/respond | Read if participating | None | Unit / assigned officer scope | Submitted, needs supplement | Yes |
+| Proposal resubmission | None | Read | Read | Submit own | None | None | Own proposal scope | Needs supplement | Yes |
+| Reviewer/council assignment | None | TP¹, TB¹, CV³: Assign with conflict check | Monitor progress¹ | None | None | Accept/decline invitation | Unit scope, assigned officer scope, conflict policy | Submitted, resubmitted, under review | Yes |
+| Reviewer scoring and comments | None | Only via own council/reviewer assignment⁵ | Only via own council/reviewer assignment⁵ | None | None | Review/Submit assigned (any role except QT) | Reviewer assignment scope | Under review | Yes |
+| Evaluation consolidation / Trình kết quả | None | TP¹, TB¹, CV³: Review/Update/Submit | Monitor progress¹ | None | None | Council secretary: synthesis/minutes (note 6) | Unit scope, conflict policy | Under review | Yes |
+| Approval/rejection of topic and funding | None | Route only (TB → TP) | GĐ only: Approve/Reject | Read result | Read result if participating | None | Unit scope, conflict policy | Ready for approval | Yes |
+| Council / IRB / acceptance establishment | None | Draft and route | GĐ or PGĐ-KH: Sign | None | None | IRB member comments, IRB secretary drafts conclusion | Unit scope, IRB assignment scope | State-dependent | Yes |
+| Approved project creation and setup | None | CV³: Create/Setup; TP¹/TB¹ assign officer | Read | Read own | Read if participating | None | Unit scope | Approved | Yes |
+| Milestone/checkpoint management | None | CV³: Manage | Read | Read/Update own allowed items | Member: update own milestone progress | None | Unit / participation scope | Active project | Yes for changes |
+| Progress report submission | None | Read | Read | Submit own | Contribution only | None | Own topic scope | Waiting report, active project | Yes |
+| Progress report review/follow-up | None | CV³: Review/Accept/Request supplement | Read/Monitor | Read/respond | Read assigned | None | Assigned officer scope | Submitted report, delayed project | Yes |
+| Project Adjustment / Extension request | None | CV³: Appraise and draft tờ trình; TB → TP route | GĐ or PGĐ-KH: Sign | Create/Submit/Withdraw own | None | None | Own topic scope; assigned officer scope | Active project | Yes |
+| Acceptance/final review | None | CV³: Prepare; route tờ trình | GĐ or PGĐ-KH: Sign council establishment | Submit acceptance dossier | Read assigned | Review if assigned | Unit scope, reviewer assignment scope, conflict policy | Waiting decision, completed/accepted | Yes |
+| Funding view (per project) | None | TP, TB: all; CV³; PP⁴ | GĐ, PGĐ-KH: all; PGĐ-TD: aggregate only | Read own⁴ | Read⁴ | None | Academy-wide / assigned / own | Any | No for read |
+| Funding management, disbursement, settlement | None | TP, TB: Academy-wide; CV³ | GĐ: Manage | None | None | None | Academy-wide / assigned | Active project | Yes |
+| Liquidation | None | CV³: Draft; route | GĐ only: Sign | Read | Read | None | Assigned officer scope | Completed | Yes |
+| Task creation and assignment | None | Create/Assign within scope | None | Create in own topic scope | None unless explicitly assigned | None | Task / linked record scope, conflict policy | Task states | Yes |
+| Task status/progress update | None | Update scoped | Read | Update own/assigned | Update assigned | None | Task assignee/collaborator scope | Task states | Yes |
+| Workflow history/timeline view | Audit/View History | Scoped | Scoped | None (two-way anonymity) | Read participating | None (two-way anonymity) | Same as source record | Any | No for read |
+| Audit log search/view | Audit/View History | If authorized | If authorized | None | None | None | Platform / unit scope | Any | No for read |
+| Notifications | Manage templates | Read own; trigger by workflow | Read own | Read own | Read own | Read own | User-specific scope | Any | No for read |
+| Dashboard view / Excel export | None | Scoped dashboard | GĐ, PGĐ-KH: authority dashboard; PGĐ-TD: aggregate⁷ | Own dashboard | Own dashboard | Own dashboard | Role and data scope | Any | Yes for export |
+| Search/filter | Admin data only | Scoped | Scoped | Read own | Read participating | Read assigned | Role and data scope | Any | No for read |
 
-### Scientific Management rules for every matrix row
+A participant cannot simultaneously be the responsible officer, reviewer, council
+member, tờ trình reviewer/approver or final signer on the same record. Reviewer and
+final decision in the same round, and mutually exclusive council positions, are also
+denied. Check on assignment creation/change, participant changes and again on
+protected action execution. Reassignment atomically ends the prior officer, preserves
+history/audit and prevents competing officers. Zero officers is a valid unassigned
+state; unresolved officer context is a fail-closed error.
 
-The Staff column in sections 7–8 is a conditional operational grant: for a
-proposal/project or its derivatives it always requires the current officer
-assignment and explicit scope. Participation/review/council access uses its own
-column; it cannot satisfy the Staff administrative grant. A revoked officer with
-another valid relationship retains only that relationship's allowed access.
-Independent intake, profile and other-domain actions retain their existing exact
-capability/scope checks and grant no proposal/project visibility. Head does not
-inherit the Staff column; `RESEARCH_OVERSIGHT_AUTHORITY` never inherits
-`LEADERSHIP_APPROVAL_AUTHORITY` decision cells. Apply this Head/Staff matrix:
+Validation must cover TP/TB in/out of scope, assigned/unassigned/revoked CV, CV with
+participation only, PP read-only, PGĐ-TD aggregate-only, both orders of conflicting
+assignments, concurrent reassignment, same-round decision conflict, tờ trình step
+skipping and self-review, and identical filtering across list/detail/count/file/history.
 
-| Capability | `SCIENTIFIC_MANAGEMENT_HEAD` | `SCIENTIFIC_MANAGEMENT_STAFF` |
-| --- | --- | --- |
-| Proposal/project list, detail, search | All within authorized Scientific Management scope, with disclosure/conflict limits | Management view only for own active officer assignments; other reads via independent legitimate relationships |
-| Responsible officer / unassigned state | See current responsible Staff or unassigned; filter/group by officer | Own management responsibility only; no unassigned queue or other Staff workload through role alone |
-| Workload, status, deadlines, counts/facets, dashboard, reports/export | Authorized-scope aggregates, same record filters for drill-down/export | Management aggregates only for own assignments; participation/review queues retain their own access basis |
-| Assign/reassign/revoke primary officer | Head capability plus scope, current context and no conflict | Deny; no self-assignment or assignment of other officers |
-| Completeness, reviewer monitoring, synthesis, project administration | Assign/reassign/revoke reviewers and council members; draft/finalize/submit eligible proposal synthesis packages; manage project officers; final Project Extension decision with exact scope/conflict checks | Completeness and named review-progress monitoring; progress-report review/accept/supplement; final Project Adjustment decision with exact project-officer assignment, scope, state and no conflict |
-| Final approve/reject | Proposal decision: deny from Head role; Project Extension: approve/reject in `ready_for_head_decision`; Project Adjustment: deny | Proposal decision: deny from Staff role; Project Adjustment: approve/reject in `under_staff_review`; Project Extension: deny |
-| Notifications, files and workflow/business history | Re-authorize source record and disclosure for every surface | Same; officer revocation ends management access immediately, independent participation remains |
+## 9. Detailed Module Permission Matrix
 
-A participant cannot simultaneously be the management officer, reviewer, evaluation/
-acceptance council member or final decision actor on the same record. Reviewer and
-final decision in the same round, and mutually exclusive council positions, are
-also denied. Check on assignment creation/change, participant changes and again on
-protected action execution. Reassignment must atomically end the prior officer,
-preserve history/audit and prevent competing primary officers. Zero officers is a
-valid unassigned state; unresolved officer context is a fail-closed error.
+Module tables use the same column groups as §8. Where a module row and §7 disagree,
+§7 wins.
 
-Validation must cover Head in/out of scope, assigned/unassigned/revoked Staff,
-Staff with participation only, both orders of conflicting assignments, concurrent
-reassignment, same-round decision conflict, and identical filtering across all required
-surfaces (including files and workflow/business history).
+### 9.1 Identity, Roles, Organizations
 
-## 8. Detailed Module Permission Matrix
+| Action | QT | Phòng KHQS | BGĐ | PI | Topic Team | Reviewer / Council | Scope Rule | Audit Required | Source Requirement |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Create/update user account | Manage | None | None | None | None | None | Platform scope | Yes | FR1, Story 1.3 |
+| Activate/deactivate or lock account | Manage | None | None | None | None | None | Platform scope | Yes | FR1, Story 1.3 |
+| Assign role (exactly one per account) | Manage | None | None | None | None | None | Platform scope | Yes | FR2, Story 1.3 |
+| Assign organization/unit scope | Manage | None | None | None | None | None | Platform scope | Yes | FR3, FR6, Story 1.3 |
+| Assign display-only unit title | Manage | None | None | None | None | None | Platform scope | Yes | Role hierarchy GĐ1 |
+| Assign topic segments (mảng) to CV | None | TP | None | None | None | None | Unit scope | Yes | Role hierarchy GĐ1 |
+| Load role-aware session context | Read own | Read own | Read own | Read own | Read own | Read own | Current user | No | FR4, FR5, FR6 |
 
-### 8.1 Identity, Roles, Organizations
+### 9.2 Catalogs And Configuration
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
+| Action | QT | Phòng KHQS | BGĐ | PI | Topic Team | Reviewer / Council | Scope Rule | Audit Required | Source Requirement |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| View shared catalogs | Read | Read | Read | Read where needed | Read where needed | Read where needed | Role and data scope | No | FR7, Story 1.4 |
+| Create/update/soft delete catalog item | Manage | None | None | None | None | None | Platform scope | Yes | FR7, Story 1.4 |
+| Configure system parameters / notification templates | Manage | None | None | None | None | None | Platform scope | Yes | FR8, FR41-FR43, Story 1.4 |
+| Manage scientific documents | Manage | TP, TB, CV: Manage | None | None | None | None | Role scope | Yes | §7.1 |
+| Evaluate permission primitive | Read policy result | Read policy result | Read policy result | Read policy result | Read policy result | Read policy result | Role, scope, and state context | No | FR6, FR6a, NFR7, NFR8, Story 1.4 |
+
+### 9.3 Proposal Intake And Submission
+
+| Action | QT | Phòng KHQS | BGĐ | PI | Topic Team | Reviewer / Council | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Create user account | Manage | None | None | None | None | None | All system scope | Any | Yes | FR1, Story 1.3 |
-| Update user account | Manage | None | None | None | None | None | All system scope | Any | Yes | FR1, Story 1.3 |
-| Activate/deactivate or lock account | Manage | None | None | None | None | None | All system scope | Any | Yes | FR1, Story 1.3 |
-| Assign role to user | Manage | None | None | None | None | None | All system scope | Any | Yes | FR2, Story 1.3 |
-| Assign organization/unit scope | Manage | None | None | None | None | None | All system scope | Any | Yes | FR3, FR6, Story 1.3 |
-| Load role-aware session context | Manage | Read own context | Read own context | Read own context | Read own context | Read own context | Current user scope | Any | No | FR4, FR5, FR6 |
-
-### 8.2 Catalogs And Configuration
-
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| View shared catalogs | Read | Read | Read | Read where needed | Read where needed | Read where needed | Role and data scope | Any | No | FR7, Story 1.4 |
-| Create/update catalog item | Manage | None | None | None | None | None | All system scope | Any | Yes | FR7, Story 1.4 |
-| Soft delete catalog item | Manage | None | None | None | None | None | All system scope | Any | Yes | FR7, Story 1.4 |
-| Configure system parameters | Manage | None | None | None | None | None | All system scope | Any | Yes | FR8, Story 1.4 |
-| Configure notification templates | Manage | None | None | None | None | None | All system scope | Any | Yes | FR8, FR41-FR43, Story 1.4 |
-| Evaluate permission primitive | Manage | Read policy result | Read policy result | Read policy result | Read policy result | Read policy result | Role, scope, and state context | Any | No | FR6, FR6a, NFR7, NFR8, Story 1.4 |
-
-### 8.3 Proposal Intake And Submission
-
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Create intake period | Manage | Create | Read | None | None | None | Organization/unit scope | Draft | Yes | FR9, Story 2.1 |
-| Update intake period | Manage | Update | Read | None | None | None | Organization/unit scope | Draft, open intake | Yes | FR9, Story 2.1 |
-| Open intake period | Manage | Update | Read | Read applicable | None | None | Organization/unit scope | Draft, open intake | Yes | FR9, Story 2.1 |
-| Close intake period | Manage | Update | Read | Read applicable | None | None | Organization/unit scope | Open intake, closed intake | Yes | FR9, Story 2.1 |
-| List applicable intake periods | Read | Read scoped | Read scoped | Read applicable | None | None | Role and organization/unit scope | Open intake | No | FR9, Story 2.1 |
-| Create proposal draft | None | None | None | Create own | None | None | Own proposal scope | Open intake, draft | Yes | FR10, Story 2.2 |
-| Update proposal draft | None | Read scoped | Read scoped | Update own | None | None | Own proposal scope | Draft | Yes | FR10, FR11, Story 2.2 |
-| Upload proposal attachment | Read scoped | Read scoped | Read scoped | Create own | Secretary: Create; Member: None | None | Proposal relationship scope | Draft, needs supplement | Yes | FR12, FR36, Story 2.3 |
-| View/download proposal attachment | Read scoped | Read scoped | Read scoped | Read own | Read if participating | Read assigned | Record-level scope | Any allowed proposal state | Yes for important downloads | FR12, FR36, Story 2.3 |
-| Check submission readiness | None | Read scoped | Read scoped | Read own | Read if participating | None | Own proposal/topic scope | Draft | No | FR13, Story 2.3 |
+| Create/update/open/close intake period | None | TP, CV | None | None | None | None | Unit scope | Draft, open intake | Yes | FR9, Story 2.1 |
+| List open intake periods | None | Read | Read | Read applicable (not NNB) | None | None | Unit scope | Open intake | No | FR9, Story 2.1 |
+| Create/update proposal draft | None | None from management role | None from management role | Own (any role except QT/NNB) | None | None | Own proposal scope | Open intake, draft | Yes | FR10, FR11, Story 2.2 |
+| Upload proposal attachment | None | None | None | Create own | Secretary: Create; Member: None | None | Proposal relationship scope | Draft, needs supplement | Yes | FR12, FR36, Story 2.3 |
+| View/download proposal attachment | None | TP/TB/PP¹, CV³ | GĐ/PGĐ-KH², PGĐ-TD¹ | Read own | Read if participating | Read assigned⁵ | Record-level scope | Any allowed state | Yes for important downloads | FR12, FR36, Story 2.3 |
+| Check submission readiness | None | None | None | Read own | Read if participating | None | Own proposal scope | Draft | No | FR13, Story 2.3 |
 | Submit proposal formally | None | None | None | Submit own | None | None | Own proposal scope; omit the submit section for non-PI viewers | Draft, open intake | Yes | FR14, FR22, Story 2.4 |
-| View submission history | Audit/View History scoped | Audit/View History scoped | Audit/View History scoped | Read own | Read if participating | Read assigned if policy allows | Same as proposal scope | Submitted or later | No | FR14, FR38, Story 2.4 |
+| Auto-assign responsible CV | System | TP: assign unmatched records | None | None | None | None | Segment match | Submitted, resubmitted | Yes | Role hierarchy GĐ1 |
+| View submission history | None | Scoped | Scoped | Read own | Read if participating | None | Same as proposal scope | Submitted or later | No | FR14, FR38, Story 2.4 |
 
-### 8.4 Proposal Review, Supplement And Approval
+### 9.4 Proposal Review, Supplement And Approval
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
+| Action | QT | Phòng KHQS | BGĐ | PI | Topic Team | Reviewer / Council | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Review proposal completeness | None | Review | Read scoped | Read own | Read if participating | None | Organization/unit scope | Submitted, resubmitted; once per current submitted version | Yes when state changes | FR15, Story 3.1 |
-| Request supplement | None | Submit request | Read scoped | Read own request | Read if participating | None | Organization/unit scope | Submitted, needs supplement; due date is a whole calendar day | Yes | FR15, Story 3.1 |
-| Respond to supplement request | None | Read scoped | Read scoped | Update/Submit own | None | None | Own proposal scope | Needs supplement | Yes | FR16, Story 3.1 |
-| Assign reviewer or committee member | None | Assigned officer: assign with conflict/exclusivity check | Operational counts/status only | None | None | Read assigned after assignment | Organization/unit scope plus source-record/evaluation-context compatibility and multiplicity | Submitted, resubmitted, under review | Yes | FR17, FR67a, Story 3.2 |
-| Change reviewer assignment | None | Assigned officer: revoke/end then assign with conflict/exclusivity check | Operational counts/status only | None | None | Read assigned after assignment | Same owning mutation and non-overlapping interval rules as initial assignment | Under review | Yes | FR17, FR67a, Story 3.2 |
-| Access assigned review package | None | Only through independent reviewer assignment | Only through independent reviewer assignment | None | None | Read assigned | Reviewer assignment scope | Under review | No | FR18, Story 3.2 |
-| Submit score/comment/recommendation | None | Only through independent reviewer assignment | Only through independent reviewer assignment | None | None | Review/Submit assigned | Reviewer assignment scope | Under review | Yes | FR18, Story 3.3 |
-| Consolidate evaluation outcome | None | Assigned officer: review/update without conflict | Operational counts/status; decision package only after routing | None | None | None | Organization/unit scope | Under review, ready for approval | Yes | FR19, Story 3.4 |
-| View evaluation output before decision | None | Read scoped | Read authority scoped | None unless policy allows result view | None unless participating view is allowed | Read own submitted review | Approval authority scope, reviewer assignment scope | Ready for approval | No | FR20, Story 3.5 |
-| Approve/reject proposal | None | None | Approve/Reject with conflict check | Read result | Read result if participating | None | Approval authority scope, conflict policy scope | Ready for approval | Yes | FR21, FR22, FR67a, Story 3.5 |
+| Review proposal completeness | None | TB¹, CV³ | None | Read own | Read if participating | None | Unit / assigned officer scope | Submitted, resubmitted | Yes | FR15, Story 3.1 |
+| Request supplement | None | TB¹, CV³ | None | Read own request | Read if participating | None | Unit / assigned officer scope | Submitted, needs supplement | Yes | FR15, Story 3.1 |
+| Respond to supplement request | None | Read | None | Update/Submit own | None | None | Own proposal scope | Needs supplement | Yes | FR16, Story 3.1 |
+| Invite/assign/revoke reviewer or council member | None | TP¹, TB¹, CV³ with conflict check | Monitor progress¹ | None | None | Accept or decline (reason required) | Unit scope, assigned officer scope, conflict policy | Submitted, resubmitted, under review | Yes | FR17, FR67a, Story 3.2 |
+| Access assigned review package | None | Only via own assignment | Only via own assignment | None | None | Title/role/deadline before acceptance; full package after acceptance | Reviewer assignment scope | Under review | No | FR18, Story 3.2 |
+| Submit score/comment/recommendation | None | Only via own assignment⁵ | Only via own assignment⁵ | None | None | Review/Submit assigned | Reviewer assignment scope | Under review | Yes | FR18, Story 3.3 |
+| Consolidate, finalize, submit evaluation result | None | TP¹, TB¹, CV³ without conflict | Monitor progress¹ | None | None | Council secretary⁶ | Unit scope | Under review, ready for approval | Yes | FR19, Story 3.4 |
+| Route evaluation package / council tờ trình | None | CV drafts → TB → TP | None | None | None | None | Unit scope | Ready for approval | Yes | Role hierarchy GĐ2–GĐ3 |
+| Sign evaluation council establishment | None | None | GĐ or PGĐ-KH | None | None | None | Unit scope, conflict policy | Tờ trình at BGĐ | Yes | Role hierarchy GĐ3 |
+| Approve/reject topic and funding | None | None | GĐ only, with conflict check | Read result | Read result if participating | None | Unit scope, conflict policy | Ready for approval | Yes | FR21, FR22, FR67a, Story 3.5 |
 
-Assignment and decision cells above inherit the single authoritative
-compatibility/multiplicity matrix and stable reason codes from
-`docs/authorization-core-business-baseline.md#evaluation-position-compatibility-and-multiplicity`.
-Candidate filtering is explanatory; single, bulk, import, direct-API and
-administrative writes must re-evaluate that policy inside the owning mutation.
+Assignment and decision cells inherit the compatibility/multiplicity matrix and
+reason codes in `docs/authorization-core-business-baseline.md#evaluation-position-compatibility-and-multiplicity`
+(pending its 10-role sync). Single, bulk, import, direct-API and administrative writes
+must re-evaluate that policy inside the owning mutation.
 
-#### 8.4.1 Read-Scope Contract and Legacy EP-03 Alignment
+`submitted` and `resubmitted` require current completeness evidence before the first
+assignment opens `under_review`. Invalid or unresolved context denies.
 
-These resolve the "read scoped" cells against the current authorization baseline.
-Legacy EP-03 code does not yet enforce every rule below; see the
+#### 9.4.1 Read-Scope Contract
+
+This table is a contract, not a completion claim; see the
 [Proposal Review & Approval plan](../_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/implementation-plan.md)
-for the implementation gaps. This table is a contract, not a completion claim.
+for implementation gaps.
 
 | Rule | Decision | Where |
 | --- | --- | --- |
-| Reviewer read | Granted only by an `assigned` or `completed` `ProposalReviewAssignment` row on that one proposal, and only while the proposal is in the formal workflow. The `reviewer` account role grants nothing by itself; a revoked assignment stops granting immediately. | `canReadProposal`, `ProposalReviewAccessService` |
-| Reviewer file read | Resolved by the same assignment lookup as the proposal read, so the attachment list and the download agree. Upload still requires proposal ownership. | `FilesService.assertCanRead` |
-| Leadership decision-package read | Requires explicitly granted authority scope, a routed proposal and no participation/reviewer conflict; role alone is insufficient. Other proposal reads require their own valid record context and disclosure. No implicit Academy-wide or organization-tree bypass. | Shared proposal/evaluation/file authorization; Story 5.7 |
-| Approval authority | `LEADERSHIP_APPROVAL_AUTHORITY` plus explicit decision scope, routed record, current context, ready state and no conflict. System administrator and reviewer/committee assignments grant no final decision authority. | Shared capability and decision mutation; Story 5.8 |
-| Head evaluation actions | `SCIENTIFIC_MANAGEMENT_HEAD` and explicit host scope, current completeness, no conflict; synthesis additionally requires all current required reviews. | `assertScientificManagementHeadScope`, `assertCurrentCompletenessEvidence` |
-| Decision/consolidation conflict | Participation and reviewer conflicts override role/scope. An active evaluation position blocks the same-round decision; any persisted draft/submitted evaluation retains that conflict after assignment revocation/expiry. An ended assignment with no persisted evaluation creates no lasting conflict. | Shared conflict resolver; Stories 5.5, 5.7, 5.8 |
+| Reviewer read | Granted only by an accepted reviewer/council/IRB assignment on that one proposal while it is in the formal workflow; a revoked assignment stops granting immediately. Before acceptance only title, role, deadline and inviter are visible. | `canReadProposal`, `ProposalReviewAccessService` |
+| Reviewer file read | Same assignment lookup as the proposal read. Upload still requires proposal ownership. | `FilesService.assertCanRead` |
+| BGĐ read | GĐ/PGĐ-KH: submitted-or-later proposals in unit scope (note 2); PGĐ-TD: unit scope read-only, no per-record funding. | Shared proposal/evaluation/file authorization |
+| Topic decision | `LEADERSHIP_APPROVAL_AUTHORITY` plus scope, routed record through TB and TP, ready state and no conflict. PGĐ-KH, QT and reviewers grant no topic decision. | Shared decision mutation |
+| Management evaluation actions | TP/TB with unit scope; CV only on assigned records; completeness only TB/CV; no conflict. | Shared capability check |
+| Decision/consolidation conflict | Participation and reviewer conflicts override role/scope; persisted evaluations keep the conflict after assignment revocation. | Shared conflict resolver |
 
-Proposal-detail presentation follows the same projection: the PI receives the edit/submission workspace, while scientific-management staff receive a read-only summary of the proposal, team, schedule, and expected budget. Supplement deadlines and reviewer-assignment effective/deadline values are entered as whole Vietnam calendar days; no hour/minute control is exposed.
+Proposal detail UI renders review/approval sections only from the current proposal's
+capability/assignment result: `ACTION_NOT_GRANTED` omits the section, conflict/state
+denials remain visible and disabled with the backend reason. Supplement deadlines and
+reviewer-assignment dates are whole Vietnam calendar days. The PI receives the
+edit/submission workspace; management roles receive a read-only summary. Allowed
+states per action are declared once in `apps/api/src/proposals-shared/proposal-workflow.ts`.
+Researcher profile pages never host proposal workflow sections.
 
-Workflow states used by EP-03: `submitted` / `resubmitted` -> `under_review` (first reviewer
-assignment) -> `ready_for_approval` (Head explicitly submits finalized synthesis after all required reviews) -> `approved` | `rejected`
-(leadership decision). The allowed states per action are declared once in
-`apps/api/src/proposals-shared/proposal-workflow.ts`. The proposal detail UI
-renders the three review/approval sections only from the current proposal's
-capability/assignment result: an `ACTION_NOT_GRANTED` action omits the section,
-while conflict/state denials remain visible and disabled with the backend reason.
-Researcher profile pages never host these proposal workflow sections.
+### 9.5 Approved Project Tracking
 
-### 8.5 Approved Project Tracking
+PI means active `TOPIC_PI`. CV means the current project officer; proposal-officer
+access is not project authority. Every grant also requires active account, current
+context, exact scope, workflow and conflict checks. Acceptance/council implementation
+details remain in their governing stories.
 
-Golden Flow 4 is specified in the [Project Execution contract](contracts/project-execution.md).
-It preserves project-scoped `TOPIC_PI` (the requested `PROJECT_PI`) and assigned-Staff
-monitoring. Leadership approves the proposal before execution only. After activation,
-assigned Staff reviews/accepts reports and finally approves/rejects Project Adjustment;
-assigned Staff validates/prepares Project Extension and scoped Head finally
-approves/rejects it. Leadership has no decision action for either request type.
-Submitted revisions and evidence are immutable; overdue is derived, never a project
-workflow state. Assigned proposal Staff creates; Head separately assigns project Staff,
-who confirms setup. Acceptance/council implementation belongs to the next flow.
+| Action | PI | Assigned CV | TP / TB | PP | GĐ / PGĐ-KH | PGĐ-TD | State / invariant |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Create/confirm project | None | Current proposal officer creates; independently assigned project officer confirms setup | Assign project officer¹ separately | None | None | None | Approved immutable source; no automatic officer copy |
+| Assign/reassign/revoke project officer | None | None | Scoped¹, conflict-free | None | None | None | One current officer; history preserved |
+| View project/milestones/history | Own | Read in unit scope¹; operate only if assigned³ | All in Academy | Unit scope¹ | All in Academy | Unit scope¹ | Same filters for list/detail/count/files |
+| Monitor deadlines | Own | Assigned³ | Scope | Scope¹ | Scope | Scope¹ | Overdue/report-due are derived flags, never workflow states |
+| View per-project funding | Own⁴ | Assigned³ | All | Own participation only⁴ | All | Aggregate only | — |
+| Manage funding, disbursement, settlement | None | Assigned³ | Academy-wide | None | GĐ only | None | Audited |
+| Plan milestones/members during setup | Read | `project.setup.configure` for initial milestones/checkpoints/responsibilities; confirm | Read | Read | Read | Read | Confirm setup before execution |
+| Update own milestone progress | Own | Read | Read | Read | Read | Read | Members (NCV/NNB) on milestones they own⁴ |
+| Upload evidence | Own exact file grant | No PI-content overwrite | No PI-content overwrite | Metadata only | Metadata only | Metadata only | `project.evidence.contribute` for active member/secretary responsible for an open milestone; own unsubmitted file only; submitted links immutable |
+| Create/edit/submit/resubmit progress report | Own | Read submitted | Read | Read | Read | Read | Submitted revisions/evidence locked; return permits a new revision |
+| Review report / accept / request supplement | Read/respond | Review; accept or request supplement | Read | Read | Read | Read | No tờ trình needed; an accepted report does not accept the project or change the plan |
+| Draft/submit Project Adjustment or Extension | Own | None | None | None | None | None | Extension end date must be later |
+| Appraise adjustment/extension, draft tờ trình | None | Assigned³ | Read | Read | Read | Read | Applies no change by itself |
+| Review tờ trình (TB step) / approve to BGĐ (TP step) | None | None | TB then TP¹; return to author with reason | None | None | None | No step skipping; no self-review |
+| Sign extension / adjustment (no funding change) | Read result | Read result | Read result | Read | GĐ or PGĐ-KH, conflict-free | None | Signature atomically applies the change |
+| Withdraw Project Adjustment / Extension (`project.adjustment.withdraw`, `project.extension.withdraw`) | Own request only, active PI requester, required reason | Denied | Denied | Denied | Denied | Denied | Project `executing`/`paused`; non-terminal request → terminal `withdrawn`; members denied |
+| Acceptance council, products, liquidation draft, closing | Submit acceptance dossier/products | Prepare and draft | Route¹ | Read | Acceptance council: GĐ or PGĐ-KH; liquidation: GĐ only | Read | Via tờ trình flow |
 
-Every grant below also requires active account, current context, exact scope,
-workflow and conflict checks. Staff means the current project officer; proposal
-officer access is not project authority. PI means active `TOPIC_PI`. Admin has no
-implicit business grant; `RESEARCH_OVERSIGHT_AUTHORITY` has scoped operational oversight only. Members
-receive read/contribution capabilities only where their relationship permits.
+All mutations above are audited. FR23–30b map to implementation Epic 6 stories
+6.1–6.7 and 6.10; member contributions remain distinct from formal PI submission under
+Story 6.4. Plan/membership changes after activation go only through a typed Project
+Adjustment, never direct edits. Code state names from the former Golden Flow 4
+(`under_staff_review`, `under_staff_validation`, `ready_for_head_decision`) must be
+reconciled with the tờ trình routing implemented on `tuan/DocManS`.
 
-| Action | PI | Assigned Staff | Head | Leadership approval authority | State / invariant |
+### 9.6 Student Research (Đề tài sinh viên NCKH)
+
+| Action | CV | NCV | Others | Scope Rule | Audit Required |
 | --- | --- | --- | --- | --- | --- |
-| Create/confirm project | None | Current scoped proposal officer creates; independently assigned project officer confirms | Assign project officer separately | Proposal approval precedes this flow; no project action | Approved immutable source; no automatic officer copy |
-| Assign/reassign/revoke project officer | None | None | Scoped, conflict-free | None | One current primary officer; history preserved |
-| View project/milestones/history | Own permitted data | Assigned scoped data | Scoped, including unassigned | Scoped disclosure | Same filters for list/detail/count/files |
-| Monitor deadlines | Own | Assigned scope | Scope | Operational scope | Overdue/report-due are derived flags |
-| Plan milestones/members during setup | Read | `project.setup.configure` for initial milestones/checkpoints/responsibilities | Read | Read | Confirm setup before execution; assigned project officer confirms |
-| Change controlled plan/membership after activation | Submit typed Project Adjustment | Review and approve/reject | Read/monitor only; no decision | Read/monitor only; no decision | No direct edits; scope is milestones, approved scope/plan, governed membership |
-| Create/edit report draft and submit/resubmit | Own | Read submitted only | Permitted read | Permitted read | Submitted revisions/evidence locked; return permits new revision |
-| Upload evidence | Own exact file grant | No PI-content overwrite | No PI-content overwrite | Monitoring metadata only | `project.evidence.contribute` for active member/secretary with responsibility for an open milestone; own unsubmitted file only; immutable submitted links |
-| Begin report review / record acceptance / request supplement | Read/respond | Administrative review; accept or request supplement | Read/monitor | Read/monitor only | Accepted report does not accept project or change plan |
-| Draft/submit Project Adjustment | Own | None | None | None | Typed milestone/scope-plan/membership values; no direct plan change |
-| Review/approve/reject Project Adjustment | Read result | Review; approve/reject | Read/monitor; denied decision | Read/monitor; denied decision | `under_staff_review`; Staff approval applies only the typed change atomically |
-| Draft/submit Project Extension | Own | None | None | None | Requested end date must be later; no end-date change on submission |
-| Validate/prepare Project Extension | None | Assigned scope | Read/monitor | Read/monitor only | `under_staff_validation` → `ready_for_head_decision`; package/evidence retained |
-| Approve/reject Project Extension | Read result | Read result | Scoped, conflict-free Head | Denied | `ready_for_head_decision`; Head decision atomically applies end date |
-| Withdraw Project Adjustment / Extension (`project.adjustment.withdraw`, `project.extension.withdraw`) | Own request only, active PI requester, required reason | Denied | Denied | Denied | Project `executing`/`paused`; any non-terminal request → terminal `withdrawn`; revisions/evidence unchanged; members denied |
+| Register topic as supervising lecturer | ✓ | ✓ | None | Own registration | Yes |
+| Approve, manage, complete | ✓¹ | None | None | Unit scope | Yes |
 
-Acceptance/final-review permissions remain in their governing next-flow stories;
-Golden Flow 4 introduces no acceptance/council endpoint. All mutations above are
-audited. FR23–30b map to implementation Epic 6 stories 6.1–6.7 and 6.10; member
-contributions remain distinct from formal PI submission under Story 6.4.
+### 9.7 Tasks
 
-### 8.6 Tasks
+| Action | QT | Phòng KHQS | BGĐ | PI | Topic Team | Reviewer / Council | Scope Rule | Audit Required | Source Requirement |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Create task (standalone or linked) | None | Create within scope | None | Create in own project scope | None unless delegated | None | Linked record scope | Yes | FR31, Story 5.1 |
+| Assign task owner/collaborators | None | Assign within scope | None | Within own project if allowed | None unless delegated | None | Linked record scope, conflict policy | Yes | FR32, Story 5.1 |
+| Update task status/progress/notes, attach evidence | None | Update scoped | Read | Update own/assigned | Update assigned | None unless task assigned | Task assignee/collaborator scope | Yes | FR33, FR36, Story 5.2 |
+| View overdue/upcoming tasks | None | Read scoped | Read scoped | Read own/assigned | Read assigned | Read assigned if applicable | Role and data scope | No | FR34 |
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Create standalone task | Read scoped | Create | Create in authority scope | Create in own project scope | None unless delegated | None | Role and data scope | Task open | Yes | FR31, Story 5.1 |
-| Create task linked to proposal/project/report/event | Read scoped | Create | Create in authority scope | Create in own project or secretary-delegated scope | None unless delegated | None unless explicitly assigned workflow | Linked record scope, proposal/project participation scope | Task open | Yes | FR31, Story 5.1 |
-| Assign task owner/collaborators | Read scoped | Assign | Assign in authority scope | Assign within own project scope if allowed | None unless delegated | None | Task assignee/collaborator scope, linked record scope, conflict policy scope | Task open/in progress | Yes | FR32, Story 5.1 |
-| Update task status/progress/notes | Read scoped | Update scoped | Review scoped | Update own/assigned | Update assigned | None unless task assigned | Task assignee/collaborator scope | Task open/in progress/completed/cancelled | Yes | FR33, Story 5.2 |
-| Attach task completion evidence | Read scoped | Update scoped | Read scoped | Update own/assigned | Update assigned | None unless task assigned | Task assignee/collaborator scope | Task open/in progress | Yes for important files | FR33, FR36, Story 5.2 |
-| View overdue/upcoming tasks | Read scoped | Read scoped | Read authority scoped | Read own/assigned | Read assigned | Read assigned if applicable | Role and data scope | Task open/in progress | No | FR34 |
+### 9.8 Files
 
-### 8.7 Files
+| Action | QT | Phòng KHQS | BGĐ | PI | Topic Team | Reviewer / Council | Scope Rule | Audit Required | Source Requirement |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Upload/replace important business file | None | Scoped where workflow allows | None | Own allowed files | Assigned allowed files | Assigned review file if workflow allows | Record-level scope | Yes | FR36, FR37 |
+| View metadata / download | None | Scoped | Scoped (PGĐ-TD: no funding detail) | Own | Participating | Assigned | Record-level scope | Yes for downloads | FR36, FR37 |
+| Soft delete file | None | Scoped if policy allows | None | Own allowed files | None unless delegated | None | Record-level scope | Yes | FR36, FR37 |
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Upload important business file | Read scoped | Create scoped | Create if workflow allows | Create own | Create assigned | Create assigned review file if workflow allows | Record-level scope | State-dependent | Yes | FR36, FR37 |
-| Replace important business file | Read scoped | Update scoped | Update if workflow allows | Update own allowed files | Update assigned allowed files | Update assigned review file if workflow allows | Record-level scope | State-dependent | Yes | FR36, FR37 |
-| View file metadata | Read scoped | Read scoped | Read scoped | Read own | Read participating | Read assigned | Record-level scope | Any allowed source state | No | FR36, FR37 |
-| Download important business file | Read scoped | Read scoped | Read scoped | Read own | Read participating | Read assigned | Record-level scope | Any allowed source state | Yes | FR36, File Attachment Requirements |
-| Soft delete file | Manage if policy allows | Update scoped if policy allows | None unless authority action allows | Update own allowed files | None unless delegated | None | Record-level scope | State-dependent | Yes | FR36, FR37 |
+### 9.9 Audit Logs And Workflow History
 
-### 8.8 Audit Logs And Workflow History
+| Action | QT | Phòng KHQS | BGĐ | PI | Topic Team | Reviewer / Council | Scope Rule | Audit Required | Source Requirement |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| View record action log / workflow history | Audit/View History | Scoped | Scoped | None (two-way anonymity) | Read participating | None (two-way anonymity) | Same as source record | No | FR38, FR40 |
+| View tờ trình step history | None | Scoped | Scoped | Read own record | Read participating | None | Same as source record | No | Role hierarchy GĐ2–GĐ3 |
+| Search/export audit logs | Audit/Export | If authorized | If authorized | None | None | None | Platform / unit scope | Yes or operational trace | FR39, FR40 |
+| Create audit record from domain action | System generated | System generated | System generated | System generated | System generated | System generated | Same as source action | Yes | Audit-Log Requirements |
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| View workflow history on business record | Audit/View History scoped | Audit/View History scoped | Audit/View History scoped | Read own | Read participating | Read assigned | Same as source record scope | Any | No | FR38, FR40 |
-| Search audit logs | Audit/View History | Audit/View History if authorized | Audit/View History if authorized | None | None | None | All system scope, organization/unit scope | Any | No for read | FR39, FR40 |
-| Export audit logs | Export | Export if authorized | Export if authorized | None | None | None | All system scope, organization/unit scope | Any | Yes or operational trace | FR39, FR40 |
-| Create audit record from domain action | System generated | System generated | System generated | System generated | System generated | System generated | Same as source action | Same as source action | Yes | Audit-Log Requirements |
+### 9.10 Notifications, Reminders And Work Queues
 
-### 8.9 Notifications, Reminders And Work Queues
+| Action | QT | Phòng KHQS | BGĐ | PI | Topic Team | Reviewer / Council | Scope Rule | Source Requirement |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Receive in-app/email notification | Read own | Read own (incl. next tờ trình step) | Read own (tờ trình awaiting signature) | Read own | Read own | Read own (invitations) | Recipient permission scope | FR41, FR42 |
+| Configure templates / reminder jobs | Manage | None | None | None | None | None | Platform scope | FR41-FR43 |
+| View work queue | None | TB: review queue; TP: approval queue; CV: assigned records | Awaiting approval/signature | Own | Own/assigned | Assigned review queue | Role, scope, assignment | FR44 |
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Receive in-app notification | Read own | Read own | Read own | Read own | Read own | Read own | User-specific scope | Any | No | FR41 |
-| Generate workflow notification | Manage templates/config | Trigger by scoped workflow | Trigger by authority workflow | Trigger by own workflow actions | Trigger by assigned workflow actions | Trigger by assigned review workflow | Recipient permission scope | State-dependent | Operational trace recommended | FR41 |
-| Send email notification | Manage templates/config | Trigger by scoped workflow | Trigger by authority workflow | Trigger by own workflow actions | Trigger by assigned workflow actions | Trigger by assigned review workflow | Recipient permission scope | State-dependent | Operational trace recommended | FR42 |
-| Generate reminders | Manage configuration | Manage scoped reminders | Read/act scoped reminders | Read own reminders | Read own reminders | Read own reminders | Role and data scope | Waiting report, delayed project, task open/in progress | Operational trace recommended | FR43 |
-| View work queue | Read scoped | Read scoped | Read authority scoped | Read own | Read own/assigned | Read assigned review queue | Role, scope, assignment | Any | No | FR44 |
+### 9.11 Dashboard, Search, Reports And Export
 
-### 8.10 Dashboard, Search, Reports And Export
+| Action | QT | Phòng KHQS | BGĐ | PI | Topic Team | Reviewer / Council | Scope Rule | Audit Required | Source Requirement |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| View business dashboard | None | Scoped; nature (Quân sự/Dân sự) and responsible-CV breakdown | GĐ/PGĐ-KH: scoped; PGĐ-TD: aggregate only⁷ | Own | Own | Own | Role and data scope | No | FR45, Story 7.2 |
+| Drill down / search / filter | Admin data only | Scoped | Scoped | Own | Participating | Assigned | Same as target record scope | No | FR46, FR47 |
+| View report | None | Scoped | Scoped (PGĐ-TD: aggregate funding only) | Own if report supports it | Own if report supports it | Assigned if report supports it | Role and data scope | No | FR49, Story 7.3 |
+| Export Excel/PDF | None | Scoped | Scoped (PGĐ-TD: no per-record funding) | Own if allowed | Own if allowed | Assigned if allowed | Role and data scope | Yes | FR48, Story 7.3 |
 
-| Action | System Administrator | Scientific Management Staff | Leadership / Approval Authority | Principal Investigator | Topic Team (Secretary / Member) | Reviewer / Committee Member | Scope Rule | State Rule | Audit Required | Source Requirement |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| View role-based dashboard | Read all/admin dashboard | Read scoped dashboard | Read authority dashboard | Read own/project dashboard | Read assigned/project dashboard | Read assigned review dashboard | Role and data scope | Any | No | FR45, Story 7.2 |
-| Drill down from dashboard widget | Read scoped | Read scoped | Read authority scoped | Read own | Read assigned/participating | Read assigned | Same as target record scope | Any | No | FR47, Story 7.2 |
-| Search/filter operational records | Read scoped | Read scoped | Read authority scoped | Read own | Read participating/assigned | Read assigned | Role and data scope | Any | No | FR46, Story 7.1 |
-| View report | Read scoped | Read scoped | Read authority scoped | Read own if report supports it | Read assigned if report supports it | Read assigned if report supports it | Role and data scope | Any | No | FR49, Story 7.3 |
-| Export Excel/PDF | Export scoped | Export scoped | Export authority scoped | Export own if allowed | Export assigned if allowed | Export assigned if allowed | Role and data scope | Any | Yes | FR48, Story 7.3 |
+## 10. Critical Negative Rules
 
-## 9. Critical Negative Rules
-
-- Frontend-only authorization is not sufficient.
-- Backend must enforce every protected action.
-- `EXTERNAL_RESEARCHER_USER` is an account-level role, not a substitute for a
-  proposal/topic/review relationship. It is never a global PI, team member,
-  reviewer, secretary, or approval role.
-- External researchers may update only explicitly assigned approved-topic/task work and
-  may review only explicitly assigned review work; they cannot create/edit/submit
-  proposals, alter protected fields, assign, or decide finally.
-- Users must not see cross-unit data unless explicitly permitted.
-- Reviewer / Committee Member must not access unassigned proposals.
-- Management officer, reviewer, committee member, or council member assignment must be denied when
-  conflict policy identifies the candidate as PI, proposal/topic participant,
-  `TOPIC_SECRETARY`, or another excluded role on the same business record.
-- Principal Investigator must not edit submitted proposals unless workflow state
-  allows supplement, resubmission, or another explicit domain action.
-- Topic team members must not access approved topics they do not participate in.
-- `TOPIC_SECRETARY` must not be treated as a global system role and must not
-  approve/reject proposals, approved topics, council records, or ethics
-  dossiers unless a separate approval authority rule explicitly grants that decision.
-- Approval authority must not self-approve records where the same user is PI,
-  topic/proposal participant, `TOPIC_SECRETARY`, reviewer, council member,
-  or another conflict role under policy.
+- Frontend-only authorization is not sufficient; the backend enforces every protected action.
+- One account holds exactly one system role; record relationships never create a system role.
+- QT never receives business-record access, a scientific CV, a business dashboard or a reviewer assignment.
+- `EXTERNAL_RESEARCHER_USER` is never PI, never sees intake periods and never creates proposals.
+- PP and PGĐ-TD never approve, sign or route; PGĐ-TD never sees per-record funding.
+- PGĐ-KH never approves topics, funding or liquidation.
+- TP never performs completeness checks or supplement requests.
+- CV never operates on proposals/projects assigned to another CV.
+- No tờ trình skips a step; TB/TP never review a tờ trình they authored.
+- PI and reviewers never see the record's action log.
+- Users must not see cross-unit proposal data unless explicitly permitted.
+- Reviewers, council and IRB members must not access unassigned records.
+- Officer, reviewer, council or IRB assignment is denied when the candidate is PI,
+  participant, `TOPIC_SECRETARY` or another excluded role on the same record.
+- A PI, member or reviewer never uses management authority (assignment, completeness,
+  synthesis, decision, funding) on the same record.
+- The PI must not edit submitted proposals unless the workflow allows supplement or resubmission.
 - File access must not be granted by object key alone.
-- Dashboard, search, export, notification, and audit views must respect role and
-  data scope.
-- Direct status mutation is forbidden; workflow transitions must go through
-  explicit domain actions.
-- Sensitive actions must fail closed when role, data scope, participation role,
-  assignment scope, conflict policy, or state context cannot be resolved safely.
-- Search results, dashboard totals, export files, notifications, audit views, and
-  file metadata must not leak unauthorized records.
+- Direct status mutation is forbidden; transitions go through explicit domain actions.
+- Sensitive actions fail closed when role, scope, relationship, assignment, conflict
+  or state context cannot be resolved safely.
+- Search results, dashboard totals, export files, notifications, audit views and file
+  metadata must not leak unauthorized records.
 
-## 10. Audit Requirements By Action
+## 11. Audit Requirements By Action
 
 | Action | Audit Required | Minimum Context |
 | --- | --- | --- |
-| login | Yes | actor, username, timestamp, result, request context |
-| logout | Yes | actor, username, timestamp, result, session context |
+| login / logout | Yes | actor, username, timestamp, result, request/session context |
 | create/update/deactivate user | Yes | actor, target user, action, before/after status where feasible |
-| assign role/scope | Yes | actor, target user, role, scope, timestamp |
+| assign role/scope/unit title | Yes | actor, target user, role, scope, title, timestamp |
+| assign CV segment | Yes | actor, CV, segment (level/nature), timestamp |
 | create/update/open/close intake period | Yes | actor, intake period id/code, from/to status, timestamp |
 | create/update proposal draft | Yes | actor, proposal id, changed section or safe summary, timestamp |
 | upload/download/replace important file | Yes | actor, file id, target entity, action, timestamp, safe metadata |
-| submit proposal | Yes | actor, proposal id, from/to status, timestamp |
+| submit / resubmit proposal | Yes | actor, proposal id, from/to status, timestamp |
 | request supplement | Yes | actor, proposal id, reason, due date, timestamp |
-| resubmit proposal | Yes | actor, proposal id, from/to status, timestamp |
-| assign/reassign/revoke management officer | Yes | actor, proposal/project, old/new officer, effective interval, timestamp, reason, context/policy versions; atomic history and assignment |
-| assign reviewer | Yes | actor, proposal id, reviewer/committee member id, timestamp |
+| assign/reassign/revoke responsible CV (manual or automatic) | Yes | actor or system, record, old/new officer, segment match, timestamp, reason |
+| invite/accept/decline/revoke reviewer, council or IRB member | Yes | actor, record, member, role, decision, reason, timestamp |
 | submit score/comment | Yes | actor, proposal id, review id, submitted status, timestamp |
 | consolidate evaluation | Yes | actor, proposal id, evaluation summary id, timestamp |
-| approve/reject | Yes | actor, target record, decision, from/to status, timestamp, note if provided |
-| create approved project | Yes | actor, source proposal id, approved project id, timestamp |
-| create/update milestone | Yes | actor, project id, milestone id, before/after state where feasible |
+| tờ trình submit/forward/return/approve/sign | Yes | actor, tờ trình id, procedure type, step, decision, reason, timestamp |
+| approve/reject topic and funding | Yes | actor, target record, decision, from/to status, timestamp, note |
+| create approved project / milestone change | Yes | actor, project id, milestone id, before/after state where feasible |
 | submit progress report | Yes | actor, project id, report id, reporting period, timestamp |
-| create adjustment/extension request | Yes | actor, project id, request id, request type, timestamp |
-| approve/reject adjustment/extension | Yes | actor, project id, request id, decision, timestamp |
-| create/assign task | Yes | actor, task id, assignee/collaborator ids, linked record, timestamp |
-| update task status | Yes | actor, task id, from/to status, timestamp |
+| create/withdraw adjustment/extension request | Yes | actor, project id, request id, request type, reason, timestamp |
+| sign adjustment/extension | Yes | actor, project id, request id, decision, timestamp |
+| funding disbursement/settlement, liquidation | Yes | actor, project id, amount/document, decision, timestamp |
+| create/assign task, update task status | Yes | actor, task id, assignees, linked record, from/to status, timestamp |
 | export report | Yes | actor, report type, filters, scope, export format, timestamp |
 
-## 11. Implementation Notes
+## 12. Implementation Notes
 
-- This file is the source of truth for phase 1 permission implementation.
-- Backend policies must combine system role, organization/unit scope, record
-  participation role, assignment scope, topic participation, task
-  participation, workflow state, and conflict policy.
-- Participation roles such as `PROPOSAL_PI`, `TOPIC_PI`, `TOPIC_MEMBER`,
-  `TOPIC_SECRETARY`, reviewer, council member, and ethics reviewer should be stored on the relevant
-  business relationship or assignment record, not inferred from a global user
-  role alone.
-- Proposal/topic participation, review assignment, council membership, ethics
-  reviewer assignment, and task assignment may use separate domain models when
-  their validation, conflict policy, lifecycle, or audit requirements differ.
-- UI button visibility may use this matrix for UX hints, but backend checks are
-  mandatory and authoritative.
-- Participation must be resolvable from the record to a user account. A
-  participation entry stored only as descriptive text cannot be used to evaluate
-  conflict policy, and any conflict rule that depends on it is unenforceable
-  until that linkage exists.
-- The effective participation role for the current user should be returned with
-  the record so the UI can state the viewer's role on that record. The UI must
-  not derive the record role from the account-level system role.
-- When conflict policy denies an action, the denial reason should be available to
-  the UI so the blocked control can explain itself rather than disappear.
-- API tests and manual QA should include allowed and denied cases for every
-  protected capability.
-- Dashboard aggregates, search counts, report exports, notifications, and file
-  metadata must be tested for cross-scope leakage.
-- Permission checks should return a fail-closed result when context is missing or
-  ambiguous.
-- Legacy roles removed: ADM, LD, VT, TBP, CB, HD, BC. These are replaced by the
-  seven canonical system roles in section 2; PI, member, secretary, reviewer,
-  council, ethics, and task roles remain record-scoped relationships.
+- This file is the source of truth for permission implementation; §7 wins on conflict.
+- The ten system role codes are those in §2 (`packages/permissions/src/system-roles.js`
+  on `tuan/DocManS`). The `DocManS` branch still ships the former seven roles until
+  that work is merged.
+- Backend policies combine system role, unit scope, record relationship, assignment,
+  workflow state, tờ trình step, and conflict policy.
+- Participation roles (`PROPOSAL_PI`, `TOPIC_PI`, `TOPIC_MEMBER`, `TOPIC_SECRETARY`,
+  reviewer, council member/secretary, IRB member/secretary, responsible officer) are
+  stored on the relevant relationship or assignment record, never inferred from the
+  account role.
+- Participation must be resolvable from the record to a user account; text-only
+  entries cannot be used to evaluate conflict policy.
+- The effective record relationship of the current user is returned with the record;
+  the UI must not derive it from the system role.
+- When conflict policy denies an action, the denial reason is available to the UI.
+- UI button visibility is a UX hint only; backend checks are authoritative.
+- API tests and manual QA include allowed and denied cases for every protected
+  capability, and cross-scope leakage tests for aggregates, search, export,
+  notifications and file metadata.
+- Legacy roles removed: ADM, LD, VT, TBP, CB, HD, BC, and the former
+  `SCIENTIFIC_MANAGEMENT_HEAD` / `SCIENTIFIC_MANAGEMENT_STAFF` codes.
 
 ## User Account assignment contract
 
-The [Reviewer / Council Assignment contract](authorization-core-business-baseline.md#reviewer--council-assignment-from-user-accounts)
-is normative for `proposal.review.assign`, including revocation. Only scoped,
-unconflicted Scientific Management Head may search candidates or mutate duties after current-submission completeness confirmation.
-Any active user is eligible independently of account role, host-unit scope or
-Scientist Profile. Both duties remain proposal-scoped; a reviewer assignment grants
-review access across organization boundaries, never final decision authority.
+Reviewer, council and IRB assignment (`proposal.review.assign`, including revocation)
+follows these rules; the baseline contract section is pending its 10-role sync.
 
 | Operation | Required checks | Evidence / disclosure |
 | --- | --- | --- |
-| Search eligible accounts | Head role and explicit host scope, assignable state, current completeness evidence, active candidate account, no PI/team conflict or live duplicate | Only account ID, display name, username |
-| Assign either duty | Recheck search eligibility, proposal context, effective dates/deadline; self-selection allowed for nonparticipants | Account ID and optional linked profile ID; atomic assignment and audit |
-| Read package/files or submit own review | Effective assignment, no participation conflict, applicable state and disclosure; no assignee role/host scope/profile restriction | Own assignment and review only |
-| Revoke either duty | Head role and explicit host scope, no actor participation conflict, assignable state, current context, nonblank reason | Retain history and submitted reviews; append audit and immediately end access |
+| Search eligible accounts | TP¹/TB¹ or assigned CV³; assignable state; current completeness evidence; active candidate; evaluation reviewers/council members and IRB members from any account with a scientific CV (never QT); no PI/team conflict or live duplicate | Account ID, display name, username, display-only unit title |
+| Invite either duty | Recheck eligibility, proposal context, effective dates/deadline | Atomic invitation and audit |
+| Accept / decline | Invitee only; decline requires reason; council tờ trình can be routed only when every member has accepted | Before acceptance only title, role, deadline and inviter |
+| Read package/files or submit own review | Accepted assignment, no participation conflict, applicable state and disclosure; may cross unit boundaries | Own assignment and review only |
+| Revoke either duty | TP¹/TB¹ or assigned CV³, no actor conflict, assignable state, nonblank reason | Retain history and submitted reviews; immediately end access |
 
-`submitted` and `resubmitted` require current completeness evidence before the
-first assignment opens `under_review`. Invalid or unresolved context denies.
-Unlinked accounts store null profile provenance; existing provenance remains intact.
+Council members who accepted can read the dossier only after BGĐ signs the council
+establishment decision.
 
 ## Researcher Profile completion — 2026-09-15
 
-[Researcher Profile / Account / My Profile contract](contracts/researcher-profile-access.md) is the current
-source of truth for this feature, including API/data fields, authorization,
-credential delivery, migration compatibility and history retention.
+[Researcher Profile / Account / My Profile contract](contracts/researcher-profile-access.md)
+remains the source for API/data fields, credential delivery, migration compatibility
+and history retention; its role list is pending 10-role sync.
 
-- Scoped `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD` and
-  `SCIENTIFIC_MANAGEMENT_STAFF` manage internal/external
-  profiles independently of Accounts, including academic/contact information,
-  position, military rank, expertise, publications and self-reported project
-  history (title, role, Academy/institutional/Ministry/other level, dates, status,
-  notes). Profile activation and account activation remain separate actions.
+- QT (platform) and TP¹/CV¹ (unit scope) manage internal/external profiles
+  independently of Accounts. Profile activation and account activation remain
+  separate actions.
+- Every role except QT has a scientific CV and self-updates it through My Profile.
 - Account provisioning creates linked `PENDING_ACTIVATION` researcher accounts:
   INTERNAL profiles provision by default with required email; EXTERNAL profiles
-  provision only when staff/admin checks `Tạo tài khoản truy cập hệ thống`.
-- Activation uses hashed single-use tokens, expires exactly after 48 hours and
-  sends only a setup-password link. No temporary password is generated, emailed,
-  persisted, returned to staff or placed in audit.
-- Login accepts either configured username or account email. Username is optional
-  at provisioning, unique when set later by the linked researcher in My Profile,
-  and never inferred from email.
+  provision only when the manager checks `Tạo tài khoản truy cập hệ thống`.
+- Activation uses hashed single-use tokens, expires exactly after 48 hours and sends
+  only a setup-password link. No temporary password is generated, emailed, persisted,
+  returned to staff or placed in audit.
+- Login accepts either configured username or account email. Username is optional at
+  provisioning, unique when set later by the linked user, and never inferred from email.
 - My Profile uses the active Account's current link. Only own personal/scientific
   fields and own username are editable; type, status, linkage, email credential
   destination and role/scope remain administrative.
@@ -653,33 +673,32 @@ credential delivery, migration compatibility and history retention.
 
 ### Researcher profile action matrix
 
-| Action | SYSTEM_ADMIN / SCIENTIFIC_MANAGEMENT_HEAD / SCIENTIFIC_MANAGEMENT_STAFF | Linked active account | Other account |
+| Action | QT / TP¹ / CV¹ | Linked active account (any role except QT) | Other account |
 | --- | --- | --- | --- |
-| Directory/create/read/update/status | Exact granted organization scope | No directory; own profile through My Profile | Deny |
-| Publication/participation edits | Exact granted organization scope | Own profile only | Deny |
+| Directory/create/read/update/status | Exact granted scope | No directory; own profile through My Profile | Deny |
+| Publication/participation edits | Exact granted scope | Own profile only | Deny |
 | Account create/link/unlink/resend activation | Scoped, matching researcher account; email/context/reason as required | Deny | Deny |
 | Own username update | Deny unless through explicit support flow | Own active linked account only | Deny |
-| Own profile read/update | Own link if present | Current active linked profile; personal allowlist | Deny |
+| Own profile read/update | — | Current active linked profile; personal allowlist | Deny |
 | History | Scope-filtered profile history | Own scientific/profile changes only | Deny |
 | Normal features before mandatory change | Deny | Deny | Deny |
 
 These profile permissions do not widen any business-record permission in this matrix.
 
-### Finalized implementation scope — 2026-09-21
+### Implementation scope
 
-The current change implements this model on the existing proposal, intake, researcher-profile,
-file and evaluation features. Approved projects, council-establishment/ethics lifecycles,
-institutional dashboards, general search/report/export and notification/My Work backends
-remain planned where no operational source exists. `PROJECT_MANAGEMENT_OFFICER` is a
-contract relationship, not a persisted orphan assignment. Dashboard showcase data is not
-an institutional report or proof of authorization. Future source domains must apply the
-same current scope, relationship, conflict and disclosure checks before aggregates or drill-down.
-
-`LEADERSHIP_APPROVAL_AUTHORITY` and `RESEARCH_OVERSIGHT_AUTHORITY` require institutional research dashboard views of available
-proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
-funding and management workload. Only `LEADERSHIP_APPROVAL_AUTHORITY` gets eligible proposal decision queues. Project adjustment queues
-belong to assigned Staff and extension decision queues to Head. Head gets
-responsible-officer/unassigned filters and workload; Staff sees assigned management records.
-Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,
-used and remaining project funding and utilization are unavailable until their source exists;
-never infer expenditure or add ledgers, payments, banking, invoices or ERP integration.
+On `DocManS` the model is implemented on the existing proposal, intake,
+researcher-profile, file and evaluation features. Approved projects, council/IRB
+lifecycles, institutional dashboards, general search/report/export and
+notification/My Work backends remain planned where no operational source exists
+(tờ trình routing, council invitations and dashboard breakdowns exist on
+`tuan/DocManS`). `PROJECT_MANAGEMENT_OFFICER` is a contract relationship, not a
+persisted orphan assignment.
+Dashboard showcase data is not an institutional report or proof of authorization.
+Future source domains must apply the same scope, relationship, conflict and disclosure
+checks before aggregates or drill-down. Dashboard filters include year, unit, level,
+field and nature (Quân sự / Dân sự / Chưa phân loại) with a responsible-CV breakdown
+and an "unassigned" group. Only GĐ gets topic/funding decision queues; GĐ and PGĐ-KH
+get signature queues; TB gets the tờ trình review queue and TP the approval queue.
+Proposal funding currently provides `budgetMetadata.amount` (requested funding); never
+infer expenditure or add ledgers, payments, banking, invoices or ERP integration.
