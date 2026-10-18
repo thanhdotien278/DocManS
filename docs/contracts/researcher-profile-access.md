@@ -4,12 +4,23 @@ Effective 2026-09-15. This contract implements the explicitly requested completi
 of FR65–FR69 and researcher account onboarding. It supersedes older Story 2.1
 field exclusions and the future-only classification of researcher email onboarding.
 
+> Synced to [`permission-matrix.md`](../permission-matrix.md) (10 system roles,
+> 18/10/2026; its "Researcher Profile completion" section and "Researcher profile
+> action matrix" govern roles). The `DocManS` branch code still ships the former 7
+> roles until `tuan/DocManS` merges; `SCIENTIFIC_MANAGEMENT_HEAD` /
+> `SCIENTIFIC_MANAGEMENT_STAFF` are renamed `RESEARCH_MANAGEMENT_HEAD` (TP) /
+> `RESEARCH_MANAGEMENT_STAFF` (CV).
+
 ## Proposal/project boundary — 2026-09-21
 
-Existing `SCIENTIFIC_MANAGEMENT_STAFF` profile/account capabilities remain separately scoped and do not grant
-proposal/project management visibility. Head is explicitly included in scoped profile management; oversight roles do not inherit
-profile management actions. Staff management requires the active `PROPOSAL_MANAGEMENT_OFFICER` /
-`PROJECT_MANAGEMENT_OFFICER`; self-reported participation is not an assignment.
+Profile management belongs to `SYSTEM_ADMIN` (QT) and, within unit scope,
+`RESEARCH_MANAGEMENT_HEAD` (TP) and `RESEARCH_MANAGEMENT_STAFF` (CV). These
+profile/account capabilities remain separately scoped and do not grant
+proposal/project management visibility. `RESEARCH_BOARD_HEAD` (TB),
+`RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP) and Ban giám đốc (GĐ, PGĐ-KH, PGĐ-TD) do not
+manage profiles. CV proposal/project management requires the active
+`PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER`; self-reported
+participation is not an assignment.
 Baseline §2.1 governs officer lifecycle, conflict checks and finalized role decisions.
 
 ## Identity and authority
@@ -18,10 +29,10 @@ Baseline §2.1 governs officer lifecycle, conflict checks and finalized role dec
   A profile may have no account. Nullable unique `linkedUserId` is the current
   one-to-one link, including inactive profiles/accounts. Ended link rows preserve
   history; `ResearcherProfileAccountLink` has at most one ACTIVE row on each side.
-- Active `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD` and `SCIENTIFIC_MANAGEMENT_STAFF` manage profiles only in
+- Active `SYSTEM_ADMIN`, `RESEARCH_MANAGEMENT_HEAD` and `RESEARCH_MANAGEMENT_STAFF` manage profiles only in
   explicitly granted active organization scopes. This administrative permission
   does not grant proposal editing, review, approval or access to unrelated records.
-- Scoped `SCIENTIFIC_MANAGEMENT_HEAD` and `SCIENTIFIC_MANAGEMENT_STAFF` managers create, view, update, search/filter/page, activate/deactivate profiles,
+- Scoped `RESEARCH_MANAGEMENT_HEAD` and `RESEARCH_MANAGEMENT_STAFF` managers create, view, update, search/filter/page, activate/deactivate profiles,
   inspect history and use the System Account / Access section. Profiles require
   name, managing organization, type (INTERNAL/EXTERNAL; default INTERNAL) and at
   least one active research-field catalog value. Contact fields are optional.
@@ -32,36 +43,39 @@ Baseline §2.1 governs officer lifecycle, conflict checks and finalized role dec
 - Academic title/degree and research fields reuse existing catalogs. Changing the
   management organization is not supported by ordinary edits. Type changes are
   blocked while linked, requiring deliberate unlink/correction/relink.
-- Linked active accounts can view/update only their own active profile through
-  My Profile. Personal/contact, academic, position/rank, expertise, publication
+- Every role except `SYSTEM_ADMIN` has a scientific CV. Linked active accounts can
+  view/update only their own active profile through My Profile. Personal/contact, academic, position/rank, expertise, publication
   and participation fields are editable. Self requests containing type, status,
   management scope, account IDs, roles or other administrative fields are rejected.
   The scientific CV uses the versioned contract in
   `_bmad-output/specs/spec-scientific-cv/cv-data-contract.md`. The full actions
   `researcher-profile.cv.read` and `researcher-profile.cv.update` are granted to
   the active linked owner and to active `SYSTEM_ADMIN`,
-  `SCIENTIFIC_MANAGEMENT_HEAD` and `SCIENTIFIC_MANAGEMENT_STAFF` managers only
+  `RESEARCH_MANAGEMENT_HEAD` and `RESEARCH_MANAGEMENT_STAFF` managers only
   when their exact active organization scope matches the profile.
   Changing a contact email never changes account credentials or their destination.
 - Linking requires an active unlinked researcher account of the matching
   internal/external role and explicit scope on the profile organization. It never
   changes existing account roles/scopes. Managers cannot link/reset themselves;
-  staff cannot manage elevated account credentials. Existing elevated account
+  TP/CV managers cannot manage elevated account credentials. Existing elevated account
   administration remains in the SYSTEM_ADMIN account-management interface.
   SYSTEM_ADMIN may detach a legacy elevated-account link to repair identity linkage;
   this never changes that account, its credentials, role or scope.
 - Story 13.10 (2026-10-13): an active SYSTEM_ADMIN may also link an active, unlinked
-  `SCIENTIFIC_MANAGEMENT_HEAD` / `SCIENTIFIC_MANAGEMENT_STAFF` account with explicit scope on
-  the profile organization to an INTERNAL profile, so that account maintains its own CV
-  through My Profile ("Lý lịch khoa học"). HEAD/STAFF managers still link only researcher-role
-  accounts, EXTERNAL profiles accept only `EXTERNAL_RESEARCHER_USER`, and nobody links
-  themselves. The rule is enforced server-side: `account-candidates` omits ineligible
-  accounts and `account/link` rejects them with 409. No profile is ever created on My Profile access.
+  account of a non-researcher role other than QT (GĐ, PGĐ-KH, PGĐ-TD, TP, PP, TB, CV)
+  with explicit scope on the profile organization to an INTERNAL profile, so that
+  account maintains its own CV through My Profile ("Lý lịch khoa học"). The `DocManS`
+  code implements this only for the former HEAD/STAFF roles. TP/CV managers still link
+  only researcher-role accounts, EXTERNAL profiles accept only
+  `EXTERNAL_RESEARCHER_USER`, and nobody links themselves. The rule is enforced
+  server-side: `account-candidates` omits ineligible accounts and `account/link`
+  rejects them with 409. No profile is ever created on My Profile access.
 - A linked owner never activates or deactivates their own profile: `activate`/`deactivate`
   are absent from their `allowedActions` and the API returns 403, whatever the profile status.
-- When the linked account is HEAD/STAFF, the manager-write actions (update, activate,
-  deactivate, cv.update, publication.manage, participation.manage) go only to an in-scope
-  SYSTEM_ADMIN. Scoped HEAD/STAFF managers keep read, cv.read and history.read; the owner keeps
+- When the linked account holds a non-researcher role (any role other than NCV/NNB), the
+  manager-write actions (update, activate, deactivate, cv.update, publication.manage,
+  participation.manage) go only to an in-scope SYSTEM_ADMIN (code: HEAD/STAFF only until
+  `tuan/DocManS` merges). Scoped TP/CV managers keep read, cv.read and history.read; the owner keeps
   their self/cv/history grants through My Profile. The projection omits these actions and
   `PATCH /:id`, `/:id/activate` and `/:id/deactivate` return 403, checked before and inside the
   transaction.
@@ -96,7 +110,7 @@ update/delete guard, and is scoped to managers or the currently linked researche
 1. Creating an INTERNAL profile provisions access by default. Email is required,
    and the system creates a linked `PENDING_ACTIVATION` account with
    `RESEARCHER_INTERNAL_USER`.
-2. Creating an EXTERNAL profile does not create an account unless staff/admin checks
+2. Creating an EXTERNAL profile does not create an account unless the profile manager checks
    `Tạo tài khoản truy cập hệ thống`. When checked, email is required and the linked
    account uses `EXTERNAL_RESEARCHER_USER`.
 3. Provisioning creates Account, matching researcher role, the profile's explicit
@@ -120,7 +134,7 @@ update/delete guard, and is scoped to managers or the currently linked researche
 
 Mail configuration is validated before provisioning or resending activation. A send
 failure after commit retains the pending account/link and records UNKNOWN (or
-PENDING if interrupted); it does not claim delivery. Staff can resend activation,
+PENDING if interrupted); it does not claim delivery. Profile managers can resend activation,
 which issues a fresh token and invalidates previous unused tokens. ACCEPTED means
 the SMTP server accepted the message, not that it reached the inbox. There is no
 plaintext outbox, automatic retry or token retrieval endpoint. Only fixed error
@@ -137,7 +151,7 @@ access returns 403; invalid input returns 400; missing mail configuration return
 | Method/path | Input | Response |
 | --- | --- | --- |
 | GET `/` | keyword, profileType, status, organizationUnitId, researchFieldId, page, pageSize | scoped identity/status/account summaries and capabilities, organizationOptions, total, page, pageSize, canCreate; detail/contact/history loaded separately |
-| GET `/catalogs` | none | active fields, academic ranks/degrees for managers or linked researcher |
+| GET `/catalogs` | none | active fields, academic ranks/degrees for managers or linked account |
 | POST `/` | profile fields; optional publications/participations; confirmDuplicate | profile or scoped duplicate warning requiring explicit confirmation |
 | GET `/:id` | none | profile with permitted account/delivery metadata and viewerAuthorization |
 | PATCH `/:id` | editable manager fields + contextVersion | updated profile and context |
