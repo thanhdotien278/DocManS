@@ -688,7 +688,7 @@ and history retention.
 | Own username update | Deny unless through explicit support flow | Own active linked account only | Deny |
 | Own profile read/update | — | Current active linked profile; personal allowlist | Deny |
 | History | Scope-filtered profile history | Own scientific/profile changes only | Deny |
-| Normal features before mandatory change | Deny | Deny | Deny |
+| Normal features before activation | Deny | Deny | Deny |
 
 These profile permissions do not widen any business-record permission in this matrix.
 
