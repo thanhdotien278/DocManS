@@ -9,8 +9,8 @@
 > `tuan/DocManS`, chưa merge vào `DocManS`). Khi mâu thuẫn, mục 7 của tài liệu này thắng.
 >
 > Các tài liệu liên quan trong `docs/` đã được đồng bộ sang mô hình 10 vai trò ngày
-> 18/10/2026. Riêng code và seed trên nhánh `DocManS` vẫn chạy 7 vai trò cũ cho đến khi
-> merge `tuan/DocManS` (xem [`development/auth-seed-users.md`](development/auth-seed-users.md)).
+> 18/10/2026. Code và seed trên nhánh `DocManS` đã có đủ 10 mã vai trò, nhưng PGĐ-KH, PP,
+> TB chưa có quyền nghiệp vụ cho đến khi port từ `tuan/DocManS` (xem [`development/auth-seed-users.md`](development/auth-seed-users.md)).
 
 ## 1. Mục đích
 
@@ -613,7 +613,7 @@ triển khai trên `tuan/DocManS`.
 
 - Tài liệu này là nguồn chuẩn cho việc triển khai phân quyền; §7 thắng khi mâu thuẫn.
 - Mười mã vai trò hệ thống là các mã ở §2 (`packages/permissions/src/system-roles.js` trên
-  `tuan/DocManS`). Nhánh `DocManS` vẫn dùng bảy vai trò cũ cho đến khi phần đó được merge.
+  `tuan/DocManS`). Nhánh `DocManS` đã có đủ 10 mã; PGĐ-KH, PP, TB chưa có quyền nghiệp vụ cho đến khi port.
 - Policy backend kết hợp vai trò hệ thống, phạm vi đơn vị, quan hệ với hồ sơ, phân công,
   trạng thái workflow, bước tờ trình và chính sách xung đột.
 - Vai trò tham gia (`PROPOSAL_PI`, `TOPIC_PI`, `TOPIC_MEMBER`, `TOPIC_SECRETARY`, phản

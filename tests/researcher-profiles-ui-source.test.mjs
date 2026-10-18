@@ -81,7 +81,7 @@ describe("Story 2.1 researcher profile UI source", () => {
     assert.match(managerPanel, /<ScientificCvWorkspace target=\{editing\.id\}/);
     assert.match(managerPanel, /select\(profile\); setProfileTab\("cv"\)/);
     assert.match(shell, /href: "\/my-profile", label: "Lý lịch khoa học"/);
-    for (const role of ["SCIENTIFIC_MANAGEMENT_HEAD", "SCIENTIFIC_MANAGEMENT_STAFF"]) assert.match(shell, new RegExp(`${role}: \\[\\s*\\{ href: "/dashboard"[^\\n]*\\n\\s*\\{ href: "/my-profile", label: "Lý lịch khoa học"`));
+    for (const role of ["RESEARCH_MANAGEMENT_HEAD", "RESEARCH_MANAGEMENT_STAFF"]) assert.match(shell, new RegExp(`${role}: \\[\\s*\\{ href: "/dashboard"[^\\n]*\\n\\s*\\{ href: "/my-profile", label: "Lý lịch khoa học"`));
   });
 
   it("uploads and crops the portrait, derives scientist type, fixes the owner username, and edits keywords as chips", async () => {

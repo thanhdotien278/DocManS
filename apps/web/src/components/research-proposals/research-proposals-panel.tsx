@@ -72,7 +72,7 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
   async function refresh() {
     setState("loading");
     try {
-      const [proposalData, intakeData] = await Promise.all([creationOnly ? Promise.resolve([]) : loadResearchProposals(), (allowCreate && account?.systemRole !== "EXTERNAL_RESEARCHER_USER") || account?.systemRole === "SCIENTIFIC_MANAGEMENT_STAFF" ? loadProposalIntakePeriods() : Promise.resolve([])]);
+      const [proposalData, intakeData] = await Promise.all([creationOnly ? Promise.resolve([]) : loadResearchProposals(), (allowCreate && account?.systemRole !== "EXTERNAL_RESEARCHER_USER") || account?.systemRole === "RESEARCH_MANAGEMENT_STAFF" ? loadProposalIntakePeriods() : Promise.resolve([])]);
       setProposals(proposalData);
       setIntakes(intakeData);
       setState("ready");
@@ -144,7 +144,7 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
     });
   }, [keyword, managementOfficerFilter, proposals, statusFilter, reviewQueue]);
 
-  const showManagementOfficerFilter = account?.systemRole === "SCIENTIFIC_MANAGEMENT_HEAD";
+  const showManagementOfficerFilter = account?.systemRole === "RESEARCH_MANAGEMENT_HEAD";
 
   function managementOfficerLabel(proposal: ResearchProposal) {
     const state = proposal.managementOfficer;
@@ -227,7 +227,7 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
               <option value="rejected">Từ chối</option>
             </select>
           </label>
-          {["SCIENTIFIC_MANAGEMENT_HEAD", "SCIENTIFIC_MANAGEMENT_STAFF"].includes(account?.systemRole ?? "") ? <label className="filter-field">
+          {["RESEARCH_MANAGEMENT_HEAD", "RESEARCH_MANAGEMENT_STAFF"].includes(account?.systemRole ?? "") ? <label className="filter-field">
             <span>Công việc đánh giá</span>
             <select value={reviewQueue} onChange={(event) => setReviewQueue(event.target.value)}>
               <option value="">Tất cả</option>

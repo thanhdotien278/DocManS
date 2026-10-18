@@ -46,7 +46,7 @@ const users = [
       "scrypt:user-staff:ea925bf5f31fe306cb863a45afec44a4e67d84423e431cb93de5af91425c6723cb66ac59963afe1f47ad86d3c16aec95f73bffc74c22d75b032fd1093f7a71d5",
     displayName: "TS. Nguyễn Minh Phương",
     status: "active",
-    systemRole: "SCIENTIFIC_MANAGEMENT_HEAD",
+    systemRole: "RESEARCH_MANAGEMENT_HEAD",
     unit: "Phòng KHQS"
   },
   {
@@ -136,7 +136,7 @@ const users = [
       "scrypt:user-staff-hdtien1:0ca10cf0ed59766007948d5e2010afb69514a438a457e62f20eb392bfae619b1d91f2fed126c591a8a9f2d945e1d0705fbf6545f1e371e3ce692d19ab1ecdea0",
     displayName: "HD Tiến 1",
     status: "active",
-    systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
+    systemRole: "RESEARCH_MANAGEMENT_STAFF",
     unit: "Phòng KHQS"
   },
   {
@@ -146,7 +146,7 @@ const users = [
       "scrypt:user-staff-hdtien2:3fcf32d5cd6957b752759325f0ee8c06f19db00e53ba051225606826fe336f7fe8bf4655570b109ee0a59eb1e90bf02c40e9a5f7d67f93562cbbac1774e7ad74",
     displayName: "HD Tiến 2",
     status: "active",
-    systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
+    systemRole: "RESEARCH_MANAGEMENT_STAFF",
     unit: "Phòng KHQS"
   },
   {

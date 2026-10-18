@@ -110,8 +110,7 @@ mọi hồ sơ.
 Bảng trên theo [ma trận phân quyền](docs/permission-matrix.md) (10 vai trò); khi mâu thuẫn,
 ma trận §7 thắng. Mọi vai trò trừ QT/NNB có thể là PI của đề xuất mình; mọi vai trò trừ QT
 có lý lịch khoa học và có thể được mời phản biện/hội đồng/IRB. Code trên nhánh `DocManS`
-vẫn chạy 7 vai trò cũ (`SCIENTIFIC_MANAGEMENT_HEAD`/`SCIENTIFIC_MANAGEMENT_STAFF` thay cho
-TP/CV) cho tới khi merge `tuan/DocManS`.
+đã có đủ 10 mã vai trò, nhưng PGĐ-KH, PP, TB chưa có quyền nghiệp vụ cho tới khi port từ `tuan/DocManS`.
 
 ### 4.2 Quan hệ theo từng bản ghi
 

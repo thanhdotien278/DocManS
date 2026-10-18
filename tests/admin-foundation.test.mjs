@@ -27,7 +27,7 @@ const staffUser = {
   username: "staff",
   role: "scientific-management",
   roleLabel: "Chuyên viên",
-  systemRole: "SCIENTIFIC_MANAGEMENT_STAFF"
+  systemRole: "RESEARCH_MANAGEMENT_STAFF"
 };
 
 function createAuditLog() {
@@ -328,7 +328,7 @@ describe("admin foundation API behavior", () => {
 
     for (const [index, systemRole] of [
       "SYSTEM_ADMIN",
-      "SCIENTIFIC_MANAGEMENT_STAFF",
+      "RESEARCH_MANAGEMENT_STAFF",
       "LEADERSHIP_APPROVAL_AUTHORITY",
       "RESEARCHER_INTERNAL_USER",
       "EXTERNAL_RESEARCHER_USER"
@@ -429,7 +429,7 @@ describe("admin foundation API behavior", () => {
         status: "locked",
         role: "scientific-management",
         roleLabel: "Chuyên viên",
-        systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
+        systemRole: "RESEARCH_MANAGEMENT_STAFF",
         unit: "Khoa B",
         passwordHash: "secret",
         roleAssignments: [{ isPrimary: true, role: { id: "role-staff", code: "scientific-management", label: "Chuyên viên" } }],
@@ -561,7 +561,7 @@ describe("admin foundation API behavior", () => {
     await assert.rejects(
       () =>
         service.updateUser(adminUser, "target-user", {
-          systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
+          systemRole: "RESEARCH_MANAGEMENT_STAFF",
           organizationUnitId: "org-child",
           status: "locked"
         }),
@@ -743,7 +743,7 @@ describe("admin foundation API behavior", () => {
     );
   });
 
-  it("lists exactly the five immutable system roles and still manages organization units", async () => {
+  it("lists exactly the ten immutable system roles and still manages organization units", async () => {
     const prisma = createAdminPrisma();
     const auditLog = createAuditLog();
     const service = new AdminUsersService(prisma, auditLog, createPasswordService());
@@ -754,8 +754,13 @@ describe("admin foundation API behavior", () => {
 
     assert.deepEqual(roles.map((role) => role.code), [
       "SYSTEM_ADMIN",
-      "SCIENTIFIC_MANAGEMENT_STAFF",
+      "RESEARCH_MANAGEMENT_HEAD",
+      "RESEARCH_MANAGEMENT_DEPUTY_HEAD",
+      "RESEARCH_BOARD_HEAD",
+      "RESEARCH_MANAGEMENT_STAFF",
       "LEADERSHIP_APPROVAL_AUTHORITY",
+      "SCIENCE_DEPUTY_DIRECTOR",
+      "RESEARCH_OVERSIGHT_AUTHORITY",
       "RESEARCHER_INTERNAL_USER",
       "EXTERNAL_RESEARCHER_USER"
     ]);
