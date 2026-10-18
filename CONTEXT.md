@@ -190,15 +190,17 @@ credential delivery, migration compatibility and history retention.
   account selection, unlink and authorized credential reset/resend. Linking is
   one-to-one across all current links, including inactive records. TP/CV can
   provision only matching researcher roles in the profile's explicit scope.
-- The profile manager confirms the recipient email. The system generates and hashes a temporary
-  password, sends login information by configured SMTP, and requires a different
-  password before any normal authenticated API/UI feature. No plaintext credential
-  is persisted, returned to the profile manager or placed in audit. SMTP acceptance is not proof
-  of inbox delivery; a failed/uncertain send has an explicit new-credential retry.
+- The profile manager confirms the recipient email. The account is created as
+  `PENDING_ACTIVATION`; the system emails, by configured SMTP, only a setup-password link
+  backed by a hashed single-use token that expires after 48 hours. The link opens
+  `Thiết lập mật khẩu`; completing it activates the account. No temporary password is
+  generated, emailed, persisted, returned to the profile manager or placed in audit. SMTP
+  acceptance is not proof of inbox delivery; a failed/uncertain send offers an explicit
+  resend of the activation link, which invalidates earlier unused links.
 - My Profile uses the active Account's current link. Only own personal/scientific
   fields are editable; type, status, linkage and role/scope remain administrative.
   Unlink immediately removes self access. Self-reported history grants no access
   to operational projects/proposals and does not replace source-owned assignments.
-- Profile/link/account/credential/first-password-change audit is preserved with
+- Profile/link/account/activation/username/account-status audit is preserved with
   safe transactional change facts. No test files are written or changed for this
   completion at the user's instruction; verification is recorded in its artifact.

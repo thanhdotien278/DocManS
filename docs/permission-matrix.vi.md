@@ -680,7 +680,7 @@ lịch sử.
 | Đổi username của mình | Từ chối trừ khi qua luồng hỗ trợ tường minh | Chỉ tài khoản liên kết đang hoạt động của mình | Từ chối |
 | Xem/sửa hồ sơ của mình | — | Hồ sơ liên kết đang hoạt động; danh sách trường cá nhân cho phép | Từ chối |
 | Lịch sử | Lịch sử hồ sơ lọc theo phạm vi | Chỉ thay đổi khoa học/hồ sơ của mình | Từ chối |
-| Tính năng thông thường trước khi đổi bắt buộc | Từ chối | Từ chối | Từ chối |
+| Tính năng thông thường trước khi kích hoạt | Từ chối | Từ chối | Từ chối |
 
 Các quyền về hồ sơ này không mở rộng bất kỳ quyền nào với bản ghi nghiệp vụ trong ma trận.
 
