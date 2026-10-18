@@ -204,7 +204,7 @@ flowchart TD
 ```
 
 CV, TB and TP never approve an adjustment/extension themselves; they appraise and
-route. GĐ or PGĐ-KH signs adjustments (without funding change) and extensions; PP and
+route. GĐ or PGĐ-KH signs adjustments (with or without funding change) and extensions; PP and
 PGĐ-TD only monitor. No direct controlled-field edits after activation. End-date
 increases require extension, never an adjustment workaround. All arrows require
 current backend capability, scope, account, relationship, assignment, conflict and
@@ -216,7 +216,7 @@ version checks. Acceptance is next flow.
 
 ```mermaid
 flowchart LR
-  pi_req["PI gửi yêu cầu chỉnh sửa sau nộp"] --> staff_approval["Quản lý khoa học có scope phê duyệt"]
+  pi_req["PI gửi yêu cầu chỉnh sửa sau nộp"] --> staff_approval["CV phụ trách hồ sơ phê duyệt"]
   staff_approval --> approved_edit{"Được phê duyệt?"}
   approved_edit -- "Không" --> keep["Giữ bản đã khóa"]
   approved_edit -- "Có" --> revision["Hệ thống tạo revision mới<br/>từ bản khóa"]
@@ -234,7 +234,7 @@ flowchart TD
   withdraw_start["PI muốn rút hồ sơ"] --> draft_state{"Còn ở Nháp?"}
   draft_state -- "Có" --> withdraw_now["PI rút theo action của Nháp"]
   draft_state -- "Không" --> withdraw_request["PI gửi Yêu cầu rút"]
-  withdraw_request --> withdraw_review["Quản lý / Thư ký được giao xem xét"]
+  withdraw_request --> withdraw_review["CV phụ trách hồ sơ xem xét"]
   withdraw_review --> withdraw_decision{"Phê duyệt?"}
   withdraw_decision -- "Có" --> withdrawn["Đã rút + audit"]
   withdraw_decision -- "Không" --> continue["Tiếp tục workflow"]
@@ -252,7 +252,7 @@ khác bị từ chối fail closed.
 flowchart LR
   subgraph profile_staff["TP / CV trong scope đơn vị (QT ở phạm vi nền tảng)"]
     create_profile["Tạo / cập nhật hồ sơ nhà khoa học"]
-    verify["Xác minh cảnh báo trùng"]
+    verify["Xác minh cảnh báo trùng<br/>thông báo TB và TP"]
     link["Liên kết một account active"]
     external_user["Tạo / quản lý external researcher"]
     assignment["Tạo / thu hồi quan hệ hoặc assignment"]
@@ -264,7 +264,7 @@ flowchart LR
 
   create_profile --> verify --> merge_decision{"Có trùng?"}
   merge_decision -- "Không" --> link
-  merge_decision -- "Có" --> merge["Quản lý khoa học phê duyệt gộp<br/>giữ lịch sử"] --> link
+  merge_decision -- "Có" --> merge["TB / TP quyết định gộp<br/>giữ lịch sử"] --> link
   account_admin --> link
   link --> relation["Gắn quan hệ đúng proposal/topic/review/task"]
   external_user --> relation
@@ -419,7 +419,7 @@ BGĐ roles open scoped institutional records and operational counts/status/deadl
 `LEADERSHIP_APPROVAL_AUTHORITY` (GĐ) alone approves topic + funding and liquidation,
 only for packages routed through TB and TP without participation/review conflicts.
 `SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH) signs council/IRB/acceptance establishment, IRB
-certificates, extensions and adjustments (no funding change). `RESEARCH_OVERSIGHT_AUTHORITY`
+certificates, extensions and adjustments (with or without funding change). `RESEARCH_OVERSIGHT_AUTHORITY`
 (PGĐ-TD) only monitors, sees aggregate funding only and signs nothing;
 `RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP) likewise only monitors within unit scope.
 PI/member/reviewer work of any of these roles is evaluated independently. TP/TB assign

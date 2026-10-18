@@ -56,7 +56,7 @@ role; thay đổi có audit. Một user có system role lãnh đạo hoặc qu�
 | --- | --- | --- | --- | --- |
 | QT | `SYSTEM_ADMIN` | Dữ liệu nền tảng | Tài khoản, role, đơn vị/scope, danh mục, cấu hình, hồ sơ nhà khoa học (tạo, cấp/liên kết tài khoản), văn bản khoa học, hỗ trợ truy vết vận hành | Không có lý lịch khoa học, không dashboard nghiệp vụ, không xem/sửa bản ghi nghiệp vụ, không làm reviewer/hội đồng/IRB, không quyết định, không mở lại hồ sơ |
 | GĐ | `LEADERSHIP_APPROVAL_AUTHORITY` | Toàn Học viện cho đề tài; đề xuất đã vào quy trình trong scope² | Duy nhất phê duyệt đề tài kèm kinh phí và phê duyệt thanh lý; ký mọi thứ PGĐ-KH ký; xem kinh phí từng đề tài; quản lý kinh phí, giải ngân, quyết toán | Không sửa nội dung hồ sơ, không bỏ qua phản biện/tổng hợp/tờ trình; không ký/quyết hồ sơ mình là PI/thành viên/reviewer |
-| PGĐ-KH | `SCIENCE_DEPUTY_DIRECTOR` | Như GĐ (xem) | Ký thành lập hội đồng đánh giá, nghiệm thu, IRB; cấp giấy IRB; ký gia hạn, điều chỉnh (không đổi kinh phí); xem kinh phí từng đề tài | Không phê duyệt đề tài, kinh phí, thanh lý; không quản lý kinh phí |
+| PGĐ-KH | `SCIENCE_DEPUTY_DIRECTOR` | Như GĐ (xem) | Ký thành lập hội đồng đánh giá, nghiệm thu, IRB; cấp giấy IRB; ký gia hạn, điều chỉnh (kể cả có đổi kinh phí); xem kinh phí từng đề tài | Không phê duyệt đề tài, kinh phí đề tài, thanh lý; không quản lý kinh phí |
 | PGĐ-TD | `RESEARCH_OVERSIGHT_AUTHORITY` | Scope đơn vị¹, chỉ theo dõi | Theo dõi tiến độ, số lượng, báo cáo kinh phí **tổng hợp**⁷ | Không xem kinh phí từng bản ghi, không ký, không duyệt, không chuyển tờ trình |
 | TP | `RESEARCH_MANAGEMENT_HEAD` | Đề xuất trong scope đơn vị¹; mọi đề tài toàn Học viện | Duyệt mọi tờ trình trước khi lên BGĐ; phân mảng cho CV; giao/thu hồi CV phụ trách; phân công phản biện/hội đồng, tổng hợp, lập hội đồng IRB, lập tờ trình trong scope¹; quản lý kinh phí toàn Học viện; quản lý đợt tiếp nhận | Không kiểm tra đầy đủ, không yêu cầu bổ sung; không ký thay BGĐ; không duyệt tờ trình mình lập |
 | PP | `RESEARCH_MANAGEMENT_DEPUTY_HEAD` | Scope đơn vị¹, chỉ theo dõi | Theo dõi tiến độ, số lượng; xem kinh phí đề tài mình là PI/thành viên⁴ | Không có bước trong luồng tờ trình, không duyệt/ký, kể cả khi TP vắng |
@@ -164,7 +164,7 @@ thêm officer relationship cho các domain khác trong thay đổi này.
   role holding a participation relationship gains only that relationship's actions.
 - Only `LEADERSHIP_APPROVAL_AUTHORITY` decides topic + funding and liquidation.
   `LEADERSHIP_APPROVAL_AUTHORITY` or `SCIENCE_DEPUTY_DIRECTOR` signs council establishment,
-  IRB, acceptance, extension and adjustment. `RESEARCH_OVERSIGHT_AUTHORITY` and
+  IRB, acceptance, extension and adjustment (with or without funding change). `RESEARCH_OVERSIGHT_AUTHORITY` and
   `RESEARCH_MANAGEMENT_DEPUTY_HEAD` only monitor and never sign, approve or route.
 - BGĐ/PP operational disclosure is status/counts/deadlines/responsible officer; GĐ and
   PGĐ-KH also see per-project funding, PGĐ-TD only aggregate funding⁷, PP only for own
@@ -245,7 +245,7 @@ invoices or ERP integration.
 | Hành động | Quyền |
 | --- | --- |
 | Tạo/cập nhật/kích hoạt/ngừng hoạt động | QT; TP¹ và CV¹ trong scope tổ chức được cấp rõ ràng |
-| Xác minh/gộp hồ sơ trùng | QT, TP¹, CV¹ cảnh báo/xác minh; chỉ TP¹/CV¹ phê duyệt gộp *(tạm giữ — §7 chưa quy định, chờ quyết định sản phẩm)* |
+| Xác minh/gộp hồ sơ trùng | QT, TP¹, CV¹ cảnh báo/xác minh; hệ thống thông báo TB¹ và TP¹; TB/TP quyết định gộp |
 | Liên kết tài khoản | QT, TP¹, CV¹; một hồ sơ chỉ một liên kết account hiện hành, kể cả khi inactive và một account không liên kết nhiều hồ sơ |
 | Tự cập nhật lý lịch khoa học | Mọi role trừ QT, qua My Profile |
 | Xem dữ liệu định danh/liên hệ | Chỉ người có scope quản lý hoặc quan hệ nghiệp vụ cần thiết; danh sách/search/notification dùng dữ liệu tối thiểu |
@@ -283,9 +283,9 @@ không. Lịch sử quan hệ cũ vẫn giữ.
 | Trình phê duyệt (tờ trình) | CV³ (hoặc TP¹/TB¹) lập → TB rà soát → TP duyệt → BGĐ (TB lập thì lên thẳng TP; TP lập vẫn qua TB; xem §3); chỉ chuyển hồ sơ, không phải quyết định cuối |
 | Ký thành lập hội đồng đánh giá/IRB; cấp giấy IRB | GĐ hoặc PGĐ-KH |
 | Phê duyệt/từ chối đề tài và kinh phí | Chỉ GĐ (`LEADERSHIP_APPROVAL_AUTHORITY`) khi hồ sơ đủ điều kiện và đã qua TB, TP |
-| Rút hồ sơ | PI chỉ rút khi còn nháp; sau nộp gửi yêu cầu, Phòng KHQS phê duyệt và chuyển `Đã rút` *(tạm giữ — §7 chưa quy định, chờ quyết định sản phẩm)* |
-| Chỉnh sửa sau nộp | PI gửi yêu cầu; Phòng KHQS phê duyệt; hệ thống tạo bản làm việc mới, giữ bản đã khóa *(tạm giữ — §7 chưa quy định, chờ quyết định sản phẩm)* |
-| Mở lại | Chỉ Phòng KHQS; bắt buộc lý do và audit *(tạm giữ — §7 chưa quy định, chờ quyết định sản phẩm)* |
+| Rút hồ sơ | PI chỉ rút khi còn nháp; sau nộp gửi yêu cầu, CV³ phê duyệt và chuyển `Đã rút` |
+| Chỉnh sửa sau nộp | PI gửi yêu cầu; CV³ phê duyệt; hệ thống tạo bản làm việc mới, giữ bản đã khóa |
+| Mở lại | Chỉ CV³; bắt buộc lý do và audit |
 
 Mọi phiên bản đã nộp, review, quyết định và tệp dùng để thẩm định được giữ
 nguyên. Không ghi đè bản cũ.
@@ -413,7 +413,7 @@ fail closed. `SYSTEM_ADMIN` không được suy diễn quyền review hoặc app
 ### Chỉnh sửa sau nộp
 
 1. PI gửi `Yêu cầu chỉnh sửa sau nộp`.
-2. Phòng KHQS có scope (TP¹/TB¹ hoặc CV³) phê duyệt. *(tạm giữ — §7 chưa quy định, chờ quyết định sản phẩm)*
+2. CV phụ trách hồ sơ (CV³) phê duyệt.
 3. Hệ thống tạo revision mới từ bản khóa; PI sửa trong revision.
 4. PI duyệt nội dung cuối và nộp lại; bản cũ vẫn là chứng cứ.
 5. Lỗi câu chữ/định dạng dùng flow này; thay đổi mục tiêu, kinh phí, nhân sự,
@@ -422,15 +422,15 @@ fail closed. `SYSTEM_ADMIN` không được suy diễn quyền review hoặc app
 ### Ẩn danh phản biện
 
 Mỗi đợt chọn `Không ẩn danh`, `Ẩn danh một chiều` hoặc `Ẩn danh hai chiều`; mặc
-định là **ẩn danh một chiều**. Chỉ Phòng KHQS có scope (TP¹/TB¹/CV³) xem danh tính
-để vận hành *(tạm giữ — §7 chưa quy định, chờ quyết định sản phẩm)*. PI/thành viên không xem identity, điểm thô hoặc nhận xét nội bộ trước
+định là **ẩn danh một chiều**. TB¹ và TP¹ được xem danh tính
+để vận hành. PI/thành viên không xem identity, điểm thô hoặc nhận xét nội bộ trước
 khi chính sách công bố cho phép. Bất kể lựa chọn của đợt, PI và reviewer không xem
 nhật ký thao tác của bản ghi.
 
 ## 4.4. Đề tài đã được duyệt
 
 Golden Flow 4 is specified in the [Project Execution contract](contracts/project-execution.md)
-(its role list is pending the 10-role sync; this section wins on conflict). It preserves
+(`permission-matrix.md` wins on conflict). It preserves
 project-scoped `TOPIC_PI` (the requested `PROJECT_PI`) and assigned-CV operations. GĐ
 approval of topic + funding is the gate before execution. After activation, reports are
 reviewed/accepted by the assigned CV without a tờ trình. For Project Adjustment (no
@@ -451,13 +451,13 @@ separately assign the project CV, who confirms setup.
 | Xem và theo dõi | GĐ, PGĐ-KH, TP, TB: mọi đề tài toàn Học viện; PP, PGĐ-TD, CV: trong scope¹ (CV chỉ thao tác khi được giao³); PI/thành viên: đề tài của mình⁴ |
 | Quản lý mốc, báo cáo, evidence, task | CV³ và participant/assignee đúng scope; thành viên NCV/NNB cập nhật tiến độ mốc mình phụ trách⁴ |
 | Báo cáo tiến độ | `TOPIC_PI`/`PROJECT_PI` nộp; CV³ review, accept hoặc request supplementation |
-| Project Adjustment | PI tạo/gửi/rút; CV³ thẩm định, lập tờ trình; TB → TP; GĐ hoặc PGĐ-KH ký. Scope: milestone, approved scope/plan, governed membership; không gồm tăng end date hoặc đổi kinh phí |
+| Project Adjustment | PI tạo/gửi/rút; CV³ thẩm định, lập tờ trình; TB → TP; GĐ hoặc PGĐ-KH ký. Scope: milestone, approved scope/plan, governed membership; không gồm tăng end date; điều chỉnh có đổi kinh phí cũng do GĐ hoặc PGĐ-KH ký |
 | Project Extension | PI tạo/gửi/rút; CV³ thẩm định, lập tờ trình; TB → TP; GĐ hoặc PGĐ-KH ký |
 | Kinh phí | Xem chi tiết: GĐ, PGĐ-KH, TP, TB; CV³; PP và PI/thành viên chỉ đề tài mình tham gia⁴; PGĐ-TD chỉ tổng hợp⁷. Quản lý, giải ngân, quyết toán: GĐ; TP, TB toàn Học viện; CV³ |
 | Nộp kết quả cuối | PI hoặc delegation hợp lệ; sau nộp khóa phiên bản |
 | Nghiệm thu | CV³ chuẩn bị, lập tờ trình hội đồng nghiệm thu; TB → TP; GĐ hoặc PGĐ-KH ký thành lập hội đồng |
 | Thanh lý | CV³ lập biên bản thanh lý; TB → TP; chỉ GĐ ký |
-| Mở lại | Chỉ Phòng KHQS; lý do + audit *(tạm giữ — §7 chưa quy định, chờ quyết định sản phẩm)* |
+| Mở lại | Chỉ CV³; lý do + audit |
 
 Trạng thái: `Chuẩn bị triển khai → Đang thực hiện → Tạm dừng → Chờ nghiệm thu
 → Đã nghiệm thu | Không đạt → Đóng/lưu trữ`.
@@ -558,8 +558,7 @@ disclosure, versioning hoặc retention phải:
 
 [Researcher Profile / Account / My Profile contract](contracts/researcher-profile-access.md) is the current
 source of truth for this feature, including API/data fields, credential delivery,
-migration compatibility and history retention; its role list is pending the 10-role
-sync, and role rules here and in `permission-matrix.md` win on conflict.
+migration compatibility and history retention; role rules here and in `permission-matrix.md` win on conflict.
 
 - QT (platform) and TP¹/CV¹ (unit scope) manage internal/external profiles
   independently of Accounts, including academic/contact information,

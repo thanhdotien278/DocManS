@@ -23,7 +23,7 @@ permission matrix §2: QT `SYSTEM_ADMIN`, GĐ `LEADERSHIP_APPROVAL_AUTHORITY`, P
 `RESEARCH_BOARD_HEAD`, CV `RESEARCH_MANAGEMENT_STAFF`, NCV `RESEARCHER_INTERNAL_USER`,
 NNB `EXTERNAL_RESEARCHER_USER` (renamed from the former `SCIENTIFIC_MANAGEMENT_HEAD` /
 `SCIENTIFIC_MANAGEMENT_STAFF`). GĐ alone approves the source proposal and signs
-liquidation; GĐ or PGĐ-KH signs extension, adjustment (no funding change) and the
+liquidation; GĐ or PGĐ-KH signs extension, adjustment (with or without funding change) and the
 acceptance council. PGĐ-TD and PP only monitor and sign or route nothing.
 
 The slice is GĐ-approved proposal → explicit project creation → TP¹/TB¹ project
@@ -84,7 +84,7 @@ withdraws); the assigned CV appraises, may request supplementation, and drafts a
 tờ trình; TB reviews and forwards to TP or returns to the author; TP approves and
 forwards to BGĐ or returns; GĐ or PGĐ-KH signs. Only the signature applies the
 change. Neither the CV, TB nor TP decides the request. An adjustment with a funding
-change is outside this slice.
+change is outside this slice; when built, it follows the same flow and GĐ or PGĐ-KH signs.
 
 Code still carries the former state names: adjustment `draft` → `submitted` →
 `under_staff_review` → `approved` / `rejected`; extension `draft` → `submitted` →
@@ -252,8 +252,7 @@ inputs. React must not derive authority from a role or relationship string.
   no status gate) and that officer creates the project. No other fallback creator.
 - Undecidable request: a request cannot progress when there is no eligible in-scope
   TB/TP step actor or no conflict-free signer. The requester PI withdraws the request
-  to unblock the project. *(Carried over from the former Head rule; not defined in
-  `permission-matrix.md` §7 — pending product decision.)*
+  to unblock the project (confirmed 18/10/2026, `permission-matrix.md` §7.3).
 - Acceptance/councils remain next flow.
 
 ## Acceptance checks

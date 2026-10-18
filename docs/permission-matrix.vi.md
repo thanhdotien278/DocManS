@@ -69,8 +69,8 @@ làm nhiệm vụ theo dõi, không còn là Phó GĐ phụ trách Khoa học.
 ### PGĐ-KH — Phó Giám đốc phụ trách Khoa học
 
 - Ký thành lập hội đồng (đánh giá, nghiệm thu, IRB), cấp giấy IRB, gia hạn và điều chỉnh
-  đề tài (không đổi kinh phí).
-- Không phê duyệt đề tài, kinh phí, thanh lý; không quản lý kinh phí.
+  đề tài (kể cả điều chỉnh có đổi kinh phí).
+- Không phê duyệt đề tài, kinh phí đề tài, thanh lý; không quản lý kinh phí.
 - Xem mọi đề tài trong Học viện và kinh phí từng đề tài.
 
 ### PGĐ-TD — Phó Giám đốc khác, chỉ theo dõi
@@ -297,7 +297,16 @@ bao giờ tạo ra vai trò hệ thống mới.
   buộc ghi lý do). TB/TP không tự rà soát tờ trình mình lập và chỉ xử lý tờ trình trong
   phạm vi đơn vị của mình.
 - **Chữ ký.** Chỉ GĐ ký phê duyệt đề tài, kinh phí và thanh lý. GĐ hoặc PGĐ-KH ký thành
-  lập hội đồng đánh giá/nghiệm thu/IRB, cấp giấy IRB, gia hạn và điều chỉnh.
+  lập hội đồng đánh giá/nghiệm thu/IRB, cấp giấy IRB, gia hạn và điều chỉnh (kể cả điều
+  chỉnh có đổi kinh phí).
+- **Rút hồ sơ, chỉnh sửa sau nộp, mở lại.** Sau khi nộp, chủ nhiệm gửi yêu cầu; CV phụ
+  trách³ phê duyệt hoặc từ chối. Mở lại do CV³ thực hiện, bắt buộc lý do. Tất cả có audit.
+- **Hồ sơ nhà khoa học trùng.** Cảnh báo trùng (do QT, TP¹ hoặc CV¹ phát hiện) được thông
+  báo đến TB¹ và TP¹; TB/TP quyết định gộp, giữ lịch sử.
+- **Danh tính phản biện.** TB¹ và TP¹ được xem danh tính phản biện của hồ sơ; chủ nhiệm,
+  thành viên và phản biện khác không được xem.
+- **Yêu cầu điều chỉnh/gia hạn không xử lý được.** Nếu không có TB/TP đủ điều kiện hoặc
+  người ký không xung đột, chủ nhiệm rút yêu cầu để gỡ chặn đề tài.
 - **Phạm vi xem đề tài.** BGĐ, TP và TB xem mọi đề tài trong Học viện; TP và TB quản lý
   kinh phí toàn Học viện; các thao tác khác với đề tài chỉ trong đơn vị. Hồ sơ đề xuất
   luôn theo phạm vi đơn vị.
@@ -319,7 +328,7 @@ bao giờ tạo ra vai trò hệ thống mới.
 | Hội đồng IRB / cấp giấy IRB | Đề xuất hội đồng IRB / kết luận IRB | GĐ hoặc PGĐ-KH |
 | Hội đồng nghiệm thu | Đề xuất hội đồng nghiệm thu | GĐ hoặc PGĐ-KH |
 | Gia hạn đề tài | CV thẩm định đề nghị gia hạn | GĐ hoặc PGĐ-KH |
-| Điều chỉnh đề tài (không đổi kinh phí) | CV thẩm định đề nghị điều chỉnh | GĐ hoặc PGĐ-KH |
+| Điều chỉnh đề tài (có hoặc không đổi kinh phí) | CV thẩm định đề nghị điều chỉnh | GĐ hoặc PGĐ-KH |
 | Thanh lý hợp đồng | Dự thảo biên bản thanh lý | Chỉ GĐ |
 
 Việc nhỏ CV tự làm, không qua tờ trình: xác nhận hồ sơ đầy đủ, yêu cầu bổ sung, phân công
@@ -486,7 +495,7 @@ Chi tiết triển khai nghiệm thu/hội đồng nằm trong các story tươn
 | Lập/nộp đề nghị điều chỉnh hoặc gia hạn | Của mình | Không | Không | Không | Không | Không | Ngày kết thúc gia hạn phải muộn hơn |
 | Thẩm định điều chỉnh/gia hạn, lập tờ trình | Không | Được giao³ | Xem | Xem | Xem | Xem | Tự nó không áp dụng thay đổi |
 | Rà soát tờ trình (bước TB) / duyệt lên BGĐ (bước TP) | Không | Không | TB rồi TP¹; trả lại người lập kèm lý do | Không | Không | Không | Không bỏ bước; không tự rà soát |
-| Ký gia hạn / điều chỉnh (không đổi kinh phí) | Xem kết quả | Xem kết quả | Xem kết quả | Xem | GĐ hoặc PGĐ-KH, không xung đột | Không | Chữ ký áp dụng thay đổi một cách nguyên tử |
+| Ký gia hạn / điều chỉnh (có hoặc không đổi kinh phí) | Xem kết quả | Xem kết quả | Xem kết quả | Xem | GĐ hoặc PGĐ-KH, không xung đột | Không | Chữ ký áp dụng thay đổi một cách nguyên tử |
 | Rút đề nghị điều chỉnh / gia hạn (`project.adjustment.withdraw`, `project.extension.withdraw`) | Chỉ đề nghị của mình, chủ nhiệm đang hiệu lực là người đề nghị, bắt buộc ghi lý do | Từ chối | Từ chối | Từ chối | Từ chối | Từ chối | Đề tài `executing`/`paused`; đề nghị chưa kết thúc → trạng thái cuối `withdrawn`; thành viên bị từ chối |
 | Hội đồng nghiệm thu, sản phẩm, dự thảo thanh lý, đóng đề tài | Nộp hồ sơ nghiệm thu/sản phẩm | Chuẩn bị và lập dự thảo | Luân chuyển¹ | Xem | Hội đồng nghiệm thu: GĐ hoặc PGĐ-KH; thanh lý: chỉ GĐ | Xem | Qua luồng tờ trình |
 
@@ -554,7 +563,7 @@ triển khai trên `tuan/DocManS`.
 - QT không bao giờ có quyền với bản ghi nghiệp vụ, lý lịch khoa học, dashboard nghiệp vụ hay phân công phản biện.
 - `EXTERNAL_RESEARCHER_USER` không bao giờ là chủ nhiệm, không xem đợt tiếp nhận, không tạo đề xuất.
 - PP và PGĐ-TD không bao giờ duyệt, ký hay luân chuyển; PGĐ-TD không xem kinh phí từng bản ghi.
-- PGĐ-KH không bao giờ phê duyệt đề tài, kinh phí hay thanh lý.
+- PGĐ-KH không bao giờ phê duyệt đề tài, kinh phí đề tài hay thanh lý.
 - TP không kiểm tra đầy đủ và không yêu cầu bổ sung.
 - CV không bao giờ thao tác trên hồ sơ/đề tài do CV khác phụ trách.
 - Không tờ trình nào được bỏ bước; TB/TP không rà soát tờ trình do chính mình lập.
