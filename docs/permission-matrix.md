@@ -70,8 +70,8 @@ Directors who monitor; it is no longer the Science Deputy Director.
 ### PGĐ-KH — Phó Giám đốc phụ trách Khoa học
 
 - Signs council establishment (evaluation, acceptance, IRB), IRB certificate,
-  project extension and adjustment (without funding change).
-- Does not approve topics, funding or liquidation; does not manage funding.
+  project extension and adjustment (with or without funding change).
+- Does not approve topics, topic funding or liquidation; does not manage funding.
 - Sees every project in the Academy and per-project funding.
 
 ### PGĐ-TD — Phó Giám đốc khác, chỉ theo dõi
@@ -300,7 +300,16 @@ never creates a new system role.
   they authored and handle only tờ trình within their unit scope.
 - **Signatures.** Only GĐ signs topic approval, funding and liquidation. GĐ or PGĐ-KH
   signs evaluation/acceptance/IRB council establishment, IRB certificate, extension
-  and adjustment.
+  and adjustment (including an adjustment that changes funding).
+- **Proposal withdrawal, post-submission edit, reopen.** After submission the PI files a
+  request; the assigned CV³ approves or rejects it. Reopen is a CV³ action with a
+  mandatory reason. All are audited.
+- **Duplicate researcher profiles.** A duplicate warning (raised by QT, TP¹ or CV¹) is
+  notified to TB¹ and TP¹, who decide the merge; history is kept.
+- **Reviewer identity.** TB¹ and TP¹ may view reviewer identity on a record; PI, members
+  and other reviewers may not.
+- **Undecidable adjustment/extension.** If no eligible TB/TP step actor or conflict-free
+  signer exists, the PI withdraws the request to unblock the project.
 - **Project view scope.** BGĐ, TP and TB see every project in the Academy; TP and TB
   manage funding Academy-wide; other project operations stay within unit scope.
   Proposals always follow unit scope.
@@ -323,7 +332,7 @@ never creates a new system role.
 | IRB council / IRB certificate | IRB council proposal / IRB conclusion | GĐ or PGĐ-KH |
 | Acceptance council | Acceptance council proposal | GĐ or PGĐ-KH |
 | Project extension | CV appraisal of the extension request | GĐ or PGĐ-KH |
-| Project adjustment (no funding change) | CV appraisal of the adjustment request | GĐ or PGĐ-KH |
+| Project adjustment (with or without funding change) | CV appraisal of the adjustment request | GĐ or PGĐ-KH |
 | Contract liquidation | Draft liquidation minutes | GĐ only |
 
 Small tasks the CV completes without routing: completeness confirmation, supplement
@@ -491,7 +500,7 @@ details remain in their governing stories.
 | Draft/submit Project Adjustment or Extension | Own | None | None | None | None | None | Extension end date must be later |
 | Appraise adjustment/extension, draft tờ trình | None | Assigned³ | Read | Read | Read | Read | Applies no change by itself |
 | Review tờ trình (TB step) / approve to BGĐ (TP step) | None | None | TB then TP¹; return to author with reason | None | None | None | No step skipping; no self-review |
-| Sign extension / adjustment (no funding change) | Read result | Read result | Read result | Read | GĐ or PGĐ-KH, conflict-free | None | Signature atomically applies the change |
+| Sign extension / adjustment (with or without funding change) | Read result | Read result | Read result | Read | GĐ or PGĐ-KH, conflict-free | None | Signature atomically applies the change |
 | Withdraw Project Adjustment / Extension (`project.adjustment.withdraw`, `project.extension.withdraw`) | Own request only, active PI requester, required reason | Denied | Denied | Denied | Denied | Denied | Project `executing`/`paused`; non-terminal request → terminal `withdrawn`; members denied |
 | Acceptance council, products, liquidation draft, closing | Submit acceptance dossier/products | Prepare and draft | Route¹ | Read | Acceptance council: GĐ or PGĐ-KH; liquidation: GĐ only | Read | Via tờ trình flow |
 
@@ -559,7 +568,7 @@ reconciled with the tờ trình routing implemented on `tuan/DocManS`.
 - QT never receives business-record access, a scientific CV, a business dashboard or a reviewer assignment.
 - `EXTERNAL_RESEARCHER_USER` is never PI, never sees intake periods and never creates proposals.
 - PP and PGĐ-TD never approve, sign or route; PGĐ-TD never sees per-record funding.
-- PGĐ-KH never approves topics, funding or liquidation.
+- PGĐ-KH never approves topics, topic funding or liquidation.
 - TP never performs completeness checks or supplement requests.
 - CV never operates on proposals/projects assigned to another CV.
 - No tờ trình skips a step; TB/TP never review a tờ trình they authored.
