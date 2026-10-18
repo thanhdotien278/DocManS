@@ -854,17 +854,19 @@ credential delivery, migration compatibility and history retention.
   account selection, unlink and authorized credential reset/resend. Linking is
   one-to-one across all current links, including inactive records. TP/CV can
   provision only matching researcher roles in the profile's explicit scope.
-- The profile manager confirms the recipient email. The system generates and hashes a temporary
-  password, sends login information by configured SMTP, and requires a different
-  password before any normal authenticated API/UI feature. No plaintext credential
-  is persisted, returned to the manager or placed in audit. SMTP acceptance is not proof
-  of inbox delivery; a failed/uncertain send has an explicit new-credential retry.
+- The profile manager confirms the recipient email. The account is created as
+  `PENDING_ACTIVATION`; the system emails, by configured SMTP, only a setup-password link
+  backed by a hashed single-use token that expires after 48 hours. The link opens
+  `Thiết lập mật khẩu`; completing it activates the account. No temporary password is
+  generated, emailed, persisted, returned to the profile manager or placed in audit. SMTP
+  acceptance is not proof of inbox delivery; a failed/uncertain send offers an explicit
+  resend of the activation link, which invalidates earlier unused links.
 - Every role except QT has a scientific CV and self-updates it through My Profile.
   My Profile uses the active Account's current link. Only own personal/scientific
   fields are editable; type, status, linkage and role/scope remain administrative.
   Unlink immediately removes self access. Self-reported history grants no access
   to operational projects/proposals and does not replace source-owned assignments.
-- Profile/link/account/credential/first-password-change audit is preserved with
+- Profile/link/account/activation/username/account-status audit is preserved with
   safe transactional change facts. No test files are written or changed for this
   completion at the user's instruction; verification is recorded in its artifact.
 
@@ -881,9 +883,10 @@ credential delivery, migration compatibility and history retention.
 - CV and profile list sections (story 13.9; publications since 13.8): every Scientific CV list (Tab 1 languages, Tab 2 education, Tab 3 work history, Tab 4 publications, intellectual property, awards, projects) and the `/researcher-profiles` form's publications and participations are read-only tables with the title and a "+ Thêm…" button in the section header, compact Pencil/Trash icon buttons per row, and one right-side Drawer for add/edit built on the house `Dialog` (full width at ≤767px). Secondary fields live only in the Drawer. The Drawer has no `<form>` (it sits inside the CV/profile form): Enter in a single-line input saves the Drawer only, required fields are marked `*`, errors show under the field with focus on the first invalid one, closing a dirty Drawer asks to discard, and only changed fields are written back. Delete asks for confirmation in a separate dialog; focus then returns to the Add button. Drawer "Lưu" updates the in-page draft; "Lưu lý lịch khoa học" / "Lưu hồ sơ" commits it. Publications keep their 13.8 columns (authors as bubbles, evidence as a `proofUrl` link, file upload deferred). Profile participations on Tab 4 stay read-only; in the profile form saved publications/participations cannot be deleted (change status instead). Without edit permission no Add/Edit/Delete controls render.
 - `/my-profile`: the same personal/scientific editor, with administrative fields
   and account operations excluded. Missing/inactive link has a safe support state.
-- Mandatory change: login routes to `/change-password`; middleware, app shell and
-  shared API guard block normal features until successful change. Password inputs
-  support password managers. Success invalidates the session and returns to login.
+- Activation: the emailed link opens `Thiết lập mật khẩu` (password + confirmation).
+  Invalid, expired or used links fail closed and leave the account pending; pending
+  accounts cannot log in. Password inputs support password managers. Success activates
+  the account and returns to login.
 
 ### Finalized oversight presentation
 
