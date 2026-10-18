@@ -45,20 +45,24 @@ Browser
 
 The authorization model is intentionally record-aware: a broad platform role alone does not automatically grant access to institutional research data.
 
-The seven active system roles are `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`,
-`SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`,
-`RESEARCH_OVERSIGHT_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, and
-`EXTERNAL_RESEARCHER_USER`. They separate platform administration, Scientific Management
-oversight/operations, leadership approval, research oversight, and researcher access.
+The ten system roles ([permission matrix](docs/permission-matrix.md) §2) are
+`SYSTEM_ADMIN` (QT), `LEADERSHIP_APPROVAL_AUTHORITY` (GĐ), `SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH),
+`RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD, monitoring only), `RESEARCH_MANAGEMENT_HEAD` (TP),
+`RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP), `RESEARCH_BOARD_HEAD` (TB), `RESEARCH_MANAGEMENT_STAFF` (CV),
+`RESEARCHER_INTERNAL_USER` (NCV) and `EXTERNAL_RESEARCHER_USER` (NNB). Submissions route as a
+tờ trình CV → TB → TP → BGĐ; only GĐ approves topic, funding and liquidation. The code on the
+`DocManS` branch still ships the former seven roles (`SCIENTIFIC_MANAGEMENT_HEAD`,
+`SCIENTIFIC_MANAGEMENT_STAFF` instead of TP/CV, without PGĐ-KH, PP, TB) until `tuan/DocManS`
+is merged.
 Proposal management officer history is persisted; project officer relationships and institutional
 reporting remain contracts until their backend domains exist. Dashboard showcase values are demo
 data. Funding currently covers requested proposal metadata, not actual expenditure or accounting.
 
-Local accounts: `nmphuong` (`SCIENTIFIC_MANAGEMENT_HEAD`), `hdtien1`/`hdtien2`
-(`SCIENTIFIC_MANAGEMENT_STAFF`), `tvtien` (`LEADERSHIP_APPROVAL_AUTHORITY`), `vndinh`
-(`RESEARCH_OVERSIGHT_AUTHORITY`). See [local demo accounts](docs/development/auth-seed-users.md). Existing
-proposals remain unassigned until Head explicitly assigns Staff; organization scope alone no
-longer gives Staff management access.
+Local accounts (current seven-role seed): `nmphuong` (`SCIENTIFIC_MANAGEMENT_HEAD`, TP),
+`hdtien1`/`hdtien2` (`SCIENTIFIC_MANAGEMENT_STAFF`, CV), `tvtien` (`LEADERSHIP_APPROVAL_AUTHORITY`, GĐ),
+`vndinh` (`RESEARCH_OVERSIGHT_AUTHORITY` today, PGĐ-KH in the new model). See
+[local demo accounts](docs/development/auth-seed-users.md). Existing proposals remain unassigned
+until TP explicitly assigns a CV; organization scope alone gives a CV no management access.
 
 
 ## Technology Stack

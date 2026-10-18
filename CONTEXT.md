@@ -51,9 +51,15 @@ policy and current workflow rules, use the linked normative documents.
 ## Authorization language
 
 DocManS distinguishes **system roles** from **record-scoped relationships and
-assignments**. The active system roles are `SYSTEM_ADMIN`,
-`SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`,
-`RESEARCHER_INTERNAL_USER`, and `EXTERNAL_RESEARCHER_USER`.
+assignments**. The ten system roles ([permission matrix](docs/permission-matrix.md) §2) are
+`SYSTEM_ADMIN` (QT), `LEADERSHIP_APPROVAL_AUTHORITY` (GĐ), `SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH),
+`RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD, monitoring only), `RESEARCH_MANAGEMENT_HEAD` (TP),
+`RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP), `RESEARCH_BOARD_HEAD` (TB), `RESEARCH_MANAGEMENT_STAFF` (CV),
+`RESEARCHER_INTERNAL_USER` (NCV) and `EXTERNAL_RESEARCHER_USER` (NNB). Submissions route as a
+tờ trình CV → TB → TP → BGĐ; only GĐ approves topic, funding and liquidation. The code on the
+`DocManS` branch still ships the former seven roles (`SCIENTIFIC_MANAGEMENT_HEAD`,
+`SCIENTIFIC_MANAGEMENT_STAFF` instead of TP/CV, without PGĐ-KH, PP, TB) until `tuan/DocManS`
+is merged.
 
 System roles describe account-level responsibility; they do not automatically
 grant access to every business record. Record access is derived from the exact
@@ -70,39 +76,39 @@ request and mutation. Missing, stale, ambiguous, inactive, expired, revoked,
 or unsupported context denies access. The backend is authoritative; UI
 capability data is explanatory only and cannot grant an action.
 
-### Scientific Management responsibility
+### Research management responsibility
 
-`SCIENTIFIC_MANAGEMENT_HEAD` is the Head of the office, not leadership approval
-qualified by another title. Head sees all proposals/projects in explicitly authorized
-Scientific Management scope, responsible Staff, unassigned records and workload/
-status/deadlines, with officer filtering/grouping. Disclosure and conflict still apply.
-Staff management visibility requires an effective `PROPOSAL_MANAGEMENT_OFFICER` or
+TP (`RESEARCH_MANAGEMENT_HEAD`) and TB (`RESEARCH_BOARD_HEAD`) see proposals in their unit
+scope and every project in the Academy, with responsible-CV, unassigned, workload and
+status/deadline filters. PP only monitors. Disclosure and conflict still apply.
+CV (`RESEARCH_MANAGEMENT_STAFF`) management visibility requires an effective `PROPOSAL_MANAGEMENT_OFFICER` or
 `PROJECT_MANAGEMENT_OFFICER` on the exact record plus explicit scope. Each record
 has at most one active primary officer; assignment/reassignment/revocation preserves
 history and audit. Project management responsibility is independent of its proposal.
 
-Staff may access other records through legitimate participation/review/council/task
-relationships, which grant no Scientific Management administrative actions. Backend
+A CV may access other records through legitimate participation/review/council/task
+relationships, which grant no management actions. Backend
 capabilities must distinguish this access basis; revocation removes only the relevant
 grant. Unassigned is a valid state; missing/ambiguous context fails closed.
-Independent intake/profile scope does not widen proposal/project access. Head assigns/reassigns/revokes officers, reads operational summaries and submits eligible
-completed packages. Head assigns reviewers and prepares, finalizes and submits synthesis; assigned Staff confirms completeness and monitors reviews.
-`LEADERSHIP_APPROVAL_AUTHORITY` combines oversight with eligible final decisions;
-`RESEARCH_OVERSIGHT_AUTHORITY` combines internal-researcher eligibility with read-only
-institutional oversight. Neither oversight reason bypasses disclosure.
+Independent intake/profile scope does not widen proposal/project access. The system
+auto-assigns a CV by segment on submission; TP/TB assign/reassign/revoke the officer.
+TB¹ or the assigned CV³ checks completeness (never TP). TP¹, TB¹ or the assigned CV³
+assign reviewers/councils and prepare synthesis; the tờ trình routes CV → TB → TP → BGĐ.
+GĐ alone decides topic + funding and liquidation; GĐ or PGĐ-KH sign councils, IRB,
+extensions and adjustments. PGĐ-TD and PP only monitor. Oversight never bypasses disclosure.
 Proposal implementation is operational; project relationships remain a contract until the
 approved-project backend is implemented (baseline §2.1).
 
 ## Workflow vocabulary
 
 Golden Flow 4 is specified in the [Project Execution contract](docs/contracts/project-execution.md).
-It preserves project-scoped `TOPIC_PI` (the requested `PROJECT_PI`). Assigned Staff
-reviews/accepts reports and finally approves/rejects normal adjustments; Head finally
-approves/rejects extensions after Staff validation/preparation. Leadership approves
-the source proposal only and has permitted read/monitor access during execution.
-Submitted revisions/evidence are immutable; overdue is derived, never a project state.
-Assigned proposal Staff creates; Head independently assigns project Staff, who confirms
-setup. Controlled fields change only through the appropriate approved request.
+It preserves project-scoped `TOPIC_PI` (the requested `PROJECT_PI`). The assigned CV
+reviews/accepts reports without a tờ trình. Adjustments (with or without funding change)
+and extensions: the PI submits, the assigned CV appraises and drafts the tờ trình, TB
+reviews, TP approves, and GĐ or PGĐ-KH signs. GĐ alone approves the source proposal and
+liquidation. Submitted revisions/evidence are immutable; overdue is derived, never a project
+state. The assigned proposal CV creates; TP or TB independently assigns the project CV, who
+confirms setup. Controlled fields change only through the appropriate approved request.
 Acceptance/council implementation belongs to the next flow.
 
 - **Draft** is editable working content; **submitted** content is the formal
@@ -175,19 +181,19 @@ Read these only when the task needs their detail; do not duplicate them here:
 source of truth for this feature, including API/data fields, authorization,
 credential delivery, migration compatibility and history retention.
 
-- Scoped SYSTEM_ADMIN, SCIENTIFIC_MANAGEMENT_HEAD and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
+- QT (platform) and TP¹/CV¹ (unit scope) manage internal/external
   profiles independently of Accounts, including academic/contact information,
   position, military rank, expertise, publications and self-reported project
   history (title, role, Academy/institutional/Ministry/other level, dates, status,
   notes). Profile activation and account activation remain separate actions.
 - System Account / Access supports optional create-and-link, existing unlinked
   account selection, unlink and authorized credential reset/resend. Linking is
-  one-to-one across all current links, including inactive records. Staff can
+  one-to-one across all current links, including inactive records. TP/CV can
   provision only matching researcher roles in the profile's explicit scope.
-- Staff confirms the recipient email. The system generates and hashes a temporary
+- The profile manager confirms the recipient email. The system generates and hashes a temporary
   password, sends login information by configured SMTP, and requires a different
   password before any normal authenticated API/UI feature. No plaintext credential
-  is persisted, returned to staff or placed in audit. SMTP acceptance is not proof
+  is persisted, returned to the profile manager or placed in audit. SMTP acceptance is not proof
   of inbox delivery; a failed/uncertain send has an explicit new-credential retry.
 - My Profile uses the active Account's current link. Only own personal/scientific
   fields are editable; type, status, linkage and role/scope remain administrative.
