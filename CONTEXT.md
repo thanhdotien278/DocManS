@@ -57,9 +57,8 @@ assignments**. The ten system roles ([permission matrix](docs/permission-matrix.
 `RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP), `RESEARCH_BOARD_HEAD` (TB), `RESEARCH_MANAGEMENT_STAFF` (CV),
 `RESEARCHER_INTERNAL_USER` (NCV) and `EXTERNAL_RESEARCHER_USER` (NNB). Submissions route as a
 tờ trình CV → TB → TP → BGĐ; only GĐ approves topic, funding and liquidation. The code on the
-`DocManS` branch still ships the former seven roles (`SCIENTIFIC_MANAGEMENT_HEAD`,
-`SCIENTIFIC_MANAGEMENT_STAFF` instead of TP/CV, without PGĐ-KH, PP, TB) until `tuan/DocManS`
-is merged.
+`DocManS` branch has all ten role codes, but PGĐ-KH, PP and TB have no business
+permissions until they are ported from `tuan/DocManS`.
 
 System roles describe account-level responsibility; they do not automatically
 grant access to every business record. Record access is derived from the exact

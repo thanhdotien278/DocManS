@@ -6,7 +6,7 @@ import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
-import { isScientificManagementHead, isScientificManagementStaff } from "../proposals-shared/proposal-access.js";
+import { isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
 import {
   getRecommendationLabel,
   REVIEW_ASSIGNMENT_STATUS,
@@ -81,21 +81,21 @@ export class ProposalEvaluationSummaryService {
     await assertEvaluationReadScope(this.prisma, actor, proposal);
     if (!isWorkflowVisibleStatus(proposal.status)) throw new ForbiddenException();
     const conflict = await resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId);
-    if (isScientificManagementStaff(actor) && conflict.conflicted) throw new ForbiddenException({ message: conflict.viewerMessage });
+    if (isResearchManagementStaff(actor) && conflict.conflicted) throw new ForbiddenException({ message: conflict.viewerMessage });
     const assignmentRecords = await this.assignments.findCurrentRoundAssignments(proposal);
     const reviewRecords = await this.assignments.findCurrentRoundReviews(proposal);
     const summary = await this.findSummary(proposalId);
     const progress = this.summarizeProgress(assignmentRecords, reviewRecords);
-    if (!isScientificManagementStaff(actor)) {
+    if (!isResearchManagementStaff(actor)) {
       const { pendingReviewers, averageTotalScore, ...operationalProgress } = progress;
       return {
         proposalId,
         proposalStatus: proposal.status,
         proposalStatusLabel: PROPOSAL_STATUS_LABELS[proposal.status] ?? proposal.status,
         ...operationalProgress,
-        assignments: isScientificManagementHead(actor) && !conflict.conflicted ? assignmentRecords.map((assignment) => this.assignments.toAssignmentResponse(assignment, reviewRecords)) : [],
-        reviews: isScientificManagementHead(actor) && !conflict.conflicted ? reviewRecords.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => this.reviews.toSubmittedReviewResponse(review)) : [],
-        ...(isScientificManagementHead(actor) && !conflict.conflicted ? { evaluationSummary: this.toSummaryResponse(summary) } : {}),
+        assignments: isResearchManagementHead(actor) && !conflict.conflicted ? assignmentRecords.map((assignment) => this.assignments.toAssignmentResponse(assignment, reviewRecords)) : [],
+        reviews: isResearchManagementHead(actor) && !conflict.conflicted ? reviewRecords.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => this.reviews.toSubmittedReviewResponse(review)) : [],
+        ...(isResearchManagementHead(actor) && !conflict.conflicted ? { evaluationSummary: this.toSummaryResponse(summary) } : {}),
         reviewDeadlines: assignmentRecords.filter((assignment) => ["assigned", "completed"].includes(assignment.status)).map((assignment) => ({ role: assignment.assignmentRole, status: assignment.status, dueDate: assignment.dueDate?.toISOString() ?? null })),
         recommendations: REVIEW_RECOMMENDATIONS.map((code) => ({ code, label: REVIEW_RECOMMENDATION_LABELS[code] }))
       };

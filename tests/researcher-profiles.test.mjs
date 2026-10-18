@@ -12,7 +12,7 @@ const staff = {
   id: "staff-1",
   username: "staff",
   displayName: "Staff",
-  systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
+  systemRole: "RESEARCH_MANAGEMENT_STAFF",
   unit: "Phòng KHQS",
   organizationScopes: [{ id: "org-1", code: "ORG1", name: "Đơn vị 1" }]
 };
@@ -73,7 +73,7 @@ function createFakePrisma({ profiles = [], failAudit = false } = {}) {
       username: "staff",
       displayName: "Staff",
       status: "active",
-      systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
+      systemRole: "RESEARCH_MANAGEMENT_STAFF",
       unit: "Đơn vị 1",
       mustChangePassword: false,
       organizationScopes: [{ organizationUnitId: "org-1", organizationUnit: { id: "org-1", code: "ORG1", name: "Đơn vị 1", status: "active" } }]
@@ -326,18 +326,18 @@ describe("Story 2.1 researcher profile contracts", () => {
     ]);
     assert.equal(capability.contextVersion.domain, "researcher-profile");
     // A linked owner (here an in-scope HEAD) never sees activate/deactivate on their own profile, active or not.
-    const head = { ...staff, id: "head-1", systemRole: "SCIENTIFIC_MANAGEMENT_HEAD" };
+    const head = { ...staff, id: "head-1", systemRole: "RESEARCH_MANAGEMENT_HEAD" };
     for (const status of ["ACTIVE", "INACTIVE"]) {
       const own = projectResearcherProfileAuthorization(head, profile({ linkedUserId: head.id, status })).allowedActions;
       assert.equal(own.includes("researcher-profile.activate") || own.includes("researcher-profile.deactivate"), false, status);
     }
     // Only SYSTEM_ADMIN may link HEAD/STAFF accounts, and only to INTERNAL profiles.
-    assert.deepEqual(linkableAccountRoles(admin, "INTERNAL"), ["RESEARCHER_INTERNAL_USER", "SCIENTIFIC_MANAGEMENT_HEAD", "SCIENTIFIC_MANAGEMENT_STAFF"]);
+    assert.deepEqual(linkableAccountRoles(admin, "INTERNAL"), ["RESEARCHER_INTERNAL_USER", "RESEARCH_MANAGEMENT_HEAD", "RESEARCH_MANAGEMENT_STAFF"]);
     assert.deepEqual(linkableAccountRoles(admin, "EXTERNAL"), ["EXTERNAL_RESEARCHER_USER"]);
     assert.deepEqual(linkableAccountRoles(staff, "INTERNAL"), ["RESEARCHER_INTERNAL_USER"]);
     assert.deepEqual(linkableAccountRoles(head, "INTERNAL"), ["RESEARCHER_INTERNAL_USER"]);
     // HEAD-linked profile: in-scope peers lose manager writes, SYSTEM_ADMIN keeps them, the owner keeps self/cv grants.
-    const headLinked = profile({ linkedUserId: head.id, linkedUser: { systemRole: "SCIENTIFIC_MANAGEMENT_HEAD", status: "active" } });
+    const headLinked = profile({ linkedUserId: head.id, linkedUser: { systemRole: "RESEARCH_MANAGEMENT_HEAD", status: "active" } });
     const writes = ["researcher-profile.update", "researcher-profile.deactivate", "researcher-profile.cv.update"];
     const peer = projectResearcherProfileAuthorization(staff, headLinked).allowedActions;
     assert.deepEqual(writes.filter((action) => peer.includes(action)), []);
@@ -349,7 +349,7 @@ describe("Story 2.1 researcher profile contracts", () => {
   });
 
   it("rejects a linked owner changing their own profile status with 403", async () => {
-    const head = { ...staff, id: "head-1", systemRole: "SCIENTIFIC_MANAGEMENT_HEAD" };
+    const head = { ...staff, id: "head-1", systemRole: "RESEARCH_MANAGEMENT_HEAD" };
     const { prisma, audit } = createFakePrisma({ profiles: [profile({ linkedUserId: head.id })] });
     prisma.store.users.push({ ...head, status: "active", mustChangePassword: false, organizationScopes: [{ organizationUnitId: "org-1", organizationUnit: { id: "org-1", code: "ORG1", name: "Đơn vị 1", status: "active" } }] });
     const { service } = createService(prisma, audit);
@@ -364,7 +364,7 @@ describe("Story 2.1 researcher profile contracts", () => {
 
   it("links HEAD accounts only for SYSTEM_ADMIN on INTERNAL profiles", async () => {
     const scopes = [{ organizationUnitId: "org-1", organizationUnit: { id: "org-1", code: "ORG1", name: "Đơn vị 1", status: "active" } }];
-    const head = { ...staff, id: "head-1", systemRole: "SCIENTIFIC_MANAGEMENT_HEAD", status: "active", mustChangePassword: false, organizationScopes: scopes };
+    const head = { ...staff, id: "head-1", systemRole: "RESEARCH_MANAGEMENT_HEAD", status: "active", mustChangePassword: false, organizationScopes: scopes };
     const attempt = async (actor, profileType) => {
       const { prisma, audit } = createFakePrisma({ profiles: [profile({ profileType })] });
       prisma.store.users.push(head, { ...admin, status: "active", mustChangePassword: false, organizationScopes: scopes });
@@ -662,7 +662,7 @@ describe("Story 2.1 researcher profile contracts", () => {
     });
     const linkedUser = { ...researcher, username: null, usernameKey: null, status: "active", mustChangePassword: false, organizationScopes: [] };
     const { prisma, audit } = createFakePrisma({ profiles: [profile({ linkedUserId: researcher.id }), profile({ id: "profile-unlinked" }), profile({ id: "profile-staff", linkedUserId: "head-2" })] });
-    prisma.store.users.push(linkedUser, { id: "other-user", username: "taken", usernameKey: "taken" }, { id: "head-2", username: "head", usernameKey: "head", systemRole: "SCIENTIFIC_MANAGEMENT_HEAD", status: "active" });
+    prisma.store.users.push(linkedUser, { id: "other-user", username: "taken", usernameKey: "taken" }, { id: "head-2", username: "head", usernameKey: "head", systemRole: "RESEARCH_MANAGEMENT_HEAD", status: "active" });
     const { service } = createService(prisma, audit);
     const saved = await service.updateProfile(staff, "profile-1", updateResearcherProfilePipe.transform({ contextVersion: contextVersion(), username: " NVA " }));
     assert.equal(linkedUser.username, "nva");

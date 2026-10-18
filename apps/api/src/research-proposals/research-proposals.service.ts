@@ -16,8 +16,8 @@ import {
   getOrganizationScopeIds,
   isLeadership,
   isInternalResearcherEligible,
-  isScientificManagementHead,
-  isScientificManagementStaff,
+  isResearchManagementHead,
+  isResearchManagementStaff,
   intakeAppliesToUser,
   isIntakeOpenForSubmission,
   isSystemAdmin
@@ -589,7 +589,7 @@ export class ResearchProposalsService {
     const accounts = await this.prisma.user.findMany({
       where: {
         status: "active",
-        systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
+        systemRole: "RESEARCH_MANAGEMENT_STAFF",
         organizationScopes: { some: { organizationUnitId: proposal.hostOrganizationUnitId, organizationUnit: { status: "active" } } }
       },
       select: { id: true, username: true, displayName: true, unit: true },
@@ -631,7 +631,7 @@ export class ResearchProposalsService {
       where: { id: officerUserId },
       include: { organizationScopes: { include: { organizationUnit: true } } }
     });
-    if (!candidate || candidate.status !== "active" || candidate.systemRole !== "SCIENTIFIC_MANAGEMENT_STAFF") {
+    if (!candidate || candidate.status !== "active" || candidate.systemRole !== "RESEARCH_MANAGEMENT_STAFF") {
       throw new BadRequestException({ message: "Cán bộ được chọn phải là tài khoản chuyên viên quản lý khoa học đang hoạt động." });
     }
     if (!candidate.organizationScopes.some((scope) => scope.organizationUnitId === proposal.hostOrganizationUnitId && scope.organizationUnit.status === "active")) {
@@ -871,7 +871,7 @@ export class ResearchProposalsService {
   }
 
   private async assertCanRequestSupplement(actor: SafeUserContext, proposal: ResearchProposalRecord) {
-    if (!isScientificManagementStaff(actor)) {
+    if (!isResearchManagementStaff(actor)) {
       throw new ForbiddenException({ message: "Chỉ chuyên viên phụ trách hồ sơ được yêu cầu bổ sung hồ sơ." });
     }
     assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
@@ -882,7 +882,7 @@ export class ResearchProposalsService {
   }
 
   private assertManagementOfficerAuthority(actor: SafeUserContext, proposal: ResearchProposalRecord) {
-    if (!isScientificManagementHead(actor)) {
+    if (!isResearchManagementHead(actor)) {
       throw new ForbiddenException({ message: "Chỉ Trưởng phòng quản lý khoa học được phân công hoặc thu hồi cán bộ phụ trách hồ sơ." });
     }
     assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
@@ -1267,7 +1267,7 @@ export class ResearchProposalsService {
   ) {
     const canEditDraft = this.canEditProposalDraft(actor, proposal);
     const canRead = canReadProposal(actor, proposal, participation, reviewAccess, managementOfficer);
-    const canExposeEvaluationSummaryStatus = isScientificManagementHead(actor) || isScientificManagementStaff(actor) || isLeadership(actor);
+    const canExposeEvaluationSummaryStatus = isResearchManagementHead(actor) || isResearchManagementStaff(actor) || isLeadership(actor);
     const viewerAuthorization = actor
       ? projectProposalViewerAuthorizationV1({
           actor,
@@ -1317,7 +1317,7 @@ export class ResearchProposalsService {
       canEdit: canEditDraft,
       canSubmit: canEditDraft,
       managementOfficer: this.toManagementOfficerResponse(managementOfficer),
-      ...((isScientificManagementHead(actor) || isScientificManagementStaff(actor)) && !participation?.isParticipant && !reviewAccess?.hasReviewConflict && !reviewAccess?.isAssignedReviewer ? { reviewWorkflow: {
+      ...((isResearchManagementHead(actor) || isResearchManagementStaff(actor)) && !participation?.isParticipant && !reviewAccess?.hasReviewConflict && !reviewAccess?.isAssignedReviewer ? { reviewWorkflow: {
         completenessChecked: completenessCheckCompleted,
         submittedCount: reviewReadiness?.submittedCount ?? 0,
         assignmentCount: reviewReadiness?.activeAssignmentCount ?? 0,

@@ -22,19 +22,19 @@ export const RESEARCHER_PROFILE_ACTIONS = [
   "researcher-profile.update"
 ] as const satisfies readonly PermissionActionV1[];
 
-export const RESEARCHER_PROFILE_MANAGER_ROLES = ["SYSTEM_ADMIN", "SCIENTIFIC_MANAGEMENT_HEAD", "SCIENTIFIC_MANAGEMENT_STAFF"] as const;
+export const RESEARCHER_PROFILE_MANAGER_ROLES = ["SYSTEM_ADMIN", "RESEARCH_MANAGEMENT_HEAD", "RESEARCH_MANAGEMENT_STAFF"] as const;
 
 // Only a SYSTEM_ADMIN may link elevated (HEAD/STAFF) accounts, and only to INTERNAL profiles.
 export function linkableAccountRoles(actor: SafeUserContext, profileType?: string | null) {
   if (profileType === "EXTERNAL") return ["EXTERNAL_RESEARCHER_USER"];
-  return actor.systemRole === "SYSTEM_ADMIN" ? ["RESEARCHER_INTERNAL_USER", "SCIENTIFIC_MANAGEMENT_HEAD", "SCIENTIFIC_MANAGEMENT_STAFF"] : ["RESEARCHER_INTERNAL_USER"];
+  return actor.systemRole === "SYSTEM_ADMIN" ? ["RESEARCHER_INTERNAL_USER", "RESEARCH_MANAGEMENT_HEAD", "RESEARCH_MANAGEMENT_STAFF"] : ["RESEARCHER_INTERNAL_USER"];
 }
 
 const ELEVATED_LINKED_WRITE_ACTIONS: readonly string[] = ["researcher-profile.update", "researcher-profile.activate", "researcher-profile.deactivate", "researcher-profile.cv.update", "researcher-profile.publication.manage", "researcher-profile.participation.manage"];
 
 // Manager writes on a profile linked to a HEAD/STAFF account belong to SYSTEM_ADMIN only (Story 13.10).
 export function deniesElevatedLinkedWrite(actor: SafeUserContext, action: string, profile: { linkedUser?: { systemRole: string | null } | null }) {
-  return actor.systemRole !== "SYSTEM_ADMIN" && ELEVATED_LINKED_WRITE_ACTIONS.includes(action) && ["SCIENTIFIC_MANAGEMENT_HEAD", "SCIENTIFIC_MANAGEMENT_STAFF"].includes(profile.linkedUser?.systemRole ?? "");
+  return actor.systemRole !== "SYSTEM_ADMIN" && ELEVATED_LINKED_WRITE_ACTIONS.includes(action) && ["RESEARCH_MANAGEMENT_HEAD", "RESEARCH_MANAGEMENT_STAFF"].includes(profile.linkedUser?.systemRole ?? "");
 }
 
 export function hasResearcherProfileScope(actor: SafeUserContext, organizationId: string) {

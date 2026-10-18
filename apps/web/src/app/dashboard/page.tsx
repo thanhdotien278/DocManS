@@ -115,7 +115,7 @@ function renderPanel(panel: DashboardPanel) {
 
 export default function DashboardPage() {
   const { account } = useSession();
-  const snapshot = getDashboardSnapshot(account?.systemRole ?? "SCIENTIFIC_MANAGEMENT_STAFF");
+  const snapshot = getDashboardSnapshot(account?.systemRole ?? "RESEARCH_MANAGEMENT_STAFF");
 
   return (
     <>
