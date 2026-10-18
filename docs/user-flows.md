@@ -3,8 +3,8 @@
 > Baseline: [`authorization-core-business-baseline.md`](./authorization-core-business-baseline.md)
 > Ma trận quyền: [`permission-matrix.md`](./permission-matrix.md)
 
-Khi có khác biệt, baseline là quyết định sản phẩm mới nhất; permission matrix
-là ma trận chi tiết để triển khai và kiểm thử.
+Khi có mâu thuẫn, mục 7 của permission matrix (mô hình 10 vai trò) thắng; baseline
+là tài liệu nền nghiệp vụ.
 
 Tài liệu này mô tả luồng người dùng đã chốt ở mức nghiệp vụ. Mọi nhánh đều
 phải đi qua kiểm tra authorization ở backend; quyền hiển thị trên UI không thay
@@ -34,19 +34,22 @@ hệ thống. Proposal PI luôn được suy ra từ `ownerId`; PI không là te
 
 ```mermaid
 flowchart LR
-  account["Tài khoản<br/>1 system role active"] --> admin["SYSTEM_ADMIN<br/>Nền tảng, tài khoản, scope"]
-  account --> oversight["RESEARCH_OVERSIGHT_AUTHORITY<br/>Nghiên cứu theo quan hệ + giám sát chỉ đọc"]
-  account --> head["SCIENTIFIC_MANAGEMENT_HEAD<br/>Giám sát trong scope được cấp"]
-  account --> staff["SCIENTIFIC_MANAGEMENT_STAFF<br/>Quản lý hồ sơ được phân công"]
-  account --> leader["LEADERSHIP_APPROVAL_AUTHORITY<br/>Quyết định trong thẩm quyền"]
-  account --> internal["RESEARCHER_INTERNAL_USER<br/>Bản ghi của mình / quan hệ hợp lệ"]
-  account --> external["EXTERNAL_RESEARCHER_USER<br/>Chỉ bản ghi được cấp"]
+  account["Tài khoản<br/>1 system role active"] --> admin["QT — SYSTEM_ADMIN<br/>Nền tảng, tài khoản, scope"]
+  account --> leader["GĐ — LEADERSHIP_APPROVAL_AUTHORITY<br/>Duy nhất phê duyệt đề tài + kinh phí, thanh lý"]
+  account --> science["PGĐ-KH — SCIENCE_DEPUTY_DIRECTOR<br/>Ký thành lập hội đồng, IRB, gia hạn, điều chỉnh"]
+  account --> oversight["PGĐ-TD — RESEARCH_OVERSIGHT_AUTHORITY<br/>Chỉ theo dõi; kinh phí tổng hợp; không ký"]
+  account --> head["TP — RESEARCH_MANAGEMENT_HEAD<br/>Duyệt tờ trình; giao CV, phân mảng"]
+  account --> deputy["PP — RESEARCH_MANAGEMENT_DEPUTY_HEAD<br/>Chỉ theo dõi trong scope"]
+  account --> board["TB — RESEARCH_BOARD_HEAD<br/>Rà soát tờ trình; giao CV; kiểm tra đầy đủ"]
+  account --> staff["CV — RESEARCH_MANAGEMENT_STAFF<br/>Quản lý hồ sơ được phân công"]
+  account --> internal["NCV — RESEARCHER_INTERNAL_USER<br/>Bản ghi của mình / quan hệ hợp lệ"]
+  account --> external["NNB — EXTERNAL_RESEARCHER_USER<br/>Chỉ bản ghi được cấp; không là PI"]
 
   record["Một proposal / approved topic / review / task"] --> pi["PROPOSAL_PI / TOPIC_PI (owner-derived)"]
   record --> member["TOPIC_MEMBER"]
   record --> secretary["TOPIC_SECRETARY"]
-  record --> officer["PROPOSAL_MANAGEMENT_OFFICER / PROJECT_MANAGEMENT_OFFICER"]
-  record --> reviewer["Reviewer / council member"]
+  record --> officer["PROPOSAL_MANAGEMENT_OFFICER / PROJECT_MANAGEMENT_OFFICER (CV)"]
+  record --> reviewer["Reviewer / council / IRB member"]
   record --> assignee["Task assignee / collaborator"]
 
   account -. "quyền account" .-> record
@@ -57,24 +60,25 @@ flowchart LR
 
 ### Luồng giám sát và phân công quản lý
 
-1. Head mở danh sách proposal/project trong scope được cấp, thấy officer hiện tại
-   hoặc “Chưa phân công”; lọc/nhóm theo chuyên viên để xem workload, trạng thái và hạn.
-2. Head có capability phân công chọn Staff phụ trách. Backend kiểm tra
+1. Khi nộp, hệ thống tự giao CV phụ trách theo mảng (cấp + tính chất); hồ sơ không khớp
+   hiện “Chưa có người phụ trách”. TP/TB mở danh sách proposal/project trong scope, thấy
+   officer hiện tại hoặc “Chưa phân công”; lọc/nhóm theo CV để xem workload, trạng thái và hạn.
+2. TP/TB chọn, chuyển hoặc thu hồi CV phụ trách (TP phân mảng cho CV). Backend kiểm tra
    scope, account, participation/conflict và context hiện thời trước khi ghi.
 3. Chuyển phân công kết thúc quan hệ cũ và tạo quan hệ mới nguyên tử, giữ history/audit;
    tối đa một `PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER` hiện hành.
-4. Staff thấy hàng chờ quản lý của mình. Hồ sơ khác chỉ xuất hiện qua quan hệ PI/member/
-   secretary/reviewer/council/task hợp lệ, kèm lý do truy cập và action đúng quan hệ.
-   Không hiện action hành chính Quản lý khoa học chỉ vì Staff đọc được hồ sơ.
+4. CV thấy hàng chờ quản lý của mình và không thao tác hồ sơ giao cho CV khác. Hồ sơ khác
+   chỉ xuất hiện qua quan hệ PI/member/secretary/reviewer/council/task hợp lệ, kèm lý do
+   truy cập và action đúng quan hệ. Không hiện action quản lý chỉ vì CV đọc được hồ sơ.
 5. Thu hồi/hết hiệu lực loại hồ sơ khỏi hàng chờ quản lý; backend re-authorize cả link,
    files, notification, history, count, dashboard và export. Quan hệ khác vẫn được xét.
 
 Participant không đồng thời làm officer, reviewer, evaluation/acceptance council hoặc
 quyết định cuối cùng hồ sơ; reviewer không quyết định cùng vòng, các vị trí loại trừ
 trong hội đồng không được kiêm nhiệm. Kiểm tra khi tạo/thay đổi assignment/participation
-và tại protected action. Head không có action phê duyệt/từ chối cuối của lãnh đạo.
-Head được phân công officer, xem tổng hợp và trình gói đủ điều kiện theo baseline §2.1;
-không có quyền quyết định cuối. Đợt/profile giữ scope riêng, không mở
+và tại protected action. TP/TB không có action phê duyệt/ký của Ban giám đốc; TP duyệt
+tờ trình trình BGĐ, TB rà soát tờ trình trước TP (permission matrix §7.3). PP và PGĐ-TD
+chỉ theo dõi, không có bước nào trong luồng tờ trình. Đợt/profile giữ scope riêng, không mở
 quyền proposal/project; project mới không tự kế thừa officer của proposal.
 
 ## 2. Cổng kiểm tra chung cho mọi hành động
@@ -95,25 +99,30 @@ flowchart TD
   resolve -. "Thiếu, cũ hoặc mơ hồ" .-> deny
   allow --> audit["Audit bất biến nếu là hành động cần ghi nhận"]
   allow -. "Áp dụng cả list/search/count/facet/dashboard/export/file" .-> filtered["Kết quả đã lọc theo quyền"]
-  deny --> end([Kết thúc])
-  audit --> end
-  filtered --> end
+  deny --> finish([Kết thúc])
+  audit --> finish
+  filtered --> finish
 ```
 
 ## 3. Luồng chính: đề xuất đến đề tài
 
 ```mermaid
 flowchart LR
-  subgraph staff["Chuyên viên có capability/scope; proposal/project cần officer assignment"]
-    open["Tạo và mở đợt tiếp nhận"]
-    check["Kiểm tra đầy đủ / thủ tục"]
-    create_project["Chủ động tạo đề tài<br/>từ đề xuất đã duyệt"]
+  subgraph staff["CV — RESEARCH_MANAGEMENT_STAFF: hồ sơ đang được giao (TP/TB làm được trong scope, trừ ô ghi rõ)"]
+    open["TP / CV: tạo và mở đợt tiếp nhận"]
+    check["TB / CV: kiểm tra đầy đủ / thủ tục<br/>(TP không làm)"]
+    assign["Phân công phản biện / mời hội đồng<br/>+ conflict check"]
+    consolidate["Đủ phiếu → Soạn tổng hợp → Chốt tổng hợp"]
+    draft_tt["Lập tờ trình"]
+    create_project["CV phụ trách: chủ động tạo đề tài<br/>từ đề xuất đã duyệt"]
   end
 
-  subgraph head["SCIENTIFIC_MANAGEMENT_HEAD có scope, không xung đột"]
-    assign["Phân công phản biện / hội đồng<br/>+ conflict check"]
-    consolidate["Đủ phiếu → Soạn tổng hợp → Chốt tổng hợp"]
-    submit_for_approval["Trình lãnh đạo phê duyệt"]
+  subgraph board_lane["TB — RESEARCH_BOARD_HEAD"]
+    tb_review{"Rà soát tờ trình"}
+  end
+
+  subgraph head_lane["TP — RESEARCH_MANAGEMENT_HEAD"]
+    tp_approve{"Duyệt, trình Ban giám đốc"}
   end
 
   subgraph pi_lane["PI / Nhà nghiên cứu nội bộ"]
@@ -129,65 +138,77 @@ flowchart LR
     score["Chấm / nhận xét / khuyến nghị"]
   end
 
-  subgraph leader_lane["LEADERSHIP_APPROVAL_AUTHORITY"]
-    decide{"Phê duyệt hoặc<br/>không phê duyệt?"}
+  subgraph leader_lane["GĐ — LEADERSHIP_APPROVAL_AUTHORITY"]
+    decide{"Phê duyệt đề tài + kinh phí<br/>hoặc không phê duyệt?"}
   end
 
   open --> draft --> edit --> submit --> check
   check --> complete{"Hồ sơ đủ điều kiện?"}
   complete -- "Chưa đủ" --> request["Yêu cầu bổ sung<br/>nêu lý do + hạn"] --> supplement --> resubmit --> check
-  complete -- "Đủ" --> assign --> review --> score --> consolidate --> submit_for_approval --> ready["Chờ quyết định"] --> decide
+  complete -- "Đủ" --> assign
+  assign -. "Hội đồng: mọi thành viên chấp nhận →<br/>tờ trình → GĐ hoặc PGĐ-KH ký thành lập" .-> review
+  assign --> review --> score --> consolidate --> draft_tt --> tb_review
+  tb_review -- "Chuyển" --> tp_approve
+  tp_approve -- "Trình BGĐ" --> ready["Chờ quyết định"] --> decide
+  tb_review -- "Trả về + lý do" --> draft_tt
+  tp_approve -- "Trả về + lý do" --> draft_tt
   decide -- "Không phê duyệt" --> rejected["Không phê duyệt<br/>giữ lịch sử"] --> proposal_archive["Đóng / lưu trữ"]
   decide -- "Phê duyệt" --> approved["Đã phê duyệt"] --> create_project --> project["Đề tài được tạo<br/>TOPIC_PI/team là quan hệ mới"]
 ```
 
-Trong chi tiết proposal, section `Nộp chính thức` chỉ thuộc lane PI. Chuyên viên quản lý khoa học xem bảng tóm tắt chỉ đọc gồm thông tin đề tài, team, thời gian và kinh phí; họ không nhận form sửa/nộp của PI. Mỗi phiên bản nộp hoặc nộp lại chỉ được xác nhận đầy đủ một lần; sau lần xác nhận, action giữ nguyên ngữ cảnh nhưng bị disabled và backend từ chối gửi lặp. Hạn bổ sung và các mốc hiệu lực/hạn đánh giá được nhập theo ngày Việt Nam, không nhập giờ phút.
+Trong chi tiết proposal, section `Nộp chính thức` chỉ thuộc lane PI. Vai trò quản lý xem bảng tóm tắt chỉ đọc gồm thông tin đề tài, team, thời gian và kinh phí theo quyền xem kinh phí của vai trò; họ không nhận form sửa/nộp của PI. Mỗi phiên bản nộp hoặc nộp lại chỉ được xác nhận đầy đủ một lần; sau lần xác nhận, action giữ nguyên ngữ cảnh nhưng bị disabled và backend từ chối gửi lặp. Hạn bổ sung và các mốc hiệu lực/hạn đánh giá được nhập theo ngày Việt Nam, không nhập giờ phút.
 
 Quy tắc cố định trong flow:
 
 - Đợt đóng chặn hồ sơ mới nhưng không dừng hồ sơ đã nộp.
-- PI hiện tại có system role `RESEARCHER_INTERNAL_USER` là người duy nhất được
-  tạo, nộp và nộp lại proposal; không có đường delegation cho các hành động này.
+- PI hiện tại (mọi system role trừ QT/NNB) là người duy nhất được tạo, nộp và nộp
+  lại proposal; không có đường delegation cho các hành động này.
 - Reviewer chỉ thấy proposal/assignment được giao; gửi review xong thì review
   bị khóa; mở lại chưa có workflow được phê duyệt, không sửa ngầm.
+- Ẩn danh hai chiều: PI và reviewer không xem nhật ký hành động/lịch sử của record.
 - `Phiếu đánh giá của tôi` chỉ xuất hiện trong proposal có assignment đang hiệu
   lực của chính người xem; assignment ở proposal khác, role researcher/council
   hoặc system role rộng không mở rộng context.
-- `Phân công đánh giá`, soạn/chốt tổng hợp và `Trình phê duyệt` chỉ dành cho `SCIENTIFIC_MANAGEMENT_HEAD` có scope, capability, state và không xung đột. `SCIENTIFIC_MANAGEMENT_STAFF` có officer assignment kiểm tra đầy đủ và theo dõi tiến độ; không phân công hoặc tổng hợp.
-- Lãnh đạo chỉ quyết định ở trạng thái `Chờ quyết định`/`ready_for_approval`;
-  không sửa nội dung và không tự quyết bản ghi có xung đột.
-- Phê duyệt không tự động sinh project; Quản lý khoa học phải tạo và xác nhận.
+- Kiểm tra đầy đủ/yêu cầu bổ sung: `RESEARCH_BOARD_HEAD` (TB, trong scope) hoặc `RESEARCH_MANAGEMENT_STAFF` (CV phụ trách); `RESEARCH_MANAGEMENT_HEAD` (TP) không làm. `Phân công đánh giá`, lập hội đồng/IRB, soạn/chốt tổng hợp và lập tờ trình: TP/TB trong scope hoặc CV phụ trách, có capability, state và không xung đột.
+- Tờ trình: CV lập → TB rà soát → TP duyệt → Ban giám đốc ký; trả về ở bất kỳ bước nào về người lập, bắt buộc lý do. Tờ trình do TB lập đi thẳng TP; do TP lập vẫn qua TB; TB/TP không rà soát tờ trình của chính mình.
+- Hội đồng đánh giá chỉ trình thành lập khi mọi thành viên đã chấp nhận; GĐ hoặc PGĐ-KH ký. Mọi role trừ QT được mời chấm; thư ký hội đồng tổng hợp/lập biên bản, không chấm.
+- Chỉ GĐ (`LEADERSHIP_APPROVAL_AUTHORITY`) quyết định đề tài + kinh phí ở trạng thái
+  `Chờ quyết định`/`ready_for_approval`; không sửa nội dung và không tự quyết bản ghi có xung đột.
+- Phê duyệt không tự động sinh project; CV phụ trách phải tạo và xác nhận.
 
 ## 4. Golden Flow 4 — project execution
 
-The [execution contract](contracts/project-execution.md) is normative. `PROJECT_PI`
-means the existing project-scoped `TOPIC_PI`, not another system role.
+The [execution contract](contracts/project-execution.md) is normative; on role
+conflicts permission-matrix §7 and §9.5 win. `PROJECT_PI` means the existing project-scoped
+`TOPIC_PI`, not another system role.
 
 ```mermaid
 flowchart TD
-  approved["Leadership-approved proposal and immutable version"] --> create["Assigned proposal Staff creates preparing project"]
-  create --> assign["Head independently assigns project officer"]
-  assign --> activate["Assigned project Staff confirms setup/activation"]
+  approved["GĐ-approved proposal and immutable version"] --> create["Assigned proposal CV creates preparing project"]
+  create --> assign["TP / TB independently assign project CV"]
+  assign --> activate["Assigned project CV confirms setup/activation"]
   activate --> execute["PI executes: milestones and reporting calendar"]
   execute --> report["PI submits immutable report/evidence"]
-  report --> review["Assigned Staff reviews"]
-  review --> accepted["Staff accepts/records"] --> execute
-  review --> supplement["Staff requests supplement: new PI revision"] --> report
-  execute --> adjustment["PI submits controlled adjustment"]
-  adjustment --> staffDecision["Assigned Staff reviews then approves/rejects"]
-  staffDecision --> apply["Only approval atomically applies the change"] --> execute
-  execute --> extension["PI submits extension"]
-  extension --> prepare["Assigned Staff validates/prepares"]
-  prepare --> headDecision["Head appraises and approves/rejects"]
-  headDecision --> extend["Only Head approval atomically extends deadline"] --> execute
+  report --> review["Assigned CV reviews (no tờ trình)"]
+  review --> accepted["CV accepts/records"] --> execute
+  review --> supplement["CV requests supplement: new PI revision"] --> report
+  execute --> request["PI submits adjustment or extension"]
+  request --> appraise["Assigned CV appraises and drafts tờ trình"]
+  appraise --> tb["TB reviews tờ trình"]
+  tb --> tp["TP approves, forwards to BGĐ"]
+  tb -. "Return to author with reason" .-> appraise
+  tp -. "Return to author with reason" .-> appraise
+  tp --> sign["GĐ or PGĐ-KH signs"]
+  sign --> apply["Only the signature atomically applies the change or extends the deadline"] --> execute
   execute -. "Deadline missed" .-> overdue["Derived overdue flag: no workflow transition"]
 ```
 
-Leadership may monitor permitted project information but has no adjustment/extension
-decision. Head is not a normal-adjustment approver; Staff is not an extension approver.
-No direct controlled-field edits after activation. End-date increases require extension,
-never an adjustment workaround. All arrows require current backend capability, scope,
-account, relationship, assignment, conflict and version checks. Acceptance is next flow.
+CV, TB and TP never approve an adjustment/extension themselves; they appraise and
+route. GĐ or PGĐ-KH signs adjustments (without funding change) and extensions; PP and
+PGĐ-TD only monitor. No direct controlled-field edits after activation. End-date
+increases require extension, never an adjustment workaround. All arrows require
+current backend capability, scope, account, relationship, assignment, conflict and
+version checks. Acceptance is next flow.
 
 ## 5. Luồng ngoại lệ và kiểm soát nghiệp vụ
 
@@ -229,7 +250,7 @@ khác bị từ chối fail closed.
 
 ```mermaid
 flowchart LR
-  subgraph profile_staff["Quản lý / Thư ký có scope"]
+  subgraph profile_staff["TP / CV trong scope đơn vị (QT ở phạm vi nền tảng)"]
     create_profile["Tạo / cập nhật hồ sơ nhà khoa học"]
     verify["Xác minh cảnh báo trùng"]
     link["Liên kết một account active"]
@@ -252,9 +273,9 @@ flowchart LR
   locked -- "Có" --> revoke["Mất quyền ngay; giữ profile,<br/>quan hệ và lịch sử"]
 ```
 
-Với proposal reviewer/committee assignment, eligibility dựa vào account active
-và conflict trên proposal; trạng thái hoặc sự tồn tại của profile không cấp/chặn
-quyền thay cho account. `TOPIC_SECRETARY` là quan hệ theo proposal/topic; nó chỉ
+Với proposal reviewer/committee/IRB assignment, eligibility dựa vào account active
+có lý lịch khoa học (mọi role trừ QT) và conflict trên proposal; trạng thái hoặc sự
+tồn tại của profile không cấp/chặn quyền thay cho account. `TOPIC_SECRETARY` là quan hệ theo proposal/topic; nó chỉ
 có thao tác được cấp và không có quyền phê duyệt cuối.
 
 Trang hồ sơ nhà khoa học chỉ hiển thị dữ liệu và action của profile. Ba section
@@ -275,10 +296,10 @@ flowchart TD
   action_ok --> version["Tệp thay thế tạo version mới;<br/>không ghi đè chứng cứ"]
   action_ok --> notify["Thông báo trạng thái / giao việc /<br/>bổ sung / hạn / quyết định"]
   action_ok --> immutable_audit["Audit actor, thời điểm, đối tượng,<br/>action, lý do khi cần"]
-  notify -. "Thông báo không cấp quyền<br/>và không chứa dữ liệu nhạy cảm" .-> end([Kết thúc])
-  version --> end
-  immutable_audit --> end
-  blocked --> end
+  notify -. "Thông báo không cấp quyền<br/>và không chứa dữ liệu nhạy cảm" .-> finish([Kết thúc])
+  version --> finish
+  immutable_audit --> finish
+  blocked --> finish
 ```
 
 ## 6. Trạng thái cốt lõi
@@ -294,8 +315,8 @@ stateDiagram-v2
   SupplementRequested --> Resubmitted: PI nộp lại
   Resubmitted --> UnderReview: kiểm tra lại
   UnderReview --> ReadyForApproval: tổng hợp đủ
-  ReadyForApproval --> Approved: lãnh đạo phê duyệt
-  ReadyForApproval --> Rejected: lãnh đạo không phê duyệt
+  ReadyForApproval --> Approved: GĐ phê duyệt
+  ReadyForApproval --> Rejected: GĐ không phê duyệt
   Approved --> Archived: đóng/lưu trữ
   Rejected --> Archived: đóng/lưu trữ
 ```
@@ -327,24 +348,27 @@ trạng thái. Không dùng cập nhật trạng thái trực tiếp để bypas
 - Có cùng đơn vị, có chức danh hiển thị hoặc có quan hệ ở bản ghi khác không
   tự cấp quyền cho bản ghi hiện tại.
 - Nhà nghiên cứu không tham gia không thấy hồ sơ chỉ vì cùng đơn vị.
-- `EXTERNAL_RESEARCHER_USER` không tạo/nộp đề xuất và chỉ sửa phần đóng góp
-  được phân công trong bản nháp.
+- `EXTERNAL_RESEARCHER_USER` không tạo/nộp/sửa đề xuất, không thấy đợt tiếp nhận;
+  chỉ tham gia qua reviewer, hội đồng/IRB, thư ký hội đồng hoặc thành viên đề tài.
+- `RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP) và `RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD)
+  chỉ theo dõi; không duyệt, ký hoặc chuyển tờ trình.
 - Mọi bản ghi, phiên bản, quan hệ, quyết định và audit được giữ lịch sử; không
   xóa cứng.
 
 ### Proposal reviewer / council assignment refinement
 
-Head opens an eligible, completeness-checked proposal → searches active user
-accounts → selects an eligible account and reviewer/committee-member duty →
-sets optional effective range/deadline → confirms → backend rechecks current
-eligibility and context → records assignment and audit in one transaction.
-Assignee role, host-unit scope and profile linkage do not determine eligibility;
-a linked profile is optional provenance, never created by assignment. An empty
+TP/TB (unit scope) or the assigned CV opens an eligible, completeness-checked
+proposal → searches active user accounts → selects an eligible account and
+reviewer/committee-member duty → sets optional effective range/deadline → confirms
+→ backend rechecks current eligibility and context → records assignment and audit in
+one transaction. Every role except QT is eligible when it has no PI/team conflict;
+host-unit scope and profile linkage do not determine eligibility; a linked profile is
+optional provenance, never created by assignment. An empty
 candidate list explains eligibility filters. A stale/denied request shows
 the server error and requires refresh before retry. Revocation requires a reason,
 retains assignment/review history, and removes access immediately. The normative
-eligibility and disclosure boundary is the Reviewer / Council Assignment section
-of `authorization-core-business-baseline.md`.
+eligibility and disclosure boundary is the User Account assignment contract in
+`permission-matrix.md`.
 
 
 ## Researcher Profile completion — 2026-09-15
@@ -353,14 +377,15 @@ of `authorization-core-business-baseline.md`.
 source of truth for this feature, including API/data fields, authorization,
 credential delivery, migration compatibility and history retention.
 
-- Scoped SYSTEM_ADMIN and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
+- SYSTEM_ADMIN (platform) and RESEARCH_MANAGEMENT_HEAD / RESEARCH_MANAGEMENT_STAFF
+  (unit scope) manage internal/external
   profiles independently of Accounts, including academic/contact information,
   position, military rank, expertise, publications and self-reported project
   history (title, role, Academy/institutional/Ministry/other level, dates, status,
   notes). Profile activation and account activation remain separate actions.
 - Account provisioning creates linked `PENDING_ACTIVATION` researcher accounts:
   INTERNAL profiles provision by default with required email; EXTERNAL profiles
-  provision only when staff/admin checks `Tạo tài khoản truy cập hệ thống`.
+  provision only when the profile manager (QT/TP/CV) checks `Tạo tài khoản truy cập hệ thống`.
 - Activation uses hashed single-use tokens, expires exactly after 48 hours and
   sends only a setup-password link. No temporary password is generated, emailed,
   persisted, returned to staff or placed in audit.
@@ -375,7 +400,7 @@ credential delivery, migration compatibility and history retention.
 
 ### Profile onboarding and self completion
 
-`Scoped staff/admin saves profile → account provisioning decision → creates and
+`QT or scoped TP/CV saves profile → account provisioning decision → creates and
 links PENDING_ACTIVATION Account when required/requested → system sends activation
 link → researcher sets password → account becomes ACTIVE → researcher logs in with
 email or username → My Profile completion`.
@@ -390,10 +415,15 @@ retain history, remove My Profile access immediately.
 
 ### Leadership and research oversight
 
-Both open scoped institutional records and operational counts/status/deadlines.
-`LEADERSHIP_APPROVAL_AUTHORITY` receives final decision actions only for eligible routed
-packages without participation/review conflicts. `RESEARCH_OVERSIGHT_AUTHORITY` receives
-no final decision action; PI/member/reviewer work is evaluated
-independently. Head assigns Staff and reviewers, reads submitted reviews, drafts/finalizes synthesis and submits the completed package.
+BGĐ roles open scoped institutional records and operational counts/status/deadlines.
+`LEADERSHIP_APPROVAL_AUTHORITY` (GĐ) alone approves topic + funding and liquidation,
+only for packages routed through TB and TP without participation/review conflicts.
+`SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH) signs council/IRB/acceptance establishment, IRB
+certificates, extensions and adjustments (no funding change). `RESEARCH_OVERSIGHT_AUTHORITY`
+(PGĐ-TD) only monitors, sees aggregate funding only and signs nothing;
+`RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP) likewise only monitors within unit scope.
+PI/member/reviewer work of any of these roles is evaluated independently. TP/TB assign
+CVs; TP/TB or the assigned CV assign reviewers, read submitted reviews, draft/finalize
+synthesis and draft the tờ trình; TB reviews and TP approves it before BGĐ.
 Protected reviewer information is omitted from oversight responses. Project/dashboard/
 notification/report routes without operational backends remain design requirements.

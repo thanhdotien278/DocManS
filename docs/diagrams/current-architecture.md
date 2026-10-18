@@ -3,6 +3,11 @@
 These diagrams describe the current DocManS architecture. Optional components
 are marked explicitly; no future infrastructure is shown as deployed.
 
+> Role labels below are the seven codes the `DocManS` branch code still runs. The
+> authoritative 10-role model and the tờ trình routing (CV → TB → TP → BGĐ) are in
+> [`permission-matrix.md`](../permission-matrix.md) §2 and §7; these labels change when
+> `tuan/DocManS` is merged.
+
 ## 1. System Context / Container Architecture
 
 ```mermaid
