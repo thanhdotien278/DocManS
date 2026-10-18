@@ -11,7 +11,7 @@ import {
   intakeAppliesToUser,
   isIntakeOpenForSubmission,
   isInternalResearcherEligible,
-  isScientificManagement,
+  isResearchManagement,
 } from "../proposals-shared/proposal-access.js";
 import type { IntakeStatus } from "../proposals-shared/proposal-types.js";
 import {
@@ -125,9 +125,9 @@ export class ProposalIntakePeriodsService {
   }
 
   async options(actor: SafeUserContext) {
-    if (!isScientificManagement(actor) && !isInternalResearcherEligible(actor)) throw new ForbiddenException();
+    if (!isResearchManagement(actor) && !isInternalResearcherEligible(actor)) throw new ForbiddenException();
     const ids = actor.organizationScopes.map((s) => s.id);
-    return { canCreate: isScientificManagement(actor), organizationUnits: await this.prisma.organizationUnit.findMany({ where: { id: { in: ids }, status: "active" }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }) };
+    return { canCreate: isResearchManagement(actor), organizationUnits: await this.prisma.organizationUnit.findMany({ where: { id: { in: ids }, status: "active" }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }) };
   }
 
   private async readUnits(actor: SafeUserContext, value: unknown) {
@@ -138,7 +138,7 @@ export class ProposalIntakePeriodsService {
   }
 
   async listPeriods(actor: SafeUserContext, filters: Record<string, unknown> = {}) {
-    if (!isScientificManagement(actor) && !isInternalResearcherEligible(actor)) {
+    if (!isResearchManagement(actor) && !isInternalResearcherEligible(actor)) {
       throw new ForbiddenException({ message: "Không có quyền xem đợt tiếp nhận." });
     }
 
@@ -147,7 +147,7 @@ export class ProposalIntakePeriodsService {
     })) as IntakePeriodRecord[];
     const statusFilter = typeof filters.status === "string" ? filters.status : "";
 
-    if (isScientificManagement(actor)) {
+    if (isResearchManagement(actor)) {
       return records
         .filter((record) => intakeAppliesToUser(record, actor))
         .filter((record) => !statusFilter || this.effectiveStatus(record) === statusFilter || record.status === statusFilter)
@@ -357,7 +357,7 @@ export class ProposalIntakePeriodsService {
   private toResponse(period: IntakePeriodRecord, actor: SafeUserContext) {
     return {
       contextVersion: period.updatedAt.toISOString(),
-      capabilities: { canEdit: isScientificManagement(actor) && period.status !== "closed", canOpen: isScientificManagement(actor) && period.status === "draft" && period.endsAt > new Date(), canClose: isScientificManagement(actor) && period.status === "open", canCreateProposal: isInternalResearcherEligible(actor) && isIntakeOpenForSubmission(period) && intakeAppliesToUser(period, actor) },
+      capabilities: { canEdit: isResearchManagement(actor) && period.status !== "closed", canOpen: isResearchManagement(actor) && period.status === "draft" && period.endsAt > new Date(), canClose: isResearchManagement(actor) && period.status === "open", canCreateProposal: isInternalResearcherEligible(actor) && isIntakeOpenForSubmission(period) && intakeAppliesToUser(period, actor) },
       applicableOrganizationUnitIds: period.applicableOrganizationUnitIds?.length ? period.applicableOrganizationUnitIds : period.applicableOrganizationUnitId ? [period.applicableOrganizationUnitId] : [],
       id: period.id,
       code: period.code,

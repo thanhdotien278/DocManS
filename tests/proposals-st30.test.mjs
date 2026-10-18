@@ -18,7 +18,7 @@ const staffUser = {
   username: "staff",
   displayName: "Chuyên viên KHQS",
   role: "scientific-management",
-  systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
+  systemRole: "RESEARCH_MANAGEMENT_STAFF",
   roleLabel: "Chuyên viên quản lý khoa học",
   unit: "Phòng KHQS",
   roles: ["scientific-management"],

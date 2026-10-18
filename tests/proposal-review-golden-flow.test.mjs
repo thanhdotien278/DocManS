@@ -87,7 +87,7 @@ test("leadership decision queue is server-filtered by authority scope and workfl
     {}
   );
   service.projectProposalList = async (_actor, records) => records;
-  await assert.rejects(() => service.listDecisionQueue({ systemRole: "SCIENTIFIC_MANAGEMENT_STAFF", organizationScopes: [{ id: "unit-1" }] }), /lãnh đạo/i);
+  await assert.rejects(() => service.listDecisionQueue({ systemRole: "RESEARCH_MANAGEMENT_STAFF", organizationScopes: [{ id: "unit-1" }] }), /lãnh đạo/i);
   await service.listDecisionQueue({ systemRole: "LEADERSHIP_APPROVAL_AUTHORITY", organizationScopes: [{ id: "unit-1" }] });
   assert.deepEqual(where.hostOrganizationUnitId, { in: ["unit-1"] });
   assert.deepEqual(where.status.in, ["ready_for_approval", "approved", "rejected"]);

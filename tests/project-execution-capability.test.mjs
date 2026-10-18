@@ -18,10 +18,10 @@ test("PI can report and request changes but cannot decide them", () => {
 });
 
 test("current assigned Staff decides adjustment, Head decides extension, Leadership decides neither", () => {
-  const staff = projectViewerAuthorizationV1({ actor: actor("staff", "SCIENTIFIC_MANAGEMENT_STAFF"), project, projectOfficer: officer, request: { requestType: "adjustment", status: "under_staff_review", requesterId: "pi" } });
+  const staff = projectViewerAuthorizationV1({ actor: actor("staff", "RESEARCH_MANAGEMENT_STAFF"), project, projectOfficer: officer, request: { requestType: "adjustment", status: "under_staff_review", requesterId: "pi" } });
   assert(has(staff, "project.adjustment.approve"));
   assert(!has(staff, "project.extension.approve"));
-  const head = projectViewerAuthorizationV1({ actor: actor("head", "SCIENTIFIC_MANAGEMENT_HEAD"), project, request: { requestType: "extension", status: "ready_for_head_decision", requesterId: "pi" } });
+  const head = projectViewerAuthorizationV1({ actor: actor("head", "RESEARCH_MANAGEMENT_HEAD"), project, request: { requestType: "extension", status: "ready_for_head_decision", requesterId: "pi" } });
   assert(has(head, "project.extension.approve"));
   assert(!has(head, "project.adjustment.approve"));
   const leader = projectViewerAuthorizationV1({ actor: actor("leader", "LEADERSHIP_APPROVAL_AUTHORITY"), project });
@@ -31,12 +31,12 @@ test("current assigned Staff decides adjustment, Head decides extension, Leaders
 });
 
 test("unassigned, expired, out-of-scope and participant-management conflicts deny decisions", () => {
-  const staff = actor("staff", "SCIENTIFIC_MANAGEMENT_STAFF");
+  const staff = actor("staff", "RESEARCH_MANAGEMENT_STAFF");
   const withoutAssignment = projectViewerAuthorizationV1({ actor: staff, project });
   assert(!has(withoutAssignment, "project.read"));
   const expired = projectViewerAuthorizationV1({ actor: staff, project, projectOfficer: { ...officer, effectiveUntil: new Date(now.getTime() - 1) } });
   assert(!has(expired, "project.adjustment.approve"));
-  const outOfScope = projectViewerAuthorizationV1({ actor: actor("staff", "SCIENTIFIC_MANAGEMENT_STAFF", false), project, projectOfficer: officer });
+  const outOfScope = projectViewerAuthorizationV1({ actor: actor("staff", "RESEARCH_MANAGEMENT_STAFF", false), project, projectOfficer: officer });
   assert(!has(outOfScope, "project.adjustment.approve"));
   const conflicted = projectViewerAuthorizationV1({ actor: staff, project, projectOfficer: officer, participant: { isParticipant: true, role: "TOPIC_MEMBER" } });
   assert(!has(conflicted, "project.adjustment.approve"));
@@ -65,8 +65,8 @@ test("only the requesting PI withdraws an open request while executing or paused
   for (const status of ["approved", "rejected", "withdrawn"]) assert(!has(projectViewerAuthorizationV1({ actor: pi, project, request: { ...open, status } }), "project.extension.withdraw"), status);
   assert(!has(projectViewerAuthorizationV1({ actor: pi, project, request: { ...open, requesterId: "other-pi" } }), "project.extension.withdraw"));
   for (const view of [
-    projectViewerAuthorizationV1({ actor: actor("staff", "SCIENTIFIC_MANAGEMENT_STAFF"), project, projectOfficer: officer, request: open }),
-    projectViewerAuthorizationV1({ actor: actor("head", "SCIENTIFIC_MANAGEMENT_HEAD"), project, request: open }),
+    projectViewerAuthorizationV1({ actor: actor("staff", "RESEARCH_MANAGEMENT_STAFF"), project, projectOfficer: officer, request: open }),
+    projectViewerAuthorizationV1({ actor: actor("head", "RESEARCH_MANAGEMENT_HEAD"), project, request: open }),
     projectViewerAuthorizationV1({ actor: actor("leader", "LEADERSHIP_APPROVAL_AUTHORITY"), project, request: open }),
     projectViewerAuthorizationV1({ actor: actor("member", "RESEARCHER_INTERNAL_USER"), project, participant: { isParticipant: true, role: "TOPIC_MEMBER" }, request: open })
   ]) {

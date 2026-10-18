@@ -51,8 +51,8 @@ export type ProjectCapabilityInput = {
   report?: { status: string; authorId: string };
 };
 
-function isHead(actor: SafeUserContext) { return actor.systemRole === "SCIENTIFIC_MANAGEMENT_HEAD"; }
-function isStaff(actor: SafeUserContext) { return actor.systemRole === "SCIENTIFIC_MANAGEMENT_STAFF"; }
+function isHead(actor: SafeUserContext) { return actor.systemRole === "RESEARCH_MANAGEMENT_HEAD"; }
+function isStaff(actor: SafeUserContext) { return actor.systemRole === "RESEARCH_MANAGEMENT_STAFF"; }
 function isLeadership(actor: SafeUserContext) { return actor.systemRole === "LEADERSHIP_APPROVAL_AUTHORITY"; }
 function isOversight(actor: SafeUserContext) { return actor.systemRole === "RESEARCH_OVERSIGHT_AUTHORITY"; }
 function inScope(actor: SafeUserContext, project: ProjectCapabilityInput["project"]) { return actor.organizationScopes.some((scope) => scope.id === project.hostOrganizationUnitId); }
@@ -106,7 +106,7 @@ export function projectViewerAuthorizationV1(input: ProjectCapabilityInput): Vie
       delegationVersion: input.project.delegationVersion ?? 0,
       policyVersion: "v1"
     },
-    accessReasons: [isPi ? "TOPIC_PI" : "", participant ? (input.participant?.role ?? "TOPIC_MEMBER") : "", hasOfficer ? "PROJECT_MANAGEMENT_OFFICER" : "", isHead(input.actor) ? "SCIENTIFIC_MANAGEMENT_HEAD_OVERSIGHT" : "", isLeadership(input.actor) ? "LEADERSHIP_APPROVAL_AUTHORITY_OVERSIGHT" : "", isOversight(input.actor) ? "RESEARCH_OVERSIGHT_AUTHORITY_OVERSIGHT" : ""].filter(Boolean)
+    accessReasons: [isPi ? "TOPIC_PI" : "", participant ? (input.participant?.role ?? "TOPIC_MEMBER") : "", hasOfficer ? "PROJECT_MANAGEMENT_OFFICER" : "", isHead(input.actor) ? "RESEARCH_MANAGEMENT_HEAD_OVERSIGHT" : "", isLeadership(input.actor) ? "LEADERSHIP_APPROVAL_AUTHORITY_OVERSIGHT" : "", isOversight(input.actor) ? "RESEARCH_OVERSIGHT_AUTHORITY_OVERSIGHT" : ""].filter(Boolean)
   };
 }
 
