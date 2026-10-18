@@ -2,19 +2,22 @@
 
 ```mermaid
 flowchart TD
-  admin(["SYSTEM_ADMIN: tạo hoặc khóa account"])
-  role(["SYSTEM_ADMIN: gán system role và scope"])
+  admin(["QT — SYSTEM_ADMIN: tạo hoặc khóa account"])
+  role(["QT — SYSTEM_ADMIN: gán đúng một system role và scope"])
   account["System: mỗi account có một system role active"]
-  head(["SCIENTIFIC_MANAGEMENT_HEAD: xem trong scope; officer / chưa phân công / workload"])
-  leader(["LEADERSHIP_APPROVAL_AUTHORITY: giám sát trong scope và quyết định đủ điều kiện"])
-  oversight(["RESEARCH_OVERSIGHT_AUTHORITY: nghiên cứu nội bộ và giám sát chỉ đọc; không quyết định cuối"])
-  staff(["SCIENTIFIC_MANAGEMENT_STAFF: management cần officer assignment hiện hành"])
-  internal(["RESEARCHER_INTERNAL_USER: PI/participation actions theo quan hệ"])
-  external(["EXTERNAL_RESEARCHER_USER: chỉ assignment/relationship được cấp"])
+  director(["GĐ — LEADERSHIP_APPROVAL_AUTHORITY: duy nhất phê duyệt đề tài + kinh phí và thanh lý; ký mọi tờ trình BGĐ"])
+  science(["PGĐ-KH — SCIENCE_DEPUTY_DIRECTOR: ký thành lập hội đồng, IRB, nghiệm thu, gia hạn, điều chỉnh"])
+  oversight(["PGĐ-TD — RESEARCH_OVERSIGHT_AUTHORITY: chỉ theo dõi; kinh phí tổng hợp; không ký"])
+  head(["TP — RESEARCH_MANAGEMENT_HEAD: duyệt tờ trình trình BGĐ; giao CV, phân mảng; không kiểm tra đầy đủ"])
+  deputy(["PP — RESEARCH_MANAGEMENT_DEPUTY_HEAD: chỉ theo dõi trong scope; không bước tờ trình"])
+  board(["TB — RESEARCH_BOARD_HEAD: rà soát tờ trình; giao CV; kiểm tra đầy đủ trong scope"])
+  staff(["CV — RESEARCH_MANAGEMENT_STAFF: chỉ hồ sơ đang được giao phụ trách"])
+  internal(["NCV — RESEARCHER_INTERNAL_USER: PI/participation actions theo quan hệ"])
+  external(["NNB — EXTERNAL_RESEARCHER_USER: không tạo đề xuất; chỉ assignment/relationship được cấp"])
   record["System: relationship hoặc assignment chỉ có hiệu lực trên record tương ứng"]
   delegation_rules["System: delegation chỉ tồn tại khi owning contract cho phép"]
   action(["User: request view, create, edit, download, approve, or delete action"])
-  context["System: resolve system role, scope, relationship, assignment, state, delegation và conflict"]
+  context["System: resolve system role, scope, relationship, assignment, state, tờ trình step, delegation và conflict"]
   allowed{"Tất cả điều kiện đạt?"}
   permit["Cho phép action trong phạm vi"]
   deny["Từ chối; fail closed khi context thiếu, cũ hoặc mơ hồ"]
@@ -22,19 +25,25 @@ flowchart TD
   audit["Audit action nếu thuộc hành động cần ghi nhận"]
 
   admin --> role --> account
-  role -. "Scope giám sát được cấp" .-> head
+  role -. "Scope BGĐ" .-> director
+  role -. "Scope BGĐ" .-> science
+  role -. "Scope theo dõi" .-> oversight
+  role -. "Scope đơn vị" .-> head
+  role -. "Scope đơn vị" .-> deputy
+  role -. "Scope đơn vị" .-> board
   role -. "Scope + officer assignment" .-> staff
-  role -. "Scope lãnh đạo được cấp" .-> leader
-  role -. "Scope giám sát được cấp" .-> oversight
   role -. "Own/relationship context" .-> internal
   role -. "Relationship/assignment context" .-> external
-  leader --> context
-  oversight --> context
-  oversight -. "PI / thành viên độc lập" .-> record
-  internal -. "PI / thành viên độc lập" .-> record
-  external -. "Assignment/relationship" .-> record
+  director --> context
+  science --> context
+  oversight -. "Chỉ đọc, không ký" .-> context
+  deputy -. "Chỉ đọc, không duyệt" .-> context
+  head --> context
+  board --> context
   staff --> record
-  head -. "Visibility, không phải final decision" .-> context
+  internal -. "PI / thành viên" .-> record
+  external -. "Reviewer / hội đồng / IRB / thành viên" .-> record
+  account -. "Mọi role trừ QT/NNB có thể là PI; mọi role trừ QT có thể được mời phản biện" .-> record
   delegation_rules --> context
   action --> context --> allowed
   record -. "Context của record" .-> context
@@ -44,5 +53,7 @@ flowchart TD
 ```
 
 `SYSTEM_ADMIN` không mặc nhiên được xem hoặc sửa dữ liệu nghiệp vụ, phản biện,
-phê duyệt, hoặc mở lại hồ sơ. Có role, scope, relationship, assignment và
-state không làm mất conflict policy.
+phê duyệt, hoặc mở lại hồ sơ; không có lý lịch khoa học và không được mời phản
+biện. PI, thành viên hoặc reviewer của một record không dùng quyền quản lý trên
+chính record đó; PI và reviewer không xem nhật ký hành động của record. Có role,
+scope, relationship, assignment và state không làm mất conflict policy.

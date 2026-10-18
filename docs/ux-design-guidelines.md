@@ -301,7 +301,7 @@ Trong màn hình chi tiết hồ sơ:
   email, trạng thái `Chờ kích hoạt`, hạn kích hoạt và nút `Gửi lại email kích hoạt`.
   Tài khoản active hiển thị email, username nếu đã cấu hình, role, trạng thái và
   hành động quản trị phù hợp. `Liên kết tài khoản đã có` là hành động phụ/nâng cao.
-- Form chỉnh sửa và section `Nộp chính thức` chỉ hiển thị cho PI hiện tại. Chuyên viên quản lý khoa học xem một bảng chỉ đọc riêng gồm thông tin đề tài, team, ngày bắt đầu/kết thúc và kinh phí dự kiến.
+- Form chỉnh sửa và section `Nộp chính thức` chỉ hiển thị cho PI hiện tại. Các vai trò quản lý (TP, PP, TB, CV, Ban giám đốc) xem một bảng chỉ đọc riêng gồm thông tin đề tài, team, ngày bắt đầu/kết thúc và kinh phí dự kiến.
 - Sau khi phiên bản nộp hiện tại đã được xác nhận đầy đủ, nút xác nhận vẫn hiện trong đúng workflow context nhưng bị disabled với lý do; không cho thao tác lặp.
 - Hạn phản hồi bổ sung, hiệu lực phân công và hạn đánh giá dùng native date input, hiển thị ngày/tháng/năm và không yêu cầu giờ phút.
 
@@ -309,7 +309,9 @@ Chống xung đột lợi ích:
 
 - Trên proposal mà người dùng có context workflow nhưng bị conflict hoặc state chặn, action liên quan phải hiển thị disabled kèm lý do bằng ngôn ngữ dễ hiểu.
 - Nếu backend không cấp action vì người dùng không liên quan, UI bỏ toàn bộ section; không dựng thẻ workflow toàn cục trên trang hồ sơ nhà khoa học.
-- `Phiếu đánh giá của tôi` chỉ hiện với assignment đang hiệu lực trên đúng proposal/vòng đánh giá; `Phân công đánh giá` và `Trình phê duyệt` chỉ hiện với capability của `SCIENTIFIC_MANAGEMENT_HEAD`; `SCIENTIFIC_MANAGEMENT_STAFF` kiểm tra đầy đủ và theo dõi, còn `Phê duyệt`/`Từ chối` chỉ dành cho `LEADERSHIP_APPROVAL_AUTHORITY`.
+- Section review/phê duyệt chỉ dựng từ capability/assignment của chính proposal: `ACTION_NOT_GRANTED` thì bỏ section; bị conflict/state chặn thì hiển thị disabled kèm lý do từ backend.
+- `Phiếu đánh giá của tôi` chỉ hiện với assignment đã nhận trên đúng proposal/vòng đánh giá (mọi vai trò trừ QT, khi được mời). Kiểm tra đầy đủ/yêu cầu bổ sung chỉ cho TB (`RESEARCH_BOARD_HEAD`, trong đơn vị) hoặc CV (`RESEARCH_MANAGEMENT_STAFF`) đang phụ trách hồ sơ, không bao giờ cho TP. `Phân công đánh giá`, tổng hợp kết quả, lập hội đồng IRB và lập tờ trình cho TP (`RESEARCH_MANAGEMENT_HEAD`)/TB trong đơn vị hoặc CV phụ trách, có kiểm tra xung đột. `Trình phê duyệt` là chuỗi tờ trình: CV lập → TB rà soát → TP duyệt → Ban giám đốc ký; trả lại ở bước nào cũng về người lập kèm lý do. `Phê duyệt`/`Từ chối` đề tài và kinh phí (và thanh lý) chỉ dành cho GĐ (`LEADERSHIP_APPROVAL_AUTHORITY`); GĐ hoặc PGĐ-KH (`SCIENCE_DEPUTY_DIRECTOR`) ký thành lập hội đồng, IRB, nghiệm thu, gia hạn, điều chỉnh. PP và PGĐ-TD chỉ theo dõi, không có nút duyệt/ký/trình.
+- PI và người đánh giá không thấy nhật ký thao tác của hồ sơ (ẩn danh hai chiều).
 - Danh sách việc chờ xử lý phải loại sẵn các hồ sơ mà người dùng bị loại trừ, và nói rõ đã loại trừ.
 
 Cần tránh:
@@ -350,11 +352,16 @@ Khi thiết kế thêm màn hình hoặc tính năng mới:
 
 ## Scientific Management and Leadership capability presentation
 
-`SCIENTIFIC_MANAGEMENT_HEAD`: officer assignment/reassignment/revocation, unassigned and staff workload filters, staff
-summary and eligible package submission. `SCIENTIFIC_MANAGEMENT_STAFF`: assigned-record management plus independent
-participation views. `LEADERSHIP_APPROVAL_AUTHORITY`: institutional oversight and eligible final decisions.
-`RESEARCH_OVERSIGHT_AUTHORITY`: internal researcher work plus read-only institutional oversight. Render backend actions and
-access reasons; never derive a decision button from general oversight or record visibility.
+Roles follow [`permission-matrix.md`](./permission-matrix.md) §7.
+`RESEARCH_MANAGEMENT_HEAD` (TP): responsible-CV assignment/reassignment/revocation, unassigned and CV workload
+filters, CV summary, tờ trình approval queue. `RESEARCH_BOARD_HEAD` (TB): responsible-CV assignment, tờ trình review
+queue (forward to TP or return to author). `RESEARCH_MANAGEMENT_STAFF` (CV): assigned-record management plus
+independent participation views. `RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP): unit-scope monitoring only.
+`LEADERSHIP_APPROVAL_AUTHORITY` (GĐ): topic/funding and liquidation decision queue plus signature queue.
+`SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH): signature queue only. `RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD): monitoring and
+aggregate figures only, no per-record funding, signs nothing. Dashboards break down by nature (Quân sự / Dân sự /
+Chưa phân loại) and responsible CV with an “unassigned” group. Render backend actions and access reasons; never derive
+a decision or signature button from general oversight or record visibility.
 Confidential reviewer fields are omitted unless exact disclosure policy allows them. Dashboard
 showcases must be labelled demo; unavailable project/funding sources must not display invented
 operational totals. Funding remains research metadata, never accounting.
@@ -362,15 +369,15 @@ operational totals. Funding remains research metadata, never accounting.
 ## Golden Flow 4 — execution workspaces
 
 Use the [Project Execution contract](contracts/project-execution.md) for PI,
-assigned Staff, Head and Leadership monitoring screens/actions. Preserve the existing design
+assigned CV, TP/TB and BGĐ monitoring screens/actions (§7 of the permission matrix wins on conflict). Preserve the existing design
 system. My Projects and project detail expose approved source, members, milestones,
 reporting deadlines, immutable reports/evidence, requests and permitted history.
-Staff monitoring provides upcoming/overdue filters and administrative review;
-Staff reviews/decides adjustments and validates/prepares extensions; Head decides
-prepared extensions. Leadership sees only authorized monitoring information.
+CV monitoring provides upcoming/overdue filters and administrative review;
+CV appraises adjustments/extensions and drafts the tờ trình; TB reviews, TP approves,
+and GĐ or PGĐ-KH signs. PGĐ-TD and PP see only authorized monitoring information.
 
 Render actions from backend capabilities and explain blocked actions. Show loading,
 empty, error and stale-context states; confirm submission/escalation/decisions in
 accessible dialogs. Separate project-state badges from overdue/report/request flags.
 Never offer generic status edits or direct changes to approved controlled fields.
-No Leadership execution approval control or Head adjustment approval control exists.
+No TP/TB/CV approval control for adjustments or extensions exists; only the BGĐ signature applies the change.

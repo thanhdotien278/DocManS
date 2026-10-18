@@ -8,11 +8,9 @@
 > và tài liệu thiết kế `docs/design/phan-cap-va-trinh-duyet.md` (hiện nằm trên nhánh
 > `tuan/DocManS`, chưa merge vào `DocManS`). Khi mâu thuẫn, mục 7 của tài liệu này thắng.
 >
-> Các tài liệu sau vẫn mô tả mô hình 7 vai trò cũ và **chờ đồng bộ**, không dùng làm
-> nguồn quyết định cho phần mâu thuẫn:
-> [`authorization-core-business-baseline.md`](./authorization-core-business-baseline.md),
-> [`contracts/project-execution.md`](contracts/project-execution.md),
-> [`contracts/researcher-profile-access.md`](contracts/researcher-profile-access.md).
+> Các tài liệu liên quan trong `docs/` đã được đồng bộ sang mô hình 10 vai trò ngày
+> 18/10/2026. Riêng code và seed trên nhánh `DocManS` vẫn chạy 7 vai trò cũ cho đến khi
+> merge `tuan/DocManS` (xem [`development/auth-seed-users.md`](development/auth-seed-users.md)).
 
 ## 1. Mục đích
 
@@ -436,7 +434,7 @@ Các bảng phân hệ dùng cùng nhóm cột như §8. Khi một dòng ở đ�
 
 Các ô phân công và quyết định kế thừa ma trận tương thích/số lượng và mã lý do trong
 `docs/authorization-core-business-baseline.md#evaluation-position-compatibility-and-multiplicity`
-(chờ đồng bộ 10 vai trò). Ghi đơn lẻ, hàng loạt, import, gọi API trực tiếp và ghi từ quản
+Ghi đơn lẻ, hàng loạt, import, gọi API trực tiếp và ghi từ quản
 trị đều phải đánh giá lại policy đó bên trong mutation sở hữu dữ liệu.
 
 `submitted` và `resubmitted` phải có bằng chứng kiểm tra đầy đủ hiện hành trước khi phân
@@ -627,7 +625,7 @@ triển khai trên `tuan/DocManS`.
 ## Hợp đồng phân công từ tài khoản người dùng
 
 Phân công phản biện, hội đồng và IRB (`proposal.review.assign`, kể cả thu hồi) tuân theo các
-quy tắc sau; mục hợp đồng trong baseline đang chờ đồng bộ 10 vai trò.
+quy tắc sau.
 
 | Thao tác | Kiểm tra bắt buộc | Bằng chứng / công bố |
 | --- | --- | --- |
@@ -644,7 +642,7 @@ Thành viên hội đồng đã nhận lời chỉ đọc được hồ sơ sau 
 
 [Hợp đồng Researcher Profile / Account / My Profile](contracts/researcher-profile-access.md)
 vẫn là nguồn cho trường API/dữ liệu, gửi thông tin đăng nhập, tương thích migration và lưu
-lịch sử; danh sách vai trò trong đó đang chờ đồng bộ 10 vai trò.
+lịch sử.
 
 - QT (nền tảng) và TP¹/CV¹ (phạm vi đơn vị) quản lý hồ sơ nội bộ/bên ngoài độc lập với tài
   khoản. Kích hoạt hồ sơ và kích hoạt tài khoản vẫn là hai thao tác riêng.

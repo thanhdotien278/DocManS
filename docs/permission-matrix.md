@@ -8,11 +8,9 @@
 > và tài liệu thiết kế `docs/design/phan-cap-va-trinh-duyet.md` (hiện nằm trên nhánh
 > `tuan/DocManS`, chưa merge vào `DocManS`). Khi mâu thuẫn, mục 7 của file này thắng.
 >
-> Các tài liệu sau vẫn mô tả mô hình 7 vai trò cũ và **chờ đồng bộ**, không dùng làm
-> nguồn quyết định cho phần mâu thuẫn:
-> [`authorization-core-business-baseline.md`](./authorization-core-business-baseline.md),
-> [`contracts/project-execution.md`](contracts/project-execution.md),
-> [`contracts/researcher-profile-access.md`](contracts/researcher-profile-access.md).
+> Các tài liệu liên quan trong `docs/` đã được đồng bộ sang mô hình 10 vai trò ngày
+> 18/10/2026. Riêng code và seed trên nhánh `DocManS` vẫn chạy 7 vai trò cũ cho đến khi
+> merge `tuan/DocManS` (xem [`development/auth-seed-users.md`](development/auth-seed-users.md)).
 
 ## 1. Purpose
 
@@ -441,7 +439,7 @@ Module tables use the same column groups as §8. Where a module row and §7 disa
 
 Assignment and decision cells inherit the compatibility/multiplicity matrix and
 reason codes in `docs/authorization-core-business-baseline.md#evaluation-position-compatibility-and-multiplicity`
-(pending its 10-role sync). Single, bulk, import, direct-API and administrative writes
+Single, bulk, import, direct-API and administrative writes
 must re-evaluate that policy inside the owning mutation.
 
 `submitted` and `resubmitted` require current completeness evidence before the first
@@ -634,7 +632,7 @@ reconciled with the tờ trình routing implemented on `tuan/DocManS`.
 ## User Account assignment contract
 
 Reviewer, council and IRB assignment (`proposal.review.assign`, including revocation)
-follows these rules; the baseline contract section is pending its 10-role sync.
+follows these rules.
 
 | Operation | Required checks | Evidence / disclosure |
 | --- | --- | --- |
@@ -651,7 +649,7 @@ establishment decision.
 
 [Researcher Profile / Account / My Profile contract](contracts/researcher-profile-access.md)
 remains the source for API/data fields, credential delivery, migration compatibility
-and history retention; its role list is pending 10-role sync.
+and history retention.
 
 - QT (platform) and TP¹/CV¹ (unit scope) manage internal/external profiles
   independently of Accounts. Profile activation and account activation remain

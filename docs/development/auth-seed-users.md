@@ -4,6 +4,14 @@ These identities and credentials are **local/demo only**, not production identit
 All seeded accounts use the existing local password `1234`; the seed stores scrypt hashes.
 Run `npm run db:setup` for a new local database, or `npm run prisma:seed` after migrations.
 
+> **Role model:** the table lists the seven role codes the seed and code on the `DocManS`
+> branch still run. The current business model has ten roles
+> ([`permission-matrix.md`](../permission-matrix.md) §2):
+> `SCIENTIFIC_MANAGEMENT_HEAD` → `RESEARCH_MANAGEMENT_HEAD` (TP),
+> `SCIENTIFIC_MANAGEMENT_STAFF` → `RESEARCH_MANAGEMENT_STAFF` (CV), and `vndinh`
+> (PGĐ phụ trách Khoa học) becomes `SCIENCE_DEPUTY_DIRECTOR`, not
+> `RESEARCH_OVERSIGHT_AUTHORITY`. The seed changes when `tuan/DocManS` is merged.
+
 | Username | System role | Demo responsibility |
 | --- | --- | --- |
 | `admin` | `SYSTEM_ADMIN` | Platform administration; no implicit business approval |

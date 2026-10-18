@@ -36,17 +36,27 @@ administration panels, responsive list patterns, shared status badges, KPI
 cards, filters, breadcrumbs, timelines, and UI tokens. The target UX must reuse
 those patterns.
 
-The target product baseline contains seven system roles (one active per account):
+The target product baseline contains ten system roles (one active per account).
+[`permission-matrix.md`](./permission-matrix.md) §7 is authoritative; superscripts
+below are its condition notes (¹ unit scope, ³ assigned responsible CV only).
 
-| System role | UI meaning |
-| --- | --- |
-| `SYSTEM_ADMIN` | Platform foundation administration only |
-| `SCIENTIFIC_MANAGEMENT_HEAD` | All proposals/projects within authorized Scientific Management scope; responsible Staff/unassigned/workload/status/deadlines |
-| `SCIENTIFIC_MANAGEMENT_STAFF` | Management operations on explicitly assigned proposals/projects only; other access through its own legitimate relationship |
-| `LEADERSHIP_APPROVAL_AUTHORITY` | Institutional oversight; final decision controls only for eligible routed records without conflict |
-| `RESEARCH_OVERSIGHT_AUTHORITY` | Institutional research oversight plus internal researcher capabilities through record relationships; no final decisions |
-| `RESEARCHER_INTERNAL_USER` | Researcher-owned and related records |
-| `EXTERNAL_RESEARCHER_USER` | Only explicitly related approved-topic/task records and assigned review work |
+| Abbr. | System role | UI meaning |
+| --- | --- | --- |
+| QT | `SYSTEM_ADMIN` | Platform administration and researcher-profile provisioning only; no scientific CV, business dashboard or reviewer assignment |
+| GĐ | `LEADERSHIP_APPROVAL_AUTHORITY` | Only role that approves/rejects topic + funding and liquidation; also signs everything PGĐ-KH signs; sees all projects and per-project funding |
+| PGĐ-KH | `SCIENCE_DEPUTY_DIRECTOR` | Signs evaluation/acceptance/IRB council establishment, IRB certificate, extension and adjustment; no topic/funding/liquidation decision |
+| PGĐ-TD | `RESEARCH_OVERSIGHT_AUTHORITY` | Other deputy directors: monitoring only (progress, counts, aggregate funding); no per-record funding; signs nothing |
+| TP | `RESEARCH_MANAGEMENT_HEAD` | Approves every tờ trình before BGĐ; assigns segments and responsible CV¹; may do reviewer/council assignment, synthesis, IRB council and tờ trình drafting¹; never completeness/supplement |
+| PP | `RESEARCH_MANAGEMENT_DEPUTY_HEAD` | Monitoring only within unit scope; no tờ trình step or approval |
+| TB | `RESEARCH_BOARD_HEAD` | Reviews CV-authored tờ trình and forwards to TP or returns to author; assigns responsible CV¹; completeness, supplement, reviewer/council assignment, synthesis, IRB council, tờ trình drafting¹ |
+| CV | `RESEARCH_MANAGEMENT_STAFF` | Record operations only on proposals/projects where currently the responsible officer³; intake periods; researcher profiles¹; student research¹ |
+| NCV | `RESEARCHER_INTERNAL_USER` | Researcher-owned and related records |
+| NNB | `EXTERNAL_RESEARCHER_USER` | Only explicitly related approved-topic/task records and assigned review work; never PI, no intake periods |
+
+Every role except QT and NNB may also be PI of its own proposal, and every role
+except QT may be invited as reviewer, council or IRB member. In the prose below,
+“Staff” means the assigned responsible CV³, “Head” means TP¹/TB¹ as §7.1 allows for
+the named action, and “Leadership”/BGĐ means the §7.4 signer.
 
 `PROPOSAL_PI`, `TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council
 member, ethics reviewer, and task assignee are record-scoped relationships or
@@ -88,8 +98,9 @@ assignments. No extra approval step. No more than one active primary officer per
 
 Recheck conflicts on assignment/participation changes and protected actions: participant
 versus officer/reviewer/evaluation or acceptance council/final decision, reviewer versus
-same-round final decision, and mutually exclusive council positions. Head and Staff never
-receive leadership final approve/reject from their management role. Existing intake/profile
+same-round final decision, and mutually exclusive council positions. TP, TB and CV never
+receive BGĐ approve/reject/sign controls from their management role; PP and PGĐ-TD never
+approve, sign or route. PI and reviewers never see the record's action log (two-way anonymity). Existing intake/profile
 capabilities remain separately scoped and do not grant proposal/project visibility.
 
 ## 1. Product UX goals
@@ -99,8 +110,8 @@ capabilities remain separately scoped and do not grant proposal/project visibili
 | User | Must accomplish quickly |
 | --- | --- |
 | System administrator | Maintain accounts, one active system role per account, organization scope, catalogs, configuration, and operational audit views without gaining implicit business-data access. |
-| Scientific management staff | Open/close intake periods, check completeness, request supplements, monitor evaluations, create approved projects, track reports, and produce scoped reports. Reviewer assignment and synthesis are Head actions. |
-| Leadership / approval authority | See only decision-ready records, understand evidence and history quickly, approve or reject with the required reason, and monitor high-level operational risk. |
+| Phòng KHQS (TP / TB / CV) | CV: open/close intake periods; CV³: check completeness, request supplements, assign reviewers/council, synthesize results, draft tờ trình, create approved projects, track reports. TB¹: the same evaluation work plus tờ trình review queue. TP¹: tờ trình approval queue, responsible-CV assignment and coordination (never completeness/supplement). PP¹: monitoring only. |
+| Ban giám đốc (GĐ / PGĐ-KH / PGĐ-TD) | GĐ: approve or reject topic + funding and liquidation with the required reason. GĐ or PGĐ-KH: sign council/IRB/acceptance establishment, IRB certificate, extension and adjustment. PGĐ-TD: monitor progress and aggregate figures only. |
 | Principal investigator / internal researcher | Create a draft, complete required sections, upload evidence, submit, respond to supplements, track an approved project, submit reports, and request adjustments or acceptance. |
 | Topic team member | See only related proposal/topic information, responsibilities, permitted files, milestones, tasks, and contribution evidence. |
 | Reviewer / committee member | Work from assigned records only, read the permitted review package, complete a structured score form, submit once, and see submission status without seeing unrelated reviews. |
@@ -263,28 +274,28 @@ refresh after `CONTEXT_VERSION_MISMATCH`.
 
 | Screen / route | Roles | Purpose and main data | Empty/loading/error/denied behavior; actions | Validation and API needs |
 | --- | --- | --- | --- | --- |
-| Intake periods `/intakes` | Staff and internal researchers within applicable scope | Intake name/code, dates, scope, required package, status, proposal count, deadline flags. | Staff creates/edits/opens/closes within policy. Empty state offers “Tạo đợt tiếp nhận” only when allowed. Closed intake is read-only for configuration and blocks new proposals. | Start < end; scope is Academy-wide or explicit units; required package non-empty. `GET/POST/PATCH /proposal-intake-periods`; state changes are explicit and audited. |
+| Intake periods `/intakes` | TP and CV manage; every role except QT and NNB views open periods | Intake name/code, dates, scope, required package, status, proposal count, deadline flags. | TP/CV create/edit/open/close within policy. Empty state offers “Tạo đợt tiếp nhận” only when allowed. Closed intake is read-only for configuration and blocks new proposals. | Start < end; scope is Academy-wide or explicit units; required package non-empty. `GET/POST/PATCH /proposal-intake-periods`; state changes are explicit and audited. |
 | Proposal list `/proposals` and `/my-proposals` | Staff, internal researchers, and related participants within returned scope | Code, title, PI, managing unit, field, intake, status, submitted date, due/risk flag, viewer relationship. | Filters persist in URL; list skeleton matches table; no-results distinguishes “no matches” from “no accessible records”; denied detail is not revealed. Staff manages workflow; only a current internal PI can create when an applicable intake exists. | Search/filter/sort are server-side and authorization-scoped. `GET /research-proposals`; counts/facets use the same scope. |
-| Proposal detail `/proposals/:id` | Authorized viewer by relationship/assignment/scope | Header: code/title/status, managing unit, PI, intake, due flag, viewer relationship, next action. The PI gets the edit/submit workspace; staff gets a read-only proposal, team, schedule, and expected-budget board. | Loading skeleton; not-found and unauthorized use a safe response; stale context offers refresh; forbidden action remains disabled with reason when the record is visible. Non-PI viewers do not receive the PI submit section. | `GET /research-proposals/:id` returns disclosure-filtered detail, capability response, version token, history, and allowed tabs. |
+| Proposal detail `/proposals/:id` | Authorized viewer by relationship/assignment/scope | Header: code/title/status, managing unit, PI, intake, due flag, viewer relationship, next action. The PI gets the edit/submit workspace; management roles get a read-only proposal, team, schedule, and expected-budget board. Review/approval sections render only from this proposal's capability/assignment result: `ACTION_NOT_GRANTED` omits the section; conflict/state denials stay visible and disabled with the backend reason. PI and reviewers do not receive the action-log tab. | Loading skeleton; not-found and unauthorized use a safe response; stale context offers refresh; forbidden action remains disabled with reason when the record is visible. Non-PI viewers do not receive the PI submit section. | `GET /research-proposals/:id` returns disclosure-filtered detail, capability response, version token, history, and allowed tabs. |
 | Create/edit proposal `/proposals/new`, `/proposals/:id/edit` | Current internal PI only | Sectioned form: intake, title/type/field, managing unit, PI/team, dates, objectives/content, budget metadata, required files, readiness summary. | Save draft at any time when allowed; section completion indicators; submitted/locked version opens read-only; non-PI viewers remain read-only with a safe denial. | Required fields and files; date range; non-negative budget; team/account uniqueness; PI is owner-derived and immutable. `POST/PATCH /research-proposals/:id`; backend validation and draft audit. |
 | Submit confirmation `/proposals/:id/submit` | Current internal PI only | Final readiness checklist, version number, intake deadline, file summary, responsibility statement, immutable-version warning. | Confirm submit; cancel returns to edit; success shows timestamp and next state; failure keeps draft and lists correctable issues. Non-PI requests are denied without mutation. | Readiness is backend-calculated. `POST /research-proposals/:id/submit` with context token; audit actor; no direct status PATCH or delegation input. |
-| Supplement request `/proposals/:id/supplement` | Scientific management staff | Locked proposal snapshot, missing items, reason, response due date, instructions, prior requests. | Save/send request only while requestable; sent request becomes immutable history; empty state is not applicable. | Reason and whole-day due date required; due date must be future and within policy. `POST /research-proposals/:id/supplement-requests`; status becomes `supplement_requested` only through domain operation. |
-| Staff check `/proposals/:id/check` | Scientific management staff | Completeness checklist, field/file evidence, eligibility/readiness result, warnings, reviewer readiness, previous supplement history. | Mark complete once per submitted/resubmitted version or request supplement; after confirmation, keep the action visible but disabled with its reason. | Checklist version, required package, current-submission evidence, and decision are backend-owned. Repeat `POST /checks/complete` is denied; audit result and reason. |
-| Reviewer assignment `/proposals/:id/assignments` | `SCIENTIFIC_MANAGEMENT_HEAD` with assignment authority | Candidate active account, assignment role, conflict result, whole-day effective dates/deadline, current assignments, assignment history. | Search candidate; run conflict check; assign, change, revoke, or complete assignment where allowed. Date inputs omit hours/minutes. Conflict result blocks assign and displays safe reason. | Candidate must be active and in permitted scope; no PI/member/conflicted reviewer; dates valid; assignment deadline valid. `GET /assignable-reviewers`, `POST/PATCH /review-assignments`; audit all changes. |
+| Supplement request `/proposals/:id/supplement` | TB¹ or assigned CV³ (never TP) | Locked proposal snapshot, missing items, reason, response due date, instructions, prior requests. | Save/send request only while requestable; sent request becomes immutable history; empty state is not applicable. | Reason and whole-day due date required; due date must be future and within policy. `POST /research-proposals/:id/supplement-requests`; status becomes `supplement_requested` only through domain operation. |
+| Staff check `/proposals/:id/check` | TB¹ or assigned CV³ (never TP) | Completeness checklist, field/file evidence, eligibility/readiness result, warnings, reviewer readiness, previous supplement history. | Mark complete once per submitted/resubmitted version or request supplement; after confirmation, keep the action visible but disabled with its reason. | Checklist version, required package, current-submission evidence, and decision are backend-owned. Repeat `POST /checks/complete` is denied; audit result and reason. |
+| Reviewer assignment (“Phân công đánh giá”) `/proposals/:id/assignments` | TP¹, TB¹ or assigned CV³ without conflict; BGĐ monitors progress¹ | Candidate active account, assignment role, conflict result, whole-day effective dates/deadline, current assignments, assignment history. | Search candidate; run conflict check; assign, change, revoke, or complete assignment where allowed. Date inputs omit hours/minutes. Conflict result blocks assign and displays safe reason. | Candidate must be an active account with a scientific CV (any role except QT; may be outside the unit); no PI/member/conflicted reviewer; council tờ trình routes only after every member accepts; dates valid; assignment deadline valid. `GET /assignable-reviewers`, `POST/PATCH /review-assignments`; audit all changes. |
 | Reviewer evaluation `/reviews/:assignmentId` | Assigned reviewer/council member/ethics reviewer for own assignment | Authorized review package, rubric criteria, score inputs, total, comment, recommendation, due date, assignment status. | Save draft; submit once; after submit fields lock and a correction creates a controlled new review version if policy permits. Reviewer cannot see another review or consolidation. | Score within criterion range; all required criteria; comment/recommendation requirements; submit confirmation. `GET/PATCH/POST /review-assignments/:id/evaluation`; audit draft/submit and lock version. |
-| Result aggregation `/proposals/:id/aggregation` | `SCIENTIFIC_MANAGEMENT_HEAD` | Submitted-review count, expected count, allowed review material, calculated totals, missing/late reviews, Head synthesis, recommendation, readiness for leadership. | Save synthesis while consolidatable; finalize and route only when required reviews/conditions pass; no raw review data shown to unauthorized viewers. | No manual total outside backend calculation; synthesis required; all assignment/context versions checked. `GET/PATCH/POST /aggregations`; transition to `ready_for_approval` is explicit and audited. |
-| Leadership decision `/proposals/:id/decision` | Leadership authority with eligible decision capability | Decision package: proposal snapshot, evaluation summary, permitted reviews, files, workflow timeline, conflict indicator, current status. | Approve or reject with confirmation. Reject requires reason. Conflict or wrong state leaves buttons visible but disabled with reason. Success shows decision and routes to read-only detail. | Decision only in `ready_for_approval`; no content editing; reject note required; backend rechecks state, conflict, scope, and version. `GET /decision-package`; `POST /decisions`; audit decision. |
+| Result aggregation `/proposals/:id/aggregation` | TP¹, TB¹ or assigned CV³ without conflict; council secretary drafts synthesis/minutes (no scoring) | Submitted-review count, expected count, allowed review material, calculated totals, missing/late reviews, synthesis, recommendation, readiness for tờ trình routing. | Save synthesis while consolidatable; finalize and start the tờ trình (CV drafts → TB reviews → TP approves → GĐ decides) only when required reviews/conditions pass; no raw review data shown to unauthorized viewers. | No manual total outside backend calculation; synthesis required; all assignment/context versions checked. `GET/PATCH/POST /aggregations`; transition to `ready_for_approval` is explicit and audited. |
+| Leadership decision `/proposals/:id/decision` | GĐ only, on a record routed through TB and TP, without conflict (PGĐ-KH, PGĐ-TD and reviewers get no decision) | Decision package: proposal snapshot, evaluation summary, permitted reviews, files, workflow timeline, conflict indicator, current status. | Approve or reject with confirmation. Reject requires reason. Conflict or wrong state leaves buttons visible but disabled with reason. Success shows decision and routes to read-only detail. | Decision only in `ready_for_approval`; no content editing; reject note required; backend rechecks state, conflict, scope, and version. `GET /decision-package`; `POST /decisions`; audit decision. |
 
 ### 3.5 Approved project and tracking screens
 
 | Screen / route | Roles | Purpose and main data | States and actions | Validation and API needs |
 | --- | --- | --- | --- | --- |
-| Approved-topic tracking overview `/projects` and `/my-projects` | Staff, leadership within scope, `TOPIC_PI`, `TOPIC_MEMBER`, `TOPIC_SECRETARY` | Topic code/source proposal, PI, unit, state, completion %, next milestone/report, risk flags, overdue flags, viewer relationship. | Staff creates/confirm topic from an approved proposal; team users open related topics; leadership sees authorized summaries. No automatic topic creation after approval. | Server-side filters and derived risk flags. `GET /api/v1/projects`; `POST /api/v1/projects` with `proposalId`, explicit confirmation and audit. |
+| Approved-topic tracking overview `/projects` and `/my-projects` | GĐ, PGĐ-KH, TP, TB (all projects); PGĐ-TD, PP, CV (unit scope¹); `TOPIC_PI`, `TOPIC_MEMBER`, `TOPIC_SECRETARY` | Topic code/source proposal, PI, unit, state, completion %, next milestone/report, risk flags, overdue flags, viewer relationship. | Staff creates/confirm topic from an approved proposal; team users open related topics; BGĐ/TP/TB/PP see authorized summaries; per-project funding hidden from PGĐ-TD and from PP unless PI/member. No automatic topic creation after approval. | Server-side filters and derived risk flags. `GET /api/v1/projects`; `POST /api/v1/projects` with `proposalId`, explicit confirmation and audit. |
 | Project detail `/projects/:id` | Authorized participant/staff/authority | Project summary, source proposal link, participants, milestones, reports, adjustment/extension, acceptance, tasks, files, timeline. | Read/write sections are individually capability-controlled. Unauthorized tabs are omitted; visible blocked actions explain why. | `GET /api/v1/projects/:id` returns disclosure-scoped tabs and capability data; mutation uses aggregate version. |
 | Progress milestones `/projects/:id/milestones` | Staff; project PI/secretary/member where assigned | Planned milestone, owner, target date, completion %, evidence, dependency, actual date, status/risk. | Add/edit only in permitted project state and relationship; overdue is a flag and reminder, not an automatic workflow transition. | Date ordering; completion 0–100; owner must be related/authorized; evidence linked through files module. Initial milestones/checkpoints via `POST /api/v1/projects/:id/setup`; post-activation changes use typed adjustment requests — no standalone milestone endpoints. |
 | Periodic reports `/projects/:id/reports` | Active project PI, assigned project Staff | Reporting period, due date, progress, difficulties, outputs, evidence, readiness, review outcome. | PI saves draft/submits; assigned Staff reviews, accepts or requests supplementation; Head/Leadership are not report approval gates. Submitted report version locks. | Period must belong to project and not overlap; required fields; submit confirmation. `POST/PATCH /api/v1/projects/:id/reports`; explicit review/follow-up operations and audit. |
-| Adjustment/extension `/projects/:id/adjustments` | PI submits; assigned Staff decides adjustments; Head decides Staff-prepared extensions | Request type, affected milestones/scope/plan/membership or extension end date, rationale, evidence, assessment, decision status. | PI can draft/submit; staff can assess; authority action is separate. Approved request updates the project only through domain operation. | Rationale and impact required; extension end date after current end; no direct project mutation from form. `POST/PATCH /api/v1/projects/:id/requests/:type` plus `submit`/`review`/`validate`/`prepare`/`supplement`/`approve`/`reject` subpaths; audit. |
-| Acceptance/final review `/projects/:id/acceptance` | PI submits; staff prepares; assigned panel/reviewer evaluates; leadership decides when required | Final outputs, acceptance dossier checklist, evidence, assigned evaluation, aggregate result, decision. | Readiness check precedes submit; assigned evaluator sees only package; submitted dossier locks; failed/incomplete dossier shows correction list. | Required final files/fields; all assigned evaluations before aggregation; conflict and disclosure rules match proposal review. Acceptance APIs are next-flow work; no endpoints exist in Golden Flow 4. |
+| Adjustment/extension `/projects/:id/adjustments` | PI submits; assigned CV³ appraises and drafts the tờ trình; TB → TP route it; GĐ or PGĐ-KH signs | Request type, affected milestones/scope/plan/membership or extension end date, rationale, evidence, assessment, decision status. | PI can draft/submit/withdraw; CV can appraise; signature is a separate BGĐ action. Approved request updates the project only through domain operation. | Rationale and impact required; extension end date after current end; no direct project mutation from form. `POST/PATCH /api/v1/projects/:id/requests/:type` plus `submit`/`review`/`validate`/`prepare`/`supplement`/`approve`/`reject` subpaths; audit. |
+| Acceptance/final review `/projects/:id/acceptance` | PI submits; CV³ prepares and drafts the council tờ trình; TB → TP route it; GĐ or PGĐ-KH signs council establishment; assigned panel evaluates | Final outputs, acceptance dossier checklist, evidence, assigned evaluation, aggregate result, decision. | Readiness check precedes submit; assigned evaluator sees only package; submitted dossier locks; failed/incomplete dossier shows correction list. | Required final files/fields; all assigned evaluations before aggregation; conflict and disclosure rules match proposal review. Acceptance APIs are next-flow work; no endpoints exist in Golden Flow 4. |
 
 ### 3.6 Task, file, search, report, and administration screens
 
@@ -295,7 +306,7 @@ refresh after `CONTEXT_VERSION_MISMATCH`.
 | Create/edit task `/tasks/new`, `/tasks/:id/edit` | Authorized creator/manager; assignee for permitted fields | Title, linked record/event, owner, collaborators, priority, dates, description, checklist/evidence. | Save draft/create; edit allowed fields by role; deleted/cancelled tasks remain traceable. | Title, due date, valid linked-record reference, assignee relation, priority enum. `POST/PATCH /tasks`; backend authorization and audit. |
 | File upload and history `/records/:id/files` | Record-authorized users; upload/replace/delete only when capability allows | File type/name, size, uploader, timestamp, version, record section, preview/download action, scan/upload status. | Upload progress; retry failed upload; preview/download is a fresh authorized request; replace creates a new version; soft delete only where allowed; no direct object URL. | Extension/MIME/size, required association, safe filename, malware/content scan outcome as supported. `POST /files`, `GET /files/:id/download`, `POST /files/:id/replace`; MinIO is private and API-enforced. |
 | Global search `/search` | All authenticated users, scoped results | Tabs for proposals, projects, tasks, reports, seminars/student research, councils, documents; code/title/person/unit/status/date facets. | Search-as-submit or debounced with cancellation; empty result distinguishes no match; hidden records never appear in count/facet/suggestion. | `GET /search` with server-side authorization, same `asOf`, facets, cursor/page; export uses same query scope. |
-| Reports `/reports` | Staff and leadership per report capability; admin only if explicitly granted | Report catalog, parameters, scoped preview, chart/table, applied filters, generation/export status. | Required filters before generation; no data preview while unauthorized; Excel/PDF generation shows progress and result; export errors are retryable. | `GET /reports`, `POST /reports/:id/run`, export endpoint with policy/version/filter snapshot; audit export. |
+| Reports `/reports` | Every role except QT, per report capability and data scope; PGĐ-TD aggregate funding only | Report catalog, parameters, scoped preview, chart/table, applied filters, generation/export status. | Required filters before generation; no data preview while unauthorized; Excel/PDF generation shows progress and result; export errors are retryable. | `GET /reports`, `POST /reports/:id/run`, export endpoint with policy/version/filter snapshot; audit export. |
 | Users `/users` | System admin | Account, name, active state, locked state, one active system role, unit/scope, linked researcher profile. | Create/update/activate/deactivate/lock/reset; role/scope change requires confirmation and impact warning. Admin does not see business records merely by opening this screen. | Unique username, exactly one active role, valid scope, account/profile link constraints. `GET/POST/PATCH /admin/users`; audit all changes. |
 | Roles and permissions `/roles` | System admin; read-only policy view for authorized operators | Canonical roles, capabilities, scopes, non-delegable actions, policy version; record relationships are explained separately. | Edit only platform policy settings supported by backend; no ad hoc wildcard permission; show effective date/version. | Unknown role/action cannot be guessed by client. `GET/PATCH /admin/roles` only if policy allows; every policy change is versioned/audited. |
 | Catalogs `/catalogs` | System admin; delegated staff read/use as needed | Units, fields, proposal types, priorities, report/product types, forms, checklists, score criteria, statuses. | Create/update/activate/deactivate; historical values remain resolvable for old records; destructive actions are soft and warned. | Code uniqueness, label required, no deactivation if referenced without replacement policy. `GET/POST/PATCH /admin/catalogs`; version history and audit. |
@@ -310,12 +321,12 @@ the viewer cannot access.
 | Dashboard persona | KPI cards | Work queue and alerts | Quick actions and summaries | Hide/prohibit |
 | --- | --- | --- | --- | --- |
 | System administrator | Active/locked accounts, pending account changes, catalog/config warnings, audit review queue. | Incomplete account scope, pending activation, failed notification/configuration checks, audit anomalies if authorized. | Manage users, roles, units, catalogs, settings, audit. Small trend of platform operations only. | Proposal/project content, reviewer identity, scores, approval queues, and business data by default. |
-| Scientific Management Head | Authorized-scope proposals/projects, workload/status/deadlines and unassigned records. | Current responsible Staff or unassigned; filter/group by Staff, status and deadlines. | Drill down to the same authorized records; reports/exports retain officer filters and disclosure. | Final decisions, hidden review data, out-of-scope records, or operational mutations without explicit capability. |
-| Scientific management staff | Only own management assignments: new submissions, pending checks, supplements awaiting response, reviews pending/overdue, ready for approval, delayed projects, reports due. | Prioritize by due date and risk: submitted checks, missing reviewer submissions, aggregation, overdue milestones/reports, adjustment/acceptance preparation. | Open intake, proposal queue, review-monitoring queue, create project from approved proposal, open reports, run operational report. Pipeline summary by intake/unit/field within current officer assignments. Participation/review queues use separate access bases. | Proposal final approval action from either Head or Staff role (project Staff adjustment and Head extension decisions remain permitted); conflict source and undisclosed review material outside policy. |
-| Leadership | Ready-for-decision records, overdue decision queue, delayed projects, reports/acceptance needing authority, high-priority risks. | Decision queue with due date, evidence completeness, conflict indicator, previous decision history; alerts are concise and action-oriented. | Open decision package, approve/reject eligible record, open scoped executive report. Trend by unit/field/status/time. | Editing proposal content, assigning reviewers, raw data outside decision disclosure, records not in approval scope, conflicted records. |
-| Principal investigator / internal researcher | Drafts, submitted proposals, supplement requests, active projects, reports due, tasks due/overdue. | “Cần tôi xử lý”: incomplete draft, response deadline, report deadline, adjustment/acceptance request status, assigned tasks. | Create draft when intake allows, open my proposals, submit supplement, submit report, open my tasks. Progress summaries for owned/related projects. | Unrelated proposals/projects, reviewer identity/raw review material before disclosure, staff-only aggregation, decision controls. |
+| TP / TB / PP | Unit-scope proposals, all Academy projects (TP/TB; PP unit scope), workload/status/deadlines, nature (Quân sự / Dân sự / Chưa phân loại) and responsible-CV breakdown with an “unassigned” group. | TB: tờ trình review queue. TP: tờ trình approval queue. PP: monitoring only, no queue. Filter/group by responsible CV, status and deadlines. | Drill down to the same authorized records; reports/exports retain officer filters and disclosure. | BGĐ decisions/signatures, hidden review data, out-of-scope records, operational mutations without explicit capability; for PP, any assignment, routing or per-project funding outside own participation. |
+| CV | Only own management assignments: new submissions, pending checks, supplements awaiting response, reviews pending/overdue, ready for approval, delayed projects, reports due. | Assigned-records queue prioritized by due date and risk: submitted checks, missing reviewer submissions, aggregation, tờ trình to draft or returned, overdue milestones/reports, adjustment/extension appraisal, acceptance/liquidation preparation. | Open intake, proposal queue, review-monitoring queue, create project from approved proposal, open reports, run operational report. Pipeline summary by intake/unit/field within current officer assignments. Participation/review queues use separate access bases. | Records assigned to another CV; any BGĐ approve/reject/sign control; conflict source and undisclosed review material outside policy. |
+| BGĐ (GĐ / PGĐ-KH / PGĐ-TD) | GĐ/PGĐ-KH: tờ trình awaiting decision/signature, overdue items, delayed projects, high-priority risks, per-project funding. PGĐ-TD: progress, counts and aggregate funding only. | GĐ: topic/funding and liquidation decision queue plus signature queue. PGĐ-KH: signature queue (council/IRB/acceptance, IRB certificate, extension, adjustment). PGĐ-TD: no queue. Each item shows due date, evidence completeness, conflict indicator and previous step history. | Open decision package, approve/reject (GĐ) or sign (GĐ/PGĐ-KH) eligible record, open scoped executive report. Trend by unit/field/nature/status/time with responsible-CV breakdown. | Editing proposal content, assigning reviewers, raw data outside decision disclosure, records not in approval scope, conflicted records; for PGĐ-TD any per-record funding or decision/sign control. |
+| Principal investigator / internal researcher | Drafts, submitted proposals, supplement requests, active projects, reports due, tasks due/overdue. | “Cần tôi xử lý”: incomplete draft, response deadline, report deadline, adjustment/acceptance request status, assigned tasks. | Create draft when intake allows, open my proposals, submit supplement, submit report, open my tasks. Progress summaries for owned/related projects. | Unrelated proposals/projects, reviewer identity/raw review material before disclosure, the record's action log, management-only aggregation, decision controls. |
 | Project member | Related projects, assigned milestones, assigned tasks, evidence awaiting upload, contribution deadlines. | Tasks and evidence explicitly assigned to the member; project alerts only at permitted disclosure level. | Open assigned project section, update task, upload permitted evidence. | PI-only submission controls, membership changes, protected files, unrelated records, final decisions. |
-| Reviewer / committee member | Assigned evaluations, due/overdue reviews, draft evaluations, upcoming council sessions if assigned. | Assignment queue sorted by due date and status; show “đã gửi” and “đang soạn”. | Open assigned review package, save draft, submit evaluation. | Unassigned records, other reviewers' scores/comments, aggregation, leadership decision, conflict source. |
+| Reviewer / committee member | Assigned evaluations, due/overdue reviews, draft evaluations, upcoming council sessions if assigned. | Assignment queue sorted by due date and status; show “đã gửi” and “đang soạn”. | Open assigned review package, save draft, submit evaluation. | Unassigned records, other reviewers' scores/comments, aggregation, the record's action log, leadership decision, conflict source. |
 
 All dashboards include a scope line in the header, a last-evaluated timestamp
 when useful, and a link to the source list. A no-data state says “Không có dữ
@@ -407,7 +418,7 @@ components should extend these patterns only when a repeated need exists.
 | File preview/download row | Show safe file metadata and available action. | Preview supported, preview unavailable, download, denied, superseded, deleted/retained history. | Accessible filename/type/size; download is an API action with authorization and audit. |
 | Timeline/activity log | Workflow history and business traceability. | Loading, empty, ordered events, redacted event, pagination. | Semantic list, timestamp machine-readable and localized; display only disclosure-safe actor/detail. |
 | Comment/note box | Supplement reason, review comment, decision note, task note. | Draft, character count, validation, read-only after submit, server error. | Label and error association; avoid sensitive data guidance; role/state determines editability. |
-| Approval decision panel | Proposal Leadership decision, project Staff adjustment decision, Head extension decision, or separately authorized acceptance decision. | Eligible, blocked by state/conflict, approve, reject, confirmation, processing, success, error. | Confirmation states consequence; reject reason required; no decision if context changed. |
+| Approval decision panel | GĐ topic/funding or liquidation decision; GĐ or PGĐ-KH signature (council/IRB/acceptance establishment, IRB certificate, extension, adjustment); TB review and TP approval steps of a tờ trình (forward or return to author with reason). | Eligible, blocked by state/conflict, approve, reject, confirmation, processing, success, error. | Confirmation states consequence; reject reason required; no decision if context changed. |
 | Reviewer score form | Structured rubric input for assigned evaluator. | Draft, calculated total, incomplete, submitted/locked, deadline warning, error. | Numeric input constraints, labels per criterion, keyboard operation, own-assignment disclosure only. |
 | KPI card | One scoped metric with optional trend and drill-down. | Loading, value, zero, unavailable, stale, error. | Label/value relationship; links announce destination/filter; no hidden records behind count. |
 | Alert list | Urgent queue of due, overdue, conflict, and required-action signals. | Empty, loading, severity, dismiss only if notification policy allows. | Icon plus text/severity; no alert contains protected review details. |
@@ -429,13 +440,13 @@ derived view rather than a canonical persisted state, the mapping is explicit.
 | State | User sees | Allowed actions | Disabled actions and reason | Warning / audit |
 | --- | --- | --- | --- | --- |
 | Draft (`draft`) | Editable sections, readiness progress, unsaved/saved indicator, draft version. | Current internal PI edits/submits; an internal `TOPIC_SECRETARY` may upload permitted proposal files but cannot edit or submit the draft. | Review/approve/aggregate unavailable: proposal has not entered formal workflow; non-PI submit is denied. | Warn before submit that the version will lock; audit create/update. |
-| Submitted / pending check (`submitted`) | Locked submitted snapshot, “Đã nộp / Chờ kiểm tra”, submission time, next owner staff. | Staff checks; staff may request supplement in this state; PI reads and may request permitted post-submit action. | PI edit/submit disabled: submitted version is locked; reviewer assignment waits for check/policy. | Submission and check actions audit actor, version, and context. |
+| Submitted / pending check (`submitted`) | Locked submitted snapshot, “Đã nộp / Chờ kiểm tra”, submission time, next owner staff. | TB¹ or assigned CV³ checks and may request supplement in this state (never TP); PI reads and may request permitted post-submit action. | PI edit/submit disabled: submitted version is locked; reviewer assignment waits for check/policy. | Submission and check actions audit actor, version, and context. |
 | Needs supplement (`supplement_requested`) | Missing-item list, reason, due date, response action, prior version. | PI edits working revision and resubmits; staff reads request/history. | Final review/approval disabled until a valid resubmission/check; no endless direct status edits. | Request reason/due date and resubmission are immutable history. |
-| Eligible (`eligible`, derived) | Completeness/check result “Đủ điều kiện”, checklist evidence, ready-for-assignment cue. | Staff confirms completeness; Head can assign when the canonical workflow permits. | PI cannot approve/assign; leadership cannot decide before aggregation. | Eligibility/check result and checklist version audited; not a bypass state. |
-| Resubmitted (`resubmitted`) | New version marker, prior locked version link, staff check queue. | Staff checks; Head assigns according to policy. | PI cannot overwrite old submitted version; reviewer cannot act until under review. | New revision/resubmission audited with source version. |
-| In review (`under_review`) | Assignment progress, own reviewer action if applicable, due dates; disclosure-filtered reviews. | Assigned reviewer evaluates; Staff monitors; Head assigns/revokes and consolidates when rules permit. | PI/member cannot see raw reviews; unrelated users denied; reviewer cannot see another assignment. | Assignment, score draft/submit, revocation, and conflict events audited. |
-| Pending result aggregation (`under_review`, derived queue) | Submitted/expected review counts, missing/late list for Head, synthesis CTA. | Head saves and finalizes synthesis when required conditions pass. | Leadership decision disabled until aggregation is complete and record is ready. | Aggregation calculation and synthesis audited. |
-| Pending approval (`ready_for_approval`) | Decision package, summary, allowed review disclosure, decision due date. | Leadership approves/rejects if authority, scope, state, conflict, and version pass. | Staff cannot final-approve; PI/member/reviewer cannot decide; conflicted authority blocked. | Approve/reject requires confirmation; rejection reason required; immutable decision. |
+| Eligible (`eligible`, derived) | Completeness/check result “Đủ điều kiện”, checklist evidence, ready-for-assignment cue. | TB¹/CV³ confirms completeness; TP¹/TB¹/CV³ can assign when the canonical workflow permits. | PI cannot approve/assign; leadership cannot decide before aggregation. | Eligibility/check result and checklist version audited; not a bypass state. |
+| Resubmitted (`resubmitted`) | New version marker, prior locked version link, staff check queue. | TB¹/CV³ checks; TP¹/TB¹/CV³ assigns according to policy. | PI cannot overwrite old submitted version; reviewer cannot act until under review. | New revision/resubmission audited with source version. |
+| In review (`under_review`) | Assignment progress, own reviewer action if applicable, due dates; disclosure-filtered reviews. | Assigned reviewer (any role except QT) evaluates; TP¹/TB¹/CV³ assign/revoke and consolidate when rules permit; BGĐ monitors progress¹. | PI/member cannot see raw reviews; unrelated users denied; reviewer cannot see another assignment. | Assignment, score draft/submit, revocation, and conflict events audited. |
+| Pending result aggregation (`under_review`, derived queue) | Submitted/expected review counts, missing/late list for TP/TB/CV, synthesis CTA. | TP¹/TB¹/CV³ saves and finalizes synthesis when required conditions pass, then drafts the tờ trình (CV → TB → TP → GĐ; return goes to the author with a reason). | GĐ decision disabled until aggregation is complete and the tờ trình has passed TB and TP. | Aggregation calculation and synthesis audited. |
+| Pending approval (`ready_for_approval`) | Decision package, summary, allowed review disclosure, decision due date. | GĐ approves/rejects if authority, scope, state, conflict, and version pass. | TP/TB/CV/PP, PGĐ-KH and PGĐ-TD cannot final-approve; PI/member/reviewer cannot decide; conflicted authority blocked. | Approve/reject requires confirmation; rejection reason required; immutable decision. |
 | Approved (`approved`) | Final decision, decision date, source proposal, “project creation pending” unless project exists. | Staff explicitly creates/confirms approved project; authorized users read final disclosure. | No proposal content edit or direct state mutation; no automatic project creation assumed. | Approval and project creation are separate audit events. |
 | Rejected (`rejected`) | Decision reason permitted by disclosure, final state, history, read-only package. | Read history; any later request must use an explicit policy-supported flow. | Edit/submit/approve disabled because the decision is final unless a formal reopen policy exists. | Decision retained; do not delete or overwrite rejected version. |
 
@@ -451,9 +462,9 @@ permissions and audit events; there is no generic bypass-state button.
 | In progress | Completion %, milestones, next report, tasks, evidence. | Staff/authorized participants update assigned work; PI submits reports/requests. | Members cannot change project authority, membership, budget, or final state. | Milestone, task, evidence, and report events audited. |
 | Report due | Due banner and report CTA for PI; staff queue for review. | PI saves/submits report; staff reviews/follows up. | Final acceptance is not implied by a due report. | Reminder and submission/follow-up audit. |
 | Delayed | Overdue flag, missed milestone/report, owner, suggested next action. | Staff may remind/escalate; authorized user may update or request adjustment. | System must not auto-pause, reject, or close the project. | Reminder/escalation audited; overdue flag is derived. |
-| Pending adjustment (request flag) | Request detail, impact, assessment, decision status. | PI submits; assigned Staff reviews and finally approves/rejects adjustments. Extensions follow a separate Staff preparation and Head decision path. | Direct approved-field edits are disabled after activation, including when no request is pending. | Request and decision history retained. |
+| Pending adjustment (request flag) | Request detail, impact, assessment, decision status. | PI submits or withdraws; assigned CV³ appraises and drafts the tờ trình; TB → TP route it; GĐ or PGĐ-KH signs adjustments (no funding change) and extensions. | Direct approved-field edits are disabled after activation, including when no request is pending. | Request and decision history retained. |
 | Paused | Pause reason, effective date, next review date. | Authorized staff/authority can resume or take policy-supported action. | Normal progress entry may be limited by policy; no silent deadline reset. | Pause/resume reason and actor audited. |
-| Pending acceptance / under acceptance | Final dossier readiness, assignments, evaluation progress. | PI submits dossier; Staff prepares; assigned evaluators evaluate; Head aggregates. | Project cannot be completed before required decision. | Dossier/version/assignment events audited. |
+| Pending acceptance / under acceptance | Final dossier readiness, assignments, evaluation progress. | PI submits dossier; CV³ prepares and drafts the acceptance council tờ trình (TB → TP → GĐ or PGĐ-KH signs); assigned evaluators evaluate. | Project cannot be completed before required decision. | Dossier/version/assignment events audited. |
 | Completed | Acceptance result, final outputs, closed timeline. | Read, report, export, archive where allowed. | Normal project edit and new evidence additions disabled unless formal reopen. | Completion/acceptance decision immutable. |
 
 ### 7.3 Task states
@@ -502,15 +513,16 @@ accounts cannot enter; network failure keeps the form and offers retry.
    and locked-version warning.
 6. PI confirms; API validates readiness, intake, relationship, scope, conflict,
    state, and context version atomically.
-7. Success shows submission timestamp and `Đã nộp / Chờ kiểm tra`; staff receives
-   a scoped notification and audit event.
+7. Success shows submission timestamp and `Đã nộp / Chờ kiểm tra`; the system auto-assigns a
+   responsible CV by segment (unmatched records show “Chưa có người phụ trách”
+   for TP/TB to assign), and that CV receives a scoped notification and audit event.
 
 Failure: missing data returns field/section errors; stale context asks refresh;
 closed intake blocks new submission; API denial leaves the draft intact.
 
 ### Flow 3 — Staff checks and requests supplement
 
-1. Staff opens the pending-check queue from dashboard or proposal list.
+1. The assigned CV³ (or TB¹; never TP) opens the pending-check queue from dashboard or proposal list.
 2. Check screen shows the locked version, checklist, files, and prior history.
 3. Staff marks each item complete or records a missing item.
 4. If incomplete, staff must enter a clear reason and due date, then confirms
@@ -536,24 +548,27 @@ non-requestable state disables the action with the backend reason.
 The UI must not offer an endless supplement loop when the canonical state does
 not allow another request.
 
-### Flow 5 — Head assigns reviewer
+### Flow 5 — Reviewer/council assignment
 
-1. `SCIENTIFIC_MANAGEMENT_HEAD` opens a checked/eligible proposal and chooses **Phân công**.
-2. Candidate search shows eligible active user accounts (ID, display name and
-   username), regardless of system role, host-unit scope or profile linkage.
+1. TP¹, TB¹ or the assigned CV³ opens a checked/eligible proposal and chooses
+   **Phân công đánh giá**.
+2. Candidate search shows eligible active accounts with a scientific CV (ID,
+   display name and username) from any role except QT, regardless of host-unit
+   scope or profile linkage; record participants are excluded.
    Selection uses the account ID; a current profile link is optional provenance,
    never created by assignment. Empty results explain the current eligibility filters.
-3. Head selects a candidate, assignment role, effective dates, and deadline.
+3. The assigner selects a candidate, assignment role, effective dates, and deadline.
 4. API runs conflict and scope checks and returns a safe result.
 5. Conflict blocks confirmation and explains the safe denial reason without
    exposing the conflict source to an unauthorized user.
-6. Head confirms; assignment is created, candidate is notified, and the event
-   is audited.
+6. The assigner confirms; assignment is created, candidate is notified, and the
+   event is audited. The candidate must accept (decline needs a reason); the council
+   tờ trình can be routed only after every member has accepted.
 
 Changing or revoking an assignment uses the same explicit operation and keeps
 the prior assignment in history.
 The assignment table shows its lifecycle status separately from review status,
-the assigning staff member, effective period, and completion/revocation time.
+the assigning TP/TB/CV, effective period, and completion/revocation time.
 Revoked rows still show whether a review was submitted. These fields use the
 existing authorized assignment response; reviewer access still ends on revocation.
 
@@ -566,35 +581,40 @@ existing authorized assignment response; reviewer access still ends on revocatio
 4. Reviewer may save a draft while assignment/state/deadline policy allows.
 5. Reviewer chooses **Gửi phiếu đánh giá**, reviews the lock warning, and confirms.
 6. API rechecks assignment, state, conflict, context version, and rubric; then
-   locks the submitted evaluation, notifies staff, and audits.
+   locks the submitted evaluation, notifies the responsible CV, and audits.
 
 After submission, the reviewer cannot edit the same version and cannot view
 other reviewers' content.
 
-### Flow 7 — Head aggregates results
+### Flow 7 — Results are aggregated and routed by tờ trình
 
-1. Head opens the aggregation queue.
+1. TP¹, TB¹ or the assigned CV³ opens the aggregation queue.
 2. Screen shows required/received review counts, late/missing assignments, and
    disclosure-safe evaluation material.
-3. Head enters the structured synthesis and recommendation; totals remain
-   backend-calculated.
-4. If required conditions pass, Head confirms **Chuyển trình phê duyệt**.
-5. API changes to `ready_for_approval`, creates the audit event, and notifies
-   eligible leadership.
+3. The aggregator enters the structured synthesis and recommendation; totals
+   remain backend-calculated.
+4. If required conditions pass, the aggregator confirms **Trình phê duyệt**, which
+   starts the tờ trình chain: CV drafts → TB reviews (forward to TP or return) →
+   TP approves to BGĐ. A TB-authored tờ trình goes straight to TP; a TP-authored
+   one still passes TB. Any return goes back to the author with a mandatory reason;
+   no step is skipped and nobody reviews their own tờ trình.
+5. Finalizing moves the record to `ready_for_approval` and opens the tờ trình; the
+   event is audited. GĐ decision controls stay disabled until the TB and TP steps
+   are done, then GĐ is notified through the decision queue.
 
 If a review is missing or context is stale, the transition remains disabled with
 the exact corrective condition.
 
-### Flow 8 — Leadership approves or rejects
+### Flow 8 — GĐ approves or rejects
 
-1. Leadership opens the decision queue and selects a ready record.
+1. GĐ opens the decision queue and selects a ready record.
 2. Decision package loads proposal snapshot, permitted files, evaluation summary,
    history, and conflict indicator.
-3. Leadership reviews evidence without edit controls.
+3. GĐ reviews evidence without edit controls.
 4. **Phê duyệt** opens a consequence confirmation; **Không phê duyệt** requires
    a reason before confirmation.
 5. API rechecks authority, scope, conflict, state, version, and disclosure.
-6. Success shows the immutable decision and next step: staff must explicitly
+6. Success shows the immutable decision and next step: the responsible CV must explicitly
    create/confirm the approved project.
 
 The system never creates the project merely because the approve button succeeded.
@@ -627,9 +647,11 @@ Overdue display triggers reminders but never silently changes the project state.
 2. Project summary shows milestone variance, report state, tasks, evidence, and
    adjustment requests.
 3. Staff records a follow-up, reminder, or assessment using an explicit action.
-4. If leadership authority is required, staff prepares a decision package and
-   routes it to the scoped leadership queue.
-5. Leadership reviews and decides only through the applicable authority action.
+4. If BGĐ authority is required (extension, adjustment, acceptance council,
+   liquidation), the CV drafts a tờ trình that passes TB and TP before reaching
+   the GĐ or PGĐ-KH signature queue (liquidation: GĐ only).
+5. The signer decides only through the applicable authority action; PGĐ-TD and
+   PP only monitor.
 
 ### Flow 12 — Task created from a record
 
@@ -695,7 +717,7 @@ No object key or direct MinIO URL is exposed as a permission token.
 - Proposal content, PI, and team fields are editable only by the current internal
   PI. External researchers cannot edit proposal drafts.
 - Start date must not be after end date. Milestone/report dates must fall within
-  the project policy window unless the appropriate approved adjustment or Head-approved extension applies.
+  the project policy window unless the appropriate signed adjustment or extension applies.
 - A unit selector contains only units the actor may use for the intake/record;
   a cooperating unit does not grant scope.
 - Member selection must prevent duplicate active relationships and must show the
@@ -822,21 +844,22 @@ mutation/audit contracts above.
 source of truth for this feature, including API/data fields, authorization,
 credential delivery, migration compatibility and history retention.
 
-- Scoped SYSTEM_ADMIN and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
+- QT (platform scope) and TP¹/CV¹ (unit scope) manage internal/external
   profiles independently of Accounts, including academic/contact information,
   position, military rank, expertise, publications and self-reported project
   history (title, role, Academy/institutional/Ministry/other level, dates, status,
   notes). Profile activation and account activation remain separate actions.
 - System Account / Access supports optional create-and-link, existing unlinked
   account selection, unlink and authorized credential reset/resend. Linking is
-  one-to-one across all current links, including inactive records. Staff can
+  one-to-one across all current links, including inactive records. TP/CV can
   provision only matching researcher roles in the profile's explicit scope.
-- Staff confirms the recipient email. The system generates and hashes a temporary
+- The profile manager confirms the recipient email. The system generates and hashes a temporary
   password, sends login information by configured SMTP, and requires a different
   password before any normal authenticated API/UI feature. No plaintext credential
-  is persisted, returned to staff or placed in audit. SMTP acceptance is not proof
+  is persisted, returned to the manager or placed in audit. SMTP acceptance is not proof
   of inbox delivery; a failed/uncertain send has an explicit new-credential retry.
-- My Profile uses the active Account's current link. Only own personal/scientific
+- Every role except QT has a scientific CV and self-updates it through My Profile.
+  My Profile uses the active Account's current link. Only own personal/scientific
   fields are editable; type, status, linkage and role/scope remain administrative.
   Unlink immediately removes self access. Self-reported history grants no access
   to operational projects/proposals and does not replace source-owned assignments.
@@ -863,21 +886,27 @@ credential delivery, migration compatibility and history retention.
 
 ### Finalized oversight presentation
 
-Use backend accessReasons and allowedActions for Head officer controls and package submission.
+Use backend accessReasons and allowedActions for TP/TB officer controls and tờ trình steps.
 Show current officer or unassigned, an officer filter and visible-record workload counts on the
-existing proposal list. `RESEARCH_OVERSIGHT_AUTHORITY` gets institutional reads and its independent PI/member actions,
-never final-decision buttons. Head reads Staff summary; oversight counts/deadlines omit reviewer
-identity/scores/comments. Both `LEADERSHIP_APPROVAL_AUTHORITY` and
-`RESEARCH_OVERSIGHT_AUTHORITY` institutional dashboards include proposal, project and funding
-indicators only when their source exists; `LEADERSHIP_APPROVAL_AUTHORITY` alone has decision queues.
+existing proposal list. `RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD) and `RESEARCH_MANAGEMENT_DEPUTY_HEAD`
+(PP) get unit-scope monitoring reads plus any independent PI/member actions, never approve, sign or
+route buttons. TP/TB read the CV summary; monitoring counts/deadlines omit reviewer
+identity/scores/comments. `LEADERSHIP_APPROVAL_AUTHORITY`, `SCIENCE_DEPUTY_DIRECTOR` and
+`RESEARCH_OVERSIGHT_AUTHORITY` dashboards include proposal, project and funding indicators only when
+their source exists, filtered by year, unit, level, field and nature (Quân sự / Dân sự / Chưa phân loại)
+with a responsible-CV breakdown and an “unassigned” group; PGĐ-TD sees aggregate funding only.
+Only `LEADERSHIP_APPROVAL_AUTHORITY` has topic/funding decision queues; it and
+`SCIENCE_DEPUTY_DIRECTOR` have signature queues; TB has the tờ trình review queue and TP the
+approval queue; CV sees assigned records.
 The current dashboard remains clearly labelled demo data. Project/funding/report/notification
 backends remain planned; requested proposal funding is the only current budget source.
 
 ### Golden Flow 4 execution clarification
 
 [Project Execution contract](contracts/project-execution.md) defines the execution
-workspace refinement and finalized Staff-adjustment/Head-extension authority. `Report due`, `Delayed`
+workspace refinement; adjustment/extension authority follows the tờ trình flow (CV appraises and
+drafts → TB → TP → GĐ or PGĐ-KH signs). `Report due`, `Delayed`
 and `Pending adjustment` are derived/child-record flags, not project states. A report
 is formally submitted only by active project PI; member contributions grant no
 submission authority. Creation is available to the current scoped proposal officer; setup confirmation
-requires Head to have independently assigned the project officer.
+requires TP or TB to have independently assigned the project officer.
