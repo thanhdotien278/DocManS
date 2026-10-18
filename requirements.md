@@ -97,12 +97,21 @@ mọi hồ sơ.
 | System role | Trách nhiệm chính | Giới hạn bắt buộc |
 | --- | --- | --- |
 | `SYSTEM_ADMIN` | Tài khoản, role, đơn vị/scope, danh mục nền tảng, cấu hình và truy vết vận hành | Không mặc nhiên xem/sửa dữ liệu nghiệp vụ, đánh giá, phê duyệt hoặc mở lại hồ sơ |
-| `SCIENTIFIC_MANAGEMENT_HEAD` | Xem tất cả proposal/project trong scope Quản lý khoa học được cấp; theo dõi chuyên viên phụ trách, chưa phân công, khối lượng, trạng thái và hạn | Không đồng nghĩa lãnh đạo phê duyệt; quyền xem không tự cấp action quản trị |
-| `SCIENTIFIC_MANAGEMENT_STAFF` | Vận hành proposal/project được phân công quản lý; đợt và hồ sơ nhà khoa học theo capability/scope riêng | Không có visibility toàn Học viện; không dùng participation để cấp quyền quản lý; không quyết định cuối |
-| `LEADERSHIP_APPROVAL_AUTHORITY` | Xem hồ sơ được trình và phê duyệt/từ chối theo thẩm quyền | Không sửa nội dung, bỏ qua đánh giá hoặc quyết định hồ sơ mình tham gia |
-| `RESEARCH_OVERSIGHT_AUTHORITY` | Institutional research oversight plus internal researcher capabilities through record relationships | Explicit institutional scopes; read-only oversight; no final decisions |
-| `RESEARCHER_INTERNAL_USER` | Khi là PI: tạo/sửa/nộp đề xuất và phản hồi bổ sung; ngoài ra tham gia đề tài hoặc review theo quan hệ | Không xem hồ sơ không liên quan hoặc quyết định cuối |
-| `EXTERNAL_RESEARCHER_USER` | Xem hồ sơ liên quan và thực hiện review hoặc đóng góp đề tài/task khi có assignment rõ ràng | Không tạo/sửa/nộp đề xuất, đổi PI/team/kinh phí/mục tiêu/trạng thái hoặc quyết định |
+| `LEADERSHIP_APPROVAL_AUTHORITY` (GĐ) | Duy nhất phê duyệt đề tài, kinh phí và thanh lý; ký mọi thủ tục PGĐ-KH ký; xem mọi đề tài trong Học viện | Không sửa nội dung, bỏ qua bước tờ trình hoặc quyết định hồ sơ mình tham gia |
+| `SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH) | Ký thành lập hội đồng đánh giá/nghiệm thu/IRB, cấp giấy IRB, gia hạn và điều chỉnh (kể cả đổi kinh phí); xem mọi đề tài | Không phê duyệt đề tài, kinh phí đề tài, thanh lý; không quản lý kinh phí |
+| `RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD) | Theo dõi tiến độ, số lượng, kinh phí tổng hợp | Không xem kinh phí từng đề tài; không ký |
+| `RESEARCH_MANAGEMENT_HEAD` (TP) | Duyệt tờ trình trước khi lên BGĐ; giao mảng cho CV; giao/thu hồi CV phụ trách; phân công phản biện/hội đồng, tổng hợp trong scope đơn vị; quản lý kinh phí toàn Học viện | Không kiểm tra đầy đủ, không yêu cầu bổ sung; không tự rà soát tờ trình mình lập |
+| `RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP) | Theo dõi tiến độ, số lượng trong scope đơn vị | Không có bước trong luồng tờ trình; không phê duyệt |
+| `RESEARCH_BOARD_HEAD` (TB) | Rà soát tờ trình của CV rồi trình TP hoặc trả lại; giao/thu hồi CV; kiểm tra đầy đủ, phân công, tổng hợp trong scope đơn vị; quản lý kinh phí toàn Học viện | Không phê duyệt; không tự rà soát tờ trình mình lập |
+| `RESEARCH_MANAGEMENT_STAFF` (CV) | Vận hành hồ sơ/đề tài mình đang phụ trách: kiểm tra đầy đủ, yêu cầu bổ sung, mời phản biện/hội đồng, tổng hợp, lập tờ trình, nghiệp vụ hằng ngày của đề tài; quản lý đợt và hồ sơ nhà khoa học trong scope đơn vị | Không thao tác hồ sơ của CV khác; không quyết định cuối |
+| `RESEARCHER_INTERNAL_USER` (NCV) | Khi là PI: tạo/sửa/nộp đề xuất và phản hồi bổ sung; ngoài ra tham gia đề tài hoặc review theo quan hệ | Không xem hồ sơ không liên quan hoặc quyết định cuối |
+| `EXTERNAL_RESEARCHER_USER` (NNB) | Xem hồ sơ liên quan và thực hiện review hoặc đóng góp đề tài/task khi có assignment rõ ràng | Không tạo/sửa/nộp đề xuất, không thấy đợt tiếp nhận, không là PI hoặc quyết định |
+
+Bảng trên theo [ma trận phân quyền](docs/permission-matrix.md) (10 vai trò); khi mâu thuẫn,
+ma trận §7 thắng. Mọi vai trò trừ QT/NNB có thể là PI của đề xuất mình; mọi vai trò trừ QT
+có lý lịch khoa học và có thể được mời phản biện/hội đồng/IRB. Code trên nhánh `DocManS`
+vẫn chạy 7 vai trò cũ (`SCIENTIFIC_MANAGEMENT_HEAD`/`SCIENTIFIC_MANAGEMENT_STAFF` thay cho
+TP/CV) cho tới khi merge `tuan/DocManS`.
 
 ### 4.2 Quan hệ theo từng bản ghi
 
@@ -115,23 +124,22 @@ Các vai trò sau không phải system role; chúng chỉ có hiệu lực trong
 - Reviewer, thành viên hội đồng, reviewer hồ sơ đạo đức.
 - Người được giao task.
 - `PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER`: tối đa một
-  Staff phụ trách chính đang hiệu lực trên mỗi proposal/project; giữ lịch sử và
+  CV phụ trách chính đang hiệu lực trên mỗi proposal/project; giữ lịch sử và
   audit khi phân công, chuyển hoặc thu hồi, kiểm soát cả request cạnh tranh.
 
 Quan hệ có trạng thái, thời gian hiệu lực, người tạo/thu hồi và audit. Các quan
 hệ cộng dồn quyền theo từng bản ghi, nhưng không có khái niệm “vai trò cao nhất”
 để thay thế các quan hệ khác.
 
-Staff có thể truy cập hồ sơ không do mình quản lý qua PI/member/secretary/reviewer/
+CV có thể truy cập hồ sơ không do mình quản lý qua PI/member/secretary/reviewer/
 council/task hợp lệ; backend phải thể hiện lý do truy cập và chỉ cấp capability của
 quan hệ đó. Thu hồi quản lý không thu hồi quan hệ độc lập, nhưng chấm dứt management
-visibility/action. Head có bộ lọc/nhóm theo officer và chưa phân công, chỉ số workload,
+visibility/action. TP/TB có bộ lọc/nhóm theo CV phụ trách và chưa phân công, chỉ số workload,
 trạng thái/hạn; count, drill-down và export dùng cùng tập hồ sơ được phép.
 
-Head phân công/chuyển/thu hồi officer, đọc tổng hợp của Staff và trình gói hoàn tất.
-`LEADERSHIP_APPROVAL_AUTHORITY` có giám sát và quyết định cuối khi đủ điều kiện,
-không có xung đột; `RESEARCH_OVERSIGHT_AUTHORITY` có năng lực nghiên cứu nội bộ
-theo quan hệ và giám sát chỉ đọc, không có quyết định cuối.
+Hệ thống tự giao CV theo mảng khi nộp; TP/TB giao/chuyển/thu hồi CV phụ trách. Tờ trình đi
+CV lập → TB rà soát → TP duyệt → BGĐ ký; trả lại ở bước nào cũng về người lập kèm lý do.
+GĐ quyết định cuối khi đủ điều kiện và không có xung đột; PGĐ-TD và PP chỉ theo dõi.
 Phạm vi triển khai hiện tại và funding metadata tuân theo baseline §2.1; backend dự án,
 council establishment, dashboard/reporting chưa tồn tại không được mô tả là đã triển khai.
 
@@ -142,8 +150,8 @@ council establishment, dashboard/reporting chưa tồn tại không được mô
 - Quyền được quyết định bởi system role, organization scope, quan hệ/assignment,
   workflow state, applicable delegation contract và conflict; thiếu hoặc mơ hồ
   context thì fail closed.
-- Head xem tất cả proposal/project trong scope được cấp; Staff chỉ có management
-  visibility trên hồ sơ có officer assignment hiện hành. Scope cha/con không tự kế thừa.
+- TP/TB xem proposal trong scope đơn vị và mọi đề tài trong Học viện; CV chỉ có management
+  visibility trên hồ sơ mình đang phụ trách. Scope cha/con không tự kế thừa.
 - Mỗi bản ghi có đúng một đơn vị quản lý chính. Cùng đơn vị, cùng chức danh hoặc
   có quan hệ ở bản ghi khác không tự mở quyền.
 - Đợt tiếp nhận có phạm vi `Toàn Học viện` hoặc `Chọn đơn vị`; mặc định là toàn
@@ -206,43 +214,43 @@ phải audit:
 
 ### 6.2 Tiếp nhận, nộp, đánh giá và phê duyệt đề xuất
 
-- Nhân sự quản lý khoa học tạo/mở/đóng đợt tiếp nhận, cấu hình thời gian, phạm
+- TP hoặc CV tạo/mở/đóng đợt tiếp nhận, cấu hình thời gian, phạm
   vi, bộ hồ sơ bắt buộc, biểu mẫu và điều kiện.
 - PI nội bộ tạo bản nháp trong đợt phù hợp, nhập thông tin có cấu trúc, upload
   tệp, kiểm tra readiness, lưu nháp và nộp chính thức.
 - Hệ thống kiểm tra trường bắt buộc, điều kiện tệp, ghi thời điểm nộp và khóa
   phiên bản đã nộp.
-- Nhân sự quản lý khoa học kiểm tra hồ sơ, yêu cầu bổ sung có
-  lý do và hạn; PI xem yêu cầu, sửa và nộp lại.
-- Nhân sự quản lý phân công reviewer/hội đồng sau conflict check; reviewer chỉ
-  xem đúng gói được giao, nhập điểm/nhận xét/kiến nghị và gửi để khóa kết quả.
-- Nhân sự quản lý theo dõi tiến độ và tổng hợp; lãnh đạo/approval authority xem
-  lịch sử, kết quả, tệp liên quan và quyết định theo workflow.
+- TB hoặc CV phụ trách kiểm tra hồ sơ, yêu cầu bổ sung có lý do và hạn (TP không làm
+  bước này); PI xem yêu cầu, sửa và nộp lại.
+- TP, TB hoặc CV phụ trách phân công reviewer/hội đồng sau conflict check; reviewer
+  (mọi vai trò trừ QT khi được mời) chỉ xem đúng gói được giao, nhập điểm/nhận xét/kiến
+  nghị và gửi để khóa kết quả.
+- TP, TB hoặc CV phụ trách tổng hợp và lập tờ trình; TB rà soát, TP duyệt, chỉ GĐ phê
+  duyệt đề tài và kinh phí.
 - Hành động sau nộp như rút, chỉnh sửa hoặc mở lại phải dùng request/action
-  riêng, không cập nhật trực tiếp trạng thái để bypass.
+  riêng do CV phụ trách phê duyệt, không cập nhật trực tiếp trạng thái để bypass.
 
 ### 6.3 Theo dõi và nghiệm thu đề tài
 
 Golden Flow 4 is specified in the [Project Execution contract](docs/contracts/project-execution.md).
-It preserves project-scoped `TOPIC_PI` (the requested `PROJECT_PI`). Assigned Staff
-reviews/accepts reports and finally approves/rejects normal adjustments; Head finally
-approves/rejects extensions after Staff validation/preparation. Leadership approves
-the source proposal only and has permitted read/monitor access during execution.
-Submitted revisions/evidence are immutable; overdue is derived, never a project state.
-Assigned proposal Staff creates; Head independently assigns project Staff, who confirms
-setup. Controlled fields change only through the appropriate approved request.
+It preserves project-scoped `TOPIC_PI` (the requested `PROJECT_PI`). The assigned CV
+reviews/accepts reports without a tờ trình. Adjustments (with or without funding change)
+and extensions: the PI submits, the assigned CV appraises and drafts the tờ trình, TB
+reviews, TP approves, and GĐ or PGĐ-KH signs. GĐ alone approves the source proposal and
+liquidation. Submitted revisions/evidence are immutable; overdue is derived, never a project
+state. The assigned proposal CV creates; TP or TB independently assigns the project CV, who
+confirms setup. Controlled fields change only through the appropriate approved request.
 Acceptance/council implementation belongs to the next flow.
 
-- Nhân sự quản lý tạo và xác nhận hồ sơ đề tài từ đề xuất đã duyệt, kế thừa dữ
+- CV phụ trách tạo và xác nhận hồ sơ đề tài từ đề xuất đã duyệt, kế thừa dữ
   liệu cần thiết nhưng không tự động sinh record ngoài quy trình.
 - Quản lý mốc tiến độ, kỳ báo cáo, tỷ lệ hoàn thành, khó khăn, minh chứng và
   cảnh báo chậm tiến độ.
 - PI nộp báo cáo định kỳ, hồ sơ điều chỉnh/gia hạn và hồ sơ kết quả cuối; thành
   viên chỉ cập nhật phần được giao.
-- Assigned project Staff reviews/accepts reports and reviews/finally decides normal
-  adjustments. Staff validates/prepares extensions; Head finally decides extensions.
-  Leadership approves the proposal before execution and monitors permitted project
-  information only. Acceptance authority remains the separate next workflow.
+- The assigned project CV reviews/accepts reports and appraises adjustments/extensions;
+  TB → TP route the tờ trình and GĐ or PGĐ-KH signs. The acceptance council is signed by
+  GĐ or PGĐ-KH; liquidation only by GĐ. Acceptance implementation remains the next workflow.
 - Phân công hội đồng/reviewer nghiệm thu, nhập nhận xét/kết quả, lưu biên bản,
   quyết định và sản phẩm cuối.
 
@@ -321,7 +329,7 @@ Quá hạn là cờ theo dõi/nhắc việc, không tự chuyển trạng thái.
 
 ```text
 Mở đợt → PI tạo/nộp → kiểm tra → bổ sung nếu cần → phân công đánh giá
-→ reviewer gửi kết quả → quản lý tổng hợp → lãnh đạo quyết định
+→ reviewer gửi kết quả → TP/TB/CV tổng hợp → tờ trình TB → TP → GĐ quyết định
 → quản lý tạo/xác nhận đề tài → theo dõi → nộp kết quả → nghiệm thu
 → đóng/lưu trữ
 ```
@@ -414,17 +422,17 @@ quản lý tại `_bmad-output/prd.md`, `_bmad-output/epics.md` và thư mục
 source of truth for this feature, including API/data fields, authorization,
 credential delivery, migration compatibility and history retention.
 
-- Scoped SYSTEM_ADMIN and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
+- QT (platform) and TP¹/CV¹ (unit scope) manage internal/external
   profiles independently of Accounts, including academic/contact information,
   position, military rank, expertise, publications and self-reported project
   history (title, role, Academy/institutional/Ministry/other level, dates, status,
   notes). Profile activation and account activation remain separate actions.
 - Account provisioning creates linked `PENDING_ACTIVATION` researcher accounts:
   INTERNAL profiles provision by default with required email; EXTERNAL profiles
-  provision only when staff/admin checks `Tạo tài khoản truy cập hệ thống`.
+  provision only when the profile manager checks `Tạo tài khoản truy cập hệ thống`.
 - Activation uses hashed single-use tokens, expires exactly after 48 hours and
   sends only a setup-password link. No temporary password is generated, emailed,
-  persisted, returned to staff or placed in audit.
+  persisted, returned to the profile manager or placed in audit.
 - Login accepts either configured username or account email. Username is optional
   at provisioning, unique when set later by the linked researcher in My Profile,
   and never inferred from email.
