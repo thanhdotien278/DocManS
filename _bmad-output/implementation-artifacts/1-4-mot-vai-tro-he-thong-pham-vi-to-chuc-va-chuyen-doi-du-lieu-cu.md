@@ -4,6 +4,8 @@ baseline_commit: 81e255883e6cf82302cfcd63b05ce776d52f7d4f
 
 # Story 1.4: One System Role, Organization Scope, and Legacy Data Migration
 
+> Role names and decision rights here predate the 10-role model (2026-10-18); see `docs/permission-matrix.md`.
+
 **Target AC revision — 2026-09-21:** The acceptance criteria now require the canonical
 seven roles and Head/Staff separation. Existing done status, checked tasks,
 persisted-value/legacy mapping notes and test results below describe the pre-canonical

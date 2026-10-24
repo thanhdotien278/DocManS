@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-10-13
+last_updated: 2026-10-18
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -35,6 +35,8 @@ development_status:
   1-7-hop-dong-phan-quyen-va-bo-danh-gia-policy-dung-chung: done
   1-8-capability-response-va-giao-dien-khong-suy-dien-quyen: done
   1-9-vong-doi-quan-he-theo-ho-so-va-gioi-han-thu-ky-khoa-hoc: done
+  1-11-ten-role-registry-and-account-migration: in-progress
+  1-12-segment-catalog-and-cv-segment-assignment: backlog
   epic-1-retrospective: optional
   epic-2: in-progress
   2-1-tao-va-duy-tri-ho-so-nha-khoa-hoc: review
@@ -43,6 +45,8 @@ development_status:
   2-4-kiem-tra-xung-dot-loi-ich-truoc-khi-phan-cong: ready-for-dev
   2-5-tim-kiem-va-xem-danh-ba-nha-khoa-hoc-theo-pham-vi: ready-for-dev
   2-6-timeline-va-audit-ho-so-nha-khoa-hoc: ready-for-dev
+  2-7-duplicate-profile-warning-and-merge-decision: backlog
+  2-8-profile-managers-qt-tp-cv-delta: backlog
   epic-2-retrospective: optional
   epic-3: backlog
   3-1-tai-len-va-truy-cap-tep-qua-ho-so-nguon: backlog
@@ -50,6 +54,7 @@ development_status:
   3-3-timeline-workflow-va-lich-su-ho-so-nghiep-vu: backlog
   3-4-ghi-audit-cho-hanh-dong-quan-trong: backlog
   3-5-tra-cuu-audit-va-lich-su-theo-tham-quyen: backlog
+  3-6-two-way-anonymity-and-reviewer-identity: backlog
   epic-3-retrospective: optional
   epic-4: backlog
   4-1-tao-va-quan-ly-dot-tiep-nhan-de-xuat: backlog
@@ -58,6 +63,8 @@ development_status:
   4-4-dinh-kem-va-quan-ly-tep-de-xuat: backlog
   4-5-kiem-tra-muc-do-san-sang-truoc-khi-nop: backlog
   4-6-nop-chinh-thuc-va-xem-lich-su-nop-de-xuat: backlog
+  4-7-auto-assign-responsible-cv-by-segment: backlog
+  4-8-post-submission-withdraw-edit-reopen-by-cv: backlog
   epic-4-retrospective: optional
   # Refined Golden Flow assessment and acceptance gate: epic-05-proposal-review-and-approval/sprint-plan.md
   # No Done promotion until both real UI terminal journeys and required denials are verified.
@@ -70,6 +77,9 @@ development_status:
   5-6-thu-ky-khoa-hoc-ho-tro-hanh-chinh-cho-quy-trinh-danh-gia: backlog
   5-7-lanh-dao-xem-ho-so-trinh-quyet-dinh: backlog
   5-8-phe-duyet-tu-choi-va-cong-bo-ket-qua-de-xuat: backlog
+  5-9-approval-routing-cv-tb-tp-bgd: backlog
+  5-10-bgd-signing-council-and-topic-decision: backlog
+  5-11-reviewer-assignment-tp-tb-cv-delta: backlog
   epic-5-retrospective: optional
   epic-6: in-progress
   6-1-khoi-tao-de-tai-tu-proposal-duoc-phe-duyet: in-progress
@@ -82,6 +92,8 @@ development_status:
   6-8-chuan-bi-va-nop-ho-so-nghiem-thu-hoac-danh-gia-cuoi: backlog
   6-9-ra-soat-va-quyet-dinh-nghiem-thu-hoac-danh-gia-cuoi: backlog
   6-10-trang-thai-lich-su-va-truy-van-duoc-phan-quyen-cua-de-tai: in-progress
+  6-11-adjustment-extension-via-approval-routing: backlog
+  6-12-funding-metadata-and-liquidation: backlog
   epic-6-retrospective: optional
   epic-7: backlog
   7-1-tao-cong-viec-doc-lap-hoac-lien-ket-ho-so: backlog
@@ -96,6 +108,7 @@ development_status:
   8-3-ghi-nhan-dieu-chinh-kinh-phi-san-pham-va-ket-qua: backlog
   8-4-dieu-khien-trang-thai-va-xem-lich-su-hoat-dong: backlog
   8-5-danh-sach-duoc-phan-quyen-va-contract-tich-hop-hoat-dong: backlog
+  8-6-student-research-registration-and-approval: backlog
   epic-8-retrospective: optional
   epic-9: backlog
   9-1-dang-ky-van-ban-va-tep-noi-dung: backlog
@@ -121,6 +134,7 @@ development_status:
   11-3-nhac-han-va-cong-viec-ton-dong-an-toan: backlog
   11-4-tong-hop-backend-cho-khu-cua-toi: backlog
   11-5-giao-dien-cua-toi-va-muc-bi-chan-do-xung-dot: backlog
+  11-6-per-role-work-queues: backlog
   epic-11-retrospective: optional
   epic-12: backlog
   12-1-tim-kiem-va-loc-xuyen-phan-he-theo-quyen: backlog
@@ -128,6 +142,7 @@ development_status:
   12-3-drill-down-va-doi-chieu-chi-so-voi-ho-so-nguon: backlog
   12-4-bao-cao-tong-hop-theo-pham-vi-nghiep-vu: backlog
   12-5-xuat-excel-pdf-co-kiem-soat-va-truy-vet: backlog
+  12-6-pp-and-pgd-td-monitoring-dashboards: backlog
   epic-12-retrospective: optional
   epic-13: done
   13-1-cv-data-contract-storage-api: done

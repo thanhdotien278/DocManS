@@ -1,32 +1,31 @@
 # Đề xuất User Interface cho DocManSystem / RTMS
 
-**Cập nhật 2026-09-21:** Cùng một workspace dùng capability backend cho hai system
-role `SCIENTIFIC_MANAGEMENT_HEAD` và `SCIENTIFIC_MANAGEMENT_STAFF`. Head xem tất cả
-proposal/project trong scope được cấp, officer/chưa phân công, nhóm/lọc theo chuyên
-viên và workload/status/deadline; không quyết định cuối thay lãnh đạo. Staff cần
-`PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER` hiện hành để quản lý.
-PI/member/secretary/reviewer/council/task trên hồ sơ khác chỉ cấp action của quan hệ đó.
-Tối đa một officer chính, chuyển/thu hồi giữ history/audit; conflict kiểm tra cả khi
-đổi quan hệ và tại action. Quyền phân công và action vận hành Head chờ chốt baseline
-§2.1. Áp dụng cùng lọc cho list/detail/search/count/dashboard/report/export/notification/
-files/history; không tạo thêm app hoặc bước phê duyệt.
+**Cập nhật 2026-10-18 (mô hình 10 vai trò):** Nguồn thẩm quyền là `docs/permission-matrix.md`
+(§7 thắng khi mâu thuẫn). Mỗi tài khoản có đúng một system role trong 10 role: QT, GĐ, PGĐ-KH,
+PGĐ-TD, TP, PP, TB, CV, NCV, NNB. Giao diện vẫn là một ứng dụng web; workspace Phòng KHQS tách
+theo TP / PP / TB / CV và dashboard BGĐ tách theo GĐ / PGĐ-KH / PGĐ-TD, đều dùng capability
+backend. CV chỉ vận hành hồ sơ đang được phân công làm chuyên viên phụ trách. Tờ trình đi theo
+chuỗi CV → TB → TP → BGĐ (GĐ hoặc PGĐ-KH ký; chỉ GĐ duyệt đề tài + kinh phí và thanh lý).
+Kinh phí chỉ là metadata có audit, không có sổ cái, thanh toán hay ERP. Hội thảo giữ nguyên.
+Áp dụng cùng một bộ lọc cho list/detail/search/count/dashboard/report/export/notification/
+files/history. Code trên nhánh `DocManS` hiện vẫn chạy mô hình 7 vai trò; UI này là đích.
 
 ## 1. Kết luận thiết kế
 
-Hệ thống **không chỉ cần giao diện cho Admin, Leader và Nhà khoa học**. Nếu chỉ chia như vậy thì sẽ thiếu nhóm vận hành quan trọng nhất là **chuyên viên quản lý khoa học / staff** và nhóm **reviewer / hội đồng / y đức**.
+Hệ thống **không chỉ cần giao diện cho Admin, Lãnh đạo và Nhà khoa học**. Nếu chỉ chia như vậy thì sẽ thiếu nhóm vận hành quan trọng nhất là **Phòng KHQS (TP, PP, TB, CV)** và nhóm **reviewer / hội đồng / IRB**.
 
 Đề xuất thiết kế hệ thống theo mô hình:
 
 ```text
-1. Admin Console
-2. Scientific Management Workspace (Head oversight / assigned Staff operations)
-3. Leadership Decision Dashboard
+1. Admin Console (QT)
+2. Phòng KHQS Workspace (TP / PP / TB / CV)
+3. BGĐ Decision Dashboard (GĐ / PGĐ-KH / PGĐ-TD)
 4. Researcher Workspace
-5. Reviewer / Council / Ethics Workspace
-6. My Work - Công việc của tôi, dùng chung cho mọi user
+5. Reviewer / Council / IRB Workspace
+6. My Work - Công việc của tôi, dùng chung cho mọi user (trừ QT)
 ```
 
-Trong đó, **My Work** không phải là một role riêng, mà là màn hình cá nhân dùng chung cho tất cả người dùng sau khi đăng nhập.
+Trong đó, **My Work** không phải là một role riêng, mà là màn hình cá nhân dùng chung cho mọi người dùng nghiệp vụ sau khi đăng nhập (QT không có hàng đợi nghiệp vụ).
 
 Không cần xây dựng giao diện riêng cho **khoa / bộ môn** trong giai đoạn hiện tại.
 
@@ -43,7 +42,7 @@ Nguyên tắc quan trọng:
 Backend vẫn phải kiểm tra quyền ở mọi API, mọi file, mọi dashboard, mọi export và mọi workflow action.
 ```
 
-Quyền của người dùng nên được tính theo:
+Mỗi tài khoản có đúng **một system role**; quan hệ với bản ghi không tạo ra role hệ thống mới. Quyền của người dùng nên được tính theo:
 
 ```text
 System role
@@ -59,12 +58,12 @@ Ví dụ một nhà khoa học có thể đồng thời là:
 ```text
 - Chủ nhiệm đề tài A
 - Thành viên đề tài B
-- Thư ký khoa học đề tài C
+- Thư ký đề tài C (`TOPIC_SECRETARY`)
 - Reviewer hồ sơ D
 - Thành viên hội đồng E
 ```
 
-Vì vậy không nên coi “nhà khoa học” là một quyền duy nhất. Nên coi đó là một nhóm người dùng có nhiều ngữ cảnh nghiệp vụ khác nhau.
+Vì vậy không nên coi “nhà khoa học” là một quyền duy nhất; ngoài system role, UI luôn dựa vào quan hệ với từng bản ghi do backend trả về. Nên coi đó là một nhóm người dùng có nhiều ngữ cảnh nghiệp vụ khác nhau.
 
 ---
 
@@ -72,9 +71,9 @@ Vì vậy không nên coi “nhà khoa học” là một quyền duy nhất. N�
 
 ### 3.1. Đối tượng sử dụng
 
-Dành cho **quản trị hệ thống**.
+Dành cho **quản trị hệ thống (QT, `SYSTEM_ADMIN`)**.
 
-Admin là người quản lý nền tảng kỹ thuật và dữ liệu nền. Admin không mặc định có quyền phê duyệt đề tài, chấm điểm đề tài hoặc quyết định nghiệp vụ khoa học.
+QT là người quản lý nền tảng kỹ thuật và dữ liệu nền. Admin không mặc định có quyền phê duyệt đề tài, chấm điểm đề tài hoặc quyết định nghiệp vụ khoa học.
 
 ### 3.2. Mục tiêu giao diện
 
@@ -93,8 +92,8 @@ Giúp quản trị viên kiểm soát:
 
 | Nhóm chức năng | Mô tả |
 |---|---|
-| Quản lý người dùng | Tạo tài khoản, cập nhật tài khoản, khóa/mở tài khoản, reset mật khẩu |
-| Quản lý vai trò | Gán role hệ thống cho user |
+| Quản lý người dùng | Tạo tài khoản, cập nhật tài khoản, khóa/mở tài khoản, gửi lại link đặt mật khẩu (xem §14) |
+| Quản lý vai trò | Gán đúng một trong 10 role hệ thống cho user |
 | Quản lý đơn vị | Quản lý khoa, bộ môn, phòng ban, đơn vị trực thuộc |
 | Quản lý danh mục | Lĩnh vực nghiên cứu, loại đề tài, tiêu chí chấm điểm, trạng thái, mức ưu tiên |
 | Cấu hình hệ thống | Tham số hệ thống, mẫu thông báo, cấu hình cơ bản |
@@ -105,128 +104,123 @@ Giúp quản trị viên kiểm soát:
 ```text
 - Không mặc định được phê duyệt đề tài
 - Không mặc định được chấm điểm đề tài
-- Không mặc định được xem toàn bộ hồ sơ nhạy cảm nếu không có quyền nghiệp vụ
+- Không xem hồ sơ nghiệp vụ (QT chỉ làm việc với dữ liệu quản trị)
 - Không được bypass workflow chỉ vì là admin
 ```
 
-Admin chỉ nên có quyền can thiệp kỹ thuật và cấu hình, còn quyết định nghiệp vụ phải thuộc Staff hoặc Leadership tùy quy trình.
+QT không có lý lịch khoa học, không có dashboard nghiệp vụ, không làm reviewer/thành viên hội đồng/IRB. QT chỉ can thiệp kỹ thuật và cấu hình; quyết định nghiệp vụ thuộc CV/TB/TP hoặc BGĐ tùy quy trình.
 
 ---
 
-## 4. Staff Operations Workspace
+## 4. Phòng KHQS Workspace (TP / PP / TB / CV)
 
 ### 4.1. Đối tượng sử dụng
 
-Dành cho **chuyên viên quản lý khoa học**, ví dụ Ban Quản lý KHQS hoặc cán bộ phụ trách vận hành quy trình đề tài.
+Dành cho Phòng KHQS: **TP** (Trưởng phòng), **PP** (Phó phòng), **TB** (Trưởng ban QLKH, một người) và **CV** (chuyên viên QLKH). Đây là workspace quan trọng nhất đối với vận hành hằng ngày. Một workspace, hiển thị theo system role; không có hồ sơ ngoài scope hay ngoài phân công.
 
-Đây là workspace quan trọng nhất đối với vận hành hằng ngày của hệ thống.
+### 4.2. Phân chia theo vai trò
 
-### 4.2. Mục tiêu giao diện
+| Vai trò | Việc chính | Không được làm |
+|---|---|---|
+| TP | Duyệt mọi tờ trình trước khi trình BGĐ; phân mảng cho CV; giao/thu hồi CV phụ trách hồ sơ và đề tài; xử lý hồ sơ "Chưa có người phụ trách"; điều phối trong scope đơn vị; xem mọi đề tài toàn Học viện; quản lý kinh phí toàn Học viện; có thể làm việc cấp CV (phân công phản biện, lập hội đồng, tổng hợp, lập tờ trình) | Kiểm tra đầy đủ, yêu cầu bổ sung; duyệt tờ trình do chính mình lập |
+| PP | Chỉ theo dõi (tiến độ, số liệu) trong scope đơn vị; xem kinh phí chỉ với đề tài mình tham gia | Mọi bước tờ trình và phê duyệt, kể cả khi TP vắng |
+| TB | Rà soát tờ trình do CV lập rồi trình TP hoặc trả về tác giả; giao/thu hồi CV; kiểm tra đầy đủ, yêu cầu bổ sung, phân công phản biện/hội đồng, tổng hợp, IRB, lập tờ trình trong scope; xem mọi đề tài toàn Học viện; quản lý kinh phí toàn Học viện | Rà soát tờ trình do chính mình lập |
+| CV | Chỉ trên hồ sơ/đề tài đang được giao: kiểm tra đầy đủ, yêu cầu bổ sung, mời phản biện/hội đồng, tổng hợp, IRB, lập tờ trình, thiết lập mốc, xét báo cáo, thẩm định điều chỉnh/gia hạn, nghiệm thu, sản phẩm, lập thanh lý, đóng đề tài, kinh phí trong phạm vi giao; duyệt/từ chối yêu cầu rút/sửa sau nộp và mở lại hồ sơ (có lý do); tạo/mở/đóng đợt tiếp nhận; quản lý hồ sơ nhà khoa học và đề tài sinh viên NCKH trong scope | Thao tác trên hồ sơ của CV khác |
 
-Giúp Staff điều phối quy trình trên proposal/project được phân công quản lý;
-nghiệp vụ độc lập dùng capability/scope riêng:
-
-```text
-- Mở đợt tiếp nhận
-- Kiểm tra hồ sơ
-- Yêu cầu bổ sung
-- Phân công reviewer/hội đồng
-- Theo dõi tiến độ đánh giá
-- Tổng hợp kết quả
-- Trình phê duyệt
-- Theo dõi đề tài được duyệt
-- Quản lý báo cáo tiến độ
-- Quản lý hội thảo, sinh viên NCKH
-- Quản lý văn bản liên quan
-- Quản lý hội đồng và hồ sơ y đức
-```
+TP và CV tạo/mở/đóng đợt tiếp nhận; TB và PP chỉ xem.
 
 ### 4.3. Chức năng chính
 
 | Nhóm chức năng | Mô tả |
 |---|---|
-| Đợt tiếp nhận | Tạo, mở, đóng, cấu hình đợt tiếp nhận hồ sơ |
-| Kiểm tra hồ sơ | Kiểm tra tính đầy đủ, trạng thái hồ sơ, file đính kèm |
-| Yêu cầu bổ sung | Gửi yêu cầu bổ sung, lý do, hạn phản hồi |
-| Phân công reviewer/hội đồng | Gán reviewer, thành viên hội đồng, thư ký hội đồng nếu có |
+| Đợt tiếp nhận | TP, CV: tạo, mở, đóng, cấu hình đợt; TB, PP: xem |
+| Kiểm tra hồ sơ | TB, CV (hồ sơ được giao): kiểm tra đầy đủ, trạng thái, file đính kèm; TP không làm bước này |
+| Yêu cầu bổ sung | TB, CV: gửi yêu cầu, lý do, hạn phản hồi |
+| Phân công chuyên viên / mảng | TP, TB: giao, đổi, thu hồi CV phụ trách (giữ lịch sử); TP: phân mảng cho CV; hệ thống tự gán CV khi nộp/nộp lại |
+| Phân công reviewer/hội đồng | TP, TB, CV: mời từ mọi tài khoản có lý lịch khoa học (trừ QT), có kiểm tra xung đột; theo dõi chấp nhận/từ chối |
 | Theo dõi đánh giá | Xem ai đã chấm, ai chưa chấm, hồ sơ nào quá hạn |
-| Tổng hợp kết quả | Tổng hợp điểm, nhận xét, kiến nghị |
-| Trình lãnh đạo | Chuyển hồ sơ đủ điều kiện sang hàng đợi phê duyệt |
-| Theo dõi đề tài được duyệt | Quản lý milestone, báo cáo định kỳ, điều chỉnh, gia hạn, nghiệm thu |
-| Hội thảo / SV NCKH | Quản lý kế hoạch, văn bản, kinh phí, sản phẩm, kết quả |
-| Văn bản liên quan | Đăng ký, phân loại, liên kết và quản lý hiệu lực văn bản |
-| Hội đồng / Y đức | Tạo hội đồng, quản lý hồ sơ y đức, tổng hợp đánh giá |
-| Báo cáo | Xuất Excel/PDF, xem thống kê theo đơn vị, lĩnh vực, trạng thái |
+| Tổng hợp kết quả | TP, TB, CV: tổng hợp điểm, nhận xét, kiến nghị; thư ký hội đồng soạn dự thảo tổng hợp/biên bản, không chấm điểm |
+| Tờ trình | CV lập → TB rà soát → TP duyệt → BGĐ ký (xem §15); trả về tác giả phải có lý do |
+| Theo dõi đề tài được duyệt | CV phụ trách: mốc, báo cáo định kỳ, thẩm định điều chỉnh/gia hạn, nghiệm thu, thanh lý; TP/TB/PP/GĐ/PGĐ-KH xem toàn Học viện |
+| Kinh phí | Siêu dữ liệu có audit: phân bổ, giải ngân, quyết toán, tài liệu; TP, TB quản lý toàn Học viện, CV trong phạm vi giao; không sổ cái/thanh toán/ERP |
+| Hội thảo / SV NCKH | Hội thảo giữ nguyên; đề tài sinh viên NCKH: CV, NCV đăng ký (giảng viên hướng dẫn), CV duyệt/quản lý/hoàn thành trong scope |
+| Văn bản liên quan | TP, TB, CV (và QT): đăng ký, phân loại, liên kết, quản lý hiệu lực |
+| Hội đồng / IRB | TP, TB, CV: lập hội đồng, mời thành viên, trình kết luận IRB |
+| Hồ sơ nhà khoa học | TP, CV (scope đơn vị): quản lý hồ sơ, xử lý cảnh báo trùng (xem §13) |
+| Báo cáo | Xuất Excel/PDF, thống kê theo đơn vị, lĩnh vực, cấp, tính chất (Quân sự / Dân sự / Chưa phân loại) |
 
-### 4.4. Dashboard cho Staff
+### 4.4. Dashboard theo vai trò
 
-Staff nên có dashboard riêng, tập trung vào việc cần xử lý:
+Dashboard riêng, tập trung vào việc cần xử lý (matrix §9.10, §9.11):
 
 ```text
-- Hồ sơ mới nộp cần kiểm tra
-- Hồ sơ đang chờ bổ sung
-- Hồ sơ đã bổ sung lại cần kiểm tra
-- Hồ sơ cần phân công reviewer
-- Reviewer quá hạn chấm điểm
-- Hồ sơ đã đủ đánh giá cần tổng hợp
-- Hồ sơ chờ trình lãnh đạo
-- Đề tài chậm báo cáo tiến độ
-- Task quá hạn
-- Hồ sơ y đức chờ xử lý
+CV (hồ sơ được giao):
+- Hồ sơ mới nộp cần kiểm tra; hồ sơ chờ bổ sung; hồ sơ đã bổ sung lại
+- Hồ sơ cần phân công reviewer; reviewer quá hạn chấm
+- Hồ sơ đã đủ đánh giá cần tổng hợp; tờ trình đang soạn hoặc bị trả về
+- Đề tài chậm báo cáo; yêu cầu điều chỉnh/gia hạn cần thẩm định
+- Yêu cầu rút/sửa sau nộp cần duyệt
+TB: hàng đợi rà soát tờ trình (bước Trưởng ban); hồ sơ cần kiểm tra/giao CV
+TP: hàng đợi duyệt tờ trình (bước Trưởng phòng); hồ sơ "Chưa có người phụ trách";
+    khối lượng việc theo CV; bộ lọc chuyên viên phụ trách/chưa phân công
+PP: chỉ theo dõi tiến độ và số liệu, không có hàng đợi xử lý
+Bộ lọc chung: năm, đơn vị, cấp, lĩnh vực, tính chất; phân tích theo CV phụ trách với nhóm "chưa phân công"
 ```
 
 ### 4.5. Lưu ý phân quyền
 
-Staff chỉ nên thấy và xử lý dữ liệu trong phạm vi được cấp. Nếu staff thuộc đơn vị/phòng ban cụ thể thì dashboard, danh sách, tìm kiếm, export và file đều phải tuân thủ scope đó.
+TP/TB chỉ xử lý dữ liệu trong scope đơn vị, trừ phạm vi xem đề tài và quản lý kinh phí toàn Học viện; hồ sơ đề xuất luôn theo scope đơn vị. CV chỉ thấy khả năng thao tác trên hồ sơ đang phụ trách; quyền quá khứ không còn hiệu lực. Danh sách, tìm kiếm, export, file và lịch sử đều tuân thủ cùng scope. Chức danh đơn vị (Trưởng khoa, Chủ nhiệm Bộ môn...) chỉ để hiển thị, không cấp quyền.
 
 ---
 
-## 5. Leadership Decision Dashboard
+## 5. BGĐ Decision Dashboard (GĐ / PGĐ-KH / PGĐ-TD)
 
 ### 5.1. Đối tượng sử dụng
 
-Dành cho **lãnh đạo / người có thẩm quyền phê duyệt / approval authority**.
+Dành cho Ban giám đốc (BGĐ), một dashboard theo system role:
+
+| Vai trò | Nội dung |
+|---|---|
+| GĐ | Duyệt đề tài + kinh phí; duyệt thanh lý (chỉ GĐ); cũng ký mọi thứ PGĐ-KH ký; xem mọi đề tài và kinh phí từng đề tài; quản lý kinh phí, giải ngân, quyết toán |
+| PGĐ-KH | Ký quyết định thành lập hội đồng (đánh giá, nghiệm thu, IRB), giấy IRB, gia hạn, điều chỉnh (kể cả đổi kinh phí); xem mọi đề tài và kinh phí; không duyệt đề tài/kinh phí đề tài/thanh lý |
+| PGĐ-TD | Chỉ theo dõi: tiến độ, số lượng, báo cáo kinh phí tổng hợp; không xem kinh phí từng bản ghi, không ký |
 
 ### 5.2. Mục tiêu giao diện
 
-Leadership không cần giao diện nhập liệu phức tạp như staff. Giao diện của lãnh đạo nên tập trung vào:
+BGĐ không cần giao diện nhập liệu phức tạp như Phòng KHQS. Giao diện tập trung vào:
 
 ```text
 - Xem tổng quan
-- Nhận biết việc cần quyết định
+- Nhận biết việc cần quyết định hoặc ký
 - Drill-down vào hồ sơ
-- Xem lịch sử, file, điểm, nhận xét, tổng hợp
-- Approve / reject / yêu cầu xem xét lại
+- Xem tờ trình, lịch sử các bước (TB, TP), file, điểm, nhận xét, tổng hợp
+- GĐ: duyệt/từ chối đề tài + kinh phí; GĐ hoặc PGĐ-KH: ký; trả về kèm lý do
 ```
 
 ### 5.3. Chức năng chính
 
 | Nhóm chức năng | Mô tả |
 |---|---|
-| Dashboard điều hành | Số hồ sơ chờ duyệt, đề tài chậm tiến độ, việc quá hạn |
-| Hàng đợi phê duyệt | Proposal, điều chỉnh, gia hạn, nghiệm thu, y đức chờ quyết định |
-| Xem hồ sơ | Xem tóm tắt, lịch sử xử lý, file, điểm đánh giá, tổng hợp |
-| Ra quyết định | Approve, reject, yêu cầu xem xét lại hoặc ghi ý kiến chỉ đạo |
-| Báo cáo tổng hợp | Xem thống kê theo đơn vị, lĩnh vực, trạng thái, thời gian |
+| Dashboard điều hành | Hồ sơ chờ duyệt, đề tài chậm tiến độ, việc quá hạn (theo role) |
+| Hàng đợi quyết định (GĐ) | Tờ trình đề tài + kinh phí, thanh lý chờ quyết định |
+| Hàng đợi ký (GĐ, PGĐ-KH) | Thành lập hội đồng đánh giá/IRB/nghiệm thu, giấy IRB, điều chỉnh, gia hạn chờ ký |
+| Xem hồ sơ | Tóm tắt, lịch sử xử lý, file, điểm đánh giá, tổng hợp (PGĐ-TD không xem kinh phí từng bản ghi) |
+| Báo cáo tổng hợp | Theo đơn vị, lĩnh vực, cấp, tính chất, trạng thái, thời gian; PGĐ-TD chỉ số liệu tổng hợp |
 
-### 5.4. Dashboard cho Leadership
-
-Nên có các khối:
+### 5.4. Dashboard theo vai trò
 
 ```text
-- Hồ sơ chờ phê duyệt
-- Hồ sơ quá hạn xử lý
-- Đề tài chậm tiến độ
-- Báo cáo tiến độ chưa nộp
-- Đề tài sắp đến hạn nghiệm thu
-- Hồ sơ y đức chờ quyết định
-- Thống kê theo đơn vị
-- Thống kê theo lĩnh vực nghiên cứu
+GĐ / PGĐ-KH (phạm vi theo quyền):
+- Tờ trình chờ quyết định (GĐ) hoặc chờ ký (GĐ, PGĐ-KH)
+- Hồ sơ quá hạn xử lý; đề tài chậm tiến độ; báo cáo chưa nộp
+- Đề tài sắp đến hạn nghiệm thu; kinh phí từng đề tài
+- Thống kê theo đơn vị, lĩnh vực, cấp, tính chất
+PGĐ-TD: khối số liệu tổng hợp, cột kinh phí từng bản ghi để trống
 ```
 
 ### 5.5. Lưu ý phân quyền
 
-Leadership chỉ được quyết định trong phạm vi thẩm quyền. Nếu một lãnh đạo đồng thời là PI của một đề tài thì hệ thống phải có rule chống xung đột lợi ích, ví dụ không cho tự phê duyệt hồ sơ của chính mình.
+Chỉ GĐ duyệt đề tài + kinh phí và thanh lý. Người ký không được là thành viên tham gia, reviewer hay bước tờ trình trên cùng bản ghi (chống xung đột lợi ích, kể cả PI là lãnh đạo). Nếu không có người xử lý/ký hợp lệ cho điều chỉnh hoặc gia hạn, PI rút yêu cầu để gỡ vướng. Khi BGĐ trả tờ trình về tác giả, lý do là bắt buộc.
 
 ---
 
@@ -234,17 +228,17 @@ Leadership chỉ được quyết định trong phạm vi thẩm quyền. Nếu 
 
 ### 6.1. Đối tượng sử dụng
 
-Dành cho **nhà khoa học**, bao gồm:
+Dành cho **mọi vai trò có thể là chủ nhiệm (mọi role trừ QT/NNB)** và **nhà khoa học** (NCV, NNB), bao gồm:
 
 ```text
 - Chủ nhiệm đề tài
 - Thành viên đề tài
-- Thư ký khoa học
+- Thư ký đề tài
 - Người tham gia hội thảo / sinh viên NCKH nếu có tài khoản
 - Người có hồ sơ nhà khoa học trong hệ thống
 ```
 
-Không nên tách thành nhiều app riêng cho PI, thành viên và thư ký. Nên dùng một **Researcher Workspace**, trong đó chức năng thay đổi theo vai trò của người đó trong từng hồ sơ cụ thể.
+NNB không bao giờ là PI, không tạo đề xuất và không thấy đợt tiếp nhận. Không nên tách thành nhiều app riêng cho PI, thành viên và thư ký. Nên dùng một **Researcher Workspace**, trong đó chức năng thay đổi theo vai trò của người đó trong từng hồ sơ cụ thể.
 
 ### 6.2. Mục tiêu giao diện
 
@@ -269,7 +263,7 @@ Giúp nhà khoa học xử lý các việc liên quan đến hồ sơ và đề 
 |---|---|
 | Đề tài tôi chủ nhiệm | Các proposal/project mà tôi là PI |
 | Đề tài tôi tham gia | Các đề tài tôi là thành viên |
-| Tôi làm thư ký | Đề tài/hội đồng mà tôi được phân công làm thư ký khoa học |
+| Tôi làm thư ký | Đề tài/hội đồng mà tôi được phân công làm thư ký |
 | Hồ sơ cần bổ sung | Các proposal/project bị yêu cầu bổ sung |
 | Báo cáo cần nộp | Báo cáo định kỳ, minh chứng, hồ sơ nghiệm thu cần nộp |
 | Công việc của tôi | Task được giao hoặc cần cập nhật |
@@ -278,7 +272,7 @@ Giúp nhà khoa học xử lý các việc liên quan đến hồ sơ và đề 
 
 ### 6.4. Quyền của Chủ nhiệm đề tài
 
-Chủ nhiệm đề tài nên có quyền:
+Sau khi nộp, PI gửi yêu cầu rút/sửa; CV phụ trách duyệt hoặc từ chối, và mở lại hồ sơ khi cần (có lý do, có audit). Chủ nhiệm đề tài nên có quyền:
 
 | Nhóm chức năng | Quyền |
 |---|---|
@@ -295,7 +289,7 @@ Chủ nhiệm đề tài không nên có quyền:
 ```text
 - Tự phê duyệt đề tài của mình
 - Tự chấm điểm đề tài của mình
-- Tự gán reviewer chính thức nếu đó là quyền của staff
+- Tự gán reviewer chính thức nếu đó là quyền của TP/TB/CV
 - Xem review nội bộ nếu chính sách chưa cho phép
 ```
 
@@ -320,11 +314,11 @@ Thành viên đề tài không nên có quyền:
 - Phê duyệt báo cáo hoặc đề tài
 ```
 
-### 6.6. Quyền của Thư ký khoa học
+### 6.6. Quyền của Thư ký (đề tài / hội đồng)
 
-Thư ký khoa học nên là vai trò theo từng đề tài hoặc hội đồng, không phải role quản trị toàn hệ thống.
+Thư ký là vai trò theo từng đề tài hoặc hội đồng, không phải role quản trị toàn hệ thống.
 
-Thư ký khoa học nên có quyền:
+Thư ký nên có quyền:
 
 | Nhóm chức năng | Quyền |
 |---|---|
@@ -335,19 +329,20 @@ Thư ký khoa học nên có quyền:
 | Theo dõi | Xem trạng thái xử lý, deadline, yêu cầu bổ sung |
 | Tổng hợp | Nhập dự thảo biên bản/tổng hợp nếu được giao |
 
-Thư ký khoa học không nên có quyền:
+Thư ký không nên có quyền:
 
 ```text
 - Approve/reject proposal
 - Approve/reject ethics dossier
-- Thay reviewer/hội đồng nếu không phải staff được ủy quyền
+- Thay reviewer/hội đồng nếu không phải TP/TB/CV có thẩm quyền
 - Xem dữ liệu ngoài đề tài/hội đồng được phân công
-- Quyết định thay lãnh đạo
+- Chấm điểm với tư cách thư ký hội đồng (chỉ soạn tổng hợp/biên bản)
+- Quyết định thay BGĐ
 ```
 
 ---
 
-## 7. Reviewer / Council / Ethics Workspace
+## 7. Reviewer / Council / IRB Workspace
 
 ### 7.1. Đối tượng sử dụng
 
@@ -358,40 +353,38 @@ Dành cho:
 - Thành viên hội đồng
 - Chủ tịch hội đồng
 - Thư ký hội đồng
-- Reviewer hồ sơ y đức
-- Thành viên hội đồng y đức
+- Thành viên IRB
+- Thư ký IRB
 ```
 
-Nhóm này không nên bị gộp hoàn toàn vào giao diện nhà khoa học thông thường, vì nhiệm vụ của họ là đánh giá độc lập, chấm điểm, nhận xét và đưa ra kiến nghị.
+Reviewer, thành viên hội đồng và thành viên IRB được mời từ **mọi tài khoản có lý lịch khoa học (mọi role trừ QT)**, kể cả GĐ, PGĐ, TP, PP, TB, CV. Người được mời phải **chấp nhận hoặc từ chối (từ chối phải có lý do)**. Người tham gia bản ghi không được mời. Nhóm này không nên bị gộp vào giao diện nhà khoa học thông thường, vì nhiệm vụ của họ là đánh giá độc lập, chấm điểm, nhận xét và đưa ra kiến nghị.
 
 ### 7.2. Mục tiêu giao diện
 
-Giúp reviewer/hội đồng xử lý các hồ sơ được phân công:
-
 ```text
+- Xem lời mời; chấp nhận hoặc từ chối kèm lý do
 - Xem danh sách hồ sơ được giao
 - Xem tài liệu cần đánh giá
-- Nhập điểm theo tiêu chí
-- Nhập nhận xét
-- Đưa ra kiến nghị
-- Submit review
-- Xem lại review đã nộp theo policy
+- Nhập điểm theo tiêu chí (mọi người được mời vào hội đồng đánh giá đều chấm)
+- Nhập nhận xét, kiến nghị; submit review
+- Thành viên IRB nhận xét; thư ký IRB lập kết luận IRB
+- Thư ký hội đồng soạn tổng hợp/biên bản, không chấm điểm
 ```
 
 ### 7.3. Chức năng chính
 
 | Nhóm chức năng | Mô tả |
 |---|---|
-| Hồ sơ được phân công | Chỉ thấy proposal, hồ sơ y đức, hội đồng được giao |
-| Tài liệu đánh giá | Xem/tải file cần thiết để đánh giá |
-| Chấm điểm | Nhập điểm theo bộ tiêu chí |
-| Nhận xét | Nhập nhận xét chuyên môn, kiến nghị |
+| Lời mời | Trước khi chấp nhận chỉ thấy tiêu đề, vai trò, hạn, người mời |
+| Hồ sơ được phân công | Chỉ thấy proposal, hồ sơ IRB, hội đồng được giao và đã chấp nhận |
+| Tài liệu đánh giá | Thành viên hội đồng chỉ đọc hồ sơ sau khi BGĐ ký quyết định thành lập |
+| Chấm điểm / Nhận xét | Điểm theo tiêu chí, nhận xét chuyên môn, kiến nghị |
 | Submit review | Gửi kết quả đánh giá chính thức |
 | Lịch sử đánh giá | Xem các đánh giá đã nộp theo chính sách quyền |
 
 ### 7.4. Lưu ý phân quyền
 
-Reviewer chỉ được truy cập hồ sơ được phân công. Không được thấy toàn bộ danh sách đề tài, không được xem review của người khác nếu policy chưa cho phép, không được sửa hồ sơ của PI và không được phê duyệt cuối cùng.
+Reviewer chỉ truy cập hồ sơ được phân công. Không thấy toàn bộ danh sách đề tài, không xem review của người khác, không sửa hồ sơ của PI, không ký hay quyết định trên cùng bản ghi. Ẩn danh hai chiều: PI và reviewer không xem nhật ký hành động của bản ghi; chỉ TB và TP được xem danh tính reviewer. Hội đồng chỉ được trình BGĐ khi mọi thành viên đã chấp nhận.
 
 ---
 
@@ -423,14 +416,20 @@ Biến hệ thống thành nơi điều hành công việc, không chỉ là nơ
 
 ### 8.4. Ví dụ theo từng nhóm người dùng
 
+QT không có hàng đợi nghiệp vụ và không dùng My Work nghiệp vụ.
+
 | Người dùng | My Work nên hiển thị |
 |---|---|
-| Staff | Hồ sơ mới nộp, hồ sơ cần kiểm tra, reviewer quá hạn, báo cáo chờ rà soát |
-| Leadership | Hồ sơ chờ phê duyệt, đề tài chậm tiến độ, quyết định cần xử lý |
+| CV | Hồ sơ mới nộp được giao, hồ sơ cần kiểm tra, reviewer quá hạn, báo cáo chờ rà soát, tờ trình bị trả về, yêu cầu rút/sửa cần duyệt |
+| TB | Hàng đợi rà soát tờ trình, hồ sơ cần kiểm tra và giao CV |
+| TP | Hàng đợi duyệt tờ trình, hồ sơ "Chưa có người phụ trách", cảnh báo hồ sơ nhà khoa học trùng |
+| PP | Số liệu theo dõi, không có hàng đợi xử lý |
+| GĐ | Tờ trình chờ quyết định và chờ ký (đề tài + kinh phí, thanh lý, hội đồng, điều chỉnh, gia hạn) |
+| PGĐ-KH | Tờ trình chờ ký (hội đồng, giấy IRB, điều chỉnh, gia hạn) |
+| PGĐ-TD | Số liệu tổng hợp |
 | PI | Proposal cần bổ sung, báo cáo sắp hạn, task trong đề tài |
 | Project Member | Task được giao, evidence cần nộp, deadline phần việc |
-| Reviewer | Hồ sơ cần chấm, review sắp hạn, review đã lưu nháp |
-| Admin | Yêu cầu hỗ trợ tài khoản, audit/security warning, cấu hình cần kiểm tra |
+| Reviewer / thành viên hội đồng / IRB | Lời mời chờ phản hồi, hồ sơ cần chấm, review sắp hạn, review đã lưu nháp |
 
 ---
 
@@ -438,16 +437,18 @@ Biến hệ thống thành nơi điều hành công việc, không chỉ là nơ
 
 Trong Phase 1, **chưa cần giao diện riêng cho sinh viên**.
 
-Module “sinh viên nghiên cứu khoa học” hiện nên do staff hoặc cán bộ phụ trách quản lý. Các nghiệp vụ chính gồm:
+Module “sinh viên nghiên cứu khoa học” (đề tài sinh viên NCKH) do CV và NCV đăng ký với tư cách giảng viên hướng dẫn; CV duyệt, quản lý và hoàn thành trong scope đơn vị (matrix §9.6). Các nghiệp vụ chính gồm:
 
 ```text
-- Tạo hoặc import hoạt động sinh viên NCKH đã được duyệt
-- Quản lý kế hoạch
-- Quản lý văn bản
+- Đăng ký đề tài (CV, NCV là giảng viên hướng dẫn)
+- Duyệt, quản lý, hoàn thành (CV trong scope)
+- Quản lý kế hoạch và văn bản
 - Theo dõi điều chỉnh
-- Theo dõi kinh phí
+- Theo dõi kinh phí (siêu dữ liệu)
 - Theo dõi sản phẩm và kết quả
 ```
+
+Hội thảo giữ nguyên, chưa thay đổi theo mô hình 10 vai trò.
 
 Sau này nếu hệ thống mở rộng, có thể thêm Student Portal.
 
@@ -476,15 +477,20 @@ Dashboard
 Công việc của tôi
 Hồ sơ đề tài
 Đề tài được duyệt
+Tờ trình
+Kinh phí
+Phân mảng
 Báo cáo tiến độ
 Hội thảo / Sinh viên NCKH
-Hội đồng / Y đức
+Hội đồng / IRB
 Văn bản liên quan
 Nhà khoa học
 Reviewer Workspace
 Báo cáo - Thống kê
 Quản trị hệ thống
 ```
+
+Hiển thị theo role: "Tờ trình" cho CV (lập), TB (rà soát), TP (duyệt), GĐ/PGĐ-KH (ký); "Kinh phí" cho GĐ, PGĐ-KH, TP, TB, CV (phạm vi giao) và người tham gia theo quyền xem riêng; "Phân mảng" chỉ TP (TB xem *(cần xác nhận)*); "Công việc của tôi" không có cho QT.
 
 Người dùng không có quyền thì không thấy menu tương ứng. Tuy nhiên backend vẫn phải kiểm tra quyền ở API.
 
@@ -494,12 +500,13 @@ Người dùng không có quyền thì không thấy menu tương ứng. Tuy nhi
 
 | Nhóm UI | Bắt buộc MVP | Đối tượng | Lý do |
 |---|---:|---|---|
-| Admin Console | Có | System Admin | Quản lý user, role, đơn vị, danh mục, cấu hình |
-| Scientific Management Workspace | Có | Head / Staff | Head giám sát trong scope; Staff vận hành proposal/project được phân công |
-| Leadership Decision Dashboard | Có | Lãnh đạo / approval authority | Phê duyệt, xem dashboard điều hành, xử lý quyết định |
-| Researcher Workspace | Có | Nhà khoa học, PI, thành viên, thư ký khoa học | Nộp hồ sơ, theo dõi đề tài, nộp báo cáo, xử lý task |
-| Reviewer / Council / Ethics Workspace | Có | Reviewer, hội đồng, y đức | Chấm điểm, nhận xét, đánh giá hồ sơ được phân công |
-| My Work | Có | Tất cả user | Hàng đợi việc cá nhân, notification, deadline |
+| Admin Console | Có | QT | Quản lý user, role, đơn vị, danh mục, cấu hình, link kích hoạt tài khoản |
+| Phòng KHQS Workspace | Có | TP, PP, TB, CV | TP duyệt tờ trình và phân mảng; PP theo dõi; TB rà soát tờ trình; CV vận hành hồ sơ được giao |
+| BGĐ Decision Dashboard | Có | GĐ, PGĐ-KH, PGĐ-TD | GĐ quyết định/ký; PGĐ-KH ký; PGĐ-TD theo dõi tổng hợp |
+| Researcher Workspace | Có | Mọi role trừ QT/NNB (PI), thành viên, thư ký đề tài | Nộp hồ sơ, theo dõi đề tài, nộp báo cáo, xử lý task |
+| Reviewer / Council / IRB Workspace | Có | Mọi tài khoản có lý lịch khoa học (trừ QT) khi được mời | Chấp nhận/từ chối, chấm điểm, nhận xét hồ sơ được phân công |
+| My Work | Có | Mọi user trừ QT | Hàng đợi việc cá nhân theo role, notification, deadline |
+| Hộp tờ trình và Hồ sơ chưa phân công | Có | CV, TB, TP, GĐ, PGĐ-KH | Xem §15, §16 |
 | Student Portal | Để sau | Sinh viên | Chưa cần cho MVP |
 | External Public Portal | Không | Người ngoài hệ thống | Phase 1 là hệ thống nội bộ, không phải cổng công khai |
 
@@ -510,11 +517,11 @@ Người dùng không có quyền thì không thấy menu tương ứng. Tuy nhi
 Giai đoạn hiện tại nên thiết kế **5 workspace chính + 1 màn hình My Work dùng chung**:
 
 ```text
-1. Admin Console
-2. Scientific Management Workspace (Head oversight / assigned Staff operations)
-3. Leadership Decision Dashboard
+1. Admin Console (QT)
+2. Phòng KHQS Workspace (TP / PP / TB / CV)
+3. BGĐ Decision Dashboard (GĐ / PGĐ-KH / PGĐ-TD)
 4. Researcher Workspace
-5. Reviewer / Council / Ethics Workspace
+5. Reviewer / Council / IRB Workspace
 6. My Work - Công việc của tôi
 ```
 
@@ -524,16 +531,44 @@ Không cần giao diện riêng cho sinh viên trong MVP.
 
 Không cần external public portal trong Phase 1.
 
-Điểm quan trọng nhất là: hệ thống không nên phân quyền theo kiểu một user chỉ có một vai trò cố định. Thay vào đó, hệ thống cần tính quyền theo từng bản ghi nghiệp vụ. Một nhà khoa học có thể là chủ nhiệm ở đề tài này, thành viên ở đề tài khác, thư ký khoa học ở hội đồng khác, và reviewer ở một hồ sơ khác.
+Điểm quan trọng nhất là: mỗi tài khoản có đúng một system role, và quyền thực tế còn được tính theo quan hệ với từng bản ghi nghiệp vụ. Một nhà khoa học có thể là chủ nhiệm ở đề tài này, thành viên ở đề tài khác, thư ký ở hội đồng khác, và reviewer ở một hồ sơ khác; quan hệ với bản ghi không bao giờ tạo thêm system role.
 
 Do đó UI phải linh hoạt theo ngữ cảnh, còn backend phải luôn enforce quyền theo:
 
 ```text
 User account
-+ System role
++ System role (một trong 10)
 + Organization/data scope
-+ Participation role
++ Record relationship / participation role
 + Assignment scope
-+ Workflow state
++ Workflow state (kể cả bước tờ trình)
 + Conflict policy
 ```
+
+---
+
+## 13. Cảnh báo hồ sơ nhà khoa học trùng và quyết định gộp
+
+- QT, TP hoặc CV (trong scope) tạo cảnh báo khi thấy hồ sơ trùng.
+- Cảnh báo gửi thông báo tới TB và TP, hai vai trò này quyết định gộp hoặc giữ riêng.
+- Màn hình quyết định cho xem hai hồ sơ cạnh nhau, lý do cảnh báo; thao tác gộp có xác nhận và lịch sử được giữ.
+- CV và QT chỉ cảnh báo, không quyết định gộp.
+
+## 14. Email link kích hoạt tài khoản
+
+- Khi QT, TP hoặc CV cấp tài khoản cho hồ sơ nhà khoa học, người dùng nhận email chứa link đặt mật khẩu dùng một lần, hết hạn sau 48 giờ.
+- Người dùng tự đặt mật khẩu qua link; không có mật khẩu do hệ thống cấp. Trước khi kích hoạt chưa dùng được tính năng thường.
+- Người quản lý có thao tác "Gửi lại link kích hoạt" khi link hết hạn hoặc gửi lỗi/chưa chắc đã tới; mọi lần gửi được audit, không hiển thị link hay mật khẩu cho người quản lý.
+
+## 15. Hộp tờ trình (approval routing inbox)
+
+- Hộp tờ trình hiển thị theo bước hiện tại của người dùng: TB (rà soát), TP (duyệt), GĐ hoặc PGĐ-KH (ký, theo loại thủ tục), CV (soạn và bị trả về).
+- Mỗi dòng cho biết loại thủ tục, bản ghi liên quan, bước hiện tại, tác giả và hạn.
+- Hành động: chuyển bước tiếp theo (TB → TP → BGĐ), duyệt/ký, hoặc trả về tác giả kèm lý do bắt buộc. Không có hành động bỏ qua bước; người dùng không rà soát tờ trình do chính mình lập.
+- Chi tiết tờ trình có lịch sử các bước (TB, TP, BGĐ); PI và reviewer không thấy nhật ký hành động.
+
+## 16. Hồ sơ chưa có người phụ trách
+
+- TP (và TB) có danh sách hồ sơ/đề tài hiển thị "Chưa có người phụ trách" khi hệ thống không tự gán được CV theo mảng.
+- Từ danh sách, TP/TB giao CV phụ trách (kiểm tra xung đột); thay đổi và thu hồi được lưu lịch sử.
+- Danh sách chỉ hiện hồ sơ trong scope của người xem.

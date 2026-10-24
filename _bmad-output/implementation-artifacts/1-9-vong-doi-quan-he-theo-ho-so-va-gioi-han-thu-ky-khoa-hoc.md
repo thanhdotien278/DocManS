@@ -4,6 +4,8 @@ baseline_commit: ba3b835088b424de62dfae70963226f8c28b9169
 
 # Story 1.9: Record-Scoped Relationship Lifecycle and Scientific Secretary Limits
 
+> Role names and decision rights here predate the 10-role model (2026-10-18); see `docs/permission-matrix.md`.
+
 **Target refinement — 2026-09-21:** Story 1.9 additionally covers
 `PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER`: at most one primary
 active Staff officer per record, concurrent-safe reassignment, preserved history/audit

@@ -8,7 +8,7 @@ review_loop_iteration: 0
 baseline_commit: a7dc9c40e6a5e1148ee4d6a8fae635523daff37f
 context:
   - '{project-root}/docs/contracts/project-execution.md'
-  - '{project-root}/docs/authorization-core-business-baseline.md'
+  - '{project-root}/docs/permission-matrix.md'
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
@@ -98,11 +98,12 @@ are immutable; stale approved baselines require new review/preparation.
   version/decision remain traceable and project grants are independent.
 - Given a submitted revision, when PI corrects after return, then old content and
   evidence remain unchanged and a new revision enters review.
-- Given current Staff assignment/scope, when monitoring runs, then only authorized
+- Given current CV assignment/scope, when monitoring runs, then only authorized
   records/counts/evidence appear and overdue never changes project state.
-- Given Staff review of adjustment or preparation of extension, when assigned Staff
-  decides adjustment or scoped Head decides extension, then approval atomically
-  applies the change; all other actors, bypasses and duplicate decisions are denied.
+- Given CV appraisal of an adjustment or extension (target 10-role model; shipped code
+  still has the Staff/Head decision paths until story 6.11), when the tờ trình has passed
+  CV → TB → TP and GĐ or PGĐ-KH signs, then the signature atomically applies the change;
+  all other actors, bypasses and duplicate decisions are denied.
 - Given inactive accounts, expired grants or conflicts, when any protected action
   runs, then backend denial overrides cached UI capabilities.
 - Given seeded scenarios, when the end-to-end flow runs, then capability-driven UI,
@@ -197,6 +198,8 @@ then prefills the report form for PATCH editing. A PATCH with `checkpointId: nul
 "Báo cáo chung". The API now also returns the current officer's `displayName`.
 
 ## Spec Change Log
+
+- 2026-10-18 (10-role model, `docs/permission-matrix.md`, §7 wins): the frozen intent, I/O matrix and the execution evidence below record the 2026-09-22 Staff/Head decision model as shipped. Target model: Staff → CV³; Head → TP¹/TB¹; assigned CV appraises adjustment/extension and drafts the tờ trình, routing is CV → TB → TP → BGĐ, and GĐ or PGĐ-KH sign (signature applies the change atomically). TP, TB and PP hold no direct decision action; liquidation is GĐ only. The "Adjustment decision" and "Extension decision" rows are replaced by routing in story 6.11 (funding and liquidation: 6.12). "Seven system roles" is now ten. Frozen text was not rewritten.
 
 ## Review Triage Log
 
