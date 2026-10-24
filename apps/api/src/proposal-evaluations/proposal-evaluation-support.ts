@@ -40,6 +40,10 @@ export type ReviewAssignmentRecord = {
   revokedAt: Date | null;
   completedAt: Date | null;
   reviewedSubmissionEventId: string | null;
+  invitationStatus?: string;
+  respondedAt?: Date | null;
+  declineReason?: string | null;
+  councilEstablishedAt?: Date | null;
   reviewer?: { displayName: string; username: string | null; unit: string; status?: string } | null;
   assignedBy?: { displayName: string } | null;
 };
@@ -248,9 +252,13 @@ export async function assertProposalManagementWriteScope(prisma: PrismaService, 
   throw new ForbiddenException({ message: "Chỉ Trưởng phòng, Trưởng ban hoặc Chuyên viên phụ trách hồ sơ mới được tổng hợp và lập tờ trình." });
 }
 
-/** Assignment rosters are operational reads for scoped Head and assigned Staff. */
+/** Assignment rosters are operational reads for scoped Head/Board Head and assigned Staff. */
 export async function assertReviewAssignmentReadScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
   if (isResearchManagementHead(actor)) return assertScientificManagementHeadScope(actor, proposal);
+  if (actor && isResearchBoardHead(actor)) {
+    assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
+    return actor;
+  }
   if (isResearchManagementStaff(actor)) return assertScientificManagementScope(prisma, actor, proposal);
   throw new ForbiddenException({ message: "Không có quyền xem phân công đánh giá của hồ sơ này." });
 }

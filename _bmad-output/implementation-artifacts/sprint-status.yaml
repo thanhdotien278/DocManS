@@ -73,7 +73,7 @@ development_status:
   epic-5: in-progress
   5-1-kiem-tra-tinh-day-du-va-yeu-cau-bo-sung: backlog
   5-2-chinh-sua-theo-yeu-cau-va-nop-lai-de-xuat: backlog
-  # 5.3: review 2026-10-24 sửa 3 lỗi; còn thiếu notification event (AC4, chờ Epic 11) -> giữ review.
+  # 5.3: review 2026-10-24 sửa 3 lỗi; còn thiếu notification event (AC4, chờ Epic 11) -> giữ review. Delta 10 vai trò: Story 5.11.
   5-3-phan-cong-reviewer-voi-kiem-tra-xung-dot: review
   5-4-reviewer-truy-cap-va-nop-danh-gia-cua-minh: backlog
   5-5-theo-doi-tien-do-va-tong-hop-danh-gia-noi-bo: review
@@ -82,8 +82,10 @@ development_status:
   5-8-phe-duyet-tu-choi-va-cong-bo-ket-qua-de-xuat: review
   # 5.9: lõi routing + API subject + UI + gói đánh giá mở DECISION_PACKAGE đã xong (2026-10-25); còn LEADERSHIP sign theo loại (5.10 và các story sau), thông báo (chờ Epic 11) -> giữ review.
   5-9-approval-routing-cv-tb-tp-bgd: review
+  # 5.10: DECISION_PACKAGE (GĐ) + EVALUATION_COUNCIL (GĐ/PGĐ-KH ký, đánh dấu councilEstablishedAt) đã xong (2026-10-24); thông báo chờ Epic 11 -> giữ review.
   5-10-bgd-signing-council-and-topic-decision: review
-  5-11-reviewer-assignment-tp-tb-cv-delta: backlog
+  # 5.11: TP¹/TB¹/CV³ mời, ứng viên có lý lịch trừ QT, chấp nhận/từ chối, chặn tự phân công đã xong (2026-10-24); thông báo lời mời chờ Epic 11, test DB opt-in của 5.3 chưa cập nhật -> review.
+  5-11-reviewer-assignment-tp-tb-cv-delta: review
   epic-5-retrospective: optional
   epic-6: in-progress
   6-1-khoi-tao-de-tai-tu-proposal-duoc-phe-duyet: in-progress

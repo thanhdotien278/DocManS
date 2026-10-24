@@ -139,8 +139,8 @@ function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): {
     return input.canEdit ? null : blocked("WORKFLOW_STATE_DENIED");
   }
   if (["proposal.completeness.check", "proposal.supplement.request"].includes(action) && !isResearchManagementStaff(input.actor)) return blocked("ACTION_NOT_GRANTED");
-  if (["proposal.review.assign", "proposal.management-officer.assign", "proposal.management-officer.revoke"].includes(action) && !isResearchManagementHead(input.actor)) return blocked("ACTION_NOT_GRANTED");
-  if (["proposal.review.consolidate", "proposal.review.finalize", "proposal.review.submit-package"].includes(action) && !canManageEvaluationPackage(input)) return blocked("ACTION_NOT_GRANTED");
+  if (["proposal.management-officer.assign", "proposal.management-officer.revoke"].includes(action) && !isResearchManagementHead(input.actor)) return blocked("ACTION_NOT_GRANTED");
+  if (["proposal.review.assign", "proposal.review.consolidate", "proposal.review.finalize", "proposal.review.submit-package"].includes(action) && !canManageEvaluationPackage(input)) return blocked("ACTION_NOT_GRANTED");
   if (["proposal.decision.approve", "proposal.decision.reject"].includes(action) && input.actor.systemRole !== "LEADERSHIP_APPROVAL_AUTHORITY") return blocked("ACTION_NOT_GRANTED");
   if (["proposal.review.assign", "proposal.review.consolidate", "proposal.review.finalize", "proposal.review.submit-package", "proposal.completeness.check", "proposal.supplement.request", "proposal.management-officer.assign", "proposal.management-officer.revoke", "proposal.decision.approve", "proposal.decision.reject"].includes(action)) {
     if (!input.actor.organizationScopes.some((scope) => scope.id === input.proposal.hostOrganizationUnitId)) return blocked("ORG_SCOPE_DENIED");
@@ -148,7 +148,7 @@ function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): {
     if (input.participation.isParticipant || input.reviewAccess.isAssignedReviewer || (input.reviewAccess.hasReviewConflict || input.reviewAccess.hasPersistedReview)) return blocked("CONFLICT_DENIED");
   }
   if (action === "proposal.review.assign") {
-    if (!isResearchManagementHead(input.actor)) return blocked("ACTION_NOT_GRANTED");
+    if (!canManageEvaluationPackage(input)) return blocked("ACTION_NOT_GRANTED");
     if (!input.actor.organizationScopes.some((scope) => scope.id === input.proposal.hostOrganizationUnitId)) return blocked("ORG_SCOPE_DENIED");
     if (!input.participation || input.participation.role === "unknown") return blocked("CONTEXT_UNRESOLVED");
     if (evaluateProposalConflict(input.participation).conflicted) return blocked("CONFLICT_DENIED");

@@ -191,3 +191,36 @@ export const finalizeEvaluationSummaryPipe: PipeTransform<unknown, FinalizeEvalu
     return { contextVersion: readContextVersion(input) } as FinalizeEvaluationSummaryDto;
   }
 };
+
+export type RespondReviewInvitationDto = { decision: "accept" | "decline"; reason?: string };
+
+/** Người được mời không có contextVersion của hồ sơ, nên route này không đòi. */
+export const respondReviewInvitationPipe: PipeTransform<unknown, RespondReviewInvitationDto> = {
+  transform(value: unknown) {
+    const input = assertRecord(value);
+    if (input.decision !== "accept" && input.decision !== "decline") throw new BadRequestException({ message: "Chọn chấp nhận hoặc từ chối lời mời." });
+    assertOptionalText(input.reason, "reason", 2000);
+    return { decision: input.decision, reason: typeof input.reason === "string" ? input.reason : undefined };
+  }
+};
+
+export type SubmitEvaluationCouncilDto = { contextVersion: ContextVersionTokenV1; note?: string };
+
+export const submitEvaluationCouncilPipe: PipeTransform<unknown, SubmitEvaluationCouncilDto> = {
+  transform(value: unknown) {
+    const input = assertRecord(value);
+    assertOptionalText(input.note, "note", 2000);
+    return { contextVersion: readContextVersion(input), note: typeof input.note === "string" ? input.note : undefined };
+  }
+};
+
+export type DecideEvaluationCouncilDto = { decision: "sign" | "return"; note?: string; contextVersion: ContextVersionTokenV1 };
+
+export const decideEvaluationCouncilPipe: PipeTransform<unknown, DecideEvaluationCouncilDto> = {
+  transform(value: unknown) {
+    const input = assertRecord(value);
+    if (input.decision !== "sign" && input.decision !== "return") throw new BadRequestException({ message: "Chọn ký hoặc trả lại." });
+    assertOptionalText(input.note, "note", 2000);
+    return { decision: input.decision, note: typeof input.note === "string" ? input.note : undefined, contextVersion: readContextVersion(input) };
+  }
+};
