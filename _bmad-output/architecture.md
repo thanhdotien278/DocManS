@@ -888,8 +888,8 @@ stateDiagram-v2
     InProgress --> AwaitingAcceptance: later acceptance flow
     AwaitingAcceptance --> Accepted: later acceptance decision
     AwaitingAcceptance --> Failed: later acceptance decision
-    Accepted --> Closed: later closure
-    Failed --> Closed: later closure
+    Accepted --> Closed: LIQUIDATION signed by GĐ (step 9)
+    Failed --> Closed: later closure (open point)
 ```
 
 `Preparing`, `InProgress`, `Paused`, `AwaitingAcceptance`, `Accepted`, `Failed`
@@ -911,6 +911,33 @@ reconciled with routing (matrix §6). On `tuan/DocManS` a request waits at
 `ready_for_head_decision` while its tờ trình is routed, and a return reverts an
 extension to `under_staff_validation` and an adjustment to `under_staff_review`; these
 names are legacy pending architect confirmation.
+
+### Topic Lifecycle Step Mapping (D-033)
+
+The user-facing topic lifecycle is fixed by `.decision-log.md` D-033: 9 steps in
+2 phases. It spans the proposal record and the approved-project record linked by
+the source proposal. This table is the single canonical mapping from existing
+states to steps; other documents point here instead of restating it. State names
+stay as defined above; the step is a derived projection, never a stored
+replacement state.
+
+| Phase | Step | Existing record/state | Notes |
+| --- | --- | --- | --- |
+| Giai đoạn đề xuất | 1. Đợt tiếp nhận | Intake period (open/closed) | Not a proposal state; the proposal enters at step 2 |
+| | 2. Hồ sơ đề xuất | `Draft`, `SupplementRequested` | The supplement loop returns the dossier to step 2 |
+| | 3. Kiểm tra đầy đủ | `Submitted`, `Resubmitted`, `UnderCompletenessReview` | Only step 3 may request a supplement (D-033 loop) |
+| | 4. Thẩm định, hội đồng | `UnderEvaluation`, `EvaluationConsolidated` | Includes `EVALUATION_COUNCIL` tờ trình |
+| | 5. Phê duyệt, kinh phí | `PendingApproval` → `Approved` / `Rejected` | **Official decision** (GĐ, `DECISION_PACKAGE`). `Rejected` ends the lifecycle; `Approved` without a project = step 5 done, step 6 pending |
+| Giai đoạn thực hiện và kết thúc | 6. Lập đề tài | Project `Preparing` | Explicit creation from the approved proposal |
+| | 7. Thực hiện | Project `InProgress`, `Paused` | Reports, adjustment/extension, disbursement metadata are child records |
+| | 8. Nghiệm thu | Project `AwaitingAcceptance`, `Accepted`, `Failed` | Products, institution level, higher level; acceptance outcome is not one of the two official decisions |
+| | 9. Thanh lý, đóng đề tài | Open `LIQUIDATION` tờ trình, project `Closed` | **Official decision** (GĐ only); the `LIQUIDATION` signature moves the project to `Closed` |
+
+Child-record loops (tờ trình `RETURNED`, report/adjustment/extension/acceptance
+dossier supplementation) stay inside their step and are not lifecycle-step
+transitions. Every step keeps history and audit. Open points: how a higher-level
+(cấp trên) acceptance is recorded, and whether `Failed` also closes through
+liquidation (see `planning-artifacts/sprint-change-proposal-2026-10-24.md`).
 
 ### Seminar And Student Research State Machine
 
