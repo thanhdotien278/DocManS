@@ -504,7 +504,7 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     assert.equal(assignment.reviewerUserId, reviewerUser.id);
     assert.equal(assignment.reviewerDisplayName, reviewerUser.displayName);
     assert.equal(assignment.assignmentRole, "committee_member");
-    assert.equal(assignment.assignmentRoleLabel, "Thành viên hội đồng");
+    assert.equal(assignment.assignmentRoleLabel, "Ủy viên");
     assert.equal(assignment.status, "assigned");
     assert.equal(assignment.assignedById, staffUser.id);
     assert.notEqual(assignment.dueDate, "");
@@ -544,7 +544,7 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     const detail = await services.proposalService.getProposal(reviewerUser, proposal.id);
     assert.equal(detail.id, proposal.id);
     assert.equal(detail.viewerReviewAssignment.isAssignedReviewer, true);
-    assert.equal(detail.viewerReviewAssignment.assignmentRoleLabel, "Người phản biện");
+    assert.equal(detail.viewerReviewAssignment.assignmentRoleLabel, "Phản biện");
     // Assignment grants read only — it never turns into an edit right.
     assert.equal(detail.canEdit, false);
     assert.equal(detail.canSubmit, false);
