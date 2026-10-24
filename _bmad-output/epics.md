@@ -78,7 +78,7 @@ story backlog below (10-role model, decisions of 18/10/2026):
   level + nature); unmatched records show "Chưa có người phụ trách" for TP. TP¹/TB¹
   assign, reassign or revoke the responsible CV with history; TP assigns segments
   to CV.
-- **Phòng KHQS.** TP¹/TB¹/CV³ assign reviewers/councils, synthesize and draft tờ
+- **Phòng KHQS.** Roles configured by QT per council type (default TP¹/TB¹, D-035) form councils and invite reviewers/members; TP¹/TB¹/CV³ synthesize and draft tờ
   trình; completeness and supplement belong to TB¹/CV³ only (never TP). TP and CV
   create/open/close intake periods. PP only monitors (unit scope) and has no step in
   the tờ trình flow, even when TP is absent.
@@ -313,7 +313,7 @@ segment match stay unassigned until TP/TB assigns a CV.
 - FR14: Epic 4 — Lịch sử nộp.
 - FR15: Epic 5 — Kiểm tra tính đầy đủ và yêu cầu bổ sung.
 - FR16: Epic 5 — Chỉnh sửa và nộp lại.
-- FR17: Epic 5 — Phân công người đánh giá (TP¹/TB¹/CV³; Story 5.11).
+- FR17: Epic 5 — Phân công người đánh giá (Story 5.11; người mời vào hội đồng theo cấu hình QT, mặc định TP¹/TB¹ — D-035, Story 10.1/10.5).
 - FR18: Epic 5 — Chấm điểm, nhận xét và kiến nghị.
 - FR19: Epic 5 — Theo dõi và tổng hợp đánh giá.
 - FR19a: Epic 5, Stories 5.5 và 5.9 — Trình hồ sơ đã tổng hợp qua luồng tờ trình tới GĐ.
@@ -677,8 +677,8 @@ submitted package and audit trail.
 
 ### Primary users / roles
 
-TB¹/CV³ for completeness checks; TP¹/TB¹/CV³ for reviewer/council assignment and
-synthesis; TB (review step) and TP (approval step) in routing; GĐ or PGĐ-KH as
+TB¹/CV³ for completeness checks; QT-configured roles (default TP¹/TB¹, D-035) for
+reviewer/council assignment; TP¹/TB¹/CV³ for synthesis; TB (review step) and TP (approval step) in routing; GĐ or PGĐ-KH as
 council signer; GĐ as the only topic + funding decider; assigned
 reviewer/council/IRB evaluator from any role except QT, including an external
 researcher when explicitly assigned; PP and PGĐ-TD as monitors; PI/member/external
@@ -686,7 +686,7 @@ researcher as disclosure-limited viewers.
 
 ### In scope
 
-TB/CV check and supplement; TP/TB/CV reviewer invitation (accept/decline),
+TB/CV check and supplement; reviewer/council invitation by QT-configured roles (default TP/TB, D-035) with accept/decline;
 evaluation aggregation and tờ trình drafting; approval routing with return and
 reason; BGĐ signature of the evaluation council; decision package, GĐ
 approve/reject confirmation, disclosure, decision history, and proposal state
@@ -764,7 +764,7 @@ see no action log (two-way anonymity); TB¹/TP¹ may see reviewer identity.
 | ID | Priority | Story/task |
 | --- | --- | --- |
 | 4.1 | MVP | Implement TB¹/CV³ completeness check and supplement request. |
-| 4.2 | MVP | Implement TP¹/TB¹/CV³ candidate search (any role except QT), conflict preflight, invitation with accept/decline, reviewer assignment/change/revoke. |
+| 4.2 | MVP | Implement candidate search for QT-configured council roles (default TP¹/TB¹, D-035; any candidate role except QT), conflict preflight, invitation with accept/decline, reviewer assignment/change/revoke. |
 | 4.3 | MVP | Implement reviewer score form, save draft, submit-once lock, and disclosure. |
 | 4.4 | MVP | Implement TP¹/TB¹/CV³ aggregation with backend totals and readiness gate; council secretary drafts synthesis/minutes without scoring. |
 | 4.5 | MVP | Implement approval routing CV → TB → TP → BGĐ with return-with-reason, no skipping and no self-review (legacy 5.9). |
@@ -1173,7 +1173,7 @@ with consistent controls.
 
 All users for notifications (including the next tờ trình step and BGĐ
 signature requests); system admin and authorized audit viewers for logs;
-Phòng KHQS (TP¹/TB¹/CV³ council and IRB setup), BGĐ signers (GĐ or PGĐ-KH),
+Phòng KHQS (council and IRB setup by QT-configured roles, default TP¹/TB¹ — D-035; tờ trình by CV³/TB¹/TP¹ — D-036), BGĐ signers (GĐ or PGĐ-KH),
 researchers, reviewers and council/IRB participants from any role except QT,
 including external researchers only for their scoped supporting workflows; CV¹
 for student research; QA and operations for hardening.
@@ -1320,7 +1320,7 @@ state.
 | Submitted | Locked snapshot, responsible CV (auto-assigned by segment) or "Chưa có người phụ trách", pending-check queue. | TB¹/assigned CV³ check/supplement; TP¹/TB¹ assign unmatched records; PI read-only except withdraw/edit requests decided by the assigned CV³. | Submit/check/auto-assignment audit (actor `System`); no post-submit overwrite. |
 | Pending check | TB/CV queue/checklist and next-owner strip. | Check complete or supplement; assignment/approval disabled. | Checklist version/audit; stale, conflict, closed-intake edge cases. |
 | Needs supplement | Missing items, reason, due date, response CTA. | PI revises working version/resubmits; final actions disabled. | Immutable request, reminder, overdue response flag. |
-| Eligible | Derived readiness/eligibility display. | TP¹/TB¹/CV³ may invite/assign when policy permits; PI and BGĐ cannot decide. | Checklist result audit; never a bypass state. |
+| Eligible | Derived readiness/eligibility display. | QT-configured council roles (default TP¹/TB¹, D-035) may invite/assign when policy permits; PI and BGĐ cannot decide. | Checklist result audit; never a bypass state. |
 | In review | Assignment progress, invitations and reviewer own work. | Accepted evaluator submits; TP¹/TB¹/CV³ monitor and aggregate when ready; raw reviews hidden; PI and reviewers see no action log. | Assignment/evaluation/conflict audit; inactive assignment edge case. |
 | Pending result aggregation | Counts/missing/late reviews and synthesis form. | TP¹/TB¹/CV³ aggregate/finalize and draft the decision-package tờ trình; council secretary drafts synthesis/minutes; GĐ decision disabled. | Backend totals and readiness audit; source failure blocks completion. |
 | Pending approval | Decision package (routed through `HEAD_REVIEW`) and due date. | GĐ alone approves/rejects topic + funding; all others disabled with reason. | Decision confirmation; conflict, stale version, and wrong-state rejection. |
@@ -1569,9 +1569,10 @@ theo hiệu lực, phiên bản và phạm vi dữ liệu.
 
 ### Epic 10: Hội đồng và hồ sơ đạo đức
 
-TP¹/TB¹/CV³, chủ nhiệm, thư ký hội đồng, thành viên hội đồng/IRB và người ký BGĐ
-(GĐ hoặc PGĐ-KH) có thể xử lý kế hoạch hội đồng hoặc hồ sơ đạo đức (IRB) trọn vòng
-đời với đánh giá, tờ trình và chữ ký đúng phân công.
+Người được QT cấu hình thành lập hội đồng (mặc định TP¹/TB¹, D-035), CV³/TB¹/TP¹
+lập tờ trình (D-036), chủ nhiệm, thư ký hội đồng, thành viên hội đồng/IRB và người
+ký BGĐ (GĐ hoặc PGĐ-KH) có thể xử lý kế hoạch hội đồng hoặc hồ sơ đạo đức (IRB) trọn
+vòng đời với đánh giá, tờ trình và chữ ký đúng phân công.
 
 **FRs covered:** FR58, FR59, FR60, FR61, FR62, FR63, FR64, FR73.
 
@@ -4180,19 +4181,29 @@ So that các workflow sử dụng căn cứ đúng và được cập nhật k�
 
 ## Epic 10: Hội đồng và hồ sơ đạo đức
 
-TP¹/TB¹/CV³, chủ nhiệm, thư ký hội đồng, thành viên hội đồng/IRB và người ký BGĐ
-(GĐ hoặc PGĐ-KH) có thể xử lý kế hoạch hội đồng hoặc hồ sơ đạo đức (IRB) trọn vòng
-đời với đánh giá, tờ trình và chữ ký đúng phân công.
+Người được QT cấu hình thành lập hội đồng (mặc định TP¹/TB¹, D-035), CV³/TB¹/TP¹
+lập tờ trình (D-036), chủ nhiệm, thư ký hội đồng, thành viên hội đồng/IRB và người
+ký BGĐ (GĐ hoặc PGĐ-KH) có thể xử lý kế hoạch hội đồng hoặc hồ sơ đạo đức (IRB) trọn
+vòng đời với đánh giá, tờ trình và chữ ký đúng phân công.
+
+> Phạm vi hội đồng đánh giá (thẩm định, bước 4 D-033) đã có đặc tả triển khai:
+> `_bmad-output/specs/spec-hoi-dong-tham-dinh.md` và các story trong
+> `implementation-artifacts/epic-10-councils-and-ethics/`. Phần nghiệm thu và IRB còn backlog.
 
 ### Story 10.1: Lập kế hoạch hội đồng, thành viên và căn cứ liên quan [FR58]
 
-As a TP¹, TB¹ hoặc CV³ phụ trách hồ sơ,
-I want lập kế hoạch hội đồng (đánh giá, nghiệm thu, IRB) với mục đích, lịch, thành viên và căn cứ,
+As a QT cấu hình và người được cấu hình thành lập hội đồng (mặc định TP¹/TB¹),
+I want cấu hình ai được thành lập hội đồng theo từng loại và lập hội đồng (đánh giá, nghiệm thu, IRB) với mục đích, lịch, thành viên và căn cứ,
 So that mỗi hội đồng có phạm vi và trách nhiệm được phê chuẩn rõ ràng.
 
 **Acceptance Criteria:**
 
-**Given** actor có council-plan action trong organization scope
+**Given** QT (`SYSTEM_ADMIN`) mở cửa sổ cấu hình hội đồng
+**When** QT cấu hình từng loại hội đồng (`EVALUATION`, `ACCEPTANCE`, `IRB`)
+**Then** QT tích chọn role được phép thành lập hội đồng và mời thành viên, và điền số lượng thành viên; mặc định TP (`RESEARCH_MANAGEMENT_HEAD`) và TB (`RESEARCH_BOARD_HEAD`) được tích (D-035)
+**And** thay đổi có audit; QT chỉ cấu hình, không tự thành lập hội đồng hay mời thành viên.
+
+**Given** actor có role được tích cho loại hội đồng đó trong organization scope (CV chỉ trên hồ sơ mình phụ trách)
 **When** họ tạo plan với purpose, schedule, linked business records và role slots
 **Then** backend validate và tạo council ở controlled initial state
 **And** lưu source record/context versions cho các liên kết.
@@ -4208,7 +4219,8 @@ candidate xung đột hoặc interval trùng/chồng lấn.
 **Given** người được mời vào hội đồng
 **When** họ chấp nhận hoặc từ chối (từ chối bắt buộc lý do)
 **Then** quyết định được lưu với history/audit
-**And** tờ trình thành lập hội đồng (`EVALUATION_COUNCIL`, `ACCEPTANCE_COUNCIL` hoặc `IRB_COUNCIL`) chỉ được lập khi mọi thành viên đã chấp nhận; thành viên chỉ đọc hồ sơ sau khi GĐ hoặc PGĐ-KH ký.
+**And** tờ trình thành lập hội đồng (`EVALUATION_COUNCIL`, `ACCEPTANCE_COUNCIL` hoặc `IRB_COUNCIL`) do CV³/TB¹/TP¹ lập (Phòng KHQS lập và trình, không ký — D-036) và chỉ được lập khi mọi thành viên đã chấp nhận; thành viên chỉ đọc hồ sơ sau khi GĐ hoặc PGĐ-KH ký
+**And** việc chặn trình khi chưa đủ số lượng thành viên theo cấu hình là đề xuất chờ chủ sản phẩm xác nhận (P2 trong `specs/spec-hoi-dong-tham-dinh.md`).
 
 **Given** legal/administrative document đã tồn tại trong Epic 9
 **When** TP¹/TB¹/CV³ có quyền ở cả hai phía tạo council-document association
@@ -4311,14 +4323,14 @@ So that chỉ hồ sơ hợp lệ được đưa vào đánh giá.
 
 ### Story 10.5: Phân công hội đồng và reviewer với eligibility/conflict [FR58, FR61]
 
-As a TP¹, TB¹ hoặc CV³ phụ trách hồ sơ,
+As a người được cấu hình thành lập hội đồng và mời thành viên (mặc định TP¹/TB¹, D-035),
 I want phân công người đánh giá đủ điều kiện cho hồ sơ,
 So that đánh giá độc lập, đúng phạm vi và không có tự đánh giá.
 
 **Acceptance Criteria:**
 
 **Given** dossier/council ở state cho phép assignment
-**When** TP¹/TB¹/CV³ chọn candidate từ mọi tài khoản có lý lịch khoa học (không bao giờ là QT)
+**When** actor có role được QT tích cho loại hội đồng đó chọn candidate từ mọi tài khoản có lý lịch khoa học (không bao giờ là QT)
 **Then** preflight kiểm tra active account, active council membership/assignment,
 source participation, organization rule và conflict
 **And** trả allowed/blocked reason cùng context version.
@@ -4329,7 +4341,7 @@ source participation, organization rule và conflict
 **And** không tạo assignment dù candidate giữ system role khác.
 
 **Given** candidate đủ điều kiện
-**When** TP¹/TB¹/CV³ mời với exact evaluation duty, deadline và criteria
+**When** actor được cấu hình mời với exact evaluation duty, deadline và criteria
 **Then** source council/ethics tạo lifecycle assignment ở trạng thái chờ chấp nhận; invitee chấp nhận hoặc từ chối kèm lý do
 **And** notification/audit không công bố assignment cho participant audience.
 
