@@ -283,7 +283,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
       setUploadFiles((current) => ({ ...current, [requirementCode]: null }));
       setUploadDescriptions((current) => ({ ...current, [requirementCode]: "" }));
       setFileInputKeys((current) => ({ ...current, [requirementCode]: (current[requirementCode] ?? 0) + 1 }));
-      setMessage("Đã tải tệp và cập nhật readiness.");
+      setMessage("Đã tải tệp và cập nhật tình trạng đầy đủ hồ sơ.");
       await refresh();
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "Không thể tải tệp.");
@@ -635,7 +635,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               <div className="meta-item"><span className="meta-label">Kinh phí dự kiến</span><span className="meta-value">{formatVndNumber(proposal.budgetMetadata?.amount)} VND</span></div>
             </div>
             <div className="form-section-inline">
-              <div className="section-mini-heading">Team members</div>
+              <div className="section-mini-heading">Thành viên nhóm nghiên cứu</div>
               {proposal.members?.length ? (
                 <ul className="participation-list">
                   {proposal.members.map((member, index) => (
@@ -683,7 +683,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                 ))}
               </div>
             ) : (
-              <EmptyState title="Chưa có yêu cầu bổ sung" message="Staff có thể gửi yêu cầu khi hồ sơ đã nộp cần hoàn thiện thêm." />
+              <EmptyState title="Chưa có yêu cầu bổ sung" message="Cán bộ phụ trách có thể gửi yêu cầu khi hồ sơ đã nộp cần hoàn thiện thêm." />
             )}
 
             <form className="admin-form compact-form" onSubmit={(event) => void handleRequestSupplement(event)}>

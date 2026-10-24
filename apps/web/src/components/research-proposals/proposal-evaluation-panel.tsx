@@ -387,11 +387,11 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
               {savingMode === "draft" ? "Đang lưu" : "Lưu nháp tổng hợp"}
             </button>
             </> : null}
-            {canFinalize && summaryStatus === "draft" ? (<button
+            {(canFinalize || canConsolidate) && summaryStatus === "draft" ? (<button
               className="button primary"
               type="button"
-              disabled={!contextVersion || !progress.allReviewsSubmitted || savingMode !== ""}
-              title={!progress.allReviewsSubmitted ? finalizeBlockedReason || "Chưa đủ phiếu đánh giá để chốt." : undefined}
+              disabled={!canFinalize || !contextVersion || !progress.allReviewsSubmitted || savingMode !== ""}
+              title={!progress.allReviewsSubmitted ? `Còn ${progress.pendingCount} phiếu chưa gửi` : !canFinalize ? finalizeBlockedReason || undefined : undefined}
               onClick={() => void handleFinalizeSummary()}
             >
               <Send size={16} aria-hidden="true" />
