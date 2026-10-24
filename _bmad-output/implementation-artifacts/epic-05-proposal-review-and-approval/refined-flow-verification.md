@@ -1,5 +1,7 @@
 # Refined Golden Flow verification
 
+> Role names and decision rights here predate the 10-role model (2026-10-18); see `docs/permission-matrix.md`.
+
 Updated: 2026-09-22. Implementation and both normal-UI terminal journeys verified.
 Independent review pending. No commit or push requested or performed.
 

@@ -120,7 +120,7 @@ describe("Story 1.8 viewer capability V1", () => {
       relationshipEffectiveFrom: { TOPIC_MEMBER: "2026-07-01T00:00:00.000Z" }
     };
     const staffCapability = projectProposalViewerAuthorizationV1({
-      actor: { ...actor, systemRole: "SCIENTIFIC_MANAGEMENT_STAFF" },
+      actor: { ...actor, systemRole: "RESEARCH_MANAGEMENT_STAFF" },
       proposal: { ...proposal, status: "under_review" },
       participation: participant,
       canRead: true,
@@ -143,7 +143,7 @@ describe("Story 1.8 viewer capability V1", () => {
 
   it("keeps PI submission record-scoped and blocks a repeated completeness check", () => {
     const staffCapability = projectProposalViewerAuthorizationV1({
-      actor: { ...actor, systemRole: "SCIENTIFIC_MANAGEMENT_STAFF" },
+      actor: { ...actor, systemRole: "RESEARCH_MANAGEMENT_STAFF" },
       proposal: { ...proposal, status: "submitted" },
       participation: { role: "none", label: "Không tham gia", roles: [], labels: [], isOwner: false, isParticipant: false, relationshipEffectiveFrom: {}, relationshipEffectiveUntil: {} },
       canRead: true,

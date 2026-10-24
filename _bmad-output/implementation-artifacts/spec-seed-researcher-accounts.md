@@ -8,6 +8,8 @@ review_loop_iteration: 0
 context: []
 ---
 
+> Role names and decision rights here predate the 10-role model (2026-10-18); see `docs/permission-matrix.md`.
+
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
 
 ## Intent

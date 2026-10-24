@@ -5,7 +5,7 @@ import { AuditLogService } from '../dist/apps/api/auth/audit-log.service.js';
 import { createProposalIntakePeriodPipe } from '../dist/apps/api/proposal-intake-periods/proposal-intake-periods.dto.js';
 
 test('intake template upload, download, authorization, validation and failed-save cleanup', async () => {
-  const actor = { id: 'staff', status: 'active', systemRole: 'SCIENTIFIC_MANAGEMENT_STAFF', organizationScopes: [] };
+  const actor = { id: 'staff', status: 'active', systemRole: 'RESEARCH_MANAGEMENT_STAFF', organizationScopes: [] };
   const records = [];
   const periods = [];
   const objects = new Map();

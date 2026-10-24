@@ -64,7 +64,7 @@ export const accountProfiles: AccountProfile[] = [
     id: "staff-vu-lan",
     username: "vlan_qlkh",
     name: "TS. Nguyễn Minh Phương",
-    role: "SCIENTIFIC_MANAGEMENT_HEAD",
+    role: "RESEARCH_MANAGEMENT_HEAD",
     roleLabel: "Trưởng phòng quản lý khoa học",
     unit: "Trưởng phòng KHQS",
     initials: "P"
@@ -73,7 +73,7 @@ export const accountProfiles: AccountProfile[] = [
     id: "staff-huynh-dang-tien",
     username: "hdtien1",
     name: "TS. Huỳnh Đặng Tiến",
-    role: "SCIENTIFIC_MANAGEMENT_STAFF",
+    role: "RESEARCH_MANAGEMENT_STAFF",
     roleLabel: "Chuyên viên quản lý khoa học",
     unit: "Phòng KHQS",
     initials: "T"
@@ -275,7 +275,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/tasks", label: "Giao việc", icon: ClipboardCheck },
     { href: "/reports", label: "Báo cáo", icon: BarChart3 }
   ],
-  SCIENTIFIC_MANAGEMENT_HEAD: [
+  RESEARCH_MANAGEMENT_HEAD: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/my-profile", label: "Lý lịch khoa học", icon: UserRoundSearch },
     { href: "/proposals", label: "Quản lý đề tài", icon: Files },
@@ -286,7 +286,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/tasks", label: "Giao việc", icon: ClipboardCheck },
     { href: "/reports", label: "Báo cáo", icon: BarChart3 }
   ],
-  SCIENTIFIC_MANAGEMENT_STAFF: [
+  RESEARCH_MANAGEMENT_STAFF: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/my-profile", label: "Lý lịch khoa học", icon: UserRoundSearch },
     { href: "/proposals", label: "Quản lý đề tài", icon: Files },
@@ -323,7 +323,11 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/reports", label: "Báo cáo", icon: BarChart3 },
     { href: "/notifications", label: "Thông báo", icon: Bell }
   ],
-  EXTERNAL_RESEARCHER_USER: []
+  EXTERNAL_RESEARCHER_USER: [],
+  // shortcut: PP, TB, PGĐ-KH chưa có quyền nghiệp vụ, cấp menu khi port phân quyền từ tuan/DocManS.
+  RESEARCH_MANAGEMENT_DEPUTY_HEAD: [],
+  RESEARCH_BOARD_HEAD: [],
+  SCIENCE_DEPUTY_DIRECTOR: []
 };
 
 export function getAccountById(accountId?: string | null) {

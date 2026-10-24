@@ -4,7 +4,7 @@ import { ProposalParticipationService } from "../research-proposals/proposal-par
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import type { PrismaService } from "../infrastructure/prisma/prisma.service.js";
-import { assertHasOrganizationScope, isLeadership, isResearchOversightAuthority, isScientificManagementHead, isScientificManagementStaff } from "../proposals-shared/proposal-access.js";
+import { assertHasOrganizationScope, isLeadership, isResearchOversightAuthority, isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
 import type { ProposalConflictDecision } from "../proposals-shared/proposal-participation.js";
 import { isWorkflowVisibleStatus, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import { proposalContextVersion } from "../proposals-shared/proposal-mutation.js";
@@ -196,7 +196,7 @@ export async function assertCurrentCompletenessEvidence(
  * AC-ST-3.4-03) rather than only on the first one.
  */
 export async function assertScientificManagementScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
-  if (!actor || !isScientificManagementStaff(actor)) {
+  if (!actor || !isResearchManagementStaff(actor)) {
     throw new ForbiddenException({ message: "Chỉ chuyên viên quản lý khoa học được phân công cho hồ sơ mới được thực hiện thao tác này." });
   }
 
@@ -228,7 +228,7 @@ export async function assertScientificManagementScope(prisma: PrismaService, act
  * these actions, so an admin role is not accepted here.
  */
 export function assertScientificManagementHeadScope(actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
-  if (!actor || !isScientificManagementHead(actor)) {
+  if (!actor || !isResearchManagementHead(actor)) {
     throw new ForbiddenException({ message: "Chỉ Trưởng phòng quản lý khoa học được thực hiện nghiệp vụ phân công và tổng hợp hồ sơ." });
   }
   assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
@@ -237,8 +237,8 @@ export function assertScientificManagementHeadScope(actor: SafeUserContext | und
 
 /** Assignment rosters are operational reads for scoped Head and assigned Staff. */
 export async function assertReviewAssignmentReadScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
-  if (isScientificManagementHead(actor)) return assertScientificManagementHeadScope(actor, proposal);
-  if (isScientificManagementStaff(actor)) return assertScientificManagementScope(prisma, actor, proposal);
+  if (isResearchManagementHead(actor)) return assertScientificManagementHeadScope(actor, proposal);
+  if (isResearchManagementStaff(actor)) return assertScientificManagementScope(prisma, actor, proposal);
   throw new ForbiddenException({ message: "Không có quyền xem phân công đánh giá của hồ sơ này." });
 }
 
@@ -246,11 +246,11 @@ export async function assertReviewAssignmentReadScope(prisma: PrismaService, act
  * Head, Deputy and Director require an explicit organization scope. */
 export async function assertEvaluationReadScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
   if (!actor) throw new ForbiddenException({ message: "Không có quyền xem thông tin đánh giá của hồ sơ này." });
-  if (isLeadership(actor) || isScientificManagementHead(actor) || isResearchOversightAuthority(actor)) {
+  if (isLeadership(actor) || isResearchManagementHead(actor) || isResearchOversightAuthority(actor)) {
     assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
     return actor;
   }
-  if (isScientificManagementStaff(actor)) {
+  if (isResearchManagementStaff(actor)) {
     await assertScientificManagementScope(prisma, actor, proposal);
     return actor;
   }

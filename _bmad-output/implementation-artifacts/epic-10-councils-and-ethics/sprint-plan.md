@@ -23,12 +23,16 @@
 
 Create the next story specification only after its preceding dependency is understood and the shared authorization, audit, and file rules in the project context remain satisfied.
 
+**Authorization refinement — 2026-10-18 (10-role model):** Stories 10.1 and 10.5: TP¹/TB¹/CV³ set up councils and assign members with a conflict check; members and IRB members are invited from any account with a scientific CV (every role except QT) and must accept or decline (decline with a reason); the council tờ trình is routed only after every member has accepted. Story 10.4 (IRB completeness): TB/CV. Story 10.8: GĐ or PGĐ-KH sign council establishment, IRB council and IRB certificate. Council members read the dossier only after BGĐ signs establishment. "Thư ký khoa học" in story 10.2 means the council/team secretary (writes synthesis/minutes, no scoring), not the former Staff role.
+
 ## Finalized leadership authorization impact
 
-`RESEARCH_OVERSIGHT_AUTHORITY` combines internal researcher capabilities through record
-relationships with explicit-scope institutional oversight. It grants no final proposal,
-council-establishment, funding or acceptance decision. `LEADERSHIP_APPROVAL_AUTHORITY`
-has oversight plus eligible conflict-free final decisions. All surfaces must preserve
-disclosure, source authorization and active officer restrictions; no broad Staff queues.
-Project/council establishment, notifications/My Work and institutional dashboards/reports
-remain planned where their owning backend is absent. Funding uses available metadata only.
+Updated 2026-10-18 to the 10-role model (`docs/permission-matrix.md`, §7 wins).
+`RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD) monitors only and is not
+`SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH). Only GĐ (`LEADERSHIP_APPROVAL_AUTHORITY`) approves
+topic + funding and liquidation; GĐ or PGĐ-KH sign councils, IRB, acceptance, extension and
+adjustment. Tờ trình routing is CV → TB → TP → BGĐ; former Head/Staff duties go to TP/TB/CV
+per action. All surfaces must preserve disclosure, source authorization and active officer
+restrictions; no broad CV queues. Project/council establishment, notifications/My Work and
+institutional dashboards/reports remain planned where their owning backend is absent.
+Funding uses available metadata only.

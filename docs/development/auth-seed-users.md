@@ -4,19 +4,17 @@ These identities and credentials are **local/demo only**, not production identit
 All seeded accounts use the existing local password `1234`; the seed stores scrypt hashes.
 Run `npm run db:setup` for a new local database, or `npm run prisma:seed` after migrations.
 
-> **Role model:** the table lists the seven role codes the seed and code on the `DocManS`
-> branch still run. The current business model has ten roles
-> ([`permission-matrix.md`](../permission-matrix.md) §2):
-> `SCIENTIFIC_MANAGEMENT_HEAD` → `RESEARCH_MANAGEMENT_HEAD` (TP),
-> `SCIENTIFIC_MANAGEMENT_STAFF` → `RESEARCH_MANAGEMENT_STAFF` (CV), and `vndinh`
+> **Role model:** the table lists the role codes the seed and code on the `DocManS` branch run
+> (all ten codes exist; PGĐ-KH, PP and TB have no permissions yet). The current business model has ten roles
+> ([`permission-matrix.md`](../permission-matrix.md) §2); still missing here: `vndinh`
 > (PGĐ phụ trách Khoa học) becomes `SCIENCE_DEPUTY_DIRECTOR`, not
-> `RESEARCH_OVERSIGHT_AUTHORITY`. The seed changes when `tuan/DocManS` is merged.
+> `RESEARCH_OVERSIGHT_AUTHORITY`. The seed changes when that role is ported from `tuan/DocManS`.
 
 | Username | System role | Demo responsibility |
 | --- | --- | --- |
 | `admin` | `SYSTEM_ADMIN` | Platform administration; no implicit business approval |
-| `nmphuong` | `SCIENTIFIC_MANAGEMENT_HEAD` | Trưởng phòng KHQS: scoped portfolio, officer assignment/reassignment/revocation, summary review and eligible package submission |
-| `hdtien1`, `hdtien2` | `SCIENTIFIC_MANAGEMENT_STAFF` | Trợ lý/Chuyên viên KHQS: manage only proposals actively assigned to that account |
+| `nmphuong` | `RESEARCH_MANAGEMENT_HEAD` | Trưởng phòng KHQS: scoped portfolio, officer assignment/reassignment/revocation, summary review and eligible package submission |
+| `hdtien1`, `hdtien2` | `RESEARCH_MANAGEMENT_STAFF` | Trợ lý/Chuyên viên KHQS: manage only proposals actively assigned to that account |
 | `tvtien` | `LEADERSHIP_APPROVAL_AUTHORITY` | Giám đốc: oversight plus eligible final decisions, subject to conflicts |
 | `vndinh` | `RESEARCH_OVERSIGHT_AUTHORITY` | Thiếu tướng PGS. TS. Vũ Nhất Định — Phó Giám đốc phụ trách NCKH; read-only institutional oversight plus independent researcher capabilities |
 | `patuan`, `nmtrung`, `int1`–`int3` | `RESEARCHER_INTERNAL_USER` | Researcher accounts; PI/member/reviewer/council responsibilities come from record relationships |
@@ -33,7 +31,7 @@ share the researcher navigation; backend relationships and capabilities still go
 
 ## Scope and management assignment
 
-Home unit is not organization scope. `SCIENTIFIC_MANAGEMENT_HEAD`,
+Home unit is not organization scope. `RESEARCH_MANAGEMENT_HEAD`,
 `LEADERSHIP_APPROVAL_AUTHORITY` and `RESEARCH_OVERSIGHT_AUTHORITY` have explicit grants
 for all nine seeded internal units (`org-hvqy`, `org-bgq`, `org-khti`, `org-khqs`,
 `org-bqlkhqs`, `org-k30`, `org-k81`, `org-k82`, `org-k84`). No organization-tree inheritance

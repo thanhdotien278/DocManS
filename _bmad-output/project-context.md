@@ -6,7 +6,7 @@ aliases:
 type: "project-context"
 status: "active"
 created: "2026-04-27T22:24:00+0700"
-updated: "2026-06-16T00:00:00+0700"
+updated: "2026-10-18T00:00:00+0700"
 inputs:
   - "/Users/Super/DocManS/_bmad-output/planning-artifacts/product-brief-DocManSystem.md"
   - "/Users/Super/DocManS/docs/ux-design-guidelines.md"
@@ -21,7 +21,7 @@ scope: "Planning, architecture, story creation, development, testing, and review
 
 DocManSystem, also referred to as RTMS, is a greenfield internal web application for managing university-level research topics and scientific project workflows at the Military Medical Academy. Phase 1 is an internal institutional administration system, not a public SaaS product.
 
-The system must prioritize operational clarity over novelty. Primary goals are process digitization, transparency, overdue visibility, controlled approvals, progress tracking, related-document traceability, council/ethics traceability, and executive reporting. The MVP primarily serves scientific management staff, leadership, principal investigators, and reviewer or council roles involved in evaluation workflows.
+The system must prioritize operational clarity over novelty. Primary goals are process digitization, transparency, overdue visibility, controlled approvals, progress tracking, related-document traceability, council/ethics traceability, and executive reporting. The MVP primarily serves Phòng KHQS (TP, PP, TB, CV), BGĐ (GĐ, PGĐ-KH, PGĐ-TD), principal investigators, and reviewer or council roles involved in evaluation workflows. Authoritative source for roles and decision rights: `docs/permission-matrix.md` (§7 wins on conflict). The 10-role model is the target; code on `DocManS` has the ten role codes (commit 0a39db3) but PGĐ-KH, PP and TB have no business permissions yet (see the 10-role section below).
 
 Core business modules in phase 1:
 
@@ -42,6 +42,7 @@ Key operational scope inside those modules includes:
 - task assignment, reminders, overdue tracking, and completion monitoring
 - related governing, legal, planning, proposal, project, seminar, and council documents with metadata, effective status, and version context
 - council plans, member roles, ethics dossiers, completeness checks, scoring, consolidated evaluation, and approval routing
+- tờ trình approval routing (CV → TB → TP → BGĐ signer) for every BGĐ-bound procedure, topic segments (mảng) with auto-assigned responsible CV, and funding as audited metadata only (no ledger, payments, banking or ERP)
 - executive dashboard views, filtered reporting, Excel export, PDF export, and traceable business history
 
 # Technology Stack
@@ -68,14 +69,19 @@ Default implementation bias:
 # Architecture Constraints
 
 Golden Flow 4 is specified in the [Project Execution contract](../docs/contracts/project-execution.md).
-It preserves project-scoped `TOPIC_PI` (the requested `PROJECT_PI`). Assigned Staff
-reviews/accepts reports and finally approves/rejects normal adjustments; Head finally
-approves/rejects extensions after Staff validation/preparation. Leadership approves
-the source proposal only and has permitted read/monitor access during execution.
+It preserves project-scoped `TOPIC_PI` (the requested `PROJECT_PI`). The assigned CV
+(`RESEARCH_MANAGEMENT_STAFF`) reviews/accepts reports and appraises Project Adjustment and
+Extension requests (including an adjustment that changes funding). Each appraisal goes
+through tờ trình routing (TB review → TP approval → BGĐ), and GĐ or PGĐ-KH signs; the
+signature applies the change atomically. TP and TB assign the project CV; PP and PGĐ-TD only
+monitor. Only GĐ approves the source proposal (topic + funding) and liquidation. If no
+eligible TB/TP step actor or conflict-free signer exists, the PI withdraws the request.
 Submitted revisions/evidence are immutable; overdue is derived, never a project state.
-Assigned proposal Staff creates; Head independently assigns project Staff, who confirms
-setup. Controlled fields change only through the appropriate approved request.
-Acceptance/council implementation belongs to the next flow.
+The assigned proposal CV creates; TP/TB independently assign the project CV, who confirms
+setup. Controlled fields change only through the appropriate signed request.
+Legacy state names `under_staff_review`, `under_staff_validation` and
+`ready_for_head_decision` belong to the former flow and must be reconciled with routing
+(matrix §6).
 
 - Phase 1 architecture is a modular monolith.
 - Use one codebase with clear internal module boundaries.
@@ -107,7 +113,9 @@ The phase 1 domain should be organized around these modules:
 - `research-proposals`
 - `proposal-intake-periods`
 - `proposal-evaluations`
-- `approvals`
+- `approvals` (approval routing: `approval_submissions` / `approval_steps`; stages `BOARD_REVIEW` → `HEAD_REVIEW` → `LEADERSHIP`)
+- `segments` (segment catalog by level + nature; CV segment assignment and responsible-CV auto-assignment)
+- `funding` (audited funding metadata: allocation, disbursement, settlement, liquidation documents; no ledger)
 - `approved-projects`
 - `progress-milestones`
 - `progress-reports`
@@ -130,43 +138,68 @@ The phase 1 domain should be organized around these modules:
 
 Module boundaries should be explicit. Avoid generic “system”, “common business”, or catch-all service layers that hide domain ownership.
 
-Account-level system roles to preserve across planning and implementation are exactly:
+Account-level system roles to preserve across planning and implementation are exactly ten
+(matrix §2; one per account):
 
-- `SYSTEM_ADMIN`
-- `SCIENTIFIC_MANAGEMENT_HEAD`
-- `SCIENTIFIC_MANAGEMENT_STAFF`
-- `LEADERSHIP_APPROVAL_AUTHORITY`
-- `RESEARCH_OVERSIGHT_AUTHORITY`
-- `RESEARCHER_INTERNAL_USER`
-- `EXTERNAL_RESEARCHER_USER`
+- `SYSTEM_ADMIN` (QT)
+- `LEADERSHIP_APPROVAL_AUTHORITY` (GĐ)
+- `SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH)
+- `RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD, monitoring only)
+- `RESEARCH_MANAGEMENT_HEAD` (TP)
+- `RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP)
+- `RESEARCH_BOARD_HEAD` (TB, exactly one holder)
+- `RESEARCH_MANAGEMENT_STAFF` (CV)
+- `RESEARCHER_INTERNAL_USER` (NCV)
+- `EXTERNAL_RESEARCHER_USER` (NNB)
 
 Record-scoped relationships and assignments remain separate: `PROPOSAL_PI`,
 `TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council chair/secretary/member,
-ethics reviewer, task assignee, and management officer.
+IRB member/secretary, task assignee, and management officer.
 
-# Scientific Management Head and Staff — finalized model
+# Phòng KHQS and BGĐ — 10-role model
 
-The seven system roles are `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`,
-`SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`,
-`RESEARCHER_INTERNAL_USER`, and `EXTERNAL_RESEARCHER_USER`; one active per account.
-Head sees all proposals/projects in explicitly authorized Scientific Management scope,
-responsible Staff, unassigned records and workload/status/deadlines, with officer filters/
-groups. Head is not leadership approval authority; oversight is not blanket mutation power.
-Staff management visibility needs the current `PROPOSAL_MANAGEMENT_OFFICER` or
-`PROJECT_MANAGEMENT_OFFICER` plus scope. At most one primary officer per record;
-assignment/reassignment/revocation preserves history and audit under concurrency.
+Authoritative source: `docs/permission-matrix.md` (§7 wins on conflict). Renames from the
+former 7-role model: `SCIENTIFIC_MANAGEMENT_HEAD` → `RESEARCH_MANAGEMENT_HEAD`,
+`SCIENTIFIC_MANAGEMENT_STAFF` → `RESEARCH_MANAGEMENT_STAFF`. Legacy codes remain only in
+migrations and historical files. `RESEARCH_OVERSIGHT_AUTHORITY` is no longer the Science
+Deputy Director; it means the other Deputy Directors, who only monitor.
 
-Staff participation/review/council/task access on other records remains independent and
-grants no Scientific Management administrative actions. Backend capabilities retain why
-the record is visible. Check participant-versus-management/review/evaluation/acceptance/
-final-decision, same-round reviewer/decision and council-position conflicts at relationship
-changes and protected actions. Apply identical filtering to every read/derived-data surface,
-including files and workflow/business history. Missing/ambiguous context fails closed.
+- TP approves every tờ trình before BGĐ, assigns segments (mảng) to CV, assigns/revokes the
+  responsible CV, and coordinates within unit scope. TP never performs completeness checks
+  or supplement requests.
+- TB (one holder) reviews CV-authored tờ trình and forwards to TP or returns it; also assigns
+  CV and performs completeness, supplement, reviewer/council assignment and synthesis in unit scope.
+- CV works only on proposals/projects where it is the current responsible officer
+  (`PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER`) and never on another CV's records.
+  The system auto-assigns one responsible CV on submit/resubmit by segment (level + nature);
+  unmatched records show "Chưa có người phụ trách" for TP.
+- PP and PGĐ-TD only monitor; they have no step in the tờ trình flow. PGĐ-TD sees aggregate figures only.
+- Signers: GĐ alone approves topic + funding and liquidation. GĐ or PGĐ-KH signs evaluation,
+  IRB and acceptance council establishment, the IRB certificate, extension and adjustment
+  (including a funding change). PGĐ-KH never approves topics, topic funding or liquidation.
+- Tờ trình routing: CV drafts → TB reviews → TP approves → BGĐ signs. Return goes to the author
+  with a mandatory reason; no step skipping; no self-review; a TB-authored tờ trình starts at TP.
+- Project view is Academy-wide for GĐ, PGĐ-KH, TP and TB; TP and TB manage funding Academy-wide.
+  Proposals always follow unit scope.
+- Reviewers, council members and IRB members are invited from any account with a scientific CV
+  (every role except QT), must accept or decline (reason required), and score. A PI is any
+  role except QT/NNB.
+- Two-way anonymity: PI and reviewers see no action log; TB and TP may see reviewer identity.
+- Post-submission withdraw/edit/reopen is approved or performed by the assigned CV with audit.
+  Duplicate researcher profile warnings go to TB/TP, who decide the merge.
 
-Baseline §2.1 defines Head officer actions, Staff assignment restrictions,
-`LEADERSHIP_APPROVAL_AUTHORITY` decisions and `RESEARCH_OVERSIGHT_AUTHORITY`
-researcher/oversight separation. Intake/profile scope remains independent. Only existing
-proposal features are implemented; absent project/reporting sources remain planned.
+Participation, review, council and task access on other records remains independent and
+grants no management actions. Backend capabilities retain why the record is visible. Check
+participant-versus-management/review/evaluation/acceptance/final-decision, same-round
+reviewer/decision, council-position and officer/reviewer/routing-actor/signer conflicts at
+relationship changes and protected actions. Apply identical filtering to every read/derived-data
+surface, including files and workflow/business history. Missing/ambiguous context fails closed.
+
+Implementation status: code on `DocManS` has all ten role codes (commit 0a39db3, migration
+`20261016500000`), with TP/CV keeping the former HEAD/STAFF permissions; PGĐ-KH, PP and TB gain business permissions only after
+the routing, segment and IRB implementation is ported from `tuan/DocManS` (no merge base).
+Account migration: HEAD → TP and STAFF → CV are done (migration `20261016500000`); former
+`RESEARCH_OVERSIGHT_AUTHORITY` holders are re-classified per person; ambiguous accounts are reported, not guessed.
 
 # Authorization And Security Rules
 
@@ -233,6 +266,14 @@ Mandatory audit-log actions:
 - update task status
 - upload important file
 - download important file
+- assign CV segment
+- assign, reassign or revoke responsible CV (manual or automatic)
+- invite, accept, decline or revoke reviewer, council or IRB member
+- tờ trình submit, forward, return, approve and sign (procedure type, step, decision, reason)
+- sign adjustment or extension
+- funding disbursement, settlement and liquidation
+- create or withdraw adjustment/extension request
+- export report
 
 Audit-log implementation rules:
 
@@ -364,6 +405,12 @@ Audit-log implementation rules:
 - Do not modify database schema without a Prisma migration.
 - Do not ship file access flows without authorization enforcement and traceability.
 - Do not treat notifications or reminders as purely frontend behavior when business correctness depends on backend state.
+- Do not use legacy role codes `SCIENTIFIC_MANAGEMENT_HEAD` / `SCIENTIFIC_MANAGEMENT_STAFF` in new work; use `RESEARCH_MANAGEMENT_HEAD` / `RESEARCH_MANAGEMENT_STAFF`.
+- Do not skip a tờ trình step or let TB/TP review a tờ trình they authored; return goes to the author with a reason.
+- Do not let anyone but GĐ decide topic, funding or liquidation; do not let PGĐ-KH, PP, PGĐ-TD, QT or a reviewer do so.
+- Do not let TP perform completeness checks or supplement requests; do not let a CV act on records assigned to another CV.
+- Do not add accounting, ledger, payment, banking or ERP integration; funding is audited metadata only.
+- Do not generate, email or store any password for a user; activation is by the 48-hour single-use setup-password link only.
 
 # Review Checklist For Future Agents
 
@@ -394,43 +441,43 @@ Use this checklist during PRD writing, architecture, story drafting, implementat
 source of truth for this feature, including API/data fields, authorization,
 credential delivery, migration compatibility and history retention.
 
-- Scoped SYSTEM_ADMIN and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
+- Scoped SYSTEM_ADMIN (platform) and TP/CV (`RESEARCH_MANAGEMENT_HEAD` / `RESEARCH_MANAGEMENT_STAFF`, unit scope) manage internal/external
   profiles independently of Accounts, including academic/contact information,
   position, military rank, expertise, publications and self-reported project
   history (title, role, Academy/institutional/Ministry/other level, dates, status,
   notes). Profile activation and account activation remain separate actions.
 - System Account / Access supports optional create-and-link, existing unlinked
   account selection, unlink and authorized credential reset/resend. Linking is
-  one-to-one across all current links, including inactive records. Staff can
+  one-to-one across all current links, including inactive records. TP/CV can
   provision only matching researcher roles in the profile's explicit scope.
-- Staff confirms the recipient email. The system generates and hashes a temporary
-  password, sends login information by configured SMTP, and requires a different
-  password before any normal authenticated API/UI feature. No plaintext credential
-  is persisted, returned to staff or placed in audit. SMTP acceptance is not proof
-  of inbox delivery; a failed/uncertain send has an explicit new-credential retry.
+- The manager confirms the recipient email. Activation uses a hashed single-use token that
+  expires exactly 48 hours after issue and sends only a setup-password link by configured SMTP;
+  the user sets their own password. No password is generated, emailed, persisted,
+  returned to staff or placed in audit. SMTP acceptance is not proof of inbox delivery; a
+  failed/uncertain send has an explicit new-link retry (resend activation).
 - My Profile uses the active Account's current link. Only own personal/scientific
   fields are editable; type, status, linkage and role/scope remain administrative.
   Unlink immediately removes self access. Self-reported history grants no access
   to operational projects/proposals and does not replace source-owned assignments.
-- Profile/link/account/credential/first-password-change audit is preserved with
+- Profile/link/account/activation audit is preserved with
   safe transactional change facts. No test files are written or changed for this
   completion at the user's instruction; verification is recorded in its artifact.
 
-### Finalized implementation scope — 2026-09-21
+### Finalized implementation scope — 2026-10-18
 
-The current change implements this model on the existing proposal, intake, researcher-profile,
-file and evaluation features. Approved projects, council-establishment/ethics lifecycles,
-institutional dashboards, general search/report/export and notification/My Work backends
-remain planned where no operational source exists. `PROJECT_MANAGEMENT_OFFICER` is a
-contract relationship, not a persisted orphan assignment. Dashboard showcase data is not
-an institutional report or proof of authorization. Future source domains must apply the
-same current scope, relationship, conflict and disclosure checks before aggregates or drill-down.
+On `DocManS` the model is implemented on the existing proposal, intake, researcher-profile,
+file and evaluation features. Approved projects, council/IRB lifecycles, institutional
+dashboards, general search/report/export and notification/My Work backends remain planned
+where no operational source exists (tờ trình routing, council invitations and dashboard
+breakdowns exist on `tuan/DocManS`). `PROJECT_MANAGEMENT_OFFICER` is a contract relationship,
+not a persisted orphan assignment. Dashboard showcase data is not an institutional report or
+proof of authorization. Future source domains must apply the same current scope,
+relationship, conflict and disclosure checks before aggregates or drill-down.
 
-`LEADERSHIP_APPROVAL_AUTHORITY` and `RESEARCH_OVERSIGHT_AUTHORITY` require institutional research dashboard views of available
-proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
-funding and management workload. Only `LEADERSHIP_APPROVAL_AUTHORITY` gets eligible proposal decision queues. Project adjustment queues
-belong to assigned Staff and extension decision queues to Head. Head gets
-responsible-officer/unassigned filters and workload; Staff sees assigned management records.
-Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,
-used and remaining project funding and utilization are unavailable until their source exists;
-never infer expenditure or add ledgers, payments, banking, invoices or ERP integration.
+Dashboards are per role. Filters: year, unit, level, field and nature (Quân sự / Dân sự /
+Chưa phân loại), with a responsible-CV breakdown and an "unassigned" group. Work queues
+(matrix §9.10): TB tờ trình review queue, TP approval queue, CV assigned records; GĐ topic/funding
+decision and signature queues, PGĐ-KH signature queue; PGĐ-TD aggregate only. QT has no queue or business dashboard.
+Proposal funding currently provides `budgetMetadata.amount` (requested funding). Funding is
+audited metadata only; never infer expenditure or add ledgers, payments, banking, invoices or
+ERP integration.
