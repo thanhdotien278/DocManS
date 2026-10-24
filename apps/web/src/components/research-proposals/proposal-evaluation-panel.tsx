@@ -44,7 +44,7 @@ function reviewStatusLabel(status: string) {
  * Actions follow the backend record capability, so a blocked
  * control explains itself instead of disappearing (UX-DR27). The backend remains authoritative.
  */
-export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflowChange, canReadProgress, canAssignReviewers, canConsolidate, canFinalize, canSubmitPackage, blockedReason, consolidateBlockedReason, finalizeBlockedReason, submitPackageBlockedReason, contextVersion }: { proposalId: string; proposalStatus: string; onWorkflowChange: () => Promise<void>; canReadProgress: boolean; canAssignReviewers: boolean; canConsolidate: boolean; canFinalize: boolean; canSubmitPackage: boolean; blockedReason: string; consolidateBlockedReason: string; finalizeBlockedReason: string; submitPackageBlockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
+export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflowChange, canReadProgress, canAssignReviewers, canConsolidate, canFinalize, canSubmitPackage, blockedReason, consolidateBlockedReason, finalizeBlockedReason, finalizeWorkflowBlocked, submitPackageBlockedReason, contextVersion }: { proposalId: string; proposalStatus: string; onWorkflowChange: () => Promise<void>; canReadProgress: boolean; canAssignReviewers: boolean; canConsolidate: boolean; canFinalize: boolean; canSubmitPackage: boolean; blockedReason: string; consolidateBlockedReason: string; finalizeBlockedReason: string; finalizeWorkflowBlocked?: boolean; submitPackageBlockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
   const [assignments, setAssignments] = useState<ProposalReviewAssignment[]>([]);
   const [progress, setProgress] = useState<ProposalReviewProgress | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
@@ -387,7 +387,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
               {savingMode === "draft" ? "Đang lưu" : "Lưu nháp tổng hợp"}
             </button>
             </> : null}
-            {(canFinalize || canConsolidate) && summaryStatus === "draft" ? (<button
+            {(canFinalize || canConsolidate || finalizeWorkflowBlocked) && summaryStatus === "draft" ? (<button
               className="button primary"
               type="button"
               disabled={!canFinalize || !contextVersion || !progress.allReviewsSubmitted || savingMode !== ""}
