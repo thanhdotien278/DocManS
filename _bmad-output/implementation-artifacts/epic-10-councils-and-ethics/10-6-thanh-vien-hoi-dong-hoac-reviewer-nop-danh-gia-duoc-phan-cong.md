@@ -5,7 +5,7 @@ spec: _bmad-output/specs/spec-hoi-dong-tham-dinh.md
 
 # Story 10.6: Thành viên hội đồng hoặc reviewer nộp đánh giá được phân công (hội đồng đánh giá)
 
-Status: ready-for-dev (hội đồng đánh giá); backlog (IRB, nghiệm thu)
+Status: review (hội đồng đánh giá); backlog (IRB, nghiệm thu)
 
 ## Story
 
