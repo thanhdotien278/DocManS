@@ -5,7 +5,7 @@ import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { readTransactionClockV1 } from "../permissions/authorization-v1.service.js";
-import { getOrganizationScopeIds, isLeadership, isResearchOversightAuthority, isScientificManagementHead, isScientificManagementStaff } from "../proposals-shared/proposal-access.js";
+import { getOrganizationScopeIds, isLeadership, isResearchOversightAuthority, isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
 import { isRelationshipActiveAt } from "../proposals-shared/proposal-participation.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { assertProposalContext } from "../proposals-shared/proposal-mutation.js";
@@ -86,7 +86,7 @@ export class ApprovedProjectsService {
     if (this.activeMember(project, actor.id)) throw new ForbiddenException({ code: "CONFLICT_DENIED" });
     await this.assertNoEvaluationConflict(tx, actor.id, project.proposalId);
     const officer = await this.currentOfficer(tx, project.id);
-    if (isScientificManagementStaff(actor) && officer?.officerUserId === actor.id) return officer;
+    if (isResearchManagementStaff(actor) && officer?.officerUserId === actor.id) return officer;
     throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Bạn chưa được phân công quản lý đề tài này." });
   }
 
@@ -135,7 +135,7 @@ export class ApprovedProjectsService {
   }
 
   async listMonitoring(actor: SafeUserContext, options: { overdue?: boolean; approaching?: boolean } = {}) {
-    if (!(isScientificManagementStaff(actor) || isScientificManagementHead(actor) || isLeadership(actor) || isResearchOversightAuthority(actor))) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Không có quyền theo dõi đề tài." });
+    if (!(isResearchManagementStaff(actor) || isResearchManagementHead(actor) || isLeadership(actor) || isResearchOversightAuthority(actor))) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Không có quyền theo dõi đề tài." });
     return this.listProjects(actor, options);
   }
 
@@ -143,8 +143,8 @@ export class ApprovedProjectsService {
     const now = new Date();
     const member = (project.members ?? []).find((item: AnyRecord) => item.userId === actor?.id && isRelationshipActiveAt(item, now));
     const isPi = member?.participationRole === "TOPIC_PI";
-    const isOfficer = !!actor && isScientificManagementStaff(actor) && officer?.officerUserId === actor.id;
-    const isHead = !!actor && isScientificManagementHead(actor);
+    const isOfficer = !!actor && isResearchManagementStaff(actor) && officer?.officerUserId === actor.id;
+    const isHead = !!actor && isResearchManagementHead(actor);
     const detailedCases = isPi || isOfficer || isHead;
     // A checkpoint whose report is already submitted no longer counts as an owed deadline.
     const reported = new Set((project.reports ?? []).filter((item: any) => [REPORT_SUBMITTED, REPORT_UNDER_REVIEW, REPORT_ACCEPTED].includes(item.status)).map((item: any) => item.checkpointId));
@@ -184,7 +184,7 @@ export class ApprovedProjectsService {
       requests: (project.requests ?? []).map((request: AnyRecord) => detailedCases && (!isHead || request.requestType === EXTENSION) ? ({
         id: request.id, projectId: request.projectId, requestType: request.requestType, status: request.status, revision: request.revision, requesterId: request.requesterId, requester: request.requester,
         currentValues: request.currentValues, proposedValues: request.proposedValues, reason: request.reason, decisionNote: request.decisionNote, responseDeadline: request.responseDeadline?.toISOString?.() ?? null, decidedAt: request.decidedAt?.toISOString?.() ?? null,
-        appraisal: actor && ((isScientificManagementStaff(actor) && request.requestType === ADJUSTMENT) || (isScientificManagementHead(actor) && request.requestType === EXTENSION)) ? request.appraisal : undefined,
+        appraisal: actor && ((isResearchManagementStaff(actor) && request.requestType === ADJUSTMENT) || (isResearchManagementHead(actor) && request.requestType === EXTENSION)) ? request.appraisal : undefined,
         preparedAt: request.preparedAt?.toISOString?.() ?? null, preparedBy: request.preparedBy, revisions: request.revisions, evidence: (request.evidence ?? []).map((item: AnyRecord) => ({ id: item.id, requestRevisionId: item.requestRevisionId, fileRecordId: item.fileRecordId, file: item.fileRecord ? { id: item.fileRecord.id, originalFileName: item.fileRecord.originalFileName, mimeType: item.fileRecord.mimeType, sizeBytes: item.fileRecord.sizeBytes, status: item.fileRecord.status } : null })),
         allowedActions: itemActions({ request: { requestType: request.requestType, status: request.status, requesterId: request.requesterId } }, `project.${request.requestType}.`)
       }) : ({ id: request.id, requestType: request.requestType, status: request.status, createdAt: request.createdAt?.toISOString?.() ?? null, decidedAt: request.decidedAt?.toISOString?.() ?? null, allowedActions: [] })),
@@ -200,7 +200,7 @@ export class ApprovedProjectsService {
     return this.prisma.$transaction(async (tx: any) => {
       await tx.$queryRaw`SELECT id FROM research_proposals WHERE id = ${proposalId} FOR UPDATE`;
       const currentActor = await this.readCurrentActor(tx, actor.id);
-      if (!isScientificManagementStaff(currentActor)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Chỉ chuyên viên phụ trách đề xuất mới được tạo đề tài." });
+      if (!isResearchManagementStaff(currentActor)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Chỉ chuyên viên phụ trách đề xuất mới được tạo đề tài." });
       const proposal = await tx.researchProposal.findUnique({ where: { id: proposalId }, include: { members: true, hostOrganizationUnit: true, owner: { select: { displayName: true, username: true } } } });
       if (!proposal) throw new NotFoundException({ message: "Không tìm thấy đề xuất nguồn." });
       if (proposal.status !== "approved") throw new BadRequestException({ code: "SOURCE_NOT_APPROVED", message: "Đề xuất nguồn chưa được phê duyệt." });
@@ -297,7 +297,7 @@ export class ApprovedProjectsService {
     const loaded = await this.loadAuthorized(this.prisma, actor, projectId);
     this.assertScope(actor, loaded.project);
     this.assertHead(actor, loaded.project);
-    const users = await (this.prisma as any).user.findMany({ where: { status: "active", systemRole: "SCIENTIFIC_MANAGEMENT_STAFF" }, include: { organizationScopes: { include: { organizationUnit: true } } }, orderBy: { displayName: "asc" } });
+    const users = await (this.prisma as any).user.findMany({ where: { status: "active", systemRole: "RESEARCH_MANAGEMENT_STAFF" }, include: { organizationScopes: { include: { organizationUnit: true } } }, orderBy: { displayName: "asc" } });
     const eligible = users.filter((user: any) => user.organizationScopes?.some((scope: any) => scope.organizationUnitId === loaded.project.hostOrganizationUnitId && scope.organizationUnit?.status === "active") && !(loaded.project.members ?? []).some((member: any) => member.userId === user.id && isRelationshipActiveAt(member, new Date())));
     const reviewAccess = new ProposalReviewAccessService(this.prisma);
     const checks = await Promise.all(eligible.map((user: AnyRecord) => reviewAccess.resolveConflictForProposal(user.id, loaded.project.proposalId)));
@@ -309,7 +309,7 @@ export class ApprovedProjectsService {
       this.assertHead(currentActor, project);
       await this.assertNoEvaluationConflict(tx, currentActor.id, project.proposalId);
       const candidate = await tx.user.findUnique({ where: { id: input.officerUserId }, include: { organizationScopes: { include: { organizationUnit: true } } } });
-      if (!candidate || candidate.status !== "active" || candidate.systemRole !== "SCIENTIFIC_MANAGEMENT_STAFF" || !candidate.organizationScopes?.some((scope: any) => scope.organizationUnitId === project.hostOrganizationUnitId && scope.organizationUnit.status === "active")) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Chuyên viên được chọn không hoạt động hoặc ngoài phạm vi đề tài." });
+      if (!candidate || candidate.status !== "active" || candidate.systemRole !== "RESEARCH_MANAGEMENT_STAFF" || !candidate.organizationScopes?.some((scope: any) => scope.organizationUnitId === project.hostOrganizationUnitId && scope.organizationUnit.status === "active")) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Chuyên viên được chọn không hoạt động hoặc ngoài phạm vi đề tài." });
       if ((project.members ?? []).some((member: any) => member.userId === candidate.id && isRelationshipActiveAt(member, new Date()))) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Thành viên đề tài không được đồng thời là chuyên viên quản lý." });
       await this.assertNoEvaluationConflict(tx, candidate.id, project.proposalId);
       const now = await readTransactionClockV1(tx);
@@ -736,7 +736,7 @@ export class ApprovedProjectsService {
 
   private assertHead(actor: SafeUserContext, project: AnyRecord) {
     this.assertScope(actor, project);
-    if (!isScientificManagementHead(actor) || this.activeMember(project, actor.id)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
+    if (!isResearchManagementHead(actor) || this.activeMember(project, actor.id)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
   }
 
   private activeMember(project: AnyRecord, actorId: string) {

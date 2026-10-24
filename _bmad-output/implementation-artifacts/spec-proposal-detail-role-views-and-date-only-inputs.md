@@ -6,7 +6,7 @@ status: 'in-progress'
 route: 'oneshot'
 review_loop_iteration: 0
 context:
-  - '{project-root}/docs/authorization-core-business-baseline.md'
+  - '{project-root}/docs/permission-matrix.md'
   - '{project-root}/docs/ux-design-guidelines.md'
 ---
 
@@ -34,3 +34,4 @@ context:
 - Supplement and assignment date controls now use native date inputs and `intakeDateToIso` whole-day boundaries; stored effective/deadline dates display without hours.
 - Focused authorization, source-behavior, and date tests passed with typecheck/API/web builds. The legacy `proposals-ep02.test.mjs` suite still stops at its pre-existing `tx.user.findUnique is not a function` mock gap before reaching the added regression assertions.
 - Live verification as scientific-management staff confirmed the repeat completeness button is disabled, the PI submit card is absent, the staff read-only summary is present, and all four affected controls are date-only.
+- **10-role update (2026-10-18):** "scientific-management staff" in the intent and notes above now reads as TP/TB/CV (management roles) and the PI is any role except QT/NNB; completeness and supplement are TB¹/assigned CV³, never TP. Authoritative source: `docs/permission-matrix.md` (§7 wins).

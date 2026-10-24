@@ -37,7 +37,7 @@ test('any active account can be assigned reviewer/council unless it participates
     const scope = (organizationUnitId) => ({ organizationUnitId });
     const users = {};
     for (const [key, data] of Object.entries({
-      staff: { username: 'staff', displayName: 'Staff', systemRole: 'SCIENTIFIC_MANAGEMENT_STAFF', status: 'active', scopes: [hostOrg.id] },
+      staff: { username: 'staff', displayName: 'Staff', systemRole: 'RESEARCH_MANAGEMENT_STAFF', status: 'active', scopes: [hostOrg.id] },
       pi: { username: 'pi', displayName: 'PI', systemRole: 'RESEARCHER_INTERNAL_USER', status: 'active', scopes: [hostOrg.id] },
       member: { username: 'member', displayName: 'Member', systemRole: 'RESEARCHER_INTERNAL_USER', status: 'active', scopes: [hostOrg.id] },
       admin: { username: 'admin', displayName: 'Admin without profile', systemRole: 'SYSTEM_ADMIN', status: 'active', scopes: [otherOrg.id] },

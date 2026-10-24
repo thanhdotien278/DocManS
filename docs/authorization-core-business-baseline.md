@@ -16,8 +16,8 @@ audience:
 
 > **Đồng bộ 18/10/2026 — 10 vai trò hệ thống.** Tài liệu này đã đồng bộ với
 > [`permission-matrix.md`](./permission-matrix.md) (§2, §5–§8, §10; §7 thắng khi mâu
-> thuẫn). Code trên nhánh `DocManS` vẫn chạy mô hình 7 vai trò cho tới khi
-> `tuan/DocManS` được merge. Chỉ số ¹–⁷ trong tài liệu này là ghi chú điều kiện ở
+> thuẫn). Code trên nhánh `DocManS` đã có đủ 10 mã vai trò, nhưng PGĐ-KH,
+> PP, TB chưa có quyền nghiệp vụ cho tới khi port từ `tuan/DocManS`. Chỉ số ¹–⁷ trong tài liệu này là ghi chú điều kiện ở
 > permission-matrix §7.2.
 
 # Mục đích và hiệu lực

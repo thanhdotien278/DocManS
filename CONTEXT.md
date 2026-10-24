@@ -24,6 +24,7 @@ policy and current workflow rules, use the linked normative documents.
 | **Relationship** | A record-scoped participation fact, such as proposal PI/team secretary/team member or approved-topic PI/team secretary/team member. It has a lifecycle and grants no authority outside its owning record. |
 | **Assignment** | A record-scoped duty, such as proposal/project management officer, reviewer, council member, ethics reviewer, or task assignee. It grants only the actions and disclosure needed for that assignment. |
 | **Delegation** | A time-bounded, approved grant for an exact action on one record where the owning contract permits delegation. It is not a general substitute for role, relationship, assignment, or decision authority; proposal submission is PI-only and non-delegable. |
+| **Topic lifecycle** | The fixed 9-step, 2-phase path of a topic: proposal phase (intake period, proposal dossier, completeness check, appraisal/council, approval/funding) then execution and closure phase (create topic, execution, acceptance, liquidation/closure). Approval and closure are the two official decisions. Decided in `_bmad-output/.decision-log.md` D-033; do not re-ask or alter. |
 | **Workflow state** | The controlled lifecycle state of a business record. A state transition is a domain action, not an unrestricted field update. |
 | **Version** | An immutable business or file revision retained as evidence. Replacing or correcting creates a new version rather than overwriting a submitted, reviewed, or decided artifact. |
 | **Related document** | A governed, legal, planning, or supporting document with metadata, effective status, and version context. It is not an authorization bypass for the record it references. |
@@ -57,9 +58,8 @@ assignments**. The ten system roles ([permission matrix](docs/permission-matrix.
 `RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP), `RESEARCH_BOARD_HEAD` (TB), `RESEARCH_MANAGEMENT_STAFF` (CV),
 `RESEARCHER_INTERNAL_USER` (NCV) and `EXTERNAL_RESEARCHER_USER` (NNB). Submissions route as a
 tờ trình CV → TB → TP → BGĐ; only GĐ approves topic, funding and liquidation. The code on the
-`DocManS` branch still ships the former seven roles (`SCIENTIFIC_MANAGEMENT_HEAD`,
-`SCIENTIFIC_MANAGEMENT_STAFF` instead of TP/CV, without PGĐ-KH, PP, TB) until `tuan/DocManS`
-is merged.
+`DocManS` branch has all ten role codes, but PGĐ-KH, PP and TB have no business
+permissions until they are ported from `tuan/DocManS`.
 
 System roles describe account-level responsibility; they do not automatically
 grant access to every business record. Record access is derived from the exact

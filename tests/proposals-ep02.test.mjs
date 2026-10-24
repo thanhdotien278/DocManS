@@ -35,7 +35,7 @@ const staffUser = {
   id: "user-staff",
   username: "staff",
   role: "scientific-management",
-  systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
+  systemRole: "RESEARCH_MANAGEMENT_STAFF",
   roleLabel: "Chuyên viên",
   roles: ["scientific-management"],
   organizationScopes: [

@@ -1,5 +1,7 @@
 # Story 1.6 Acceptance Auditor Prompt
 
+> Role names and decision rights here predate the 10-role model (2026-10-18); see `docs/permission-matrix.md`.
+
 Review the current uncommitted changes in `/Users/Super/DocManS` against:
 
 - `_bmad-output/implementation-artifacts/1-6-quan-ly-danh-muc-va-cau-hinh-van-hanh-dung-chung.md`

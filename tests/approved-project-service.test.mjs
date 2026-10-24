@@ -10,7 +10,7 @@ const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z")
 const unit = { id: "unit-1", code: "UNIT", name: "Unit", status: "active" };
 const scope = { organizationUnitId: unit.id, organizationUnit: unit };
 const person = (id, systemRole) => ({ id, username: id, displayName: id, systemRole, status: "active", unit: "u", organizationScopes: [scope] });
-const USERS = [person("pi", "RESEARCHER_INTERNAL_USER"), person("member", "RESEARCHER_INTERNAL_USER"), person("staff", "SCIENTIFIC_MANAGEMENT_STAFF"), person("staff2", "SCIENTIFIC_MANAGEMENT_STAFF"), person("head", "SCIENTIFIC_MANAGEMENT_HEAD")];
+const USERS = [person("pi", "RESEARCHER_INTERNAL_USER"), person("member", "RESEARCHER_INTERNAL_USER"), person("staff", "RESEARCH_MANAGEMENT_STAFF"), person("staff2", "RESEARCH_MANAGEMENT_STAFF"), person("head", "RESEARCH_MANAGEMENT_HEAD")];
 const actor = (id) => { const user = USERS.find((item) => item.id === id); return { ...user, organizationScopes: [{ id: unit.id, code: unit.code, name: unit.name }] }; };
 const code = (expected) => (error) => (error?.response?.code ?? error?.code) === expected;
 
