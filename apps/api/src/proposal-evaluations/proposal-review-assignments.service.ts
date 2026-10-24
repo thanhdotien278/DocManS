@@ -191,7 +191,16 @@ export class ProposalReviewAssignmentsService {
       select: { id: true }
     });
     if (managementOfficer) {
-      throw new BadRequestException({ code: "CONFLICT_DENIED", message: "Không thể phân công cán bộ đang phụ trách hồ sơ làm người phản biện." });
+      await this.auditLog.record({
+        action: "assign-reviewer",
+        result: "failure",
+        actorId: actor.id,
+        targetEntity: "proposal-review-assignment",
+        targetEntityId: proposalId,
+        username: actor.username,
+        reason: JSON.stringify({ proposalId, candidateUserId: candidate.id, assignmentRole, contextVersion: input.contextVersion, reasonCode: "management_officer" })
+      });
+      return new BadRequestException({ code: "CONFLICT_DENIED", message: "Không thể phân công cán bộ đang phụ trách hồ sơ làm người phản biện." });
     }
 
     // Any non-revoked assignment blocks a new one, not just an open one: a reviewer who already
@@ -292,10 +301,11 @@ export class ProposalReviewAssignmentsService {
    */
   async revokeAssignment(actor: SafeUserContext, proposalId: string, assignmentId: string, input: Record<string, unknown> = {}): Promise<any> {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (s, a) => s.revokeAssignment(a, proposalId, assignmentId, input));
-    if ((await this.participation.evaluateConflict(actor.id, proposalId)).conflicted) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được thay đổi phân công." });
+    if ((await resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId)).conflicted) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được thay đổi phân công." });
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
     assertScientificManagementHeadScope(actor, proposal);
     assertProposalStatus(proposal, REVIEWER_ASSIGNABLE_STATUSES, "Hồ sơ không ở trạng thái cho phép thay đổi phân công đánh giá.");
+    await this.assertCompletenessEvidence(proposal);
 
     const assignment = await this.findAssignmentById(proposalId, assignmentId);
     const submissionEvidence = await findCurrentSubmissionEvidence(this.prisma, proposal);

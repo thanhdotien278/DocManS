@@ -35,6 +35,18 @@ export function isResearchManagementHead(user?: SafeUserContext) {
   return user?.systemRole === "RESEARCH_MANAGEMENT_HEAD";
 }
 
+export function isResearchManagementDeputyHead(user?: SafeUserContext) {
+  return user?.systemRole === "RESEARCH_MANAGEMENT_DEPUTY_HEAD";
+}
+
+export function isResearchBoardHead(user?: SafeUserContext) {
+  return user?.systemRole === "RESEARCH_BOARD_HEAD";
+}
+
+export function isScienceDeputyDirector(user?: SafeUserContext) {
+  return user?.systemRole === "SCIENCE_DEPUTY_DIRECTOR";
+}
+
 export function isResearchOversightAuthority(user?: SafeUserContext) {
   return user?.systemRole === "RESEARCH_OVERSIGHT_AUTHORITY";
 }
