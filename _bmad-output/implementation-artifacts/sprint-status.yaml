@@ -80,7 +80,8 @@ development_status:
   5-6-thu-ky-khoa-hoc-ho-tro-hanh-chinh-cho-quy-trinh-danh-gia: backlog
   5-7-lanh-dao-xem-ho-so-trinh-quyet-dinh: backlog
   5-8-phe-duyet-tu-choi-va-cong-bo-ket-qua-de-xuat: backlog
-  5-9-approval-routing-cv-tb-tp-bgd: backlog
+  # 5.9: lõi routing + API subject + UI + gói đánh giá mở DECISION_PACKAGE đã xong (2026-10-25); còn LEADERSHIP sign theo loại (5.10 và các story sau), thông báo (chờ Epic 11) -> giữ review.
+  5-9-approval-routing-cv-tb-tp-bgd: review
   5-10-bgd-signing-council-and-topic-decision: backlog
   5-11-reviewer-assignment-tp-tb-cv-delta: backlog
   epic-5-retrospective: optional

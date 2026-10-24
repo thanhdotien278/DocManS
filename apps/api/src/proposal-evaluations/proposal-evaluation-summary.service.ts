@@ -6,6 +6,7 @@ import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
+import { openApprovalSubmission } from "../proposals-shared/approval-routing.js";
 import { isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
 import {
   getRecommendationLabel,
@@ -330,6 +331,8 @@ export class ProposalEvaluationSummaryService {
       await tx.proposalReviewAssignment.updateMany({ where: { proposalId, reviewedSubmissionEventId: currentEvidence.eventId, status: REVIEW_ASSIGNMENT_STATUS.assigned }, data: { status: REVIEW_ASSIGNMENT_STATUS.completed, completedAt: now } as never });
       await tx.proposalSubmissionEvent.create({ data: { proposalId, actorId: actor.id, fromStatus: PROPOSAL_STATUS.underReview, toStatus: PROPOSAL_STATUS.readyForApproval, submittedAt: now, snapshot: { kind: "evaluation_package_submitted", schemaVersion: "proposal-evaluation-package.v1", revision: currentSummary.revision, submissionEventId: currentEvidence.eventId, finalizedEvidence }, note: "Trưởng phòng trình gói đánh giá đã chốt tới lãnh đạo" } as never });
       await tx.auditLog.create({ data: { action: "submit-evaluation-package", result: "success", actorId: actor.id, targetEntity: "proposal-evaluation-summary", targetEntityId: record.id, username: actor.username, reason: JSON.stringify({ proposalId, sourceSummaryUpdatedById: existing.updatedById, submittedReviews: currentProgress.submittedCount, fromStatus: PROPOSAL_STATUS.underReview, toStatus: PROPOSAL_STATUS.readyForApproval }) } });
+      // Gói đánh giá lên BGĐ chỉ qua tờ trình TB → TP (Story 5.9); GĐ ký ở Story 5.10.
+      await openApprovalSubmission(tx, actor, { kind: "DECISION_PACKAGE", subjectType: "proposal", subjectId: proposalId }, { title: proposal.title, hostOrganizationUnitId: proposal.hostOrganizationUnitId });
       return record;
     })) as unknown as EvaluationSummaryRecord;
 
