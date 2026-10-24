@@ -18,7 +18,7 @@ import { ProposalReviewAccessService } from "./proposal-review-access.service.js
 /**
  * Luồng tờ trình qua Phòng KHQS (Story 5.9, D-035). Một nguồn quy tắc cho mọi thủ tục cần Ban giám đốc ký:
  *   người lập (CV/TB/TP) → BOARD_REVIEW (TB rà soát) → HEAD_REVIEW (TP duyệt) → LEADERSHIP (BGĐ ký) → CLOSED.
- * TB lập thì bắt đầu ở HEAD_REVIEW; CV và TP lập bắt đầu ở BOARD_REVIEW. Không bỏ bước, không tự rà soát.
+ * TB lập thì bắt đầu ở HEAD_REVIEW; CV và TP lập bắt đầu ở BOARD_REVIEW; TP lập thì TB chuyển thẳng LEADERSHIP. Không bỏ bước, không tự rà soát.
  * TB/TP chỉ chuyển tiếp hoặc trả lại (RETURNED, bắt buộc lý do); chỉ người ký ở LEADERSHIP được APPROVED/REJECTED.
  * Các story sau gọi các hàm này trong transaction nghiệp vụ của mình: `tx` là client transaction.
  */
@@ -94,6 +94,8 @@ export type ApprovalSubmissionRow = {
   status: ApprovalStatus;
   signer: ApprovalSigner;
   submittedById: string;
+  /** Vai trò của tác giả lúc lập (không đổi theo tài khoản về sau). */
+  authorRole: string;
   lastNote: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -217,7 +219,7 @@ export async function openApprovalSubmission(
     await recordStep(tx, actor, old, { action: "CANCEL", stage: old.stage, note: "Thay bằng tờ trình mới", toStage: "CLOSED", toStatus: "CANCELLED", auditAction: "cancel-approval-submission" });
   }
   const created = (await tx.approvalSubmission.create({
-    data: { ...keyWhere(key), title: input.title.slice(0, 500), hostOrganizationUnitId: input.hostOrganizationUnitId, stage, status: "PENDING", signer: APPROVAL_SIGNERS[key.kind], submittedById: actor.id, lastNote: note }
+    data: { ...keyWhere(key), title: input.title.slice(0, 500), hostOrganizationUnitId: input.hostOrganizationUnitId, stage, status: "PENDING", signer: APPROVAL_SIGNERS[key.kind], submittedById: actor.id, authorRole: actor.systemRole ?? "", lastNote: note }
   })) as ApprovalSubmissionRow;
   await recordStep(tx, actor, { ...created, stage: stage, status: "PENDING" }, { action: "SUBMIT", stage, note, toStage: stage, toStatus: "PENDING", auditAction: "submit-approval-submission" });
   return created;
@@ -228,7 +230,8 @@ export async function advanceApprovalSubmission(tx: Prisma.TransactionClient, ac
   const note = readApprovalNote(input.note, false);
   const row = await loadPending(tx, id, input.expectedStage);
   await assertStageActor(tx, actor, row);
-  const next: ApprovalStage = row.stage === "BOARD_REVIEW" ? "HEAD_REVIEW" : "LEADERSHIP";
+  // TP lập tờ trình thì việc lập đã là duyệt của TP: TB chuyển thẳng LEADERSHIP (D-035).
+  const next: ApprovalStage = row.stage === "BOARD_REVIEW" && row.authorRole !== "RESEARCH_MANAGEMENT_HEAD" ? "HEAD_REVIEW" : "LEADERSHIP";
   await transition(tx, row, { stage: next, lastNote: note ?? row.lastNote });
   await recordStep(tx, actor, row, { action: row.stage === "BOARD_REVIEW" ? "FORWARD" : "APPROVE", stage: row.stage, note, toStage: next, toStatus: "PENDING", auditAction: row.stage === "BOARD_REVIEW" ? "forward-approval-submission" : "approve-approval-submission" });
   return { ...row, stage: next };

@@ -85,7 +85,7 @@ test("CV submission walks TB → TP → BGĐ in order; steps cannot be skipped o
 });
 
 test("TB-authored goes to TP; TP-authored still goes through TB; nobody reviews their own", async () => {
-  const { people, open, advance } = await setup("B");
+  const { people, open, advance, routing, proposal } = await setup("B");
   const byBoard = await open(people.board, "IRB_COUNCIL");
   assert.equal(byBoard.stage, "HEAD_REVIEW");
   await assert.rejects(() => advance(people.board, byBoard), code(403));
@@ -95,9 +95,11 @@ test("TB-authored goes to TP; TP-authored still goes through TB; nobody reviews 
   const byHead = await open(people.head, "IRB_CERTIFICATE");
   assert.equal(byHead.stage, "BOARD_REVIEW");
   await advance(people.board, byHead);
-  await assert.rejects(() => advance(people.head, byHead), code(403), "TP không duyệt tờ trình mình lập");
-  await advance(people.head2, byHead);
-  assert.equal((await db.approvalSubmission.findUnique({ where: { id: byHead.id } })).stage, "LEADERSHIP");
+  const forwarded = await db.approvalSubmission.findUnique({ where: { id: byHead.id }, include: { steps: { orderBy: { createdAt: "asc" } } } });
+  assert.equal(forwarded.stage, "LEADERSHIP", "TP lập thì TB chuyển thẳng BGĐ, không kẹt ở HEAD_REVIEW");
+  assert.deepEqual(forwarded.steps.map((step) => [step.stage, step.action]), [["BOARD_REVIEW", "SUBMIT"], ["BOARD_REVIEW", "FORWARD"]]);
+  for (const actor of [people.head, people.head2]) await assert.rejects(() => advance(actor, byHead), code(403), "TP không có action trên tờ trình này");
+  assert.deepEqual((await routing.forSubject(people.head, "proposal", proposal.id)).submissions.find((item) => item.id === byHead.id).actions, { advance: false, return: false });
 });
 
 test("only CV/TB/TP in scope author; PP, PGĐ-KH, GĐ, PI and out-of-scope staff have no action", async () => {
@@ -124,7 +126,7 @@ test("re-opening cancels the pending submission; the DB allows only one PENDING 
   assert.deepEqual([cancelled.status, cancelled.stage], ["CANCELLED", "CLOSED"]);
   assert.equal(second.status, "PENDING");
   assert.ok(await db.auditLog.findFirst({ where: { action: "cancel-approval-submission", targetEntityId: first.id } }));
-  await assert.rejects(() => db.approvalSubmission.create({ data: { ...key("EVALUATION_COUNCIL"), title: "x", hostOrganizationUnitId: org.id, stage: "BOARD_REVIEW", signer: "DIRECTOR_OR_SCIENCE_DEPUTY", submittedById: people.staff.id } }), /Unique|unique/);
+  await assert.rejects(() => db.approvalSubmission.create({ data: { ...key("EVALUATION_COUNCIL"), title: "x", hostOrganizationUnitId: org.id, stage: "BOARD_REVIEW", signer: "DIRECTOR_OR_SCIENCE_DEPUTY", submittedById: people.staff.id, authorRole: "RESEARCH_MANAGEMENT_STAFF" } }), /Unique|unique/);
   await open(people.staff, "DECISION_PACKAGE");
   assert.equal(await db.approvalSubmission.count({ where: { subjectId: proposal.id, status: "PENDING" } }), 2, "khác loại thì song song");
 });
