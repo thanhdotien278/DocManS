@@ -4,6 +4,14 @@ import assert from "node:assert/strict";
 import { createMigratedDatabase } from "./helpers/disposable-database.mjs";
 import { PrismaService } from "../dist/apps/api/infrastructure/prisma/prisma.service.js";
 import { ApprovalRoutingService } from "../dist/apps/api/approvals/approval-routing.service.js";
+import { AuditLogService } from "../dist/apps/api/auth/audit-log.service.js";
+import { ProposalParticipationService } from "../dist/apps/api/research-proposals/proposal-participation.service.js";
+import { ProposalReviewAccessService } from "../dist/apps/api/proposals-shared/proposal-review-access.service.js";
+import { proposalContextVersion } from "../dist/apps/api/proposals-shared/proposal-mutation.js";
+import { ProposalReviewAssignmentsService } from "../dist/apps/api/proposal-evaluations/proposal-review-assignments.service.js";
+import { ProposalReviewsService } from "../dist/apps/api/proposal-evaluations/proposal-reviews.service.js";
+import { ProposalEvaluationSummaryService } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-summary.service.js";
+import { ProposalDecisionsService } from "../dist/apps/api/proposal-evaluations/proposal-decisions.service.js";
 import { advanceApprovalSubmission, assertReadyForLeadership, closeApprovalSubmission, openApprovalSubmission, returnApprovalSubmission } from "../dist/apps/api/proposals-shared/approval-routing.js";
 
 // Story 5.9 trên PostgreSQL thật (index duy nhất từng phần, cancel khi lập lại, transaction không ghi một phần).
@@ -161,4 +169,70 @@ test("a signer who participates in the proposal is refused", async () => {
   await advance(people.head, submission);
   await db.proposalMember.create({ data: { proposalId: proposal.id, userId: people.director.id, name: "GĐ", role: "TOPIC_MEMBER", organization: org.name } });
   await assert.rejects(() => ready(people.director, "DECISION_PACKAGE"), code(403));
+});
+
+// Story 5.10: GĐ quyết định đề tài và kinh phí chỉ qua tờ trình DECISION_PACKAGE đang ở LEADERSHIP.
+async function decisionFixture(code) {
+  const ctx = await setup(code);
+  const { people, proposal, org } = ctx;
+  const event = await db.proposalSubmissionEvent.create({ data: { proposalId: proposal.id, actorId: people.pi.id, fromStatus: "draft", toStatus: "submitted", snapshot: { members: [], attachments: [], requiredPackage: [] } } });
+  await db.proposalSubmissionEvent.create({ data: { proposalId: proposal.id, actorId: people.staff.id, fromStatus: "submitted", toStatus: "submitted", submittedAt: new Date(Date.now() + 1000), snapshot: { kind: "completeness_check", submissionEventId: event.id, readiness: { ready: true } } } });
+  const assignmentIds = [];
+  const reviewIds = [];
+  for (const [index, role] of ["reviewer", "reviewer", "committee_member", "committee_member", "committee_member"].entries()) {
+    const user = await db.user.create({ data: { username: `rv${index}-${code}`, usernameKey: `rv${index}-${code}`.toLowerCase(), displayName: `RV${index}`, passwordHash: "x", status: "active", systemRole: "RESEARCHER_INTERNAL_USER", unit: org.name } });
+    const assignment = await db.proposalReviewAssignment.create({ data: { proposalId: proposal.id, reviewerUserId: user.id, assignmentRole: role, status: "completed", assignedById: people.head.id, reviewedSubmissionEventId: event.id } });
+    const review = await db.proposalReview.create({ data: { proposalId: proposal.id, assignmentId: assignment.id, reviewerUserId: user.id, status: "submitted", totalScore: 80, submissionEventId: event.id } });
+    assignmentIds.push(assignment.id);
+    reviewIds.push(review.id);
+  }
+  await db.proposalEvaluationSummary.create({ data: { proposalId: proposal.id, summary: "Tổng hợp", recommendation: "approve", status: "ready_for_approval", createdById: people.head.id, updatedById: people.head.id, revision: 1, evidenceSnapshot: { lifecycle: "finalized", submissionEventId: event.id, assignmentIds, reviewIds } } });
+  await db.researchProposal.update({ where: { id: proposal.id }, data: { status: "ready_for_approval" } });
+  const submission = await ctx.open(people.staff, "DECISION_PACKAGE");
+  const toLeadership = async () => { await ctx.advance(people.board, submission); await ctx.advance(people.head, submission); };
+  const decisions = () => {
+    const audit = new AuditLogService(db);
+    const participation = new ProposalParticipationService(db);
+    const access = new ProposalReviewAccessService(db);
+    const assignments = new ProposalReviewAssignmentsService(db, audit, participation, access);
+    const reviews = new ProposalReviewsService(db, audit, access, participation);
+    return new ProposalDecisionsService(db, audit, participation, access, assignments, reviews, new ProposalEvaluationSummaryService(db, audit, assignments, reviews, participation, access));
+  };
+  const decide = async (actor, decision, note) => decisions().decide(actor, proposal.id, decision, { contextVersion: proposalContextVersion(await db.researchProposal.findUnique({ where: { id: proposal.id } })), packageRevision: 1, note });
+  const snapshot = async () => ({ proposal: (await db.researchProposal.findUnique({ where: { id: proposal.id } })).status, decisions: await db.proposalDecision.count({ where: { proposalId: proposal.id } }), submission: (await db.approvalSubmission.findUnique({ where: { id: submission.id } })).status });
+  return { ...ctx, org, submission, toLeadership, decide, snapshot, decisions };
+}
+
+test("decision: only GĐ at LEADERSHIP decides; before that, PGĐ-KH, conflicted signer and reject without reason are refused without writes", async () => {
+  const f = await decisionFixture("H");
+  const { people } = f;
+  const untouched = { proposal: "ready_for_approval", decisions: 0, submission: "PENDING" };
+  await assert.rejects(() => f.decide(people.director, "approved"), (e) => e.getResponse().code === "APPROVAL_NOT_READY", "tờ trình mới ở BOARD_REVIEW");
+  await assert.rejects(() => f.decisions().getDecisionPackage(people.director, f.proposal.id), (e) => e.getResponse().code === "APPROVAL_NOT_READY", "gói chưa mở cho GĐ");
+  await f.toLeadership();
+  for (const actor of [people.science, people.deputy, people.head, people.board, people.staff]) await assert.rejects(() => f.decide(actor, "approved"), code(403));
+  await assert.rejects(() => f.decide(people.director, "rejected", "  "), code(400), "từ chối cần lý do");
+  const pack = await f.decisions().getDecisionPackage(people.director, f.proposal.id);
+  assert.deepEqual([pack.canDecide, pack.approval.stage], [true, "LEADERSHIP"]);
+  await db.proposalMember.create({ data: { proposalId: f.proposal.id, userId: people.director.id, name: "GĐ", role: "TOPIC_MEMBER", organization: f.org.name } });
+  await assert.rejects(() => f.decide(people.director, "approved"), code(403), "xung đột");
+  assert.deepEqual(await f.snapshot(), untouched);
+});
+
+test("decision: approve closes the tờ trình with the decision atomically; a failing close rolls the decision back; concurrent decisions leave one winner", async () => {
+  const f = await decisionFixture("I");
+  await f.toLeadership();
+  await db.$executeRawUnsafe(`CREATE FUNCTION fail_close() RETURNS trigger AS $$ BEGIN RAISE EXCEPTION 'close blocked'; END $$ LANGUAGE plpgsql`);
+  await db.$executeRawUnsafe(`CREATE TRIGGER fail_close BEFORE UPDATE ON approval_submissions FOR EACH ROW WHEN (NEW.stage = 'CLOSED') EXECUTE FUNCTION fail_close()`);
+  await assert.rejects(() => f.decide(f.people.director, "approved"));
+  assert.deepEqual(await f.snapshot(), { proposal: "ready_for_approval", decisions: 0, submission: "PENDING" }, "đóng tờ trình lỗi thì quyết định cũng rollback");
+  await db.$executeRawUnsafe(`DROP TRIGGER fail_close ON approval_submissions`);
+  await db.$executeRawUnsafe(`DROP FUNCTION fail_close()`);
+
+  const results = await Promise.allSettled([f.decide(f.people.director, "approved"), f.decide(f.people.director, "rejected", "Không đủ kinh phí")]);
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1, "đúng một quyết định thắng");
+  const after = await f.snapshot();
+  assert.equal(after.decisions, 1);
+  assert.deepEqual([after.proposal, after.submission], after.proposal === "approved" ? ["approved", "APPROVED"] : ["rejected", "REJECTED"], "trạng thái hồ sơ khớp tờ trình");
+  await assert.rejects(() => f.decide(f.people.director, "approved"), code(400), "không quyết định lần hai");
 });

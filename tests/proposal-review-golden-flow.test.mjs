@@ -5,7 +5,7 @@ import { proposalDecisionPipe } from "../dist/apps/api/proposal-evaluations/prop
 import { ProposalDecisionsService, PROPOSAL_DECISIONS } from "../dist/apps/api/proposal-evaluations/proposal-decisions.service.js";
 import { ProposalEvaluationSummaryService } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-summary.service.js";
 import { ProposalReviewsService } from "../dist/apps/api/proposal-evaluations/proposal-reviews.service.js";
-import { findCurrentSubmissionEvidence, assertCurrentCompletenessEvidence, filterCurrentRoundAssignments } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-support.js";
+import { assertProposalManagementWriteScope, findCurrentSubmissionEvidence, assertCurrentCompletenessEvidence, filterCurrentRoundAssignments } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-support.js";
 import { ResearchProposalsService } from "../dist/apps/api/research-proposals/research-proposals.service.js";
 
 const proposal = {
@@ -109,4 +109,15 @@ test("frozen evidence excludes revoked, expired, future, inactive and old-versio
   const active = { id: "active", reviewedSubmissionEventId: "current", status: "completed", reviewer: { status: "active" } };
   const rows = [active, { ...active, id: "revoked", status: "revoked" }, { ...active, id: "old", reviewedSubmissionEventId: "old" }, { ...active, id: "expired", effectiveUntil: new Date(5) }, { ...active, id: "future", effectiveFrom: new Date(11) }, { ...active, id: "inactive", reviewer: { status: "inactive" } }];
   assert.deepEqual(filterCurrentRoundAssignments(rows, "current", new Date(10)).map(row => row.id), ["active"]);
+});
+
+test("synthesis writes are for TP/TB/CV only; PP, PGĐ-KH, BGĐ, QT and out-of-scope TP/TB are refused before any lookup", async () => {
+  const host = { id: "p", hostOrganizationUnitId: "unit-1" };
+  const as = (systemRole, scope = "unit-1") => ({ id: "u", systemRole, organizationScopes: [{ id: scope }] });
+  for (const role of ["RESEARCH_MANAGEMENT_DEPUTY_HEAD", "SCIENCE_DEPUTY_DIRECTOR", "LEADERSHIP_APPROVAL_AUTHORITY", "RESEARCH_OVERSIGHT_AUTHORITY", "SYSTEM_ADMIN"]) {
+    await assert.rejects(() => assertProposalManagementWriteScope({}, as(role), host), { status: 403 }, role);
+  }
+  for (const role of ["RESEARCH_MANAGEMENT_HEAD", "RESEARCH_BOARD_HEAD"]) {
+    await assert.rejects(() => assertProposalManagementWriteScope({}, as(role, "unit-2"), host), { status: 403 }, `${role} ngoài scope`);
+  }
 });

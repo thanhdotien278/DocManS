@@ -4,7 +4,7 @@ import { ProposalParticipationService } from "../research-proposals/proposal-par
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import type { PrismaService } from "../infrastructure/prisma/prisma.service.js";
-import { assertHasOrganizationScope, isLeadership, isResearchOversightAuthority, isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
+import { assertHasOrganizationScope, isLeadership, isResearchBoardHead, isResearchOversightAuthority, isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
 import type { ProposalConflictDecision } from "../proposals-shared/proposal-participation.js";
 import { isWorkflowVisibleStatus, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import { proposalContextVersion } from "../proposals-shared/proposal-mutation.js";
@@ -235,6 +235,19 @@ export function assertScientificManagementHeadScope(actor: SafeUserContext | und
   return actor;
 }
 
+/**
+ * Quyền ghi tổng hợp/chốt/lập tờ trình gói đánh giá: TP¹/TB¹ trong unit scope, CV³ là cán bộ phụ trách hiện hành;
+ * TP/TB/CV đều không được xung đột (CV kiểm tra ở đây, TP/TB ở từng thao tác). PP, BGĐ, QT và CV không phụ trách bị từ chối.
+ */
+export async function assertProposalManagementWriteScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
+  if (actor && (isResearchManagementHead(actor) || isResearchBoardHead(actor))) {
+    assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
+    return actor; // xung đột do từng thao tác tổng hợp kiểm tra tiếp bằng resolver đã tiêm
+  }
+  if (actor && isResearchManagementStaff(actor)) return assertScientificManagementScope(prisma, actor, proposal);
+  throw new ForbiddenException({ message: "Chỉ Trưởng phòng, Trưởng ban hoặc Chuyên viên phụ trách hồ sơ mới được tổng hợp và lập tờ trình." });
+}
+
 /** Assignment rosters are operational reads for scoped Head and assigned Staff. */
 export async function assertReviewAssignmentReadScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
   if (isResearchManagementHead(actor)) return assertScientificManagementHeadScope(actor, proposal);
@@ -246,7 +259,7 @@ export async function assertReviewAssignmentReadScope(prisma: PrismaService, act
  * Head, Deputy and Director require an explicit organization scope. */
 export async function assertEvaluationReadScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
   if (!actor) throw new ForbiddenException({ message: "Không có quyền xem thông tin đánh giá của hồ sơ này." });
-  if (isLeadership(actor) || isResearchManagementHead(actor) || isResearchOversightAuthority(actor)) {
+  if (isLeadership(actor) || isResearchManagementHead(actor) || isResearchBoardHead(actor) || isResearchOversightAuthority(actor)) {
     assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
     return actor;
   }
