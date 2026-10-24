@@ -1003,6 +1003,7 @@ model ApprovalSubmission {
   signer                 String
   submittedById          String   @map("submitted_by_id")
   submittedBy            User     @relation("ApprovalSubmissionAuthor", fields: [submittedById], references: [id])
+  authorRole             String   @map("author_role")
   lastNote               String?  @map("last_note")
   closedAt               DateTime? @map("closed_at")
   createdAt              DateTime @default(now()) @map("created_at")

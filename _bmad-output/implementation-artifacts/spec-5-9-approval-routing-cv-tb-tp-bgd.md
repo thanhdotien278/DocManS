@@ -10,6 +10,8 @@ story_key: 5-9-approval-routing-cv-tb-tp-bgd
 
 Mọi thủ tục cần BGĐ ký đi qua một luồng tờ trình thống nhất: người lập (CV/TB/TP) → TB rà soát → TP duyệt → BGĐ ký. AC: `_bmad-output/epics.md` Story 5.9; quyết định REJECTED/CANCELLED: D-035.
 
+Quy tắc TP lập: TB chuyển thẳng `LEADERSHIP` (D-035), tác giả lưu ở `author_role`.
+
 ## Scope of this step
 
 Lõi routing, API theo hồ sơ nguồn, UI trên chi tiết đề xuất, và điểm tích hợp gói đánh giá (`DECISION_PACKAGE`). Không gồm: GĐ ký/quyết định (5.10), inbox (11.6), thông báo (chờ hạ tầng Epic 11).

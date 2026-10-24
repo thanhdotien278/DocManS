@@ -11,6 +11,7 @@ CREATE TABLE "approval_submissions" (
     "status" TEXT NOT NULL DEFAULT 'PENDING',
     "signer" TEXT NOT NULL,
     "submitted_by_id" TEXT NOT NULL,
+    "author_role" TEXT NOT NULL,
     "last_note" TEXT,
     "closed_at" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
