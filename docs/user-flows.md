@@ -111,7 +111,7 @@ flowchart LR
   subgraph staff["CV — RESEARCH_MANAGEMENT_STAFF: hồ sơ đang được giao (TP/TB làm được trong scope, trừ ô ghi rõ)"]
     open["TP / CV: tạo và mở đợt tiếp nhận"]
     check["TB / CV: kiểm tra đầy đủ / thủ tục<br/>(TP không làm)"]
-    assign["Phân công phản biện / mời hội đồng<br/>+ conflict check"]
+    assign["Phân công phản biện / mời hội đồng<br/>(role do QT cấu hình, mặc định TP/TB)<br/>+ conflict check"]
     consolidate["Đủ phiếu → Soạn tổng hợp → Chốt tổng hợp"]
     draft_tt["Lập tờ trình"]
     create_project["CV phụ trách: chủ động tạo đề tài<br/>từ đề xuất đã duyệt"]
@@ -169,7 +169,7 @@ Quy tắc cố định trong flow:
 - `Phiếu đánh giá của tôi` chỉ xuất hiện trong proposal có assignment đang hiệu
   lực của chính người xem; assignment ở proposal khác, role researcher/council
   hoặc system role rộng không mở rộng context.
-- Kiểm tra đầy đủ/yêu cầu bổ sung: `RESEARCH_BOARD_HEAD` (TB, trong scope) hoặc `RESEARCH_MANAGEMENT_STAFF` (CV phụ trách); `RESEARCH_MANAGEMENT_HEAD` (TP) không làm. `Phân công đánh giá`, lập hội đồng/IRB, soạn/chốt tổng hợp và lập tờ trình: TP/TB trong scope hoặc CV phụ trách, có capability, state và không xung đột.
+- Kiểm tra đầy đủ/yêu cầu bổ sung: `RESEARCH_BOARD_HEAD` (TB, trong scope) hoặc `RESEARCH_MANAGEMENT_STAFF` (CV phụ trách); `RESEARCH_MANAGEMENT_HEAD` (TP) không làm. `Phân công đánh giá` và lập hội đồng/IRB (kể cả mời phản biện): role do `SYSTEM_ADMIN` cấu hình theo loại hội đồng, mặc định TP/TB trong scope; CV phụ trách chỉ khi được tích; QT chỉ cấu hình, không tự lập/mời (D-035). Soạn/chốt tổng hợp và lập tờ trình: TP/TB trong scope hoặc CV phụ trách. Mọi thao tác cần capability, state và không xung đột.
 - Tờ trình: CV lập → TB rà soát → TP duyệt → Ban giám đốc ký; trả về ở bất kỳ bước nào về người lập, bắt buộc lý do. Tờ trình do TB lập đi thẳng TP; do TP lập vẫn qua TB; TB/TP không rà soát tờ trình của chính mình.
 - Hội đồng đánh giá chỉ trình thành lập khi mọi thành viên đã chấp nhận; GĐ hoặc PGĐ-KH ký. Mọi role trừ QT được mời chấm; thư ký hội đồng tổng hợp/lập biên bản, không chấm.
 - Chỉ GĐ (`LEADERSHIP_APPROVAL_AUTHORITY`) quyết định đề tài + kinh phí ở trạng thái
@@ -362,7 +362,7 @@ trạng thái. Không dùng cập nhật trạng thái trực tiếp để bypas
 
 ### Proposal reviewer / council assignment refinement
 
-TP/TB (unit scope) or the assigned CV opens an eligible, completeness-checked
+A role QT configures for the council type (default TP/TB in unit scope; the assigned CV only if ticked) opens an eligible, completeness-checked
 proposal → searches active user accounts → selects an eligible account and
 reviewer/committee-member duty → sets optional effective range/deadline → confirms
 → backend rechecks current eligibility and context → records assignment and audit in
@@ -428,7 +428,7 @@ certificates, extensions and adjustments (with or without funding change). `RESE
 (PGĐ-TD) only monitors, sees aggregate funding only and signs nothing;
 `RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP) likewise only monitors within unit scope.
 PI/member/reviewer work of any of these roles is evaluated independently. TP/TB assign
-CVs; TP/TB or the assigned CV assign reviewers, read submitted reviews, draft/finalize
+CVs; the roles QT configures per council type (default TP/TB) assign reviewers and form councils; TP/TB or the assigned CV read submitted reviews, draft/finalize
 synthesis and draft the tờ trình; TB reviews and TP approves it before BGĐ.
 Protected reviewer information is omitted from oversight responses. Project/dashboard/
 notification/report routes without operational backends remain design requirements.

@@ -117,17 +117,25 @@ export class ProposalEvaluationSummaryService {
   async saveEvaluationSummary(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>): Promise<any> {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, currentActor) => service.saveEvaluationSummary(currentActor, proposalId, input));
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    await assertProposalManagementWriteScope(this.prisma, actor, proposal);
+    // Thư ký (đã nhận lời, hội đồng đã thành lập) chỉ soạn bản nháp; họ luôn là "người được phân công" nên không qua resolver xung đột của người tổng hợp.
+    const access = await this.reviewAccess.resolveForProposal(actor.id, proposalId);
+    const isSecretary = access.isAssignedReviewer && access.assignmentRole === "council_secretary";
+    if (isSecretary) {
+      if ((await this.participation.evaluateConflict(actor.id, proposalId)).conflicted) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia hồ sơ không thể soạn tổng hợp." });
+    } else {
+      await assertProposalManagementWriteScope(this.prisma, actor, proposal);
+    }
     assertProposalStatus(proposal, [PROPOSAL_STATUS.underReview], "Chỉ hồ sơ đang đánh giá mới được soạn tổng hợp kết quả.");
     this.assertNoSynthesisBypass(input);
-    await this.assertSynthesisActorIsEligible(actor, proposalId);
+    if (!isSecretary) await this.assertSynthesisActorIsEligible(actor, proposalId);
     const summaryText = this.readSummaryText(input.summary);
     const recommendation = this.readRecommendation(input.recommendation);
     const submissionEvidence = await assertCurrentCompletenessEvidence(this.prisma, proposal);
     const assignmentRecords = await this.assignments.findCurrentRoundAssignments(proposal);
     const reviewRecords = await this.assignments.findCurrentRoundReviews(proposal);
-    const progress = this.summarizeProgress(assignmentRecords, reviewRecords);
-    this.assertCompleteCurrentRound(progress);
+    if (isSecretary && !assignmentRecords.some((assignment) => assignment.id === access.assignmentId)) {
+      throw new ForbiddenException({ code: "STALE_ASSIGNMENT_CONTEXT", message: "Phân công không còn gắn với phiên bản nộp hiện tại của hồ sơ." });
+    }
 
     const existing = await this.findSummary(proposalId);
     if (existing && existing.status !== EVALUATION_SUMMARY_STATUS.draft) {
@@ -141,7 +149,6 @@ export class ProposalEvaluationSummaryService {
       const currentRoundAssignments = filterCurrentRoundAssignments(currentAssignments, submissionEvidence.eventId);
       const currentRoundReviews = currentReviews.filter((review) => review.submissionEventId === submissionEvidence.eventId && currentRoundAssignments.some((assignment) => assignment.id === review.assignmentId));
       const currentProgress = this.summarizeProgress(currentRoundAssignments, currentRoundReviews);
-      this.assertCompleteCurrentRound(currentProgress);
       const currentSummary = existing ? await tx.proposalEvaluationSummary.findUnique({ where: { id: existing.id } }) : null;
       if (currentSummary && currentSummary.status !== EVALUATION_SUMMARY_STATUS.draft) {
         throw new BadRequestException({ message: "Bản tổng hợp đã được thay đổi. Vui lòng tải lại hồ sơ." });
@@ -214,6 +221,7 @@ export class ProposalEvaluationSummaryService {
             proposalId,
             recommendation,
             summaryLength: summaryText.length,
+            actorPosition: isSecretary ? "council_secretary" : "management",
             submittedReviews: currentProgress.submittedCount,
             totalAssignments: currentProgress.activeAssignmentCount,
             fromStatus: proposal.status,
@@ -236,6 +244,7 @@ export class ProposalEvaluationSummaryService {
   async finalizeEvaluationSummary(actor: SafeUserContext, proposalId: string, input: Record<string, unknown> = {}): Promise<any> {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, currentActor) => service.finalizeEvaluationSummary(currentActor, proposalId, input));
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
+    await this.assertNotSecretary(actor, proposalId);
     await assertProposalManagementWriteScope(this.prisma, actor, proposal);
     assertProposalStatus(proposal, [PROPOSAL_STATUS.underReview], "Chỉ hồ sơ đang đánh giá mới được chốt bản tổng hợp.");
     await this.assertSynthesisActorIsEligible(actor, proposalId);
@@ -288,6 +297,7 @@ export class ProposalEvaluationSummaryService {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, currentActor) => service.submitCompletedPackage(currentActor, proposalId, input));
 
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
+    await this.assertNotSecretary(actor, proposalId);
     await assertProposalManagementWriteScope(this.prisma, actor, proposal);
     assertProposalStatus(proposal, [PROPOSAL_STATUS.underReview], "Chỉ hồ sơ đang đánh giá mới được trình gói hoàn tất.");
 
@@ -381,7 +391,7 @@ export class ProposalEvaluationSummaryService {
   private assertCompleteCurrentRound(progress: ReturnType<ProposalEvaluationSummaryService["summarizeProgress"]>) {
     if (!progress.allReviewsSubmitted) {
       throw new BadRequestException({
-        message: "Chưa thể chốt gói đánh giá: cần đúng 2 người phản biện, ít nhất 3 thành viên hội đồng và đầy đủ phiếu đánh giá.",
+        message: `Chưa thể chốt gói đánh giá: ${progress.readinessReasons.join(" ")}`,
         pendingReviewers: progress.pendingReviewers
       });
     }
@@ -391,6 +401,14 @@ export class ProposalEvaluationSummaryService {
     const ids = (value: unknown) => Array.isArray(value) ? value.filter((item): item is string => typeof item === "string").sort() : [];
     return JSON.stringify(ids(evidence.assignmentIds)) === JSON.stringify(assignments.map((assignment) => assignment.id).sort()) &&
       JSON.stringify(ids(evidence.reviewIds)) === JSON.stringify(reviews.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => review.id).sort());
+  }
+
+  /** Thư ký soạn bản nháp nhưng không chốt, không trình. */
+  private async assertNotSecretary(actor: SafeUserContext, proposalId: string) {
+    const access = await this.reviewAccess.resolveForProposal(actor.id, proposalId);
+    if (access.isAssignedReviewer && access.assignmentRole === "council_secretary") {
+      throw new ForbiddenException({ code: "SECRETARY_CANNOT_FINALIZE", message: "Thư ký hội đồng chỉ soạn bản nháp, không chốt hoặc trình tổng hợp." });
+    }
   }
 
   private async assertSynthesisActorIsEligible(actor: SafeUserContext, proposalId: string) {

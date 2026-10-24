@@ -83,8 +83,8 @@ làm nhiệm vụ theo dõi, không còn là Phó GĐ phụ trách Khoa học.
 - Duyệt mọi tờ trình trước khi lên BGĐ.
 - Giao mảng đề tài cho CV, giao/đổi/thu hồi chuyên viên phụ trách hồ sơ và đề tài, điều
   phối mọi hồ sơ trong phạm vi đơn vị.
-- Có thể làm cả việc đánh giá ở mức CV (phân công phản biện/hội đồng, tổng hợp, hội đồng
-  IRB, lập tờ trình) trong phạm vi đơn vị.
+- Có thể làm cả việc đánh giá ở mức CV (tổng hợp, lập tờ trình; phân công phản biện/hội
+  đồng và hội đồng IRB theo cấu hình QT, mặc định có, ghi chú 8) trong phạm vi đơn vị.
 - Xem mọi đề tài trong Học viện; quản lý kinh phí toàn Học viện.
 - Không kiểm tra đầy đủ và không yêu cầu bổ sung hồ sơ.
 
@@ -98,15 +98,15 @@ làm nhiệm vụ theo dõi, không còn là Phó GĐ phụ trách Khoa học.
 
 - Rà soát tờ trình do CV lập, rồi trình TP hoặc trả lại người lập.
 - Giao/thu hồi chuyên viên phụ trách trong phạm vi đơn vị; làm kiểm tra đầy đủ, yêu cầu
-  bổ sung, phân công phản biện/hội đồng, tổng hợp, hội đồng IRB và lập tờ trình trong
-  phạm vi đơn vị.
+  bổ sung, tổng hợp và lập tờ trình trong phạm vi đơn vị; phân công phản biện/hội đồng và
+  hội đồng IRB theo cấu hình QT (mặc định có, ghi chú 8).
 - Xem mọi đề tài trong Học viện; quản lý kinh phí toàn Học viện.
 
 ### CV — Chuyên viên QLKH
 
 - Chỉ làm việc trên hồ sơ/đề tài mà mình đang được phân công phụ trách (ghi chú 3): kiểm
-  tra đầy đủ, yêu cầu bổ sung, mời phản biện/hội đồng, tổng hợp, hội đồng IRB, lập tờ
-  trình, nghiệp vụ đề tài hằng ngày (thiết lập mốc, xét báo cáo, thẩm định điều chỉnh/gia
+  tra đầy đủ, yêu cầu bổ sung, tổng hợp, lập tờ trình (mời phản biện/hội đồng và hội đồng
+  IRB chỉ khi QT cấu hình tích role CV, ghi chú 8), nghiệp vụ đề tài hằng ngày (thiết lập mốc, xét báo cáo, thẩm định điều chỉnh/gia
   hạn, nghiệm thu, sản phẩm, lập thanh lý, đóng đề tài), kinh phí trong phạm vi phụ trách.
 - Tạo/mở/đóng đợt tiếp nhận; quản lý hồ sơ nhà khoa học trong phạm vi đơn vị; quản lý đề
   tài sinh viên NCKH trong phạm vi đơn vị.
@@ -242,11 +242,11 @@ bao giờ tạo ra vai trò hệ thống mới.
 | Xem hồ sơ | — | Xem² | Xem² | Xem¹ | Xem¹ | Xem¹ | Xem¹ | ◐3 | ◐4 | ◐5 |
 | Giao hoặc thu hồi chuyên viên phụ trách hồ sơ, phân mảng | — | — | — | — | ✓¹ | — | ✓¹ | — | — | — |
 | Kiểm tra đầy đủ, yêu cầu bổ sung | — | — | — | — | — | — | ✓¹ | ◐3 | — | — |
-| Phân công phản biện, lập hội đồng đánh giá | — | — | — | — | ✓¹ | — | ✓¹ | ◐3 | — | — |
+| Phân công phản biện, lập hội đồng đánh giá (theo cấu hình QT⁸) | — | — | — | — | ✓¹ ⁸ | — | ✓¹ ⁸ | ◐3, 8 | — | — |
 | Chấm phiếu đánh giá | — | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 |
 | Tổng hợp, chốt, trình kết quả đánh giá | — | — | — | — | ✓¹ | — | ✓¹ | ◐3 | ◐6 | ◐6 |
 | Xem tiến độ đánh giá | — | Xem¹ | Xem¹ | Xem¹ | Xem¹ | Xem¹ | Xem¹ | ◐3 | — | — |
-| Lập hội đồng IRB (mời thành viên), trình kết luận IRB | — | — | — | — | ✓¹ | — | ✓¹ | ◐3 | — | — |
+| Lập hội đồng IRB (mời thành viên; theo cấu hình QT⁸), trình kết luận IRB | — | — | — | — | ✓¹ ⁸ | — | ✓¹ ⁸ | ◐3, 8 | — | — |
 | Nhận xét IRB (thành viên), lập kết luận IRB (thư ký) | — | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 |
 | **Tờ trình qua Phòng KHQS** | | | | | | | | | | |
 | Lập tờ trình | — | — | — | — | ✓¹ | — | ✓¹ | ◐3 | — | — |
@@ -285,6 +285,7 @@ bao giờ tạo ra vai trò hệ thống mới.
 6. Thư ký hội đồng của chính hồ sơ: lập tổng hợp, ghi biên bản, không chấm phiếu.
 7. Chưa được định nghĩa trong chú giải của PDF. Theo `docs/design/phan-cap-va-trinh-duyet.md`
    §5: PGĐ-TD chỉ thấy số liệu tổng hợp; kinh phí từng đề tài/hồ sơ để trống.
+8. Hội đồng đánh giá, hội đồng nghiệm thu và hội đồng IRB (kể cả mời phản biện): role được lập hội đồng và mời thành viên do QT cấu hình theo từng loại hội đồng (D-035); mặc định TP¹ và TB¹. CV chỉ làm được khi QT tích role CV và hồ sơ thuộc phạm vi phụ trách³. QT chỉ cấu hình, không tự lập hội đồng hay mời thành viên.
 
 ### 7.3 Quy tắc chung
 
@@ -351,7 +352,7 @@ theo §7.4. Ô không có hoặc bị từ chối là `Không` tường minh.
 | Kiểm tra đầy đủ | Không | TB¹, CV³: Xem xét | Không | Xem của mình | Xem nếu tham gia | Không | Đơn vị / CV phụ trách | Đã nộp, đã nộp lại | Có |
 | Yêu cầu bổ sung | Không | TB¹, CV³: Gửi yêu cầu | Không | Xem/phản hồi | Xem nếu tham gia | Không | Đơn vị / CV phụ trách | Đã nộp, cần bổ sung | Có |
 | Nộp lại đề xuất | Không | Xem | Xem | Nộp của mình | Không | Không | Hồ sơ của mình | Cần bổ sung | Có |
-| Phân công phản biện/hội đồng | Không | TP¹, TB¹, CV³: Phân công có kiểm tra xung đột | Theo dõi tiến độ¹ | Không | Không | Nhận/từ chối lời mời | Đơn vị, CV phụ trách, xung đột | Đã nộp, đã nộp lại, đang đánh giá | Có |
+| Phân công phản biện/hội đồng | Không | Role do QT cấu hình⁸ (mặc định TP¹, TB¹): Phân công có kiểm tra xung đột | Theo dõi tiến độ¹ | Không | Không | Nhận/từ chối lời mời | Đơn vị, CV phụ trách, xung đột | Đã nộp, đã nộp lại, đang đánh giá | Có |
 | Chấm điểm và nhận xét | Không | Chỉ qua phân công hội đồng/phản biện của chính mình⁵ | Chỉ qua phân công hội đồng/phản biện của chính mình⁵ | Không | Không | Xem xét/Nộp phần được phân công (mọi vai trò trừ QT) | Phân công đánh giá | Đang đánh giá | Có |
 | Tổng hợp đánh giá / Trình kết quả | Không | TP¹, TB¹, CV³: Xem xét/Cập nhật/Trình | Theo dõi tiến độ¹ | Không | Không | Thư ký hội đồng: tổng hợp/biên bản (ghi chú 6) | Đơn vị, xung đột | Đang đánh giá | Có |
 | Phê duyệt/từ chối đề tài và kinh phí | Không | Chỉ luân chuyển (TB → TP) | Chỉ GĐ: Phê duyệt/Từ chối | Xem kết quả | Xem kết quả nếu tham gia | Không | Đơn vị, xung đột | Chờ phê duyệt | Có |
@@ -433,7 +434,7 @@ Các bảng phân hệ dùng cùng nhóm cột như §8. Khi một dòng ở đ�
 | Kiểm tra đầy đủ hồ sơ | Không | TB¹, CV³ | Không | Xem của mình | Xem nếu tham gia | Không | Đơn vị / CV phụ trách | Đã nộp, đã nộp lại | Có | FR15, Story 3.1 |
 | Yêu cầu bổ sung | Không | TB¹, CV³ | Không | Xem yêu cầu của mình | Xem nếu tham gia | Không | Đơn vị / CV phụ trách | Đã nộp, cần bổ sung | Có | FR15, Story 3.1 |
 | Phản hồi yêu cầu bổ sung | Không | Xem | Không | Sửa/Nộp của mình | Không | Không | Hồ sơ của mình | Cần bổ sung | Có | FR16, Story 3.1 |
-| Mời/phân công/thu hồi phản biện hoặc thành viên hội đồng | Không | TP¹, TB¹, CV³ có kiểm tra xung đột | Theo dõi tiến độ¹ | Không | Không | Nhận hoặc từ chối (bắt buộc ghi lý do) | Đơn vị, CV phụ trách, xung đột | Đã nộp, đã nộp lại, đang đánh giá | Có | FR17, FR67a, Story 3.2 |
+| Mời/phân công/thu hồi phản biện hoặc thành viên hội đồng | Không | Role do QT cấu hình⁸ (mặc định TP¹, TB¹) có kiểm tra xung đột | Theo dõi tiến độ¹ | Không | Không | Nhận hoặc từ chối (bắt buộc ghi lý do) | Đơn vị, CV phụ trách, xung đột | Đã nộp, đã nộp lại, đang đánh giá | Có | FR17, FR67a, Story 3.2 |
 | Truy cập gói đánh giá được phân công | Không | Chỉ qua phân công của chính mình | Chỉ qua phân công của chính mình | Không | Không | Trước khi nhận lời: tên đề tài/vai trò/hạn; sau khi nhận lời: toàn bộ gói | Phân công đánh giá | Đang đánh giá | Không | FR18, Story 3.2 |
 | Nộp điểm/nhận xét/kiến nghị | Không | Chỉ qua phân công của chính mình⁵ | Chỉ qua phân công của chính mình⁵ | Không | Không | Xem xét/Nộp phần được phân công | Phân công đánh giá | Đang đánh giá | Có | FR18, Story 3.3 |
 | Tổng hợp, chốt, trình kết quả đánh giá | Không | TP¹, TB¹, CV³ không xung đột | Theo dõi tiến độ¹ | Không | Không | Thư ký hội đồng⁶ | Đơn vị | Đang đánh giá, chờ phê duyệt | Có | FR19, Story 3.4 |
@@ -638,11 +639,11 @@ quy tắc sau.
 
 | Thao tác | Kiểm tra bắt buộc | Bằng chứng / công bố |
 | --- | --- | --- |
-| Tìm tài khoản đủ điều kiện | TP¹/TB¹ hoặc CV phụ trách³; trạng thái cho phép phân công; có bằng chứng kiểm tra đầy đủ hiện hành; ứng viên đang hoạt động; phản biện/thành viên hội đồng đánh giá và thành viên IRB lấy từ mọi tài khoản có lý lịch khoa học (không bao giờ là QT); không xung đột chủ nhiệm/nhóm, không trùng phân công đang hiệu lực | ID tài khoản, tên hiển thị, username, chức danh đơn vị (chỉ hiển thị) |
+| Tìm tài khoản đủ điều kiện | Role do QT cấu hình theo loại hội đồng⁸ (mặc định TP¹/TB¹; CV phụ trách³ chỉ khi được tích); trạng thái cho phép phân công; có bằng chứng kiểm tra đầy đủ hiện hành; ứng viên đang hoạt động; phản biện/thành viên hội đồng đánh giá và thành viên IRB lấy từ mọi tài khoản có lý lịch khoa học (không bao giờ là QT); không xung đột chủ nhiệm/nhóm, không trùng phân công đang hiệu lực | ID tài khoản, tên hiển thị, username, chức danh đơn vị (chỉ hiển thị) |
 | Mời cho một trong hai nhiệm vụ | Kiểm tra lại điều kiện, ngữ cảnh hồ sơ, ngày hiệu lực/hạn | Lời mời và audit nguyên tử |
 | Nhận lời / từ chối | Chỉ người được mời; từ chối bắt buộc ghi lý do; tờ trình hội đồng chỉ được luân chuyển khi mọi thành viên đã nhận lời | Trước khi nhận lời chỉ thấy tên đề tài, vai trò, hạn và người mời |
 | Đọc gói/file hoặc nộp phiếu của mình | Phân công đã nhận lời, không xung đột tham gia, trạng thái và quy tắc công bố phù hợp; được vượt ranh giới đơn vị | Chỉ phân công và phiếu của mình |
-| Thu hồi một trong hai nhiệm vụ | TP¹/TB¹ hoặc CV phụ trách³, người thao tác không xung đột, trạng thái cho phép, lý do không để trống | Giữ lịch sử và phiếu đã nộp; chấm dứt quyền truy cập ngay |
+| Thu hồi một trong hai nhiệm vụ | Role do QT cấu hình⁸ (mặc định TP¹/TB¹; CV phụ trách³ chỉ khi được tích), người thao tác không xung đột, trạng thái cho phép, lý do không để trống | Giữ lịch sử và phiếu đã nộp; chấm dứt quyền truy cập ngay |
 
 Thành viên hội đồng đã nhận lời chỉ đọc được hồ sơ sau khi BGĐ ký quyết định thành lập hội
 đồng.

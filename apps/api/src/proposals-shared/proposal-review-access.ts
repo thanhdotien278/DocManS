@@ -14,12 +14,22 @@ export const REVIEW_ASSIGNMENT_STATUS = {
 
 export type ReviewAssignmentStatus = (typeof REVIEW_ASSIGNMENT_STATUS)[keyof typeof REVIEW_ASSIGNMENT_STATUS];
 
-export type ReviewAssignmentRole = "reviewer" | "committee_member";
+/** Vị trí trong hội đồng thẩm định (spec hội đồng §5). `reviewer` = Phản biện, `committee_member` = Ủy viên. */
+export type ReviewAssignmentRole = "council_chair" | "reviewer" | "committee_member" | "council_secretary";
+
+export const REVIEW_ASSIGNMENT_ROLES = ["council_chair", "reviewer", "committee_member", "council_secretary"] as const satisfies readonly ReviewAssignmentRole[];
 
 export const REVIEW_ASSIGNMENT_ROLE_LABELS: Record<ReviewAssignmentRole, string> = {
-  reviewer: "Người phản biện",
-  committee_member: "Thành viên hội đồng"
+  council_chair: "Chủ tịch hội đồng",
+  reviewer: "Phản biện",
+  committee_member: "Ủy viên",
+  council_secretary: "Thư ký hội đồng"
 };
+
+/** Thư ký soạn tổng hợp/biên bản, không chấm phiếu. */
+export function isScoringRole(role: unknown) {
+  return normalizeAssignmentRole(role) !== "council_secretary";
+}
 
 export const REVIEW_ASSIGNMENT_STATUS_LABELS: Record<string, string> = {
   [REVIEW_ASSIGNMENT_STATUS.assigned]: "Đang được phân công",
@@ -105,17 +115,15 @@ const NO_REVIEW_ACCESS: ProposalReviewAccess = {
   conflictUnresolved: false
 };
 
-export function normalizeAssignmentRole(value: unknown): ReviewAssignmentRole {
-  if (typeof value !== "string") {
-    return "reviewer";
-  }
-
+/** Giá trị lạ trả `null` để mutation từ chối 400; đường đọc dùng `?? "reviewer"` (dữ liệu cũ). */
+export function normalizeAssignmentRole(value: unknown): ReviewAssignmentRole | null {
+  if (typeof value !== "string") return null;
   const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, "_");
-  return normalized === "committee_member" ? "committee_member" : "reviewer";
+  return (REVIEW_ASSIGNMENT_ROLES as readonly string[]).includes(normalized) ? (normalized as ReviewAssignmentRole) : null;
 }
 
 export function getAssignmentRoleLabel(role: string) {
-  return REVIEW_ASSIGNMENT_ROLE_LABELS[normalizeAssignmentRole(role)];
+  return REVIEW_ASSIGNMENT_ROLE_LABELS[normalizeAssignmentRole(role) ?? "reviewer"];
 }
 
 export function getRecommendationLabel(value: string | null | undefined) {
@@ -153,7 +161,7 @@ export function resolveProposalReviewAccess(assignments?: ReviewAssignmentLike[]
   return {
     isAssignedReviewer: true,
     assignmentId: active.id,
-    assignmentRole: normalizeAssignmentRole(active.assignmentRole),
+    assignmentRole: normalizeAssignmentRole(active.assignmentRole) ?? "reviewer",
     effectiveFrom: (active.effectiveFrom ?? active.assignedAt)?.toISOString() ?? "",
     effectiveUntil: active.effectiveUntil?.toISOString() ?? null
   };

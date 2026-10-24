@@ -257,6 +257,12 @@ function createAdminPrisma() {
       }
     },
     systemParameter: {
+      async findUnique({ where }) {
+        return store.systemParameters.find((item) => item.key === where.key) ?? null;
+      },
+      async findMany() {
+        return store.systemParameters;
+      },
       async upsert({ where, create, update }) {
         const index = store.systemParameters.findIndex((item) => item.key === where.key);
         if (index >= 0) {
@@ -680,6 +686,58 @@ describe("admin foundation API behavior", () => {
     assert.deepEqual(
       auditLog.records.map((record) => record.action),
       ["create-catalog", "update-catalog", "update-catalog", "soft-delete-catalog"]
+    );
+  });
+
+  it("D-035: council formation config validates, defaults, audits and is admin-only", async () => {
+    const prisma = createAdminPrisma();
+    const auditLog = createAuditLog();
+    const controller = new AdminConfigController(new AdminConfigService(prisma, auditLog));
+
+    await assert.rejects(() => controller.listCouncilFormation({ currentUser: staffUser }), ForbiddenException);
+    await assert.rejects(
+      () => controller.updateCouncilFormation({ currentUser: staffUser }, "EVALUATION", { allowedRoles: ["RESEARCH_BOARD_HEAD"], memberCount: 7 }),
+      ForbiddenException
+    );
+
+    const initial = await controller.listCouncilFormation({ currentUser: adminUser });
+    const evaluation = initial.configs.find((config) => config.councilType === "EVALUATION");
+    assert.deepEqual(evaluation.allowedRoles, ["RESEARCH_MANAGEMENT_HEAD", "RESEARCH_BOARD_HEAD"]);
+    assert.equal(evaluation.memberCount, 7);
+    assert.equal(evaluation.isDefault, true);
+
+    for (const body of [
+      { allowedRoles: ["SYSTEM_ADMIN"], memberCount: 7 },
+      { allowedRoles: [], memberCount: 7 },
+      { allowedRoles: ["RESEARCH_BOARD_HEAD"], memberCount: 4 },
+      { allowedRoles: ["RESEARCH_BOARD_HEAD"], memberCount: 16 }
+    ]) {
+      await assert.rejects(
+        () => controller.updateCouncilFormation({ currentUser: adminUser }, "EVALUATION", body),
+        (error) => error.getResponse().code === "COUNCIL_CONFIG_INVALID"
+      );
+    }
+    await assert.rejects(
+      () => controller.updateCouncilFormation({ currentUser: adminUser }, "UNKNOWN", { allowedRoles: ["RESEARCH_BOARD_HEAD"], memberCount: 7 }),
+      { name: "NotFoundException" }
+    );
+    assert.equal(prisma.store.systemParameters.length, 0);
+
+    const saved = await controller.updateCouncilFormation(
+      { currentUser: adminUser },
+      "EVALUATION",
+      { allowedRoles: ["RESEARCH_MANAGEMENT_STAFF", "RESEARCH_BOARD_HEAD"], memberCount: 9 }
+    );
+    assert.deepEqual(saved.config.allowedRoles, ["RESEARCH_BOARD_HEAD", "RESEARCH_MANAGEMENT_STAFF"]);
+    assert.equal(saved.config.isDefault, false);
+    const audit = auditLog.records.find((record) => record.action === "update-council-formation-config");
+    assert.equal(audit.beforeFacts.memberCount, 7);
+    assert.equal(audit.afterFacts.memberCount, 9);
+
+    // route chung dùng cùng validator
+    await assert.rejects(
+      () => controller.updateSystemParameter({ currentUser: adminUser }, { key: "council_formation.IRB", value: '{"allowedRoles":[],"memberCount":5}', label: "x" }),
+      (error) => error.getResponse().code === "COUNCIL_CONFIG_INVALID"
     );
   });
 

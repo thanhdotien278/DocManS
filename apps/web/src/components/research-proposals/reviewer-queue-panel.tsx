@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ReasonDialog } from "@/components/research-proposals/proposal-council-panel";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { loadMyReviewAssignments, respondToReviewInvitation, type ReviewInvitationPreview, type ReviewerGrantedItem, type ReviewerQueueItem } from "@/lib/proposal-evaluations-api";
@@ -18,7 +19,7 @@ function formatDate(value: string) {
 export function ReviewerQueuePanel() {
   const [assignments, setAssignments] = useState<ReviewerQueueItem[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
-  const [actionError, setActionError] = useState("");
+  const [responding, setResponding] = useState<{ invitation: ReviewInvitationPreview; decision: "accept" | "decline" } | null>(null);
 
   async function load() {
     try {
@@ -33,22 +34,12 @@ export function ReviewerQueuePanel() {
     void load();
   }, []);
 
-  async function respond(invitation: ReviewInvitationPreview, decision: "accept" | "decline") {
-    setActionError("");
-    let reason = "";
-    if (decision === "decline") {
-      reason = window.prompt("Nhập lý do từ chối lời mời:")?.trim() ?? "";
-      if (!reason) {
-        setActionError("Cần nhập lý do khi từ chối lời mời.");
-        return;
-      }
-    }
-    try {
-      await respondToReviewInvitation(invitation.proposalId, invitation.id, decision, reason);
-      await load();
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Không thể trả lời lời mời.");
-    }
+  // Ném lỗi lại để dialog hiển thị ngay tại chỗ; thành công thì đóng dialog và tải lại hàng đợi.
+  async function respond(reason: string) {
+    if (!responding) return;
+    await respondToReviewInvitation(responding.invitation.proposalId, responding.invitation.id, responding.decision, reason);
+    setResponding(null);
+    await load();
   }
 
   if (state === "loading") {
@@ -61,15 +52,18 @@ export function ReviewerQueuePanel() {
 
   const invitations = assignments.filter((assignment): assignment is ReviewInvitationPreview => assignment.access === "preview");
   const granted = assignments.filter((assignment): assignment is ReviewerGrantedItem => assignment.access === "granted");
-  const pendingCount = granted.filter((assignment) => assignment.myReviewStatus !== "submitted").length;
+  const isSecretary = (assignment: ReviewerGrantedItem) => assignment.assignmentRole === "council_secretary" || assignment.scoring === false;
+  const pendingCount = granted.filter((assignment) => !isSecretary(assignment) && assignment.myReviewStatus !== "submitted").length;
+  const actionLabel = (assignment: ReviewerGrantedItem) => (isSecretary(assignment) ? "Soạn biên bản" : "Chấm phiếu");
 
   return (
     <SectionCard
       title="Hồ sơ được phân công"
       subtitle={`${granted.length} hồ sơ · ${pendingCount} phiếu chưa gửi · ${invitations.length} lời mời`}
     >
-      {actionError ? <p className="form-error">{actionError}</p> : null}
       {invitations.length ? (
+        <>
+        <div className="section-mini-heading">Lời mời</div>
         <div className="table-wrap" tabIndex={0} role="region" aria-label="Lời mời đánh giá">
           <table className="data-table">
             <thead>
@@ -85,11 +79,11 @@ export function ReviewerQueuePanel() {
                   <td>
                     {invitation.invitationStatus === "invited" ? (
                       <>
-                        <button className="button primary" type="button" onClick={() => void respond(invitation, "accept")}>Chấp nhận</button>{" "}
-                        <button className="button" type="button" onClick={() => void respond(invitation, "decline")}>Từ chối</button>
+                        <button className="button primary" type="button" onClick={() => setResponding({ invitation, decision: "accept" })}>Chấp nhận</button>{" "}
+                        <button className="button" type="button" onClick={() => setResponding({ invitation, decision: "decline" })}>Từ chối</button>
                       </>
                     ) : (
-                      <span className="record-meta">{invitation.invitationStatusLabel} · chờ Ban giám đốc ký thành lập hội đồng</span>
+                      <span className="record-meta">{invitation.invitationStatus === "accepted" ? "Đã chấp nhận · Chờ Ban giám đốc ký thành lập hội đồng" : invitation.invitationStatusLabel}</span>
                     )}
                   </td>
                 </tr>
@@ -97,6 +91,7 @@ export function ReviewerQueuePanel() {
             </tbody>
           </table>
         </div>
+        </>
       ) : null}
       {granted.length === 0 && invitations.length === 0 ? (
         <EmptyState
@@ -114,6 +109,7 @@ export function ReviewerQueuePanel() {
                   <th>Hạn đánh giá</th>
                   <th>Trạng thái hồ sơ</th>
                   <th>Phiếu của tôi</th>
+                  <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -136,10 +132,13 @@ export function ReviewerQueuePanel() {
                           <span className="record-title">Đã gửi</span>
                           <span className="record-meta">{formatDate(assignment.myReviewSubmittedAt)}</span>
                         </>
+                      ) : isSecretary(assignment) ? (
+                        <span className="record-meta">Thư ký: không chấm phiếu</span>
                       ) : (
                         <span className="record-meta">Chưa gửi phiếu</span>
                       )}
                     </td>
+                    <td><Link className="button" href={`/proposals/${assignment.proposal.id}`}>{actionLabel(assignment)}</Link></td>
                   </tr>
                 ))}
               </tbody>
@@ -160,13 +159,20 @@ export function ReviewerQueuePanel() {
                   {assignment.dueDate ? ` · Hạn ${formatDate(assignment.dueDate)}` : " · Không đặt hạn"}
                 </span>
                 <span className="record-meta">
-                  Phiếu của tôi: {assignment.myReviewStatus === "submitted" ? "Đã gửi" : "Chưa gửi"}
+                  {isSecretary(assignment) ? "Thư ký: không chấm phiếu" : `Phiếu của tôi: ${assignment.myReviewStatus === "submitted" ? "Đã gửi" : "Chưa gửi"}`}
                 </span>
+                <Link className="button" href={`/proposals/${assignment.proposal.id}`}>{actionLabel(assignment)}</Link>
               </article>
             ))}
           </div>
         </>
       )}
+      {responding?.decision === "decline" ? (
+        <ReasonDialog title="Từ chối lời mời" description={responding.invitation.proposal.title} reasonLabel="Lý do từ chối" confirmLabel="Gửi từ chối" onConfirm={respond} onClose={() => setResponding(null)} />
+      ) : null}
+      {responding?.decision === "accept" ? (
+        <ReasonDialog title="Chấp nhận lời mời" description={`${responding.invitation.assignmentRoleLabel} · ${responding.invitation.proposal.title}. Sau khi Ban giám đốc ký thành lập hội đồng, bạn được đọc hồ sơ.`} confirmLabel="Chấp nhận" onConfirm={respond} onClose={() => setResponding(null)} />
+      ) : null}
     </SectionCard>
   );
 }
