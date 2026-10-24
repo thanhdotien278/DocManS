@@ -889,7 +889,7 @@ stateDiagram-v2
     AwaitingAcceptance --> Accepted: later acceptance decision
     AwaitingAcceptance --> Failed: later acceptance decision
     Accepted --> Closed: LIQUIDATION signed by GĐ (step 9)
-    Failed --> Closed: later closure (open point)
+    Failed --> Closed: LIQUIDATION signed by GĐ (step 9)
 ```
 
 `Preparing`, `InProgress`, `Paused`, `AwaitingAcceptance`, `Accepted`, `Failed`
@@ -924,20 +924,18 @@ replacement state.
 | Phase | Step | Existing record/state | Notes |
 | --- | --- | --- | --- |
 | Giai đoạn đề xuất | 1. Đợt tiếp nhận | Intake period (open/closed) | Not a proposal state; the proposal enters at step 2 |
-| | 2. Hồ sơ đề xuất | `Draft`, `SupplementRequested` | The supplement loop returns the dossier to step 2 |
+| | 2. Hồ sơ đề xuất | `Draft`, `SupplementRequested` | The supplement loop and a CV reopen (FR76, D-034) return the dossier to step 2 |
 | | 3. Kiểm tra đầy đủ | `Submitted`, `Resubmitted`, `UnderCompletenessReview` | Only step 3 may request a supplement (D-033 loop) |
 | | 4. Thẩm định, hội đồng | `UnderEvaluation`, `EvaluationConsolidated` | Includes `EVALUATION_COUNCIL` tờ trình |
 | | 5. Phê duyệt, kinh phí | `PendingApproval` → `Approved` / `Rejected` | **Official decision** (GĐ, `DECISION_PACKAGE`). `Rejected` ends the lifecycle; `Approved` without a project = step 5 done, step 6 pending |
 | Giai đoạn thực hiện và kết thúc | 6. Lập đề tài | Project `Preparing` | Explicit creation from the approved proposal |
 | | 7. Thực hiện | Project `InProgress`, `Paused` | Reports, adjustment/extension, disbursement metadata are child records |
-| | 8. Nghiệm thu | Project `AwaitingAcceptance`, `Accepted`, `Failed` | Products, institution level, higher level; acceptance outcome is not one of the two official decisions |
-| | 9. Thanh lý, đóng đề tài | Open `LIQUIDATION` tờ trình, project `Closed` | **Official decision** (GĐ only); the `LIQUIDATION` signature moves the project to `Closed` |
+| | 8. Nghiệm thu | Project `AwaitingAcceptance`, `Accepted`, `Failed` | Products, institution level, higher level go through one acceptance council; the chair marks đạt → `Accepted` or không đạt → `Failed` (D-034); not an official decision |
+| | 9. Thanh lý, đóng đề tài | Open `LIQUIDATION` tờ trình, project `Closed` | **Official decision** (GĐ only); the `LIQUIDATION` signature moves an `Accepted` or `Failed` project to `Closed` (D-034) |
 
 Child-record loops (tờ trình `RETURNED`, report/adjustment/extension/acceptance
 dossier supplementation) stay inside their step and are not lifecycle-step
-transitions. Every step keeps history and audit. Open points: how a higher-level
-(cấp trên) acceptance is recorded, and whether `Failed` also closes through
-liquidation (see `planning-artifacts/sprint-change-proposal-2026-10-24.md`).
+transitions. Every step keeps history and audit. Clarifications: `.decision-log.md` D-034.
 
 ### Seminar And Student Research State Machine
 

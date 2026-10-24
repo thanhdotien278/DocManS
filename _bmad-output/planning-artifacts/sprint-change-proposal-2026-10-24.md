@@ -131,3 +131,14 @@ step 9 come from the product owner's answer to Q1; this story invents neither.
 - Added Story 3.7 to `epics.md` and `3-7-vong-doi-de-tai-9-buoc-va-timeline-xuyen-ho-so: backlog` to `sprint-status.yaml`.
 - Applied §4.2 deltas to Stories 4.8 (Q3 placeholder), 6.8, 6.9 (title wording only; sprint-status key unchanged), 6.12, 12.2, 12.4.
 - `6-13` waits for the PO answer to Q1; Q2 and Q3 remain open.
+
+## Addendum — 2026-10-24 (PO answers, D-034)
+
+- **Q1:** products, institution and higher-level acceptance go through one topic
+  acceptance council; the chair marks đạt → `Accepted`, không đạt → `Failed`.
+  `6-13-ghi-nhan-nghiem-thu-cap-tren` is **dropped** (never added to sprint-status).
+  Stories 6.8 and 6.9 updated.
+- **Q2:** a `Failed` project is still closed, through the step 9 `LIQUIDATION`
+  signed by GĐ. Story 6.12 and the architecture state machine updated.
+- **Q3:** a reopened proposal returns to step 2 (Hồ sơ đề xuất). Story 4.8 updated.
+- No open questions remain for this proposal.

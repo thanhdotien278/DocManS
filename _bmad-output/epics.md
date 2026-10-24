@@ -2730,8 +2730,8 @@ So that hồ sơ đã nộp không bị ghi đè mà vẫn có đường điều
 
 **Given** hồ sơ được mở lại
 **When** bước vòng đời D-033 được suy ra
-**Then** bước đích được xác định theo quyết định PO cho câu hỏi Q3 của `sprint-change-proposal-2026-10-24.md` *(cần xác nhận)*
-**And** không tự thêm bước lùi ngoài vòng bổ sung 3 → 2 khi chưa có quyết định.
+**Then** hồ sơ quay về bước 2 (Hồ sơ đề xuất) theo D-034
+**And** PI nộp lại thì hồ sơ vào lại bước 3 như vòng bổ sung.
 
 **Given** actor là TP, TB, PP, BGĐ, QT, CV không phụ trách hồ sơ, thành viên hoặc reviewer
 **When** họ cố duyệt yêu cầu hoặc mở lại
@@ -3548,8 +3548,8 @@ So that đề tài có thể được xem xét kết thúc theo quy trình.
 
 **Given** dossier nghiệm thu (bước 8, D-033)
 **When** kết quả được ghi nhận
-**Then** dossier tách kết quả theo cấp: nghiệm thu sản phẩm và nghiệm thu cấp cơ sở
-**And** nghiệm thu cấp trên chờ story riêng sau khi PO trả lời Q1.
+**Then** nghiệm thu sản phẩm, cơ sở, cấp trên đều qua một hội đồng nghiệm thu đề tài duy nhất (D-034)
+**And** không có bản ghi hay quy trình nghiệm thu riêng cho từng cấp.
 
 **Given** member có responsibility/action đóng góp
 **When** họ cung cấp product/evidence
@@ -3574,6 +3574,7 @@ So that kết quả cuối của đề tài có căn cứ và không bị tự p
 
 > D-033: kết quả nghiệm thu thuộc bước 8, không phải một trong hai quyết định chính
 > thức (bước 5 và 9). Quy tắc thẩm quyền và chữ ký dưới đây giữ nguyên.
+> D-034: một hội đồng nghiệm thu đề tài; chủ tịch hội đồng đánh dấu kết quả.
 
 **Acceptance Criteria:**
 
@@ -3601,6 +3602,11 @@ So that kết quả cuối của đề tài có căn cứ và không bị tự p
 **When** họ cố approve/reject/finalize
 **Then** backend từ chối do conflict/non-delegable policy
 **And** không có đường API hoặc UI khác vượt chặn.
+
+**Given** hội đồng nghiệm thu đã đánh giá và chủ tịch hội đồng không conflict
+**When** chủ tịch đánh dấu kết quả
+**Then** đạt chuyển đề tài sang `Accepted`, không đạt chuyển sang `Failed` (D-034)
+**And** thành viên khác của hội đồng, CV, TB, TP hay người tham gia đề tài không đánh dấu thay.
 
 **Given** actor hợp lệ ghi decision
 **When** transaction thành công
@@ -3703,10 +3709,10 @@ So that kinh phí đề tài truy vết được mà không biến hệ thống 
 **Then** submission đi qua TB → TP theo Story 5.9 và chỉ GĐ được ký
 **And** PGĐ-KH không ký thanh lý; chữ ký áp dụng kết quả thanh lý atomically với audit.
 
-**Given** tờ trình `LIQUIDATION` của đề tài `Accepted` được GĐ ký
+**Given** tờ trình `LIQUIDATION` của đề tài `Accepted` hoặc `Failed` được GĐ ký
 **When** transaction thành công
 **Then** đề tài chuyển `Closed` atomically cùng kết quả thanh lý, history và audit (bước 9)
-**And** không đường nào khác đóng đề tài `Accepted`; cách đóng đề tài `Failed` chờ PO trả lời Q2 *(cần xác nhận)*.
+**And** đề tài `Failed` vẫn được đóng (D-034); không đường nào khác đóng đề tài.
 
 ## Epic 7: Giao việc và theo dõi thực hiện
 
