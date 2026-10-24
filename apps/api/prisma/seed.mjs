@@ -60,13 +60,13 @@ const users = [
     unit: "Khoa Toán - Tin học"
   },
   {
-    id: "user-reviewer",
+    id: "user-board-head-nmtrung",
     username: "nmtrung",
     passwordHash:
       "scrypt:user-reviewer:b0782812a1c75cef9db6596a7c88ae497fac0d08b7c7230c908d3c413fc08c2bed386eccfc0cbc10a64a088f1ad9bf6a2f6507410ea3d833bbb0907d958ac12a",
     displayName: "TS. Đỗ Minh Trung",
     status: "active",
-    systemRole: "RESEARCHER_INTERNAL_USER",
+    systemRole: "RESEARCH_BOARD_HEAD",
     unit: "Ban Quản lý KHQS"
   },
   {
@@ -150,14 +150,34 @@ const users = [
     unit: "Phòng KHQS"
   },
   {
-    id: "user-oversight-vndinh",
+    id: "user-science-deputy-vndinh",
     username: "vndinh",
     passwordHash:
       "scrypt:user-oversight-vndinh:160c990dff95c8879c814e0cfebadd0ab04305c0442bdff044342674d7ef241c364e1457a75a02617d6f303aec6e1a01c26d97b2baaa7522e14b9ef8874cbd7f",
     displayName: "Thiếu tướng PGS. TS. Vũ Nhất Định",
     status: "active",
+    systemRole: "SCIENCE_DEPUTY_DIRECTOR",
+    unit: "Ban Giám Đốc"
+  },
+  {
+    id: "user-oversight-ndbac",
+    username: "ndbac",
+    passwordHash:
+      "scrypt:user-oversight-ndbac:3e86748fc789cb583dbccf2b6bfc74b4d5dd1f732a26287422ecc4986a3df3f9b04b6669bc201b6202306d892e05acf596f57d3e0b35172e0caa021e0cea5441",
+    displayName: "Nguyễn Duy Bắc",
+    status: "active",
     systemRole: "RESEARCH_OVERSIGHT_AUTHORITY",
     unit: "Ban Giám Đốc"
+  },
+  {
+    id: "user-deputy-head-dnbinh",
+    username: "dnbinh",
+    passwordHash:
+      "scrypt:user-deputy-head-dnbinh:2828b8d36f9c394f205ca7c7ec4e49a17741797519047102833baeb58a143376cd2ac23dc83bb1dc200b9ab06435862d791e92fa36e3ff57681ebbd88e8751cb",
+    displayName: "Đỗ Như Bình",
+    status: "active",
+    systemRole: "RESEARCH_MANAGEMENT_DEPUTY_HEAD",
+    unit: "Phòng KHQS"
   }
 ];
 
@@ -185,7 +205,10 @@ const additionalOrganizationScopes = {
   "user-staff-hdtien1": ["org-khti", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
   "user-staff-hdtien2": ["org-khti", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
   "user-staff": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-khqs").map(([id]) => id),
-  "user-oversight-vndinh": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-bgq").map(([id]) => id)
+  "user-science-deputy-vndinh": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-bgq").map(([id]) => id),
+  "user-oversight-ndbac": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-bgq").map(([id]) => id),
+  "user-board-head-nmtrung": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-bqlkhqs").map(([id]) => id),
+  "user-deputy-head-dnbinh": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-khqs").map(([id]) => id)
 };
 
 // Units published on hocvienquany.vn; kept out of `organizationUnits` so they do not widen seeded account scopes.
@@ -244,10 +267,10 @@ for (const user of users) {
 }
 
 const oversightProfile = await prisma.researcherProfile.upsert({
-  where: { id: "profile-oversight-vndinh" },
+  where: { id: "profile-science-deputy-vndinh" },
   update: {
     managementOrganizationUnitId: "org-bgq",
-    linkedUserId: "user-oversight-vndinh",
+    linkedUserId: "user-science-deputy-vndinh",
     profileType: "INTERNAL",
     fullName: "Thiếu tướng PGS. TS. Vũ Nhất Định",
     fullNameKey: "thieu tuong pgs ts vu nhat dinh",
@@ -258,9 +281,9 @@ const oversightProfile = await prisma.researcherProfile.upsert({
     updatedById: "user-admin"
   },
   create: {
-    id: "profile-oversight-vndinh",
+    id: "profile-science-deputy-vndinh",
     managementOrganizationUnitId: "org-bgq",
-    linkedUserId: "user-oversight-vndinh",
+    linkedUserId: "user-science-deputy-vndinh",
     profileType: "INTERNAL",
     fullName: "Thiếu tướng PGS. TS. Vũ Nhất Định",
     fullNameKey: "thieu tuong pgs ts vu nhat dinh",
@@ -273,11 +296,11 @@ const oversightProfile = await prisma.researcherProfile.upsert({
   }
 });
 
-const existingOversightLink = await prisma.researcherProfileAccountLink.findFirst({ where: { researcherProfileId: oversightProfile.id, userId: "user-oversight-vndinh" } });
+const existingOversightLink = await prisma.researcherProfileAccountLink.findFirst({ where: { researcherProfileId: oversightProfile.id, userId: "user-science-deputy-vndinh" } });
 if (existingOversightLink) {
   await prisma.researcherProfileAccountLink.update({ where: { id: existingOversightLink.id }, data: { status: "ACTIVE", effectiveUntil: null, reason: "seed-oversight-account" } });
 } else {
-  await prisma.researcherProfileAccountLink.create({ data: { researcherProfileId: oversightProfile.id, userId: "user-oversight-vndinh", status: "ACTIVE", effectiveFrom: new Date(), reason: "seed-oversight-account", createdById: "user-admin" } });
+  await prisma.researcherProfileAccountLink.create({ data: { researcherProfileId: oversightProfile.id, userId: "user-science-deputy-vndinh", status: "ACTIVE", effectiveFrom: new Date(), reason: "seed-oversight-account", createdById: "user-admin" } });
 }
 
 // Story 13.10: science-management demo accounts get their own INTERNAL CV profile. Create-only, name and unit only.

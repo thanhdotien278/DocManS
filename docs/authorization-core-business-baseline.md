@@ -17,7 +17,7 @@ audience:
 > **Đồng bộ 18/10/2026 — 10 vai trò hệ thống.** Tài liệu này đã đồng bộ với
 > [`permission-matrix.md`](./permission-matrix.md) (§2, §5–§8, §10; §7 thắng khi mâu
 > thuẫn). Code trên nhánh `DocManS` đã có đủ 10 mã vai trò, nhưng PGĐ-KH,
-> PP, TB chưa có quyền nghiệp vụ cho tới khi port từ `tuan/DocManS`. Chỉ số ¹–⁷ trong tài liệu này là ghi chú điều kiện ở
+> PP, TB chưa có quyền nghiệp vụ cho tới khi port từ `tuan/DocManS`. Chỉ số ¹–⁸ trong tài liệu này là ghi chú điều kiện ở
 > permission-matrix §7.2.
 
 # Mục đích và hiệu lực
@@ -58,10 +58,10 @@ role; thay đổi có audit. Một user có system role lãnh đạo hoặc qu�
 | GĐ | `LEADERSHIP_APPROVAL_AUTHORITY` | Toàn Học viện cho đề tài; đề xuất đã vào quy trình trong scope² | Duy nhất phê duyệt đề tài kèm kinh phí và phê duyệt thanh lý; ký mọi thứ PGĐ-KH ký; xem kinh phí từng đề tài; quản lý kinh phí, giải ngân, quyết toán | Không sửa nội dung hồ sơ, không bỏ qua phản biện/tổng hợp/tờ trình; không ký/quyết hồ sơ mình là PI/thành viên/reviewer |
 | PGĐ-KH | `SCIENCE_DEPUTY_DIRECTOR` | Như GĐ (xem) | Ký thành lập hội đồng đánh giá, nghiệm thu, IRB; cấp giấy IRB; ký gia hạn, điều chỉnh (kể cả có đổi kinh phí); xem kinh phí từng đề tài | Không phê duyệt đề tài, kinh phí đề tài, thanh lý; không quản lý kinh phí |
 | PGĐ-TD | `RESEARCH_OVERSIGHT_AUTHORITY` | Scope đơn vị¹, chỉ theo dõi | Theo dõi tiến độ, số lượng, báo cáo kinh phí **tổng hợp**⁷ | Không xem kinh phí từng bản ghi, không ký, không duyệt, không chuyển tờ trình |
-| TP | `RESEARCH_MANAGEMENT_HEAD` | Đề xuất trong scope đơn vị¹; mọi đề tài toàn Học viện | Duyệt mọi tờ trình trước khi lên BGĐ; phân mảng cho CV; giao/thu hồi CV phụ trách; phân công phản biện/hội đồng, tổng hợp, lập hội đồng IRB, lập tờ trình trong scope¹; quản lý kinh phí toàn Học viện; quản lý đợt tiếp nhận | Không kiểm tra đầy đủ, không yêu cầu bổ sung; không ký thay BGĐ; không duyệt tờ trình mình lập |
+| TP | `RESEARCH_MANAGEMENT_HEAD` | Đề xuất trong scope đơn vị¹; mọi đề tài toàn Học viện | Duyệt mọi tờ trình trước khi lên BGĐ; phân mảng cho CV; giao/thu hồi CV phụ trách; tổng hợp, lập tờ trình trong scope¹; phân công phản biện/hội đồng, lập hội đồng IRB theo cấu hình QT⁸ (mặc định có); quản lý kinh phí toàn Học viện; quản lý đợt tiếp nhận | Không kiểm tra đầy đủ, không yêu cầu bổ sung; không ký thay BGĐ; không duyệt tờ trình mình lập |
 | PP | `RESEARCH_MANAGEMENT_DEPUTY_HEAD` | Scope đơn vị¹, chỉ theo dõi | Theo dõi tiến độ, số lượng; xem kinh phí đề tài mình là PI/thành viên⁴ | Không có bước trong luồng tờ trình, không duyệt/ký, kể cả khi TP vắng |
-| TB | `RESEARCH_BOARD_HEAD` | Đề xuất trong scope đơn vị¹; mọi đề tài toàn Học viện | Rà soát tờ trình do CV lập rồi trình TP hoặc trả tác giả; giao/thu hồi CV phụ trách; kiểm tra đầy đủ, yêu cầu bổ sung, phân công phản biện/hội đồng, tổng hợp, lập hội đồng IRB, lập tờ trình trong scope¹; quản lý kinh phí toàn Học viện | Không rà soát tờ trình mình lập; không ký thay BGĐ |
-| CV | `RESEARCH_MANAGEMENT_STAFF` | Chỉ hồ sơ/đề tài đang được giao phụ trách³ | Kiểm tra đầy đủ, yêu cầu bổ sung, mời phản biện/hội đồng, tổng hợp, lập hội đồng IRB, lập tờ trình; nghiệp vụ đề tài hằng ngày; kinh phí trong phạm vi giao; tạo/mở/đóng đợt; quản lý hồ sơ nhà khoa học và NCKH sinh viên trong scope¹ | Không thao tác hồ sơ giao cho CV khác; không giao/thu hồi CV; quan hệ tham gia không cấp quyền quản lý |
+| TB | `RESEARCH_BOARD_HEAD` | Đề xuất trong scope đơn vị¹; mọi đề tài toàn Học viện | Rà soát tờ trình do CV lập rồi trình TP hoặc trả tác giả; giao/thu hồi CV phụ trách; kiểm tra đầy đủ, yêu cầu bổ sung, tổng hợp, lập tờ trình trong scope¹; phân công phản biện/hội đồng, lập hội đồng IRB theo cấu hình QT⁸ (mặc định có); quản lý kinh phí toàn Học viện | Không rà soát tờ trình mình lập; không ký thay BGĐ |
+| CV | `RESEARCH_MANAGEMENT_STAFF` | Chỉ hồ sơ/đề tài đang được giao phụ trách³ | Kiểm tra đầy đủ, yêu cầu bổ sung, tổng hợp, lập tờ trình; mời phản biện/hội đồng, lập hội đồng IRB chỉ khi QT cấu hình tích role CV⁸; nghiệp vụ đề tài hằng ngày; kinh phí trong phạm vi giao; tạo/mở/đóng đợt; quản lý hồ sơ nhà khoa học và NCKH sinh viên trong scope¹ | Không thao tác hồ sơ giao cho CV khác; không giao/thu hồi CV; quan hệ tham gia không cấp quyền quản lý |
 | NCV | `RESEARCHER_INTERNAL_USER` | Bản ghi có quan hệ hợp lệ⁴ | Tạo/sửa/nộp đề xuất với tư cách PI; làm việc PI/thành viên; reviewer, hội đồng, IRB khi được mời⁵ ⁶; đăng ký NCKH sinh viên với tư cách GVHD | Không xem bản ghi không liên quan, không tự phân công, không quyết định |
 | NNB | `EXTERNAL_RESEARCHER_USER` | Chỉ bản ghi có quan hệ được cấp | Reviewer, thành viên hội đồng/IRB, thư ký hội đồng hoặc thành viên đề tài qua quan hệ tường minh | Không bao giờ là PI; không thấy đợt tiếp nhận; không tạo/sửa/nộp đề xuất; không phân công hoặc quyết định |
 
@@ -94,7 +94,7 @@ thu hồi và audit; quan hệ inactive/expired/revoked mất quyền ngay.
 
 Reviewer, thành viên hội đồng đánh giá và thành viên IRB được mời từ mọi tài khoản có
 lý lịch khoa học (mọi role trừ QT); ai được mời vào hội đồng đánh giá đều chấm phiếu.
-Người tham gia bản ghi không được mời. Các quan hệ cộng dồn quyền được phép, nhưng mọi
+Người tham gia bản ghi không được mời. Role được lập hội đồng/mời do QT cấu hình theo loại hội đồng⁸ (mặc định TP¹/TB¹). Các quan hệ cộng dồn quyền được phép, nhưng mọi
 điều kiện từ system role, scope, trạng thái, context và conflict đều phải đạt. Không có
 khái niệm “quan hệ cao nhất” để thay thế hoặc làm mất quan hệ khác.
 
@@ -148,15 +148,17 @@ thêm officer relationship cho các domain khác trong thay đổi này.
 - TP¹/TB¹ own officer assignment/reassignment/revocation within explicit scope and without
   conflict; the system auto-assigns by segment on submission. Assignment takes effect at
   transaction time; prior rows and audit are retained. Unassigned records remain valid.
-- After current-submission completeness confirmation (TB¹/CV³), TP¹/TB¹ or the assigned CV³
-  assign reviewers/council, read submitted reviews, consolidate and draft the tờ trình. The
+- After current-submission completeness confirmation (TB¹/CV³), the QT-configured roles⁸
+  (default TP¹/TB¹) assign reviewers/council; TP¹/TB¹ or the assigned CV³ read submitted
+  reviews, consolidate and draft the tờ trình. The
   council secretary drafts synthesis/minutes and does not score. The tờ trình goes CV → TB →
   TP → BGĐ; no role on that path edits research content through management authority.
-- Demo accounts under the 10-role model (the `DocManS` seed still uses the 7-role codes;
+- Demo accounts under the 10-role model (the `DocManS` seed now has all ten codes;
   see `docs/development/auth-seed-users.md`): `nmphuong` → `RESEARCH_MANAGEMENT_HEAD`;
   `hdtien1`, `hdtien2` → `RESEARCH_MANAGEMENT_STAFF`; `tvtien` →
   `LEADERSHIP_APPROVAL_AUTHORITY`; `vndinh` (PGĐ phụ trách Khoa học) →
-  `SCIENCE_DEPUTY_DIRECTOR`. Local demo institutional scope is granted explicitly for
+  `SCIENCE_DEPUTY_DIRECTOR`; `ndbac` (PGĐ-TD) → `RESEARCH_OVERSIGHT_AUTHORITY`; `dnbinh` →
+  `RESEARCH_MANAGEMENT_DEPUTY_HEAD`; `nmtrung` → `RESEARCH_BOARD_HEAD`. Local demo institutional scope is granted explicitly for
   each internal unit, never inherited from an organization tree.
 - Proposal PI eligibility: every system role except `SYSTEM_ADMIN` and
   `EXTERNAL_RESEARCHER_USER`. Create/edit/submit/resubmit still require the current
@@ -277,7 +279,7 @@ không. Lịch sử quan hệ cũ vẫn giữ.
 | Tự giao CV phụ trách | Hệ thống theo mảng khi nộp/nộp lại; TP giao hồ sơ không khớp mảng; TP¹/TB¹ giao/thu hồi |
 | Kiểm tra đầy đủ/yêu cầu bổ sung | TB¹ hoặc CV³ (không phải TP); mỗi phiên bản nộp/nộp lại chỉ được xác nhận đầy đủ một lần; yêu cầu bổ sung phải nêu lý do và hạn theo ngày |
 | Phản hồi và nộp lại | Chỉ PI hiện tại; không delegation |
-| Phân công/thay đổi phản biện, hội đồng, hội đồng IRB | TP¹, TB¹ hoặc CV³, có conflict check |
+| Phân công/thay đổi phản biện, hội đồng, hội đồng IRB | role do QT cấu hình theo loại hội đồng⁸ (mặc định TP¹/TB¹); CV³ chỉ khi được tích; QT chỉ cấu hình, không tự lập/mời (D-035); có conflict check |
 | Chấm điểm/nhận xét | Chỉ người được mời và đã chấp nhận (mọi role trừ QT)⁵; thư ký hội đồng không chấm; gửi xong thì khóa; sửa lỗi bằng phiên bản nhận xét mới được duyệt |
 | Tổng hợp đánh giá | TP¹, TB¹ hoặc CV³ không xung đột; thư ký hội đồng soạn tổng hợp/biên bản⁶ |
 | Trình phê duyệt (tờ trình) | CV³ (hoặc TP¹/TB¹) lập → TB rà soát → TP duyệt → BGĐ (TB lập thì lên thẳng TP; TP lập vẫn qua TB; xem §3); chỉ chuyển hồ sơ, không phải quyết định cuối |
@@ -293,8 +295,8 @@ nguyên. Không ghi đè bản cũ.
 
 ### Reviewer / Council Assignment from User Accounts
 
-TP¹/TB¹ within scope, or the CV with an effective `PROPOSAL_MANAGEMENT_OFFICER`
-assignment³, may assign or revoke `reviewer` or `committee_member` duties on that
+The roles QT configures per council type⁸ (default TP¹/TB¹ within scope; the CV with an
+effective `PROPOSAL_MANAGEMENT_OFFICER` assignment³ only if QT ticks CV) may assign or revoke `reviewer` or `committee_member` duties on that
 eligible proposal. Both duties remain proposal-scoped assignments, not account roles.
 
 Each proposal requires exactly two `reviewer` assignments and at least three
@@ -364,8 +366,8 @@ history and does not relax any conflict while the assignment is active.
 Any active account with a scientific CV can be selected — every system role except
 `SYSTEM_ADMIN` (GĐ, PGĐ, TP, PP, TB, CV, NCV, NNB) — regardless of organization scope
 or whether a Scientist Profile exists or is active. Search exposes only account ID,
-display name, username and display-only unit title to TP¹/TB¹ or the assigned CV³
-without conflict on this proposal. A profile link is optional provenance and is never
+display name, username and display-only unit title to the QT-configured roles⁸ (default
+TP¹/TB¹; the assigned CV³ only if ticked) without conflict on this proposal. A profile link is optional provenance and is never
 created by assignment. The assignee needs no scope at the proposal's host unit: an
 accepted `reviewer` assignment allows the review queue, proposal/package/files and own review
 actions on that proposal, subject to participation conflicts and the existing
@@ -378,7 +380,7 @@ assignment requires current submission completeness evidence and opens
 `under_review`. Revocation uses the same state boundary and requires a reason.
 PI and active team secretary/member, unresolved conflict context, inactive accounts,
 `SYSTEM_ADMIN`, and incompatible, duplicate or overlapping active assignments are
-denied. Only TP¹/TB¹ or the assigned CV³, conflict-free, may assign or consolidate.
+denied. Only the QT-configured roles⁸ (default TP¹/TB¹; assigned CV³ only if ticked), conflict-free, may assign; TP¹/TB¹ or the assigned CV³, conflict-free, may consolidate.
 Self-assignment, where otherwise eligible, removes consolidation authority through the
 same-proposal reviewer conflict. A CV acts only with current management-officer
 authority on that proposal; GĐ/PGĐ-KH with a reviewer or council assignment still
@@ -527,7 +529,7 @@ TP/CV mở đợt tiếp nhận
   → Hệ thống tự giao CV theo mảng (không khớp: TP giao)
   → TB/CV kiểm tra đầy đủ
   → (bổ sung/chỉnh sửa sau nộp nếu cần)
-  → TP/TB/CV mời phản biện/hội đồng; tờ trình hội đồng → GĐ/PGĐ-KH ký
+  → Role do QT cấu hình (mặc định TP/TB) mời phản biện/hội đồng; tờ trình hội đồng → GĐ/PGĐ-KH ký
   → Phản biện/hội đồng chấm và gửi
   → TP/TB/CV tổng hợp, CV lập tờ trình → TB rà soát → TP duyệt
   → GĐ phê duyệt/từ chối đề tài và kinh phí
