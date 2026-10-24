@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { loadMyReviewAssignments, type ReviewerQueueItem } from "@/lib/proposal-evaluations-api";
+import { loadMyReviewAssignments, respondToReviewInvitation, type ReviewInvitationPreview, type ReviewerGrantedItem, type ReviewerQueueItem } from "@/lib/proposal-evaluations-api";
 
 function formatDate(value: string) {
   return value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(new Date(value)) : "Không đặt hạn";
@@ -18,29 +18,38 @@ function formatDate(value: string) {
 export function ReviewerQueuePanel() {
   const [assignments, setAssignments] = useState<ReviewerQueueItem[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [actionError, setActionError] = useState("");
+
+  async function load() {
+    try {
+      setAssignments(await loadMyReviewAssignments());
+      setState("ready");
+    } catch {
+      setState("error");
+    }
+  }
 
   useEffect(() => {
-    let cancelled = false;
+    void load();
+  }, []);
 
-    async function load() {
-      try {
-        const data = await loadMyReviewAssignments();
-        if (!cancelled) {
-          setAssignments(data);
-          setState("ready");
-        }
-      } catch {
-        if (!cancelled) {
-          setState("error");
-        }
+  async function respond(invitation: ReviewInvitationPreview, decision: "accept" | "decline") {
+    setActionError("");
+    let reason = "";
+    if (decision === "decline") {
+      reason = window.prompt("Nhập lý do từ chối lời mời:")?.trim() ?? "";
+      if (!reason) {
+        setActionError("Cần nhập lý do khi từ chối lời mời.");
+        return;
       }
     }
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    try {
+      await respondToReviewInvitation(invitation.proposalId, invitation.id, decision, reason);
+      await load();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Không thể trả lời lời mời.");
+    }
+  }
 
   if (state === "loading") {
     return <p className="state-message">Đang tải danh sách hồ sơ được phân công...</p>;
@@ -50,19 +59,51 @@ export function ReviewerQueuePanel() {
     return <p className="state-message error">Không thể tải danh sách hồ sơ được phân công.</p>;
   }
 
-  const pendingCount = assignments.filter((assignment) => assignment.myReviewStatus !== "submitted").length;
+  const invitations = assignments.filter((assignment): assignment is ReviewInvitationPreview => assignment.access === "preview");
+  const granted = assignments.filter((assignment): assignment is ReviewerGrantedItem => assignment.access === "granted");
+  const pendingCount = granted.filter((assignment) => assignment.myReviewStatus !== "submitted").length;
 
   return (
     <SectionCard
       title="Hồ sơ được phân công"
-      subtitle={`${assignments.length} hồ sơ · ${pendingCount} phiếu chưa gửi`}
+      subtitle={`${granted.length} hồ sơ · ${pendingCount} phiếu chưa gửi · ${invitations.length} lời mời`}
     >
-      {assignments.length === 0 ? (
+      {actionError ? <p className="form-error">{actionError}</p> : null}
+      {invitations.length ? (
+        <div className="table-wrap" tabIndex={0} role="region" aria-label="Lời mời đánh giá">
+          <table className="data-table">
+            <thead>
+              <tr><th>Hồ sơ</th><th>Vai trò</th><th>Hạn</th><th>Người mời</th><th>Trả lời</th></tr>
+            </thead>
+            <tbody>
+              {invitations.map((invitation) => (
+                <tr key={invitation.id}>
+                  <td><span className="record-title">{invitation.proposal.title}</span></td>
+                  <td>{invitation.assignmentRoleLabel}</td>
+                  <td>{formatDate(invitation.dueDate)}</td>
+                  <td>{invitation.assignedByDisplayName}</td>
+                  <td>
+                    {invitation.invitationStatus === "invited" ? (
+                      <>
+                        <button className="button primary" type="button" onClick={() => void respond(invitation, "accept")}>Chấp nhận</button>{" "}
+                        <button className="button" type="button" onClick={() => void respond(invitation, "decline")}>Từ chối</button>
+                      </>
+                    ) : (
+                      <span className="record-meta">{invitation.invitationStatusLabel} · chờ Ban giám đốc ký thành lập hội đồng</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+      {granted.length === 0 && invitations.length === 0 ? (
         <EmptyState
           title="Chưa có hồ sơ được phân công"
           message="Khi chuyên viên quản lý khoa học phân công đánh giá, hồ sơ sẽ xuất hiện ở đây."
         />
-      ) : (
+      ) : granted.length === 0 ? null : (
         <>
           <div className="table-wrap" tabIndex={0} role="region" aria-label="Danh sách phân công đánh giá">
             <table className="data-table">
@@ -76,7 +117,7 @@ export function ReviewerQueuePanel() {
                 </tr>
               </thead>
               <tbody>
-                {assignments.map((assignment) => (
+                {granted.map((assignment) => (
                   <tr key={assignment.id}>
                     <td>
                       <Link className="record-title" href={`/proposals/${assignment.proposal.id}`}>
@@ -106,7 +147,7 @@ export function ReviewerQueuePanel() {
           </div>
 
           <div className="mobile-list">
-            {assignments.map((assignment) => (
+            {granted.map((assignment) => (
               <article className="list-card" key={assignment.id}>
                 <div className="list-card-header">
                   <Link className="record-title" href={`/proposals/${assignment.proposal.id}`}>

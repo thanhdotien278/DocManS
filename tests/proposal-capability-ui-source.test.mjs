@@ -37,7 +37,7 @@ describe("Story 1.8 proposal capability UI source behavior", () => {
       assert.match(source, /disabled/);
     }
     const evaluationSource = await readFile(new URL("../apps/web/src/components/research-proposals/proposal-evaluation-panel.tsx", import.meta.url), "utf8");
-    assert.match(evaluationSource, /Gửi lãnh đạo phê duyệt/);
+    assert.match(evaluationSource, /Lập tờ trình gửi Ban giám đốc/);
   });
 
   it("fails closed with a reload/support message for an invalid capability contract", async () => {

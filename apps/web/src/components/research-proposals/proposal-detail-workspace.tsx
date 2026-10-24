@@ -7,6 +7,8 @@ import { ProposalMembersEditor } from "@/components/research-proposals/proposal-
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Download, FileText, Pencil, Save, Send, Trash2, UploadCloud, X } from "lucide-react";
 import { useSession } from "@/components/auth/session-provider";
+import { RoutingStatus } from "@/components/approvals/routing-status";
+import { ProposalCouncilPanel } from "@/components/research-proposals/proposal-council-panel";
 import { ProposalDecisionPanel } from "@/components/research-proposals/proposal-decision-panel";
 import { ProposalEvaluationPanel } from "@/components/research-proposals/proposal-evaluation-panel";
 import { ProposalReviewForm } from "@/components/research-proposals/proposal-review-form";
@@ -693,9 +695,14 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
 
         {showReviewForm ? <ProposalReviewForm contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} onReviewSubmitted={() => void refreshWorkflowState()} canSubmitReview={canPerformProposalAction(capabilityState, "proposal.review.submit")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.submit")?.reason ?? capabilityState.reason} /> : null}
 
+        <RoutingStatus subjectType="proposal" subjectId={proposal.id} refreshKey={proposal.status} onChanged={() => void refreshWorkflowState()} />
+
         {showEvaluationProgress ? (
           <ProposalEvaluationPanel contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} proposalStatus={proposal.status} onWorkflowChange={refreshWorkflowState} canReadProgress={canReadReviewProgress} canAssignReviewers={canPerformProposalAction(capabilityState, "proposal.review.assign")} canConsolidate={canPerformProposalAction(capabilityState, "proposal.review.consolidate")} canFinalize={canPerformProposalAction(capabilityState, "proposal.review.finalize")} canSubmitPackage={canPerformProposalAction(capabilityState, "proposal.review.submit-package")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.assign")?.reason ?? capabilityState.reason} consolidateBlockedReason={blockedProposalAction(capabilityState, "proposal.review.consolidate")?.reason ?? capabilityState.reason} finalizeBlockedReason={blockedProposalAction(capabilityState, "proposal.review.finalize")?.reason ?? capabilityState.reason} submitPackageBlockedReason={blockedProposalAction(capabilityState, "proposal.review.submit-package")?.reason ?? capabilityState.reason} />
         ) : null}
+
+        {/* PGĐ-KH ký hội đồng nhưng không có capability quyết định: panel tự ẩn khi backend trả 403. */}
+        {proposal.status === "under_review" ? <ProposalCouncilPanel proposalId={proposal.id} onChanged={() => void refreshWorkflowState()} /> : null}
 
         {showDecisionPanel ? <ProposalDecisionPanel contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} onDecision={() => void refreshWorkflowState()} canDecide={canPerformProposalAction(capabilityState, "proposal.decision.approve")} blockedReason={blockedProposalAction(capabilityState, "proposal.decision.approve")?.reason ?? capabilityState.reason} /> : null}
 

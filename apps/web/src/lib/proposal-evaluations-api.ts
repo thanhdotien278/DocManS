@@ -25,6 +25,11 @@ export type ProposalReviewAssignment = {
   assignmentRoleLabel: string;
   status: "assigned" | "revoked" | "completed";
   statusLabel: string;
+  invitationStatus: "invited" | "accepted" | "declined";
+  invitationStatusLabel: string;
+  respondedAt: string;
+  declineReason: string;
+  councilEstablishedAt: string;
   assignedById: string;
   assignedByDisplayName: string;
   assignedAt: string;
@@ -41,7 +46,16 @@ export type ProposalReviewAssignment = {
   reviewRecommendationLabel: string;
 };
 
-export type ReviewerQueueItem = Pick<ProposalReviewAssignment, "id" | "proposalId" | "assignmentRole" | "assignmentRoleLabel" | "status" | "statusLabel" | "assignedAt" | "effectiveFrom" | "effectiveUntil" | "dueDate" | "completedAt"> & {
+/** Trước khi chấp nhận / trước khi BGĐ ký hội đồng: chỉ tên hồ sơ, vai trò, hạn và người mời (Story 5.11). */
+export type ReviewInvitationPreview = Pick<ProposalReviewAssignment, "id" | "proposalId" | "assignmentRole" | "assignmentRoleLabel" | "invitationStatus" | "invitationStatusLabel" | "dueDate" | "assignedByDisplayName"> & {
+  access: "preview";
+  proposal: { title: string };
+};
+
+export type ReviewerQueueItem = ReviewerGrantedItem | ReviewInvitationPreview;
+
+export type ReviewerGrantedItem = Pick<ProposalReviewAssignment, "id" | "proposalId" | "assignmentRole" | "assignmentRoleLabel" | "status" | "statusLabel" | "assignedAt" | "effectiveFrom" | "effectiveUntil" | "dueDate" | "completedAt"> & {
+  access: "granted";
   proposal: {
     id: string;
     code: string;
@@ -162,6 +176,8 @@ export type ProposalDecisionPackage = {
   proposalStatus: string;
   proposalStatusLabel: string;
   canDecide: boolean;
+  /** Tờ trình DECISION_PACKAGE gần nhất; GĐ chỉ quyết định khi stage là LEADERSHIP và status PENDING. */
+  approval: { id: string; stage: string; stageLabel: string; status: string; statusLabel: string; lastNote: string } | null;
   conflict: {
     conflicted: boolean;
     reasonCode: string;
@@ -306,6 +322,39 @@ export async function revokeProposalReviewAssignment(proposalId: string, assignm
     { method: "POST", body: JSON.stringify({ note, contextVersion }) }
   );
   return response.assignment;
+}
+
+export async function respondToReviewInvitation(proposalId: string, assignmentId: string, decision: "accept" | "decline", reason?: string) {
+  const response = await requestJson<{ invitation: { id: string; invitationStatus: string; invitationStatusLabel: string } }>(
+    `/research-proposals/${proposalId}/review-assignments/${assignmentId}/respond`,
+    { method: "POST", body: JSON.stringify({ decision, reason }) }
+  );
+  return response.invitation;
+}
+
+// Story 5.10 — hội đồng đánh giá ----------------------------------------------------------------
+
+export type EvaluationCouncil = {
+  contextVersion: ViewerAuthorizationV1["contextVersion"];
+  canOpen: boolean;
+  canSign: boolean;
+  canReturn: boolean;
+  blockedReason: string;
+  established: boolean;
+  approval: { id: string; stage: string; stageLabel: string; submittedByName: string } | null;
+  members: Array<{ assignmentId: string; displayName: string; assignmentRole: ReviewAssignmentRole; assignmentRoleLabel: string; invitationStatus: string; invitationStatusLabel: string; declineReason: string; dueDate: string; councilEstablishedAt: string }>;
+};
+
+export async function loadEvaluationCouncil(proposalId: string) {
+  return (await requestJson<{ council: EvaluationCouncil }>(`/research-proposals/${proposalId}/evaluation-council`)).council;
+}
+
+export async function submitEvaluationCouncil(proposalId: string, contextVersion: EvaluationCouncil["contextVersion"]) {
+  return requestJson<{ submissionId: string }>(`/research-proposals/${proposalId}/evaluation-council/submit`, { method: "POST", body: JSON.stringify({ contextVersion }) });
+}
+
+export async function decideEvaluationCouncil(proposalId: string, decision: "sign" | "return", note: string, contextVersion: EvaluationCouncil["contextVersion"]) {
+  return requestJson<{ status: string }>(`/research-proposals/${proposalId}/evaluation-council/decide`, { method: "POST", body: JSON.stringify({ decision, note, contextVersion }) });
 }
 
 export async function loadMyReviewAssignments() {

@@ -27,6 +27,12 @@ export const REVIEW_ASSIGNMENT_STATUS_LABELS: Record<string, string> = {
   [REVIEW_ASSIGNMENT_STATUS.completed]: "Đã hoàn thành"
 };
 
+export const INVITATION_STATUS_LABELS: Record<string, string> = {
+  invited: "Chờ chấp nhận",
+  accepted: "Đã chấp nhận",
+  declined: "Đã từ chối"
+};
+
 export const REVIEW_STATUS = {
   draft: "draft",
   submitted: "submitted"
@@ -67,6 +73,10 @@ export type ReviewAssignmentLike = {
   assignedAt?: Date | null;
   effectiveFrom?: Date | null;
   effectiveUntil?: Date | null;
+  /** Story 5.11: chỉ `accepted` mới đọc được hồ sơ. Thiếu trường (dữ liệu/mock cũ) coi là đã chấp nhận. */
+  invitationStatus?: string | null;
+  /** Story 5.10: thiếu trường coi là đã thành lập; null nghĩa là BGĐ chưa ký hội đồng. */
+  councilEstablishedAt?: Date | null;
 };
 
 export type ProposalReviewAccess = {
@@ -112,6 +122,11 @@ export function getRecommendationLabel(value: string | null | undefined) {
   return value && value in REVIEW_RECOMMENDATION_LABELS ? REVIEW_RECOMMENDATION_LABELS[value as ReviewRecommendation] : "";
 }
 
+/** Hồ sơ chỉ mở cho thành viên đã chấp nhận và hội đồng đã được BGĐ ký thành lập. */
+export function grantsReviewAccess(assignment: Pick<ReviewAssignmentLike, "invitationStatus" | "councilEstablishedAt">) {
+  return (assignment.invitationStatus ?? "accepted") === "accepted" && assignment.councilEstablishedAt !== null;
+}
+
 /**
  * Resolves what a user may do on one proposal from that user's assignment rows on it. Only an
  * `assigned` row grants access: a revoked assignment stays in history but stops granting anything,
@@ -125,6 +140,7 @@ export function resolveProposalReviewAccess(assignments?: ReviewAssignmentLike[]
   const active = assignments
     .filter((assignment) =>
       (assignment.status === REVIEW_ASSIGNMENT_STATUS.assigned || assignment.status === REVIEW_ASSIGNMENT_STATUS.completed) &&
+      grantsReviewAccess(assignment) &&
       (!assignment.effectiveFrom || assignment.effectiveFrom <= asOf) &&
       (!assignment.effectiveUntil || asOf < assignment.effectiveUntil)
     )

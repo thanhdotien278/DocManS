@@ -76,6 +76,16 @@ export const projectDecisionPipe: PipeTransform<unknown, ProjectDecisionDto> = {
 
 export const projectWithdrawPipe: PipeTransform<unknown, ProjectDecisionDto> = { transform(value) { const input = record(value ?? {}); return { reason: readText(input.reason, "reason", 2000), contextVersion: context(input) }; } };
 
+export const projectFundingPipe: PipeTransform<unknown, ProjectMutationDto> = { transform(value) {
+  const input = record(value);
+  return { kind: readCode(input.kind, "kind"), amount: input.amount, recordedOn: readText(input.recordedOn, "recordedOn", 10), note: readOptionalText(input.note, "note", 2000), entryId: input.entryId === undefined ? undefined : readText(input.entryId, "entryId", 80), fileRecordIds: ids(input.fileRecordIds, "fileRecordIds") } as ProjectMutationDto;
+} };
+
+export const projectLiquidationPipe: PipeTransform<unknown, ProjectMutationDto> = { transform(value) {
+  const input = record(value);
+  return { report: readText(input.report, "report", 10000), fileRecordIds: ids(input.fileRecordIds, "fileRecordIds"), contextVersion: context(input) } as ProjectMutationDto;
+} };
+
 export function readRequestType(value: unknown) {
   const type = readCode(value, "requestType").toLowerCase();
   if (type !== "adjustment" && type !== "extension") throw new BadRequestException({ message: "requestType chỉ được là adjustment hoặc extension." });

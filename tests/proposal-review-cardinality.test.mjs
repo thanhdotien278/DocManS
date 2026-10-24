@@ -31,15 +31,15 @@ test('readiness requires exactly two reviewers, at least three distinct council 
   assert.equal(service.summarizeProgress(duplicate, submitted(duplicate)).allReviewsSubmitted, false);
 });
 
-test('Staff cannot assign reviewers or synthesize even on an under-review proposal', async () => {
-  const prisma = { researchProposal: { findUnique: async () => proposal } };
+test('CV not in charge cannot invite reviewers or synthesize', async () => {
+  const prisma = { researchProposal: { findUnique: async () => proposal }, proposalManagementOfficer: { findFirst: async () => null } };
   const assignments = new ProposalReviewAssignmentsService(prisma, {}, participation, access);
   assignments.transactional = true;
-  await assert.rejects(() => assignments.assignReviewer(actor, proposal.id, { reviewerUserId: 'third' }), /Trưởng phòng/);
+  await assert.rejects(() => assignments.assignReviewer(actor, proposal.id, { reviewerUserId: 'third' }), /không còn là chuyên viên phụ trách/);
   const summary = new ProposalEvaluationSummaryService(prisma, {}, {}, {}, participation, access);
   summary.transactional = true;
   for (const method of ['saveEvaluationSummary', 'finalizeEvaluationSummary', 'submitCompletedPackage']) {
-    await assert.rejects(() => summary[method](actor, proposal.id, { summary: 'Đủ điều kiện', recommendation: 'approve' }), /Trưởng phòng/);
+    await assert.rejects(() => summary[method](actor, proposal.id, { summary: 'Đủ điều kiện', recommendation: 'approve' }), /không còn là chuyên viên phụ trách/);
   }
 });
 
@@ -58,7 +58,7 @@ test('Head cannot route a draft or synthesize incomplete current reviews', async
   }, {}, participation, { resolveConflictForProposal: async () => ({ isAssignedReviewer: false, hasPersistedReview: false, unresolved: false }) });
   summary.transactional = true;
   await assert.rejects(() => summary.saveEvaluationSummary(head, proposal.id, { summary: 'Đủ điều kiện', recommendation: 'approve' }), /đầy đủ phiếu/);
-  await assert.rejects(() => summary.submitCompletedPackage(head, proposal.id), /phải được Trưởng phòng chốt/);
+  await assert.rejects(() => summary.submitCompletedPackage(head, proposal.id), /phải được chốt/);
 });
 
 test('finalized synthesis refuses a replaced review roster without regenerating its evidence', async () => {

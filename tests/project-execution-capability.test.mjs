@@ -17,17 +17,22 @@ test("PI can report and request changes but cannot decide them", () => {
   assert(!has(view, "project.extension.approve"));
 });
 
-test("current assigned Staff decides adjustment, Head decides extension, Leadership decides neither", () => {
-  const staff = projectViewerAuthorizationV1({ actor: actor("staff", "RESEARCH_MANAGEMENT_STAFF"), project, projectOfficer: officer, request: { requestType: "adjustment", status: "under_staff_review", requesterId: "pi" } });
-  assert(has(staff, "project.adjustment.approve"));
-  assert(!has(staff, "project.extension.approve"));
-  const head = projectViewerAuthorizationV1({ actor: actor("head", "RESEARCH_MANAGEMENT_HEAD"), project, request: { requestType: "extension", status: "ready_for_head_decision", requesterId: "pi" } });
-  assert(has(head, "project.extension.approve"));
-  assert(!has(head, "project.adjustment.approve"));
-  const leader = projectViewerAuthorizationV1({ actor: actor("leader", "LEADERSHIP_APPROVAL_AUTHORITY"), project });
-  assert(has(leader, "project.monitor"));
-  assert(!has(leader, "project.adjustment.approve"));
-  assert(!has(leader, "project.extension.approve"));
+test("only GĐ or PGĐ-KH sign a request submitted to routing; CV, TP, TB and PGĐ-TD never decide", () => {
+  const request = (requestType, status = "ready_for_head_decision") => ({ requestType, status, requesterId: "pi" });
+  for (const role of ["LEADERSHIP_APPROVAL_AUTHORITY", "SCIENCE_DEPUTY_DIRECTOR"]) {
+    const view = projectViewerAuthorizationV1({ actor: actor("signer", role, false), project, request: request("adjustment") });
+    assert(has(view, "project.adjustment.approve") && has(view, "project.adjustment.reject"), role);
+    assert(!has(projectViewerAuthorizationV1({ actor: actor("signer", role), project, request: request("extension", "under_staff_validation") }), "project.extension.approve"), "not before the tờ trình exists");
+  }
+  const staff = projectViewerAuthorizationV1({ actor: actor("staff", "RESEARCH_MANAGEMENT_STAFF"), project, projectOfficer: officer, request: request("adjustment") });
+  assert(!has(staff, "project.adjustment.approve") && !has(staff, "project.adjustment.reject"));
+  for (const role of ["RESEARCH_MANAGEMENT_HEAD", "RESEARCH_BOARD_HEAD", "RESEARCH_MANAGEMENT_DEPUTY_HEAD", "RESEARCH_OVERSIGHT_AUTHORITY", "SYSTEM_ADMIN"]) {
+    const view = projectViewerAuthorizationV1({ actor: actor("x", role), project, request: request("extension") });
+    assert(!has(view, "project.extension.approve") && !has(view, "project.extension.reject"), role);
+  }
+  const head = projectViewerAuthorizationV1({ actor: actor("head", "RESEARCH_MANAGEMENT_HEAD"), project });
+  assert(has(head, "project.read"));
+  assert(has(projectViewerAuthorizationV1({ actor: actor("board", "RESEARCH_BOARD_HEAD", false), project }), "project.read"), "TB sees every project");
 });
 
 test("unassigned, expired, out-of-scope and participant-management conflicts deny decisions", () => {
