@@ -133,7 +133,12 @@ export function canReadProposal(
     return true;
   }
 
-  if (isResearchManagementHead(user) || isResearchOversightAuthority(user) || isLeadership(user)) {
+  if (isResearchManagementHead(user) || isResearchOversightAuthority(user) || isResearchBoardHead(user) || isResearchManagementDeputyHead(user)) {
+    return true;
+  }
+
+  // Director and Science Deputy Director read only proposals already in the formal workflow (matrix 7.1, note 2).
+  if ((isLeadership(user) || isScienceDeputyDirector(user)) && isWorkflowVisibleStatus(proposal.status)) {
     return true;
   }
 

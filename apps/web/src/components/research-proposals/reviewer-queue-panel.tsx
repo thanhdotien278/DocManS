@@ -54,6 +54,15 @@ export function ReviewerQueuePanel() {
   const granted = assignments.filter((assignment): assignment is ReviewerGrantedItem => assignment.access === "granted");
   const isSecretary = (assignment: ReviewerGrantedItem) => assignment.assignmentRole === "council_secretary" || assignment.scoring === false;
   const pendingCount = granted.filter((assignment) => !isSecretary(assignment) && assignment.myReviewStatus !== "submitted").length;
+  // Lời mời đã từ chối/đã nhận chỉ hiện nhãn trạng thái: không có nút trả lời, không có liên kết mở hồ sơ.
+  const replyCell = (invitation: ReviewInvitationPreview) => invitation.invitationStatus === "invited" ? (
+    <>
+      <button className="button primary" type="button" onClick={() => setResponding({ invitation, decision: "accept" })}>Chấp nhận</button>{" "}
+      <button className="button" type="button" onClick={() => setResponding({ invitation, decision: "decline" })}>Từ chối</button>
+    </>
+  ) : (
+    <span className="record-meta">{invitation.invitationStatus === "accepted" ? "Đã chấp nhận · Chờ Ban giám đốc ký thành lập hội đồng" : invitation.invitationStatus === "declined" ? "Đã từ chối" : invitation.invitationStatusLabel}</span>
+  );
   const actionLabel = (assignment: ReviewerGrantedItem) => (isSecretary(assignment) ? "Soạn biên bản" : "Chấm phiếu");
 
   return (
@@ -77,19 +86,22 @@ export function ReviewerQueuePanel() {
                   <td>{formatDate(invitation.dueDate)}</td>
                   <td>{invitation.assignedByDisplayName}</td>
                   <td>
-                    {invitation.invitationStatus === "invited" ? (
-                      <>
-                        <button className="button primary" type="button" onClick={() => setResponding({ invitation, decision: "accept" })}>Chấp nhận</button>{" "}
-                        <button className="button" type="button" onClick={() => setResponding({ invitation, decision: "decline" })}>Từ chối</button>
-                      </>
-                    ) : (
-                      <span className="record-meta">{invitation.invitationStatus === "accepted" ? "Đã chấp nhận · Chờ Ban giám đốc ký thành lập hội đồng" : invitation.invitationStatusLabel}</span>
-                    )}
+                    {replyCell(invitation)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="mobile-list">
+          {invitations.map((invitation) => (
+            <article className="list-card" key={invitation.id}>
+              <span className="record-title">{invitation.proposal.title}</span>
+              <span className="record-meta">{invitation.assignmentRoleLabel} · {invitation.dueDate ? `Hạn ${formatDate(invitation.dueDate)}` : "Không đặt hạn"}</span>
+              <span className="record-meta">Người mời: {invitation.assignedByDisplayName}</span>
+              <div>{replyCell(invitation)}</div>
+            </article>
+          ))}
         </div>
         </>
       ) : null}

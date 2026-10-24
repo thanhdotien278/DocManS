@@ -356,7 +356,9 @@ test("5.11: invitee sees only title, role, due date and inviter until accepting;
   await f.respond(declined, declinedId, "decline", "Bận công tác");
   const row = await db.proposalReviewAssignment.findUnique({ where: { id: declinedId } });
   assert.deepEqual([row.invitationStatus, row.declineReason], ["declined", "Bận công tác"]);
-  assert.deepEqual(await f.assignments.listMyAssignments(declined), []);
+  const declinedRows = await f.assignments.listMyAssignments(declined);
+  assert.deepEqual(declinedRows.map((r) => [r.access, r.invitationStatus, r.invitationStatusLabel]), [["preview", "declined", "Đã từ chối"]]);
+  await assert.rejects(() => f.assignments.getReviewPackage(declined, f.proposal.id), code(403), "lời mời đã từ chối không mở quyền đọc");
   assert.ok(await db.auditLog.findFirst({ where: { action: "decline-review-invitation", targetEntityId: declinedId } }));
 });
 

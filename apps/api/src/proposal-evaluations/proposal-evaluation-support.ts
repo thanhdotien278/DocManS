@@ -5,7 +5,7 @@ import { ProposalParticipationService } from "../research-proposals/proposal-par
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import type { PrismaService } from "../infrastructure/prisma/prisma.service.js";
-import { assertHasOrganizationScope, isLeadership, isResearchBoardHead, isResearchOversightAuthority, isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
+import { assertHasOrganizationScope, isLeadership, isResearchBoardHead, isScienceDeputyDirector, isResearchManagementDeputyHead, isResearchOversightAuthority, isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
 import type { ProposalConflictDecision } from "../proposals-shared/proposal-participation.js";
 import { isWorkflowVisibleStatus, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import { proposalContextVersion } from "../proposals-shared/proposal-mutation.js";
@@ -268,7 +268,7 @@ export async function assertReviewAssignmentReadScope(prisma: PrismaService, act
  * Head, Deputy and Director require an explicit organization scope. */
 export async function assertEvaluationReadScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
   if (!actor) throw new ForbiddenException({ message: "Không có quyền xem thông tin đánh giá của hồ sơ này." });
-  if (isLeadership(actor) || isResearchManagementHead(actor) || isResearchBoardHead(actor) || isResearchOversightAuthority(actor)) {
+  if (isLeadership(actor) || isResearchManagementHead(actor) || isResearchBoardHead(actor) || isResearchOversightAuthority(actor) || isScienceDeputyDirector(actor) || isResearchManagementDeputyHead(actor)) {
     assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
     return actor;
   }
