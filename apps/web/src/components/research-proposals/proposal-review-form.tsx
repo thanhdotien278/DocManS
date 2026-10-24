@@ -164,7 +164,7 @@ export function ProposalReviewForm({ proposalId, onReviewSubmitted, canSubmitRev
 
   return (
     <SectionCard
-      title="Phiếu đánh giá của tôi"
+      title={reviewPackage?.assignmentRoleLabel ? `Phiếu đánh giá — ${reviewPackage.assignmentRoleLabel}` : "Phiếu đánh giá của tôi"}
       subtitle={isSubmitted
         ? `Phiếu đã gửi và ở chế độ chỉ đọc · ${reviewPackage?.assignmentRoleLabel ?? "Phân công"}`
         : `Chấm điểm theo từng tiêu chí, nhận xét và chọn kết luận đề nghị · ${reviewPackage?.assignmentRoleLabel ?? "Phân công"}`}

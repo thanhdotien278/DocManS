@@ -4,6 +4,7 @@ import type { SafeUserContext } from "../auth/auth.types.js";
 import { evaluateProposalConflict, type ProposalParticipation } from "../proposals-shared/proposal-participation.js";
 import type { ProposalReviewAccess } from "../proposals-shared/proposal-review-access.js";
 import type { ProposalManagementOfficerResolution } from "../proposals-shared/proposal-management-officer.service.js";
+import { DEFAULT_COUNCIL_FORMATION, canFormCouncil, type CouncilFormationConfig } from "../proposals-shared/council-formation.js";
 import { isInternalResearcherEligible, isResearchBoardHead, isResearchOversightAuthority, isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
 import { publicAuthorizationReasonV1 } from "./authorization-v1.service.js";
 
@@ -28,6 +29,11 @@ type ProposalCapabilityInput = {
   completenessCheckCompleted?: boolean;
   evaluationSummaryStatus?: string;
   allReviewsSubmitted?: boolean;
+  /**
+   * Cấu hình thành lập hội đồng đánh giá (D-035). Người gọi (research-proposals.service) nên đọc bằng `readCouncilFormationConfig`.
+   * shortcut: thiếu thì dùng mặc định TP/TB, chưa phản ánh cấu hình Admin, cho tới khi người gọi truyền vào.
+   */
+  councilFormationConfig?: CouncilFormationConfig;
   /** Bước của tờ trình DECISION_PACKAGE đang mở; thiếu nghĩa là chưa có tờ trình. */
   decisionApprovalStage?: string;
 };
@@ -140,7 +146,13 @@ function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): {
   }
   if (["proposal.completeness.check", "proposal.supplement.request"].includes(action) && !isResearchManagementStaff(input.actor)) return blocked("ACTION_NOT_GRANTED");
   if (["proposal.management-officer.assign", "proposal.management-officer.revoke"].includes(action) && !isResearchManagementHead(input.actor)) return blocked("ACTION_NOT_GRANTED");
-  if (["proposal.review.assign", "proposal.review.consolidate", "proposal.review.finalize", "proposal.review.submit-package"].includes(action) && !canManageEvaluationPackage(input)) return blocked("ACTION_NOT_GRANTED");
+  if (action === "proposal.review.assign") {
+    const config = input.councilFormationConfig ?? { councilType: "EVALUATION" as const, ...DEFAULT_COUNCIL_FORMATION.EVALUATION, isDefault: true, updatedAt: null };
+    const isActiveOfficer = isResearchManagementStaff(input.actor) && input.managementOfficer?.resolved === true && input.managementOfficer.officer?.officerUserId === input.actor.id;
+    const decision = canFormCouncil(input.actor, config, input.proposal, isActiveOfficer);
+    if (!decision.allowed) return { code: "ACTION_NOT_GRANTED", reason: decision.reason };
+  }
+  if (["proposal.review.consolidate", "proposal.review.finalize", "proposal.review.submit-package"].includes(action) && !canManageEvaluationPackage(input)) return blocked("ACTION_NOT_GRANTED");
   if (["proposal.decision.approve", "proposal.decision.reject"].includes(action) && input.actor.systemRole !== "LEADERSHIP_APPROVAL_AUTHORITY") return blocked("ACTION_NOT_GRANTED");
   if (["proposal.review.assign", "proposal.review.consolidate", "proposal.review.finalize", "proposal.review.submit-package", "proposal.completeness.check", "proposal.supplement.request", "proposal.management-officer.assign", "proposal.management-officer.revoke", "proposal.decision.approve", "proposal.decision.reject"].includes(action)) {
     if (!input.actor.organizationScopes.some((scope) => scope.id === input.proposal.hostOrganizationUnitId)) return blocked("ORG_SCOPE_DENIED");
@@ -148,7 +160,6 @@ function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): {
     if (input.participation.isParticipant || input.reviewAccess.isAssignedReviewer || (input.reviewAccess.hasReviewConflict || input.reviewAccess.hasPersistedReview)) return blocked("CONFLICT_DENIED");
   }
   if (action === "proposal.review.assign") {
-    if (!canManageEvaluationPackage(input)) return blocked("ACTION_NOT_GRANTED");
     if (!input.actor.organizationScopes.some((scope) => scope.id === input.proposal.hostOrganizationUnitId)) return blocked("ORG_SCOPE_DENIED");
     if (!input.participation || input.participation.role === "unknown") return blocked("CONTEXT_UNRESOLVED");
     if (evaluateProposalConflict(input.participation).conflicted) return blocked("CONFLICT_DENIED");
@@ -156,7 +167,7 @@ function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): {
     return ["submitted", "resubmitted", "under_review"].includes(input.proposal.status) ? null : blocked("WORKFLOW_STATE_DENIED");
   }
   if (["proposal.review.consolidate", "proposal.review.finalize", "proposal.review.submit-package"].includes(action)) {
-    if (!input.completenessCheckCompleted || !input.allReviewsSubmitted) return { code: "WORKFLOW_STATE_DENIED", reason: "Cần hồ sơ đã kiểm tra đầy đủ, đúng 2 phản biện, ít nhất 3 thành viên hội đồng và đủ phiếu đã gửi." };
+    if (!input.completenessCheckCompleted || !input.allReviewsSubmitted) return { code: "WORKFLOW_STATE_DENIED", reason: "Cần hồ sơ đã kiểm tra đầy đủ, hội đồng đã được thành lập và mọi thành viên chấm đã gửi phiếu." };
     if (action === "proposal.review.consolidate" && input.evaluationSummaryStatus && input.evaluationSummaryStatus !== "draft") return { code: "WORKFLOW_STATE_DENIED", reason: "Bản tổng hợp đã chốt, không thể sửa." };
   }
   if (action === "proposal.review.submit-package") {
@@ -199,6 +210,7 @@ function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): {
     return ["submitted", "resubmitted"].includes(input.proposal.status) ? null : blocked("WORKFLOW_STATE_DENIED");
   }
   if (action === "proposal.review.submit") {
+    if (input.reviewAccess?.assignmentRole === "council_secretary") return { code: "ACTION_NOT_GRANTED", reason: "Thư ký hội đồng không chấm phiếu." };
     if (!input.participation || input.participation.role === "unknown") return blocked("CONTEXT_UNRESOLVED");
     if (input.participation?.isParticipant) return blocked("CONFLICT_DENIED");
     if (!input.managementOfficer?.resolved) return blocked("CONTEXT_UNRESOLVED");

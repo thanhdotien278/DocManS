@@ -52,8 +52,8 @@ export class ProposalEvaluationsController {
   }
 
   @Get(":id/assignable-reviewers")
-  async candidates(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Query("q") query?: string) {
-    return this.assignments.candidates(request.currentUser!, id, query);
+  async candidates(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Query("q") query?: string, @Query("position") position?: string) {
+    return this.assignments.candidates(request.currentUser!, id, query, position);
   }
 
   @Get(":id/review-assignments")
@@ -96,6 +96,12 @@ export class ProposalEvaluationsController {
   @Get(":id/evaluation-council")
   async getCouncil(@Req() request: RequestWithCurrentUser, @Param("id") id: string) {
     return { council: await this.councils.getCouncil(request.currentUser!, id) };
+  }
+
+  /** Chỉ thư ký hội đồng: tiến độ và phiếu ẩn danh (spec P7). */
+  @Get(":id/evaluation-council/reviews")
+  async getSecretaryReviews(@Req() request: RequestWithCurrentUser, @Param("id") id: string) {
+    return this.councils.getSecretaryReviews(request.currentUser!, id);
   }
 
   @Post(":id/evaluation-council/submit")

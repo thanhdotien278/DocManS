@@ -237,3 +237,28 @@ export async function updateOrganizationUnitStatus(unitId: string, status: strin
     body: JSON.stringify({ status })
   });
 }
+
+export type CouncilFormationConfig = {
+  councilType: string;
+  councilTypeLabel: string;
+  allowedRoles: string[];
+  memberCount: number;
+  minMemberCount: number;
+  maxMemberCount: number;
+  enforced: boolean;
+  isDefault: boolean;
+  updatedAt: string | null;
+};
+
+export type CouncilSelectableRole = { code: string; label: string };
+
+export async function loadCouncilFormationConfig() {
+  return requestJson<{ configs: CouncilFormationConfig[]; selectableRoles: CouncilSelectableRole[] }>("/config/council-formation");
+}
+
+export async function updateCouncilFormationConfig(councilType: string, input: { allowedRoles: string[]; memberCount: number }) {
+  return requestJson<{ config: CouncilFormationConfig }>(`/config/council-formation/${encodeURIComponent(councilType)}`, {
+    method: "PUT",
+    body: JSON.stringify(input)
+  });
+}

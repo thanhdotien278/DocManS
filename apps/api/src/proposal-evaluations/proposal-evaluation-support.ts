@@ -1,4 +1,5 @@
-import { REVIEW_ASSIGNMENT_STATUS, REVIEW_STATUS, REVIEW_MAX_TOTAL_SCORE } from "../proposals-shared/proposal-review-access.js";
+import { REVIEW_ASSIGNMENT_ROLE_LABELS, REVIEW_ASSIGNMENT_STATUS, REVIEW_STATUS, REVIEW_MAX_TOTAL_SCORE, isScoringRole, normalizeAssignmentRole, type ReviewAssignmentRole } from "../proposals-shared/proposal-review-access.js";
+import { EVALUATION_COUNCIL_STRUCTURE, canFormCouncil, readCouncilFormationConfig, type CouncilFormationConfig } from "../proposals-shared/council-formation.js";
 import { BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
@@ -387,19 +388,48 @@ export function assertProposalStatus(proposal: EvaluationProposalRecord, allowed
   }
 }
 
+/** Hội đồng đã thành lập: có thành viên và mọi thành viên có `councilEstablishedAt` (thiếu trường coi là đã thành lập, như `grantsReviewAccess`). */
+export function isCouncilEstablished(roster: Array<Pick<ReviewAssignmentRecord, "councilEstablishedAt">>) {
+  return roster.length > 0 && roster.every((row) => row.councilEstablishedAt !== null);
+}
+
+/** Chặn lập tờ trình và chặn ký (spec §7.4): cấu trúc §5, rồi lời mời chưa nhận/đã từ chối. */
+export function councilRosterBlockers(roster: ReviewAssignmentRecord[], memberCount: number) {
+  const required = EVALUATION_COUNCIL_STRUCTURE(memberCount);
+  const blockers: string[] = [];
+  for (const position of Object.keys(required) as ReviewAssignmentRole[]) {
+    const current = roster.filter((row) => (normalizeAssignmentRole(row.assignmentRole) ?? "reviewer") === position).length;
+    if (current !== required[position]) blockers.push(`Cần ${required[position]} ${REVIEW_ASSIGNMENT_ROLE_LABELS[position]} (hiện ${current}).`);
+  }
+  const invited = roster.filter((row) => (row.invitationStatus ?? "accepted") === "invited").length;
+  const declined = roster.filter((row) => row.invitationStatus === "declined").length;
+  if (invited) blockers.push(`${invited} thành viên chưa chấp nhận lời mời.`);
+  if (declined) blockers.push(`${declined} thành viên đã từ chối: thu hồi và mời người khác.`);
+  return blockers;
+}
+
+/**
+ * Tiến độ phiếu: chỉ thành viên chấm (không gồm thư ký) tính vào pending/submitted/average. Sẵn sàng tổng hợp (§7.4):
+ * hội đồng đã thành lập và mọi thành viên chấm đã gửi phiếu. Cấu trúc/số lượng chỉ kiểm khi lập tờ trình và ký.
+ */
 export function summarizeReviewProgress(assignments: ReviewAssignmentRecord[], reviews: ProposalReviewRecord[]) {
   const active = assignments.filter((assignment) => assignment.status === REVIEW_ASSIGNMENT_STATUS.assigned || assignment.status === REVIEW_ASSIGNMENT_STATUS.completed);
-  const reviewerCount = new Set(active.filter((assignment) => assignment.assignmentRole === "reviewer").map((assignment) => assignment.reviewerUserId)).size;
-  const committeeMemberCount = new Set(active.filter((assignment) => assignment.assignmentRole === "committee_member").map((assignment) => assignment.reviewerUserId)).size;
-  const assignmentRequirementsMet = reviewerCount === 2 && committeeMemberCount >= 3 && new Set(active.map((assignment) => assignment.reviewerUserId)).size === active.length;
-  const activeIds = new Set(active.map((assignment) => assignment.id));
-  const submitted = reviews.filter((review) => review.status === REVIEW_STATUS.submitted && activeIds.has(review.assignmentId));
+  const scoring = active.filter((assignment) => isScoringRole(assignment.assignmentRole));
+  const countRole = (role: string) => new Set(active.filter((assignment) => assignment.assignmentRole === role).map((assignment) => assignment.reviewerUserId)).size;
+  const reviewerCount = countRole("reviewer");
+  const committeeMemberCount = countRole("committee_member");
+  const established = isCouncilEstablished(active);
+  const assignmentRequirementsMet = established && scoring.length > 0 && new Set(active.map((assignment) => assignment.reviewerUserId)).size === active.length;
+  const scoringIds = new Set(scoring.map((assignment) => assignment.id));
+  const submitted = reviews.filter((review) => review.status === REVIEW_STATUS.submitted && scoringIds.has(review.assignmentId));
   const submittedAssignmentIds = new Set(submitted.map((review) => review.assignmentId));
-  const pending = active.filter((assignment) => !submittedAssignmentIds.has(assignment.id));
+  const pending = scoring.filter((assignment) => !submittedAssignmentIds.has(assignment.id));
   const scored = submitted.map((review) => review.totalScore).filter((score): score is number => typeof score === "number");
 
   return {
     activeAssignmentCount: active.length,
+    scoringMemberCount: scoring.length,
+    secretaryAssigned: active.some((assignment) => !isScoringRole(assignment.assignmentRole)),
     reviewerCount,
     committeeMemberCount,
     assignmentRequirementsMet,
@@ -407,8 +437,7 @@ export function summarizeReviewProgress(assignments: ReviewAssignmentRecord[], r
     pendingCount: pending.length,
     overdueCount: pending.filter((assignment) => assignment.dueDate && assignment.dueDate < new Date()).length,
     readinessReasons: [
-      ...(reviewerCount !== 2 ? ["Cần đúng 2 người phản biện."] : []),
-      ...(committeeMemberCount < 3 ? ["Cần ít nhất 3 thành viên hội đồng."] : []),
+      ...(!established ? ["Hội đồng chưa được thành lập."] : []),
       ...(pending.length ? [`Còn ${pending.length} phiếu chưa gửi.`] : [])
     ],
     pendingReviewers: pending.map((assignment) => ({
@@ -420,4 +449,24 @@ export function summarizeReviewProgress(assignments: ReviewAssignmentRecord[], r
     averageTotalScore: scored.length ? Math.round((scored.reduce((sum, score) => sum + score, 0) / scored.length) * 10) / 10 : null,
     maxTotalScore: REVIEW_MAX_TOTAL_SCORE
   };
+}
+
+/**
+ * Quyền (a) thành lập hội đồng/mời/thu hồi theo cấu hình Admin (D-035). Một chỗ gọi `canFormCouncil` cho mọi route;
+ * CV chỉ được khi đang là cán bộ phụ trách hiện hành.
+ */
+export async function resolveCouncilFormationPermission(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
+  const config = await readCouncilFormationConfig(prisma, "EVALUATION");
+  const now = new Date();
+  const isActiveOfficer = Boolean(actor && isResearchManagementStaff(actor) && await prisma.proposalManagementOfficer.findFirst({
+    where: { proposalId: proposal.id, officerUserId: actor.id, status: "ACTIVE", effectiveFrom: { lte: now }, OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: now } }] },
+    select: { id: true }
+  }));
+  return { config, decision: canFormCouncil(actor, config, proposal, isActiveOfficer) };
+}
+
+export async function assertCanFormCouncil(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord): Promise<CouncilFormationConfig> {
+  const { config, decision } = await resolveCouncilFormationPermission(prisma, actor, proposal);
+  if (!decision.allowed) throw new ForbiddenException({ code: decision.code, message: decision.reason });
+  return config;
 }

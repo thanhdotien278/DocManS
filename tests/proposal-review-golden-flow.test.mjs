@@ -64,15 +64,18 @@ test("decision mutation requires a package revision and keeps terminal outcomes 
   assert.throws(() => ProposalDecisionsService.prototype.readNote.call({}, "", { required: true }), BadRequestException);
 });
 
-test("locked submitted reviews cannot be edited and readiness still requires the full roster", () => {
+test("locked submitted reviews cannot be edited and readiness needs every scoring member, not the secretary", () => {
   assert.throws(() => ProposalReviewsService.prototype.assertReviewIsOpen.call({}, { status: "submitted" }), BadRequestException);
   const service = new ProposalEvaluationSummaryService();
   const assignments = [
+    { id: "chair", reviewerUserId: "chair", assignmentRole: "council_chair", status: "completed" },
+    { id: "secretary", reviewerUserId: "secretary", assignmentRole: "council_secretary", status: "completed" },
     ...Array.from({ length: 2 }, (_, index) => ({ id: `r${index}`, reviewerUserId: `r${index}`, assignmentRole: "reviewer", status: "completed" })),
     ...Array.from({ length: 3 }, (_, index) => ({ id: `c${index}`, reviewerUserId: `c${index}`, assignmentRole: "committee_member", status: "completed" }))
   ];
-  const reviews = assignments.map((assignment) => ({ assignmentId: assignment.id, status: "submitted", totalScore: 80 }));
+  const reviews = assignments.filter((assignment) => assignment.id !== "secretary").map((assignment) => ({ assignmentId: assignment.id, status: "submitted", totalScore: 80 }));
   assert.equal(service.summarizeProgress(assignments, reviews).allReviewsSubmitted, true);
+  assert.equal(service.summarizeProgress(assignments, reviews).pendingCount, 0);
   assert.equal(service.summarizeProgress(assignments, reviews.slice(0, -1)).allReviewsSubmitted, false);
   assert.equal(service.summarizeProgress(assignments, [...reviews, { assignmentId: "revoked", status: "submitted", totalScore: 0 }]).averageTotalScore, 80);
 });

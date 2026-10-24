@@ -37,6 +37,7 @@ import { PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js
 import type { ProposalMemberPersistInput, ProposalMissingItem } from "../proposals-shared/proposal-types.js";
 import { ProposalParticipationService } from "./proposal-participation.service.js";
 import { projectProposalViewerAuthorizationV1 } from "../permissions/proposal-capability-v1.js";
+import { readCouncilFormationConfig, type CouncilFormationConfig } from "../proposals-shared/council-formation.js";
 import {
   assertDateRange,
   normalizeRequiredPackage,
@@ -209,6 +210,7 @@ export class ResearchProposalsService {
       ),
       this.managementOfficers.resolveForProposals(records.map((proposal) => proposal.id), asOf)
     ]);
+    const councilFormationConfig = await this.readCouncilFormationConfigForView();
     // ponytail: per-visible-record evidence reads; batch these if proposal queues grow large.
     return Promise.all(records
       .filter((proposal) => canReadProposal(actor, proposal, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), managementOfficerByProposal.get(proposal.id)))
@@ -216,7 +218,7 @@ export class ResearchProposalsService {
         const [checked, summaryStatus, reviewReadiness, approvalStage] = await Promise.all([
           this.hasCurrentCompletenessCheck(proposal), this.findEvaluationSummaryStatus(proposal.id), this.findReviewReadiness(proposal), this.findDecisionApprovalStage(proposal.id)
         ]);
-        return this.toProposalResponse(proposal, actor, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), checked, managementOfficerByProposal.get(proposal.id), summaryStatus, reviewReadiness, approvalStage);
+        return this.toProposalResponse(proposal, actor, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), checked, managementOfficerByProposal.get(proposal.id), summaryStatus, reviewReadiness, approvalStage, councilFormationConfig);
       }));
   }
 
@@ -1172,7 +1174,7 @@ export class ResearchProposalsService {
     const completenessCheckCompleted = await this.hasCurrentCompletenessCheck(proposal);
     const managementOfficerHistory = await this.managementOfficers.listHistory(proposal.id);
 
-    const response = this.toProposalResponse(proposal, actor, participation, reviewAccess, completenessCheckCompleted, managementOfficer, evaluationSummaryStatus ?? await this.findEvaluationSummaryStatus(proposal.id), await this.findReviewReadiness(proposal), await this.findDecisionApprovalStage(proposal.id));
+    const response = this.toProposalResponse(proposal, actor, participation, reviewAccess, completenessCheckCompleted, managementOfficer, evaluationSummaryStatus ?? await this.findEvaluationSummaryStatus(proposal.id), await this.findReviewReadiness(proposal), await this.findDecisionApprovalStage(proposal.id), await this.readCouncilFormationConfigForView());
     const versions = await this.prisma.proposalSubmissionEvent.findMany({ where: { proposalId: proposal.id, toStatus: { in: ["submitted", "resubmitted"] } }, orderBy: { submittedAt: "asc" }, select: { id: true, submittedAt: true, snapshot: true } });
     return {
       ...response,
@@ -1258,6 +1260,15 @@ export class ResearchProposalsService {
     }
   }
 
+  /** Chỉ để hiển thị capability; backend vẫn kiểm lại khi mời. Cấu hình hỏng → mặc định (hiển thị), không chặn danh sách. */
+  private async readCouncilFormationConfigForView(): Promise<CouncilFormationConfig | undefined> {
+    try {
+      return await readCouncilFormationConfig(this.prisma, "EVALUATION");
+    } catch {
+      return undefined;
+    }
+  }
+
   private toProposalResponse(
     proposal: ResearchProposalRecord,
     actor?: SafeUserContext,
@@ -1267,7 +1278,8 @@ export class ResearchProposalsService {
     managementOfficer?: ProposalManagementOfficerResolution,
     evaluationSummaryStatus?: string | null,
     reviewReadiness?: ReturnType<typeof summarizeReviewProgress> | null,
-    decisionApprovalStage?: string | null
+    decisionApprovalStage?: string | null,
+    councilFormationConfig?: CouncilFormationConfig
   ) {
     const canEditDraft = this.canEditProposalDraft(actor, proposal);
     const canRead = canReadProposal(actor, proposal, participation, reviewAccess, managementOfficer);
@@ -1285,7 +1297,8 @@ export class ResearchProposalsService {
           completenessCheckCompleted,
           evaluationSummaryStatus: evaluationSummaryStatus ?? undefined,
           allReviewsSubmitted: reviewReadiness?.allReviewsSubmitted ?? false,
-          decisionApprovalStage: decisionApprovalStage ?? undefined
+          decisionApprovalStage: decisionApprovalStage ?? undefined,
+          councilFormationConfig
         })
       : undefined;
 

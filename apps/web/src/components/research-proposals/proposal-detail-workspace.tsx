@@ -9,6 +9,7 @@ import { CheckCircle2, Download, FileText, Pencil, Save, Send, Trash2, UploadClo
 import { useSession } from "@/components/auth/session-provider";
 import { RoutingStatus } from "@/components/approvals/routing-status";
 import { ProposalCouncilPanel } from "@/components/research-proposals/proposal-council-panel";
+import { CouncilSecretaryPanel } from "@/components/research-proposals/council-secretary-panel";
 import { ProposalDecisionPanel } from "@/components/research-proposals/proposal-decision-panel";
 import { ProposalEvaluationPanel } from "@/components/research-proposals/proposal-evaluation-panel";
 import { ProposalReviewForm } from "@/components/research-proposals/proposal-review-form";
@@ -18,6 +19,7 @@ import { ParticipationBadge } from "@/components/ui/participation-badge";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatIntakeDate, intakeDateToIso, toIntakeDateInput } from "@/lib/intake-dates";
+import { loadMyReviewAssignments } from "@/lib/proposal-evaluations-api";
 import { formatVndNumber, numberToVietnameseWords, parseVndNumber } from "@/lib/vietnamese-currency";
 import {
   deleteProposalAttachment,
@@ -111,6 +113,8 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   const [supplementError, setSupplementError] = useState("");
   const [isRequestingSupplement, setIsRequestingSupplement] = useState(false);
   const [isResubmitting, setIsResubmitting] = useState(false);
+  // Thư ký (đã nhận lời, đã thành lập) không gọi được evaluation-council nên nhận diện qua hàng đợi của chính mình (spec S7).
+  const [isCouncilSecretary, setIsCouncilSecretary] = useState(false);
 
   async function refresh() {
     setState("loading");
@@ -144,6 +148,14 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
     void loadProposalCatalogs().then(setCatalogs).catch(() => setMessage("Không tải được danh mục. Vui lòng tải lại."));
     void refresh();
   }, [proposalId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadMyReviewAssignments()
+      .then((items) => { if (!cancelled) setIsCouncilSecretary(items.some((item) => item.access === "granted" && item.proposalId === proposalId && item.assignmentRole === "council_secretary")); })
+      .catch(() => { if (!cancelled) setIsCouncilSecretary(false); });
+    return () => { cancelled = true; };
+  }, [proposalId, proposal?.status]);
 
   const capabilityState = proposal ? getProposalCapabilityState(proposal) : { capability: null, reloadRequired: true, reason: "Đang tải quyền thao tác." };
   const canEdit = canPerformProposalAction(capabilityState, "proposal.draft.update");
@@ -693,7 +705,9 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
           </SectionCard>
         ) : null}
 
-        {showReviewForm ? <ProposalReviewForm contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} onReviewSubmitted={() => void refreshWorkflowState()} canSubmitReview={canPerformProposalAction(capabilityState, "proposal.review.submit")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.submit")?.reason ?? capabilityState.reason} /> : null}
+        {isCouncilSecretary ? <CouncilSecretaryPanel proposalId={proposal.id} contextVersion={proposal.viewerAuthorization?.contextVersion} onChanged={() => void refreshWorkflowState()} /> : null}
+
+        {showReviewForm && !isCouncilSecretary ? <ProposalReviewForm contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} onReviewSubmitted={() => void refreshWorkflowState()} canSubmitReview={canPerformProposalAction(capabilityState, "proposal.review.submit")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.submit")?.reason ?? capabilityState.reason} /> : null}
 
         <RoutingStatus subjectType="proposal" subjectId={proposal.id} refreshKey={proposal.status} onChanged={() => void refreshWorkflowState()} />
 
@@ -701,8 +715,8 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
           <ProposalEvaluationPanel contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} proposalStatus={proposal.status} onWorkflowChange={refreshWorkflowState} canReadProgress={canReadReviewProgress} canAssignReviewers={canPerformProposalAction(capabilityState, "proposal.review.assign")} canConsolidate={canPerformProposalAction(capabilityState, "proposal.review.consolidate")} canFinalize={canPerformProposalAction(capabilityState, "proposal.review.finalize")} canSubmitPackage={canPerformProposalAction(capabilityState, "proposal.review.submit-package")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.assign")?.reason ?? capabilityState.reason} consolidateBlockedReason={blockedProposalAction(capabilityState, "proposal.review.consolidate")?.reason ?? capabilityState.reason} finalizeBlockedReason={blockedProposalAction(capabilityState, "proposal.review.finalize")?.reason ?? capabilityState.reason} submitPackageBlockedReason={blockedProposalAction(capabilityState, "proposal.review.submit-package")?.reason ?? capabilityState.reason} />
         ) : null}
 
-        {/* PGĐ-KH ký hội đồng nhưng không có capability quyết định: panel tự ẩn khi backend trả 403. */}
-        {proposal.status === "under_review" ? <ProposalCouncilPanel proposalId={proposal.id} onChanged={() => void refreshWorkflowState()} /> : null}
+        {/* Panel hội đồng tự ẩn khi backend trả 401/403 (người xem không lập, rà soát hay ký). */}
+        {["submitted", "resubmitted", "under_review"].includes(proposal.status) ? <ProposalCouncilPanel proposalId={proposal.id} onChanged={() => void refreshWorkflowState()} /> : null}
 
         {showDecisionPanel ? <ProposalDecisionPanel contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} onDecision={() => void refreshWorkflowState()} canDecide={canPerformProposalAction(capabilityState, "proposal.decision.approve")} blockedReason={blockedProposalAction(capabilityState, "proposal.decision.approve")?.reason ?? capabilityState.reason} /> : null}
 

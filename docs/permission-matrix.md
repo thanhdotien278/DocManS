@@ -84,8 +84,8 @@ Directors who monitor; it is no longer the Science Deputy Director.
 - Approves every submission dossier (tờ trình) before it goes to BGĐ.
 - Assigns topic segments (mảng) to CV, assigns/reassigns/revokes the responsible CV
   on proposals and projects, coordinates every proposal within unit scope.
-- May also perform CV-level evaluation work (reviewer/council assignment, synthesis,
-  IRB council, drafting tờ trình) within unit scope.
+- May also perform CV-level evaluation work (synthesis, drafting tờ trình; reviewer/council
+  assignment and IRB council per QT configuration, on by default, note 8) within unit scope.
 - Sees every project in the Academy; manages funding Academy-wide.
 - Does not perform completeness checks or supplement requests.
 
@@ -99,15 +99,15 @@ Directors who monitor; it is no longer the Science Deputy Director.
 
 - Reviews CV-authored tờ trình, then forwards to TP or returns to the author.
 - Assigns/revokes the responsible CV within unit scope; performs completeness,
-  supplement, reviewer/council assignment, synthesis, IRB council and tờ trình
-  drafting within unit scope.
+  supplement, synthesis and tờ trình drafting within unit scope; reviewer/council
+  assignment and IRB council per QT configuration (on by default, note 8).
 - Sees every project in the Academy; manages funding Academy-wide.
 
 ### CV — Chuyên viên QLKH
 
 - Works only on proposals/projects to which CV is currently assigned as responsible
-  officer (note 3): completeness, supplement request, reviewer/council invitation,
-  synthesis, IRB council, drafting tờ trình, daily project operations (milestone
+  officer (note 3): completeness, supplement request, synthesis, drafting tờ trình
+  (reviewer/council invitation and IRB council only when QT ticks the CV role, note 8), daily project operations (milestone
   setup, report review, appraising adjustment/extension, acceptance, products,
   drafting liquidation, project closing), funding within assignment.
 - Creates/opens/closes intake periods; manages researcher profiles in unit scope;
@@ -244,11 +244,11 @@ never creates a new system role.
 | Xem hồ sơ | — | Xem² | Xem² | Xem¹ | Xem¹ | Xem¹ | Xem¹ | ◐3 | ◐4 | ◐5 |
 | Giao hoặc thu hồi chuyên viên phụ trách hồ sơ, phân mảng | — | — | — | — | ✓¹ | — | ✓¹ | — | — | — |
 | Kiểm tra đầy đủ, yêu cầu bổ sung | — | — | — | — | — | — | ✓¹ | ◐3 | — | — |
-| Phân công phản biện, lập hội đồng đánh giá | — | — | — | — | ✓¹ | — | ✓¹ | ◐3 | — | — |
+| Phân công phản biện, lập hội đồng đánh giá (theo cấu hình QT⁸) | — | — | — | — | ✓¹ ⁸ | — | ✓¹ ⁸ | ◐3, 8 | — | — |
 | Chấm phiếu đánh giá | — | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 |
 | Tổng hợp, chốt, trình kết quả đánh giá | — | — | — | — | ✓¹ | — | ✓¹ | ◐3 | ◐6 | ◐6 |
 | Xem tiến độ đánh giá | — | Xem¹ | Xem¹ | Xem¹ | Xem¹ | Xem¹ | Xem¹ | ◐3 | — | — |
-| Lập hội đồng IRB (mời thành viên), trình kết luận IRB | — | — | — | — | ✓¹ | — | ✓¹ | ◐3 | — | — |
+| Lập hội đồng IRB (mời thành viên; theo cấu hình QT⁸), trình kết luận IRB | — | — | — | — | ✓¹ ⁸ | — | ✓¹ ⁸ | ◐3, 8 | — | — |
 | Nhận xét IRB (thành viên), lập kết luận IRB (thư ký) | — | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 |
 | **Tờ trình qua Phòng KHQS** | | | | | | | | | | |
 | Lập tờ trình | — | — | — | — | ✓¹ | — | ✓¹ | ◐3 | — | — |
@@ -287,6 +287,7 @@ never creates a new system role.
 6. Council secretary of that record: drafts synthesis and minutes, does not score.
 7. Not defined in the PDF legend. Per `docs/design/phan-cap-va-trinh-duyet.md` §5:
    PGĐ-TD sees aggregate figures only; per-project/proposal funding stays empty.
+8. Evaluation, acceptance and IRB councils (including reviewer invitation): the roles allowed to form a council and invite members are configured by QT per council type (D-035); default TP¹ and TB¹. CV can act only when QT ticks the CV role and the record is within the assigned scope³. QT only configures; it never forms a council or invites members.
 
 ### 7.3 General rules
 
@@ -355,7 +356,7 @@ means the signer from §7.4. Missing or denied cells are explicit `None`.
 | Proposal completeness review | None | TB¹, CV³: Review | None | Read own | Read if participating | None | Unit / assigned officer scope | Submitted, resubmitted | Yes |
 | Supplement request | None | TB¹, CV³: Submit request | None | Read/respond | Read if participating | None | Unit / assigned officer scope | Submitted, needs supplement | Yes |
 | Proposal resubmission | None | Read | Read | Submit own | None | None | Own proposal scope | Needs supplement | Yes |
-| Reviewer/council assignment | None | TP¹, TB¹, CV³: Assign with conflict check | Monitor progress¹ | None | None | Accept/decline invitation | Unit scope, assigned officer scope, conflict policy | Submitted, resubmitted, under review | Yes |
+| Reviewer/council assignment | None | Roles configured by QT⁸ (default TP¹, TB¹): Assign with conflict check | Monitor progress¹ | None | None | Accept/decline invitation | Unit scope, assigned officer scope, conflict policy | Submitted, resubmitted, under review | Yes |
 | Reviewer scoring and comments | None | Only via own council/reviewer assignment⁵ | Only via own council/reviewer assignment⁵ | None | None | Review/Submit assigned (any role except QT) | Reviewer assignment scope | Under review | Yes |
 | Evaluation consolidation / Trình kết quả | None | TP¹, TB¹, CV³: Review/Update/Submit | Monitor progress¹ | None | None | Council secretary: synthesis/minutes (note 6) | Unit scope, conflict policy | Under review | Yes |
 | Approval/rejection of topic and funding | None | Route only (TB → TP) | GĐ only: Approve/Reject | Read result | Read result if participating | None | Unit scope, conflict policy | Ready for approval | Yes |
@@ -438,7 +439,7 @@ Module tables use the same column groups as §8. Where a module row and §7 disa
 | Review proposal completeness | None | TB¹, CV³ | None | Read own | Read if participating | None | Unit / assigned officer scope | Submitted, resubmitted | Yes | FR15, Story 3.1 |
 | Request supplement | None | TB¹, CV³ | None | Read own request | Read if participating | None | Unit / assigned officer scope | Submitted, needs supplement | Yes | FR15, Story 3.1 |
 | Respond to supplement request | None | Read | None | Update/Submit own | None | None | Own proposal scope | Needs supplement | Yes | FR16, Story 3.1 |
-| Invite/assign/revoke reviewer or council member | None | TP¹, TB¹, CV³ with conflict check | Monitor progress¹ | None | None | Accept or decline (reason required) | Unit scope, assigned officer scope, conflict policy | Submitted, resubmitted, under review | Yes | FR17, FR67a, Story 3.2 |
+| Invite/assign/revoke reviewer or council member | None | Roles configured by QT⁸ (default TP¹, TB¹) with conflict check | Monitor progress¹ | None | None | Accept or decline (reason required) | Unit scope, assigned officer scope, conflict policy | Submitted, resubmitted, under review | Yes | FR17, FR67a, Story 3.2 |
 | Access assigned review package | None | Only via own assignment | Only via own assignment | None | None | Title/role/deadline before acceptance; full package after acceptance | Reviewer assignment scope | Under review | No | FR18, Story 3.2 |
 | Submit score/comment/recommendation | None | Only via own assignment⁵ | Only via own assignment⁵ | None | None | Review/Submit assigned | Reviewer assignment scope | Under review | Yes | FR18, Story 3.3 |
 | Consolidate, finalize, submit evaluation result | None | TP¹, TB¹, CV³ without conflict | Monitor progress¹ | None | None | Council secretary⁶ | Unit scope | Under review, ready for approval | Yes | FR19, Story 3.4 |
@@ -645,11 +646,11 @@ follows these rules.
 
 | Operation | Required checks | Evidence / disclosure |
 | --- | --- | --- |
-| Search eligible accounts | TP¹/TB¹ or assigned CV³; assignable state; current completeness evidence; active candidate; evaluation reviewers/council members and IRB members from any account with a scientific CV (never QT); no PI/team conflict or live duplicate | Account ID, display name, username, display-only unit title |
+| Search eligible accounts | Roles configured by QT per council type⁸ (default TP¹/TB¹; assigned CV³ only if ticked); assignable state; current completeness evidence; active candidate; evaluation reviewers/council members and IRB members from any account with a scientific CV (never QT); no PI/team conflict or live duplicate | Account ID, display name, username, display-only unit title |
 | Invite either duty | Recheck eligibility, proposal context, effective dates/deadline | Atomic invitation and audit |
 | Accept / decline | Invitee only; decline requires reason; council tờ trình can be routed only when every member has accepted | Before acceptance only title, role, deadline and inviter |
 | Read package/files or submit own review | Accepted assignment, no participation conflict, applicable state and disclosure; may cross unit boundaries | Own assignment and review only |
-| Revoke either duty | TP¹/TB¹ or assigned CV³, no actor conflict, assignable state, nonblank reason | Retain history and submitted reviews; immediately end access |
+| Revoke either duty | Roles configured by QT⁸ (default TP¹/TB¹; assigned CV³ only if ticked), no actor conflict, assignable state, nonblank reason | Retain history and submitted reviews; immediately end access |
 
 Council members who accepted can read the dossier only after BGĐ signs the council
 establishment decision.
