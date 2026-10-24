@@ -9,9 +9,10 @@ import {
   getAssignmentRoleLabel,
   getRecommendationLabel,
   normalizeAssignmentRole,
-  resolveProposalReviewAccess,
+  grantsReviewAccess,
   REVIEW_ASSIGNMENT_STATUS,
   REVIEW_ASSIGNMENT_STATUS_LABELS,
+  INVITATION_STATUS_LABELS,
   REVIEW_STATUS
 } from "../proposals-shared/proposal-review-access.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
@@ -22,7 +23,7 @@ import {
   filterCurrentRoundAssignments,
   assertCurrentCompletenessEvidence,
   assertReviewAssignmentReadScope,
-  assertScientificManagementHeadScope,
+  assertProposalManagementWriteScope,
   findCurrentSubmissionEvidence,
   findEvaluationProposal,
   resolveActorConflict,
@@ -39,6 +40,7 @@ type ReviewerCandidate = {
   status: string;
   unit: string;
   researcherProfileId: string | null;
+  systemRole: string | null;
 };
 
 const ASSIGNMENT_INCLUDE = {
@@ -75,7 +77,7 @@ export class ProposalReviewAssignmentsService {
 
   async candidates(actor: SafeUserContext, proposalId: string, query: unknown = "") {
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    assertScientificManagementHeadScope(actor, proposal);
+    await assertProposalManagementWriteScope(this.prisma, actor, proposal);
     assertProposalStatus(proposal, REVIEWER_ASSIGNABLE_STATUSES, "Hồ sơ không ở trạng thái cho phép phân công đánh giá.");
     if (typeof query !== "string") {
       throw new BadRequestException({ message: "Từ khóa tìm kiếm người đánh giá không hợp lệ." });
@@ -89,6 +91,10 @@ export class ProposalReviewAssignmentsService {
     const accounts = await this.prisma.user.findMany({
       where: {
         status: "active",
+        // Ứng viên: mọi tài khoản active có lý lịch khoa học, trừ QT và chính người phân công (Story 5.11).
+        systemRole: { not: "SYSTEM_ADMIN" },
+        researcherProfile: { isNot: null },
+        id: { not: actor.id },
         OR: [
           { displayName: { contains: search, mode: "insensitive" } },
           { username: { contains: search, mode: "insensitive" } }
@@ -119,8 +125,9 @@ export class ProposalReviewAssignmentsService {
     if (!isWorkflowVisibleStatus(proposal.status)) throw new ForbiddenException();
     if ((await this.participation.evaluateConflict(actor.id, proposalId)).conflicted) throw new ForbiddenException({ message: "Không được xem dữ liệu phản biện của hồ sơ mình tham gia." });
     const assignments = await this.findCurrentRoundAssignments(proposal);
-    const access = resolveProposalReviewAccess(assignments.filter((assignment) => assignment.reviewerUserId === actor.id));
-    const reviews = access.isAssignedReviewer ? [] : await this.findReviews(proposalId);
+    // Người được mời (kể cả chưa chấp nhận) không đọc phiếu của người khác.
+    const isInvitee = assignments.some((assignment) => assignment.reviewerUserId === actor.id);
+    const reviews = isInvitee ? [] : await this.findReviews(proposalId);
     return assignments.map((assignment) => this.toAssignmentResponse(assignment, reviews));
   }
 
@@ -136,7 +143,7 @@ export class ProposalReviewAssignmentsService {
       return result;
     }
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    assertScientificManagementHeadScope(actor, proposal);
+    await assertProposalManagementWriteScope(this.prisma, actor, proposal);
     assertProposalStatus(proposal, REVIEWER_ASSIGNABLE_STATUSES, "Chỉ hồ sơ đã nộp hoặc đang đánh giá mới được phân công người đánh giá.");
     const actorConflict = await resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId);
     if (actorConflict.conflicted) {
@@ -144,8 +151,9 @@ export class ProposalReviewAssignmentsService {
     }
 
     await this.assertCompletenessEvidence(proposal);
+    await this.assertNoPendingCouncil(proposalId);
     const submissionEvidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
-    const candidate = await this.resolveReviewerCandidate(input);
+    const candidate = await this.resolveReviewerCandidate(input, actor.id);
     if (input.assignmentRole !== undefined && !["reviewer", "committee_member"].includes(String(input.assignmentRole))) throw new BadRequestException({ message: "Vai trò phân công không hợp lệ." });
     const assignmentRole = normalizeAssignmentRole(input.assignmentRole);
     if (assignmentRole === "reviewer" && await this.prisma.proposalReviewAssignment.count({
@@ -191,7 +199,16 @@ export class ProposalReviewAssignmentsService {
       select: { id: true }
     });
     if (managementOfficer) {
-      throw new BadRequestException({ code: "CONFLICT_DENIED", message: "Không thể phân công cán bộ đang phụ trách hồ sơ làm người phản biện." });
+      await this.auditLog.record({
+        action: "assign-reviewer",
+        result: "failure",
+        actorId: actor.id,
+        targetEntity: "proposal-review-assignment",
+        targetEntityId: proposalId,
+        username: actor.username,
+        reason: JSON.stringify({ proposalId, candidateUserId: candidate.id, assignmentRole, contextVersion: input.contextVersion, reasonCode: "management_officer" })
+      });
+      return new BadRequestException({ code: "CONFLICT_DENIED", message: "Không thể phân công cán bộ đang phụ trách hồ sơ làm người phản biện." });
     }
 
     // Any non-revoked assignment blocks a new one, not just an open one: a reviewer who already
@@ -219,6 +236,7 @@ export class ProposalReviewAssignmentsService {
             researcherProfileId: candidate.researcherProfileId,
             assignmentRole,
             status: REVIEW_ASSIGNMENT_STATUS.assigned,
+            invitationStatus: "invited",
             assignedById: actor.id,
             assignedAt,
             effectiveFrom,
@@ -269,6 +287,7 @@ export class ProposalReviewAssignmentsService {
               researcherProfileId: candidate.researcherProfileId,
               reviewerUsername: candidate.username,
               assignmentRole,
+              invitationStatus: "invited",
               contextVersion: input.contextVersion,
               effectiveFrom: effectiveFrom.toISOString(),
               effectiveUntil: effectiveUntil?.toISOString() ?? null,
@@ -292,10 +311,12 @@ export class ProposalReviewAssignmentsService {
    */
   async revokeAssignment(actor: SafeUserContext, proposalId: string, assignmentId: string, input: Record<string, unknown> = {}): Promise<any> {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (s, a) => s.revokeAssignment(a, proposalId, assignmentId, input));
-    if ((await this.participation.evaluateConflict(actor.id, proposalId)).conflicted) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được thay đổi phân công." });
+    if ((await resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId)).conflicted) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được thay đổi phân công." });
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    assertScientificManagementHeadScope(actor, proposal);
+    await assertProposalManagementWriteScope(this.prisma, actor, proposal);
     assertProposalStatus(proposal, REVIEWER_ASSIGNABLE_STATUSES, "Hồ sơ không ở trạng thái cho phép thay đổi phân công đánh giá.");
+    await this.assertCompletenessEvidence(proposal);
+    await this.assertNoPendingCouncil(proposalId);
 
     const assignment = await this.findAssignmentById(proposalId, assignmentId);
     const submissionEvidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
@@ -397,8 +418,10 @@ export class ProposalReviewAssignmentsService {
       }
     })) as ProposalReviewRecord[];
 
-    const visible = [];
+    const visible: typeof assignments = [];
+    const preview: typeof assignments = [];
     for (const assignment of assignments) {
+      if (assignment.invitationStatus === "declined") continue;
       const proposal = assignment.proposal as EvaluationProposalRecord;
       let currentSubmissionEventId = "";
       try {
@@ -407,15 +430,34 @@ export class ProposalReviewAssignmentsService {
         continue;
       }
       if (assignment.reviewedSubmissionEventId !== currentSubmissionEventId) continue;
+      if (!isWorkflowVisibleStatus(assignment.proposal?.status ?? "") || (await this.participation.evaluateConflict(actor.id, assignment.proposalId)).conflicted) continue;
+      if (!grantsReviewAccess(assignment)) {
+        preview.push(assignment);
+        continue;
+      }
       const access = await this.reviewAccess.resolveForProposal(actor.id, assignment.proposalId, asOf);
-      const conflict = await this.participation.evaluateConflict(actor.id, assignment.proposalId);
-      if (isWorkflowVisibleStatus(assignment.proposal?.status ?? "") && access.isAssignedReviewer && access.assignmentId === assignment.id && !conflict.conflicted) visible.push(assignment);
+      if (access.isAssignedReviewer && access.assignmentId === assignment.id) visible.push(assignment);
     }
-    return visible.map((assignment) => {
+    // Trước khi chấp nhận và trước khi BGĐ ký hội đồng: chỉ tên hồ sơ, vai trò, hạn và người mời (Story 5.11).
+    const previews = preview.map((assignment) => ({
+      id: assignment.id,
+      proposalId: assignment.proposalId,
+      access: "preview" as const,
+      assignmentRole: normalizeAssignmentRole(assignment.assignmentRole),
+      assignmentRoleLabel: getAssignmentRoleLabel(assignment.assignmentRole),
+      invitationStatus: assignment.invitationStatus ?? "accepted",
+      invitationStatusLabel: INVITATION_STATUS_LABELS[assignment.invitationStatus ?? "accepted"] ?? "",
+      dueDate: assignment.dueDate?.toISOString() ?? "",
+      assignedByDisplayName: assignment.assignedBy?.displayName ?? "",
+      proposal: { title: assignment.proposal?.title ?? "" }
+    }));
+    const granted = visible.map((assignment) => {
       const review = reviews.find((item) => item.assignmentId === assignment.id);
       return {
         id: assignment.id,
         proposalId: assignment.proposalId,
+        access: "granted" as const,
+        invitationStatus: "accepted",
         assignmentRole: normalizeAssignmentRole(assignment.assignmentRole),
         assignmentRoleLabel: getAssignmentRoleLabel(assignment.assignmentRole),
         status: assignment.status,
@@ -437,6 +479,59 @@ export class ProposalReviewAssignmentsService {
         myReviewSubmittedAt: review?.submittedAt?.toISOString() ?? ""
       };
     });
+    return [...previews, ...granted];
+  }
+
+  /**
+   * Story 5.11. Người được mời chấp nhận hoặc từ chối (từ chối bắt buộc lý do). Người mời không có
+   * contextVersion nên không dùng context của hồ sơ; cập nhật có điều kiện trên hàng còn `invited`
+   * dưới khóa hồ sơ, nên không thắng cuộc đua với thu hồi hoặc ký hội đồng.
+   */
+  async respondToInvitation(actor: SafeUserContext, proposalId: string, assignmentId: string, input: Record<string, unknown> = {}) {
+    if (input.decision !== "accept" && input.decision !== "decline") throw new BadRequestException({ message: "Chọn chấp nhận hoặc từ chối lời mời." });
+    const accepting = input.decision === "accept";
+    const reason = typeof input.reason === "string" ? input.reason.trim().slice(0, 2000) : "";
+    if (!accepting && !reason) throw new BadRequestException({ code: "DECLINE_REASON_REQUIRED", message: "Nhập lý do từ chối lời mời." });
+
+    const updated = await this.prisma.$transaction(async (client) => {
+      const tx = client as unknown as PrismaService;
+      await tx.$queryRaw`SELECT id FROM research_proposals WHERE id = ${proposalId} FOR UPDATE`;
+      const proposal = await findEvaluationProposal(tx, proposalId);
+      assertProposalStatus(proposal, REVIEWER_ASSIGNABLE_STATUSES, "Hồ sơ không ở trạng thái cho phép trả lời lời mời.");
+      const assignment = (await tx.proposalReviewAssignment.findUnique({ where: { id: assignmentId }, include: ASSIGNMENT_INCLUDE })) as ReviewAssignmentRecord | null;
+      // Người khác nhận NotFound như hàng không tồn tại: không lộ ai được mời.
+      if (!assignment || assignment.proposalId !== proposalId || assignment.reviewerUserId !== actor.id) throw new NotFoundException({ message: "Không tìm thấy lời mời." });
+      const evidence = await findCurrentSubmissionEvidence(tx, proposal);
+      if (assignment.reviewedSubmissionEventId !== evidence.eventId) throw new BadRequestException({ code: "STALE_ASSIGNMENT_CONTEXT", message: "Lời mời thuộc phiên bản nộp cũ của hồ sơ." });
+      if (assignment.status !== REVIEW_ASSIGNMENT_STATUS.assigned || (assignment.invitationStatus ?? "accepted") !== "invited") {
+        throw new BadRequestException({ code: "INVITATION_NOT_PENDING", message: "Lời mời đã được trả lời hoặc không còn hiệu lực." });
+      }
+      if ((await new ProposalParticipationService(tx).evaluateConflict(actor.id, proposalId)).conflicted) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia hồ sơ không thể nhận lời mời đánh giá." });
+      const respondedAt = await readTransactionClockV1(tx);
+      const invitationStatus = accepting ? "accepted" : "declined";
+      const moved = await tx.proposalReviewAssignment.updateMany({
+        where: { id: assignmentId, status: REVIEW_ASSIGNMENT_STATUS.assigned, invitationStatus: "invited" },
+        data: { invitationStatus, respondedAt, declineReason: accepting ? null : reason } as never
+      });
+      if (moved.count !== 1) throw new BadRequestException({ code: "INVITATION_NOT_PENDING", message: "Lời mời đã được trả lời hoặc không còn hiệu lực." });
+      await tx.researchProposal.update({
+        where: { id: proposalId },
+        data: { authorizationRelationshipVersion: { increment: 1 }, authorizationDelegationVersion: { increment: 1 }, authorizationContextUpdatedAt: respondedAt } as never
+      });
+      await tx.auditLog.create({
+        data: {
+          action: accepting ? "accept-review-invitation" : "decline-review-invitation",
+          result: "success",
+          actorId: actor.id,
+          targetEntity: "proposal-review-assignment",
+          targetEntityId: assignmentId,
+          username: actor.username,
+          reason: JSON.stringify({ proposalId, assignmentRole: normalizeAssignmentRole(assignment.assignmentRole), fromInvitationStatus: "invited", toInvitationStatus: invitationStatus, reason: accepting ? null : reason })
+        }
+      });
+      return { id: assignmentId, proposalId, invitationStatus, respondedAt };
+    });
+    return { id: updated.id, proposalId: updated.proposalId, invitationStatus: updated.invitationStatus, invitationStatusLabel: INVITATION_STATUS_LABELS[updated.invitationStatus], respondedAt: updated.respondedAt.toISOString() };
   }
 
   /**
@@ -626,6 +721,11 @@ export class ProposalReviewAssignmentsService {
       assignmentRoleLabel: getAssignmentRoleLabel(assignment.assignmentRole),
       status: assignment.status,
       statusLabel: REVIEW_ASSIGNMENT_STATUS_LABELS[assignment.status] ?? assignment.status,
+      invitationStatus: assignment.invitationStatus ?? "accepted",
+      invitationStatusLabel: INVITATION_STATUS_LABELS[assignment.invitationStatus ?? "accepted"] ?? "",
+      respondedAt: assignment.respondedAt?.toISOString() ?? "",
+      declineReason: assignment.declineReason ?? "",
+      councilEstablishedAt: assignment.councilEstablishedAt?.toISOString() ?? "",
       assignedById: assignment.assignedById,
       assignedByDisplayName: assignment.assignedBy?.displayName ?? "",
       assignedAt: assignment.assignedAt.toISOString(),
@@ -694,11 +794,17 @@ export class ProposalReviewAssignmentsService {
     return assignment;
   }
 
+  /** Danh sách đang trình BGĐ ký thì không đổi: bản ký phải đúng bản đã duyệt. */
+  private async assertNoPendingCouncil(proposalId: string) {
+    const pending = await this.prisma.approvalSubmission.findFirst({ where: { kind: "EVALUATION_COUNCIL", subjectType: "proposal", subjectId: proposalId, status: "PENDING" }, select: { id: true } });
+    if (pending) throw new BadRequestException({ code: "COUNCIL_SUBMISSION_PENDING", message: "Đang có tờ trình hội đồng chờ duyệt. Trả lại tờ trình trước khi đổi danh sách." });
+  }
+
   private async assertCompletenessEvidence(proposal: EvaluationProposalRecord) {
     await assertCurrentCompletenessEvidence(this.prisma, proposal);
   }
 
-  private async resolveReviewerCandidate(input: Record<string, unknown>): Promise<ReviewerCandidate> {
+  private async resolveReviewerCandidate(input: Record<string, unknown>, actorId: string): Promise<ReviewerCandidate> {
     if (Object.prototype.hasOwnProperty.call(input, "researcherProfileId") || Object.prototype.hasOwnProperty.call(input, "reviewerUsername")) {
       throw new BadRequestException({ message: "Chọn người đánh giá bằng tài khoản." });
     }
@@ -706,16 +812,22 @@ export class ProposalReviewAssignmentsService {
     if (!reviewerUserId || reviewerUserId.length > 80) {
       throw new BadRequestException({ message: "Chọn tài khoản người đánh giá." });
     }
+    if (reviewerUserId === actorId) {
+      throw new BadRequestException({ code: "SELF_ASSIGNMENT_DENIED", message: "Không thể tự phân công chính mình làm người đánh giá." });
+    }
     await this.prisma.$queryRaw`SELECT id FROM users WHERE id = ${reviewerUserId} FOR SHARE`;
     const account = await this.prisma.user.findUnique({
       where: { id: reviewerUserId },
-      select: { id: true, username: true, displayName: true, status: true, unit: true, researcherProfile: { select: { id: true } } }
+      select: { id: true, username: true, displayName: true, status: true, unit: true, systemRole: true, researcherProfile: { select: { id: true } } }
     });
     if (!account || account.status !== "active") {
       throw new BadRequestException({ message: "Tài khoản không hoạt động hoặc không tồn tại." });
     }
+    if (account.systemRole === "SYSTEM_ADMIN" || !account.researcherProfile) {
+      throw new BadRequestException({ code: "CANDIDATE_NOT_ELIGIBLE", message: "Chỉ mời được tài khoản đang hoạt động có lý lịch khoa học (không gồm Quản trị hệ thống)." });
+    }
     const { researcherProfile, ...user } = account;
-    return { ...user, researcherProfileId: researcherProfile?.id ?? null };
+    return { ...user, researcherProfileId: researcherProfile.id };
   }
 
   private readOptionalDueDate(value: unknown) {

@@ -3166,7 +3166,7 @@ So that không thủ tục nào tới Ban giám đốc mà thiếu bước rà s
 **Given** tờ trình do CV hoặc TP lập
 **When** được trình
 **Then** submission bắt đầu ở stage `BOARD_REVIEW` với status `PENDING`
-**And** tờ trình do TB lập bắt đầu ở `HEAD_REVIEW`; tờ trình do TP lập vẫn qua bước TB.
+**And** tờ trình do TB lập bắt đầu ở `HEAD_REVIEW`; tờ trình do TP lập vẫn qua bước TB, và khi TB chuyển thì đi thẳng `LEADERSHIP` (việc lập đã là duyệt của TP, D-037).
 
 **Given** submission ở `BOARD_REVIEW`
 **When** TB¹ không phải tác giả rà soát
@@ -3196,7 +3196,8 @@ So that không thủ tục nào tới Ban giám đốc mà thiếu bước rà s
 **Given** submission ở trạng thái `RETURNED`, `REJECTED` hoặc `CANCELLED`
 **When** người dùng xem hồ sơ nguồn
 **Then** trạng thái và lý do hiển thị read-only theo scope
-**And** quy tắc ai được đặt `REJECTED`/`CANCELLED` theo bản routing của `tuan/DocManS` khi port (câu hỏi mở).
+**And** `REJECTED` chỉ do BGĐ đúng người ký theo loại, đặt ở bước `LEADERSHIP`; TB và TP chỉ chuyển bước hoặc trả lại (`RETURNED`, lý do bắt buộc) (D-037)
+**And** lập tờ trình mới cho cùng (loại, đối tượng) tự chuyển tờ trình `PENDING` cũ sang `CANCELLED`/`CLOSED` trong cùng transaction; unique index chỉ áp dụng khi `status = 'PENDING'` (D-037).
 
 ### Story 5.10: BGĐ ký thành lập hội đồng đánh giá và quyết định đề tài cùng kinh phí [FR73, FR20]
 

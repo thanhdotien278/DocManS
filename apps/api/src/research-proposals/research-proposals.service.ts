@@ -1,4 +1,5 @@
 import { filterCurrentRoundAssignments, summarizeReviewProgress } from "../proposal-evaluations/proposal-evaluation-support.js";
+import { pendingApprovalStages } from "../proposals-shared/approval-routing.js";
 import { runProposalMutation } from "../proposals-shared/proposal-mutation.js";
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 // @ts-ignore The runtime package is JavaScript; its TypeScript source entry supplies this contract.
@@ -191,7 +192,9 @@ export class ResearchProposalsService {
       orderBy: { createdAt: "desc" },
       include: { owner: { select: { displayName: true } } }
     })) as ResearchProposalRecord[];
-    return this.projectProposalList(actor, records);
+    // Hồ sơ chờ phê duyệt chỉ vào hàng đợi của GĐ khi tờ trình đã qua TB và TP (5.7).
+    const stages = await pendingApprovalStages(this.prisma as never, "proposal", records.filter((r) => r.status === "ready_for_approval").map((r) => r.id));
+    return this.projectProposalList(actor, records.filter((r) => r.status !== "ready_for_approval" || stages.get(r.id)?.DECISION_PACKAGE?.stage === "LEADERSHIP"));
   }
 
   private async projectProposalList(actor: SafeUserContext, records: ResearchProposalRecord[]) {
@@ -210,10 +213,10 @@ export class ResearchProposalsService {
     return Promise.all(records
       .filter((proposal) => canReadProposal(actor, proposal, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), managementOfficerByProposal.get(proposal.id)))
       .map(async (proposal) => {
-        const [checked, summaryStatus, reviewReadiness] = await Promise.all([
-          this.hasCurrentCompletenessCheck(proposal), this.findEvaluationSummaryStatus(proposal.id), this.findReviewReadiness(proposal)
+        const [checked, summaryStatus, reviewReadiness, approvalStage] = await Promise.all([
+          this.hasCurrentCompletenessCheck(proposal), this.findEvaluationSummaryStatus(proposal.id), this.findReviewReadiness(proposal), this.findDecisionApprovalStage(proposal.id)
         ]);
-        return this.toProposalResponse(proposal, actor, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), checked, managementOfficerByProposal.get(proposal.id), summaryStatus, reviewReadiness);
+        return this.toProposalResponse(proposal, actor, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), checked, managementOfficerByProposal.get(proposal.id), summaryStatus, reviewReadiness, approvalStage);
       }));
   }
 
@@ -1169,7 +1172,7 @@ export class ResearchProposalsService {
     const completenessCheckCompleted = await this.hasCurrentCompletenessCheck(proposal);
     const managementOfficerHistory = await this.managementOfficers.listHistory(proposal.id);
 
-    const response = this.toProposalResponse(proposal, actor, participation, reviewAccess, completenessCheckCompleted, managementOfficer, evaluationSummaryStatus ?? await this.findEvaluationSummaryStatus(proposal.id), await this.findReviewReadiness(proposal));
+    const response = this.toProposalResponse(proposal, actor, participation, reviewAccess, completenessCheckCompleted, managementOfficer, evaluationSummaryStatus ?? await this.findEvaluationSummaryStatus(proposal.id), await this.findReviewReadiness(proposal), await this.findDecisionApprovalStage(proposal.id));
     const versions = await this.prisma.proposalSubmissionEvent.findMany({ where: { proposalId: proposal.id, toStatus: { in: ["submitted", "resubmitted"] } }, orderBy: { submittedAt: "asc" }, select: { id: true, submittedAt: true, snapshot: true } });
     return {
       ...response,
@@ -1263,7 +1266,8 @@ export class ResearchProposalsService {
     completenessCheckCompleted = false,
     managementOfficer?: ProposalManagementOfficerResolution,
     evaluationSummaryStatus?: string | null,
-    reviewReadiness?: ReturnType<typeof summarizeReviewProgress> | null
+    reviewReadiness?: ReturnType<typeof summarizeReviewProgress> | null,
+    decisionApprovalStage?: string | null
   ) {
     const canEditDraft = this.canEditProposalDraft(actor, proposal);
     const canRead = canReadProposal(actor, proposal, participation, reviewAccess, managementOfficer);
@@ -1280,7 +1284,8 @@ export class ResearchProposalsService {
           canManageFiles: this.canMutateProposalFiles(actor, proposal, participation),
           completenessCheckCompleted,
           evaluationSummaryStatus: evaluationSummaryStatus ?? undefined,
-          allReviewsSubmitted: reviewReadiness?.allReviewsSubmitted ?? false
+          allReviewsSubmitted: reviewReadiness?.allReviewsSubmitted ?? false,
+          decisionApprovalStage: decisionApprovalStage ?? undefined
         })
       : undefined;
 
@@ -1327,6 +1332,12 @@ export class ResearchProposalsService {
       } } : {}),
       ...(canExposeEvaluationSummaryStatus && !participation?.isParticipant && !reviewAccess?.hasReviewConflict && !reviewAccess?.isAssignedReviewer ? { evaluationSummaryStatus: evaluationSummaryStatus ?? "" } : {})
     };
+  }
+
+  /** Bước hiện tại của tờ trình DECISION_PACKAGE đang mở (undefined nếu không có). */
+  private async findDecisionApprovalStage(proposalId: string) {
+    const stages = await pendingApprovalStages(this.prisma as never, "proposal", [proposalId]);
+    return stages.get(proposalId)?.DECISION_PACKAGE?.stage ?? null;
   }
 
   private async findEvaluationSummaryStatus(proposalId: string) {
