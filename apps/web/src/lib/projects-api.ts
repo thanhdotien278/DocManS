@@ -9,14 +9,14 @@ export type ProjectRecord = {
   milestones: Array<{ id: string; title: string; dueDate: string; isImportant: boolean; status: string; responsibleMemberId?: string | null }>;
   checkpoints: Array<{ id: string; title: string; dueDate: string; status: string }>;
   reports: Array<{ id: string; revision: number; status: string; checkpointId?: string; reportingPeriodStart?: string; reportingPeriodEnd?: string; progressResults?: string; issuesRecommendations?: string; reviewReason?: string; responseDeadline?: string; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }>; allowedActions: PermissionActionV1[] }>;
-  requests: Array<{ id: string; requestType: "adjustment" | "extension"; status: string; revision?: number; requesterId?: string; reason?: string; proposedValues?: Record<string, unknown>; decisionNote?: string; responseDeadline?: string; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }>; allowedActions: PermissionActionV1[] }>;
+  requests: Array<{ id: string; requestType: "adjustment" | "extension"; status: string; revision?: number; requesterId?: string; reason?: string; proposedValues?: Record<string, unknown>; decisionNote?: string; responseDeadline?: string; approval?: { stage: string; stageLabel: string; withdrawNote: string } | null; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }>; allowedActions: PermissionActionV1[] }>;
   history: Array<{ id: string; action: string; reason?: string; createdAt: string }>;
   overdue: boolean; approaching: boolean; nearestDeadline: string | null; viewerAuthorization: ViewerAuthorizationV1;
 };
 
 const PROJECT_STATUS_LABELS: Record<string, string> = { preparing: "Chuẩn bị triển khai", executing: "Đang thực hiện", paused: "Tạm dừng", pending_acceptance: "Chờ nghiệm thu", accepted: "Đã nghiệm thu", failed: "Không đạt", closed: "Đóng/lưu trữ" };
 const REPORT_STATUS_LABELS: Record<string, string> = { draft: "Bản nháp", submitted: "Đã nộp", under_review: "Đang xem xét", supplement_requested: "Yêu cầu bổ sung", accepted: "Đã chấp nhận", superseded: "Đã có bản sửa" };
-const REQUEST_STATUS_LABELS: Record<string, string> = { draft: "Bản nháp", submitted: "Đã nộp", under_staff_review: "Chuyên viên đang xem xét", under_staff_validation: "Chuyên viên đang kiểm tra", ready_for_head_decision: "Chờ Trưởng phòng quyết định", supplement_requested: "Yêu cầu bổ sung", approved: "Đã phê duyệt", rejected: "Đã từ chối", withdrawn: "Đã rút" };
+const REQUEST_STATUS_LABELS: Record<string, string> = { draft: "Bản nháp", submitted: "Đã nộp", under_staff_review: "Chuyên viên đang xem xét", under_staff_validation: "Chuyên viên đang kiểm tra", ready_for_head_decision: "Đã trình tờ trình, chờ rà soát và ký", supplement_requested: "Yêu cầu bổ sung", approved: "Đã phê duyệt", rejected: "Đã từ chối", withdrawn: "Đã rút" };
 const MILESTONE_STATUS_LABELS: Record<string, string> = { open: "Đang mở", completed: "Hoàn thành" };
 const ROLE_LABELS: Record<string, string> = { TOPIC_PI: "Chủ nhiệm đề tài", TOPIC_MEMBER: "Thành viên", TOPIC_SECRETARY: "Thư ký" };
 const MEMBER_STATUS_LABELS: Record<string, string> = { ACTIVE: "Đang tham gia", ENDED: "Đã kết thúc" };
@@ -26,7 +26,7 @@ const HISTORY_ACTION_LABELS: Record<string, string> = {
   "project.report.draft": "Tạo bản nháp báo cáo", "project.report.edit-draft": "Cập nhật báo cáo", "project.report.submit": "Nộp báo cáo",
   "project.report.review": "Bắt đầu xem xét báo cáo", "project.report.request-supplement": "Yêu cầu bổ sung báo cáo", "project.report.accept": "Chấp nhận báo cáo"
 };
-const REQUEST_ACTION_LABELS: Record<string, string> = { create: "Tạo yêu cầu", "edit-draft": "Cập nhật yêu cầu", submit: "Nộp yêu cầu", review: "Bắt đầu xem xét yêu cầu", validate: "Kiểm tra hành chính", prepare: "Trình Trưởng phòng", "request-supplement": "Yêu cầu bổ sung", approve: "Phê duyệt", reject: "Từ chối", withdraw: "Rút yêu cầu" };
+const REQUEST_ACTION_LABELS: Record<string, string> = { create: "Tạo yêu cầu", "edit-draft": "Cập nhật yêu cầu", submit: "Nộp yêu cầu", review: "Bắt đầu xem xét yêu cầu", validate: "Kiểm tra hành chính", prepare: "Lập tờ trình", "request-supplement": "Yêu cầu bổ sung", approve: "Phê duyệt", reject: "Từ chối", withdraw: "Rút yêu cầu" };
 // Unknown codes fall back to the raw value so new states stay visible instead of blank.
 export const projectStatusLabel = (value: string) => PROJECT_STATUS_LABELS[value] ?? value;
 export const reportStatusLabel = (value: string) => REPORT_STATUS_LABELS[value] ?? value;

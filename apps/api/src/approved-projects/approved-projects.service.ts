@@ -5,7 +5,8 @@ import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { readTransactionClockV1 } from "../permissions/authorization-v1.service.js";
-import { getOrganizationScopeIds, isLeadership, isResearchOversightAuthority, isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
+import { APPROVAL_SIGNERS, APPROVAL_STAGE_LABELS, cancelPendingApprovals, canSignApproval, closeApprovalSubmission, openApprovalSubmission, type ApprovalKind } from "../proposals-shared/approval-routing.js";
+import { getOrganizationScopeIds, isLeadership, isResearchBoardHead, isResearchOversightAuthority, isResearchManagementHead, isResearchManagementStaff, isScienceDeputyDirector } from "../proposals-shared/proposal-access.js";
 import { isRelationshipActiveAt } from "../proposals-shared/proposal-participation.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { assertProposalContext } from "../proposals-shared/proposal-mutation.js";
@@ -21,6 +22,14 @@ const REPORT_ACCEPTED = "accepted";
 const REPORT_SUPERSEDED = "superseded";
 const ADJUSTMENT = "adjustment";
 const EXTENSION = "extension";
+const REQUEST_KIND: Record<string, ApprovalKind> = { [ADJUSTMENT]: "PROJECT_ADJUSTMENT", [EXTENSION]: "PROJECT_EXTENSION" };
+// Bước CV thẩm định của từng loại; yêu cầu bị trả lại quay về đây (khớp `revertProjectRequest`).
+const APPRAISAL_STATUS: Record<string, string> = { [ADJUSTMENT]: "under_staff_review", [EXTENSION]: "under_staff_validation" };
+// Đã trình = có tờ trình PENDING; bước TB/TP/BGĐ đọc từ tờ trình, không đặt tên trạng thái mới.
+const SUBMITTED_FOR_SIGNATURE = "ready_for_head_decision";
+const SKIP_CONTEXT = Symbol("skip-context");
+const FUNDING_KINDS = ["GRANT", "DISBURSEMENT", "SETTLEMENT"];
+const LIQUIDATABLE = [PROJECT_STATUSES.accepted, PROJECT_STATUSES.failed];
 
 type AnyRecord = Record<string, any>;
 
@@ -33,21 +42,22 @@ const PROJECT_INCLUDE = {
   checkpoints: { orderBy: { dueDate: "asc" } },
   reports: { include: { evidence: { include: { fileRecord: true } }, checkpoint: true, author: { select: { displayName: true, username: true } }, reviewedBy: { select: { displayName: true, username: true } } }, orderBy: [{ revision: "desc" }] },
   requests: { include: { revisions: { orderBy: { revision: "desc" } }, evidence: { include: { fileRecord: true } }, requester: { select: { displayName: true, username: true } }, decisionBy: { select: { displayName: true, username: true } }, preparedBy: { select: { displayName: true, username: true } } }, orderBy: { createdAt: "desc" } },
-  history: { orderBy: { createdAt: "desc" } }
+  history: { orderBy: { createdAt: "desc" } },
+  liquidations: { orderBy: { createdAt: "desc" } }
 };
 
 @Injectable()
 export class ApprovedProjectsService {
   constructor(private readonly prisma: PrismaService, private readonly auditLog: AuditLogService) {}
 
-  private mutate<T>(actor: SafeUserContext, projectId: string, expected: unknown, work: (tx: any, currentActor: SafeUserContext, project: AnyRecord) => Promise<T>): Promise<T> {
+  private mutate<T>(actor: SafeUserContext, projectId: string, expected: unknown | typeof SKIP_CONTEXT, work: (tx: any, currentActor: SafeUserContext, project: AnyRecord) => Promise<T>): Promise<T> {
     return this.prisma.$transaction(async (tx: any) => {
       await tx.$queryRaw`SELECT id FROM users WHERE id = ${actor.id} FOR SHARE`;
       const currentActor = await this.readCurrentActor(tx, actor.id);
       await tx.$queryRaw`SELECT id FROM approved_projects WHERE id = ${projectId} FOR UPDATE`;
       const project = await tx.approvedProject.findUnique({ where: { id: projectId }, include: PROJECT_INCLUDE });
       if (!project) throw new NotFoundException({ message: "Không tìm thấy đề tài đã được duyệt." });
-      assertProjectContext(expected, project);
+      if (expected !== SKIP_CONTEXT) assertProjectContext(expected, project);
       return work(tx, currentActor, project);
     }, { isolationLevel: "Serializable", timeout: 15000 }).catch(async (error: AnyRecord) => {
       const denied = error?.code === "P2034" ? new ConflictException({ code: "CONTEXT_VERSION_MISMATCH" }) : error;
@@ -107,12 +117,13 @@ export class ApprovedProjectsService {
     const authorize = (item: AnyRecord = {}) => projectViewerAuthorizationV1({ actor, project: { ...project, ownerId: projectPi?.userId ?? "" }, projectOfficer: officer, participant: { isParticipant: participant, role: actorMember?.participationRole, effectiveFrom: actorMember?.effectiveFrom?.toISOString?.(), effectiveUntil: actorMember?.effectiveUntil?.toISOString?.() }, responsibleMember, ...item });
     const capability = authorize();
     if (!capability.allowedActions.includes("project.read")) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Không có quyền xem đề tài này." });
+    project.pendingApprovals = await tx.approvalSubmission.findMany({ where: { subjectType: "project", subjectId: projectId, status: "PENDING" } });
     return { project, officer, capability, authorize };
   }
 
   async listProjects(actor: SafeUserContext, options: { overdue?: boolean; approaching?: boolean } = {}) {
     const scopeIds = getOrganizationScopeIds(actor);
-    const where = scopeIds.length ? { OR: [{ hostOrganizationUnitId: { in: scopeIds } }, { members: { some: { userId: actor.id, status: "ACTIVE" } } }, { proposal: { ownerId: actor.id } }] } : { OR: [{ members: { some: { userId: actor.id, status: "ACTIVE" } } }, { proposal: { ownerId: actor.id } }] };
+    const where = isAcademyWide(actor) ? {} : scopeIds.length ? { OR: [{ hostOrganizationUnitId: { in: scopeIds } }, { members: { some: { userId: actor.id, status: "ACTIVE" } } }, { proposal: { ownerId: actor.id } }] } : { OR: [{ members: { some: { userId: actor.id, status: "ACTIVE" } } }, { proposal: { ownerId: actor.id } }] };
     const records = await (this.prisma as any).approvedProject.findMany({ where, include: PROJECT_INCLUDE, orderBy: { createdAt: "desc" } });
     const visible = [];
     for (const project of records) {
@@ -145,7 +156,13 @@ export class ApprovedProjectsService {
     const isPi = member?.participationRole === "TOPIC_PI";
     const isOfficer = !!actor && isResearchManagementStaff(actor) && officer?.officerUserId === actor.id;
     const isHead = !!actor && isResearchManagementHead(actor);
+    const isRouter = !!actor && (isHead || isResearchBoardHead(actor));
+    const isSigner = !!actor && (isLeadership(actor) || isScienceDeputyDirector(actor));
     const detailedCases = isPi || isOfficer || isHead;
+    // TB/TP rà soát và GĐ/PGĐ-KH ký cần thấy yêu cầu thay đổi (trước/sau, lý do, thẩm định).
+    const requestDetail = detailedCases || isRouter || isSigner;
+    const reviewer = isOfficer || isRouter || isSigner;
+    const pending = new Map<string, AnyRecord>((project.pendingApprovals ?? []).map((row: AnyRecord) => [row.subjectRef, row]));
     // A checkpoint whose report is already submitted no longer counts as an owed deadline.
     const reported = new Set((project.reports ?? []).filter((item: any) => [REPORT_SUBMITTED, REPORT_UNDER_REVIEW, REPORT_ACCEPTED].includes(item.status)).map((item: any) => item.checkpointId));
     const deadlines = [project.endDate, ...(project.checkpoints ?? []).filter((item: any) => item.status !== "completed" && !reported.has(item.id)).map((item: any) => item.dueDate), ...(project.milestones ?? []).filter((item: any) => item.status !== "completed").map((item: any) => item.dueDate)].filter((value): value is Date => value instanceof Date);
@@ -166,7 +183,8 @@ export class ApprovedProjectsService {
       source: { proposalId: project.proposalId, submissionEventId: project.sourceSubmissionEventId, decisionId: project.sourceDecisionId },
       startDate: project.startDate?.toISOString?.() ?? null,
       endDate: project.endDate?.toISOString?.() ?? null,
-      scope: project.scopeSnapshot,
+      // Kinh phí từng đề tài không hiển thị cho PGĐ-TD (chỉ số liệu tổng hợp, Story 6.12).
+      scope: actor && isResearchOversightAuthority(actor) ? omitBudget(project.scopeSnapshot) : project.scopeSnapshot,
       plan: project.planSnapshot,
       members: (project.members ?? []).map((member: any) => ({ ...member, effectiveFrom: member.effectiveFrom?.toISOString?.() ?? null, effectiveUntil: member.effectiveUntil?.toISOString?.() ?? null })),
       officer: officer ? { id: officer.id, officerUserId: officer.officerUserId, displayName: (project.managementOfficers ?? []).find((row: AnyRecord) => row.id === officer.id)?.officer?.displayName ?? null, status: officer.status, effectiveFrom: officer.effectiveFrom?.toISOString?.() ?? null, effectiveUntil: officer.effectiveUntil?.toISOString?.() ?? null } : null,
@@ -181,14 +199,16 @@ export class ApprovedProjectsService {
         evidence: (report.evidence ?? []).map((item: AnyRecord) => ({ id: item.id, fileRecordId: item.fileRecordId, file: item.fileRecord ? { id: item.fileRecord.id, originalFileName: item.fileRecord.originalFileName, mimeType: item.fileRecord.mimeType, sizeBytes: item.fileRecord.sizeBytes, status: item.fileRecord.status } : null })),
         allowedActions: itemActions({ report: { status: report.status, authorId: report.authorId } }, "project.report.")
       }) : ({ id: report.id, checkpointId: report.checkpointId, status: report.status, revision: report.revision, deadline: report.deadline?.toISOString?.() ?? null, submittedAt: report.submittedAt?.toISOString?.() ?? null, allowedActions: [] })),
-      requests: (project.requests ?? []).map((request: AnyRecord) => detailedCases && (!isHead || request.requestType === EXTENSION) ? ({
+      requests: (project.requests ?? []).map((request: AnyRecord) => requestDetail ? ({
         id: request.id, projectId: request.projectId, requestType: request.requestType, status: request.status, revision: request.revision, requesterId: request.requesterId, requester: request.requester,
         currentValues: request.currentValues, proposedValues: request.proposedValues, reason: request.reason, decisionNote: request.decisionNote, responseDeadline: request.responseDeadline?.toISOString?.() ?? null, decidedAt: request.decidedAt?.toISOString?.() ?? null,
-        appraisal: actor && ((isResearchManagementStaff(actor) && request.requestType === ADJUSTMENT) || (isResearchManagementHead(actor) && request.requestType === EXTENSION)) ? request.appraisal : undefined,
+        appraisal: reviewer ? request.appraisal : undefined,
+        approval: pending.has(request.id) ? { stage: pending.get(request.id)!.stage, stageLabel: APPROVAL_STAGE_LABELS[pending.get(request.id)!.stage as keyof typeof APPROVAL_STAGE_LABELS], signer: pending.get(request.id)!.signer, withdrawNote: "Nếu không có người rà soát hoặc ký phù hợp, PI có thể rút yêu cầu để giải phóng đề tài." } : null,
         preparedAt: request.preparedAt?.toISOString?.() ?? null, preparedBy: request.preparedBy, revisions: request.revisions, evidence: (request.evidence ?? []).map((item: AnyRecord) => ({ id: item.id, requestRevisionId: item.requestRevisionId, fileRecordId: item.fileRecordId, file: item.fileRecord ? { id: item.fileRecord.id, originalFileName: item.fileRecord.originalFileName, mimeType: item.fileRecord.mimeType, sizeBytes: item.fileRecord.sizeBytes, status: item.fileRecord.status } : null })),
-        allowedActions: itemActions({ request: { requestType: request.requestType, status: request.status, requesterId: request.requesterId } }, `project.${request.requestType}.`)
+        allowedActions: itemActions({ request: { requestType: request.requestType, status: request.status, requesterId: request.requesterId } }, `project.${request.requestType}.`).filter((action: string) => !/\.(approve|reject)$/.test(action) || pending.get(request.id)?.stage === "LEADERSHIP")
       }) : ({ id: request.id, requestType: request.requestType, status: request.status, createdAt: request.createdAt?.toISOString?.() ?? null, decidedAt: request.decidedAt?.toISOString?.() ?? null, allowedActions: [] })),
-      history: (project.history ?? []).map((item: AnyRecord) => ({ id: item.id, action: item.action, fromStatus: item.fromStatus, toStatus: item.toStatus, reason: detailedCases ? item.reason : undefined, createdAt: item.createdAt?.toISOString?.() ?? null, beforeFacts: isOfficer || isHead ? item.beforeFacts : undefined, afterFacts: isOfficer || isHead ? item.afterFacts : undefined })),
+      history: (project.history ?? []).map((item: AnyRecord) => ({ id: item.id, action: item.action, fromStatus: item.fromStatus, toStatus: item.toStatus, reason: requestDetail ? item.reason : undefined, createdAt: item.createdAt?.toISOString?.() ?? null, beforeFacts: isOfficer || isHead || isRouter || isSigner ? item.beforeFacts : undefined, afterFacts: isOfficer || isHead || isRouter || isSigner ? item.afterFacts : undefined })),
+      liquidation: actor ? this.liquidationView(project, actor) : null,
       overdue,
       approaching,
       nearestDeadline: nearest?.toISOString?.() ?? null,
@@ -612,10 +632,9 @@ export class ApprovedProjectsService {
     return this.mutate(actor, projectId, input.contextVersion, async (tx, currentActor, project) => {
       const request = await this.findRequest(tx, project, input.requestId);
       if (request.requestType !== requestType) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED" });
-      if (requestType === ADJUSTMENT || request.status !== "ready_for_head_decision") await this.assertOfficer(tx, currentActor, project);
-      else { this.assertHead(currentActor, project); await this.assertNoEvaluationConflict(tx, currentActor.id, project.proposalId); }
-      const allowed = requestType === ADJUSTMENT ? ["submitted", "under_staff_review"] : ["submitted", "under_staff_validation", "ready_for_head_decision"];
-      if (!allowed.includes(request.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED" });
+      await this.assertOfficer(tx, currentActor, project);
+      // Đã trình thì TB/TP trả lại qua tờ trình; CV chỉ yêu cầu bổ sung trong bước thẩm định.
+      if (!["submitted", APPRAISAL_STATUS[requestType]].includes(request.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED" });
       if (!input.reason || !input.responseDeadline) throw new BadRequestException({ message: "Cần lý do và hạn bổ sung." });
       if (new Date(input.responseDeadline).getTime() <= (await readTransactionClockV1(tx)).getTime()) throw new BadRequestException({ code: "DEADLINE_INVALID", message: "Hạn bổ sung phải ở tương lai." });
       const updated = await tx.projectRequest.update({ where: { id: request.id }, data: { status: "supplement_requested", decisionNote: input.reason, responseDeadline: input.responseDeadline } });
@@ -624,37 +643,38 @@ export class ApprovedProjectsService {
     });
   }
 
-  async prepareExtension(actor: SafeUserContext, projectId: string, input: AnyRecord) {
+  /** CV ghi kết quả thẩm định và lập tờ trình qua Story 5.9; thẩm định tự nó không đổi đề tài (Story 6.11). */
+  async prepareRequest(actor: SafeUserContext, projectId: string, requestType: typeof ADJUSTMENT | typeof EXTENSION, input: AnyRecord) {
     return this.mutate(actor, projectId, input.contextVersion, async (tx, currentActor, project) => {
       await this.assertOfficer(tx, currentActor, project);
       const request = await this.findRequest(tx, project, input.requestId);
-      if (request.requestType !== EXTENSION || request.status !== "under_staff_validation") throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED" });
-      this.assertExtensionValues(project, request.proposedValues);
+      if (request.requestType !== requestType || request.status !== APPRAISAL_STATUS[requestType]) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED" });
+      if (typeof input.note !== "string" || !input.note.trim()) throw new BadRequestException({ code: "APPRAISAL_REQUIRED", message: "Cần ghi kết quả thẩm định trước khi lập tờ trình." });
+      if (requestType === EXTENSION) this.assertExtensionValues(project, request.proposedValues); else this.assertAdjustmentValues(request.proposedValues);
       const now = await readTransactionClockV1(tx);
-      const updated = await tx.projectRequest.update({ where: { id: request.id }, data: { status: "ready_for_head_decision", preparedById: currentActor.id, preparedAt: now, appraisal: { validationNote: input.note ?? "Đã kiểm tra hành chính" } } });
-      await this.recordRequestAction(tx, currentActor, project, request, "prepare", "ready_for_head_decision", { note: input.note ?? null });
+      await openApprovalSubmission(tx, currentActor, { kind: REQUEST_KIND[requestType], subjectType: "project", subjectId: project.id, subjectRef: request.id }, { title: `${requestType === EXTENSION ? "Gia hạn" : "Điều chỉnh"} đề tài: ${project.title}`, hostOrganizationUnitId: project.hostOrganizationUnitId });
+      const updated = await tx.projectRequest.update({ where: { id: request.id }, data: { status: SUBMITTED_FOR_SIGNATURE, preparedById: currentActor.id, preparedAt: now, appraisal: { validationNote: input.note.trim() } } });
+      await this.recordRequestAction(tx, currentActor, project, request, "prepare", SUBMITTED_FOR_SIGNATURE, { note: input.note.trim() });
       return updated;
     });
   }
 
+  /** Chữ ký GĐ hoặc PGĐ-KH trên tờ trình đóng tờ trình và áp dụng thay đổi trong cùng transaction (Story 6.11). */
   async decideRequest(actor: SafeUserContext, projectId: string, requestType: typeof ADJUSTMENT | typeof EXTENSION, decision: "approve" | "reject", input: AnyRecord) {
     return this.mutate(actor, projectId, input.contextVersion, async (tx, currentActor, project) => {
+      if (!canSignApproval(currentActor, APPROVAL_SIGNERS[REQUEST_KIND[requestType]])) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Chỉ Giám đốc hoặc Phó GĐ phụ trách Khoa học ký yêu cầu này." });
       const request = await this.findRequest(tx, project, input.requestId);
-      const required = requestType === ADJUSTMENT ? "under_staff_review" : "ready_for_head_decision";
-      if (request.requestType !== requestType || request.status !== required) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED" });
-      if (requestType === ADJUSTMENT) await this.assertOfficer(tx, currentActor, project);
-      else {
-        this.assertHead(currentActor, project);
-        await this.assertNoEvaluationConflict(tx, currentActor.id, project.proposalId);
-        if (!request.preparedById || !request.preparedAt) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED" });
-      }
-      if (request.requesterId === currentActor.id || this.activeMember(project, currentActor.id)) throw new ForbiddenException({ code: "CONFLICT_DENIED" });
+      if (request.requestType !== requestType || request.status !== SUBMITTED_FOR_SIGNATURE) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED" });
+      if (this.activeMember(project, currentActor.id)) throw new ForbiddenException({ code: "CONFLICT_DENIED" });
+      await this.assertNoEvaluationConflict(tx, currentActor.id, project.proposalId);
       if (decision === "reject" && !input.reason) throw new BadRequestException({ message: "Cần lý do từ chối." });
       const submitted = request.revisions.find((revision: AnyRecord) => revision.revision === request.revision);
       if (!submitted || submitted.status !== "submitted") throw new ConflictException({ code: "CONTEXT_VERSION_MISMATCH" });
       const nextValues = submitted.proposedValues as AnyRecord;
       // Only a change to the values this request depends on makes it stale (not report acceptance or officer reassignment).
       if (!sameBaseline(submitted.currentValues, requestBaseline(project, requestType, nextValues))) throw new ConflictException({ code: "CONTEXT_VERSION_MISMATCH", message: "Giá trị đã duyệt liên quan đã thay đổi; yêu cầu cần được bổ sung và xem xét lại." });
+      // Cổng tờ trình: đúng bước LEADERSHIP, đúng người ký, không xung đột. Lỗi ở đây rollback toàn bộ.
+      await closeApprovalSubmission(tx, currentActor, { kind: REQUEST_KIND[requestType], subjectType: "project", subjectId: project.id, subjectRef: request.id }, decision === "approve" ? "APPROVED" : "REJECTED", input.reason ?? input.note ?? null);
       const endDate = requestType === EXTENSION ? this.assertExtensionValues(project, nextValues) : null;
       const next = endDate ? { endDate, planSnapshot: { ...(project.planSnapshot ?? {}), endDate: endDate.toISOString() } } : this.adjustmentUpdate(project, nextValues);
       const now = await readTransactionClockV1(tx);
@@ -676,7 +696,8 @@ export class ApprovedProjectsService {
       const request = await this.findRequest(tx, project, input.requestId);
       if (request.requesterId !== currentActor.id) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Chỉ PI đã tạo yêu cầu mới được rút yêu cầu." });
       if (request.requestType !== requestType || TERMINAL_REQUEST_STATUSES.includes(request.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Yêu cầu đã kết thúc hoặc không đúng loại." });
-      // Revisions and evidence stay untouched; only the request status becomes terminal.
+      // Revisions and evidence stay untouched; only the request status becomes terminal. Tờ trình đang mở bị hủy (có ghi bước).
+      await cancelPendingApprovals(tx, currentActor, { kind: REQUEST_KIND[requestType], subjectType: "project", subjectId: project.id, subjectRef: request.id }, "PI rút yêu cầu");
       const updated = await tx.projectRequest.update({ where: { id: request.id }, data: { status: "withdrawn" } });
       await this.recordRequestAction(tx, currentActor, project, request, "withdraw", "withdrawn", { reason: input.reason });
       return updated;
@@ -734,6 +755,127 @@ export class ApprovedProjectsService {
     }
   }
 
+  // ---- Story 6.12: kinh phí dạng metadata và thanh lý ----
+
+  private liquidationView(project: AnyRecord, actor: SafeUserContext) {
+    const latest = (project.liquidations ?? [])[0] ?? null;
+    const member = this.activeMember(project, actor.id);
+    return {
+      current: latest ? { id: latest.id, status: latest.status, outcome: latest.outcome, report: latest.report, decisionNote: latest.decisionNote, decidedAt: latest.decidedAt?.toISOString?.() ?? null } : null,
+      eligible: LIQUIDATABLE.includes(project.status),
+      canSign: isLeadership(actor) && !member && latest?.status === "SUBMITTED" && (project.pendingApprovals ?? []).some((row: AnyRecord) => row.kind === "LIQUIDATION" && row.stage === "LEADERSHIP"),
+      note: LIQUIDATABLE.includes(project.status) ? null : "Chỉ đề tài đã nghiệm thu (Accepted) hoặc không đạt (Failed) mới được thanh lý."
+    };
+  }
+
+  /** Ai xem được kinh phí từng đề tài: BGĐ-KH, TP, TB toàn Học viện; CV phụ trách; PP/PI/thành viên chỉ đề tài mình tham gia. PGĐ-TD và QT: không. */
+  private canViewFunding(actor: SafeUserContext, project: AnyRecord, officer: AnyRecord | null) {
+    if (isAcademyWide(actor)) return true;
+    if (isResearchManagementStaff(actor)) return officer?.officerUserId === actor.id;
+    return !isResearchOversightAuthority(actor) && this.activeMember(project, actor.id);
+  }
+
+  /** Ghi kinh phí: GĐ, TP, TB toàn Học viện; CV phụ trách. Không phải PGĐ-KH, PGĐ-TD, PP, QT, PI, thành viên. Người trong đề tài không tự ghi. */
+  private canWriteFunding(actor: SafeUserContext, project: AnyRecord, officer: AnyRecord | null) {
+    const allowed = isLeadership(actor) || isResearchManagementHead(actor) || isResearchBoardHead(actor) || (isResearchManagementStaff(actor) && officer?.officerUserId === actor.id);
+    return allowed && !this.activeMember(project, actor.id);
+  }
+
+  private latestFunding(rows: AnyRecord[]) {
+    const latest = new Map<string, AnyRecord>();
+    for (const row of rows) if (!latest.has(row.entryId) || latest.get(row.entryId)!.version < row.version) latest.set(row.entryId, row);
+    return [...latest.values()].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
+
+  private fundingTotals(records: AnyRecord[]) {
+    return Object.fromEntries(FUNDING_KINDS.map((kind) => [kind, records.filter((row) => row.kind === kind).reduce((sum, row) => sum + Number(row.amount), 0)]));
+  }
+
+  async getFunding(actor: SafeUserContext, projectId: string) {
+    const project = await (this.prisma as any).approvedProject.findUnique({ where: { id: projectId }, include: PROJECT_INCLUDE });
+    if (!project) throw new NotFoundException({ message: "Không tìm thấy đề tài đã được duyệt." });
+    if (isResearchOversightAuthority(actor)) return { restricted: true, records: [], totals: null, canWrite: false };
+    const officer = await this.currentOfficer(this.prisma, projectId);
+    if (!this.canViewFunding(actor, project, officer)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Không có quyền xem kinh phí đề tài này." });
+    const rows = await (this.prisma as any).projectFundingRecord.findMany({ where: { projectId }, orderBy: { createdAt: "asc" } });
+    const records = this.latestFunding(rows);
+    return { restricted: false, records: records.map((row) => ({ entryId: row.entryId, version: row.version, kind: row.kind, amount: String(row.amount), recordedOn: row.recordedOn?.toISOString?.().slice(0, 10) ?? null, note: row.note, fileRecordIds: row.fileRecordIds, recordedById: row.recordedById, createdAt: row.createdAt.toISOString() })), totals: this.fundingTotals(records), canWrite: this.canWriteFunding(actor, project, officer) };
+  }
+
+  /** Số liệu tổng hợp toàn Học viện; không có cột kinh phí từng đề tài. Dành cho vai trò theo dõi (gồm PGĐ-TD). */
+  async fundingSummary(actor: SafeUserContext) {
+    if (!(isAcademyWide(actor) || isResearchOversightAuthority(actor))) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Không có quyền xem số liệu tổng hợp kinh phí." });
+    const rows = await (this.prisma as any).projectFundingRecord.findMany({ orderBy: { createdAt: "asc" } });
+    const byProject = new Map<string, AnyRecord[]>();
+    for (const row of rows) byProject.set(row.projectId, [...(byProject.get(row.projectId) ?? []), row]);
+    const records = [...byProject.values()].flatMap((list) => this.latestFunding(list));
+    return { projectCount: byProject.size, totals: this.fundingTotals(records) };
+  }
+
+  /** Thêm số liệu (entryId mới) hoặc phiên bản sửa của một số liệu (entryId cũ). Chỉ thêm, không ghi đè; mỗi lần có history và audit. */
+  async recordFunding(actor: SafeUserContext, projectId: string, input: AnyRecord) {
+    return this.mutate(actor, projectId, SKIP_CONTEXT, async (tx, currentActor, project) => {
+      const officer = await this.currentOfficer(tx, project.id);
+      if (!this.canWriteFunding(currentActor, project, officer)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Bạn không có quyền ghi số liệu kinh phí của đề tài này." });
+      if ([PREPARING, PROJECT_STATUSES.closed].includes(project.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Đề tài chưa thực hiện hoặc đã đóng." });
+      if (!FUNDING_KINDS.includes(input.kind)) throw new BadRequestException({ message: "Loại số liệu kinh phí không hợp lệ." });
+      const amount = Number(input.amount);
+      if (!Number.isFinite(amount) || amount < 0 || amount >= 1e16) throw new BadRequestException({ message: "Số tiền không hợp lệ." });
+      const files = await this.assertUsableEvidence(tx, project.id, input.fileRecordIds);
+      let entryId = randomUUID();
+      let version = 1;
+      let before: AnyRecord | null = null;
+      if (input.entryId) {
+        const last = await tx.projectFundingRecord.findFirst({ where: { projectId: project.id, entryId: input.entryId }, orderBy: { version: "desc" } });
+        if (!last || last.kind !== input.kind) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Không tìm thấy số liệu cần sửa." });
+        entryId = last.entryId; version = last.version + 1; before = { amount: String(last.amount), note: last.note, version: last.version };
+      }
+      const record = await tx.projectFundingRecord.create({ data: { projectId: project.id, entryId, version, kind: input.kind, amount, recordedOn: projectDay(input.recordedOn), note: optionalText(input.note ?? null), fileRecordIds: files.map((file: AnyRecord) => file.id), recordedById: currentActor.id } });
+      const after = { kind: input.kind, amount: String(record.amount), version, entryId, fileRecordIds: record.fileRecordIds };
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.funding.record", reason: record.note, beforeFacts: before, afterFacts: after } });
+      await new AuditLogService(tx).record({ action: "record-project-funding", result: "success", actorId: currentActor.id, targetEntity: "approved-project", targetEntityId: project.id, username: currentActor.username, beforeFacts: before ?? undefined, afterFacts: after });
+      return { entryId, version, kind: record.kind, amount: String(record.amount) };
+    });
+  }
+
+  /** CV phụ trách lập biên bản thanh lý và trình tờ trình LIQUIDATION (TB → TP → GĐ). Chỉ đề tài Accepted/Failed. */
+  async submitLiquidation(actor: SafeUserContext, projectId: string, input: AnyRecord) {
+    return this.mutate(actor, projectId, input.contextVersion, async (tx, currentActor, project) => {
+      await this.assertOfficer(tx, currentActor, project);
+      if (!LIQUIDATABLE.includes(project.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Chỉ đề tài đã nghiệm thu hoặc không đạt mới được thanh lý." });
+      const report = requiredText(input.report, "report");
+      const files = await this.assertUsableEvidence(tx, project.id, input.fileRecordIds);
+      const live = (project.liquidations ?? []).find((row: AnyRecord) => ["DRAFT", "SUBMITTED", "SIGNED"].includes(row.status));
+      if (live && live.status !== "DRAFT") throw new ConflictException({ code: "LIQUIDATION_EXISTS", message: "Đề tài đã có biên bản thanh lý đang trình hoặc đã ký." });
+      const data = { report, fileRecordIds: files.map((file: AnyRecord) => file.id), outcome: project.status, status: "SUBMITTED", authorId: currentActor.id };
+      const liquidation = live ? await tx.projectLiquidation.update({ where: { id: live.id }, data }) : await tx.projectLiquidation.create({ data: { projectId: project.id, ...data } });
+      await openApprovalSubmission(tx, currentActor, { kind: "LIQUIDATION", subjectType: "project", subjectId: project.id, subjectRef: liquidation.id }, { title: `Thanh lý đề tài: ${project.title}`, hostOrganizationUnitId: project.hostOrganizationUnitId });
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.liquidation.submit", fromStatus: live ? "DRAFT" : null, toStatus: "SUBMITTED", afterFacts: { liquidationId: liquidation.id, outcome: project.status } } });
+      await new AuditLogService(tx).record({ action: "submit-project-liquidation", result: "success", actorId: currentActor.id, targetEntity: "project-liquidation", targetEntityId: liquidation.id, username: currentActor.username, afterFacts: { projectId: project.id, outcome: project.status } });
+      return liquidation;
+    });
+  }
+
+  /** Chỉ GĐ ký thanh lý (PGĐ-KH không). Ký thì biên bản SIGNED và đề tài Accepted/Failed → Closed trong cùng transaction (D-034). */
+  async decideLiquidation(actor: SafeUserContext, projectId: string, decision: "approve" | "reject", input: AnyRecord) {
+    return this.mutate(actor, projectId, input.contextVersion, async (tx, currentActor, project) => {
+      if (!isLeadership(currentActor)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Thanh lý do Giám đốc ký." });
+      const liquidation = (project.liquidations ?? []).find((row: AnyRecord) => row.id === input.liquidationId);
+      if (!liquidation || liquidation.status !== "SUBMITTED" || !LIQUIDATABLE.includes(project.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED" });
+      if (this.activeMember(project, currentActor.id)) throw new ForbiddenException({ code: "CONFLICT_DENIED" });
+      await this.assertNoEvaluationConflict(tx, currentActor.id, project.proposalId);
+      if (decision === "reject" && !input.reason) throw new BadRequestException({ message: "Cần lý do từ chối." });
+      await closeApprovalSubmission(tx, currentActor, { kind: "LIQUIDATION", subjectType: "project", subjectId: project.id, subjectRef: liquidation.id }, decision === "approve" ? "APPROVED" : "REJECTED", input.reason ?? null);
+      const now = await readTransactionClockV1(tx);
+      const status = decision === "approve" ? "SIGNED" : "REJECTED";
+      const updated = await tx.projectLiquidation.update({ where: { id: liquidation.id }, data: { status, decidedById: currentActor.id, decidedAt: now, decisionNote: input.reason ?? null } });
+      if (decision === "approve") await tx.approvedProject.update({ where: { id: project.id }, data: { status: PROJECT_STATUSES.closed, aggregateVersion: { increment: 1 }, authorizationContextUpdatedAt: now } });
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: `project.liquidation.${decision}`, fromStatus: project.status, toStatus: decision === "approve" ? PROJECT_STATUSES.closed : project.status, reason: input.reason ?? null, beforeFacts: { status: project.status, liquidation: "SUBMITTED" }, afterFacts: { status: decision === "approve" ? PROJECT_STATUSES.closed : project.status, liquidation: status, liquidationId: liquidation.id } } });
+      await new AuditLogService(tx).record({ action: `${decision}-project-liquidation`, result: "success", actorId: currentActor.id, targetEntity: "project-liquidation", targetEntityId: liquidation.id, username: currentActor.username, reason: input.reason ?? undefined, beforeFacts: { projectStatus: project.status, status: "SUBMITTED" }, afterFacts: { projectStatus: decision === "approve" ? PROJECT_STATUSES.closed : project.status, status } });
+      return updated;
+    });
+  }
+
   private assertHead(actor: SafeUserContext, project: AnyRecord) {
     this.assertScope(actor, project);
     if (!isResearchManagementHead(actor) || this.activeMember(project, actor.id)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
@@ -750,6 +892,9 @@ export class ApprovedProjectsService {
     await new AuditLogService(tx).record({ action: name, result: "success", actorId: actor.id, targetEntity: "project-request", targetEntityId: request.id, username: actor.username, reason: facts.reason ?? facts.note ?? undefined, beforeFacts: facts.before ?? { status: request.status }, afterFacts: facts.after ?? { status: toStatus } });
   }
 }
+
+function isAcademyWide(actor: SafeUserContext) { return isLeadership(actor) || isScienceDeputyDirector(actor) || isResearchManagementHead(actor) || isResearchBoardHead(actor); }
+function omitBudget(scope: AnyRecord | null) { if (!scope) return scope; const { budgetMetadata: _hidden, ...rest } = scope; return rest; }
 
 // The approved values a request depends on: end date for an extension; the touched scope/plan keys,
 // touched milestones and (for membership changes) the active member set for an adjustment.

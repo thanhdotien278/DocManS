@@ -13,6 +13,8 @@ import { ProposalReviewsService } from "../dist/apps/api/proposal-evaluations/pr
 import { ProposalEvaluationSummaryService } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-summary.service.js";
 import { ProposalEvaluationCouncilService } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-council.service.js";
 import { ProposalDecisionsService } from "../dist/apps/api/proposal-evaluations/proposal-decisions.service.js";
+import { ApprovedProjectsService } from "../dist/apps/api/approved-projects/approved-projects.service.js";
+import { projectContextVersion } from "../dist/apps/api/approved-projects/project-capability-v1.js";
 import { advanceApprovalSubmission, assertReadyForLeadership, closeApprovalSubmission, openApprovalSubmission, returnApprovalSubmission } from "../dist/apps/api/proposals-shared/approval-routing.js";
 
 // Story 5.9 trên PostgreSQL thật (index duy nhất từng phần, cancel khi lập lại, transaction không ghi một phần).
@@ -49,7 +51,10 @@ async function setup(code, { board = true } = {}) {
     head2: await make("truongphong2", "RESEARCH_MANAGEMENT_HEAD"),
     director: await make("giamdoc", "LEADERSHIP_APPROVAL_AUTHORITY"),
     science: await make("pgdkh", "SCIENCE_DEPUTY_DIRECTOR"),
-    pi: await make("chunhiem", "RESEARCHER_INTERNAL_USER")
+    pi: await make("chunhiem", "RESEARCHER_INTERNAL_USER"),
+    member: await make("thanhvien", "RESEARCHER_INTERNAL_USER"),
+    oversight: await make("pgdtd", "RESEARCH_OVERSIGHT_AUTHORITY"),
+    admin: await make("quantri", "SYSTEM_ADMIN")
   };
   const intake = await db.proposalIntakePeriod.create({ data: { code: `DOT-${code}`, title: "Đợt", startsAt: new Date("2026-01-01"), endsAt: new Date("2027-01-01"), requiredPackage: [] } });
   const proposal = await db.researchProposal.create({ data: { intakePeriodId: intake.id, ownerId: people.pi.id, hostOrganizationUnitId: org.id, title: `Đề tài ${code}`, status: "under_review", submittedAt: new Date() } });
@@ -399,4 +404,161 @@ test("5.10 council: return changes nothing at the source; signer who reviews the
   await db.proposalMember.create({ data: { proposalId: proposal.id, userId: people.science.id, name: "PGĐ", role: "TOPIC_MEMBER", organization: "x" } });
   await assert.rejects(() => f.decideCouncil(people.science, "sign"), code(403), "người ký tham gia hồ sơ");
   assert.equal(await db.proposalReviewAssignment.count({ where: { proposalId: proposal.id, councilEstablishedAt: { not: null } } }), 0);
+});
+
+// Story 6.11/6.12: điều chỉnh, gia hạn, kinh phí và thanh lý đề tài đi qua tờ trình, trên PostgreSQL thật.
+async function projectFixture(code, status = "executing") {
+  const ctx = await setup(code);
+  const { people, proposal, org } = ctx;
+  const event = await db.proposalSubmissionEvent.create({ data: { proposalId: proposal.id, actorId: people.pi.id, fromStatus: "draft", toStatus: "submitted", snapshot: {} } });
+  const decision = await db.proposalDecision.create({ data: { proposalId: proposal.id, decision: "approved", decidedById: people.head.id, fromStatus: "under_review", toStatus: "approved" } });
+  const project = await db.approvedProject.create({ data: { proposalId: proposal.id, sourceSubmissionEventId: event.id, sourceDecisionId: decision.id, hostOrganizationUnitId: org.id, title: "Đề tài", scopeSnapshot: { title: "Đề tài", summary: "S", budgetMetadata: { total: 1000 } }, planSnapshot: { endDate: "2030-01-01T00:00:00.000Z" }, status, startDate: new Date("2026-01-01"), endDate: new Date("2030-01-01"), createdById: people.staff.id } });
+  const since = new Date(Date.now() - 86400000);
+  for (const [user, role] of [[people.pi, "TOPIC_PI"], [people.member, "TOPIC_MEMBER"]]) await db.approvedProjectMember.create({ data: { projectId: project.id, userId: user.id, name: user.displayName, role, participationRole: role, status: "ACTIVE", effectiveFrom: since, createdById: people.staff.id } });
+  await db.projectManagementOfficer.create({ data: { projectId: project.id, officerUserId: people.staff.id, assignedById: people.head.id, status: "ACTIVE", effectiveFrom: since, assignmentContextVersion: {} } });
+  const service = new ApprovedProjectsService(db, new AuditLogService(db));
+  const ctxVersion = async () => projectContextVersion(await db.approvedProject.findUnique({ where: { id: project.id } }));
+  const reload = () => db.approvedProject.findUnique({ where: { id: project.id } });
+  const pending = (kind) => db.approvalSubmission.findFirst({ where: { kind, subjectType: "project", subjectId: project.id }, orderBy: { createdAt: "desc" } });
+  const request = async (type, proposedValues, appraise = true) => {
+    const draft = await service[type === "extension" ? "createExtension" : "createAdjustment"](people.pi, project.id, { proposedValues, reason: "Lý do", contextVersion: await ctxVersion() });
+    await service.submitRequest(people.pi, project.id, type, { requestId: draft.id, contextVersion: await ctxVersion() });
+    if (type === "extension") await service.validateExtension(people.staff, project.id, { requestId: draft.id, contextVersion: await ctxVersion() });
+    else await service.reviewAdjustment(people.staff, project.id, { requestId: draft.id, contextVersion: await ctxVersion() });
+    if (appraise) await service.prepareRequest(people.staff, project.id, type, { requestId: draft.id, note: "Đủ căn cứ", contextVersion: await ctxVersion() });
+    return draft.id;
+  };
+  const sign = async (actor, type, id, decision = "approve", reason) => service.decideRequest(actor, project.id, type, decision, { requestId: id, reason, contextVersion: await ctxVersion() });
+  const toLeadership = async (kind) => { const row = await pending(kind); await ctx.advance(people.board, row); await ctx.advance(people.head, row); return row; };
+  return { ...ctx, project, service, ctxVersion, reload, pending, request, sign, toLeadership, status: async (id) => (await db.projectRequest.findUnique({ where: { id } })).status };
+}
+
+test("6.11: CV appraises and opens a tờ trình that changes nothing; only GĐ/PGĐ-KH at LEADERSHIP sign, and the signature applies the change atomically", async () => {
+  const f = await projectFixture("P1");
+  const { people } = f;
+  const id = await f.request("extension", { requestedEndDate: "2030-06-01" });
+  assert.equal(await f.status(id), "ready_for_head_decision");
+  assert.equal((await f.reload()).endDate.toISOString().slice(0, 10), "2030-01-01", "thẩm định không đổi đề tài");
+  const submission = await f.pending("PROJECT_EXTENSION");
+  assert.deepEqual([submission.stage, submission.subjectRef, submission.submittedById], ["BOARD_REVIEW", id, people.staff.id]);
+
+  await assert.rejects(() => f.sign(people.director, "extension", id), code(400), "chưa tới BGĐ");
+  for (const who of [people.staff, people.head, people.board, people.oversight, people.pi, people.member, people.admin]) await assert.rejects(() => f.sign(who, "extension", id), code(403));
+  await f.toLeadership("PROJECT_EXTENSION");
+  for (const who of [people.staff, people.head, people.board, people.oversight, people.admin]) await assert.rejects(() => f.sign(who, "extension", id), (error) => error.response?.code === "ACTION_NOT_GRANTED", "CV/TP/TB/PGĐ-TD/QT không ký");
+  assert.equal((await f.reload()).endDate.toISOString().slice(0, 10), "2030-01-01");
+
+  await db.approvedProjectMember.create({ data: { projectId: f.project.id, userId: people.science.id, name: "PGĐ-KH", role: "TOPIC_MEMBER", participationRole: "TOPIC_MEMBER", status: "ACTIVE", effectiveFrom: new Date(Date.now() - 1000), createdById: people.staff.id } });
+  await assert.rejects(() => f.sign(people.science, "extension", id), code(403), "người ký có xung đột");
+  await db.approvedProjectMember.deleteMany({ where: { userId: people.science.id } });
+
+  await f.sign(people.science, "extension", id);
+  const project = await f.reload();
+  assert.equal(project.endDate.toISOString().slice(0, 10), "2030-06-01");
+  assert.equal(project.planSnapshot.endDate, "2030-06-01T00:00:00.000Z");
+  assert.equal(project.aggregateVersion, 1);
+  assert.equal(await f.status(id), "approved");
+  assert.deepEqual([(await f.pending("PROJECT_EXTENSION")).status, (await f.pending("PROJECT_EXTENSION")).stage], ["APPROVED", "CLOSED"]);
+  const history = await db.projectHistory.findFirst({ where: { projectId: project.id, action: "project.extension.approve" } });
+  assert.equal(history.actorId, people.science.id);
+  assert.equal(history.beforeFacts.endDate, "2030-01-01T00:00:00.000Z");
+
+  const adjustment = await f.request("adjustment", { scope: { summary: "Mới" } });
+  await f.toLeadership("PROJECT_ADJUSTMENT");
+  await f.sign(people.director, "adjustment", adjustment);
+  assert.equal((await f.reload()).scopeSnapshot.summary, "Mới");
+  assert.equal((await f.reload()).scopeSnapshot.budgetMetadata.total, 1000, "thay đổi chỉ chạm khóa được duyệt");
+});
+
+test("6.11: a tờ trình returned by TB/TP sends the request back to CV; PI withdrawing cancels the open tờ trình", async () => {
+  const f = await projectFixture("P2");
+  const { people } = f;
+  const id = await f.request("adjustment", { scope: { summary: "Mới" } });
+  const first = await f.pending("PROJECT_ADJUSTMENT");
+  await f.advance(people.board, first);
+  await f.giveBack(people.head, first, "Thiếu căn cứ");
+  assert.equal(await f.status(id), "under_staff_review");
+  assert.equal((await db.projectRequest.findUnique({ where: { id } })).preparedAt, null);
+  assert.equal((await db.approvalSubmission.findUnique({ where: { id: first.id } })).status, "RETURNED");
+  assert.ok(await db.projectRequestHistory.findFirst({ where: { requestId: id, action: "project.adjustment.return", reason: "Thiếu căn cứ" } }));
+  await assert.rejects(() => f.sign(people.director, "adjustment", id), code(400));
+
+  await f.service.prepareRequest(people.staff, f.project.id, "adjustment", { requestId: id, note: "Đã bổ sung", contextVersion: await f.ctxVersion() });
+  const second = await f.pending("PROJECT_ADJUSTMENT");
+  assert.notEqual(second.id, first.id);
+  assert.equal(second.status, "PENDING");
+  await f.service.withdrawRequest(people.pi, f.project.id, "adjustment", { requestId: id, reason: "Không còn cần", contextVersion: await f.ctxVersion() });
+  const cancelled = await db.approvalSubmission.findUnique({ where: { id: second.id }, include: { steps: true } });
+  assert.deepEqual([cancelled.status, cancelled.stage], ["CANCELLED", "CLOSED"]);
+  assert.ok(cancelled.steps.some((step) => step.action === "CANCEL" && step.actorId === people.pi.id));
+  assert.equal(await f.status(id), "withdrawn");
+  const view = await f.service.getProject(people.pi, f.project.id);
+  assert.equal(view.requests[0].status, "withdrawn");
+});
+
+test("6.12: funding metadata is versioned and audited; only GĐ/TP/TB/assigned CV write; PGĐ-TD sees no per-project funding anywhere", async () => {
+  const f = await projectFixture("P3");
+  const { people, service } = f;
+  const write = (actor, extra = {}) => service.recordFunding(actor, f.project.id, { kind: "GRANT", amount: 500000000, recordedOn: "2026-03-01", note: "Đợt 1", ...extra });
+  const granted = await write(people.director);
+  assert.equal(granted.version, 1);
+  for (const who of [people.head, people.board, people.staff]) await write(who, { kind: "DISBURSEMENT", amount: 100 });
+  for (const who of [people.science, people.oversight, people.deputy, people.admin, people.pi, people.member]) await assert.rejects(() => write(who), (error) => error.response?.code === "ACTION_NOT_GRANTED", who.displayName);
+  await assert.rejects(() => write(people.staff2), (error) => error.response?.code === "ACTION_NOT_GRANTED", "CV không phụ trách");
+
+  const fixed = await write(people.head, { entryId: granted.entryId, amount: 450000000, note: "Điều chỉnh số liệu" });
+  assert.equal(fixed.version, 2);
+  assert.equal((await db.projectFundingRecord.count({ where: { entryId: granted.entryId } })), 2, "bản cũ được giữ");
+  const audit = await db.auditLog.findFirst({ where: { action: "record-project-funding", targetEntityId: f.project.id }, orderBy: { timestamp: "desc" } });
+  assert.equal(audit.actorId, people.head.id);
+  assert.equal(audit.beforeFacts.version, 1);
+  const history = await db.projectHistory.findFirst({ where: { projectId: f.project.id, action: "project.funding.record" }, orderBy: { createdAt: "desc" } });
+  assert.equal(history.afterFacts.version, 2);
+
+  for (const who of [people.director, people.science, people.head, people.board, people.staff, people.pi, people.member]) {
+    const funding = await service.getFunding(who, f.project.id);
+    assert.equal(funding.restricted, false, who.displayName);
+    assert.equal(funding.records.find((row) => row.entryId === granted.entryId).amount, "450000000", "bản mới nhất");
+  }
+  await assert.rejects(() => service.getFunding(people.staff2, f.project.id), code(403));
+  assert.deepEqual(await service.getFunding(people.oversight, f.project.id), { restricted: true, records: [], totals: null, canWrite: false });
+  assert.equal((await service.fundingSummary(people.oversight)).totals.GRANT, 450000000);
+
+  const detail = await service.getProject(people.oversight, f.project.id);
+  assert.equal(detail.scope.budgetMetadata, undefined, "chi tiết đề tài không lộ kinh phí");
+  assert.equal((await service.listProjects(people.oversight)).every((row) => row.scope?.budgetMetadata === undefined), true);
+  assert.equal((await service.getProject(people.director, f.project.id)).scope.budgetMetadata.total, 1000);
+});
+
+test("6.12: CV submits LIQUIDATION only for an Accepted/Failed project; GĐ alone signs and the project closes atomically; PGĐ-KH is refused; return goes back to draft", async () => {
+  const f = await projectFixture("P4", "executing");
+  const { people, service } = f;
+  const liquidate = async () => service.submitLiquidation(people.staff, f.project.id, { report: "Biên bản thanh lý", contextVersion: await f.ctxVersion() });
+  await assert.rejects(liquidate, code(400), "đề tài đang thực hiện chưa thanh lý được");
+  await assert.rejects(async () => service.submitLiquidation(people.head, f.project.id, { report: "x", contextVersion: await f.ctxVersion() }), code(403));
+
+  await db.approvedProject.update({ where: { id: f.project.id }, data: { status: "failed" } });
+  const liquidation = await liquidate();
+  const row = await f.pending("LIQUIDATION");
+  assert.deepEqual([row.stage, row.signer, row.subjectRef, liquidation.outcome], ["BOARD_REVIEW", "DIRECTOR", liquidation.id, "failed"]);
+  await assert.rejects(liquidate, code(409), "chỉ một biên bản đang trình");
+
+  await f.advance(people.board, row);
+  await f.giveBack(people.head, row, "Thiếu biên bản quyết toán");
+  assert.equal((await db.projectLiquidation.findUnique({ where: { id: liquidation.id } })).status, "DRAFT");
+  await liquidate();
+  const resubmitted = await f.pending("LIQUIDATION");
+  assert.equal(resubmitted.status, "PENDING");
+  await f.toLeadership("LIQUIDATION");
+
+  const decide = async (actor, decision, reason) => service.decideLiquidation(actor, f.project.id, decision, { liquidationId: liquidation.id, reason, contextVersion: await f.ctxVersion() });
+  for (const who of [people.science, people.head, people.board, people.staff, people.oversight, people.pi]) await assert.rejects(() => decide(who, "approve"), code(403), who.displayName);
+  assert.equal((await f.reload()).status, "failed");
+  await decide(people.director, "approve");
+  const closed = await f.reload();
+  assert.equal(closed.status, "closed", "Failed vẫn được đóng (D-034)");
+  assert.equal((await db.projectLiquidation.findUnique({ where: { id: liquidation.id } })).status, "SIGNED");
+  assert.equal((await f.pending("LIQUIDATION")).status, "APPROVED");
+  const history = await db.projectHistory.findFirst({ where: { projectId: closed.id, action: "project.liquidation.approve" } });
+  assert.deepEqual([history.fromStatus, history.toStatus, history.actorId], ["failed", "closed", people.director.id]);
 });
