@@ -621,6 +621,12 @@ model ProposalReviewAssignment {
   dueDate        DateTime?        @map("due_date")
   revokedAt      DateTime?        @map("revoked_at")
   completedAt    DateTime?        @map("completed_at")
+  /// invited → accepted | declined (Story 5.11). Hàng cũ trước 5.11 đã là accepted.
+  invitationStatus String         @default("invited") @map("invitation_status")
+  respondedAt    DateTime?        @map("responded_at")
+  declineReason  String?          @map("decline_reason")
+  /// Set khi BGĐ ký tờ trình EVALUATION_COUNCIL (Story 5.10); chỉ khi đó thành viên đã chấp nhận mới đọc được hồ sơ.
+  councilEstablishedAt DateTime?  @map("council_established_at")
   /// The immutable submission event this assignment evaluates. Nullable only for historical rows
   /// created before the golden-flow binding was introduced.
   reviewedSubmissionEventId String? @map("reviewed_submission_event_id")

@@ -31,11 +31,11 @@ test('readiness requires exactly two reviewers, at least three distinct council 
   assert.equal(service.summarizeProgress(duplicate, submitted(duplicate)).allReviewsSubmitted, false);
 });
 
-test('CV not in charge cannot synthesize; assignment stays TP-only until Story 5.11', async () => {
+test('CV not in charge cannot invite reviewers or synthesize', async () => {
   const prisma = { researchProposal: { findUnique: async () => proposal }, proposalManagementOfficer: { findFirst: async () => null } };
   const assignments = new ProposalReviewAssignmentsService(prisma, {}, participation, access);
   assignments.transactional = true;
-  await assert.rejects(() => assignments.assignReviewer(actor, proposal.id, { reviewerUserId: 'third' }), /Trưởng phòng/);
+  await assert.rejects(() => assignments.assignReviewer(actor, proposal.id, { reviewerUserId: 'third' }), /không còn là chuyên viên phụ trách/);
   const summary = new ProposalEvaluationSummaryService(prisma, {}, {}, {}, participation, access);
   summary.transactional = true;
   for (const method of ['saveEvaluationSummary', 'finalizeEvaluationSummary', 'submitCompletedPackage']) {
