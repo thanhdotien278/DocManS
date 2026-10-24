@@ -1,0 +1,107 @@
+{
+  "options": "Chọn người đủ điều kiện",
+  "council": {
+    "status": 200,
+    "body": {
+      "council": {
+        "contextVersion": {
+          "domain": "proposal",
+          "recordId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+          "aggregateVersion": 1792832866215,
+          "relationshipVersion": 4,
+          "conflictVersion": 2,
+          "delegationVersion": 4,
+          "policyVersion": "v1"
+        },
+        "roundId": "e597c518-73f3-4a86-8a7c-4b3e19227d75",
+        "status": "FORMING",
+        "statusLabel": "Đang lập",
+        "legacyRound": true,
+        "config": {
+          "memberCount": 7,
+          "structure": {
+            "council_chair": 1,
+            "reviewer": 2,
+            "committee_member": 3,
+            "council_secretary": 1
+          }
+        },
+        "slots": [
+          {
+            "position": "council_chair",
+            "positionLabel": "Chủ tịch hội đồng",
+            "required": 1,
+            "filled": 0,
+            "accepted": 0
+          },
+          {
+            "position": "reviewer",
+            "positionLabel": "Phản biện",
+            "required": 2,
+            "filled": 0,
+            "accepted": 0
+          },
+          {
+            "position": "committee_member",
+            "positionLabel": "Ủy viên",
+            "required": 3,
+            "filled": 1,
+            "accepted": 0
+          },
+          {
+            "position": "council_secretary",
+            "positionLabel": "Thư ký hội đồng",
+            "required": 1,
+            "filled": 0,
+            "accepted": 0
+          }
+        ],
+        "blockers": [
+          "Cần 1 Chủ tịch hội đồng (hiện 0).",
+          "Cần 2 Phản biện (hiện 0).",
+          "Cần 3 Ủy viên (hiện 1).",
+          "Cần 1 Thư ký hội đồng (hiện 0).",
+          "1 thành viên đã từ chối: thu hồi và mời người khác."
+        ],
+        "viewer": {
+          "canInvite": true,
+          "inviteBlockedReason": "",
+          "canRevoke": true,
+          "canSubmit": false,
+          "submitBlockedReason": "Cần 1 Chủ tịch hội đồng (hiện 0).",
+          "canSign": false,
+          "canReturn": false,
+          "signBlockedReason": ""
+        },
+        "approval": null,
+        "establishedAt": "",
+        "members": [
+          {
+            "assignmentId": "92bdacd2-d204-44ab-bbdc-026ef6b9b6bb",
+            "reviewerUserId": "user-test_external10",
+            "displayName": "Nhà nghiên cứu test ngoài đơn vị 10",
+            "username": "test_external10",
+            "unit": "Đơn vị ngoài",
+            "assignmentRole": "committee_member",
+            "assignmentRoleLabel": "Ủy viên",
+            "scoring": true,
+            "invitationStatus": "declined",
+            "invitationStatusLabel": "Đã từ chối",
+            "declineReason": "QA kiểm lại: lời mời phải còn dòng Đã từ chối.",
+            "respondedAt": "2026-10-24T09:07:46.204Z",
+            "dueDate": "2026-11-07T16:59:59.999Z",
+            "assignedByDisplayName": "TS. Nguyễn Minh Phương",
+            "councilEstablishedAt": ""
+          }
+        ]
+      }
+    }
+  },
+  "direct": {
+    "status": 400,
+    "body": {
+      "code": "ROUTING_ACTOR_UNAVAILABLE",
+      "message": "TS. Đỗ Minh Trung là người duy nhất xử lý một bước của tờ trình hội đồng nên không thể làm thành viên."
+    }
+  }
+}

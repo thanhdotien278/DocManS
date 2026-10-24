@@ -1,0 +1,88 @@
+{
+  "time": "2026-10-24T08:59:32.236Z",
+  "case": "K6",
+  "url": "http://localhost:3001/my-reviews",
+  "text": "Đến nội dung chính\nHỆ THỐNG QUẢN LÝ NGHIÊN CỨU KHOA HỌC, CÔNG NGHỆ VÀ ĐỔI MỚI SÁNG TẠO\nHọc viện Quân y\nN\nNhà nghiên cứu test nội bộ 02\nKhoa Toán - Tin học\nDashboard\nLý lịch khoa học\nHồ sơ của tôi\nĐề tài đang thực hiện\nBáo cáo định kỳ\nCông việc của tôi\nThông báo\nĐánh giá của tôi\nDashboard /\nĐánh giá của tôi\n\nNHẬN XÉT\n\nĐánh giá của tôi\n\nCác hồ sơ bạn được phân công đánh giá, hạn nhận xét và tình trạng phiếu chấm điểm.\n\nHồ sơ được phân công\n\n0 hồ sơ · 0 phiếu chưa gửi · 1 lời mời\n\nLỜI MỜI\nHỒ SƠ\tVAI TRÒ\tHẠN\tNGƯỜI MỜI\tTRẢ LỜI\n\nQA-CODEX-HDTD-20261024-01\n\tPhản biện\t7 thg 11, 2026\tTS. Nguyễn Minh Phương\tChấp nhận Từ chối",
+  "links": [
+    {
+      "text": "Đến nội dung chính",
+      "href": "#main-content"
+    },
+    {
+      "text": "HỆ THỐNG QUẢN LÝ NGHIÊN CỨU KHOA HỌC, CÔNG NGHỆ VÀ ĐỔI MỚI SÁNG TẠO\nHọc viện Quân y",
+      "href": "/dashboard"
+    },
+    {
+      "text": "",
+      "href": "/change-password"
+    },
+    {
+      "text": "Dashboard",
+      "href": "/dashboard"
+    },
+    {
+      "text": "Lý lịch khoa học",
+      "href": "/my-profile"
+    },
+    {
+      "text": "Hồ sơ của tôi",
+      "href": "/my-proposals"
+    },
+    {
+      "text": "Đề tài đang thực hiện",
+      "href": "/my-projects"
+    },
+    {
+      "text": "Báo cáo định kỳ",
+      "href": "/periodic-reports"
+    },
+    {
+      "text": "Công việc của tôi",
+      "href": "/my-tasks"
+    },
+    {
+      "text": "Thông báo",
+      "href": "/notifications"
+    },
+    {
+      "text": "Đánh giá của tôi",
+      "href": "/my-reviews"
+    },
+    {
+      "text": "Dashboard",
+      "href": "/dashboard"
+    },
+    {
+      "text": "Lý lịch khoa học",
+      "href": "/my-profile"
+    },
+    {
+      "text": "Hồ sơ của tôi",
+      "href": "/my-proposals"
+    },
+    {
+      "text": "Đề tài đang thực hiện",
+      "href": "/my-projects"
+    },
+    {
+      "text": "Báo cáo định kỳ",
+      "href": "/periodic-reports"
+    },
+    {
+      "text": "Công việc của tôi",
+      "href": "/my-tasks"
+    },
+    {
+      "text": "Thông báo",
+      "href": "/notifications"
+    },
+    {
+      "text": "Đánh giá của tôi",
+      "href": "/my-reviews"
+    },
+    {
+      "text": "Dashboard",
+      "href": "/dashboard"
+    }
+  ]
+}

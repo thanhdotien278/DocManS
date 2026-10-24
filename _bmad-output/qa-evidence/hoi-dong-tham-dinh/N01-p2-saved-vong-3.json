@@ -1,0 +1,25 @@
+{
+  "text": "Đến nội dung chính\nHỆ THỐNG QUẢN LÝ NGHIÊN CỨU KHOA HỌC, CÔNG NGHỆ VÀ ĐỔI MỚI SÁNG TẠO\nHọc viện Quân y\nN\nNhà nghiên cứu test nội bộ 09\nKhoa Toán - Tin học\nDashboard\nLý lịch khoa học\nHồ sơ của tôi\nĐề tài đang thực hiện\nBáo cáo định kỳ\nCông việc của tôi\nThông báo\nĐánh giá của tôi\nDashboard /\nQuản lý đề tài /\nChi tiết hồ sơ\n\nCHI TIẾT HỒ SƠ\n\nHồ sơ đề xuất\n\nCập nhật thông tin nháp, tải tài liệu, kiểm tra mức độ sẵn sàng, nộp chính thức và xem lịch sử nộp.\n\nTải lại hồ sơ\nYêu cầu bổ sung\n\nLý do, hạn phản hồi và trạng thái xử lý của vòng bổ sung\n\nChưa có yêu cầu bổ sung\n\nCán bộ phụ trách có thể gửi yêu cầu khi hồ sơ đã nộp cần hoàn thiện thêm.\n\nLý do bổ sung\nHạn phản hồi\nYêu cầu bổ sung\n\nBạn không được cấp quyền thực hiện hành động này.\n\nBiên bản và dự thảo tổng hợp\n\nThư ký hội đồng soạn dự thảo; Trưởng phòng, Trưởng ban hoặc Chuyên viên phụ trách chốt và trình\n\nĐã gửi 0/6 phiếu · Còn chờ 6 · Điểm trung bình: Chưa có\n\nChưa có phiếu nào được gửi\n\nPhiếu ẩn danh sẽ hiện ở đây khi thành viên hội đồng gửi phiếu.\n\nNội dung tổng hợp/biên bản\nKết luận tổng hợp\n-- Chọn kết luận --\nĐề nghị phê duyệt\nĐề nghị chỉnh sửa\nĐề nghị không phê duyệt\n\nĐã lưu bản nháp.\n\nLưu nháp\nTệp tài liệu\n\nTheo dõi từng tài liệu bắt buộc và metadata nộp hồ sơ\n\nThuyết minh đề tài\n\napplication/pdf · tối đa 5MB\n\nHoạt động\nChọn tệp\nMô tả tài liệu\nTải tệp\n\nTrạng thái hồ sơ hiện không cho phép hành động này.\n\nTÊN TỆP\tMÔ TẢ TÀI LIỆU\tKÍCH THƯỚC\tNGƯỜI TẢI LÊN\tTHỜI GIAN NỘP\tTHAO TÁC\n\nQA-K16-proposal-form.pdf\n\tChưa có mô tả\t10 KB\tKhông xác định\t16:02 24 thg 10, 2026\t\nDự toán kinh phí\n\napplication/pdf · tối đa 5MB\n\nHoạt động\nChọn tệp\nMô tả tài liệu\nTải tệp\n\nTrạng thái hồ sơ hiện không cho phép hành động này.\n\nTÊN TỆP\tMÔ TẢ TÀI LIỆU\tKÍCH THƯỚC\tNGƯỜI TẢI LÊN\tTHỜI GIAN NỘP\tTHAO TÁC\n\nQA-K16-budget-form.pdf\n\tChưa có mô tả\t10 KB\tKhông xác định\t16:02 24 thg 10, 2026\t\nTimeline\n\nLịch sử nộp và thay đổi trạng thái chính\n\nNGƯỜI THỰC HIỆN\tTHỜI GIAN\tNỘI DUNG\nKhông xác định\t16:02 24 thg 10, 2026\tPI nộp hồ sơ chính thức\nKhông xác định\t16:02 24 thg 10, 2026\tĐã kiểm tra hồ sơ đầy đủ\nKhông xác định\t16:07 24 thg 10, 2026\tNgười có quyền thành lập hội đồng mở vòng đánh giá và mời thành viên\nKhông xác định\t16:31 24 thg 10, 2026\tLưu bản nháp tổng hợp đánh giá\nKhông xác định\t16:40 24 thg 10, 2026\tLưu bản nháp tổng hợp đánh giá",
+  "fields": [
+    {
+      "tag": "TEXTAREA",
+      "id": "",
+      "value": "",
+      "disabled": true,
+      "readOnly": false
+    },
+    {
+      "tag": "TEXTAREA",
+      "id": "",
+      "value": "QA vòng 2: kiểm chứng nạp lại bản nháp thư ký hồ sơ 02.\nQA vòng 3: xác nhận lưu bổ sung và nạp lại ngày 24/10/2026.",
+      "disabled": false,
+      "readOnly": false
+    },
+    {
+      "tag": "SELECT",
+      "id": "",
+      "value": "approve",
+      "disabled": false
+    }
+  ]
+}
