@@ -209,8 +209,10 @@ and request-specific actions:
 | `project.extension.approve`, `project.extension.reject` | GĐ or PGĐ-KH signer, after TB → TP routing |
 | `project.adjustment.withdraw`, `project.extension.withdraw` | Active PI who is the requester; project executing/paused; request non-terminal; required reason → `withdrawn` |
 
-TB and TP steps use the tờ trình routing actions on `tuan/DocManS`; the state
-preconditions above follow the former state names until that reconciliation.
+TB and TP steps use the shared tờ trình routing (`/approvals`, Story 5.9). The former
+state names are kept and mapped to routing in
+`_bmad-output/implementation-artifacts/spec-6-11-6-12-adjustment-extension-funding-liquidation.md`;
+`approve`/`reject` are granted only while the tờ trình is at `LEADERSHIP`.
 CV, TB and TP cannot sign; PP, PGĐ-TD and QT cannot appraise, route or sign.
 Enforce these denials in capabilities and direct APIs.
 Use existing `allowedActions`, `blockedActions`, denial reasons and context tokens.

@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
-import { assignProjectOfficerPipe, createProjectPipe, projectDecisionPipe, projectMutationPipe, projectReportPipe, projectReportReviewPipe, projectReportSubmissionPipe, projectRequestPipe, projectWithdrawPipe, readRequestType, revokeProjectOfficerPipe } from "./approved-projects.dto.js";
+import { assignProjectOfficerPipe, createProjectPipe, projectDecisionPipe, projectFundingPipe, projectLiquidationPipe, projectMutationPipe, projectReportPipe, projectReportReviewPipe, projectReportSubmissionPipe, projectRequestPipe, projectWithdrawPipe, readRequestType, revokeProjectOfficerPipe } from "./approved-projects.dto.js";
 import { ApprovedProjectsService } from "./approved-projects.service.js";
 
 function filters(value: Record<string, string>) {
@@ -16,6 +16,9 @@ export class ApprovedProjectsController {
 
   @Get()
   async list(@Req() req: RequestWithCurrentUser, @Query() query: Record<string, string>) { return { projects: await this.projects.listProjects(req.currentUser!, filters(query)) }; }
+
+  @Get("funding/summary")
+  async fundingSummary(@Req() req: RequestWithCurrentUser) { return { summary: await this.projects.fundingSummary(req.currentUser!) }; }
 
   @Get("monitor")
   async monitor(@Req() req: RequestWithCurrentUser, @Query() query: Record<string, string>) { return { projects: await this.projects.listMonitoring(req.currentUser!, filters(query)) }; }
@@ -74,8 +77,8 @@ export class ApprovedProjectsController {
   @Post(":id/requests/extension/:requestId/validate")
   async validateExtension(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("requestId") requestId: string, @Body(projectDecisionPipe) body: any) { return { request: await this.projects.validateExtension(req.currentUser!, id, { ...body, requestId }) }; }
 
-  @Post(":id/requests/extension/:requestId/prepare")
-  async prepareExtension(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("requestId") requestId: string, @Body(projectDecisionPipe) body: any) { return { request: await this.projects.prepareExtension(req.currentUser!, id, { ...body, requestId }) }; }
+  @Post(":id/requests/:type/:requestId/prepare")
+  async prepare(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("type") type: string, @Param("requestId") requestId: string, @Body(projectDecisionPipe) body: any) { return { request: await this.projects.prepareRequest(req.currentUser!, id, readRequestType(type), { ...body, requestId }) }; }
 
   @Post(":id/requests/:type/:requestId/supplement")
   async supplementRequest(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("type") type: string, @Param("requestId") requestId: string, @Body(projectDecisionPipe) body: any) { return { request: await this.projects.requestSupplement(req.currentUser!, id, readRequestType(type), { ...body, requestId }) }; }
@@ -88,4 +91,19 @@ export class ApprovedProjectsController {
 
   @Post(":id/requests/:type/:requestId/withdraw")
   async withdraw(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("type") type: string, @Param("requestId") requestId: string, @Body(projectWithdrawPipe) body: any) { return { request: await this.projects.withdrawRequest(req.currentUser!, id, readRequestType(type), { ...body, requestId }) }; }
+
+  @Get(":id/funding")
+  async funding(@Req() req: RequestWithCurrentUser, @Param("id") id: string) { return { funding: await this.projects.getFunding(req.currentUser!, id) }; }
+
+  @Post(":id/funding")
+  async recordFunding(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectFundingPipe) body: any) { return { funding: await this.projects.recordFunding(req.currentUser!, id, body) }; }
+
+  @Post(":id/liquidation")
+  async submitLiquidation(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectLiquidationPipe) body: any) { return { liquidation: await this.projects.submitLiquidation(req.currentUser!, id, body) }; }
+
+  @Post(":id/liquidation/:liquidationId/approve")
+  async approveLiquidation(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("liquidationId") liquidationId: string, @Body(projectDecisionPipe) body: any) { return { liquidation: await this.projects.decideLiquidation(req.currentUser!, id, "approve", { ...body, liquidationId }) }; }
+
+  @Post(":id/liquidation/:liquidationId/reject")
+  async rejectLiquidation(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("liquidationId") liquidationId: string, @Body(projectDecisionPipe) body: any) { return { liquidation: await this.projects.decideLiquidation(req.currentUser!, id, "reject", { ...body, liquidationId }) }; }
 }

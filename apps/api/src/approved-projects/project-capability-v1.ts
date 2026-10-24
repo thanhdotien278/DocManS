@@ -55,6 +55,9 @@ function isHead(actor: SafeUserContext) { return actor.systemRole === "RESEARCH_
 function isStaff(actor: SafeUserContext) { return actor.systemRole === "RESEARCH_MANAGEMENT_STAFF"; }
 function isLeadership(actor: SafeUserContext) { return actor.systemRole === "LEADERSHIP_APPROVAL_AUTHORITY"; }
 function isOversight(actor: SafeUserContext) { return actor.systemRole === "RESEARCH_OVERSIGHT_AUTHORITY"; }
+function isSignerRole(actor: SafeUserContext) { return actor.systemRole === "LEADERSHIP_APPROVAL_AUTHORITY" || actor.systemRole === "SCIENCE_DEPUTY_DIRECTOR"; }
+// GĐ, PGĐ-KH, TP và TB xem toàn Học viện; các vai trò khác theo đơn vị.
+function academyWide(actor: SafeUserContext) { return isHead(actor) || isSignerRole(actor) || actor.systemRole === "RESEARCH_BOARD_HEAD"; }
 function inScope(actor: SafeUserContext, project: ProjectCapabilityInput["project"]) { return actor.organizationScopes.some((scope) => scope.id === project.hostOrganizationUnitId); }
 function activeOfficer(officer: ProjectOfficerFact | null | undefined, actorId: string, asOf = new Date()) {
   return !!officer && officer.status === "ACTIVE" && officer.officerUserId === actorId && officer.effectiveFrom <= asOf && (officer.effectiveUntil === null || asOf < officer.effectiveUntil);
@@ -67,8 +70,11 @@ export function projectViewerAuthorizationV1(input: ProjectCapabilityInput): Vie
   const hasOfficer = officerFact !== null;
   const participant = input.participant?.isParticipant === true;
   const isPi = input.project.ownerId === input.actor.id && scoped;
-  const canRead = scoped && (isPi || participant || isHead(input.actor) || isLeadership(input.actor) || isOversight(input.actor) || (isStaff(input.actor) && hasOfficer));
-  const canMonitor = scoped && (isHead(input.actor) || isLeadership(input.actor) || isOversight(input.actor) || hasOfficer || isPi || participant);
+  const wide = academyWide(input.actor);
+  const canRead = wide || (scoped && (isPi || participant || isOversight(input.actor) || (isStaff(input.actor) && hasOfficer)));
+  const canMonitor = wide || (scoped && (isOversight(input.actor) || hasOfficer || isPi || participant));
+  // Chữ ký GĐ/PGĐ-KH trên tờ trình là đường quyết định cuối duy nhất (Story 6.11); người trong đề tài không ký.
+  const canSign = isSignerRole(input.actor) && !participant && !isPi;
   const canOperate = scoped && isStaff(input.actor) && hasOfficer && !participant && !isPi;
   const canHeadDecide = scoped && isHead(input.actor) && !participant && !isPi;
   const canPi = isPi && input.project.status === PROJECT_STATUSES.executing;
@@ -78,7 +84,7 @@ export function projectViewerAuthorizationV1(input: ProjectCapabilityInput): Vie
   const blockedActions: Array<{ action: PermissionActionV1; code: AuthorizationDecisionCodeV1; reason: string }> = [];
   const allowedActions: PermissionActionV1[] = [];
   for (const action of PROJECT_ACTIONS) {
-    const denial = projectActionDenial(action, { ...input, scoped, officer: hasOfficer, participantActive: participant, isPi, canRead, canMonitor, canOperate, canHeadDecide, canPi, inExecution });
+    const denial = projectActionDenial(action, { ...input, scoped, officer: hasOfficer, participantActive: participant, isPi, canRead, canMonitor, canOperate, canHeadDecide, canSign, canPi, inExecution });
     if (denial) blockedActions.push({ action, ...denial });
     else allowedActions.push(action);
   }
@@ -110,7 +116,7 @@ export function projectViewerAuthorizationV1(input: ProjectCapabilityInput): Vie
   };
 }
 
-function projectActionDenial(action: PermissionActionV1, input: ProjectCapabilityInput & { scoped: boolean; officer: boolean; participantActive: boolean; isPi: boolean; canRead: boolean; canMonitor: boolean; canOperate: boolean; canHeadDecide: boolean; canPi: boolean; inExecution: boolean }): { code: AuthorizationDecisionCodeV1; reason: string } | null {
+function projectActionDenial(action: PermissionActionV1, input: ProjectCapabilityInput & { scoped: boolean; officer: boolean; participantActive: boolean; isPi: boolean; canRead: boolean; canMonitor: boolean; canOperate: boolean; canHeadDecide: boolean; canSign: boolean; canPi: boolean; inExecution: boolean }): { code: AuthorizationDecisionCodeV1; reason: string } | null {
   if (action === "project.read" || action === "project.history.read") return input.canRead ? null : blocked("ACTION_NOT_GRANTED");
   if (action === "project.monitor") return input.canMonitor ? null : blocked("ACTION_NOT_GRANTED");
   if (action === "project.setup.configure" || action === "project.setup.confirm") return input.canOperate && input.project.status === PROJECT_STATUSES.preparing ? null : blocked(input.project.status === PROJECT_STATUSES.preparing ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");
@@ -126,19 +132,25 @@ function projectActionDenial(action: PermissionActionV1, input: ProjectCapabilit
   if (action === "project.adjustment.withdraw" || action === "project.extension.withdraw") return withdrawDenial(action === "project.adjustment.withdraw" ? "adjustment" : "extension", input);
   if (action.startsWith("project.adjustment.")) {
     if (["project.adjustment.create", "project.adjustment.edit-draft", "project.adjustment.submit"].includes(action)) return piRequestDenial("adjustment", action, input);
-    if (action === "project.adjustment.review") return input.canOperate && (!input.request || (input.request.requestType === "adjustment" && input.request.status === "submitted")) ? null : blocked(input.request && input.request.requestType === "adjustment" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
+    if (action === "project.adjustment.review") return input.canOperate && (!input.request || (input.request.requestType === "adjustment" && ["submitted", "under_staff_review"].includes(input.request.status))) ? null : blocked(input.request && input.request.requestType === "adjustment" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
     if (action === "project.adjustment.request-supplement") return input.canOperate && (!input.request || (input.request.requestType === "adjustment" && ["submitted", "under_staff_review"].includes(input.request.status))) ? null : blocked(input.request && input.request.requestType === "adjustment" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
-    if (action === "project.adjustment.approve" || action === "project.adjustment.reject") return input.canOperate && (!input.request || (input.request.requestType === "adjustment" && input.request.status === "under_staff_review")) ? null : blocked(input.request && input.request.requestType === "adjustment" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
+    if (action === "project.adjustment.approve" || action === "project.adjustment.reject") return signDenial("adjustment", input);
   }
   if (action.startsWith("project.extension.")) {
     if (["project.extension.create", "project.extension.edit-draft", "project.extension.submit"].includes(action)) return piRequestDenial("extension", action, input);
     if (action === "project.extension.validate") return input.canOperate && (!input.request || (input.request.requestType === "extension" && input.request.status === "submitted")) ? null : blocked(input.request && input.request.requestType === "extension" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
     if (action === "project.extension.prepare") return input.canOperate && (!input.request || (input.request.requestType === "extension" && input.request.status === "under_staff_validation")) ? null : blocked(input.request && input.request.requestType === "extension" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
-    if (action === "project.extension.request-supplement" && !input.request) return input.canOperate || input.canHeadDecide ? null : blocked("ACTION_NOT_GRANTED");
-    if (action === "project.extension.request-supplement") return (input.canOperate && !!input.request && input.request.requestType === "extension" && ["submitted", "under_staff_validation"].includes(input.request.status)) || (input.canHeadDecide && !!input.request && input.request.requestType === "extension" && input.request.status === "ready_for_head_decision") ? null : blocked(input.request && input.request.requestType === "extension" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
-    if (action === "project.extension.approve" || action === "project.extension.reject") return input.canHeadDecide && (!input.request || (input.request.requestType === "extension" && input.request.status === "ready_for_head_decision")) ? null : blocked(input.request && input.request.requestType === "extension" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
+    if (action === "project.extension.request-supplement" && !input.request) return input.canOperate ? null : blocked("ACTION_NOT_GRANTED");
+    if (action === "project.extension.request-supplement") return input.canOperate && !!input.request && input.request.requestType === "extension" && ["submitted", "under_staff_validation"].includes(input.request.status) ? null : blocked(input.request && input.request.requestType === "extension" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
+    if (action === "project.extension.approve" || action === "project.extension.reject") return signDenial("extension", input);
   }
   return blocked("ACTION_NOT_GRANTED");
+}
+
+// Ký: chỉ GĐ/PGĐ-KH, khi yêu cầu đã trình (ready_for_head_decision = có tờ trình đang mở; bước TB/TP do routing quản lý).
+function signDenial(requestType: string, input: ProjectCapabilityInput & { canSign: boolean }) {
+  if (!input.canSign) return blocked("ACTION_NOT_GRANTED");
+  return !input.request || (input.request.requestType === requestType && input.request.status === "ready_for_head_decision") ? null : blocked("WORKFLOW_STATE_DENIED");
 }
 
 // With a report/request in context, PI draft actions also need authorship and an editable state.
