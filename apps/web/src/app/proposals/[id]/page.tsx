@@ -21,7 +21,7 @@ export default async function ProposalDetailPage({
       <PageHeader
         eyebrow="Chi tiết hồ sơ"
         title="Hồ sơ đề xuất"
-        description="Cập nhật thông tin nháp, tải tài liệu, kiểm tra readiness, nộp chính thức và xem lịch sử nộp."
+        description="Cập nhật thông tin nháp, tải tài liệu, kiểm tra mức độ sẵn sàng, nộp chính thức và xem lịch sử nộp."
       />
       <ProposalDetailWorkspace proposalId={id} />
     </>

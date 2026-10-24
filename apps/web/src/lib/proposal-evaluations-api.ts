@@ -392,9 +392,12 @@ export async function decideEvaluationCouncil(proposalId: string, decision: "sig
 }
 
 /** Chỉ thư ký (P7): phiếu ẩn danh "Phiếu 1..N", không có tên người chấm. */
+export type SecretarySummary = Pick<ProposalEvaluationSummary, "status" | "statusLabel" | "summary" | "recommendation" | "recommendationLabel" | "updatedByDisplayName" | "updatedAt">;
+
 export type CouncilAnonymousReviews = {
   reviews: Array<{ label: string; totalScore: number | null; maxTotalScore: number; scoreData: Record<string, number>; recommendation: string; recommendationLabel: string; comment: string; submittedAt: string }>;
   progress: { scoringMemberCount: number; submittedCount: number; pendingCount: number; averageTotalScore: number | null };
+  evaluationSummary?: SecretarySummary | null;
 };
 
 export function loadCouncilAnonymousReviews(proposalId: string) {
