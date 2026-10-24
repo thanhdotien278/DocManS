@@ -4,7 +4,7 @@ import { ProposalReviewAssignmentsService } from '../dist/apps/api/proposal-eval
 import { ProposalEvaluationSummaryService } from '../dist/apps/api/proposal-evaluations/proposal-evaluation-summary.service.js';
 import { proposalContextVersion } from '../dist/apps/api/proposals-shared/proposal-mutation.js';
 
-const actor = { id: 'staff', systemRole: 'SCIENTIFIC_MANAGEMENT_STAFF', organizationScopes: [{ id: 'unit' }] };
+const actor = { id: 'staff', systemRole: 'RESEARCH_MANAGEMENT_STAFF', organizationScopes: [{ id: 'unit' }] };
 const proposal = { id: 'proposal', status: 'under_review', hostOrganizationUnitId: 'unit', updatedAt: new Date(), authorizationRelationshipVersion: 1, authorizationConflictVersion: 1, authorizationDelegationVersion: 1 };
 const participation = { evaluateConflict: async () => ({ conflicted: false }) };
 const access = { resolveForProposal: async () => ({ isAssignedReviewer: false }) };
@@ -44,7 +44,7 @@ test('Staff cannot assign reviewers or synthesize even on an under-review propos
 });
 
 test('Head cannot route a draft or synthesize incomplete current reviews', async () => {
-  const head = { ...actor, systemRole: 'SCIENTIFIC_MANAGEMENT_HEAD' };
+  const head = { ...actor, systemRole: 'RESEARCH_MANAGEMENT_HEAD' };
   const submission = { id: 'submission', submittedAt: new Date(1), snapshot: { members: [], attachments: [], requiredPackage: [] } };
   const prisma = {
     researchProposal: { findUnique: async () => ({ ...proposal, submittedAt: new Date(1) }) },
@@ -62,7 +62,7 @@ test('Head cannot route a draft or synthesize incomplete current reviews', async
 });
 
 test('finalized synthesis refuses a replaced review roster without regenerating its evidence', async () => {
-  const head = { ...actor, systemRole: 'SCIENTIFIC_MANAGEMENT_HEAD' };
+  const head = { ...actor, systemRole: 'RESEARCH_MANAGEMENT_HEAD' };
   const assignments = roster(2, 3).map(row => ({ ...row, reviewedSubmissionEventId: 'submission', reviewer: { status: 'active' } }));
   const reviews = submitted(assignments).map((row, index) => ({ ...row, id: `review-${index}`, submissionEventId: 'submission' }));
   const frozen = { id: 'summary', status: 'finalized', revision: 2, evidenceSnapshot: { lifecycle: 'finalized', submissionEventId: 'submission', assignmentIds: assignments.map(row => row.id), reviewIds: reviews.map(row => row.id) } };

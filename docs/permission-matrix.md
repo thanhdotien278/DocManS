@@ -9,8 +9,8 @@
 > `tuan/DocManS`, chưa merge vào `DocManS`). Khi mâu thuẫn, mục 7 của file này thắng.
 >
 > Các tài liệu liên quan trong `docs/` đã được đồng bộ sang mô hình 10 vai trò ngày
-> 18/10/2026. Riêng code và seed trên nhánh `DocManS` vẫn chạy 7 vai trò cũ cho đến khi
-> merge `tuan/DocManS` (xem [`development/auth-seed-users.md`](development/auth-seed-users.md)).
+> 18/10/2026. Code và seed trên nhánh `DocManS` đã có đủ 10 mã vai trò, nhưng PGĐ-KH, PP,
+> TB chưa có quyền nghiệp vụ cho đến khi port từ `tuan/DocManS` (xem [`development/auth-seed-users.md`](development/auth-seed-users.md)).
 
 ## 1. Purpose
 
@@ -618,8 +618,8 @@ reconciled with the tờ trình routing implemented on `tuan/DocManS`.
 
 - This file is the source of truth for permission implementation; §7 wins on conflict.
 - The ten system role codes are those in §2 (`packages/permissions/src/system-roles.js`
-  on `tuan/DocManS`). The `DocManS` branch still ships the former seven roles until
-  that work is merged.
+  on `tuan/DocManS`). The `DocManS` branch has all ten codes; PGĐ-KH, PP and TB have
+  no business permissions until they are ported.
 - Backend policies combine system role, unit scope, record relationship, assignment,
   workflow state, tờ trình step, and conflict policy.
 - Participation roles (`PROPOSAL_PI`, `TOPIC_PI`, `TOPIC_MEMBER`, `TOPIC_SECRETARY`,

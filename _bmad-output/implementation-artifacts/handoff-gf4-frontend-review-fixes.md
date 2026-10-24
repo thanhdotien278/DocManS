@@ -1,5 +1,7 @@
 # Handoff — GF4 frontend review fixes (13 patches)
 
+> **10-role vocabulary (2026-10-18; `docs/permission-matrix.md`, §7 wins):** where entries below say Head read TP (or TB for review/assignment actions), Staff/"chuyên viên" read CV (acts only on its assigned records), and Leadership read GĐ (topic + funding, liquidation) or GĐ/PGĐ-KH (other signatures). Code identifiers and seeded account names quoted below describe the code as shipped on `DocManS`, which still has the earlier decision paths until stories 1.11 and 6.11.
+
 Created 2026-10-14. Self-contained brief for a new session. Project root: `/Users/Super/DocManS`.
 
 ## Context

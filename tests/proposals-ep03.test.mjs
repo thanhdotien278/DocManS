@@ -20,7 +20,7 @@ const staffUser = {
   displayName: "TS. Nguyễn Minh Phương",
   status: "active",
   role: "scientific-management",
-  systemRole: "SCIENTIFIC_MANAGEMENT_STAFF",
+  systemRole: "RESEARCH_MANAGEMENT_STAFF",
   roleLabel: "Trưởng phòng",
   unit: "Phòng KHQS",
   roles: ["scientific-management"],

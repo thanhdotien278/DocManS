@@ -304,16 +304,21 @@ flowchart TD
 
 ## 6. Trạng thái cốt lõi
 
+Các trạng thái dưới đây ánh xạ vào vòng đời đề tài 9 bước, 2 giai đoạn (D-033)
+theo bảng duy nhất trong `_bmad-output/architecture.md` → "Topic Lifecycle Step
+Mapping (D-033)". Yêu cầu bổ sung chỉ phát sinh ở bước 3 (kiểm tra đầy đủ).
+
 ### Đề xuất
 
 ```mermaid
 stateDiagram-v2
   [*] --> Draft
   Draft --> Submitted: PI nộp
-  Submitted --> UnderReview: bắt đầu thẩm định/đánh giá
-  UnderReview --> SupplementRequested: yêu cầu bổ sung
+  Submitted --> CompletenessCheck: kiểm tra đầy đủ
+  CompletenessCheck --> SupplementRequested: yêu cầu bổ sung
   SupplementRequested --> Resubmitted: PI nộp lại
-  Resubmitted --> UnderReview: kiểm tra lại
+  Resubmitted --> CompletenessCheck: kiểm tra lại
+  CompletenessCheck --> UnderReview: đủ, thẩm định/hội đồng
   UnderReview --> ReadyForApproval: tổng hợp đủ
   ReadyForApproval --> Approved: GĐ phê duyệt
   ReadyForApproval --> Rejected: GĐ không phê duyệt

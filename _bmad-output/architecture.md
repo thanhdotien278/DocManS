@@ -215,17 +215,25 @@ nx add @nx/nest
 ### Authentication & Security
 
 - **Phase 1 authentication:** local application authentication with extensible adapter boundaries for future SSO
-- **System-role model:** exactly one active account-level role per user:
-  `SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`,
-  `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`
+- **System-role model:** exactly one active account-level role per user, from the ten
+  system roles of `docs/permission-matrix.md` §2: `SYSTEM_ADMIN` (QT),
+  `LEADERSHIP_APPROVAL_AUTHORITY` (GĐ), `SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH),
+  `RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD, monitoring only), `RESEARCH_MANAGEMENT_HEAD` (TP),
+  `RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP), `RESEARCH_BOARD_HEAD` (TB, single holder),
+  `RESEARCH_MANAGEMENT_STAFF` (CV), `RESEARCHER_INTERNAL_USER` (NCV) or
+  `EXTERNAL_RESEARCHER_USER` (NNB). Rename note: the former `SCIENTIFIC_MANAGEMENT_HEAD`
+  and `SCIENTIFIC_MANAGEMENT_STAFF` codes became `RESEARCH_MANAGEMENT_HEAD` and
+  `RESEARCH_MANAGEMENT_STAFF`; `RESEARCH_OVERSIGHT_AUTHORITY` no longer means the Science
+  Deputy Director
 - **Record-role model:** proposals derive one `PROPOSAL_PI` from `ownerId` and
   use only `TOPIC_SECRETARY`/`TOPIC_MEMBER` team relationships; approved topics
   use `TOPIC_PI` plus the same team roles. Reviewer, council, ethics, and task
   duties remain typed assignments, never additional global roles
 - **Authorization model:** system role plus organization/data scope plus
   record participation plus assignment scope plus any domain-applicable future
-  delegation plus workflow state plus conflict policy; proposal
-  create/submit/resubmit are PI-only
+  delegation plus workflow state (including the approval-routing stage) plus
+  conflict policy; proposal create/submit/resubmit are PI-only, and the PI may hold
+  any system role except QT/NNB
 - **Session and security strategy:** authenticated web session or token-based app session, but always enforced server-side
 - **Security middleware:** request validation, auth guards, permission checks, audit logging hooks, and rate protection for login-sensitive endpoints
 - **Sensitive file rule:** file metadata visibility and file download access must be permission-checked every time
@@ -239,39 +247,67 @@ nx add @nx/nest
   `WORKFLOW_STATE_DENIED`, `CONFLICT_DENIED`, `DELEGATION_INVALID`,
   `ACTION_NOT_GRANTED`. Delegation cannot override a denial.
 
-#### Scientific Management Head / Staff boundary — 2026-09-21
+#### Phòng KHQS and BGĐ boundary — 2026-10-18
 
-`SCIENTIFIC_MANAGEMENT_HEAD` can read all proposals/projects within explicit
-Scientific Management scope and monitor current officer/unassigned/workload/status/
-deadlines, including officer filters/groups. It is not leadership decision authority
-and visibility alone grants no administrative mutation. Staff management access needs
-an active `PROPOSAL_MANAGEMENT_OFFICER` or `PROJECT_MANAGEMENT_OFFICER` and scope.
-Other Staff relationships grant only their own actions/disclosure, never management.
+Replaces the "Scientific Management Head / Staff boundary — 2026-09-21" section, whose
+Head/Staff/Leadership decision rights are superseded. Authoritative source:
+`docs/permission-matrix.md` (§7 wins on conflict).
 
-Proposal/project modules own these management relationships, their lifecycle, current
-officer query projection and audit. At most one primary officer is active per record;
-reassignment ends the old interval and creates the new one atomically under concurrency
-control. Keep immutable history, actor, time and reason; zero officers means unassigned.
-Do not copy authority from the source proposal to a created project automatically.
+1. **Responsible CV.** TP¹ or TB¹ assigns, reassigns or revokes the responsible CV
+   (`PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER`). On submit, and on
+   resubmit while no officer is active, the system auto-assigns one CV whose segment
+   (mảng = proposal level + nature Quân sự/Dân sự) matches. Tie-break: the more specific
+   segment first, then the CV with fewer active records. Unmatched records show
+   "Chưa có người phụ trách" for TP to assign. CV acts only on records it currently holds;
+   a past assignment grants nothing.
+2. **Approval routing replaces package submission.** Every BGĐ-bound procedure is an
+   `approval_submissions` record with `approval_steps` history (model per
+   `tuan/DocManS`, migration `20261018000000_approval_routing`):
+   - CV drafts and submits; stages `BOARD_REVIEW` (TB) → `HEAD_REVIEW` (TP) →
+     `LEADERSHIP` (signer per kind) → `CLOSED`;
+   - a return at any step goes back to the author with a mandatory reason;
+   - no step skipping and no self-review; TB/TP handle only submissions in their unit scope;
+   - a TB-authored submission starts at `HEAD_REVIEW`; a TP-authored one still passes
+     `BOARD_REVIEW`;
+   - one open submission per kind and subject.
+3. **Adjustment and extension.** The assigned CV appraises the PI's request and drafts
+   the tờ trình → TB → TP → GĐ or PGĐ-KH signs. This includes an adjustment that changes
+   funding. The signature applies the change atomically; appraisal alone applies nothing.
+   CV, TB and TP make no adjustment or extension decision.
+4. **Signatures.** GĐ alone approves topic + funding and liquidation. GĐ or PGĐ-KH signs
+   evaluation/IRB/acceptance council establishment, the IRB certificate, extension and
+   adjustment. A signer cannot be a participant, reviewer or council member on the record.
+5. **Visibility.** Project view is Academy-wide for GĐ, PGĐ-KH, TP and TB; TP and TB manage
+   funding Academy-wide. Proposals remain unit-scoped. Visibility alone grants no mutation.
+6. **Monitoring only.** PP and PGĐ-TD only monitor; PP has no routing step and never
+   substitutes for TP. PGĐ-TD sees aggregate funding only.
 
-Extend existing context/version and capability contracts to retain the access basis:
-Head oversight, management officer, or participation/review/council/task. A resolved
-empty management assignment supplies no management allow; it must not deny an
-otherwise valid independent participation/review grant. Current role,
-scope, assignment lifecycle and conflict changes invalidate stale authorization for
-reads, aggregates, exports, notifications, files and workflow/business history. No
-second authorization engine or generic assignment subsystem is required.
+Proposal/project modules own the management-officer relationships, their lifecycle,
+current-officer query projection and audit. At most one responsible CV is active per
+record; reassignment ends the old interval and creates the new one atomically under
+concurrency control. Keep immutable history, actor (or `System` for auto-assignment),
+time, segment match and reason; zero officers means unassigned. Do not copy authority
+from the source proposal to a created project automatically.
 
-Check participant-versus-management/review/evaluation/acceptance-council/final-decision
-conflicts on both directions of relationship changes and at protected actions; retain
-same-round reviewer/decision and mutually exclusive council-position checks. Head
-oversight never bypasses participant disclosure or conflict restrictions.
+Capability context retains the access basis: TP/TB unit-scope coordination, BGĐ/TP/TB
+Academy-wide project view, responsible CV, routing-step actor, signer, or
+participation/review/council/task. A resolved-empty management assignment supplies no
+management allow and does not deny an otherwise valid independent participation/review
+grant. Role, scope, assignment, routing-stage and conflict changes invalidate stale
+authorization for reads, aggregates, exports, notifications, files and history. No second
+authorization engine or generic assignment subsystem is required.
 
-Head owns officer changes and submission of eligible proposal packages; no proposal
-final decisions. During project execution, assigned Staff finally decides adjustments
-and Head finally decides Staff-prepared extensions. Leadership monitors only.
-Migration adds proposal-owned officer history and role registry checks. Project officer persistence
-awaits the approved-project domain; no orphan generic assignment store is introduced.
+Check officer/reviewer/council member/routing reviewer-approver/signer conflicts against
+participation in both directions of relationship changes and again at protected actions;
+these positions are mutually exclusive on one record. Same-round reviewer/decision and
+mutually exclusive council-position checks remain. Management visibility never bypasses
+participant disclosure or conflict restrictions. If no eligible TB/TP step actor or
+conflict-free signer exists, the PI withdraws the request.
+
+Migration adds proposal-owned officer history and role registry checks; segment
+persistence (`management_portfolios`) and routing persistence port from `tuan/DocManS`.
+Project officer persistence awaits the approved-project domain; no orphan generic
+assignment store is introduced.
 
 #### Authorization Decision Contract
 
@@ -292,7 +328,7 @@ personal-work aggregation, and integration fixtures are defined in
    task relationships for the target record.
 4. For a future domain that explicitly adopts delegation, resolve its
    exact-match grant contract. For proposal create/submit/resubmit, return
-   not-applicable and require the owner-derived internal PI.
+   not-applicable and require the owner-derived PI (any role except QT/NNB).
 5. Evaluate workflow-state guards.
 6. Evaluate conflict and separation-of-duty rules.
 7. Allow only an explicitly permitted action. Otherwise deny with the
@@ -329,17 +365,18 @@ or validates the same context versions atomically. Lists may return the
 versioned compact form, but it must preserve security-relevant viewer
 relationships and blocked actions. Capability responses disclose only the
 viewer's own relationships and facts needed to explain the result. A separate
-authorized management projection exposes responsible Staff/unassigned state to the
-Head; it never reveals hidden review assignments or the source of a conflict. Unknown
+authorized management projection exposes the responsible CV/unassigned state to TP and
+TB in scope (and to GĐ/PGĐ-KH); it never reveals hidden review assignments or the source
+of a conflict. Unknown
 schema versions, action IDs, and denial codes fail closed in protected clients.
 
 #### Future Delegation Contract
 
 - No current proposal action is delegable. Proposal creation, submission, and
-  resubmission are restricted to the owner-derived internal-researcher PI.
+  resubmission are restricted to the owner-derived PI (any role except QT/NNB).
 - If a future domain adopts delegation, the current action holder initiates an
-  action-specific grant and authorized scientific management staff approves or
-  revokes it.
+  action-specific grant and an approver named by that domain's approved delegation
+  contract approves or revokes it.
 - Each grant stores grantor, approver, delegate, target type/id, action set,
   start/end, status, revocation metadata, and audit context.
 - Reviewer assignment, scoring, membership changes, approval, rejection, and
@@ -373,8 +410,9 @@ Before the configured disclosure state, PI, team members, and team secretaries
 receive no reviewer identity, raw score, reviewer
 comment, or consolidated evaluation material in lists, details, files, exports,
 notifications, dashboards, or history. After final decision, only the
-policy-approved summary is exposed by default. Any wider institutional
-disclosure requires a separately approved, versioned policy.
+policy-approved summary is exposed by default. Two-way anonymity applies: the PI and
+reviewers never see the record's action log; TB¹ and TP¹ may see reviewer identity.
+Any wider institutional disclosure requires a separately approved, versioned policy.
 
 #### Mutation, Job, and Audit Contract
 
@@ -669,7 +707,9 @@ must complete before dependent stories rely on it.
   notification
 - **Prevents:** role-only or scope-only permission decisions
 - **Rule:** evaluate system role, organization scope, active record
-  relationships, assignment scope, valid delegation, workflow state, and
+  relationships, assignment scope (including the segment-based responsible-CV
+  assignment), valid delegation, workflow state (including the approval-routing
+  stage `BOARD_REVIEW`/`HEAD_REVIEW`/`LEADERSHIP` and its signer), and
   conflict policy; applicable resolvers distinguish resolved-value,
   resolved-empty, not-applicable, and unresolved/error; only unresolved,
   failed, stale, or ambiguous applicable context fails closed
@@ -695,7 +735,7 @@ must complete before dependent stories rely on it.
 
 - **Binds:** governance, audit, source-domain action policies
 - **Prevents:** informal “act on behalf of” access
-- **Rule:** only current-holder-initiated, staff-approved, active, unrevoked,
+- **Rule:** only current-holder-initiated, approver-approved (per the domain contract), active, unrevoked,
   exact-action, time-bounded grants are valid; source authority must remain
   active; wildcards and chains are forbidden; reviewer assignment, scoring,
   membership changes, approval, rejection, and final decisions are
@@ -767,6 +807,15 @@ must complete before dependent stories rely on it.
   legacy business-role accounts to canonical system role plus typed record
   relations, enforces one active system role, and consolidates existing
   permission seams before dependent work
+- **7 → 10 account migration (2026-10-18):** forward migration
+  `20261016500000_rename_research_management_roles` (commit 0a39db3; never an edit of
+  `20260921000000`) maps `SCIENTIFIC_MANAGEMENT_HEAD` → `RESEARCH_MANAGEMENT_HEAD` (TP)
+  and `SCIENTIFIC_MANAGEMENT_STAFF` → `RESEARCH_MANAGEMENT_STAFF` (CV) mechanically;
+  former `RESEARCH_OVERSIGHT_AUTHORITY` holders are re-classified per person as
+  `SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH) or kept as PGĐ-TD; PP, TB and PGĐ-TD accounts are
+  created fresh, TB has exactly one holder, and ambiguous accounts are reported, not
+  guessed. `tuan/DocManS` migration `20261017000000_role_hierarchy` only widens the role
+  constraint and migrates no accounts
 
 ### AD-13 — Authoritative Commands and Jobs [ADOPTED]
 
@@ -809,16 +858,20 @@ stateDiagram-v2
     Draft --> Submitted: submit
     Submitted --> SupplementRequested: requestSupplement
     SupplementRequested --> Resubmitted: resubmit
-    Resubmitted --> UnderCompletenessReview: staffReview
-    Submitted --> UnderCompletenessReview: staffReview
+    Resubmitted --> UnderCompletenessReview: completenessReview
+    Submitted --> UnderCompletenessReview: completenessReview
     UnderCompletenessReview --> UnderEvaluation: assignReviewers
     UnderEvaluation --> EvaluationConsolidated: consolidateReviews
-    EvaluationConsolidated --> PendingApproval: submitForApproval
+    EvaluationConsolidated --> PendingApproval: routeDecisionPackage
     PendingApproval --> Approved: approve
     PendingApproval --> Rejected: reject
     Approved --> [*]
     Rejected --> [*]
 ```
+
+`routeDecisionPackage` opens a `DECISION_PACKAGE` approval submission (CV → TB → TP);
+only GĐ approves or rejects topic + funding once it reaches `LEADERSHIP`. A return sends
+the package back for revision with a mandatory reason.
 
 ### Approved Project State Machine
 
@@ -835,8 +888,8 @@ stateDiagram-v2
     InProgress --> AwaitingAcceptance: later acceptance flow
     AwaitingAcceptance --> Accepted: later acceptance decision
     AwaitingAcceptance --> Failed: later acceptance decision
-    Accepted --> Closed: later closure
-    Failed --> Closed: later closure
+    Accepted --> Closed: LIQUIDATION signed by GĐ (step 9)
+    Failed --> Closed: LIQUIDATION signed by GĐ (step 9)
 ```
 
 `Preparing`, `InProgress`, `Paused`, `AwaitingAcceptance`, `Accepted`, `Failed`
@@ -849,7 +902,40 @@ Golden Flow 4 covers creation/setup and execution; acceptance/council/closure
 transitions remain outside its implementation scope.
 
 See [Golden Flow 4 contract](../docs/contracts/project-execution.md) for the
-execution boundary and finalized Staff adjustment and Head extension decision rules.
+execution boundary. Adjustment (with or without funding change) and extension are routed
+decisions: the PI submits, the assigned CV appraises and drafts the tờ trình, TB → TP
+route it, and GĐ or PGĐ-KH signs; the signature applies the change atomically (see
+"Phòng KHQS and BGĐ boundary — 2026-10-18"). The legacy request state names
+`under_staff_review`, `under_staff_validation` and `ready_for_head_decision` must be
+reconciled with routing (matrix §6). On `tuan/DocManS` a request waits at
+`ready_for_head_decision` while its tờ trình is routed, and a return reverts an
+extension to `under_staff_validation` and an adjustment to `under_staff_review`; these
+names are legacy pending architect confirmation.
+
+### Topic Lifecycle Step Mapping (D-033)
+
+The user-facing topic lifecycle is fixed by `.decision-log.md` D-033: 9 steps in
+2 phases. It spans the proposal record and the approved-project record linked by
+the source proposal. This table is the single canonical mapping from existing
+states to steps; other documents point here instead of restating it. State names
+stay as defined above; the step is a derived projection, never a stored
+replacement state.
+
+| Phase | Step | Existing record/state | Notes |
+| --- | --- | --- | --- |
+| Giai đoạn đề xuất | 1. Đợt tiếp nhận | Intake period (open/closed) | Not a proposal state; the proposal enters at step 2 |
+| | 2. Hồ sơ đề xuất | `Draft`, `SupplementRequested` | The supplement loop and a CV reopen (FR76, D-034) return the dossier to step 2 |
+| | 3. Kiểm tra đầy đủ | `Submitted`, `Resubmitted`, `UnderCompletenessReview` | Only step 3 may request a supplement (D-033 loop) |
+| | 4. Thẩm định, hội đồng | `UnderEvaluation`, `EvaluationConsolidated` | Includes `EVALUATION_COUNCIL` tờ trình |
+| | 5. Phê duyệt, kinh phí | `PendingApproval` → `Approved` / `Rejected` | **Official decision** (GĐ, `DECISION_PACKAGE`). `Rejected` ends the lifecycle; `Approved` without a project = step 5 done, step 6 pending |
+| Giai đoạn thực hiện và kết thúc | 6. Lập đề tài | Project `Preparing` | Explicit creation from the approved proposal |
+| | 7. Thực hiện | Project `InProgress`, `Paused` | Reports, adjustment/extension, disbursement metadata are child records |
+| | 8. Nghiệm thu | Project `AwaitingAcceptance`, `Accepted`, `Failed` | Products, institution level, higher level go through one acceptance council; the chair marks đạt → `Accepted` or không đạt → `Failed` (D-034); not an official decision |
+| | 9. Thanh lý, đóng đề tài | Open `LIQUIDATION` tờ trình, project `Closed` | **Official decision** (GĐ only); the `LIQUIDATION` signature moves an `Accepted` or `Failed` project to `Closed` (D-034) |
+
+Child-record loops (tờ trình `RETURNED`, report/adjustment/extension/acceptance
+dossier supplementation) stay inside their step and are not lifecycle-step
+transitions. Every step keeps history and audit. Clarifications: `.decision-log.md` D-034.
 
 ### Seminar And Student Research State Machine
 
@@ -1387,6 +1473,15 @@ erDiagram
 - `council_evaluations`
 - `council_decisions`
 
+**Approval Routing And Segment Ownership (port from `tuan/DocManS`):**
+
+- `approval_submissions` (kind, subject, stage, status, signer; one open submission per
+  kind and subject)
+- `approval_steps` (append-only step history: `SUBMIT`, `FORWARD`, `APPROVE`, `REJECT`,
+  `RETURN`)
+- `management_portfolios` (TP-assigned CV segments: proposal level and/or nature; null
+  means any value)
+
 **Operational Support Ownership:**
 
 - `tasks`
@@ -1671,45 +1766,70 @@ Initialize the Nx workspace and establish the baseline repository, shared packag
 
 [Researcher Profile / Account / My Profile contract](../docs/contracts/researcher-profile-access.md) is the current
 source of truth for this feature, including API/data fields, authorization,
-credential delivery, migration compatibility and history retention.
+credential delivery, migration compatibility and history retention. Actor wording
+follows the 10-role model (`docs/permission-matrix.md`, "Researcher Profile completion").
 
-- Scoped SYSTEM_ADMIN and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
-  profiles independently of Accounts, including academic/contact information,
-  position, military rank, expertise, publications and self-reported project
-  history (title, role, Academy/institutional/Ministry/other level, dates, status,
-  notes). Profile activation and account activation remain separate actions.
+- QT (platform scope) and TP¹/CV¹ (unit scope) manage internal/external profiles
+  independently of Accounts, including academic/contact information, position, military
+  rank, expertise, publications and self-reported project history (title, role,
+  Academy/institutional/Ministry/other level, dates, status, notes). Profile activation
+  and account activation remain separate actions.
 - System Account / Access supports optional create-and-link, existing unlinked
-  account selection, unlink and authorized credential reset/resend. Linking is
-  one-to-one across all current links, including inactive records. Staff can
-  provision only matching researcher roles in the profile's explicit scope.
-- Staff confirms the recipient email. The system generates and hashes a temporary
-  password, sends login information by configured SMTP, and requires a different
-  password before any normal authenticated API/UI feature. No plaintext credential
-  is persisted, returned to staff or placed in audit. SMTP acceptance is not proof
-  of inbox delivery; a failed/uncertain send has an explicit new-credential retry.
-- My Profile uses the active Account's current link. Only own personal/scientific
-  fields are editable; type, status, linkage and role/scope remain administrative.
-  Unlink immediately removes self access. Self-reported history grants no access
-  to operational projects/proposals and does not replace source-owned assignments.
-- Profile/link/account/credential/first-password-change audit is preserved with
-  safe transactional change facts. No test files are written or changed for this
-  completion at the user's instruction; verification is recorded in its artifact.
+  account selection, unlink and resending the activation link. Linking is one-to-one
+  across all current links, including inactive records. Scoped managers provision only
+  matching researcher roles in the profile's explicit scope.
+- Provisioning creates a linked `PENDING_ACTIVATION` account: INTERNAL profiles
+  provision by default with a required email; EXTERNAL profiles provision only when the
+  manager checks `Tạo tài khoản truy cập hệ thống`. The manager confirms the recipient
+  email.
+- Activation uses a hashed single-use token that expires exactly after 48 hours; the
+  system sends only a setup-password link by configured SMTP and keeps the account
+  pending until the user sets a password through it. No temporary password is
+  generated, emailed, persisted, returned to managers or placed in audit. SMTP acceptance is
+  not proof of inbox delivery; a failed/uncertain send is retried by resending a new
+  activation link.
+- Login accepts either the configured username or the account email. Username is
+  optional at provisioning, unique when set later by the linked user, and never inferred
+  from email.
+- My Profile uses the active Account's current link. Every role except QT has a
+  scientific CV. Only own personal/scientific fields and own username are editable; type,
+  status, linkage, email credential destination and role/scope remain administrative.
+  Unlink immediately removes self access. Self-reported history grants no access to
+  operational projects/proposals and does not replace source-owned assignments.
+- Duplicate profile warnings (raised by QT, TP¹ or CV¹) are notified to TB¹/TP¹, who
+  decide the merge; history is kept.
+- Profile/link/account/activation/username/account-status audit is preserved with safe
+  transactional change facts. No test files are written or changed for this completion
+  at the user's instruction; verification is recorded in its artifact.
 
-### Finalized implementation scope — 2026-09-21
+### Implementation scope and work queues — 2026-10-18
 
-The current change implements this model on the existing proposal, intake, researcher-profile,
-file and evaluation features. Approved projects, council-establishment/ethics lifecycles,
-institutional dashboards, general search/report/export and notification/My Work backends
-remain planned where no operational source exists. `PROJECT_MANAGEMENT_OFFICER` is a
-contract relationship, not a persisted orphan assignment. Dashboard showcase data is not
-an institutional report or proof of authorization. Future source domains must apply the
-same current scope, relationship, conflict and disclosure checks before aggregates or drill-down.
+Replaces "Finalized implementation scope — 2026-09-21". On `DocManS` the model is
+implemented on the existing proposal, intake, researcher-profile, file and evaluation
+features. Approved projects, council/IRB lifecycles, institutional dashboards, general
+search/report/export and notification/My Work backends remain planned where no
+operational source exists; approval routing, segment auto-assignment, council invitations
+and dashboard breakdowns exist on `tuan/DocManS` and must be ported (that branch has no
+merge base with `DocManS`). `PROJECT_MANAGEMENT_OFFICER` is a contract relationship, not a
+persisted orphan assignment. Dashboard showcase data is not an institutional report or
+proof of authorization. Future source domains must apply the same current scope,
+relationship, conflict and disclosure checks before aggregates or drill-down.
 
-`LEADERSHIP_APPROVAL_AUTHORITY` and `RESEARCH_OVERSIGHT_AUTHORITY` require institutional research dashboard views of available
-proposal stages, overdue work, active/delayed/reporting-due/acceptance/completed projects,
-funding and management workload. Only `LEADERSHIP_APPROVAL_AUTHORITY` gets eligible proposal decision queues. Project adjustment queues
-belong to assigned Staff and extension decision queues to Head. Head gets
-responsible-officer/unassigned filters and workload; Staff sees assigned management records.
-Proposal funding currently provides `budgetMetadata.amount` (requested funding). Approved,
-used and remaining project funding and utilization are unavailable until their source exists;
-never infer expenditure or add ledgers, payments, banking, invoices or ERP integration.
+Work queues follow matrix §9.10:
+
+- TB: tờ trình review queue (`BOARD_REVIEW`); TP: tờ trình approval queue
+  (`HEAD_REVIEW`) plus the "Chưa có người phụ trách" unassigned view;
+- CV: records it is currently assigned to, and its own submitted tờ trình;
+- GĐ: topic + funding decision queue and every signature queue (`LEADERSHIP`);
+- PGĐ-KH: signature queue for `DIRECTOR_OR_SCIENCE_DEPUTY` kinds only;
+- reviewers/council/IRB members: invitations and accepted assignments;
+- QT has no business queue; PP and PGĐ-TD have monitoring dashboards only.
+
+Dashboards are per role and scope, filtered by year, unit, level, field and nature
+(Quân sự / Dân sự / Chưa phân loại), with a responsible-CV breakdown and an "unassigned"
+group. PGĐ-TD sees aggregate figures only; per-project/proposal funding stays empty.
+
+Funding is audited metadata only: allocation, disbursement and settlement figures plus
+documents, with audit. Proposal funding currently provides `budgetMetadata.amount`
+(requested funding). Never infer expenditure or add ledgers, payments, banking, invoices
+or ERP integration.
