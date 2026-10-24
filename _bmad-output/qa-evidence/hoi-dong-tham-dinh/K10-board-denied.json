@@ -1,0 +1,66 @@
+{
+  "time": "2026-10-24T09:01:14.496Z",
+  "case": "K10",
+  "url": "http://localhost:3001/proposals/1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+  "text": "Đến nội dung chính\nHỆ THỐNG QUẢN LÝ NGHIÊN CỨU KHOA HỌC, CÔNG NGHỆ VÀ ĐỔI MỚI SÁNG TẠO\nHọc viện Quân y\nT\nTS. Đỗ Minh Trung\nBan Quản lý KHQS\nĐánh giá của tôi\nDashboard /\nQuản lý đề tài /\nChi tiết hồ sơ\n\nCHI TIẾT HỒ SƠ\n\nHồ sơ đề xuất\n\nCập nhật thông tin nháp, tải tài liệu, kiểm tra readiness, nộp chính thức và xem lịch sử nộp.\n\nKhông thể tải chi tiết hồ sơ hoặc bạn không có quyền truy cập.",
+  "me": {
+    "status": 200,
+    "body": {
+      "user": {
+        "id": "user-board-head-nmtrung",
+        "username": "nmtrung",
+        "displayName": "TS. Đỗ Minh Trung",
+        "systemRole": "RESEARCH_BOARD_HEAD",
+        "unit": "Ban Quản lý KHQS",
+        "organizationScopes": [
+          {
+            "id": "org-bqlkhqs",
+            "code": "BQLKHQS",
+            "name": "Ban Quản lý KHQS"
+          },
+          {
+            "id": "org-hvqy",
+            "code": "HVQY",
+            "name": "Học viện Quân y"
+          },
+          {
+            "id": "org-bgq",
+            "code": "BGD",
+            "name": "Ban Giám Đốc"
+          },
+          {
+            "id": "org-khti",
+            "code": "KHTI",
+            "name": "Khoa Toán - Tin học"
+          },
+          {
+            "id": "org-khqs",
+            "code": "KHQS",
+            "name": "Phòng KHQS"
+          },
+          {
+            "id": "org-k30",
+            "code": "K30",
+            "name": "Công tác Đảng, Công tác Chính trị"
+          },
+          {
+            "id": "org-k81",
+            "code": "K81",
+            "name": "Vật lý"
+          },
+          {
+            "id": "org-k82",
+            "code": "K82",
+            "name": "Hóa học"
+          },
+          {
+            "id": "org-k84",
+            "code": "K84",
+            "name": "Ngoại ngữ"
+          }
+        ],
+        "mustChangePassword": false
+      }
+    }
+  }
+}

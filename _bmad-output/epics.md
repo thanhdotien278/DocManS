@@ -3227,16 +3227,16 @@ So that hội đồng và quyết định cuối có thẩm quyền đúng ma tr
 **Then** backend từ chối do conflict
 **And** action hiển thị bị khóa kèm lý do.
 
-### Story 5.11: Delta cho 5.3: TP¹/TB¹/CV³ phân công, ứng viên ngoài QT, chấp nhận/từ chối [FR17]
+### Story 5.11: Delta cho 5.3: người được QT cấu hình phân công (mặc định TP¹/TB¹, D-035), ứng viên ngoài QT, chấp nhận/từ chối [FR17]
 
-As a TP¹, TB¹ hoặc CV³ phụ trách hồ sơ,
+As a người được QT cấu hình thành lập hội đồng và mời (mặc định TP¹/TB¹, D-035; CV³ chỉ khi được tích),
 I want mời reviewer và thành viên hội đồng từ mọi tài khoản có lý lịch khoa học trừ QT,
 So that Story 5.3 (đang review, giữ nguyên AC) vận hành đúng mô hình mười vai trò.
 
 **Acceptance Criteria:**
 
 **Given** proposal đã xác nhận đầy đủ cho phiên bản nộp hiện tại
-**When** TP¹, TB¹ hoặc CV³ tìm ứng viên hoặc phân công/thu hồi
+**When** người được QT cấu hình (mặc định TP¹, TB¹) tìm ứng viên hoặc phân công/thu hồi
 **Then** backend cho phép theo scope (TP/TB unit scope, CV chỉ hồ sơ mình phụ trách) cùng các kiểm tra eligibility và conflict của Story 5.3
 **And** PP, BGĐ, QT và CV không phụ trách hồ sơ bị từ chối.
 

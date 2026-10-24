@@ -1,0 +1,24 @@
+{
+  "results": [
+    {
+      "u": "patuan",
+      "options": "Chọn người đủ điều kiện"
+    },
+    {
+      "u": "int1",
+      "options": "Đang tìm..."
+    },
+    {
+      "u": "hdtien1",
+      "options": "Chọn người đủ điều kiện"
+    },
+    {
+      "u": "nmphuong",
+      "options": "Đang tìm..."
+    },
+    {
+      "u": "admin",
+      "options": "Đang tìm..."
+    }
+  ]
+}

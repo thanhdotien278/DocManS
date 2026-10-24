@@ -1,0 +1,26 @@
+{
+  "health": {
+    "status": 200,
+    "body": {
+      "status": "ok",
+      "service": "DocManSystem API",
+      "timestamp": "2026-10-24T09:32:44.852Z"
+    }
+  },
+  "web": "http://localhost:3001",
+  "api": "http://localhost:4001/api/v1",
+  "viewports": {
+    "desktop": {
+      "width": 1440,
+      "height": 1000
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  "p1": "1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+  "p2": "e00f26a6-ee96-4889-a5d5-53a668458336",
+  "draftId": "c5ad230b-9b6f-461f-b47b-711a7778727c",
+  "note": "Database docmans_council_qa theo môi trường người dùng cung cấp; không truy cập SQL."
+}
