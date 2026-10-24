@@ -11,6 +11,7 @@ import { proposalContextVersion } from "../dist/apps/api/proposals-shared/propos
 import { ProposalReviewAssignmentsService } from "../dist/apps/api/proposal-evaluations/proposal-review-assignments.service.js";
 import { ProposalReviewsService } from "../dist/apps/api/proposal-evaluations/proposal-reviews.service.js";
 import { ProposalEvaluationSummaryService } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-summary.service.js";
+import { ProposalEvaluationCouncilService } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-council.service.js";
 import { ProposalDecisionsService } from "../dist/apps/api/proposal-evaluations/proposal-decisions.service.js";
 import { advanceApprovalSubmission, assertReadyForLeadership, closeApprovalSubmission, openApprovalSubmission, returnApprovalSubmission } from "../dist/apps/api/proposals-shared/approval-routing.js";
 
@@ -41,6 +42,7 @@ async function setup(code, { board = true } = {}) {
   };
   const people = {
     staff: await make("chuyenvien", "RESEARCH_MANAGEMENT_STAFF"),
+    staff2: await make("chuyenvien2", "RESEARCH_MANAGEMENT_STAFF"),
     board: board ? await make("truongban", "RESEARCH_BOARD_HEAD") : null,
     deputy: await make("phophong", "RESEARCH_MANAGEMENT_DEPUTY_HEAD"),
     head: await make("truongphong", "RESEARCH_MANAGEMENT_HEAD"),
@@ -235,4 +237,166 @@ test("decision: approve closes the tờ trình with the decision atomically; a f
   assert.equal(after.decisions, 1);
   assert.deepEqual([after.proposal, after.submission], after.proposal === "approved" ? ["approved", "APPROVED"] : ["rejected", "REJECTED"], "trạng thái hồ sơ khớp tờ trình");
   await assert.rejects(() => f.decide(f.people.director, "approved"), code(400), "không quyết định lần hai");
+});
+
+// Story 5.11 + 5.10 (EVALUATION_COUNCIL): mời/chấp nhận/từ chối, hội đồng do BGĐ ký, hồ sơ chỉ mở sau khi ký.
+async function councilFixture(code) {
+  const ctx = await setup(code);
+  const { people, proposal, org } = ctx;
+  const event = await db.proposalSubmissionEvent.create({ data: { proposalId: proposal.id, actorId: people.pi.id, fromStatus: "draft", toStatus: "submitted", snapshot: { members: [], attachments: [], requiredPackage: [] } } });
+  await db.proposalSubmissionEvent.create({ data: { proposalId: proposal.id, actorId: people.staff.id, fromStatus: "submitted", toStatus: "submitted", submittedAt: new Date(Date.now() + 1000), snapshot: { kind: "completeness_check", submissionEventId: event.id, readiness: { ready: true } } } });
+  await db.proposalManagementOfficer.create({ data: { proposalId: proposal.id, officerUserId: people.staff.id, assignedById: people.head.id, effectiveFrom: new Date(Date.now() - 1000) } });
+  const withProfile = (user) => db.researcherProfile.create({ data: { managementOrganizationUnitId: org.id, linkedUserId: user.id, fullName: user.displayName, fullNameKey: user.displayName.toLowerCase(), createdById: people.head.id, updatedById: people.head.id } });
+  let counter = 0;
+  const candidate = async (name, systemRole = "RESEARCHER_INTERNAL_USER", profile = true) => {
+    const username = `${name}${counter++}-${code}`;
+    const user = await db.user.create({ data: { username, usernameKey: username.toLowerCase(), displayName: name, passwordHash: "x", status: "active", systemRole, unit: org.name } });
+    if (profile) await withProfile(user);
+    return { id: user.id, username, displayName: name, systemRole, unit: org.name, organizationScopes: [] };
+  };
+  const audit = new AuditLogService(db);
+  const participation = new ProposalParticipationService(db);
+  const access = new ProposalReviewAccessService(db);
+  const assignments = new ProposalReviewAssignmentsService(db, audit, participation, access);
+  const council = new ProposalEvaluationCouncilService(db, audit, participation, access);
+  const reviews = new ProposalReviewsService(db, audit, access, participation);
+  const contextVersion = async () => proposalContextVersion(await db.researchProposal.findUnique({ where: { id: proposal.id } }));
+  const invite = async (actor, user, assignmentRole = "reviewer") => (await assignments.assignReviewer(actor, proposal.id, { reviewerUserId: user.id, assignmentRole, contextVersion: await contextVersion() })).id;
+  const respond = (user, assignmentId, decision, reason) => assignments.respondToInvitation(user, proposal.id, assignmentId, { decision, reason });
+  const submitCouncil = async (actor) => council.submitCouncil(actor, proposal.id, { contextVersion: await contextVersion() });
+  const decideCouncil = async (actor, decision, note) => council.decideCouncil(actor, proposal.id, { decision, note, contextVersion: await contextVersion() });
+  const roster = async () => {
+    const members = [];
+    for (const [index, role] of ["reviewer", "reviewer", "committee_member", "committee_member", "committee_member"].entries()) {
+      const user = await candidate(`tv${index}`);
+      members.push({ user, role, id: await invite(people.head, user, role) });
+    }
+    return members;
+  };
+  return { ...ctx, candidate, withProfile, assignments, council, reviews, invite, respond, submitCouncil, decideCouncil, roster, contextVersion };
+}
+
+test("5.11: only TP/TB/CV in charge invite; QT, self, accounts without a profile and participants are never candidates", async () => {
+  const f = await councilFixture("J");
+  const { people } = f;
+  const [qt, noProfile, peer] = [await f.candidate("quantri", "SYSTEM_ADMIN"), await f.candidate("khonglyli", "RESEARCHER_INTERNAL_USER", false), await f.candidate("nguoimoi")];
+  for (const user of [people.head, people.pi, people.science]) await f.withProfile(user);
+  const search = async (actor) => (await f.assignments.candidates(actor, f.proposal.id, "")).users.map((user) => user.id);
+  const found = await search(people.head);
+  assert.ok(found.includes(peer.id) && found.includes(people.science.id), "PGĐ-KH có lý lịch được mời");
+  for (const excluded of [qt, noProfile, people.head, people.pi]) assert.ok(!found.includes(excluded.id));
+  assert.deepEqual(Object.keys((await f.assignments.candidates(people.head, f.proposal.id, "nguoimoi")).users[0]).sort(), ["displayName", "id", "username"]);
+
+  await assert.rejects(() => f.invite(people.head, qt), code(400));
+  await assert.rejects(() => f.invite(people.head, people.head), (e) => e.getResponse().code === "SELF_ASSIGNMENT_DENIED", "tự phân công bị chặn");
+  for (const actor of [people.deputy, people.director, people.science, people.pi, people.staff2, qt]) {
+    await assert.rejects(() => search(actor), code(403));
+    await assert.rejects(() => f.invite(actor, peer), code(403), "PP, BGĐ, QT, PI và CV không phụ trách bị từ chối");
+  }
+  await f.invite(people.staff, peer);
+  await f.invite(people.board, await f.candidate("nguoimoi2"), "committee_member");
+  await assert.rejects(() => f.invite(people.head, peer), code(400), "đã được mời");
+  assert.equal(await db.proposalReviewAssignment.count({ where: { proposalId: f.proposal.id, invitationStatus: "invited" } }), 2);
+});
+
+test("5.11: invitee sees only title, role, due date and inviter until accepting; decline needs a reason; nobody else can answer", async () => {
+  const f = await councilFixture("K");
+  const { people } = f;
+  const user = await f.candidate("duocmoi");
+  const other = await f.candidate("nguoikhac");
+  const id = await f.invite(people.head, user);
+  assert.deepEqual(Object.keys((await f.assignments.listMyAssignments(user))[0]).sort(), ["access", "assignmentRole", "assignmentRoleLabel", "assignedByDisplayName", "dueDate", "id", "invitationStatus", "invitationStatusLabel", "proposal", "proposalId"].sort());
+  assert.deepEqual(Object.keys((await f.assignments.listMyAssignments(user))[0].proposal), ["title"]);
+  await assert.rejects(() => f.assignments.getReviewPackage(user, f.proposal.id), code(403), "chưa chấp nhận");
+  await assert.rejects(() => f.respond(user, id, "decline", "  "), (e) => e.getResponse().code === "DECLINE_REASON_REQUIRED");
+  await assert.rejects(() => f.respond(other, id, "accept"), code(404), "chỉ người được mời mới trả lời");
+  assert.equal((await db.proposalReviewAssignment.findUnique({ where: { id } })).invitationStatus, "invited", "không ghi một phần");
+
+  await f.respond(user, id, "accept");
+  await assert.rejects(() => f.respond(user, id, "accept"), code(400), "không trả lời lần hai");
+  await assert.rejects(() => f.assignments.getReviewPackage(user, f.proposal.id), code(403), "đã chấp nhận nhưng hội đồng chưa được ký");
+  assert.equal((await f.assignments.listMyAssignments(user))[0].access, "preview");
+  assert.ok(await db.auditLog.findFirst({ where: { action: "accept-review-invitation", targetEntityId: id, actorId: user.id } }));
+
+  const declined = await f.candidate("tuchoi");
+  const declinedId = await f.invite(people.head, declined);
+  await f.respond(declined, declinedId, "decline", "Bận công tác");
+  const row = await db.proposalReviewAssignment.findUnique({ where: { id: declinedId } });
+  assert.deepEqual([row.invitationStatus, row.declineReason], ["declined", "Bận công tác"]);
+  assert.deepEqual(await f.assignments.listMyAssignments(declined), []);
+  assert.ok(await db.auditLog.findFirst({ where: { action: "decline-review-invitation", targetEntityId: declinedId } }));
+});
+
+test("5.10 council: tờ trình refused while anyone has not accepted or has declined; PGĐ-KH signing opens the file for accepted members only", async () => {
+  const f = await councilFixture("L");
+  const { people, proposal } = f;
+  const members = await f.roster();
+  const refused = (e) => e.getResponse().code === "COUNCIL_NOT_READY";
+  await assert.rejects(() => f.submitCouncil(people.head), refused, "còn thành viên chưa chấp nhận");
+  for (const member of members.slice(0, 4)) await f.respond(member.user, member.id, "accept");
+  const last = members[4];
+  await f.respond(last.user, last.id, "decline", "Xung đột chuyên môn");
+  await assert.rejects(() => f.submitCouncil(people.staff), refused, "có thành viên đã từ chối");
+  assert.equal(await db.approvalSubmission.count({ where: { subjectId: proposal.id, kind: "EVALUATION_COUNCIL" } }), 0);
+
+  await f.assignments.revokeAssignment(people.head, proposal.id, last.id, { reason: "Đã từ chối", contextVersion: await f.contextVersion() });
+  const replacement = await f.candidate("thaythe");
+  const replacementId = await f.invite(people.head, replacement, "committee_member");
+  await f.respond(replacement, replacementId, "accept");
+  const submission = { id: (await f.submitCouncil(people.staff)).submissionId };
+  assert.equal((await db.approvalSubmission.findUnique({ where: { id: submission.id } })).stage, "BOARD_REVIEW");
+  const late = await f.candidate("muon");
+  await assert.rejects(() => f.invite(people.head, late), (e) => e.getResponse().code === "COUNCIL_SUBMISSION_PENDING", "đang trình thì không đổi danh sách");
+  await assert.rejects(() => f.decideCouncil(people.science, "sign"), (e) => e.getResponse().code === "APPROVAL_NOT_READY", "chưa tới BGĐ");
+  await f.advance(people.board, submission);
+  await f.advance(people.head, submission);
+
+  const reviewer = members[0].user;
+  for (const actor of [people.staff, people.head, people.board, people.pi]) await assert.rejects(() => f.decideCouncil(actor, "sign"), code(403));
+  await assert.rejects(() => f.assignments.getReviewPackage(reviewer, proposal.id), code(403), "đọc hồ sơ trước khi ký bị chặn");
+  const stale = await f.contextVersion();
+  await assert.rejects(() => f.reviews.saveMyReview(reviewer, proposal.id, { contextVersion: stale }), code(403), "nộp đánh giá trước khi ký bị chặn");
+  const view = await f.council.getCouncil(people.science, proposal.id);
+  assert.deepEqual([view.canSign, view.canReturn, view.members.length], [true, true, 5]);
+
+  await f.decideCouncil(people.science, "sign");
+  assert.equal((await db.approvalSubmission.findUnique({ where: { id: submission.id } })).status, "APPROVED");
+  const established = await db.proposalReviewAssignment.findMany({ where: { proposalId: proposal.id, status: "assigned", councilEstablishedAt: { not: null } } });
+  assert.equal(established.length, 5);
+  assert.equal((await f.assignments.getReviewPackage(reviewer, proposal.id)).assignmentRole, "reviewer", "đã chấp nhận và hội đồng đã ký");
+  const outsider = await f.candidate("nguoingoai");
+  await assert.rejects(() => f.assignments.getReviewPackage(outsider, proposal.id), code(403));
+  const audit = await db.auditLog.findFirst({ where: { action: "establish-evaluation-council", targetEntityId: proposal.id } });
+  assert.equal(audit.actorId, people.science.id);
+  assert.equal((await f.council.getCouncil(people.science, proposal.id)).established, true);
+});
+
+test("5.10 council: return changes nothing at the source; signer who reviews the file is refused; sign re-checks acceptance", async () => {
+  const f = await councilFixture("M");
+  const { people, proposal } = f;
+  const members = await f.roster();
+  for (const member of members) await f.respond(member.user, member.id, "accept");
+  const first = await f.submitCouncil(people.head);
+  assert.equal(first.stage, "BOARD_REVIEW");
+  await f.advance(people.board, { id: first.submissionId });
+  const stage = (await db.approvalSubmission.findUnique({ where: { id: first.submissionId } })).stage;
+  assert.equal(stage, "LEADERSHIP", "TP lập: TB chuyển thẳng BGĐ");
+
+  await assert.rejects(() => f.decideCouncil(people.director, "return", " "), code(400), "trả lại cần lý do");
+  const before = await db.proposalReviewAssignment.findMany({ where: { proposalId: proposal.id }, orderBy: { id: "asc" } });
+  await f.decideCouncil(people.director, "return", "Thiếu chuyên gia");
+  assert.equal((await db.approvalSubmission.findUnique({ where: { id: first.submissionId } })).status, "RETURNED");
+  assert.deepEqual(await db.proposalReviewAssignment.findMany({ where: { proposalId: proposal.id }, orderBy: { id: "asc" } }), before, "trả lại không đổi danh sách");
+  assert.equal((await db.researchProposal.findUnique({ where: { id: proposal.id } })).status, "under_review");
+
+  const second = await f.submitCouncil(people.staff);
+  await f.advance(people.board, { id: second.submissionId });
+  await f.advance(people.head, { id: second.submissionId });
+  await db.proposalReviewAssignment.update({ where: { id: members[2].id }, data: { invitationStatus: "declined", declineReason: "Rút lui" } });
+  await assert.rejects(() => f.decideCouncil(people.science, "sign"), (e) => e.getResponse().code === "COUNCIL_NOT_READY", "thành viên đổi ý trước khi ký");
+  assert.equal((await db.approvalSubmission.findUnique({ where: { id: second.submissionId } })).status, "PENDING");
+  await db.proposalReviewAssignment.update({ where: { id: members[2].id }, data: { invitationStatus: "accepted" } });
+  await db.proposalMember.create({ data: { proposalId: proposal.id, userId: people.science.id, name: "PGĐ", role: "TOPIC_MEMBER", organization: "x" } });
+  await assert.rejects(() => f.decideCouncil(people.science, "sign"), code(403), "người ký tham gia hồ sơ");
+  assert.equal(await db.proposalReviewAssignment.count({ where: { proposalId: proposal.id, councilEstablishedAt: { not: null } } }), 0);
 });
