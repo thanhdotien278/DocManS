@@ -7,7 +7,7 @@ paradigm: policy-enforced modular monolith
 scope: scientist record-scoped roles, delegation, conflict policy, capability projection, and dependent integrations
 status: final
 created: 2026-07-29
-updated: 2026-07-29
+updated: 2026-10-18
 binds:
   - FR2
   - FR6a
@@ -32,23 +32,40 @@ companions:
 
 This is the adopted target contract for new and migrated authorization work.
 `[ADOPTED]` means accepted from the named planning sources, not already
-implemented. The current account model has one of seven system roles and proposal-owned
-participation/review/management relationships. Domains without backend sources remain
-planned; dependent stories must distinguish requirements from operational evidence.
+implemented. The target account model has one of ten system roles
+(`docs/permission-matrix.md` §2) plus proposal-owned participation/review/management
+relationships. The committed `DocManS` code has the ten role codes (commit 0a39db3, migration
+`20261016500000`), but PGĐ-KH, PP and TB have no business permissions until the
+routing, segment and IRB implementation is ported from `tuan/DocManS`, which has no merge
+base with `DocManS`. Domains without backend sources remain planned; dependent stories
+must distinguish requirements from operational evidence.
 
-## Scientific Management clarification — 2026-09-21
+## Research Management clarification — 2026-10-18
 
-Apply the companion Authorization Contracts target update: Head oversight within
-explicit scope; Staff management only through active `PROPOSAL_MANAGEMENT_OFFICER` /
-`PROJECT_MANAGEMENT_OFFICER`; one primary officer per record with atomic, audited
-history. Domain resolvers retain independent participation access and deny conflicting
-management/evaluation/decision assignments at changes and actions. Head oversight exposes
-responsible Staff/unassigned/workload data without granting leadership decisions or hidden
-review data. All read/aggregate/file/history surfaces share these rules. Baseline §2.1 now defines Head officer management and completed-package submission,
-`LEADERSHIP_APPROVAL_AUTHORITY` oversight plus eligible decisions, and
-`RESEARCH_OVERSIGHT_AUTHORITY` internal-researcher eligibility plus read-only
-oversight. Proposal persistence is implemented; project/dashboard/reporting sources remain
-planned and must not be represented as operational.
+Replaces "Scientific Management clarification — 2026-09-21"; its Head/Staff/Leadership
+decision rights are superseded. Apply the companion Authorization Contracts section
+"Research Management roles and approval-routing contract — 2026-10-18"
+(`docs/permission-matrix.md` §7 wins):
+
+- TP¹/TB¹ assign or revoke the responsible CV; the system auto-assigns one CV on
+  submit/resubmit by segment (level + nature), more specific segment first, then the CV
+  with fewer active records; unmatched records show "Chưa có người phụ trách" for TP. CV
+  manages only records it currently holds (`PROPOSAL_MANAGEMENT_OFFICER` /
+  `PROJECT_MANAGEMENT_OFFICER`), one officer per record with atomic, audited history.
+- Approval routing (`approval_submissions`) replaces package submission: CV drafts →
+  `BOARD_REVIEW` (TB) → `HEAD_REVIEW` (TP) → `LEADERSHIP` (signer per kind); return to the
+  author with a mandatory reason; no step skipping, no self-review; TB-authored
+  submissions start at `HEAD_REVIEW`.
+- Adjustment (with or without funding change) and extension: CV appraises → routing →
+  GĐ or PGĐ-KH signs; the signature applies the change atomically. GĐ alone approves
+  topic + funding and liquidation.
+- Project view is Academy-wide for GĐ, PGĐ-KH, TP and TB; proposals remain unit-scoped.
+  PP and PGĐ-TD only monitor; PGĐ-TD sees aggregate funding only.
+- Domain resolvers retain independent participation access and deny conflicting
+  officer/evaluation/routing/signer assignments at changes and actions. Management
+  visibility never grants hidden review data. All read/aggregate/file/history surfaces
+  share these rules. Proposal persistence is implemented; project/dashboard/reporting
+  sources remain planned and must not be represented as operational.
 
 ## Design Paradigm
 
@@ -88,8 +105,9 @@ flowchart LR
   notification
 - **Prevents:** role-only or scope-only permission decisions
 - **Rule:** evaluate system role, organization scope, active record
-  relationships, assignment scope, any domain-applicable future delegation, workflow state, and
-  conflict policy; each applicable resolver returns `resolved(value)`,
+  relationships, assignment scope (including the segment-based responsible-CV
+  assignment), any domain-applicable future delegation, workflow state (including the
+  approval-routing stage and its signer), and conflict policy; each applicable resolver returns `resolved(value)`,
   `resolved(empty)`, or `unresolved/error`, while inapplicable dimensions return
   `not-applicable`; only unresolved, failed, stale, or ambiguous applicable
   context fails closed
@@ -118,8 +136,8 @@ flowchart LR
 
 - **Binds:** governance, audit, source-domain action policies
 - **Prevents:** informal act-on-behalf access
-- **Rule:** proposal create, submit, and resubmit are owner-derived internal-PI
-  actions and are never delegated; any future delegation in another domain
+- **Rule:** proposal create, submit, and resubmit are owner-derived PI actions (PI
+  is any role except QT/NNB) and are never delegated; any future delegation in another domain
   requires its own explicit, record-bounded contract before implementation
 
 ### AD-6 — Server Capability Contract [ADOPTED]
@@ -194,7 +212,11 @@ flowchart LR
   migrates legacy PI/reviewer/council accounts to a canonical system role plus
   typed record relationships, enforces one active system role at persistence
   and service boundaries, and consolidates existing permission seams before
-  dependent modules are implemented
+  dependent modules are implemented; the 7 → 10 account migration is forward
+  migration `20261016500000` (commit 0a39db3; never an edit of `20260921000000`): `SCIENTIFIC_MANAGEMENT_HEAD` → TP and
+  `SCIENTIFIC_MANAGEMENT_STAFF` → CV mechanically, former `RESEARCH_OVERSIGHT_AUTHORITY`
+  holders re-classified per person as PGĐ-KH or PGĐ-TD, PP/TB/PGĐ-TD accounts created
+  fresh (TB has exactly one holder), ambiguous accounts reported, not guessed
 
 ### AD-13 — Authoritative Commands and Jobs [ADOPTED]
 
@@ -227,6 +249,8 @@ flowchart LR
 | Decision response | `AuthorizationDecisionCodeV1`, one deterministic primary code, plain-language reason, policy version, evaluated context versions |
 | Capability response | `ViewerAuthorizationV1`; minimum-disclosure viewer relationships, exact action IDs, blocked action/code/reason, evaluated context version |
 | Mutation | Owning application service re-evaluates authoritative policy and state inside one transaction or validates context versions atomically |
+| Approval routing | `approval_submissions` / `approval_steps`; stage is workflow state, not a relationship; no step skipping or self-review; signer per kind (`DIRECTOR` or `DIRECTOR_OR_SCIENCE_DEPUTY`) |
+| Segment assignment | TP-owned CV segments (`management_portfolios`); auto-assignment is service-only with audit actor `System` |
 | Audit | Append-only `AuthorizationAuditV1` records event/correlation ID, actor and service principal, target, action, time, policy/schema version, context versions, selected decision, evaluated rule outcomes, and redacted before/after values |
 | Dependency direction | Shared authorization imports domain fact-provider ports and shared contracts, never domain persistence; domains do not reinterpret shared policy internals |
 
@@ -236,6 +260,8 @@ flowchart LR
 apps/api/src/common/authorization/   # shared policy composition and decision types
 apps/api/src/modules/delegations/    # future only after a domain contract is approved
 apps/api/src/modules/personal-work/  # authorized cross-module read model
+apps/api/src/approvals/              # approval routing (port from tuan/DocManS)
+apps/api/src/proposals-shared/approval-routing.ts  # routing rules shared by proposal/project
 packages/permissions/                # shared action, decision, and capability contracts
 ```
 
@@ -256,6 +282,8 @@ direction.
 | Record role/action UI | API DTOs and web feature | AD-6 |
 | Personal work and action queues | personal-work read module | AD-7 |
 | Cross-module integrations | source domain plus consumer | AD-8 |
+| Approval routing (tờ trình CV → TB → TP → BGĐ) | approvals module; proposal/project modules open and close submissions | AD-2, AD-3, AD-13 |
+| Segment catalog and responsible-CV auto-assignment | proposal module (TP-owned segments, service-only job) | AD-2, AD-4, AD-13 |
 
 ## Inherited Operational Constraint
 
@@ -263,6 +291,14 @@ This feature inherits the full architecture's deployment, monitoring, backup,
 and environment model. Authorization policy, decision codes, disclosure,
 auditing, and fail-closed behavior must not vary by environment, and no
 deployable path may introduce an authorization bypass.
+
+## Open Decisions
+
+- Segment taxonomy values (proposal levels and nature values) are not yet fixed.
+- TB has exactly one holder; enforcement point and absence handling are open.
+- PP never substitutes for TP, even when TP is absent; no deputy path exists.
+- Exact `PermissionActionV1` codes for routing and segment actions come from the
+  `tuan/DocManS` registry, pending architect confirmation.
 
 ## Deferred
 

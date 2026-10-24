@@ -12,6 +12,8 @@ context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/implementation-plan.md'
 ---
 
+> Role names and decision rights here predate the 10-role model (2026-10-18); see `docs/permission-matrix.md`.
+
 <frozen-after-approval>
 
 **Historical verification record:** This completed slice predates the current

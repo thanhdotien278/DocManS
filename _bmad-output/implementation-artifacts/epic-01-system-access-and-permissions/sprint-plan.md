@@ -19,6 +19,8 @@
 | 1.8 | Capability response và giao diện không suy diễn quyền | `backlog` |
 | 1.9 | Vòng đời quan hệ theo hồ sơ và giới hạn thư ký khoa học | `backlog` |
 | 1.10 | Vòng đời ủy quyền theo hành động và hồ sơ | `backlog` |
+| 1.11 | Ten-role registry and account migration | `backlog` |
+| 1.12 | Segment catalog and CV segment assignment | `backlog` |
 
 ## Execution note
 
@@ -26,10 +28,12 @@ Stories 1.1–1.4 are implemented and covered by the current workspace, authenti
 
 ## Finalized leadership authorization impact
 
-`RESEARCH_OVERSIGHT_AUTHORITY` combines internal researcher capabilities through record
-relationships with explicit-scope institutional oversight. It grants no final proposal,
-council-establishment, funding or acceptance decision. `LEADERSHIP_APPROVAL_AUTHORITY`
-has oversight plus eligible conflict-free final decisions. All surfaces must preserve
-disclosure, source authorization and active officer restrictions; no broad Staff queues.
-Project/council establishment, notifications/My Work and institutional dashboards/reports
-remain planned where their owning backend is absent. Funding uses available metadata only.
+Updated 2026-10-18 to the 10-role model (`docs/permission-matrix.md`, §7 wins).
+`RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD) monitors only and is not
+`SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH). Only GĐ (`LEADERSHIP_APPROVAL_AUTHORITY`) approves
+topic + funding and liquidation; GĐ or PGĐ-KH sign councils, IRB, acceptance, extension and
+adjustment. Tờ trình routing is CV → TB → TP → BGĐ; former Head/Staff duties go to TP/TB/CV
+per action. All surfaces must preserve disclosure, source authorization and active officer
+restrictions; no broad CV queues. Project/council establishment, notifications/My Work and
+institutional dashboards/reports remain planned where their owning backend is absent.
+Funding uses available metadata only.

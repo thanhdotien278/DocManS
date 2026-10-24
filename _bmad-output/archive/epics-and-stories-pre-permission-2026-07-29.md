@@ -21,6 +21,8 @@ outputFile: "/Users/Super/DocManS/_bmad-output/epics-and-stories.md"
 
 # DocManSystem - Epic Breakdown
 
+> Role names and decision rights here predate the 10-role model (2026-10-18); see `docs/permission-matrix.md`.
+
 > Archived on 2026-07-29. The permission-complete canonical backlog is
 > `_bmad-output/epics.md`.
 

@@ -4,6 +4,8 @@ baseline_commit: NO_VCS
 
 # Story 1.10: Vòng đời ủy quyền theo hành động và hồ sơ
 
+> Role names and decision rights here predate the 10-role model (2026-10-18); see `docs/permission-matrix.md`.
+
 Status: review
 
 ## Story

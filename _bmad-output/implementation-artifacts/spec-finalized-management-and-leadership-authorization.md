@@ -12,6 +12,8 @@ context:
   - '{project-root}/docs/permission-matrix.md'
 ---
 
+> Role names and decision rights here predate the 10-role model (2026-10-18); see `docs/permission-matrix.md`.
+
 > **Historical implementation record:** This completed spec records the 2026-09-21
 > delivery slice. The current normative authority split is maintained by the approved
 > baseline, permission matrix and refined review-flow spec: `SCIENTIFIC_MANAGEMENT_HEAD`

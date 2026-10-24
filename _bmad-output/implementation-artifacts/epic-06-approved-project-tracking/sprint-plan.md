@@ -1,6 +1,6 @@
 # Epic 6: Theo dõi và nghiệm thu đề tài đã phê duyệt
 
-**Authorization refinement — 2026-09-21/22:** Stories 6.1/6.2 own independent `PROJECT_MANAGEMENT_OFFICER` lifecycle: at most one active primary officer, no automatic proposal-authority copy, atomic reassignment/history/audit. Head oversight and assigned-Staff visibility apply to reporting/adjustment/extension/files/history; participants cannot hold conflicting management/evaluation roles. Leadership approval is the gate before execution. After activation, assigned Staff reviews/accepts reports and finally approves/rejects Project Adjustment; assigned Staff validates/prepares Project Extension and scoped Head finally approves/rejects it. Leadership does not decide either request type. Golden Flow 4 project execution is in implementation; acceptance/council, institutional dashboards and notification delivery remain later work.
+**Authorization refinement — 2026-10-18 (10-role model, supersedes 2026-09-21/22):** Stories 6.1/6.2 own independent `PROJECT_MANAGEMENT_OFFICER` lifecycle: at most one active primary officer (a CV), no automatic proposal-authority copy, atomic reassignment/history/audit; TP¹/TB¹ assign it. Project view is Academy-wide for GĐ, PGĐ-KH, TP and TB; CV operates only on assigned projects; PP and PGĐ-TD read only. GĐ approval of topic + funding is the gate before execution. After activation, the assigned CV reviews/accepts reports and appraises Project Adjustment/Extension; the request then goes through tờ trình routing (CV → TB → TP → BGĐ) and is signed by GĐ or PGĐ-KH, whose signature applies the change atomically. Acceptance council is signed by GĐ or PGĐ-KH; liquidation only by GĐ. New stories 6.11 (adjustment/extension via routing) and 6.12 (funding metadata and liquidation). The Golden Flow 4 code on `DocManS` still ships the former Staff/Head decision paths until 6.11 lands. Institutional dashboards and notification delivery remain later work.
 
 - **Epic status:** `in-progress`
 - **Canonical source:** [epics.md](../../epics.md)
@@ -21,6 +21,8 @@
 | 6.8 | Chuẩn bị và nộp hồ sơ nghiệm thu hoặc đánh giá cuối | `backlog` |
 | 6.9 | Rà soát và quyết định nghiệm thu hoặc đánh giá cuối | `backlog` |
 | 6.10 | Trạng thái, lịch sử và truy vấn được phân quyền của đề tài | `in-progress` (execution/history portions in the GF4 slice; remainder backlog) |
+| 6.11 | Delta for GF4: adjustment/extension via approval routing, signed by GĐ/PGĐ-KH | `backlog` |
+| 6.12 | Funding metadata and liquidation | `backlog` |
 
 ## Execution note
 
@@ -28,30 +30,34 @@ Create the next story specification only after its preceding dependency is under
 
 ## Finalized leadership authorization impact
 
-`RESEARCH_OVERSIGHT_AUTHORITY` combines internal researcher capabilities through record
-relationships with explicit-scope institutional oversight. It grants no final proposal,
-council-establishment, funding or acceptance decision. `LEADERSHIP_APPROVAL_AUTHORITY`
-has the proposal gate and any separately defined later decision authority, but no
-Golden Flow 4 Project Adjustment or Project Extension decision. All surfaces must
-preserve disclosure, source authorization and active officer restrictions; no broad
-Staff queues.
-Project/council establishment, notifications/My Work and institutional dashboards/reports
-remain planned where their owning backend is absent. Funding uses available metadata only.
+Updated 2026-10-18 to the 10-role model (`docs/permission-matrix.md`, §7 wins).
+`RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD) monitors only and is not
+`SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH). Only GĐ (`LEADERSHIP_APPROVAL_AUTHORITY`) approves
+topic + funding and liquidation; GĐ or PGĐ-KH sign councils, IRB, acceptance, extension and
+adjustment. Tờ trình routing is CV → TB → TP → BGĐ; former Head/Staff duties go to TP/TB/CV
+per action. All surfaces must preserve disclosure, source authorization and active officer
+restrictions; no broad CV queues. Project/council establishment, notifications/My Work and
+institutional dashboards/reports remain planned where their owning backend is absent.
+Funding uses available metadata only.
 
 ## Golden Flow 4 delivery gate — 2026-09-22
 
 [Execution contract](../../../docs/contracts/project-execution.md) refines stories
 6.1–6.7 and execution/history from 6.10 into one vertical flow. 6.8–6.9 remain the
-next flow. The documentation gate is complete; implementation is **in progress**. Assigned proposal
-Staff creates; Head separately assigns project Staff, who confirms setup. Leadership
-approval is required before execution begins, but Leadership does not approve project
-adjustments or extensions. Head has no Project Adjustment decision action.
-Head officer-grant authority is already settled by baseline §2.1.
+next flow. The documentation gate is complete; implementation is **in progress**.
+Target model (10 roles, 2026-10-18; the code on `DocManS` has the ten role codes but still
+implements the former Staff/Head (now CV/TP) decision paths until story 6.11): the assigned proposal CV creates the
+project; TP¹/TB¹ separately assign the project CV, who confirms setup. GĐ approval of
+topic + funding is required before execution begins. The assigned CV appraises Project
+Adjustment/Extension and drafts the tờ trình; TB → TP route it; GĐ or PGĐ-KH sign, and the
+signature applies the change atomically. TP, TB and PP have no direct adjustment or
+extension decision action.
 
 Verification must cover all twenty happy/negative scenarios in the user request,
-including immutable report/evidence revisions, assigned-Staff scope, Staff report
-acceptance, Staff adjustment approval/rejection, Head extension approval/rejection,
-Leadership denial for both project request types, atomic end-date/plan application,
+including immutable report/evidence revisions, assigned-CV scope, CV report
+acceptance, CV appraisal of adjustment/extension, tờ trình routing (no step skipping,
+no self-review, return with reason), GĐ or PGĐ-KH signature approval/rejection and denial
+for TP/TB/PP/PGĐ-TD, atomic end-date/plan application,
 rejection preservation, inactive actors, incompatible assignments, stale/duplicate
 decisions, derived overdue, capability-driven UI and append-only audit. Seed must
 demonstrate the entire flow.
