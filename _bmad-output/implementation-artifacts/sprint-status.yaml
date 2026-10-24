@@ -35,7 +35,8 @@ development_status:
   1-7-hop-dong-phan-quyen-va-bo-danh-gia-policy-dung-chung: done
   1-8-capability-response-va-giao-dien-khong-suy-dien-quyen: done
   1-9-vong-doi-quan-he-theo-ho-so-va-gioi-han-thu-ky-khoa-hoc: done
-  1-11-ten-role-registry-and-account-migration: in-progress
+  # 1.11: vai trò/báo cáo migration/TB duy nhất/audit đã xong; còn chức danh đơn vị hiển thị (chưa có trường dữ liệu) -> review.
+  1-11-ten-role-registry-and-account-migration: review
   1-12-segment-catalog-and-cv-segment-assignment: backlog
   epic-1-retrospective: optional
   epic-2: in-progress
@@ -72,6 +73,7 @@ development_status:
   epic-5: in-progress
   5-1-kiem-tra-tinh-day-du-va-yeu-cau-bo-sung: backlog
   5-2-chinh-sua-theo-yeu-cau-va-nop-lai-de-xuat: backlog
+  # 5.3: review 2026-10-24 sửa 3 lỗi; còn thiếu notification event (AC4, chờ Epic 11) -> giữ review.
   5-3-phan-cong-reviewer-voi-kiem-tra-xung-dot: review
   5-4-reviewer-truy-cap-va-nop-danh-gia-cua-minh: backlog
   5-5-theo-doi-tien-do-va-tong-hop-danh-gia-noi-bo: backlog
