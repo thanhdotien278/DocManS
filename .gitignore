@@ -16,3 +16,6 @@ apps/web/.next/
 users.md
 _bmad/
 graphify-out/
+
+# Bằng chứng QA cục bộ (ảnh, JSON), không commit
+_bmad-output/qa-evidence/
