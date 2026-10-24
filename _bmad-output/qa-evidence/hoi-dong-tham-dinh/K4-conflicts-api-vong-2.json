@@ -1,0 +1,47 @@
+[
+  {
+    "u": "patuan",
+    "response": {
+      "status": 200,
+      "body": {
+        "users": []
+      }
+    }
+  },
+  {
+    "u": "int1",
+    "response": {
+      "status": 200,
+      "body": {
+        "users": []
+      }
+    }
+  },
+  {
+    "u": "hdtien1",
+    "response": {
+      "status": 200,
+      "body": {
+        "users": []
+      }
+    }
+  },
+  {
+    "u": "nmphuong",
+    "response": {
+      "status": 200,
+      "body": {
+        "users": []
+      }
+    }
+  },
+  {
+    "u": "admin",
+    "response": {
+      "status": 200,
+      "body": {
+        "users": []
+      }
+    }
+  }
+]

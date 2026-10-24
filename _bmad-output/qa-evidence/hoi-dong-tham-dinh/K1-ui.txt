@@ -1,0 +1,169 @@
+Đến nội dung chính
+HỆ THỐNG QUẢN LÝ NGHIÊN CỨU KHOA HỌC, CÔNG NGHỆ VÀ ĐỔI MỚI SÁNG TẠO
+Học viện Quân y
+H
+HD Tiến 1
+Phòng KHQS
+Dashboard
+Lý lịch khoa học
+Quản lý đề tài
+Hồ sơ nhà khoa học
+Đợt tiếp nhận
+Đánh giá hồ sơ
+Theo dõi đề tài
+Giao việc
+Báo cáo
+Đánh giá của tôi
+Dashboard /
+Quản lý đề tài /
+Chi tiết hồ sơ
+
+CHI TIẾT HỒ SƠ
+
+Hồ sơ đề xuất
+
+Cập nhật thông tin nháp, tải tài liệu, kiểm tra readiness, nộp chính thức và xem lịch sử nộp.
+
+Tải lại hồ sơ
+Kiểm tra đầy đủ
+
+Ghi nhận kiểm tra trước khi phân công đánh giá
+
+Xác nhận hồ sơ đầy đủ
+
+Trạng thái hồ sơ hiện không cho phép hành động này.
+
+Phiên bản đã nộp
+
+Nội dung đã khóa được giữ nguyên
+
+Phiên bản 1 — 15:56 24 thg 10, 2026
+Thông tin đề tài
+
+Thông tin chỉ đọc phục vụ kiểm tra và điều phối
+
+TÊN ĐỀ TÀI
+QA-CODEX-HDTD-20261024-01
+CHỦ NHIỆM (PI)
+TS. Phạm Anh Tuấn
+LĨNH VỰC
+Y học quân sự
+LOẠI ĐỀ TÀI
+Đề tài cấp Học viện
+ĐƠN VỊ CHỦ TRÌ
+Khoa Toán - Tin học
+TRẠNG THÁI
+Đã nộp
+BẮT ĐẦU
+01/11/2026
+KẾT THÚC
+01/11/2027
+KINH PHÍ DỰ KIẾN
+10.000.000 VND
+TEAM MEMBERS
+int1
+Thành viên
+Khoa Toán - Tin học
+Yêu cầu bổ sung
+
+Lý do, hạn phản hồi và trạng thái xử lý của vòng bổ sung
+
+Chưa có yêu cầu bổ sung
+
+Staff có thể gửi yêu cầu khi hồ sơ đã nộp cần hoàn thiện thêm.
+
+Lý do bổ sung
+Hạn phản hồi
+Yêu cầu bổ sung
+Phiếu đánh giá của tôi
+
+Chấm điểm và nhận xét theo phân công
+
+Lưu nháp
+
+Hành động bị từ chối do xung đột lợi ích.
+
+Tiến độ phiếu đánh giá
+
+Theo dõi thành viên chấm phiếu, tiến độ và hạn xử lý (việc mời thành viên thực hiện ở panel Hội đồng thẩm định)
+
+Đã nộp
+ĐANG PHÂN CÔNG
+0
+ĐÃ GỬI PHIẾU
+0
+CÒN CHỜ
+0
+ĐIỂM TRUNG BÌNH
+Ẩn theo chính sách
+
+Đã gửi 0/0 phiếu · Quá hạn: 0. Hội đồng chưa được thành lập.
+
+HẠN XỬ LÝ VÒNG ĐÁNH GIÁ
+
+Chưa có hạn xử lý được ghi nhận.
+
+Hội đồng thẩm định
+
+Đang lập
+
+Đang lập
+
+Chủ tịch hội đồng 0/1 · Phản biện 0/2 · Ủy viên 0/3 · Thư ký hội đồng 0/1 · Tổng số thành viên cấu hình: 7
+
+Chưa có thành viên được mời
+
+Danh sách thành viên chưa có hoặc không được hiển thị cho tài khoản này.
+
+Vai trò của bạn không được cấu hình để thành lập hội đồng.
+
+ĐIỀU KIỆN TRÌNH
+Cần 1 Chủ tịch hội đồng (hiện 0).
+Cần 2 Phản biện (hiện 0).
+Cần 3 Ủy viên (hiện 0).
+Cần 1 Thư ký hội đồng (hiện 0).
+Lập tờ trình thành lập hội đồng
+
+Cần 1 Chủ tịch hội đồng (hiện 0).
+
+Tệp tài liệu
+
+Theo dõi từng tài liệu bắt buộc và metadata nộp hồ sơ
+
+Thuyết minh đề tài
+
+application/pdf · tối đa 5MB
+
+Hoạt động
+Chọn tệp
+Mô tả tài liệu
+Tải tệp
+
+Trạng thái hồ sơ hiện không cho phép hành động này.
+
+TÊN TỆP	MÔ TẢ TÀI LIỆU	KÍCH THƯỚC	NGƯỜI TẢI LÊN	THỜI GIAN NỘP	THAO TÁC
+
+QA-proposal-form.pdf
+	Chưa có mô tả	20 KB	TS. Phạm Anh Tuấn	15:56 24 thg 10, 2026	
+Dự toán kinh phí
+
+application/pdf · tối đa 5MB
+
+Hoạt động
+Chọn tệp
+Mô tả tài liệu
+Tải tệp
+
+Trạng thái hồ sơ hiện không cho phép hành động này.
+
+TÊN TỆP	MÔ TẢ TÀI LIỆU	KÍCH THƯỚC	NGƯỜI TẢI LÊN	THỜI GIAN NỘP	THAO TÁC
+
+QA-budget-form.pdf
+	Chưa có mô tả	20 KB	TS. Phạm Anh Tuấn	15:56 24 thg 10, 2026	
+Timeline
+
+Lịch sử nộp và thay đổi trạng thái chính
+
+NGƯỜI THỰC HIỆN	THỜI GIAN	NỘI DUNG
+TS. Phạm Anh Tuấn	15:56 24 thg 10, 2026	PI nộp hồ sơ chính thức
+HD Tiến 1	15:56 24 thg 10, 2026	Đã kiểm tra hồ sơ đầy đủ

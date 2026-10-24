@@ -1,0 +1,10 @@
+{
+  "total": 88,
+  "console": 44,
+  "pageerror": [],
+  "http5xx": [],
+  "httpCounts": {
+    "401": 8,
+    "403": 36
+  }
+}

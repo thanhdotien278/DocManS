@@ -1,0 +1,39 @@
+{
+  "time": "2026-10-24T08:59:47.110Z",
+  "case": "K7",
+  "url": "http://localhost:3001/my-reviews",
+  "text": "Đến nội dung chính\nHỆ THỐNG QUẢN LÝ NGHIÊN CỨU KHOA HỌC, CÔNG NGHỆ VÀ ĐỔI MỚI SÁNG TẠO\nHọc viện Quân y\nN\nNhà nghiên cứu test ngoài đơn vị 02\nĐơn vị ngoài\nDashboard\nLý lịch khoa học\nHồ sơ của tôi\nĐề tài đang thực hiện\nBáo cáo định kỳ\nCông việc của tôi\nThông báo\nĐánh giá của tôi\nDashboard /\nĐánh giá của tôi\n\nNHẬN XÉT\n\nĐánh giá của tôi\n\nCác hồ sơ bạn được phân công đánh giá, hạn nhận xét và tình trạng phiếu chấm điểm.\n\nHồ sơ được phân công\n\n0 hồ sơ · 0 phiếu chưa gửi · 0 lời mời\n\nChưa có hồ sơ được phân công\n\nKhi chuyên viên quản lý khoa học phân công đánh giá, hồ sơ sẽ xuất hiện ở đây.",
+  "focus": [
+    {
+      "tag": "BUTTON",
+      "text": "Hủy",
+      "inside": true
+    },
+    {
+      "tag": "BODY",
+      "text": "Đến nội dung chính\nHỆ THỐNG QUẢN LÝ NGHIÊN CỨU KHOA HỌC, CÔNG NGHỆ VÀ ĐỔI MỚI SÁNG TẠO\nHọc viện Quân y\nN\nNhà nghiên cứu test ngoài đơn vị 02\nĐơn vị ngoài\nDashboard\nLý lịch khoa học\nHồ sơ của tôi\nĐề tài đang thực hiện\nBáo cáo định kỳ\nCông việc của tôi\nThông báo\nĐánh giá của tôi\nDashboard /\nĐánh giá của tôi\n\nNHẬN XÉT\n\nĐánh giá của tôi\n\nCác hồ sơ bạn được phân công đánh giá, hạn nhận xét và tình trạng phiếu chấm điểm.\n\nHồ sơ được phân công\n\n0 hồ sơ · 0 phiếu chưa gửi · 1 lời mời\n\nLỜI MỜI\nHỒ SƠ\tVAI TRÒ\tHẠN\tNGƯỜI MỜI\tTRẢ LỜI\n\nQA-CODEX-HDTD-20261024-01\n\tỦy viên\t7 thg 11, 2026\tTS. Nguyễn Minh Phương\tChấp nhận Từ chối\nTừ chối lời mời\n\nQA-CODEX-HDTD-20261024-01\n\nLý do từ chối *\n\nHủy\nGửi từ chối",
+      "inside": false
+    },
+    {
+      "tag": "TEXTAREA",
+      "text": "",
+      "inside": true
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Hủy",
+      "inside": true
+    },
+    {
+      "tag": "TEXTAREA",
+      "text": "",
+      "inside": true
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Hủy",
+      "inside": true
+    }
+  ],
+  "escapeClosed": true
+}

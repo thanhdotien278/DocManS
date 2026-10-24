@@ -1,0 +1,996 @@
+{
+  "pid": "e00f26a6-ee96-4889-a5d5-53a668458336",
+  "steps": [
+    {
+      "status": 201,
+      "body": {
+        "proposal": {
+          "viewerAuthorization": {
+            "schemaVersion": "v1",
+            "systemRole": "RESEARCHER_INTERNAL_USER",
+            "viewerRelationships": [
+              {
+                "type": "PROPOSAL_PI",
+                "status": "ACTIVE",
+                "effectiveFrom": "2026-10-24T09:02:43.110Z",
+                "effectiveUntil": null
+              }
+            ],
+            "allowedActions": [
+              "file.read",
+              "file.upload",
+              "proposal.draft.update",
+              "proposal.read",
+              "proposal.submit"
+            ],
+            "blockedActions": [
+              {
+                "action": "proposal.completeness.check",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.decision.approve",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.decision.reject",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.management-officer.assign",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.management-officer.revoke",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.review.assign",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Vai trò của bạn không được cấu hình để thành lập hội đồng."
+              },
+              {
+                "action": "proposal.review.consolidate",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.review.finalize",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.review.progress.read",
+                "code": "WORKFLOW_STATE_DENIED",
+                "reason": "Trạng thái hồ sơ hiện không cho phép hành động này."
+              },
+              {
+                "action": "proposal.review.submit",
+                "code": "CONFLICT_DENIED",
+                "reason": "Hành động bị từ chối do xung đột lợi ích."
+              },
+              {
+                "action": "proposal.review.submit-package",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.supplement.request",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              }
+            ],
+            "policyVersion": "v1",
+            "evaluatedAsOf": "2026-10-24T09:02:43.098Z",
+            "contextVersion": {
+              "domain": "proposal",
+              "recordId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+              "aggregateVersion": 1792832563125,
+              "relationshipVersion": 1,
+              "conflictVersion": 1,
+              "delegationVersion": 1,
+              "policyVersion": "v1"
+            },
+            "accessReasons": [
+              "PROPOSAL_PI"
+            ]
+          },
+          "viewerParticipation": {
+            "role": "PROPOSAL_PI",
+            "label": "Chủ nhiệm",
+            "roles": [
+              "PROPOSAL_PI"
+            ],
+            "labels": [
+              "Chủ nhiệm"
+            ],
+            "isOwner": true,
+            "isParticipant": true,
+            "conflict": {
+              "conflicted": true,
+              "reasonCode": "participation",
+              "reason": "Người dùng là chủ nhiệm của hồ sơ này.",
+              "message": "Bạn là chủ nhiệm hồ sơ này nên không thể phê duyệt hoặc đánh giá hồ sơ."
+            }
+          },
+          "viewerReviewAssignment": {
+            "isAssignedReviewer": false,
+            "assignmentId": "",
+            "assignmentRole": "none",
+            "assignmentRoleLabel": ""
+          },
+          "statusLabel": "Nháp",
+          "id": "e00f26a6-ee96-4889-a5d5-53a668458336",
+          "code": "",
+          "intakePeriodId": "7fe84864-4762-4dab-b93c-e4596f1d1ab8",
+          "ownerId": "user-pi",
+          "ownerDisplayName": "TS. Phạm Anh Tuấn",
+          "hostOrganizationUnitId": "org-khti",
+          "researchFieldCode": "military-medicine",
+          "proposalTypeCode": "academy-level",
+          "title": "QA-CODEX-HDTD-20261024-02-K16",
+          "objectives": "Kiểm thử xung đột người ký thành viên hội đồng",
+          "summary": "Dữ liệu thử QA độc lập K16",
+          "startDate": "2026-11-01T00:00:00.000Z",
+          "endDate": "2027-11-01T00:00:00.000Z",
+          "budgetMetadata": {
+            "amount": 10000000,
+            "currency": "VND"
+          },
+          "status": "draft",
+          "submittedAt": "",
+          "submittedById": "",
+          "createdAt": "2026-10-24T09:02:43.110Z",
+          "updatedAt": "2026-10-24T09:02:43.125Z",
+          "canEdit": true,
+          "canSubmit": true,
+          "managementOfficer": {
+            "resolved": true,
+            "current": null,
+            "history": []
+          },
+          "versions": [],
+          "members": [
+            {
+              "id": "07ddeeba-2377-4ead-9eb3-9839cd071b0c",
+              "name": "int1",
+              "role": "TOPIC_MEMBER",
+              "organization": "Khoa Toán - Tin học",
+              "userId": "user-researcher1",
+              "isAccountLinked": true,
+              "participationRole": "TOPIC_MEMBER",
+              "participationRoleLabel": "Thành viên",
+              "status": "ACTIVE",
+              "effectiveFrom": "2026-10-24T09:02:43.098Z",
+              "effectiveUntil": ""
+            }
+          ],
+          "attachments": [],
+          "history": [],
+          "supplementRequests": [],
+          "requiredPackage": [
+            {
+              "code": "proposal-form",
+              "label": "Thuyết minh đề tài",
+              "allowedMimeTypes": [
+                "application/pdf"
+              ],
+              "maxSizeMb": 5
+            },
+            {
+              "code": "budget-form",
+              "label": "Dự toán kinh phí",
+              "allowedMimeTypes": [
+                "application/pdf"
+              ],
+              "maxSizeMb": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "status": 201,
+      "body": {
+        "file": {
+          "id": "be94cba2-4f54-4bf4-a675-58809ea4b877",
+          "relatedEntityType": "research_proposal",
+          "relatedEntityId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+          "proposalId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+          "filePurpose": "proposal-form",
+          "requirementCode": "proposal-form",
+          "fileName": "QA-K16-proposal-form.pdf",
+          "description": null,
+          "mimeType": "application/pdf",
+          "sizeBytes": 10203,
+          "uploadedById": "user-pi",
+          "uploaderDisplayName": "TS. Phạm Anh Tuấn",
+          "status": "active",
+          "createdAt": "2026-10-24T09:02:43.326Z",
+          "updatedAt": "2026-10-24T09:02:43.326Z",
+          "canEdit": true,
+          "canDelete": true
+        }
+      }
+    },
+    {
+      "status": 201,
+      "body": {
+        "file": {
+          "id": "8daa6f28-e3f6-4dc3-83a9-9c4bdaea5d00",
+          "relatedEntityType": "research_proposal",
+          "relatedEntityId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+          "proposalId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+          "filePurpose": "budget-form",
+          "requirementCode": "budget-form",
+          "fileName": "QA-K16-budget-form.pdf",
+          "description": null,
+          "mimeType": "application/pdf",
+          "sizeBytes": 10203,
+          "uploadedById": "user-pi",
+          "uploaderDisplayName": "TS. Phạm Anh Tuấn",
+          "status": "active",
+          "createdAt": "2026-10-24T09:02:43.362Z",
+          "updatedAt": "2026-10-24T09:02:43.362Z",
+          "canEdit": true,
+          "canDelete": true
+        }
+      }
+    },
+    {
+      "status": 201,
+      "body": {
+        "proposal": {
+          "viewerAuthorization": {
+            "schemaVersion": "v1",
+            "systemRole": "RESEARCHER_INTERNAL_USER",
+            "viewerRelationships": [
+              {
+                "type": "PROPOSAL_PI",
+                "status": "ACTIVE",
+                "effectiveFrom": "2026-10-24T09:02:43.110Z",
+                "effectiveUntil": null
+              }
+            ],
+            "allowedActions": [
+              "file.read",
+              "proposal.read"
+            ],
+            "blockedActions": [
+              {
+                "action": "file.upload",
+                "code": "WORKFLOW_STATE_DENIED",
+                "reason": "Trạng thái hồ sơ hiện không cho phép hành động này."
+              },
+              {
+                "action": "proposal.completeness.check",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.decision.approve",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.decision.reject",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.draft.update",
+                "code": "WORKFLOW_STATE_DENIED",
+                "reason": "Trạng thái hồ sơ hiện không cho phép hành động này."
+              },
+              {
+                "action": "proposal.management-officer.assign",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.management-officer.revoke",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.review.assign",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Vai trò của bạn không được cấu hình để thành lập hội đồng."
+              },
+              {
+                "action": "proposal.review.consolidate",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.review.finalize",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.review.progress.read",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.review.submit",
+                "code": "CONFLICT_DENIED",
+                "reason": "Hành động bị từ chối do xung đột lợi ích."
+              },
+              {
+                "action": "proposal.review.submit-package",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.submit",
+                "code": "WORKFLOW_STATE_DENIED",
+                "reason": "Trạng thái hồ sơ hiện không cho phép hành động này."
+              },
+              {
+                "action": "proposal.supplement.request",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              }
+            ],
+            "policyVersion": "v1",
+            "evaluatedAsOf": "2026-10-24T09:02:43.362Z",
+            "contextVersion": {
+              "domain": "proposal",
+              "recordId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+              "aggregateVersion": 1792832563388,
+              "relationshipVersion": 1,
+              "conflictVersion": 1,
+              "delegationVersion": 1,
+              "policyVersion": "v1"
+            },
+            "accessReasons": [
+              "PROPOSAL_PI"
+            ]
+          },
+          "viewerParticipation": {
+            "role": "PROPOSAL_PI",
+            "label": "Chủ nhiệm",
+            "roles": [
+              "PROPOSAL_PI"
+            ],
+            "labels": [
+              "Chủ nhiệm"
+            ],
+            "isOwner": true,
+            "isParticipant": true,
+            "conflict": {
+              "conflicted": true,
+              "reasonCode": "participation",
+              "reason": "Người dùng là chủ nhiệm của hồ sơ này.",
+              "message": "Bạn là chủ nhiệm hồ sơ này nên không thể phê duyệt hoặc đánh giá hồ sơ."
+            }
+          },
+          "viewerReviewAssignment": {
+            "isAssignedReviewer": false,
+            "assignmentId": "",
+            "assignmentRole": "none",
+            "assignmentRoleLabel": ""
+          },
+          "statusLabel": "Đã nộp",
+          "id": "e00f26a6-ee96-4889-a5d5-53a668458336",
+          "code": "",
+          "intakePeriodId": "7fe84864-4762-4dab-b93c-e4596f1d1ab8",
+          "ownerId": "user-pi",
+          "ownerDisplayName": "",
+          "hostOrganizationUnitId": "org-khti",
+          "researchFieldCode": "military-medicine",
+          "proposalTypeCode": "academy-level",
+          "title": "QA-CODEX-HDTD-20261024-02-K16",
+          "objectives": "Kiểm thử xung đột người ký thành viên hội đồng",
+          "summary": "Dữ liệu thử QA độc lập K16",
+          "startDate": "2026-11-01T00:00:00.000Z",
+          "endDate": "2027-11-01T00:00:00.000Z",
+          "budgetMetadata": {
+            "amount": 10000000,
+            "currency": "VND"
+          },
+          "status": "submitted",
+          "submittedAt": "2026-10-24T09:02:43.388Z",
+          "submittedById": "user-pi",
+          "createdAt": "2026-10-24T09:02:43.110Z",
+          "updatedAt": "2026-10-24T09:02:43.388Z",
+          "canEdit": false,
+          "canSubmit": false,
+          "managementOfficer": {
+            "resolved": true,
+            "current": null,
+            "history": []
+          },
+          "versions": [
+            {
+              "id": "e597c518-73f3-4a86-8a7c-4b3e19227d75",
+              "version": 1,
+              "submittedAt": "2026-10-24T09:02:43.388Z",
+              "content": {
+                "id": "e00f26a6-ee96-4889-a5d5-53a668458336",
+                "title": "QA-CODEX-HDTD-20261024-02-K16",
+                "endDate": "2027-11-01T00:00:00.000Z",
+                "members": [
+                  {
+                    "id": "07ddeeba-2377-4ead-9eb3-9839cd071b0c",
+                    "name": "int1",
+                    "role": "TOPIC_MEMBER",
+                    "status": "ACTIVE",
+                    "userId": "user-researcher1",
+                    "organization": "Khoa Toán - Tin học",
+                    "effectiveFrom": "2026-10-24T09:02:43.098Z",
+                    "effectiveUntil": "",
+                    "isAccountLinked": true,
+                    "participationRole": "TOPIC_MEMBER",
+                    "participationRoleLabel": "Thành viên"
+                  }
+                ],
+                "ownerId": "user-pi",
+                "summary": "Dữ liệu thử QA độc lập K16",
+                "startDate": "2026-11-01T00:00:00.000Z",
+                "objectives": "Kiểm thử xung đột người ký thành viên hội đồng",
+                "attachments": [
+                  {
+                    "id": "be94cba2-4f54-4bf4-a675-58809ea4b877",
+                    "status": "active",
+                    "canEdit": false,
+                    "fileName": "QA-K16-proposal-form.pdf",
+                    "mimeType": "application/pdf",
+                    "canDelete": false,
+                    "createdAt": "2026-10-24T09:02:43.326Z",
+                    "sizeBytes": 10203,
+                    "updatedAt": "2026-10-24T09:02:43.326Z",
+                    "proposalId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+                    "description": null,
+                    "filePurpose": "proposal-form",
+                    "uploadedById": "user-pi",
+                    "relatedEntityId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+                    "requirementCode": "proposal-form",
+                    "relatedEntityType": "research_proposal",
+                    "uploaderDisplayName": "TS. Phạm Anh Tuấn"
+                  },
+                  {
+                    "id": "8daa6f28-e3f6-4dc3-83a9-9c4bdaea5d00",
+                    "status": "active",
+                    "canEdit": false,
+                    "fileName": "QA-K16-budget-form.pdf",
+                    "mimeType": "application/pdf",
+                    "canDelete": false,
+                    "createdAt": "2026-10-24T09:02:43.362Z",
+                    "sizeBytes": 10203,
+                    "updatedAt": "2026-10-24T09:02:43.362Z",
+                    "proposalId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+                    "description": null,
+                    "filePurpose": "budget-form",
+                    "uploadedById": "user-pi",
+                    "relatedEntityId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+                    "requirementCode": "budget-form",
+                    "relatedEntityType": "research_proposal",
+                    "uploaderDisplayName": "TS. Phạm Anh Tuấn"
+                  }
+                ],
+                "budgetMetadata": {
+                  "amount": 10000000,
+                  "currency": "VND"
+                },
+                "requiredPackage": [
+                  {
+                    "code": "proposal-form",
+                    "label": "Thuyết minh đề tài",
+                    "maxSizeMb": 5,
+                    "allowedMimeTypes": [
+                      "application/pdf"
+                    ]
+                  },
+                  {
+                    "code": "budget-form",
+                    "label": "Dự toán kinh phí",
+                    "maxSizeMb": 5,
+                    "allowedMimeTypes": [
+                      "application/pdf"
+                    ]
+                  }
+                ],
+                "proposalTypeCode": "academy-level",
+                "researchFieldCode": "military-medicine",
+                "hostOrganizationUnitId": "org-khti"
+              }
+            }
+          ],
+          "members": [
+            {
+              "id": "07ddeeba-2377-4ead-9eb3-9839cd071b0c",
+              "name": "int1",
+              "role": "TOPIC_MEMBER",
+              "organization": "Khoa Toán - Tin học",
+              "userId": "user-researcher1",
+              "isAccountLinked": true,
+              "participationRole": "TOPIC_MEMBER",
+              "participationRoleLabel": "Thành viên",
+              "status": "ACTIVE",
+              "effectiveFrom": "2026-10-24T09:02:43.098Z",
+              "effectiveUntil": ""
+            }
+          ],
+          "attachments": [
+            {
+              "id": "be94cba2-4f54-4bf4-a675-58809ea4b877",
+              "proposalId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+              "relatedEntityType": "research_proposal",
+              "relatedEntityId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+              "filePurpose": "proposal-form",
+              "requirementCode": "proposal-form",
+              "fileName": "QA-K16-proposal-form.pdf",
+              "description": null,
+              "mimeType": "application/pdf",
+              "sizeBytes": 10203,
+              "uploadedById": "user-pi",
+              "uploaderDisplayName": "TS. Phạm Anh Tuấn",
+              "status": "active",
+              "createdAt": "2026-10-24T09:02:43.326Z",
+              "updatedAt": "2026-10-24T09:02:43.326Z",
+              "canEdit": false,
+              "canDelete": false
+            },
+            {
+              "id": "8daa6f28-e3f6-4dc3-83a9-9c4bdaea5d00",
+              "proposalId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+              "relatedEntityType": "research_proposal",
+              "relatedEntityId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+              "filePurpose": "budget-form",
+              "requirementCode": "budget-form",
+              "fileName": "QA-K16-budget-form.pdf",
+              "description": null,
+              "mimeType": "application/pdf",
+              "sizeBytes": 10203,
+              "uploadedById": "user-pi",
+              "uploaderDisplayName": "TS. Phạm Anh Tuấn",
+              "status": "active",
+              "createdAt": "2026-10-24T09:02:43.362Z",
+              "updatedAt": "2026-10-24T09:02:43.362Z",
+              "canEdit": false,
+              "canDelete": false
+            }
+          ],
+          "history": [
+            {
+              "id": "e597c518-73f3-4a86-8a7c-4b3e19227d75",
+              "proposalId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+              "actorId": "user-pi",
+              "actorDisplayName": "TS. Phạm Anh Tuấn",
+              "fromStatus": "draft",
+              "toStatus": "submitted",
+              "submittedAt": "2026-10-24T09:02:43.388Z",
+              "note": "PI nộp hồ sơ chính thức"
+            }
+          ],
+          "supplementRequests": [],
+          "requiredPackage": [
+            {
+              "code": "proposal-form",
+              "label": "Thuyết minh đề tài",
+              "allowedMimeTypes": [
+                "application/pdf"
+              ],
+              "maxSizeMb": 5
+            },
+            {
+              "code": "budget-form",
+              "label": "Dự toán kinh phí",
+              "allowedMimeTypes": [
+                "application/pdf"
+              ],
+              "maxSizeMb": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "status": 201,
+      "body": {
+        "managementOfficer": {
+          "resolved": true,
+          "current": {
+            "id": "22555bac-3043-41d7-84de-8ff8989a617c",
+            "officerUserId": "user-staff-hdtien1",
+            "officerDisplayName": "HD Tiến 1",
+            "officerUsername": "hdtien1",
+            "status": "ACTIVE",
+            "effectiveFrom": "2026-10-24T09:02:44.748Z",
+            "effectiveUntil": "",
+            "reason": "QA K16",
+            "assignedById": "user-staff"
+          },
+          "history": []
+        }
+      }
+    },
+    {
+      "status": 201,
+      "body": {
+        "proposal": {
+          "viewerAuthorization": {
+            "schemaVersion": "v1",
+            "systemRole": "RESEARCH_MANAGEMENT_STAFF",
+            "viewerRelationships": [
+              {
+                "type": "PROPOSAL_MANAGEMENT_OFFICER",
+                "status": "ACTIVE",
+                "effectiveFrom": "2026-10-24T09:02:44.748Z",
+                "effectiveUntil": null
+              }
+            ],
+            "allowedActions": [
+              "file.read",
+              "proposal.read",
+              "proposal.review.progress.read",
+              "proposal.supplement.request"
+            ],
+            "blockedActions": [
+              {
+                "action": "file.upload",
+                "code": "WORKFLOW_STATE_DENIED",
+                "reason": "Trạng thái hồ sơ hiện không cho phép hành động này."
+              },
+              {
+                "action": "proposal.completeness.check",
+                "code": "WORKFLOW_STATE_DENIED",
+                "reason": "Trạng thái hồ sơ hiện không cho phép hành động này."
+              },
+              {
+                "action": "proposal.decision.approve",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.decision.reject",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.draft.update",
+                "code": "WORKFLOW_STATE_DENIED",
+                "reason": "Trạng thái hồ sơ hiện không cho phép hành động này."
+              },
+              {
+                "action": "proposal.management-officer.assign",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.management-officer.revoke",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              },
+              {
+                "action": "proposal.review.assign",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Vai trò của bạn không được cấu hình để thành lập hội đồng."
+              },
+              {
+                "action": "proposal.review.consolidate",
+                "code": "WORKFLOW_STATE_DENIED",
+                "reason": "Cần hồ sơ đã kiểm tra đầy đủ, hội đồng đã được thành lập và mọi thành viên chấm đã gửi phiếu."
+              },
+              {
+                "action": "proposal.review.finalize",
+                "code": "WORKFLOW_STATE_DENIED",
+                "reason": "Cần hồ sơ đã kiểm tra đầy đủ, hội đồng đã được thành lập và mọi thành viên chấm đã gửi phiếu."
+              },
+              {
+                "action": "proposal.review.submit",
+                "code": "CONFLICT_DENIED",
+                "reason": "Hành động bị từ chối do xung đột lợi ích."
+              },
+              {
+                "action": "proposal.review.submit-package",
+                "code": "WORKFLOW_STATE_DENIED",
+                "reason": "Cần hồ sơ đã kiểm tra đầy đủ, hội đồng đã được thành lập và mọi thành viên chấm đã gửi phiếu."
+              },
+              {
+                "action": "proposal.submit",
+                "code": "ACTION_NOT_GRANTED",
+                "reason": "Bạn không được cấp quyền thực hiện hành động này."
+              }
+            ],
+            "policyVersion": "v1",
+            "evaluatedAsOf": "2026-10-24T09:02:46.163Z",
+            "contextVersion": {
+              "domain": "proposal",
+              "recordId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+              "aggregateVersion": 1792832566163,
+              "relationshipVersion": 2,
+              "conflictVersion": 2,
+              "delegationVersion": 2,
+              "policyVersion": "v1"
+            },
+            "accessReasons": [
+              "PROPOSAL_MANAGEMENT_OFFICER"
+            ]
+          },
+          "viewerParticipation": {
+            "role": "none",
+            "label": "Không tham gia",
+            "roles": [],
+            "labels": [],
+            "isOwner": false,
+            "isParticipant": false,
+            "conflict": {
+              "conflicted": false,
+              "reasonCode": "no-conflict",
+              "reason": "",
+              "message": ""
+            }
+          },
+          "viewerReviewAssignment": {
+            "isAssignedReviewer": false,
+            "assignmentId": "",
+            "assignmentRole": "none",
+            "assignmentRoleLabel": ""
+          },
+          "statusLabel": "Đã nộp",
+          "id": "e00f26a6-ee96-4889-a5d5-53a668458336",
+          "code": "",
+          "intakePeriodId": "7fe84864-4762-4dab-b93c-e4596f1d1ab8",
+          "ownerId": "user-pi",
+          "ownerDisplayName": "TS. Phạm Anh Tuấn",
+          "hostOrganizationUnitId": "org-khti",
+          "researchFieldCode": "military-medicine",
+          "proposalTypeCode": "academy-level",
+          "title": "QA-CODEX-HDTD-20261024-02-K16",
+          "objectives": "Kiểm thử xung đột người ký thành viên hội đồng",
+          "summary": "Dữ liệu thử QA độc lập K16",
+          "startDate": "2026-11-01T00:00:00.000Z",
+          "endDate": "2027-11-01T00:00:00.000Z",
+          "budgetMetadata": {
+            "amount": 10000000,
+            "currency": "VND"
+          },
+          "status": "submitted",
+          "submittedAt": "2026-10-24T09:02:43.388Z",
+          "submittedById": "user-pi",
+          "createdAt": "2026-10-24T09:02:43.110Z",
+          "updatedAt": "2026-10-24T09:02:46.163Z",
+          "canEdit": false,
+          "canSubmit": false,
+          "managementOfficer": {
+            "resolved": true,
+            "current": {
+              "id": "22555bac-3043-41d7-84de-8ff8989a617c",
+              "officerUserId": "user-staff-hdtien1",
+              "officerDisplayName": "HD Tiến 1",
+              "officerUsername": "hdtien1",
+              "status": "ACTIVE",
+              "effectiveFrom": "2026-10-24T09:02:44.748Z",
+              "effectiveUntil": "",
+              "reason": "QA K16",
+              "assignedById": "user-staff"
+            },
+            "history": [
+              {
+                "id": "22555bac-3043-41d7-84de-8ff8989a617c",
+                "officerUserId": "user-staff-hdtien1",
+                "officerDisplayName": "HD Tiến 1",
+                "officerUsername": "hdtien1",
+                "status": "ACTIVE",
+                "effectiveFrom": "2026-10-24T09:02:44.748Z",
+                "effectiveUntil": "",
+                "reason": "QA K16",
+                "assignedById": "user-staff",
+                "assignedByDisplayName": "TS. Nguyễn Minh Phương"
+              }
+            ]
+          },
+          "reviewWorkflow": {
+            "completenessChecked": true,
+            "submittedCount": 0,
+            "assignmentCount": 0,
+            "pendingCount": 0,
+            "overdueCount": 0,
+            "readyForSynthesis": false
+          },
+          "evaluationSummaryStatus": "",
+          "versions": [
+            {
+              "id": "e597c518-73f3-4a86-8a7c-4b3e19227d75",
+              "version": 1,
+              "submittedAt": "2026-10-24T09:02:43.388Z",
+              "content": {
+                "id": "e00f26a6-ee96-4889-a5d5-53a668458336",
+                "title": "QA-CODEX-HDTD-20261024-02-K16",
+                "endDate": "2027-11-01T00:00:00.000Z",
+                "members": [
+                  {
+                    "id": "07ddeeba-2377-4ead-9eb3-9839cd071b0c",
+                    "name": "int1",
+                    "role": "TOPIC_MEMBER",
+                    "status": "ACTIVE",
+                    "userId": "user-researcher1",
+                    "organization": "Khoa Toán - Tin học",
+                    "effectiveFrom": "2026-10-24T09:02:43.098Z",
+                    "effectiveUntil": "",
+                    "isAccountLinked": true,
+                    "participationRole": "TOPIC_MEMBER",
+                    "participationRoleLabel": "Thành viên"
+                  }
+                ],
+                "ownerId": "user-pi",
+                "summary": "Dữ liệu thử QA độc lập K16",
+                "startDate": "2026-11-01T00:00:00.000Z",
+                "objectives": "Kiểm thử xung đột người ký thành viên hội đồng",
+                "attachments": [
+                  {
+                    "id": "be94cba2-4f54-4bf4-a675-58809ea4b877",
+                    "status": "active",
+                    "canEdit": false,
+                    "fileName": "QA-K16-proposal-form.pdf",
+                    "mimeType": "application/pdf",
+                    "canDelete": false,
+                    "createdAt": "2026-10-24T09:02:43.326Z",
+                    "sizeBytes": 10203,
+                    "updatedAt": "2026-10-24T09:02:43.326Z",
+                    "proposalId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+                    "description": null,
+                    "filePurpose": "proposal-form",
+                    "uploadedById": "user-pi",
+                    "relatedEntityId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+                    "requirementCode": "proposal-form",
+                    "relatedEntityType": "research_proposal",
+                    "uploaderDisplayName": "TS. Phạm Anh Tuấn"
+                  },
+                  {
+                    "id": "8daa6f28-e3f6-4dc3-83a9-9c4bdaea5d00",
+                    "status": "active",
+                    "canEdit": false,
+                    "fileName": "QA-K16-budget-form.pdf",
+                    "mimeType": "application/pdf",
+                    "canDelete": false,
+                    "createdAt": "2026-10-24T09:02:43.362Z",
+                    "sizeBytes": 10203,
+                    "updatedAt": "2026-10-24T09:02:43.362Z",
+                    "proposalId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+                    "description": null,
+                    "filePurpose": "budget-form",
+                    "uploadedById": "user-pi",
+                    "relatedEntityId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+                    "requirementCode": "budget-form",
+                    "relatedEntityType": "research_proposal",
+                    "uploaderDisplayName": "TS. Phạm Anh Tuấn"
+                  }
+                ],
+                "budgetMetadata": {
+                  "amount": 10000000,
+                  "currency": "VND"
+                },
+                "requiredPackage": [
+                  {
+                    "code": "proposal-form",
+                    "label": "Thuyết minh đề tài",
+                    "maxSizeMb": 5,
+                    "allowedMimeTypes": [
+                      "application/pdf"
+                    ]
+                  },
+                  {
+                    "code": "budget-form",
+                    "label": "Dự toán kinh phí",
+                    "maxSizeMb": 5,
+                    "allowedMimeTypes": [
+                      "application/pdf"
+                    ]
+                  }
+                ],
+                "proposalTypeCode": "academy-level",
+                "researchFieldCode": "military-medicine",
+                "hostOrganizationUnitId": "org-khti"
+              }
+            }
+          ],
+          "members": [
+            {
+              "id": "07ddeeba-2377-4ead-9eb3-9839cd071b0c",
+              "name": "int1",
+              "role": "TOPIC_MEMBER",
+              "organization": "Khoa Toán - Tin học",
+              "userId": "user-researcher1",
+              "isAccountLinked": true,
+              "participationRole": "TOPIC_MEMBER",
+              "participationRoleLabel": "Thành viên",
+              "status": "ACTIVE",
+              "effectiveFrom": "2026-10-24T09:02:43.098Z",
+              "effectiveUntil": ""
+            }
+          ],
+          "attachments": [
+            {
+              "id": "be94cba2-4f54-4bf4-a675-58809ea4b877",
+              "proposalId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+              "relatedEntityType": "research_proposal",
+              "relatedEntityId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+              "filePurpose": "proposal-form",
+              "requirementCode": "proposal-form",
+              "fileName": "QA-K16-proposal-form.pdf",
+              "description": null,
+              "mimeType": "application/pdf",
+              "sizeBytes": 10203,
+              "uploadedById": "user-pi",
+              "uploaderDisplayName": "TS. Phạm Anh Tuấn",
+              "status": "active",
+              "createdAt": "2026-10-24T09:02:43.326Z",
+              "updatedAt": "2026-10-24T09:02:43.326Z",
+              "canEdit": false,
+              "canDelete": false
+            },
+            {
+              "id": "8daa6f28-e3f6-4dc3-83a9-9c4bdaea5d00",
+              "proposalId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+              "relatedEntityType": "research_proposal",
+              "relatedEntityId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+              "filePurpose": "budget-form",
+              "requirementCode": "budget-form",
+              "fileName": "QA-K16-budget-form.pdf",
+              "description": null,
+              "mimeType": "application/pdf",
+              "sizeBytes": 10203,
+              "uploadedById": "user-pi",
+              "uploaderDisplayName": "TS. Phạm Anh Tuấn",
+              "status": "active",
+              "createdAt": "2026-10-24T09:02:43.362Z",
+              "updatedAt": "2026-10-24T09:02:43.362Z",
+              "canEdit": false,
+              "canDelete": false
+            }
+          ],
+          "history": [
+            {
+              "id": "e597c518-73f3-4a86-8a7c-4b3e19227d75",
+              "proposalId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+              "actorId": "user-pi",
+              "actorDisplayName": "TS. Phạm Anh Tuấn",
+              "fromStatus": "draft",
+              "toStatus": "submitted",
+              "submittedAt": "2026-10-24T09:02:43.388Z",
+              "note": "PI nộp hồ sơ chính thức"
+            },
+            {
+              "id": "63613b3e-d1d1-46f1-81aa-bcb7eb0579a8",
+              "proposalId": "e00f26a6-ee96-4889-a5d5-53a668458336",
+              "actorId": "user-staff-hdtien1",
+              "actorDisplayName": "HD Tiến 1",
+              "fromStatus": "submitted",
+              "toStatus": "submitted",
+              "submittedAt": "2026-10-24T09:02:46.161Z",
+              "note": "Đã kiểm tra hồ sơ đầy đủ"
+            }
+          ],
+          "supplementRequests": [],
+          "requiredPackage": [
+            {
+              "code": "proposal-form",
+              "label": "Thuyết minh đề tài",
+              "allowedMimeTypes": [
+                "application/pdf"
+              ],
+              "maxSizeMb": 5
+            },
+            {
+              "code": "budget-form",
+              "label": "Dự toán kinh phí",
+              "allowedMimeTypes": [
+                "application/pdf"
+              ],
+              "maxSizeMb": 5
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -36,3 +36,11 @@ Backlog (không làm trong story này): hội đồng nghiệm thu/IRB và nơi 
 - Spec chuẩn: `_bmad-output/specs/spec-hoi-dong-tham-dinh.md` §3–§8, §10 S1–S2, gói BE1/BE2/FE1 ở §16.
 - Baseline là đỉnh `claude/step3-project-6-11-6-12-57d947`; không có bảng/migration mới; cấu hình lưu `system_parameters`.
 - Đề xuất chờ chủ sản phẩm xác nhận: P1 (số lượng cố định, kể cả thư ký), P3 (role tích được), P5 (đổi cấu hình không ảnh hưởng hội đồng đã thành lập).
+
+## Ghi chú hoàn tất (2026-10-24)
+
+- **Phạm vi đã làm:** hội đồng đánh giá (bước 4) theo `_bmad-output/specs/spec-hoi-dong-tham-dinh.md`. Phần ACCEPTANCE/IRB, lịch họp, liên kết văn bản, tệp biên bản, email vẫn `backlog`.
+- **Commit:** `ed1e0ff` (tính năng), `874db68`, `44045ef`, `2163e59` (sửa lỗi theo QA), `c8d5ba5` (tài liệu).
+- **Kiểm thử tự động:** `npm run typecheck`, `build:api`, `admin-foundation` 17/17, `approval-routing-db` 17/17, `proposal-review-cardinality` 4/4, `proposal-review-golden-flow` 7/7, `proposal-capability-ui-source` 6/6. `npm test` toàn bộ: không có test nào fail mới so với `d4e37bc` (HEAD 53 fail, baseline 71 fail). Ca DB của `reviewer-council-assignment`: NOT RUN.
+- **QA UI Playwright (Codex):** vòng 1: 9 PASS/2 FAIL/5 BLOCKED; vòng 2: 8 PASS/1 FAIL (9 kịch bản chạy lại); vòng 3: N01, N03, U03 PASS, N02 sửa sau vòng 3 và đã kiểm lại. Báo cáo: `_bmad-output/qa-evidence/hoi-dong-tham-dinh/`.
+- **Còn lại:** chốt tổng hợp sau khi thư ký lưu nháp sớm cần lưu lại nháp (`PACKAGE_CONTEXT_MISMATCH`); thu hồi thành viên không chấm sau khi thành lập chưa kiểm lại cơ cấu; thông báo chỉ trong ứng dụng (email thuộc Epic 11).

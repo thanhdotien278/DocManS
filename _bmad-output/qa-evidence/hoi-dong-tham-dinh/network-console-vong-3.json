@@ -1,0 +1,530 @@
+[
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 401,
+    "url": "http://localhost:4001/api/v1/auth/me",
+    "body": "{\"message\":\"Yêu cầu đăng nhập để tiếp tục.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=e00f26a6-ee96-4889-a5d5-53a668458336",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/e00f26a6-ee96-4889-a5d5-53a668458336/evaluation-council",
+    "body": "{\"message\":\"Không có quyền xem hội đồng đánh giá của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=e00f26a6-ee96-4889-a5d5-53a668458336",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/e00f26a6-ee96-4889-a5d5-53a668458336/evaluation-council",
+    "body": "{\"message\":\"Không có quyền xem hội đồng đánh giá của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=e00f26a6-ee96-4889-a5d5-53a668458336",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/e00f26a6-ee96-4889-a5d5-53a668458336/evaluation-council",
+    "body": "{\"message\":\"Không có quyền xem hội đồng đánh giá của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=e00f26a6-ee96-4889-a5d5-53a668458336",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/e00f26a6-ee96-4889-a5d5-53a668458336/evaluation-council",
+    "body": "{\"message\":\"Không có quyền xem hội đồng đánh giá của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=e00f26a6-ee96-4889-a5d5-53a668458336",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/e00f26a6-ee96-4889-a5d5-53a668458336/evaluation-council",
+    "body": "{\"message\":\"Không có quyền xem hội đồng đánh giá của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=e00f26a6-ee96-4889-a5d5-53a668458336",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/e00f26a6-ee96-4889-a5d5-53a668458336/evaluation-council",
+    "body": "{\"message\":\"Không có quyền xem hội đồng đánh giá của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+    "body": "{\"message\":\"Không có quyền xem hồ sơ đề xuất này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+    "body": "{\"message\":\"Không có quyền xem hồ sơ đề xuất này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/1cfa5ab5-ac66-4eca-8a8f-0b33107b7118/readiness",
+    "body": "{\"message\":\"Không có quyền xem hồ sơ đề xuất này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/1cfa5ab5-ac66-4eca-8a8f-0b33107b7118/readiness",
+    "body": "{\"message\":\"Không có quyền xem hồ sơ đề xuất này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/1cfa5ab5-ac66-4eca-8a8f-0b33107b7118/readiness",
+    "body": "{\"message\":\"Không có quyền xem hồ sơ đề xuất này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+    "body": "{\"message\":\"Không có quyền xem hồ sơ đề xuất này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/1cfa5ab5-ac66-4eca-8a8f-0b33107b7118/readiness",
+    "body": "{\"message\":\"Không có quyền xem hồ sơ đề xuất này.\"}"
+  },
+  {
+    "case": "N01",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+    "body": "{\"message\":\"Không có quyền xem hồ sơ đề xuất này.\"}"
+  },
+  {
+    "case": "N02",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  },
+  {
+    "case": "N02",
+    "type": "http",
+    "status": 401,
+    "url": "http://localhost:4001/api/v1/auth/me",
+    "body": "{\"message\":\"Yêu cầu đăng nhập để tiếp tục.\"}"
+  },
+  {
+    "case": "N02-ndbac",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  },
+  {
+    "case": "N02-ndbac",
+    "type": "http",
+    "status": 401,
+    "url": "http://localhost:4001/api/v1/auth/me",
+    "body": "{\"message\":\"Yêu cầu đăng nhập để tiếp tục.\"}"
+  },
+  {
+    "case": "N02-ndbac",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N02-ndbac",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N02-ndbac",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N02-ndbac",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N02-ndbac",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/e00f26a6-ee96-4889-a5d5-53a668458336/evaluation-council",
+    "body": "{\"message\":\"Không có quyền xem hội đồng đánh giá của hồ sơ này.\"}"
+  },
+  {
+    "case": "N02-ndbac",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/e00f26a6-ee96-4889-a5d5-53a668458336/evaluation-council",
+    "body": "{\"message\":\"Không có quyền xem hội đồng đánh giá của hồ sơ này.\"}"
+  },
+  {
+    "case": "N02-ndbac",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=e00f26a6-ee96-4889-a5d5-53a668458336",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N02-ndbac",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=e00f26a6-ee96-4889-a5d5-53a668458336",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N02-dnbinh",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  },
+  {
+    "case": "N02-dnbinh",
+    "type": "http",
+    "status": 401,
+    "url": "http://localhost:4001/api/v1/auth/me",
+    "body": "{\"message\":\"Yêu cầu đăng nhập để tiếp tục.\"}"
+  },
+  {
+    "case": "N02-dnbinh",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N02-dnbinh",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N02-dnbinh",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/e00f26a6-ee96-4889-a5d5-53a668458336/evaluation-council",
+    "body": "{\"message\":\"Không có quyền xem hội đồng đánh giá của hồ sơ này.\"}"
+  },
+  {
+    "case": "N02-dnbinh",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/research-proposals/e00f26a6-ee96-4889-a5d5-53a668458336/evaluation-council",
+    "body": "{\"message\":\"Không có quyền xem hội đồng đánh giá của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01-p1",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  },
+  {
+    "case": "N01-p1",
+    "type": "http",
+    "status": 401,
+    "url": "http://localhost:4001/api/v1/auth/me",
+    "body": "{\"message\":\"Yêu cầu đăng nhập để tiếp tục.\"}"
+  },
+  {
+    "case": "N01-p1",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01-p1",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01-p1",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01-p1",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01-p1",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01-p1",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01-p1",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01-p1",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01-p1",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01-p1",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01-p1",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01-p1",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01-p1",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01-p1",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01-p1",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01-p1",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N03",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  },
+  {
+    "case": "N03",
+    "type": "http",
+    "status": 401,
+    "url": "http://localhost:4001/api/v1/auth/me",
+    "body": "{\"message\":\"Yêu cầu đăng nhập để tiếp tục.\"}"
+  },
+  {
+    "case": "U03",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  },
+  {
+    "case": "U03",
+    "type": "http",
+    "status": 401,
+    "url": "http://localhost:4001/api/v1/auth/me",
+    "body": "{\"message\":\"Yêu cầu đăng nhập để tiếp tục.\"}"
+  },
+  {
+    "case": "N01-anonymous",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  },
+  {
+    "case": "N01-anonymous",
+    "type": "http",
+    "status": 401,
+    "url": "http://localhost:4001/api/v1/auth/me",
+    "body": "{\"message\":\"Yêu cầu đăng nhập để tiếp tục.\"}"
+  },
+  {
+    "case": "N01-anonymous",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01-anonymous",
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  },
+  {
+    "case": "N01-anonymous",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  },
+  {
+    "case": "N01-anonymous",
+    "type": "http",
+    "status": 403,
+    "url": "http://localhost:4001/api/v1/approval-submissions/subject?type=proposal&id=1cfa5ab5-ac66-4eca-8a8f-0b33107b7118",
+    "body": "{\"message\":\"Không có quyền xem tờ trình của hồ sơ này.\"}"
+  }
+]
