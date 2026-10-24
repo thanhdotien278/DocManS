@@ -440,7 +440,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
         </form> : null}
       </SectionCard>
 
-      {progress && (canConsolidate || canFinalize || canSubmitPackage || progress.evaluationSummary) ? <SectionCard title="Tổng hợp và trình phê duyệt" subtitle={canManageReviewRound ? "Trưởng phòng tổng hợp, chốt và trình gói đánh giá tới lãnh đạo" : "Theo dõi kết quả tổng hợp trong phạm vi được cấp"}>
+      {progress && (canConsolidate || canFinalize || canSubmitPackage || progress.evaluationSummary) ? <SectionCard title="Tổng hợp và trình phê duyệt" subtitle={canManageReviewRound ? "Tổng hợp, chốt và lập tờ trình gói đánh giá (Trưởng ban → Trưởng phòng → Giám đốc)" : "Theo dõi kết quả tổng hợp trong phạm vi được cấp"}>
         {progress.reviews.length ? (
           <div className="timeline">
             {progress.reviews.map((review) => (
@@ -546,12 +546,12 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
                 title={summaryStatus !== "finalized" ? "Cần chốt bản tổng hợp trước khi trình gói." : !progress.allReviewsSubmitted ? submitPackageBlockedReason : undefined}
               >
                 <Send size={16} aria-hidden="true" />
-                {savingMode === "ready" ? "Đang trình" : "Gửi lãnh đạo phê duyệt"}
+                {savingMode === "ready" ? "Đang lập tờ trình" : "Lập tờ trình gửi Ban giám đốc"}
               </button>
             ) : null}
           </div>
           {!canConsolidate && !canFinalize && !canSubmitPackage ? (
-            <p className="record-meta">{consolidateBlockedReason || "Trưởng phòng quản lý khoa học thực hiện tổng hợp, chốt và trình gói; chuyên viên chỉ theo dõi tiến độ."}</p>
+            <p className="record-meta">{consolidateBlockedReason || "Chỉ Trưởng phòng, Trưởng ban hoặc Chuyên viên phụ trách hồ sơ mới tổng hợp, chốt và lập tờ trình; các vai trò khác chỉ theo dõi."}</p>
           ) : canSubmitPackage && !progress.allReviewsSubmitted && !isReadyForApproval ? (
             <p className="record-meta">{submitPackageBlockedReason || "Chưa đủ phiếu đánh giá để trình gói hoàn tất."}</p>
           ) : canFinalize && summaryStatus === "draft" && !progress.allReviewsSubmitted ? (
