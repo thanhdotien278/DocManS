@@ -5,6 +5,7 @@ import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
+import { APPROVAL_STAGE_LABELS, APPROVAL_STATUS_LABELS, assertReadyForLeadership, closeApprovalSubmission, canSignApproval, type ApprovalKey, type ApprovalSubmissionRow } from "../proposals-shared/approval-routing.js";
 import { DECIDABLE_STATUSES, PROPOSAL_STATUS, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import {
   assertApprovalAuthority,
@@ -33,6 +34,8 @@ const DECISION_TARGET_STATUS: Record<ProposalDecisionCode, string> = {
   approved: PROPOSAL_STATUS.approved,
   rejected: PROPOSAL_STATUS.rejected
 };
+
+const decisionKey = (proposalId: string): ApprovalKey => ({ kind: "DECISION_PACKAGE", subjectType: "proposal", subjectId: proposalId });
 
 const DECISION_LABELS: Record<string, string> = {
   approved: "Phê duyệt",
@@ -87,6 +90,13 @@ export class ProposalDecisionsService {
       throw new ForbiddenException({ message: "Chỉ được xem gói đánh giá đã trình lãnh đạo khi không có xung đột lợi ích." });
     }
 
+    // Tờ trình phải qua TB và TP rồi mới tới GĐ (5.7): hồ sơ đang chờ phê duyệt mà tờ trình chưa ở LEADERSHIP thì chưa mở gói.
+    const approval = (await this.prisma.approvalSubmission.findFirst({ where: { kind: "DECISION_PACKAGE", subjectType: "proposal", subjectId: proposalId, subjectRef: "" }, orderBy: { createdAt: "desc" } })) as ApprovalSubmissionRow | null;
+    if (proposal.status === PROPOSAL_STATUS.readyForApproval && !(approval?.status === "PENDING" && approval.stage === "LEADERSHIP")) {
+      throw new ForbiddenException({ code: "APPROVAL_NOT_READY", message: "Tờ trình chưa tới Ban giám đốc nên chưa mở gói đánh giá." });
+    }
+    const canSign = approval?.status === "PENDING" && approval.stage === "LEADERSHIP" && canSignApproval(actor, approval.signer);
+
     const [assignmentRecords, reviewRecords, summary, decisions, attachments, history] = await Promise.all([
       this.assignments.findCurrentRoundAssignments(proposal),
       this.assignments.findCurrentRoundReviews(proposal),
@@ -108,7 +118,8 @@ export class ProposalDecisionsService {
       proposalId,
       proposalStatus: proposal.status,
       proposalStatusLabel: PROPOSAL_STATUS_LABELS[proposal.status] ?? proposal.status,
-      canDecide: (DECIDABLE_STATUSES as string[]).includes(proposal.status) && !conflict.conflicted && summary?.status === "ready_for_approval" && publicProgress.allReviewsSubmitted,
+      canDecide: (DECIDABLE_STATUSES as string[]).includes(proposal.status) && !conflict.conflicted && summary?.status === "ready_for_approval" && publicProgress.allReviewsSubmitted && canSign,
+      approval: approval ? { id: approval.id, stage: approval.stage, stageLabel: APPROVAL_STAGE_LABELS[approval.stage], status: approval.status, statusLabel: APPROVAL_STATUS_LABELS[approval.status], lastNote: approval.lastNote ?? "" } : null,
       conflict,
       progress: publicProgress,
       // Leadership receives the routed aggregate and decision history, but reviewer identity,
@@ -149,6 +160,8 @@ export class ProposalDecisionsService {
     assertApprovalAuthority(actor);
     await assertCanReadEvaluation(this.prisma, actor, proposal);
     assertProposalStatus(proposal, DECIDABLE_STATUSES, "Chỉ hồ sơ ở trạng thái chờ phê duyệt mới được quyết định.");
+    // Không có tờ trình ở LEADERSHIP thì không còn đường ký tắt (D-035, 5.10).
+    await assertReadyForLeadership(this.prisma as never, actor, decisionKey(proposalId));
 
     const conflict = await this.resolveDecisionConflict(actor, proposal);
     if (conflict.conflicted) {
@@ -197,6 +210,8 @@ export class ProposalDecisionsService {
 
       // Conditional on the status and package revision we validated, so two authorities deciding at once cannot both win.
       await updateProposalStatusGuarded(tx, proposalId, proposal.status, toStatus);
+      // Đóng tờ trình trong cùng transaction: quyết định và tờ trình cùng commit hoặc cùng rollback.
+      await closeApprovalSubmission(tx as never, actor, decisionKey(proposalId), decision === PROPOSAL_DECISIONS.approved ? "APPROVED" : "REJECTED", note);
 
       const record = (await tx.proposalDecision.create({
         data: {

@@ -162,6 +162,8 @@ export type ProposalDecisionPackage = {
   proposalStatus: string;
   proposalStatusLabel: string;
   canDecide: boolean;
+  /** Tờ trình DECISION_PACKAGE gần nhất; GĐ chỉ quyết định khi stage là LEADERSHIP và status PENDING. */
+  approval: { id: string; stage: string; stageLabel: string; status: string; statusLabel: string; lastNote: string } | null;
   conflict: {
     conflicted: boolean;
     reasonCode: string;
