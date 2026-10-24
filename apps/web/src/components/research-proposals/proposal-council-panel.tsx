@@ -208,6 +208,7 @@ export function ProposalCouncilPanel({ proposalId, onChanged }: { proposalId: st
       {message ? <p className="state-message success" role="status">{message}</p> : null}
 
       {council.members.length ? (
+        <>
         <div className="table-wrap" tabIndex={0} role="region" aria-label="Danh sách thành viên hội đồng">
           <table className="data-table">
             <thead>
@@ -235,6 +236,23 @@ export function ProposalCouncilPanel({ proposalId, onChanged }: { proposalId: st
             </tbody>
           </table>
         </div>
+        <div className="mobile-list">
+          {council.members.map((member) => (
+            <article className="list-card" key={member.assignmentId}>
+              <div className="list-card-header">
+                <span className="record-title">{member.displayName}</span>
+                <span className={`status-badge ${INVITATION_TONE[member.invitationStatus]}`}>{member.invitationStatusLabel}</span>
+              </div>
+              <span className="record-meta">{member.assignmentRoleLabel}{member.scoring ? "" : " · Không chấm phiếu"} · {member.unit}</span>
+              <span className="record-meta">{member.dueDate ? `Hạn ${formatIntakeDate(member.dueDate)}` : "Không đặt hạn"} · Người mời: {member.assignedByDisplayName}</span>
+              {member.declineReason ? <span className="record-meta">Lý do từ chối: {member.declineReason}</span> : null}
+              {viewer.canRevoke ? (
+                <button className="button danger" type="button" aria-label={`Thu hồi lời mời của ${member.displayName}`} disabled={busy} onClick={() => setDialog({ type: "revoke", assignmentId: member.assignmentId, name: member.displayName })}>Thu hồi</button>
+              ) : null}
+            </article>
+          ))}
+        </div>
+        </>
       ) : (
         <EmptyState title="Chưa có thành viên được mời" message={canInvite ? "Chọn vị trí và mời người đầu tiên để lập hội đồng." : "Danh sách thành viên chưa có hoặc không được hiển thị cho tài khoản này."} />
       )}

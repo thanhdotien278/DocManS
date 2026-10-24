@@ -465,7 +465,6 @@ export class ProposalReviewAssignmentsService {
     const visible: typeof assignments = [];
     const preview: typeof assignments = [];
     for (const assignment of assignments) {
-      if (assignment.invitationStatus === "declined") continue;
       const proposal = assignment.proposal as EvaluationProposalRecord;
       let currentSubmissionEventId = "";
       try {

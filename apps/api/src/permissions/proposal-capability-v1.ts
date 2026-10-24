@@ -5,7 +5,7 @@ import { evaluateProposalConflict, type ProposalParticipation } from "../proposa
 import type { ProposalReviewAccess } from "../proposals-shared/proposal-review-access.js";
 import type { ProposalManagementOfficerResolution } from "../proposals-shared/proposal-management-officer.service.js";
 import { DEFAULT_COUNCIL_FORMATION, canFormCouncil, type CouncilFormationConfig } from "../proposals-shared/council-formation.js";
-import { isInternalResearcherEligible, isResearchBoardHead, isResearchOversightAuthority, isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
+import { isInternalResearcherEligible, isResearchBoardHead, isScienceDeputyDirector, isResearchManagementDeputyHead, isResearchOversightAuthority, isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
 import { publicAuthorizationReasonV1 } from "./authorization-v1.service.js";
 
 type ProposalCapabilityInput = {
@@ -132,7 +132,7 @@ function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): {
   if (action === "proposal.review.progress.read") {
     if (!input.actor.organizationScopes.some((scope) => scope.id === input.proposal.hostOrganizationUnitId)) return blocked("ORG_SCOPE_DENIED");
     if (!["submitted", "resubmitted", "supplement_requested", "under_review", "ready_for_approval", "approved", "rejected"].includes(input.proposal.status)) return blocked("WORKFLOW_STATE_DENIED");
-    if (isResearchManagementHead(input.actor) || isResearchBoardHead(input.actor) || isResearchOversightAuthority(input.actor) || input.actor.systemRole === "LEADERSHIP_APPROVAL_AUTHORITY") return null;
+    if (isResearchManagementHead(input.actor) || isResearchBoardHead(input.actor) || isResearchOversightAuthority(input.actor) || isScienceDeputyDirector(input.actor) || isResearchManagementDeputyHead(input.actor) || input.actor.systemRole === "LEADERSHIP_APPROVAL_AUTHORITY") return null;
     if (!isResearchManagementStaff(input.actor) || !input.managementOfficer?.resolved || input.managementOfficer.officer?.officerUserId !== input.actor.id) return blocked("ACTION_NOT_GRANTED");
     if (!input.participation || input.participation.role === "unknown" || !input.reviewAccess || input.reviewAccess.conflictUnresolved) return blocked("CONTEXT_UNRESOLVED");
     return input.participation.isParticipant || input.reviewAccess.isAssignedReviewer || (input.reviewAccess.hasReviewConflict || input.reviewAccess.hasPersistedReview) ? blocked("CONFLICT_DENIED") : null;

@@ -213,7 +213,7 @@ export function ProposalEvaluationPanel({ proposalId, proposalStatus, onWorkflow
         </div> : null}
 
         {progress ? <p className="record-meta" role="status">
-          Đã gửi {progress.submittedCount}/{progress.activeAssignmentCount} phiếu · Quá hạn: {progress.overdueCount ?? 0}.
+          Đã gửi {progress.submittedCount}/{progress.scoringMemberCount ?? progress.activeAssignmentCount} phiếu · Quá hạn: {progress.overdueCount ?? 0}.
           {progress.readinessReasons?.length ? ` ${progress.readinessReasons.join(" ")}` : progress.allReviewsSubmitted ? " Đủ điều kiện tổng hợp." : ""}
         </p> : null}
 
