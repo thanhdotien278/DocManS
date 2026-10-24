@@ -5,7 +5,7 @@ spec: _bmad-output/specs/spec-hoi-dong-tham-dinh.md
 
 # Story 10.7: Theo dõi, tổng hợp và trình kết quả hội đồng (hội đồng đánh giá)
 
-Status: ready-for-dev (lập tờ trình thành lập hội đồng đánh giá, readiness tổng hợp); backlog (`IRB_CERTIFICATE`, kết luận IRB, nghiệm thu)
+Status: review (lập tờ trình thành lập hội đồng đánh giá, readiness tổng hợp); backlog (`IRB_CERTIFICATE`, kết luận IRB, nghiệm thu)
 
 ## Story
 

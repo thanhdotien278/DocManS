@@ -5,7 +5,7 @@ spec: _bmad-output/specs/spec-hoi-dong-tham-dinh.md
 
 # Story 10.1: Lập kế hoạch hội đồng, thành viên và căn cứ liên quan (phần hội đồng đánh giá)
 
-Status: ready-for-dev (phần hội đồng đánh giá); backlog (nghiệm thu, IRB, lịch họp, liên kết văn bản)
+Status: review (phần hội đồng đánh giá); backlog (nghiệm thu, IRB, lịch họp, liên kết văn bản)
 
 ## Story
 

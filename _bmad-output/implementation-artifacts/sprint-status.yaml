@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-10-24
+last_updated: 2026-10-24T22:00:00+07:00
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -123,15 +123,15 @@ development_status:
   9-4-tim-kiem-va-truy-xuat-van-ban-theo-quyen: backlog
   9-5-nhac-hieu-luc-va-contract-tich-hop-van-ban: backlog
   epic-9-retrospective: optional
-  epic-10: backlog
-  10-1-lap-ke-hoach-hoi-dong-thanh-vien-va-can-cu-lien-quan: backlog
-  10-2-thu-ky-khoa-hoc-ho-tro-van-hanh-hoi-dong: backlog
+  epic-10: in-progress
+  10-1-lap-ke-hoach-hoi-dong-thanh-vien-va-can-cu-lien-quan: review
+  10-2-thu-ky-khoa-hoc-ho-tro-van-hanh-hoi-dong: review
   10-3-tao-hoan-thien-va-nop-ho-so-dao-duc: backlog
   10-4-kiem-tra-ho-so-dao-duc-va-xu-ly-bo-sung: backlog
-  10-5-phan-cong-hoi-dong-va-reviewer-voi-eligibility-conflict: backlog
-  10-6-thanh-vien-hoi-dong-hoac-reviewer-nop-danh-gia-duoc-phan-cong: backlog
-  10-7-theo-doi-tong-hop-va-trinh-ket-qua-hoi-dong: backlog
-  10-8-quyet-dinh-hoi-dong-hoac-ho-so-dao-duc: backlog
+  10-5-phan-cong-hoi-dong-va-reviewer-voi-eligibility-conflict: review
+  10-6-thanh-vien-hoi-dong-hoac-reviewer-nop-danh-gia-duoc-phan-cong: review
+  10-7-theo-doi-tong-hop-va-trinh-ket-qua-hoi-dong: review
+  10-8-quyet-dinh-hoi-dong-hoac-ho-so-dao-duc: review
   10-9-contract-tich-hop-hoi-dong-va-ho-so-dao-duc: backlog
   epic-10-retrospective: optional
   epic-11: backlog
