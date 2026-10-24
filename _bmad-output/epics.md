@@ -3165,7 +3165,7 @@ So that không thủ tục nào tới Ban giám đốc mà thiếu bước rà s
 **Given** tờ trình do CV hoặc TP lập
 **When** được trình
 **Then** submission bắt đầu ở stage `BOARD_REVIEW` với status `PENDING`
-**And** tờ trình do TB lập bắt đầu ở `HEAD_REVIEW`; tờ trình do TP lập vẫn qua bước TB.
+**And** tờ trình do TB lập bắt đầu ở `HEAD_REVIEW`; tờ trình do TP lập vẫn qua bước TB, và khi TB chuyển thì đi thẳng `LEADERSHIP` (việc lập đã là duyệt của TP, D-035).
 
 **Given** submission ở `BOARD_REVIEW`
 **When** TB¹ không phải tác giả rà soát
