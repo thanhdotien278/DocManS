@@ -3195,7 +3195,8 @@ So that không thủ tục nào tới Ban giám đốc mà thiếu bước rà s
 **Given** submission ở trạng thái `RETURNED`, `REJECTED` hoặc `CANCELLED`
 **When** người dùng xem hồ sơ nguồn
 **Then** trạng thái và lý do hiển thị read-only theo scope
-**And** quy tắc ai được đặt `REJECTED`/`CANCELLED` theo bản routing của `tuan/DocManS` khi port (câu hỏi mở).
+**And** `REJECTED` chỉ do BGĐ đúng người ký theo loại, đặt ở bước `LEADERSHIP`; TB và TP chỉ chuyển bước hoặc trả lại (`RETURNED`, lý do bắt buộc) (D-035)
+**And** lập tờ trình mới cho cùng (loại, đối tượng) tự chuyển tờ trình `PENDING` cũ sang `CANCELLED`/`CLOSED` trong cùng transaction; unique index chỉ áp dụng khi `status = 'PENDING'` (D-035).
 
 ### Story 5.10: BGĐ ký thành lập hội đồng đánh giá và quyết định đề tài cùng kinh phí [FR73, FR20]
 
