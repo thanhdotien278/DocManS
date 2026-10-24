@@ -11,6 +11,8 @@ context:
   - /Users/Super/DocManS/CONTEXT.md
 ---
 
+> Role names and decision rights here predate the 10-role model (2026-10-18); see `docs/permission-matrix.md`.
+
 <frozen-after-approval reason="Explicit user request authorizes complete implementation and documentation updates">
 
 ## Intent

@@ -55,7 +55,7 @@ so that quan hệ nghiệp vụ có thể tham chiếu một định danh thốn
 
 - Story 2.1 is a hard dependency. Reuse its profile aggregate, management organization, version, module, policy, API, UI, and audit seam.
 - Phase 1 cardinality is explicitly one active link per profile and per account at any instant. Changing this is a product/architecture change, not an implementation choice.
-- Grant account-link lifecycle actions explicitly to in-scope `SCIENTIFIC_MANAGEMENT_STAFF` and `SYSTEM_ADMIN`; both still require exact scope over the profile and target account. Neither role receives an implicit bypass.
+- Grant account-link lifecycle actions explicitly to `SYSTEM_ADMIN` (QT, platform) and in-scope `RESEARCH_MANAGEMENT_HEAD` (TP¹) and `RESEARCH_MANAGEMENT_STAFF` (CV¹) per `docs/permission-matrix.md` (10-role model, 2026-10-18); each still requires exact scope over the profile and target account. No role receives an implicit bypass.
 - Link rows are identity resolution facts, not global roles or source-domain authority. Proposal/project/council/task modules continue to own their typed relationships.
 - Linking an `EXTERNAL_RESEARCHER_USER` account to a profile does not make it a PI, member, reviewer, or secretary; those capabilities require an active relationship/assignment on the target record.
 - Do not backfill by matching a name, username, email, or free-text `ProposalMember.name`. A later source migration may backfill only through an exact active profile-account link; ambiguity remains unresolved and reportable.

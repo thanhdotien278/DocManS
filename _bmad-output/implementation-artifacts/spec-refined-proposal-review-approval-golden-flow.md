@@ -7,6 +7,7 @@ route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: 'd7ab29b960f8eee35374850c8039662c026c62f9'
 context:
+  - '{project-root}/docs/permission-matrix.md'
   - '{project-root}/_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/sprint-plan.md'
   - '{project-root}/_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/implementation-plan.md'
 ---
@@ -53,14 +54,14 @@ edits, authorization bypass, reset/reseed of existing data or unrelated refactor
 ## Code Map
 
 Exact paths and ordered changes are in the linked implementation plan.
-- Assignment service/support: reuse account/lifecycle/transaction; Head writes and separate Staff reads.
-- Summary service/controller/DTO: Head-only draft/finalize/submit, complete current reviews,
+- Assignment service/support: reuse account/lifecycle/transaction; TP¹/TB¹/CV³ write, monitor-only roles read.
+- Summary service/controller/DTO: TP¹/TB¹/CV³ draft/finalize; submit goes through tờ trình routing (5.9), complete current reviews,
   immutable evidence and named operational progress. Validate current completeness payload/binding
   and assignment effective intervals rather than trusting event kind or assignment status alone.
 - Capability projector and proposal service: current readiness facts, actor grants, queues/blockers.
 - Decision service: completeness/finalized/routed checks and leadership progress redaction.
 - Existing evaluation API client, evaluation panel, detail workspace and proposal list:
-  independent Staff monitoring and Head actions; preserve reviewer and leadership screens.
+  independent monitoring and management actions; preserve reviewer and leadership screens.
 - Existing Golden Flow test: focused role/gate/disclosure regression alongside cardinality tests.
 
 ## Tasks & Acceptance
@@ -69,19 +70,19 @@ Exact paths and ordered changes are in the linked implementation plan.
 - [x] Update existing Epic 5 sprint plan and Stories 5.1–5.5/5.8 before code; retain
   Story 5.7 and independent 5.6, with no duplicate stories or unearned Done statuses.
 - [x] Reconcile `CONTEXT.md`, baseline, matrix, PRD, user flows and Authorization Contracts
-  listed in the implementation plan with Head-owned assignment/synthesis.
+  listed in the implementation plan with Head-owned assignment/synthesis (the 2026-09-21 model; superseded by TP/TB/CV in the 10-role update, see Spec Change Log).
 - [x] Apply backend role/gate/lifecycle changes in the Code Map, preserving existing review
   submission and decision infrastructure. All successful mutations commit audit atomically.
 - [x] Separate UI monitoring from write controls and expose backend readiness/reasons.
 - [x] Add focused regression checks; run both real UI terminal journeys and required denials.
 
 **Acceptance Criteria:**
-- Given a fresh resubmission, when Head assigns before Staff confirms its completeness,
+- Given a fresh resubmission, when a TP/TB/CV assigns before TB/CV confirms its completeness,
   then assignment is denied; confirmation unlocks assignment without another proposal enum.
-- Given all required current reviews are complete, when Head saves/finalizes/submits,
+- Given all required current reviews are complete, when a TP/TB/CV saves/finalizes/submits,
   then each explicit lifecycle action records actor/revision/history and only submission
   transitions the proposal to `ready_for_approval`.
-- Given Staff can monitor, when Staff calls any Head synthesis/assignment endpoint,
+- Given a monitor-only role (PP, PGĐ-TD) can monitor, when it calls any synthesis/assignment endpoint,
   then it is denied while named progress/deadline access remains available.
 - Given a finalized package changes or is stale, when it is submitted or decided,
   then the backend rejects it; it never silently replaces the approved evidence.
@@ -100,6 +101,8 @@ journeys reached their expected Approved and Rejected states on 2026-09-22. See
 Independent review remains pending; legacy fixture/source-test failures are reported separately.
 
 ## Spec Change Log
+
+- 2026-10-18 (10-role model, `docs/permission-matrix.md`, §7 wins): the frozen intent and the shipped slice use the 2026-09-21 Head/Staff actors. Read Head as TP¹/TB¹/CV³ and Staff as CV³ per action (completeness/supplement: TB¹/CV³, never TP); "seven system roles" is now ten; package submission is replaced by tờ trình routing CV → TB → TP → BGĐ (story 5.9); only GĐ decides topic + funding and `RESEARCH_OVERSIGHT_AUTHORITY` is PGĐ-TD (monitor only). Frozen text was not rewritten.
 
 ## Review Triage Log
 

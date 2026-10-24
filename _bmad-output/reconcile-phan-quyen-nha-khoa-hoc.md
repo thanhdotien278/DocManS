@@ -8,6 +8,8 @@ status: "complete"
 
 # Source Reconciliation: Scientist Record-Scoped Authorization
 
+> Role names and decision rights here predate the 10-role model (2026-10-18); see `docs/permission-matrix.md`.
+
 ## Reconciliation Verdict
 
 The PRD substantially covers the source policy at the product-requirement level.

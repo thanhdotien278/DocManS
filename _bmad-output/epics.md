@@ -5,7 +5,8 @@ stepsCompleted:
   - 3
   - 4
 status: complete
-updated: 2026-09-02
+updated: 2026-10-18
+changeProposal: "_bmad-output/planning-artifacts/sprint-change-proposal-2026-10-18.md"
 inputDocuments:
   - "/Users/Super/DocManS/_bmad-output/prd.md"
   - "/Users/Super/DocManS/_bmad-output/architecture.md"
@@ -32,94 +33,139 @@ stories.
 
 ## Authorization Baseline Alignment
 
-`docs/authorization-core-business-baseline.md` and
-`docs/permission-matrix.md` are binding inputs for every story. Where an older
-PRD, architecture, or story statement conflicts, the approved baseline wins.
-Every protected action requires backend authorization before detail, list,
+`docs/permission-matrix.md` (§7 wins on conflict) and
+`docs/authorization-core-business-baseline.md` are binding inputs for every story.
+Where an older PRD, architecture, or story statement conflicts, the permission
+matrix wins. Every protected action requires backend authorization before detail, list,
 search, count, facet, dashboard, export, notification, or file-metadata
 disclosure; unresolved context fails closed and important changes are audited.
 
-- `SYSTEM_ADMIN` manages platform data only and has no implicit business-data,
-  review, approval, or reopen access.
-- `SCIENTIFIC_MANAGEMENT_HEAD` sees all proposals/projects within authorized
-  Scientific Management scope; Staff management access requires the exact active
-  officer assignment. Head oversight does not grant leadership decisions or all
-  operational actions. State, conflict and disclosure remain enforced; no tree inheritance.
-- Each account has one active role from `SYSTEM_ADMIN`,
-  `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`,
-  `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`. All PI, member,
-  secretary, reviewer, council, ethics, and task authority remains record
-  scoped.
-- Proposal creation, submission, and resubmission are owner-only actions. No
-  proposal-submit delegation or delegated capability is supported. Any future
-  delegation remains domain-specific and contract-bound.
+- Each account has exactly one active system role from the ten roles of matrix §2:
+  QT `SYSTEM_ADMIN`; GĐ `LEADERSHIP_APPROVAL_AUTHORITY`; PGĐ-KH
+  `SCIENCE_DEPUTY_DIRECTOR`; PGĐ-TD `RESEARCH_OVERSIGHT_AUTHORITY`; TP
+  `RESEARCH_MANAGEMENT_HEAD`; PP `RESEARCH_MANAGEMENT_DEPUTY_HEAD`; TB
+  `RESEARCH_BOARD_HEAD` (one holder); CV `RESEARCH_MANAGEMENT_STAFF`; NCV
+  `RESEARCHER_INTERNAL_USER`; NNB `EXTERNAL_RESEARCHER_USER`. GĐ, PGĐ-KH and
+  PGĐ-TD form Ban giám đốc (BGĐ); TP, PP, TB and CV form Phòng KHQS. All PI,
+  member, secretary, reviewer, council, IRB/ethics, and task authority remains
+  record scoped.
+- Rename note (7 → 10 roles, 2026-10-18): `SCIENTIFIC_MANAGEMENT_HEAD` →
+  `RESEARCH_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF` →
+  `RESEARCH_MANAGEMENT_STAFF`; `RESEARCH_OVERSIGHT_AUTHORITY` now means only the
+  other Deputy Directors who monitor and no longer the Science Deputy Director.
+  Done and in-flight story text below keeps the old names (see the epic banners).
+- Condition superscripts follow matrix §7.2: ¹ = within the user's unit scope;
+  ² = submitted-or-later proposals in unit scope; ³ = only records where the CV is
+  the current responsible officer; ⁴ = own PI/member participation; ⁵ = when
+  assigned as reviewer, council or IRB member; ⁶ = council secretary of that
+  record; ⁷ = aggregate only (PGĐ-TD).
+- `SYSTEM_ADMIN` manages platform data only: no business-data, review, approval
+  or reopen access, no scientific CV, no business dashboard, never a reviewer.
+- Proposal creation, submission, and resubmission are owner-only actions of the
+  PI (any role except QT/NNB). No proposal-submit delegation or delegated
+  capability is supported. Any future delegation remains domain-specific and
+  contract-bound.
 
-### Scientific Management scope for all epic descriptions and stories
+### Phòng KHQS and BGĐ scope for all epic descriptions and stories
 
-FR6f–FR6g apply to both the delivery-epic summaries and numbered story backlog below.
-Every Staff proposal/project check, follow-up or administrative
-operation requires the matching active management-officer relationship and explicit scope;
-participation/review access never supplies that authority. Independent intake/profile and
-other-domain capabilities retain their own scope and cannot widen proposal/project access.
-Head sees the authorized portfolio, assigns/reassigns/revokes responsible Staff, reviews
-Staff summaries and submits eligible completed packages. `LEADERSHIP_APPROVAL_AUTHORITY`
-has oversight and final decisions only when eligible and conflict-free.
-`RESEARCH_OVERSIGHT_AUTHORITY` has internal researcher eligibility and read-only
-institutional oversight. Project and other absent backends remain planned.
+FR6f–FR6g and FR71–FR79 apply to both the delivery-epic summaries and numbered
+story backlog below (10-role model, decisions of 18/10/2026):
+
+- **Responsible CV.** Every CV proposal/project operation requires the current
+  responsible-officer assignment (³); participation/review access never supplies
+  it, and a CV never operates on records assigned to another CV. On
+  submit/resubmit the system auto-assigns one responsible CV by segment (mảng =
+  level + nature); unmatched records show "Chưa có người phụ trách" for TP. TP¹/TB¹
+  assign, reassign or revoke the responsible CV with history; TP assigns segments
+  to CV.
+- **Phòng KHQS.** TP¹/TB¹/CV³ assign reviewers/councils, synthesize and draft tờ
+  trình; completeness and supplement belong to TB¹/CV³ only (never TP). TP and CV
+  create/open/close intake periods. PP only monitors (unit scope) and has no step in
+  the tờ trình flow, even when TP is absent.
+- **Tờ trình routing.** Every BGĐ-bound procedure goes through approval routing:
+  CV drafts → TB reviews → TP approves → BGĐ signs. A TB-authored tờ trình starts at
+  TP; a TP-authored one still passes TB. Return at any step goes back to the author
+  with a mandatory reason; no step skipping; no self-review.
+- **Signer rules (matrix §7.4).** GĐ alone approves topic + funding and contract
+  liquidation. GĐ or PGĐ-KH signs evaluation/acceptance/IRB council
+  establishment, the IRB certificate, project extension and project adjustment
+  (including a funding change). A signer cannot be participant, reviewer or council
+  member on the same record. PGĐ-TD only monitors with aggregate funding (⁷).
+- **Project view.** GĐ, PGĐ-KH, TP and TB see every project in the Academy; TP and
+  TB manage funding Academy-wide; proposals always follow unit scope.
+- **Reviewers.** Reviewer/council/IRB duty is invited from any account with a
+  scientific CV (every role except QT); invitees accept or decline.
+- **Two-way anonymity.** PI and reviewers never see the record's action log;
+  TB¹/TP¹ may see reviewer identity.
+- **Decisions of 18/10/2026 (matrix §7.3).** The assigned CV³ approves
+  post-submission withdraw/edit requests and reopens with a mandatory reason;
+  TB¹/TP¹ decide duplicate researcher-profile merges; if no eligible TB/TP step
+  actor or conflict-free signer exists for an adjustment/extension, the PI
+  withdraws the request. Funding stays audited metadata only (no ledger, payment,
+  banking or ERP). Account activation uses a 48-hour single-use setup-password
+  link.
 
 | Requirement | Owning existing stories |
 | --- | --- |
-| FR6f: roles, management lifecycle, one primary officer, audited assignment | 1.4, 1.7–1.9; proposal integration 4.2/5.1; project integration 6.1–6.2 |
-| FR6g: independent access basis, bidirectional/action-time conflict, surface parity | 1.7–1.9, 2.4, 3.1–3.5, 4–7, 10.5–10.8, 11.1–11.5, 12.1–12.5 |
-| FR45a: Head oversight, officer filters, unassigned and workload/status/deadlines | Dashboard delivery Epic 8, reporting delivery Epic 9; Stories 12.1–12.5 |
+| FR6f: roles, management lifecycle, one responsible CV, audited assignment | 1.4, 1.7–1.9, 1.11; proposal integration 4.2/4.7/5.1; project integration 6.1–6.2 |
+| FR6g: independent access basis, bidirectional/action-time conflict, surface parity | 1.7–1.9, 2.4, 3.1–3.6, 4–7, 10.5–10.8, 11.1–11.6, 12.1–12.6 |
+| FR45a: TP/TB oversight, responsible-CV filters, unassigned and workload/status/deadlines | Dashboard delivery Epic 8, reporting delivery Epic 9; Stories 12.1–12.6 |
+| FR71: approval routing | 5.9; consumers 5.10, 6.11, 6.12, 10.7–10.8 |
+| FR72: segments and responsible-CV auto-assignment | 1.12, 4.7 |
+| FR73: BGĐ signatures | 5.10, 6.11, 10.8 |
+| FR74: funding metadata and liquidation | 6.12, 12.6 |
+| FR75: duplicate profile merge | 2.7 |
+| FR76: post-submission withdraw/edit/reopen | 4.8 |
+| FR77: two-way anonymity | 3.6 |
+| FR78: per-role work queues | 11.6 |
+| FR79: setup-password activation link | Covered by 2.1 (review), 2.2 (ready-for-dev) and the Researcher Profile completion section; no new story |
 
-The seven-role registry includes `SCIENTIFIC_MANAGEMENT_HEAD` and
-`RESEARCH_OVERSIGHT_AUTHORITY`. Proposal officer history is
-source-owned; no generic ACL is introduced. Existing records stay unassigned. Staff PI
-mutation eligibility is unchanged; Oversight gains internal researcher eligibility.
+The ten-role registry and the 7 → 10 account migration are Story 1.11 (codes and the HEAD/STAFF rename already delivered by commit 0a39db3). Proposal
+officer history is source-owned; no generic ACL is introduced. Records with no
+segment match stay unassigned until TP/TB assigns a CV.
 
 ## Requirements Inventory
 
 ### Functional Requirements
 
 - FR1: System administrators can create, update, activate, deactivate, and lock user accounts.
-- FR2: System administrators can assign exactly one active account-level system role (`SYSTEM_ADMIN`, `SCIENTIFIC_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF`, `LEADERSHIP_APPROVAL_AUTHORITY`, `RESEARCH_OVERSIGHT_AUTHORITY`, `RESEARCHER_INTERNAL_USER`, or `EXTERNAL_RESEARCHER_USER`) to a user; owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer permissions are assigned through record-scoped relationships or assignments instead of additional global roles.
+- FR2: System administrators can assign exactly one active account-level system role from the ten roles of the permission matrix §2 (`SYSTEM_ADMIN` QT, `LEADERSHIP_APPROVAL_AUTHORITY` GĐ, `SCIENCE_DEPUTY_DIRECTOR` PGĐ-KH, `RESEARCH_OVERSIGHT_AUTHORITY` PGĐ-TD, `RESEARCH_MANAGEMENT_HEAD` TP, `RESEARCH_MANAGEMENT_DEPUTY_HEAD` PP, `RESEARCH_BOARD_HEAD` TB, `RESEARCH_MANAGEMENT_STAFF` CV, `RESEARCHER_INTERNAL_USER` NCV, `EXTERNAL_RESEARCHER_USER` NNB) to a user; owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and IRB/ethics member permissions are assigned through record-scoped relationships or assignments instead of additional global roles. Reviewer, council and IRB duty is invited from any account with a scientific CV (every role except QT).
 - FR3: System administrators can associate users with an organizational unit and other scope-defining organizational attributes.
 - FR4: The system can authenticate users and establish a role-aware session for authorized access.
 - FR4a: Authenticated users can change their own password, and authorized administrators can initiate a controlled password reset flow for internal users.
 - FR5: The system can enforce role-based access rules across all protected capabilities.
-- FR6: The system can enforce explicit organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports; Scientific Management Head can view all proposals/projects within explicitly authorized Scientific Management scope; Staff management visibility requires an effective record-level management-officer assignment. Parent/child units never imply scope.
-- FR6f: Distinguish `SCIENTIFIC_MANAGEMENT_HEAD` oversight from `SCIENTIFIC_MANAGEMENT_STAFF` management access. Head sees all proposals/projects in explicit Scientific Management scope; Staff needs an effective `PROPOSAL_MANAGEMENT_OFFICER` or `PROJECT_MANAGEMENT_OFFICER` on the exact record. Each record has at most one active primary officer; assignment, reassignment and revocation preserve history and audit, including concurrent changes. Neither role has proposal final approval authority. During project execution, assigned Staff finally approves/rejects normal Project Adjustments and scoped Head finally approves/rejects Project Extensions after Staff preparation; Leadership decides neither.
-- FR6g: Preserve independent PI/member/secretary/reviewer/council/task access for Staff on other records without Scientific Management administrative actions. Backend capabilities identify the access basis. Deny participant + management officer/reviewer/evaluation or acceptance council/final decision, reviewer + final decision in the same round, and mutually exclusive council positions; check every relationship creation/change and protected action. Apply the same authorization/disclosure to list, detail, search, counts/facets, dashboards, reports/export, notifications, files and workflow/business history.
+- FR6: The system can enforce explicit organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, ethics dossiers, related documents, tasks, files, dashboards, and reports; approved projects are visible Academy-wide to GĐ, PGĐ-KH, TP and TB, while proposals always follow unit scope; CV operations require an effective record-level responsible-officer assignment. Parent/child units never imply scope.
+- FR6f: Distinguish Phòng KHQS coordination from CV record operations. GĐ, PGĐ-KH, TP and TB view every project in the Academy; proposals stay unit-scoped (TP/TB/PP/PGĐ-TD¹, GĐ/PGĐ-KH²). CV needs an effective `PROPOSAL_MANAGEMENT_OFFICER` or `PROJECT_MANAGEMENT_OFFICER` on the exact record. Each record has at most one active responsible CV; TP¹/TB¹ assignment, reassignment and revocation (and segment auto-assignment) preserve history and audit, including concurrent changes. PP and PGĐ-TD are read-only (PGĐ-TD aggregate funding only). Project adjustment and extension decisions follow FR28 (CV appraisal → routing → GĐ or PGĐ-KH signature); no Phòng KHQS role decides them.
+- FR6g: Preserve independent PI/member/secretary/reviewer/council/task access for Phòng KHQS and BGĐ accounts on other records without management actions. Backend capabilities identify the access basis. On one record the responsible officer, reviewer, council member, tờ trình reviewer/approver and final signer are mutually exclusive with participation (PI/member/secretary) and with each other where the matrix §8 closing rule says so; deny reviewer + final decision in the same round and mutually exclusive council positions; check every relationship creation/change and protected action. Apply the same authorization/disclosure to list, detail, search, counts/facets, dashboards, reports/export, notifications, files and workflow/business history.
 - FR6a: The system can distinguish account-level system roles from record-scoped relationships or assignments, including owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer, so those relationships only grant permissions within the specific proposal, approved topic, council, review, ethics dossier, task, or related record context.
-- FR6b: Proposal creation, submission, and resubmission require the current owner-derived PI with active `RESEARCHER_INTERNAL_USER`; no proposal-submit delegation or delegated capability is supported.
+- FR6b: Proposal creation, submission, and resubmission require the current owner-derived PI, who may hold any system role except `SYSTEM_ADMIN` (QT) and `EXTERNAL_RESEARCHER_USER` (NNB); NNB can never be PI; no proposal-submit delegation or delegated capability is supported.
 - FR6c: Protected record responses can state the current user's record-scoped relationships, allowed actions, blocked actions, and plain-language denial reasons as calculated by backend authorization policy.
 - FR6d: A record-scoped `TOPIC_SECRETARY` can perform only the explicitly authorized administrative, meeting, minutes, document, task, tracking, and draft-summary actions for the assigned proposal, approved topic, council, or ethics record; the secretary relationship alone never grants reviewer scoring or final approval/rejection authority.
 - FR6e: Proposal participation, project participation, council membership, reviewer assignment, task assignment, and ethics assignment relationships can be activated, suspended, ended, or revoked with effective dates and status, and an inactive relationship immediately stops granting access or capabilities.
 - FR7: System administrators can manage shared catalogs required by business workflows, including organizational units, research fields, proposal types, statuses, priorities, report types, product types, forms, checklists, and scoring criteria.
 - FR8: System administrators can configure system parameters, notification templates, and selected workflow-supporting settings required for phase 1 operations.
-- FR9: Scientific management staff can create and manage proposal intake periods with dates, required submission packages, and either Academy-wide scope (the default) or an explicit selected-unit scope.
-- FR10: An internal-researcher PI with applicable unit scope can create a proposal draft, save progress, and submit a proposal formally within an applicable intake period; external researchers cannot create or submit proposals.
+- FR9: TP and CV can create, open, close and manage proposal intake periods with dates, required submission packages, and either Academy-wide scope (the default) or an explicit selected-unit scope; open periods are visible to every role except QT and NNB.
+- FR10: A PI (any role except QT/NNB) with applicable unit scope can create a proposal draft, save progress, and submit a proposal formally within an applicable intake period; external researchers (NNB) cannot see intake periods or create or submit proposals.
 - FR11: Principal investigators can enter structured proposal information including title, field, host unit, participants, timeline, objectives, content summary, and proposed budget metadata.
 - FR12: Principal investigators can upload required proposal attachments and supporting documents to a proposal record.
 - FR13: The system can validate required proposal data and required file conditions before formal submission.
-- FR14: The system can record immutable proposal submission history, including timestamps, submission state changes, PI actor context, and locked versions; post-submission edits, withdrawal, and reopening use explicit requests/actions rather than overwriting a submitted version.
-- FR15: Scientific management staff assigned as the current proposal management officer can review proposal completeness once per submitted/resubmitted version and request supplements with a stated reason and whole-calendar-day due date; repeat completeness confirmation for the current version is denied.
+- FR14: The system can record immutable proposal submission history, including timestamps, submission state changes, PI actor context, and locked versions; post-submission edits, withdrawal, and reopening use explicit requests/actions rather than overwriting a submitted version; the PI's post-submission withdraw/edit requests are approved or rejected by the assigned CV³, and reopen is a CV³ action with a mandatory reason (FR76).
+- FR15: TB¹ or the assigned CV³ can review proposal completeness once per submitted/resubmitted version and request supplements with a stated reason and whole-calendar-day due date; repeat completeness confirmation for the current version is denied; TP never performs completeness or supplement actions.
 - FR16: Principal investigators can view supplement requests, revise proposal content or attachments, and resubmit the proposal.
-- FR17: Scoped Scientific Management Head can assign, revoke or replace eligible active proposal reviewers/committee members after Staff confirms current-submission completeness. Preserve optional profile provenance, current-account/context validation, compatibility, lifecycle, immutable audit/history and disclosure. Staff monitoring never grants assignment authority.
-- FR18: Reviewers and committee members can access assigned proposals and submit scores, comments, and recommendations.
-- FR19: Scientific management staff assigned as the current proposal management officer can monitor named assignments, deadlines, pending/overdue work and backend-derived completion/blockers. Scoped conflict-free Scientific Management Head alone creates, updates and finalizes synthesis after all required reviews are complete.
-- FR19a: Scoped conflict-free Scientific Management Head explicitly submits a finalized current review/synthesis package to Leadership. Draft save and finalization alone do not route the proposal; Staff has no synthesis/routing grant and Head has no final approve/reject authority.
-- FR20: Leadership or approval authority can review proposal history, evaluation outputs, and supporting files before making an approval decision.
-- FR21: Leadership or approval authority can approve, reject, or otherwise disposition a proposal according to workflow rules.
+- FR17: TP¹, TB¹ or the assigned CV³ can invite, assign, revoke or replace eligible active proposal reviewers/council members, with a conflict check, after current-submission completeness is confirmed. Candidates are any active account with a scientific CV (every role except QT) that is not a participant on the record; self-assignment is denied. Invitees must accept or decline (decline with a reason). Preserve optional profile provenance, current-account/context validation, compatibility, lifecycle, immutable audit/history and disclosure.
+- FR18: Reviewers and council members who accepted their invitation can access assigned proposals and submit scores, comments, and recommendations; before acceptance they see only title, role, deadline and inviter; council members read the dossier only after BGĐ signs the council establishment; every invited role scores.
+- FR19: TP¹, TB¹ or the assigned CV³ can monitor named assignments, deadlines, pending/overdue work and backend-derived completion/blockers, and conflict-free create, update and finalize the synthesis after all required reviews are complete; the council secretary of the record drafts synthesis/minutes without scoring.
+- FR19a: A finalized current review/synthesis package is submitted for decision only through approval routing (FR71: drafted → TB → TP → GĐ). Draft save and finalization alone do not route the proposal; no Phòng KHQS role has final approve/reject authority.
+- FR20: GĐ (`LEADERSHIP_APPROVAL_AUTHORITY`) alone can review the routed proposal history, evaluation outputs, and supporting files before deciding topic and funding together.
+- FR21: GĐ alone can approve or reject a proposal (topic and funding together) after the routed package has passed `HEAD_REVIEW`; PGĐ-KH, PGĐ-TD, Phòng KHQS roles, QT and reviewers have no topic decision.
 - FR22: The system can treat proposal statuses as controlled states and restrict actions based on current proposal state.
 - FR23: The system can create an approved-project record from an approved proposal while preserving relevant source data.
-- FR24: Assigned project management staff and independently authorized project participants can define and maintain project milestones and planned reporting checkpoints.
+- FR24: The assigned project CV³ and independently authorized project participants can define and maintain project milestones and planned reporting checkpoints.
 - FR25: Principal investigators can submit periodic progress reports and supporting evidence for approved projects.
-- FR26: Scientific management staff assigned as the current project management officer can review project progress reports, request follow-up where needed, and track unresolved issues.
+- FR26: The assigned project CV³ (current project management officer) can review project progress reports, request follow-up where needed, and track unresolved issues.
 - FR27: Principal investigators can submit adjustment or extension requests for approved projects.
 - FR27a: Principal investigators can prepare and submit acceptance or final-review dossiers with required structured data, files, and readiness validation when the approved-project workflow requires a formal dossier before the authority decision.
-- FR28: Assigned project management staff can review and finally approve/reject Project Adjustment requests within the typed milestone/scope-plan/membership scope; the same Staff validates/prepares Project Extension requests; only scoped Scientific Management Head finally approves/rejects extensions. Leadership has no decision action for either Golden Flow 4 request type.
+- FR28: The assigned project CV³ appraises Project Adjustment (typed milestone/scope-plan/membership change, with or without a funding change) and Project Extension requests and drafts the tờ trình; it passes approval routing (TB → TP) and GĐ or PGĐ-KH signs; the signature applies the change atomically. No Phòng KHQS role decides either request type. If no eligible TB/TP step actor or conflict-free signer exists, the PI withdraws the request. Acceptance council establishment is signed by GĐ or PGĐ-KH.
 - FR29: The system can identify delayed projects, upcoming deadlines, and projects waiting for administrative action.
 - FR30: The system can treat approved-project workflow states as controlled states and restrict actions based on current project state.
 - FR30a: Project members can view approved projects they participate in, including assigned responsibilities, relevant milestones, and permitted supporting files.
@@ -138,34 +184,43 @@ mutation eligibility is unchanged; Oversight gains internal researcher eligibili
 - FR42: The system can send email notifications for important business events and reminders defined in phase 1 scope.
 - FR43: The system can generate reminders for approaching deadlines, overdue reports, overdue tasks, and pending workflow actions.
 - FR44: The system can present user-specific work queues showing items waiting for the current user's attention.
-- FR45: Leadership, Scientific Management Head and Scientific Management Staff can access role-based dashboards showing waiting approvals, delayed projects, overdue tasks, council or ethics queues, seminar or student research milestones, document status gaps, upcoming reports, and summary indicators within authorized scope.
+- FR45: Every role except QT can access a per-role dashboard (GĐ/PGĐ-KH authority dashboards; TP, PP, TB and CV scoped dashboards; PGĐ-TD aggregate only, with per-record funding columns empty; researchers their own dashboard) showing waiting approvals/signatures, delayed projects, overdue tasks, council or IRB queues, seminar or student research milestones, document status gaps, upcoming reports, and summary indicators within authorized scope; filters include year, unit, level, field and nature (Quân sự / Dân sự / Chưa phân loại).
 - FR46: Users can search and filter proposals, projects, seminar records, student research records, council records, document records, tasks, and reports by relevant business attributes such as code, title, unit, field, status, assignee, due date, and intake period.
-- FR45a: Head can identify each proposal/project's current responsible Staff member or unassigned state, filter/group by responsible Staff, and monitor workload, status and deadlines within authorized scope. Staff management dashboards/reports contain only their assigned records; participation/review queues remain separately authorized. Counts, drill-down and exports use the same filters and access basis.
+- FR45a: TP and TB can identify each proposal/project's current responsible CV or unassigned state ("Chưa có người phụ trách"), filter/group by responsible CV with an "unassigned" group, and monitor workload, status and deadlines within authorized scope. CV management dashboards/reports contain only their assigned records; participation/review queues remain separately authorized. Counts, drill-down and exports use the same filters and access basis.
 - FR47: The system can provide traceable detail views that connect dashboard indicators and list results to the underlying workflow records.
 - FR48: Authorized users can export designated lists and reports to Excel or PDF according to business needs and permission rules.
 - FR49: The system can produce role-scoped reporting views and summary outputs by unit, field, status, reporting period, module type, and related administrative dimensions.
-- FR50: Scientific management staff can create or import approved seminar and student research records with responsible unit, participants, schedule, scope, and source decision metadata.
-- FR51: Scientific management staff can maintain plans, related documents, milestones, and administrative notes for approved seminars and student research activities.
-- FR52: Authorized users can record adjustment requests, budget metadata, products, and outcomes for seminars and student research activities.
-- FR53: The system can treat seminar and student research statuses as controlled states, expose role-scoped lists, and preserve history for important changes.
+- FR50: Student research (đề tài sinh viên NCKH) follows matrix §9.6: CV and NCV register a topic as supervising lecturer; CV¹ approves it. Seminar records keep the existing rule: scientific management staff (CV) can create or import approved seminar records with responsible unit, participants, schedule, scope, and source decision metadata (seminar permissions are an open question).
+- FR51: CV¹ manages approved student research activities, and CV maintains approved seminars: plans, related documents, milestones, and administrative notes.
+- FR52: CV¹ (student research) and authorized users (seminar) can record adjustment requests, budget metadata, products, and outcomes for seminars and student research activities.
+- FR53: The system can treat seminar and student research statuses as controlled states, expose role-scoped lists, and preserve history for important changes; CV¹ completes student research.
 - FR54: Authorized users can register governing, legal, planning, proposal, project, seminar, council, and other related documents with document type, issuing authority, code, date, effective status, and metadata.
 - FR55: Authorized users can link related documents to proposals, approved projects, seminars, student research activities, councils, ethics dossiers, tasks, and reports.
 - FR56: The system can preserve version or replacement history for important related documents and distinguish current, expired, superseded, and archived document states.
 - FR57: The system can provide role-scoped search, filtering, and retrieval of related documents without exposing file metadata or document content outside authorized scope.
-- FR58: Scientific management staff can create and manage council plans with purpose, schedule, member roles, related legal documents, and linked business records.
-- FR59: Principal investigators or authorized staff can create, complete, and submit ethics dossiers with required structured data and attachments.
-- FR60: Scientific management staff can review ethics dossier completeness, request supplements, and track resubmissions.
-- FR61: Council members or assigned reviewers can access assigned ethics dossiers or council records and submit scores, comments, and recommendations.
-- FR62: Scientific management staff can monitor council review progress, consolidate evaluation outcomes, and route records for approval.
-- FR63: Leadership or approval authority can approve, reject, or otherwise decide council or ethics records according to workflow rules.
-- FR64: The system can treat council and ethics workflow statuses as controlled states with role-scoped dashboards, reports, history, notifications, and audit logs.
-- FR65: Authorized users can create and maintain researcher profiles with identity, academic rank or degree, title, contact details, organization, research fields, expertise keywords, and active status.
-- FR66: Authorized users can link researcher profiles to user accounts where applicable while still allowing profile records for researchers who do not yet have system login accounts.
+- FR58: TP¹, TB¹ or the assigned CV³ can set up evaluation, acceptance and IRB (ethics) councils with purpose, schedule, member roles, related legal documents, and linked business records; members are invited from any account with a scientific CV except QT and must accept; a council tờ trình is routed only after every member accepts, and GĐ or PGĐ-KH signs the establishment.
+- FR59: Principal investigators or the assigned CV³ can create, complete, and submit IRB (ethics) dossiers with required structured data and attachments.
+- FR60: TB¹ or the assigned CV³ can review IRB dossier completeness, request supplements, and track resubmissions.
+- FR61: Council members, IRB members or assigned reviewers who accepted can access assigned IRB dossiers or council records and submit scores, comments, and recommendations; the IRB/council secretary drafts the conclusion/minutes without scoring.
+- FR62: TP¹, TB¹ or the assigned CV³ can monitor council review progress, consolidate evaluation outcomes, and route the IRB conclusion or council result through approval routing (FR71).
+- FR63: GĐ or PGĐ-KH signs council establishment (evaluation, acceptance, IRB) and the IRB certificate after routing; a signer cannot be a participant, reviewer or council member on the record.
+- FR64: The system can treat council and IRB workflow statuses as controlled states with role-scoped dashboards, reports, history, notifications, and audit logs.
+- FR65: QT (platform scope) and TP¹/CV¹ (unit scope) can create and maintain researcher profiles with identity, academic rank or degree, title, contact details, organization, research fields, expertise keywords, and active status.
+- FR66: QT and TP¹/CV¹ can link researcher profiles to user accounts where applicable while still allowing profile records for researchers who do not yet have system login accounts.
 - FR67: Authorized users can associate researcher profiles with proposals, approved projects, seminars, student research activities, councils, ethics dossiers, reviews, publications, products, and tasks where relevant.
 - FR67a: The system enforces record/evaluation-context conflict, separation-of-duty and multiplicity policy in preflight and every authoritative assignment/decision mutation; the authorization baseline owns the compatibility matrix and stable reasons.
 - FR68: Users can search and filter researcher profiles by name, unit, field, expertise, status, participation history, and other authorized business attributes.
 - FR69: The system can preserve researcher profile history and audit important profile changes according to role and data-scope permissions.
 - FR70: Researchers can maintain a scientific CV (Lý lịch khoa học, form BM-06) on their researcher profile — general info, education, work history, research experience — validated server-side, with sensitive fields protected, and can view/print it in Vietnamese and English; authorized scoped managers can view it.
+- FR71: The system routes every BGĐ-bound procedure (8 kinds: evaluation council, decision package, IRB council, IRB certificate, acceptance council, project extension, project adjustment, liquidation) through approval routing with a signer per kind (matrix §7.4): CV drafts → TB review → TP approval → BGĐ signature. Any step can return the submission to its author with a mandatory reason. No step skipping and no self-review; a TB-authored submission starts at TP. One open submission per kind and subject.
+- FR72: TP assigns segments (mảng = level + nature) to CV. On submit/resubmit the system auto-assigns one responsible CV: the more specific segment match first, then the CV with fewer active records; unmatched records show "Chưa có người phụ trách". TP/TB assign, reassign and revoke the responsible CV, keeping history.
+- FR73: BGĐ signatures: GĐ or PGĐ-KH signs councils (evaluation, IRB, acceptance), the IRB certificate, project extension and project adjustment; GĐ alone signs topic + funding and liquidation. A signer cannot be a participant or reviewer on the record.
+- FR74: Funding is recorded as audited metadata (allocation, disbursement and settlement figures plus documents; no ledger, payments, banking or ERP). View: GĐ/PGĐ-KH/TP/TB all; CV assigned; PP and PI/members own participation; PGĐ-TD aggregate only. Manage: GĐ, and TP/TB Academy-wide; CV assigned. Liquidation: CV drafts → routing → GĐ signs.
+- FR75: A duplicate researcher-profile warning (raised by QT, TP or CV) is notified to TB/TP, who decide the merge; history is kept.
+- FR76: Post-submission withdraw/edit requests are approved or rejected, and reopen is performed, by the assigned CV, with a mandatory reason and audit.
+- FR77: Two-way anonymity: the PI and reviewers see no action log of the record; TB/TP may see reviewer identity.
+- FR78: Per-role work queues (matrix §9.10): TB review queue, TP approval queue, CV assigned records, GĐ decision/signature queue, PGĐ-KH signature queue, reviewer invitations. QT has none.
+- FR79: Accounts are activated by a 48-hour single-use setup-password link; no temporary password is generated or sent.
 
 ### NonFunctional Requirements
 
@@ -237,14 +292,14 @@ mutation eligibility is unchanged; Oversight gains internal researcher eligibili
 ### FR Coverage Map
 
 - FR1: Epic 1 — Quản trị vòng đời tài khoản.
-- FR2: Epic 1 — Một vai trò hệ thống và vai trò nghiệp vụ theo hồ sơ.
+- FR2: Epic 1 — Một trong mười vai trò hệ thống và vai trò nghiệp vụ theo hồ sơ (Story 1.11).
 - FR3: Epic 1 — Phạm vi tổ chức của tài khoản.
 - FR4: Epic 1 — Đăng nhập và phiên làm việc.
 - FR4a: Epic 1 — Đổi và đặt lại mật khẩu.
 - FR5: Epic 1 — Phân quyền backend cho năng lực được bảo vệ.
 - FR6: Epic 1 — Phạm vi đơn vị/tổ chức.
 - FR6a: Epic 1 — Quan hệ nghiệp vụ theo từng hồ sơ.
-- FR6b: Epic 1 — PI nội bộ duy nhất được tạo, nộp và nộp lại đề xuất; không ủy quyền.
+- FR6b: Epic 1 — Chỉ PI (mọi vai trò trừ QT/NNB) được tạo, nộp và nộp lại đề xuất; không ủy quyền.
 - FR6c: Epic 1 — Capability response từ backend.
 - FR6d: Epic 1 — Năng lực và giới hạn của thư ký khoa học.
 - FR6e: Epic 1 — Vòng đời quan hệ tham gia/phân công.
@@ -258,12 +313,12 @@ mutation eligibility is unchanged; Oversight gains internal researcher eligibili
 - FR14: Epic 4 — Lịch sử nộp.
 - FR15: Epic 5 — Kiểm tra tính đầy đủ và yêu cầu bổ sung.
 - FR16: Epic 5 — Chỉnh sửa và nộp lại.
-- FR17: Epic 5 — Phân công người đánh giá.
+- FR17: Epic 5 — Phân công người đánh giá (TP¹/TB¹/CV³; Story 5.11).
 - FR18: Epic 5 — Chấm điểm, nhận xét và kiến nghị.
 - FR19: Epic 5 — Theo dõi và tổng hợp đánh giá.
-- FR19a: Epic 5, Story 5.5 — Trình hồ sơ đã tổng hợp tới lãnh đạo.
-- FR20: Epic 5 — Hồ sơ trình người có thẩm quyền.
-- FR21: Epic 5 — Quyết định phê duyệt hoặc từ chối.
+- FR19a: Epic 5, Stories 5.5 và 5.9 — Trình hồ sơ đã tổng hợp qua luồng tờ trình tới GĐ.
+- FR20: Epic 5 — Hồ sơ trình GĐ quyết định.
+- FR21: Epic 5 — GĐ phê duyệt hoặc từ chối đề tài và kinh phí.
 - FR22: Epic 5 — Máy trạng thái đề xuất.
 - FR23: Epic 6 — Chuyển đề xuất được duyệt thành đề tài.
 - FR24: Epic 6 — Mốc tiến độ và kỳ báo cáo.
@@ -271,7 +326,7 @@ mutation eligibility is unchanged; Oversight gains internal researcher eligibili
 - FR26: Epic 6 — Kiểm tra báo cáo và theo dõi tồn đọng.
 - FR27: Epic 6 — Điều chỉnh và gia hạn.
 - FR27a: Epic 6 — Hồ sơ nghiệm thu/đánh giá cuối.
-- FR28: Epic 6 — Quyết định điều chỉnh, nghiệm thu và đánh giá cuối.
+- FR28: Epic 6 — Thẩm định điều chỉnh/gia hạn qua tờ trình, GĐ hoặc PGĐ-KH ký; nghiệm thu và đánh giá cuối.
 - FR29: Epic 6 — Phát hiện chậm tiến độ và việc chờ xử lý.
 - FR30: Epic 6 — Máy trạng thái đề tài.
 - FR30a: Epic 6 — Phạm vi xem của thành viên đề tài.
@@ -290,12 +345,12 @@ mutation eligibility is unchanged; Oversight gains internal researcher eligibili
 - FR42: Epic 11 — Thông báo email.
 - FR43: Epic 11 — Nhắc hạn và việc tồn đọng.
 - FR44: Epic 11 — Hàng đợi công việc cá nhân.
-- FR45: Epic 12 — Dashboard theo vai trò và phạm vi.
+- FR45: Epic 12 — Dashboard theo vai trò và phạm vi (Story 12.6 cho PP, PGĐ-TD).
 - FR46: Epic 12 — Tìm kiếm và lọc đa phân hệ.
 - FR47: Epic 12 — Drill-down truy vết về hồ sơ nguồn.
 - FR48: Epic 12 — Xuất Excel/PDF theo quyền.
 - FR49: Epic 12 — Báo cáo tổng hợp theo phạm vi.
-- FR50: Epic 8 — Tạo/nhập seminar và nghiên cứu sinh viên.
+- FR50: Epic 8 — Tạo/nhập seminar; đăng ký đề tài sinh viên NCKH (Story 8.6).
 - FR51: Epic 8 — Kế hoạch, văn bản, mốc và ghi chú.
 - FR52: Epic 8 — Điều chỉnh, kinh phí, sản phẩm và kết quả.
 - FR53: Epic 8 — Trạng thái, danh sách và lịch sử.
@@ -310,13 +365,22 @@ mutation eligibility is unchanged; Oversight gains internal researcher eligibili
 - FR62: Epic 10 — Theo dõi, tổng hợp và trình phê duyệt.
 - FR63: Epic 10 — Quyết định hội đồng/đạo đức.
 - FR64: Epic 10 — Trạng thái, dashboard, báo cáo, lịch sử và thông báo.
-- FR65: Epic 2 — Hồ sơ nhà khoa học.
+- FR65: Epic 2 — Hồ sơ nhà khoa học (QT/TP¹/CV¹; Story 2.8).
 - FR66: Epic 2 — Liên kết hồ sơ với tài khoản.
 - FR67: Epic 2 — Liên kết tham gia với hồ sơ nghiệp vụ.
 - FR67a: Epic 2 — Xung đột lợi ích và phân tách nhiệm vụ.
 - FR68: Epic 2 — Tìm kiếm hồ sơ nhà khoa học.
 - FR69: Epic 2 — Lịch sử và audit hồ sơ nhà khoa học.
 - FR70: Epic 13 — Lý lịch khoa học (BM-06).
+- FR71: Epic 5, Story 5.9 — Luồng tờ trình CV → TB → TP → BGĐ cho 8 loại thủ tục.
+- FR72: Epic 1, Story 1.12; Epic 4, Story 4.7 — Phân mảng và tự động giao CV phụ trách.
+- FR73: Epic 5, Story 5.10; Epic 6, Story 6.11; Epic 10, Story 10.8 — Chữ ký BGĐ theo loại thủ tục.
+- FR74: Epic 6, Story 6.12; Epic 12, Story 12.6 — Kinh phí dạng metadata có audit và thanh lý.
+- FR75: Epic 2, Story 2.7 — Cảnh báo hồ sơ trùng và TB/TP quyết định gộp.
+- FR76: Epic 4, Story 4.8 — Rút, sửa sau nộp và mở lại do CV phụ trách.
+- FR77: Epic 3, Story 3.6 — Ẩn danh hai chiều và danh tính reviewer cho TB/TP.
+- FR78: Epic 11, Story 11.6 — Hàng đợi công việc theo vai trò.
+- FR79: Epic 2, Stories 2.1–2.2 — Kích hoạt tài khoản bằng link đặt mật khẩu 48 giờ (đã có; không thêm story).
 
 ## Canonical UX/UI Delivery Epics
 
@@ -345,15 +409,15 @@ decomposition is retained below as a traceability source and is not removed.
 | Canonical epic | Existing backlog retained | Delivery intent |
 | --- | --- | --- |
 | 1. Foundation, authentication, app shell, navigation | Epic 1 stories 1.1-1.2, 1.5, 1.8 | Establish one authenticated responsive workspace and route boundary. |
-| 2. User, role, organization, catalog administration | Epic 1 stories 1.3-1.9; Epic 2 stories 2.1-2.6 | Keep account, seven system roles, scope, researcher profiles, relationships, conflicts, and catalogs. |
-| 3. Proposal / research topic management | Epic 4 stories 4.1-4.6 | Convert intake, draft, structured form, files, readiness, submit, and resubmit into UX-backed delivery slices. |
-| 4. Review, evaluation, aggregation, approval | Epic 5 stories 5.1-5.8 | Preserve supplement, reviewer assignment, evaluation, aggregation, decision, disclosure, and state controls. |
-| 5. Project tracking after approval | Epic 6 stories 6.1-6.10 | Preserve explicit project creation, milestones, reports, adjustment, acceptance, member scope, and final decision. |
+| 2. User, role, organization, catalog administration | Epic 1 stories 1.3-1.9, 1.11-1.12; Epic 2 stories 2.1-2.8 | Keep account, ten system roles and the 7 → 10 account migration, scope, segments, researcher profiles and duplicate merge, relationships, conflicts, and catalogs. |
+| 3. Proposal / research topic management | Epic 4 stories 4.1-4.8 | Convert intake, draft, structured form, files, readiness, submit, resubmit, responsible-CV auto-assignment and post-submission withdraw/edit/reopen into UX-backed delivery slices. |
+| 4. Review, evaluation, aggregation, approval | Epic 5 stories 5.1-5.11 | Preserve supplement, reviewer assignment, evaluation, aggregation, approval routing (tờ trình), BGĐ signature, GĐ decision, disclosure, and state controls. |
+| 5. Project tracking after approval | Epic 6 stories 6.1-6.12 | Preserve explicit project creation, milestones, reports, adjustment/extension through routing, acceptance, funding metadata and liquidation, member scope, and final decision. |
 | 6. Task management | Epic 7 stories 7.1-7.5 | Preserve standalone/linked tasks, assignment, evidence, due dates, and controlled task states. |
-| 7. File management and document history | Epic 3 stories 3.1-3.3; Epic 9 stories 9.1-9.5 | Unify shared files, related documents, versioning, history, and effective-date traceability. |
-| 8. Dashboard and operational alerts | Epic 11 stories 11.3-11.5; Epic 12 stories 12.2-12.3 | Deliver role-aware dashboard, My Work, queues, due/overdue alerts, and drill-down. |
+| 7. File management and document history | Epic 3 stories 3.1-3.3, 3.6; Epic 9 stories 9.1-9.5 | Unify shared files, related documents, versioning, history, and effective-date traceability. |
+| 8. Dashboard and operational alerts | Epic 11 stories 11.3-11.6; Epic 12 stories 12.2-12.3, 12.6 | Deliver per-role dashboard, My Work, per-role work queues, due/overdue alerts, and drill-down. |
 | 9. Search, filtering, reports, exports | Epic 12 stories 12.1, 12.4-12.5; Epic 9 story 9.4 | Keep server-side scoped search, reports, Excel/PDF export, and source/version consistency. |
-| 10. Audit log, notifications, accessibility, hardening | Epic 3 stories 3.4-3.5; Epic 11 stories 11.1-11.2; Epic 8; Epic 10 | Preserve audit and notification delivery plus accessibility/security hardening and the existing seminar, student research, council, and ethics scope as supporting tracks. |
+| 10. Audit log, notifications, accessibility, hardening | Epic 3 stories 3.4-3.5; Epic 11 stories 11.1-11.2; Epic 8 (incl. 8.6); Epic 10 | Preserve audit and notification delivery plus accessibility/security hardening and the existing seminar, student research, council, and ethics scope as supporting tracks. |
 
 ## Epic 1: Foundation, authentication, app shell, navigation
 
@@ -370,8 +434,9 @@ unauthorized requests remain outside the protected data boundary.
 
 ### Primary users / roles
 
-Unauthenticated users; all seven active system roles; record-scoped PI, member,
-reviewer, secretary, and task assignee relationships.
+Unauthenticated users; all ten active system roles (QT, GĐ, PGĐ-KH, PGĐ-TD, TP,
+PP, TB, CV, NCV, NNB); record-scoped PI, member, reviewer, secretary, and task
+assignee relationships.
 
 ### In scope
 
@@ -443,14 +508,17 @@ reviewer/approval decisions auditable.
 
 ### Primary users / roles
 
-`SYSTEM_ADMIN`; `SCIENTIFIC_MANAGEMENT_STAFF` for permitted business operations;
-authorized profile managers; `EXTERNAL_RESEARCHER_USER` as a managed account
-with no administrative authority; read-only users of catalog values.
+QT `SYSTEM_ADMIN` (platform); TP¹/CV¹ as researcher-profile managers; TP as
+segment owner; TB¹/TP¹ as duplicate-merge deciders; `EXTERNAL_RESEARCHER_USER`
+as a managed account with no administrative authority; read-only users of
+catalog values.
 
 ### In scope
 
-Users, seven system roles, units/scope, researcher profiles and account links,
-participation history, reviewer/team relationships, conflict preflight,
+Users, ten system roles and the 7 → 10 account migration, units/scope,
+display-only unit titles, segments (mảng) and CV segment assignment, researcher
+profiles, account links and the 48-hour setup-password link, duplicate-profile
+merge, participation history, reviewer/team relationships, conflict preflight,
 catalogs, forms, checklists, score criteria, notification templates, and
 configuration.
 
@@ -467,8 +535,9 @@ contracts; Prisma migrations; authorization baseline and conflict policy.
 
 ### UX screens involved
 
-Users, roles/permissions, organization units, catalogs, researcher profiles,
-intake configuration, reviewer candidate search, and account reset.
+Users, roles/permissions, organization units, catalogs, segment assignment
+(Phân mảng), researcher profiles and duplicate merge, intake configuration,
+reviewer candidate search, and account reset.
 
 ### Backend/API needs
 
@@ -484,8 +553,10 @@ Proposal create/submit/resubmit are PI-only; no proposal delegation is allowed.
 
 ### Acceptance criteria
 
-- An account has exactly one active system role from the seven canonical values;
-  invalid legacy ambiguity fails closed and is reported for migration.
+- An account has exactly one active system role from the ten canonical values;
+  legacy HEAD/STAFF accounts migrate to TP/CV, former `RESEARCH_OVERSIGHT_AUTHORITY`
+  holders are re-classified per person, and ambiguity fails closed and is reported
+  for migration, never guessed.
 - An active `EXTERNAL_RESEARCHER_USER` can sign in and receive only explicitly
   related/assigned record capabilities; it cannot manage accounts, roles,
   scopes, profiles, or configuration.
@@ -501,34 +572,39 @@ Proposal create/submit/resubmit are PI-only; no proposal delegation is allowed.
 
 | ID | Priority | Story/task |
 | --- | --- | --- |
-| 2.1 | MVP | Manage users, one active system role, status/lock, unit scope, and controlled reset. |
+| 2.1 | MVP | Manage users, one active system role (ten values), status/lock, unit scope, display-only unit title, and controlled reset. |
 | 2.2 | MVP | Manage organizations, catalogs, forms, checklists, priorities, and score criteria with soft lifecycle. |
-| 2.3 | MVP | Manage researcher profiles, account links, participation history, and record relationships. |
-| 2.4 | MVP | Run conflict/separation-of-duty preflight before reviewer, secretary, or approval assignment. |
+| 2.3 | MVP | Manage researcher profiles (QT, TP¹/CV¹), account links, duplicate-merge decisions (TB¹/TP¹), participation history, and record relationships. |
+| 2.4 | MVP | Run conflict/separation-of-duty preflight before officer, reviewer, council, secretary, tờ trình step or signer assignment. |
+| 2.5 | MVP | Maintain the segment catalog and TP-owned CV segment assignment (legacy 1.12). |
 
 ## Epic 3: Proposal / research topic management
 
 ### Goal
 
-Let an eligible internal PI create, complete, save, submit, and resubmit a
-research proposal through a controlled intake without overwriting submitted
-versions.
+Let an eligible PI (any role except QT/NNB) create, complete, save, submit, and
+resubmit a research proposal through a controlled intake without overwriting
+submitted versions, and hand each submitted proposal to one responsible CV.
 
 ### Business value
 
 Proposal intake becomes complete, visible, and traceable from opening an intake
-through the next staff action.
+through the responsible CV's next action.
 
 ### Primary users / roles
 
-Scientific management staff for intake/check operations; current internal PI for
-proposal authoring; related team members and reviewers for permitted read/file work.
+TP and CV for intake periods; TB¹/CV³ for completeness checks; TP¹/TB¹ for
+responsible-CV assignment of unmatched records; the current PI (any role except
+QT/NNB) for proposal authoring; related team members and reviewers for permitted
+read/file work. NNB never sees intake periods.
 
 ### In scope
 
 Intake periods, proposal list/detail, create/edit form, readiness checklist,
-submit confirmation, supplement response, resubmission, proposal files, status
-badges, timeline, and next-action presentation.
+submit confirmation, supplement response, resubmission, segment-based
+responsible-CV auto-assignment and the "Chưa có người phụ trách" view,
+post-submission withdraw/edit requests and reopen by the assigned CV, proposal
+files, status badges, timeline, and next-action presentation.
 
 ### Out of scope / later
 
@@ -543,7 +619,8 @@ audit and notification hooks from Epic 10.
 ### UX screens involved
 
 Intake periods, proposal list, proposal detail, create/edit proposal, submit
-confirmation, supplement request, and staff check.
+confirmation, supplement request, CV completeness check, unassigned-records view,
+and withdraw/edit/reopen requests.
 
 ### Backend/API needs
 
@@ -555,7 +632,8 @@ validation, scoped list/detail/count/facet, and `ViewerAuthorizationV1`.
 
 PI edit/submit is limited to applicable intake and scope. Submitted versions
 lock. Non-PI users cannot create, edit, submit, or resubmit proposal drafts.
-No direct status PATCH.
+No direct status PATCH. Post-submission withdraw/edit is a PI request decided by
+the assigned CV³; reopen is a CV³ action with a mandatory reason; all are audited.
 
 ### Acceptance criteria
 
@@ -580,13 +658,17 @@ No direct status PATCH.
 | 3.3 | MVP | Add readiness, submit confirmation, immutable submission, supplement, and resubmit flow. |
 | 3.4 | MVP | Implement state badges, next-action strip, version/history, and capability-aware controls. |
 | 3.5 | Should have | Add richer read/file contribution guidance for related team members after core PI intake is stable. |
+| 3.6 | MVP | Auto-assign the responsible CV by segment on submit/resubmit; TP¹/TB¹ assign unmatched records (legacy 4.7). |
+| 3.7 | MVP | Implement post-submission withdraw/edit requests and reopen by the assigned CV (legacy 4.8). |
 
 ## Epic 4: Review, evaluation, aggregation, and approval
 
 ### Goal
 
 Move eligible proposals through conflict-safe reviewer assignment, independent
-evaluation, result aggregation, and leadership approval/rejection.
+evaluation, result aggregation, approval routing (tờ trình CV → TB → TP → BGĐ),
+BGĐ signature of the evaluation council, and GĐ approval/rejection of topic and
+funding.
 
 ### Business value
 
@@ -595,16 +677,20 @@ submitted package and audit trail.
 
 ### Primary users / roles
 
-Scientific management staff for proposal checks and scoped administration; assigned
-reviewer/council/ethics evaluator, including an external researcher when
-explicitly assigned; leadership approval authority; PI/member/external
+TB¹/CV³ for completeness checks; TP¹/TB¹/CV³ for reviewer/council assignment and
+synthesis; TB (review step) and TP (approval step) in routing; GĐ or PGĐ-KH as
+council signer; GĐ as the only topic + funding decider; assigned
+reviewer/council/IRB evaluator from any role except QT, including an external
+researcher when explicitly assigned; PP and PGĐ-TD as monitors; PI/member/external
 researcher as disclosure-limited viewers.
 
 ### In scope
 
-Staff check and supplement; Head reviewer assignment, evaluation aggregation and
-`Trình phê duyệt` routing; decision package, leadership approve/reject
-confirmation, disclosure, decision history, and proposal state transitions.
+TB/CV check and supplement; TP/TB/CV reviewer invitation (accept/decline),
+evaluation aggregation and tờ trình drafting; approval routing with return and
+reason; BGĐ signature of the evaluation council; decision package, GĐ
+approve/reject confirmation, disclosure, decision history, and proposal state
+transitions.
 
 ### Out of scope / later
 
@@ -618,14 +704,16 @@ notifications, and state transition contracts from Epic 10.
 
 ### UX screens involved
 
-Staff check, Head reviewer assignment, reviewer evaluation, Head result aggregation,
-leadership decision, proposal detail review/history tabs.
+Completeness check, reviewer assignment and invitation, reviewer evaluation,
+result aggregation, tờ trình routing inbox (TB review, TP approval), BGĐ
+signature, GĐ decision, proposal detail review/history tabs.
 
 ### Backend/API needs
 
-Check, supplement, reviewer assignment, evaluation, aggregation, decision
-package, approve/reject endpoints; server-calculated totals; disclosure-filtered
-DTOs; atomic state/version/conflict checks.
+Check, supplement, reviewer assignment and invitation response, evaluation,
+aggregation, approval routing (`approval_submissions`: submit/forward/return/
+approve/sign), decision package, approve/reject endpoints; server-calculated
+totals; disclosure-filtered DTOs; atomic state/version/conflict checks.
 
 ### Permission and security notes
 
@@ -641,9 +729,10 @@ canonical; stories reference it rather than redefine pairwise rules.
 Researcher-profile pages never render proposal review/assignment/approval cards;
 proposal detail renders them only from backend capability and exact assignment
 context. `ACTION_NOT_GRANTED` omits a section; conflict/state blocks keep the
-relevant section disabled with its denial reason. Staff monitoring is not assignment,
-synthesis, routing or final approval; Head routing is not final approval, and
-`SYSTEM_ADMIN` gains no implicit proposal workflow action.
+relevant section disabled with its denial reason. TB/TP routing steps are not
+final approval; PP and PGĐ-TD never route, sign or decide; PGĐ-KH never decides a
+topic; `SYSTEM_ADMIN` gains no implicit proposal workflow action. PI and reviewers
+see no action log (two-way anonymity); TB¹/TP¹ may see reviewer identity.
 
 ### Acceptance criteria
 
@@ -659,22 +748,28 @@ synthesis, routing or final approval; Head routing is not final approval, and
 - Evaluation validates every required criterion, calculates totals on the
   backend, and locks the submitted version.
 - Aggregation cannot move to pending approval until required reviews and summary
-  conditions pass; missing/late review is actionable only for authorized staff.
-- Head can send a completed dossier to leadership through `Trình phê duyệt`; Staff
-  confirms completeness and monitors progress but cannot invoke final approve/reject actions.
-- Leadership approve/reject rechecks authority, scope, conflict, state, version,
-  and disclosure; rejection requires a reason and creates an immutable audit.
+  conditions pass; missing/late review is actionable only for TP¹/TB¹/CV³.
+- A finalized dossier reaches GĐ only through approval routing (drafted by
+  TP/TB/CV → TB review → TP approval → GĐ); a return at any step goes to the author
+  with a mandatory reason; steps are never skipped and nobody reviews a
+  submission they authored. No Phòng KHQS role invokes final approve/reject.
+- An evaluation council tờ trình is routed only after every member accepted, and
+  GĐ or PGĐ-KH signs the establishment before members read the dossier.
+- GĐ approve/reject of topic and funding rechecks authority, scope, conflict,
+  state, version, routing completion and disclosure; rejection requires a reason
+  and creates an immutable audit.
 
 ### Suggested stories / tasks
 
 | ID | Priority | Story/task |
 | --- | --- | --- |
-| 4.1 | MVP | Implement staff completeness check and supplement request. |
-| 4.2 | MVP | Implement Head-owned candidate search, conflict preflight, reviewer assignment/change/revoke. |
+| 4.1 | MVP | Implement TB¹/CV³ completeness check and supplement request. |
+| 4.2 | MVP | Implement TP¹/TB¹/CV³ candidate search (any role except QT), conflict preflight, invitation with accept/decline, reviewer assignment/change/revoke. |
 | 4.3 | MVP | Implement reviewer score form, save draft, submit-once lock, and disclosure. |
-| 4.4 | MVP | Implement Head-owned aggregation with backend totals and readiness gate. |
-| 4.5 | MVP | Implement leadership decision package and approve/reject action. |
-| 4.6 | Should have | Add council/ethics evaluator variants using the same assignment/evaluation contracts. |
+| 4.4 | MVP | Implement TP¹/TB¹/CV³ aggregation with backend totals and readiness gate; council secretary drafts synthesis/minutes without scoring. |
+| 4.5 | MVP | Implement approval routing CV → TB → TP → BGĐ with return-with-reason, no skipping and no self-review (legacy 5.9). |
+| 4.6 | MVP | Implement BGĐ signature of the evaluation council and the GĐ topic + funding decision package and approve/reject action (legacy 5.7, 5.8, 5.10). |
+| 4.7 | Should have | Add council/IRB evaluator variants using the same assignment/evaluation contracts. |
 
 ## Epic 5: Project tracking after approval
 
@@ -691,20 +786,25 @@ acceptance path.
 
 ### Primary users / roles
 
-Scientific management staff; leadership; project PI, members, secretary,
-assigned evaluators, permitted delegates, and external researchers only where
-an explicit project/review relationship grants access.
+The assigned project CV³ for daily operations; TP¹/TB¹ for project-officer
+assignment and routing steps; GĐ, PGĐ-KH, TP and TB with Academy-wide project
+view; GĐ or PGĐ-KH as signer of extension, adjustment and acceptance council; GĐ
+as liquidation signer; PP and PGĐ-TD as monitors; project PI, members, secretary,
+assigned evaluators, permitted delegates, and external researchers only where an
+explicit project/review relationship grants access.
 
 ### In scope
 
 Project creation/setup, overview/detail, milestones, periodic reports,
-delayed/risk flags, adjustment/extension, acceptance/final review, project
-states, member scope, files, tasks, and history.
+delayed/risk flags, adjustment/extension appraisal and routing, acceptance/final
+review, funding metadata (allocation, disbursement, settlement) and liquidation,
+project states, member scope, files, tasks, and history.
 
 ### Out of scope / later
 
-`[Later / non-MVP]` Deep accounting/financial integration, automatic project
-creation, automatic pause/reject on overdue, and mobile-native workflows.
+`[Later / non-MVP]` Deep accounting/financial integration (no ledger, payments,
+banking or ERP; funding stays audited metadata), automatic project creation,
+automatic pause/reject on overdue, and mobile-native workflows.
 
 ### Dependencies
 
@@ -714,7 +814,8 @@ notifications/alerts from Epic 8/10; report/export services from Epic 9.
 ### UX screens involved
 
 Project overview/detail, progress milestones, periodic reports,
-adjustment/extension, acceptance/final review.
+adjustment/extension, tờ trình routing and signature, acceptance/final review,
+funding (Kinh phí) and liquidation.
 
 ### Backend/API needs
 
@@ -726,16 +827,23 @@ relationship/source link; aggregate/context version and audit.
 
 Members see only related project information and permitted files/tasks. Project
 state does not imply proposal authority. Overdue is a derived flag/reminder,
-not a hidden state mutation.
+not a hidden state mutation. Per-project funding is visible to GĐ/PGĐ-KH/TP/TB,
+the assigned CV and own participants (PP only own participation); PGĐ-TD sees
+aggregates only. No Phòng KHQS role decides an adjustment or extension.
 
 ### Acceptance criteria
 
-- Approval does not create a project automatically; staff explicitly confirms
+- Approval does not create a project automatically; the assigned CV explicitly confirms
   source, copied relationships, code, dates, milestones, and report calendar.
 - Project state badges follow the canonical lifecycle; report due, delayed and
   pending adjustment are derived or child-record flags, not project states.
 - Submitted reports and acceptance dossiers lock versions; adjustment and final
   decisions use separate operations and retain history.
+- Adjustment (with or without funding change) and extension: the assigned CV
+  appraises and drafts the tờ trình, TB → TP route it, GĐ or PGĐ-KH signs, and the
+  signature applies the change atomically. If no eligible step actor or
+  conflict-free signer exists, the PI withdraws the request.
+- Liquidation is drafted by the CV, routed TB → TP and signed by GĐ only.
 - Project member and external-researcher access, file access, task access,
   dashboard counts, and exports all use the same record scope and disclosure
   rules; external access never widens the linked-record permission.
@@ -746,9 +854,10 @@ not a hidden state mutation.
 | --- | --- | --- |
 | 5.1 | MVP | Create/confirm project from approved proposal with explicit setup. |
 | 5.2 | MVP | Implement project overview/detail, milestones, progress, report due and delayed flags. |
-| 5.3 | MVP | Implement PI periodic report draft/submit and staff follow-up. |
-| 5.4 | MVP | Implement adjustment/extension request and authority decision. |
-| 5.5 | MVP | Implement acceptance dossier, evaluation, aggregation, final decision, and completed state. |
+| 5.3 | MVP | Implement PI periodic report draft/submit and assigned-CV follow-up (no tờ trình). |
+| 5.4 | MVP | Implement adjustment/extension request, CV appraisal, routing and GĐ or PGĐ-KH signature (legacy 6.11). |
+| 5.5 | MVP | Implement acceptance dossier, acceptance council (signed by GĐ or PGĐ-KH), evaluation, aggregation, final decision, and completed state. |
+| 5.7 | MVP | Implement funding metadata and liquidation routed to GĐ (legacy 6.12). |
 | 5.6 | Should have | Carry forward seminar/student research tracking as a related activity track using the same milestone/file/history patterns. |
 
 ## Epic 6: Task management
@@ -765,8 +874,9 @@ follow-up rather than remaining in email or spreadsheets.
 
 ### Primary users / roles
 
-Task creator/manager; assignee; collaborators; staff and leadership for scoped
-oversight; any authorized linked-record participant, including an external
+Task creator/manager (TP/TB/CV within scope, PI within own project); assignee;
+collaborators; BGĐ and PP for scoped read-only oversight (QT and BGĐ create no
+tasks); any authorized linked-record participant, including an external
 researcher only when explicitly assigned.
 
 ### In scope
@@ -834,9 +944,10 @@ not become an accidental bypass around record authorization.
 
 ### Primary users / roles
 
-Authorized record participants, PI/members, external researchers, staff,
-leadership, reviewers, and document administrators according to each record's
-disclosure policy.
+Authorized record participants, PI/members, external researchers, Phòng KHQS
+and BGĐ roles within scope (PGĐ-TD without per-record funding detail),
+reviewers, and scientific-document managers (QT, TP, TB, CV) according to each
+record's disclosure policy.
 
 ### In scope
 
@@ -901,19 +1012,24 @@ only actionable queues, risks, due dates, and permitted drill-downs.
 
 ### Business value
 
-Staff and leadership can prioritize work; researchers and reviewers know what
-they owe; counts do not leak records outside scope.
+Phòng KHQS and BGĐ roles can prioritize their own queues; researchers and
+reviewers know what they owe; counts do not leak records outside scope.
 
 ### Primary users / roles
 
-All authenticated users, with role/persona-specific cards and queues; external
-researchers see only queues and cards derived from their explicit assignments.
+Every role except QT, with per-role cards and queues (TB review queue, TP
+approval queue, CV assigned records, GĐ decision/signature, PGĐ-KH signature, PP
+and PGĐ-TD monitoring, PGĐ-TD aggregate only); external researchers see only
+queues and cards derived from their explicit assignments. QT has no business
+dashboard and no My Work.
 
 ### In scope
 
-Role-aware dashboard, My Work, KPI cards, alert list, due/overdue queues,
-source-list drill-down, relationship labels, blocked-with-reason items, and
-scoped operational summaries.
+Per-role dashboard, My Work, per-role work queues, KPI cards, alert list,
+due/overdue queues, source-list drill-down, relationship labels,
+blocked-with-reason items, responsible-CV and nature (Quân sự / Dân sự / Chưa
+phân loại) breakdowns with an "unassigned" group, and scoped operational
+summaries.
 
 ### Out of scope / later
 
@@ -943,24 +1059,25 @@ hidden records remain undiscoverable.
 
 ### Acceptance criteria
 
-- Each persona sees only relevant KPI cards, queues, and quick actions; admin
-  does not gain business-data visibility by default.
+- Each role sees only relevant KPI cards, queues, and quick actions; QT has no
+  business dashboard; PGĐ-TD per-record funding columns stay empty.
 - Every actionable card drills to the same scoped filter/source version and
   re-authorizes on detail open.
 - Composite source failure shows unavailable/fail-closed rather than partial
   totals presented as complete.
-- My Work is available to all roles, de-duplicates entries, preserves all
-  viewer relationships, and excludes blocked items from actionable counts;
+- My Work is available to every role except QT, de-duplicates entries, preserves
+  all viewer relationships, and excludes blocked items from actionable counts;
   external researchers receive only explicitly assigned work.
 
 ### Suggested stories / tasks
 
 | ID | Priority | Story/task |
 | --- | --- | --- |
-| 8.1 | MVP | Implement role-aware dashboard KPIs, urgent queue, scope line, and source links. |
-| 8.2 | MVP | Implement My Work aggregation for proposals, projects, reports, tasks, and assignments. |
+| 8.1 | MVP | Implement per-role dashboard KPIs, urgent queue, scope line, and source links. |
+| 8.2 | MVP | Implement My Work aggregation and per-role work queues for proposals, projects, tờ trình steps, signatures, reports, tasks, and invitations (legacy 11.6). |
 | 8.3 | MVP | Add due/overdue flags and operational alert list with safe disclosure. |
 | 8.4 | MVP | Add KPI drill-down with filter/asOf/source-version consistency. |
+| 8.6 | Should have | Add PP and PGĐ-TD monitoring dashboards with aggregate-only funding for PGĐ-TD (legacy 12.6). |
 | 8.5 | Later / non-MVP | Add complex charts, saved filters, or predictive risk indicators. |
 
 ## Epic 9: Search, filtering, reports, and exports
@@ -978,8 +1095,8 @@ creating a second, ungoverned data access path.
 ### Primary users / roles
 
 All authenticated users for authorized search; external researchers only for
-related/assigned records; staff and leadership for report and export
-capabilities; admin only for explicitly permitted operational data.
+related/assigned records; every role except QT for scoped report and Excel
+export (PGĐ-TD without per-record funding); QT only for administrative data.
 
 ### In scope
 
@@ -1054,10 +1171,12 @@ with consistent controls.
 
 ### Primary users / roles
 
-All users for notifications; system admin and authorized audit viewers for logs;
-staff/leadership/researchers/reviewers/council/ethics participants, including
-external researchers only for their scoped supporting workflows; QA and
-operations for hardening.
+All users for notifications (including the next tờ trình step and BGĐ
+signature requests); system admin and authorized audit viewers for logs;
+Phòng KHQS (TP¹/TB¹/CV³ council and IRB setup), BGĐ signers (GĐ or PGĐ-KH),
+researchers, reviewers and council/IRB participants from any role except QT,
+including external researchers only for their scoped supporting workflows; CV¹
+for student research; QA and operations for hardening.
 
 ### In scope
 
@@ -1097,17 +1216,21 @@ advertised as covered.
 
 ### Acceptance criteria
 
-- Critical submit, supplement, assignment, evaluation, aggregation, decision,
-  project, report, task, file, account, and policy actions have actor, target,
+- Critical submit, supplement, assignment, responsible-CV assignment (manual or
+  automatic), evaluation, aggregation, tờ trình submit/forward/return/approve/sign,
+  decision, project, funding, liquidation, report, task, file, account, and
+  policy actions have actor, target,
   action, UTC time, outcome, context/policy version, and redacted changes.
 - Notification/reminder retry does not duplicate business outcomes and cancels
   effects when authority or state is no longer valid.
 - Core flows meet WCAG 2.2 AA floor: landmarks, headings, labels, visible focus,
   keyboard access, live regions, semantic status, paste support, and responsive
   breakpoints.
-- Seminar/student research and council/ethics supporting stories retain their
-  existing business scope and use the same backend authorization, files,
-  states, audit, notification, and disclosure contracts.
+- Seminar and council/IRB supporting stories retain their existing business
+  scope; student research follows matrix §9.6 (CV/NCV register, CV¹ approves,
+  manages and completes); IRB/council establishment and the IRB certificate are
+  routed and signed by GĐ or PGĐ-KH; all use the same backend authorization,
+  files, states, audit, notification, and disclosure contracts.
 
 ### Suggested stories / tasks
 
@@ -1117,7 +1240,7 @@ advertised as covered.
 | 10.2 | MVP | Implement in-app notifications, configured email for required events, and safe reminders. |
 | 10.3 | MVP | Run accessibility/responsive/security hardening across core MVP screens and mutations. |
 | 10.4 | Should have | Carry forward seminar/student research workflow slices and integration contracts. |
-| 10.5 | Should have | Carry forward council/ethics intake, supplement, assignment, evaluation, aggregation, and decision slices. |
+| 10.5 | Should have | Carry forward council/IRB intake, supplement, assignment, evaluation, aggregation, routing, and BGĐ signature slices. |
 | 10.6 | Later / non-MVP | Add SMS, digital signature, external integrations, or workflow-engine capabilities. |
 
 ## Cross-epic screen implementation tasks
@@ -1130,19 +1253,19 @@ behavior outside `docs/ux-ui-spec.md`.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | S01 Login | Authenticate and establish safe session. | Unauthenticated | `/login` | Username, password, account-state message. | `POST /auth/login`. | Generic credential failure; no secret in URL/logs. | Loading, invalid, locked/inactive, network error, success. | Successful login lands on scoped dashboard; duplicate submit is prevented; audit is written. |
 | S02 Password | Change password or complete admin-issued reset. | Authenticated; reset-context user | `/change-password`, `/password-reset` | Current/new/confirm password, reset expiry. | Change/reset endpoints. | No credential-detail leakage; token single-use. | Loading, validation, expired token, error, success. | Policy and confirmation are validated; success invalidates old reset/session context as required. |
-| S03 Dashboard/My Work | Show scoped KPIs and action-needed records. | All authenticated roles | `/dashboard`, `/my-work` | KPI, queue, relationship, state, due/risk, route. | `GET /dashboard`, `GET /me/work`. | Same scope for cards/counts/drill-down; conflict items non-actionable. | Loading, empty, unavailable source, error, success. | Every card links to an authorized filtered source list; no global counts. |
-| S04 Intake/proposal list | Browse intake/proposal queues. | Staff/internal researchers for intakes; authorized proposal relationships for proposals. | `/intakes`, `/proposals`, `/my-proposals` | Code/title/PI/unit/field/intake/state/due. | Intake/proposal list APIs. | Server-side scope, counts, facets, filters. | Loading, no records, no match, error, denied. | URL filters restore; desktop table/mobile cards preserve code, state, due, owner, action. |
+| S03 Dashboard/My Work | Show scoped KPIs, per-role queues and action-needed records. | Every role except QT | `/dashboard`, `/my-work` | KPI, queue, relationship, state, due/risk, route. | `GET /dashboard`, `GET /me/work`. | Same scope for cards/counts/drill-down; conflict items non-actionable. | Loading, empty, unavailable source, error, success. | Every card links to an authorized filtered source list; no global counts. |
+| S04 Intake/proposal list | Browse intake/proposal queues. | TP/CV manage intakes; every role except QT/NNB reads open intakes; authorized proposal relationships/scope for proposals. | `/intakes`, `/proposals`, `/my-proposals` | Code/title/PI/unit/field/intake/state/due. | Intake/proposal list APIs. | Server-side scope, counts, facets, filters. | Loading, no records, no match, error, denied. | URL filters restore; desktop table/mobile cards preserve code, state, due, owner, action. |
 | S05 Proposal detail | Canonical proposal detail workspace. | Authorized relationship/scope/assignment. | `/proposals/:id` | Header, relationship, tabs, files, timeline, capabilities. | Scoped detail API. | Disclosure-filtered DTO; stale context retained. | Loading, safe not-found/denied, stale, read-only, success. | PI gets the edit/submit workspace; staff gets a read-only proposal/team/schedule/budget summary; hidden tabs/data are omitted. |
-| S06 Create/edit proposal | Create/edit structured draft. | Current internal PI only. | `/proposals/new`, `/proposals/:id/edit` | Intake, participants, dates, objectives, budget, files, readiness. | Create/update proposal, catalogs, files. | Owner, system role, scope, state; submitted version locked. | Loading, incomplete, field/server error, locked, saved. | Save draft preserves values; invalid required fields focus first error; non-PI users cannot edit or submit. |
-| S07 Submit confirmation / supplement request / staff check | Confirm submit, request supplement, or perform staff check. | Current internal PI for submit/resubmit; scientific management staff for check/supplement. | Proposal action panels. | Readiness, version, reasons, whole-day due date, checklist. | Submit/resubmit/check/supplement operations. | Atomic state/context/conflict checks; proposal submit/resubmit are PI-only; one completeness check per submitted version. | Loading, blocked, stale, validation error, success. | Non-PI viewers do not receive the submit section; repeat completeness is disabled and denied; supplement reason/due date is immutable history. |
-| S08 Reviewer assignment / reviewer evaluation | Assign reviewers and collect own evaluation. | Head; assigned reviewer/council/ethics evaluator. | `/proposals/:id/assignments`, `/reviews/:assignmentId` | Candidate, conflict result, rubric, score, recommendation, whole-day effective dates/deadline. | Assignment/evaluation APIs. | No self-review; own assignment only; one submit/lock. | Loading, empty candidates, conflict-blocked, incomplete, submitted, error. | Date controls omit hours/minutes; conflict blocks confirmation; total is backend-calculated; other reviews remain hidden. |
-| S09 Result aggregation / leadership decision | Consolidate evidence and decide. | Head; leadership authority. | `/proposals/:id/aggregation`, `/proposals/:id/decision` | Review counts, synthesis, package, history, conflict indicator. | Aggregation/decision package and decision APIs. | Head cannot approve; conflicted authority cannot decide. | Loading, not-ready, blocked, confirm, error, immutable success. | Pending approval requires conditions; reject requires reason; decision is audited and read-only. |
-| S10 Project tracking overview | Operate approved project lifecycle. | Staff, leadership, PI, members, secretary. | `/projects`, `/projects/:id` | Source proposal, relationships, state, progress, risks, tabs. | Project detail/list and explicit create API. | Member scope; no automatic project creation; state-based actions. | Loading, empty, denied tab, delayed, read-only, success. | Project setup clearly separates copied data from source proposal and exposes next action. |
-| S11 Progress milestone / periodic report / adjustment-extension / acceptance-evaluation | Manage progress evidence and request decisions. | PI, assigned project Staff, scoped Head, later acceptance actors. | Project subroutes. | Dates, progress, report period, evidence, typed adjustment impact, extension end date, dossier. | Milestone/report/adjustment/extension/acceptance APIs. | Submitted versions lock; Staff decides adjustments, Head decides extensions, Leadership has no GF4 request decision action. | Loading, due, overdue, invalid, blocked, success. | Overdue never silently changes project state; all decisions and evidence are traceable. |
+| S06 Create/edit proposal | Create/edit structured draft. | Current PI only (any role except QT/NNB). | `/proposals/new`, `/proposals/:id/edit` | Intake, participants, dates, objectives, budget, files, readiness. | Create/update proposal, catalogs, files. | Owner, system role, scope, state; submitted version locked. | Loading, incomplete, field/server error, locked, saved. | Save draft preserves values; invalid required fields focus first error; non-PI users cannot edit or submit. |
+| S07 Submit confirmation / supplement request / completeness check / withdraw-edit-reopen | Confirm submit, request supplement, perform completeness check, or handle post-submission requests. | Current PI (any role except QT/NNB) for submit/resubmit and withdraw/edit requests; TB¹ or assigned CV³ for check/supplement (never TP); assigned CV³ for withdraw/edit decisions and reopen. | Proposal action panels. | Readiness, version, reasons, whole-day due date, checklist, responsible CV or "Chưa có người phụ trách". | Submit/resubmit/check/supplement/withdraw/edit/reopen operations; segment auto-assignment on submit. | Atomic state/context/conflict checks; proposal submit/resubmit are PI-only; one completeness check per submitted version; reopen needs a reason. | Loading, blocked, stale, validation error, unassigned, success. | Non-PI viewers do not receive the submit section; repeat completeness is disabled and denied; supplement reason/due date and withdraw/edit/reopen decisions are immutable history. |
+| S08 Reviewer assignment / reviewer evaluation | Invite/assign reviewers and collect own evaluation. | TP¹, TB¹ or assigned CV³; invited reviewer/council/IRB evaluator from any role except QT. | `/proposals/:id/assignments`, `/reviews/:assignmentId` | Candidate, conflict result, invitation status (accept/decline with reason), rubric, score, recommendation, whole-day effective dates/deadline. | Assignment/invitation/evaluation APIs. | No self-assignment or self-review; participants cannot be invited; own accepted assignment only; before acceptance only title/role/deadline/inviter; one submit/lock. | Loading, empty candidates, conflict-blocked, invited, declined, incomplete, submitted, error. | Date controls omit hours/minutes; conflict blocks confirmation; total is backend-calculated; other reviews remain hidden; TB¹/TP¹ alone may see reviewer identity. |
+| S09 Result aggregation / tờ trình routing / BGĐ signature / GĐ decision | Consolidate evidence, route the tờ trình, sign and decide. | TP¹/TB¹/CV³ synthesize and draft; council secretary drafts synthesis/minutes; TB review step; TP approval step; GĐ or PGĐ-KH sign the evaluation council; GĐ alone decides topic + funding. | `/proposals/:id/aggregation`, routing inbox (Tờ trình), `/proposals/:id/decision` | Review counts, synthesis, package, routing stage/status and step history, return reasons, conflict indicator. | Aggregation, approval-routing (`approval_submissions`), signature, decision package and decision APIs. | No step skipping or self-review; return goes to the author with a reason; Phòng KHQS roles, PGĐ-KH, PP and PGĐ-TD cannot decide a topic; conflicted signer/decider cannot act. | Loading, not-ready, in routing, returned, blocked, confirm, error, immutable success. | Pending approval requires conditions and completed routing; reject/return require a reason; every step and decision is audited and read-only. |
+| S10 Project tracking overview | Operate approved project lifecycle. | Assigned CV³; GĐ, PGĐ-KH, TP, TB (Academy-wide view); PP and PGĐ-TD (monitor, unit scope); PI, members, secretary. | `/projects`, `/projects/:id` | Source proposal, relationships, state, progress, risks, tabs. | Project detail/list and explicit create API. | Member scope; no automatic project creation; state-based actions. | Loading, empty, denied tab, delayed, read-only, success. | Project setup clearly separates copied data from source proposal and exposes next action. |
+| S11 Progress milestone / periodic report / adjustment-extension / acceptance-evaluation / funding-liquidation | Manage progress evidence, request routed decisions and record funding. | PI; assigned project CV³; TB and TP routing steps; GĐ or PGĐ-KH signer; GĐ for liquidation; GĐ, TP/TB and assigned CV manage funding. | Project subroutes (incl. Kinh phí). | Dates, progress, report period, evidence, typed adjustment impact (incl. funding change), extension end date, dossier, funding figures and documents. | Milestone/report/adjustment/extension/acceptance/funding/liquidation and approval-routing APIs. | Submitted versions lock; CV appraises and drafts the tờ trình; GĐ or PGĐ-KH signs adjustment/extension/acceptance council; GĐ alone signs liquidation; no Phòng KHQS role decides; PI withdraws when no eligible actor exists. | Loading, due, overdue, invalid, in routing, returned, blocked, success. | Overdue never silently changes project state; the signature applies the change atomically; all decisions, funding changes and evidence are traceable. |
 | S12 Task list / task detail / create-edit task | Create and update linked/standalone work. | Creators, managers, assignees, collaborators. | `/tasks`, `/tasks/:id`, `/tasks/new` | Linked record, owner, collaborators, priority, due, state, evidence. | Task APIs and linked-record authorization. | Task cannot widen linked-record access. | Loading, empty/no-match, validation, denied, overdue, success. | All task states use named transitions; completion/cancellation requires permitted action and audit. |
 | S13 File upload / file preview-download / file history | Upload, view/download, replace, and inspect history. | Authorized record viewers/managers. | `/records/:id/files` and detail tabs. | Name/type/size/uploader/time/version/status/effective date. | Files/related-documents APIs; private MinIO. | Reauthorize metadata/content; no direct object URL. | Selecting, validating, uploading/scanning, retry, denied, superseded, deleted. | Replace creates a version; download is audited where required; protected review files remain hidden. |
 | S14 Global search | Search core and supporting records. | All authenticated users in scope. | `/search` and local list filters. | Query, tabs, facets, state/unit/person/date, cursor. | Scoped search endpoint. | Auth before result/count/facet/suggestion. | Idle, typing, loading, no match, error, success. | Unauthorized records never affect count/facet/suggestion; result detail re-authorizes. |
-| S15 Reports and export | Preview and export scoped operational data. | Staff/leadership; explicitly authorized admin. | `/reports`, report result/history. | Definition, parameters, filters, source versions, job status. | Report/run/export job APIs. | Exact export action; reauthorize job/download. | Parameter error, queued, progress, unavailable, error, success. | Excel/PDF result has expiry and audit; required source failure is not shown as complete. |
+| S15 Reports and export | Preview and export scoped operational data. | Every role except QT within its scope (PGĐ-TD aggregate funding only); QT only for administrative data. | `/reports`, report result/history. | Definition, parameters, filters, source versions, job status. | Report/run/export job APIs. | Exact export action; reauthorize job/download. | Parameter error, queued, progress, unavailable, error, success. | Excel/PDF result has expiry and audit; required source failure is not shown as complete. |
 | S16 User management / roles and permissions / catalog management / audit log | Manage platform and inspect authorized audit. | System admin; authorized audit viewer. | `/users`, `/roles`, `/catalogs`, `/system-logs` | Accounts, role/scope, catalog values, actor/action/time/outcome. | Admin and audit APIs. | Admin business-data boundary; redacted immutable audit. | Loading, empty, validation, denied, success. | Exactly one role; changes are audited; secrets/conflict sources/raw tokens never display. |
 
 ## Reusable component implementation tasks
@@ -1188,30 +1311,46 @@ state.
 
 | State | UI/backend task | Allowed/disabled action work | Audit/notification/edge cases |
 | --- | --- | --- | --- |
-| Draft | Editable sections, readiness, version badge. | Current internal PI edits/submits; non-PI users are read-only except separately authorized file actions; review/approval disabled. | Create/update audit; empty required fields permitted only for save draft. |
-| Submitted | Locked snapshot and pending-check queue. | Staff checks/supplements; PI read-only. | Submit/check audit; no post-submit overwrite. |
-| Pending check | Staff queue/checklist and next-owner strip. | Check complete or supplement; assignment/approval disabled. | Checklist version/audit; stale, conflict, closed-intake edge cases. |
+| Draft | Editable sections, readiness, version badge. | Current PI (any role except QT/NNB) edits/submits; non-PI users are read-only except separately authorized file actions; review/approval disabled. | Create/update audit; empty required fields permitted only for save draft. |
+| Submitted | Locked snapshot, responsible CV (auto-assigned by segment) or "Chưa có người phụ trách", pending-check queue. | TB¹/assigned CV³ check/supplement; TP¹/TB¹ assign unmatched records; PI read-only except withdraw/edit requests decided by the assigned CV³. | Submit/check/auto-assignment audit (actor `System`); no post-submit overwrite. |
+| Pending check | TB/CV queue/checklist and next-owner strip. | Check complete or supplement; assignment/approval disabled. | Checklist version/audit; stale, conflict, closed-intake edge cases. |
 | Needs supplement | Missing items, reason, due date, response CTA. | PI revises working version/resubmits; final actions disabled. | Immutable request, reminder, overdue response flag. |
-| Eligible | Derived readiness/eligibility display. | Head may assign when policy permits; Staff monitors; PI/leadership cannot decide. | Checklist result audit; never a bypass state. |
-| In review | Assignment progress and reviewer own work. | Assigned evaluator submits; Staff monitors; Head aggregates when ready; raw reviews hidden. | Assignment/evaluation/conflict audit; inactive assignment edge case. |
-| Pending result aggregation | Counts/missing/late reviews and synthesis form. | Head aggregates/marks ready; leadership decision disabled. | Backend totals and readiness audit; source failure blocks completion. |
-| Pending approval | Decision package and due date. | Eligible leadership approves/rejects; all others disabled with reason. | Decision confirmation; conflict, stale version, and wrong-state rejection. |
-| Approved | Final decision and project-creation-pending cue. | Staff explicitly creates project; proposal read-only. | Approval and project creation are separate events. |
+| Eligible | Derived readiness/eligibility display. | TP¹/TB¹/CV³ may invite/assign when policy permits; PI and BGĐ cannot decide. | Checklist result audit; never a bypass state. |
+| In review | Assignment progress, invitations and reviewer own work. | Accepted evaluator submits; TP¹/TB¹/CV³ monitor and aggregate when ready; raw reviews hidden; PI and reviewers see no action log. | Assignment/evaluation/conflict audit; inactive assignment edge case. |
+| Pending result aggregation | Counts/missing/late reviews and synthesis form. | TP¹/TB¹/CV³ aggregate/finalize and draft the decision-package tờ trình; council secretary drafts synthesis/minutes; GĐ decision disabled. | Backend totals and readiness audit; source failure blocks completion. |
+| Pending approval | Decision package (routed through `HEAD_REVIEW`) and due date. | GĐ alone approves/rejects topic + funding; all others disabled with reason. | Decision confirmation; conflict, stale version, and wrong-state rejection. |
+| Approved | Final decision and project-creation-pending cue. | Assigned CV³ explicitly creates the project; proposal read-only. | Approval and project creation are separate events. |
 | Rejected | Final read-only package and permitted reason/history. | No edit/submit/approve unless explicit future policy. | Immutable decision; no hidden reopen button. |
+
+### Approval routing states (tờ trình)
+
+Applies to every `approval_submissions` kind: `EVALUATION_COUNCIL`,
+`DECISION_PACKAGE`, `IRB_COUNCIL`, `IRB_CERTIFICATE`, `ACCEPTANCE_COUNCIL`,
+`PROJECT_EXTENSION`, `PROJECT_ADJUSTMENT`, `LIQUIDATION`. Signer is `DIRECTOR`
+for `DECISION_PACKAGE` and `LIQUIDATION`, otherwise `DIRECTOR_OR_SCIENCE_DEPUTY`.
+
+| State (stage / status) | UI/backend task | Allowed/disabled action work | Audit/notification/edge cases |
+| --- | --- | --- | --- |
+| `BOARD_REVIEW` / `PENDING` | TB review inbox with the drafted tờ trình and source record. | TB¹ forwards to TP or returns to the author with a mandatory reason; TB never reviews a tờ trình it authored. A TB-authored submission skips this stage; a TP-authored one still passes it. | Submit/forward/return audit; next-step notification; one open submission per kind and subject. |
+| `HEAD_REVIEW` / `PENDING` | TP approval inbox. | TP¹ approves to BGĐ or returns to the author with a reason; no self-review; PP has no step. | Approve/return audit; notification to the signer. |
+| `LEADERSHIP` / `PENDING` | Signature/decision queue for the signer of the kind. | GĐ (`DIRECTOR`) or GĐ/PGĐ-KH (`DIRECTOR_OR_SCIENCE_DEPUTY`) signs or returns; conflicted signer is denied. | Sign audit; the signature applies the source change atomically. |
+| `CLOSED` / `APPROVED` | Read-only signed result on the source record. | No further step; source record shows the applied outcome. | Immutable step history visible by scope; PI sees own record's step history only. |
+| `RETURNED` | Author's correction queue with the return reason. | Author corrects and resubmits; no step is skipped on resubmission. | Return reason retained in history. |
+| `REJECTED` / `CANCELLED` | Terminal read-only submission. | No further step. | Who may reject or cancel is defined by the routing implementation (open point; see Open Questions). |
 
 ### Project tracking states and derived/child-record flags
 
 | State | UI/backend task | Allowed/disabled action work | Audit/notification/edge cases |
 | --- | --- | --- | --- |
-| Tracking initialized | Setup checklist and source link. | Staff confirms code/milestones/report calendar; progress/acceptance waits. | Explicit creation/copy audit. |
+| Tracking initialized | Setup checklist and source link. | Assigned CV³ confirms code/milestones/report calendar; TP¹/TB¹ assign the project officer; progress/acceptance waits. | Explicit creation/copy audit. |
 | In progress | Progress, milestones, reports, tasks, files. | Participants update assigned work; members cannot change authority/membership/final state. | Changes and evidence audited. |
-| Report due | Due banner and report CTA/queue. | PI submits; staff reviews/follows up. | Reminder/submission audit; does not imply acceptance. |
+| Report due | Due banner and report CTA/queue. | PI submits; assigned CV³ reviews/follows up (no tờ trình). | Reminder/submission audit; does not imply acceptance. |
 | Delayed | Missed item, owner, risk, next action. | Reminder/escalate/update/request adjustment. | Derived overdue flag; never auto-pause/reject/close. |
-| Pending adjustment (request flag) | Request impact/assessment/decision. | PI submits typed milestone/scope-plan/membership change; assigned Staff reviews and approves/rejects. Head and Leadership are read/monitor only. | Direct controlled-field edits disabled after activation; duration/end-date increase is not an adjustment. |
-| Pending extension (request flag) | Requested/current end date, validation package and decision. | PI submits later end date; assigned Staff validates/prepares; scoped Head approves/rejects. Leadership is read/monitor only. | Direct end-date edits disabled; no extension applies before Head decision. |
-| Pending acceptance | Dossier readiness and assignment progress. | PI submits; Staff checks and monitors; Head assigns/aggregates; evaluator evaluates. | Version/assignment audit; missing evidence blocks. |
-| Under acceptance | Evaluation/aggregation/decision workspace. | Assigned evaluator/staff/authority actions by capability. | Conflict/disclosure checks; no completion before decision. |
-| Completed | Final outputs and closed timeline. | Read/report/export; normal edits disabled. | Completion decision immutable; formal reopen only if later policy exists. |
+| Pending adjustment (request flag) | Request impact (incl. funding change), CV appraisal, routing stage and signature. | PI submits or withdraws a typed milestone/scope-plan/membership/funding change; assigned CV³ appraises and drafts the `PROJECT_ADJUSTMENT` tờ trình; TB → TP route; GĐ or PGĐ-KH signs. No Phòng KHQS role decides. If no eligible step actor or conflict-free signer exists, the PI withdraws. | Direct controlled-field edits disabled after activation; duration/end-date increase is not an adjustment; the signature applies the change atomically; old code states `under_staff_review` must be reconciled with routing. |
+| Pending extension (request flag) | Requested/current end date, CV appraisal, routing stage and signature. | PI submits or withdraws a later end date; assigned CV³ appraises and drafts the `PROJECT_EXTENSION` tờ trình; TB → TP route; GĐ or PGĐ-KH signs. Same no-eligible-actor withdrawal rule. | Direct end-date edits disabled; no extension applies before the signature; old code states `under_staff_validation` / `ready_for_head_decision` must be reconciled with routing. |
+| Pending acceptance | Dossier readiness and assignment progress. | PI submits; assigned CV³ checks, prepares the acceptance council and drafts the `ACCEPTANCE_COUNCIL` tờ trình; GĐ or PGĐ-KH signs the council; evaluator evaluates. | Version/assignment audit; missing evidence blocks. |
+| Under acceptance | Evaluation/aggregation/decision workspace. | Assigned evaluator/CV/signer actions by capability. | Conflict/disclosure checks; no completion before decision. |
+| Completed | Final outputs and closed timeline. | Read/report/export; normal edits disabled; assigned CV³ drafts the `LIQUIDATION` tờ trình, signed by GĐ only. | Completion decision immutable; formal reopen only if later policy exists. |
 | Paused | Reason, effective date, next review date. | Authorized resume/policy action; normal progress may be limited. | Pause/resume reason audited; no silent deadline reset. |
 
 ### Task states
@@ -1230,8 +1369,10 @@ state.
 ## MVP prioritization and dependency order
 
 1. `[MVP]` Epic 1 foundation and Epic 2 identity/authorization facts.
-2. `[MVP]` Epic 3 intake/proposal and Epic 4 check, assignment, evaluation,
-   aggregation, approval.
+2. `[MVP]` Epic 3 intake/proposal (incl. responsible-CV auto-assignment after the
+   segment catalog) and Epic 4 check, assignment, evaluation, aggregation, approval
+   routing, BGĐ signature and GĐ approval. Legacy order: 1.11 → 1.12 → 4.7 → 5.9 →
+   (5.10, 5.11, 6.11, 6.12) → 11.6, 12.6.
 3. `[MVP]` Epic 5 project initialization/tracking, Epic 6 basic tasks, Epic 7
    permission-checked files/history.
 4. `[MVP]` Epic 8 role-aware dashboard/My Work/core alerts and Epic 9 core
@@ -1247,9 +1388,9 @@ state.
 
 ## Open Questions / Product Decisions Needed
 
-- What exact organization level may exercise each approval authority, and how
-  is an authority's organization scope granted or revoked?
-- Is leadership approval ever delegable? Approval delegation remains out of MVP
+- How is a BGĐ signer's or TP/TB's organization scope granted or revoked? (Signer
+  per procedure is settled by matrix §7.4.)
+- Is BGĐ approval or signature ever delegable? Approval delegation remains out of MVP
   unless its own future contract is explicitly approved. Proposal submission
   is PI-only and has no delegation path.
 - Is preview required for any specific file format in MVP, or is authorized
@@ -1264,6 +1405,15 @@ state.
   behavior in MVP?
 - Is the audit log visible to every system administrator, or only to a narrower
   explicitly authorized audit-viewer capability?
+- Seminar permissions: the matrix does not cover them; Epic 8 seminar stories stay
+  unchanged until decided.
+- Roster readiness "exactly two reviewers and at least three committee members"
+  (Story 5.3) is not in the matrix; kept as-is.
+- May BGĐ, PP or TB read other users' scientific CVs (Story 13.1)? The matrix
+  gives profile management only to QT/TP/CV.
+- Segment taxonomy values (level and nature) and who may set an approval
+  submission to `REJECTED` or `CANCELLED` are not fixed by the matrix; take them
+  from the `tuan/DocManS` routing implementation when ported.
 
 ## Traceability
 
@@ -1272,16 +1422,22 @@ state.
 | Authentication | S01 Login, S02 Password, C01 App shell | Epic 1 | 1.1, S01-S02 | MVP |
 | Dashboard | S03 Dashboard/My Work, C19 KPI card, C20 Alert list | Epic 8 | 8.1-8.4, S03 | MVP |
 | Proposal intake | S04-S07, C11 Form section, C12 Stepper | Epic 3 | 3.1-3.4, S04-S07 | MVP |
-| Staff check | S07 Submit confirmation / supplement request / staff check | Epic 4 | 4.1, S07 | MVP |
+| Completeness check | S07 Submit confirmation / supplement request / completeness check | Epic 4 | 4.1, S07 | MVP |
 | Supplement request | S07, C16 Comment/note box, C23 Confirmation dialog | Epics 3-4 | 3.3, 4.1, S07 | MVP |
-| Reviewer assignment | S08 Reviewer assignment / reviewer evaluation, C18 Reviewer score form | Epic 4 | 4.2, S08 | MVP |
+| Responsible CV and segments (FR72) | S07, S16 | Epics 2-3 | 2.5, 3.6 (legacy 1.12, 4.7) | MVP |
+| Post-submission withdraw/edit/reopen (FR76) | S07, C23 Confirmation dialog | Epic 3 | 3.7 (legacy 4.8) | MVP |
+| Reviewer assignment | S08 Reviewer assignment / reviewer evaluation, C18 Reviewer score form | Epic 4 | 4.2, S08 (legacy 5.11) | MVP |
 | Reviewer evaluation | S08, C18 Reviewer score form | Epic 4 | 4.3, S08 | MVP |
-| Approval | S09 Result aggregation / leadership decision, C17 Approval decision panel | Epic 4 | 4.4-4.5, S09 | MVP |
-| Project tracking | S10-S11, C08 Status badge, C15 Timeline/activity log | Epic 5 | 5.1-5.5, S10-S11 | MVP |
+| Approval routing (FR71) | S09 routing inbox, C15 Timeline/activity log | Epic 4 | 4.5, S09 (legacy 5.9) | MVP |
+| BGĐ signature and GĐ decision (FR73, FR20-21) | S09, C17 Approval decision panel | Epic 4 | 4.4, 4.6, S09 (legacy 5.10) | MVP |
+| Project tracking | S10-S11, C08 Status badge, C15 Timeline/activity log | Epic 5 | 5.1-5.5, S10-S11 (legacy 6.11) | MVP |
+| Funding metadata and liquidation (FR74) | S11, S15 | Epic 5 | 5.7, S11 (legacy 6.12) | MVP |
+| Two-way anonymity (FR77) | S05, S08, C15, C26 | Epic 7 | 7.3 (legacy 3.6) | MVP |
+| Per-role work queues (FR78) | S03, C19-C20 | Epic 8 | 8.2, 8.6 (legacy 11.6, 12.6) | MVP |
 | Task management | S12 Task list / task detail / create-edit task | Epic 6 | 6.1-6.3, S12 | MVP |
 | File management | S13 File upload / file preview-download / file history, C13-C14 | Epic 7 | 7.1-7.3, S13 | MVP |
 | Search/reporting | S14 Global search, S15 Reports and export, C06-C07, C25 | Epic 9 | 9.1-9.3, S14-S15 | MVP |
-| Administration | S16 User management / roles and permissions / catalog management / audit log, C05 | Epic 2 | 2.1-2.4, S16 | MVP |
+| Administration | S16 User management / roles and permissions / catalog management / audit log, C05 | Epic 2 | 2.1-2.5, S16 (legacy 1.11, 2.7, 2.8) | MVP |
 | Audit log | S16, C15 Timeline/activity log | Epic 10 | 10.1, S16 | MVP |
 
 ## Legacy FR decomposition retained for traceability
@@ -1292,7 +1448,7 @@ Quản trị viên có thể vận hành tài khoản, vai trò hệ thống, ph
 quan hệ theo hồ sơ, ủy quyền và cấu hình dùng chung; người dùng đăng nhập vào
 một không gian làm việc duy nhất với quyền do backend quyết định.
 
-**FRs covered:** FR1, FR2, FR3, FR4, FR4a, FR5, FR6, FR6a, FR6b, FR6c, FR6d, FR6e, FR7, FR8.
+**FRs covered:** FR1, FR2, FR3, FR4, FR4a, FR5, FR6, FR6a, FR6b, FR6c, FR6d, FR6e, FR7, FR8, FR72 (Story 1.12).
 
 ### Epic 2: Hồ sơ nhà khoa học và định danh quan hệ
 
@@ -1300,40 +1456,51 @@ Người có thẩm quyền có thể quản lý hồ sơ nhà khoa học, liên
 lịch sử tham gia, tìm kiếm đúng phạm vi và ngăn xung đột lợi ích ngay từ nguồn
 định danh.
 
-**FRs covered:** FR65, FR66, FR67, FR67a, FR68, FR69.
+**FRs covered:** FR65, FR66, FR67, FR67a, FR68, FR69, FR75, FR79.
 
 ### Epic 3: Tệp nghiệp vụ, lịch sử và kiểm toán
 
 Người dùng có thể làm việc an toàn với tệp, lịch sử và audit của hồ sơ trong
 phạm vi được phép, với metadata và phiên bản có khả năng truy vết.
 
-**FRs covered:** FR36, FR37, FR38, FR39, FR40.
+**FRs covered:** FR36, FR37, FR38, FR39, FR40, FR77.
 
 ### Epic 4: Tiếp nhận và nộp đề xuất nghiên cứu
 
-Chuyên viên có thể mở đợt tiếp nhận; chủ nhiệm có thể lập, kiểm tra và nộp một
-đề xuất đầy đủ cùng tệp và lịch sử nộp.
+TP và CV có thể mở đợt tiếp nhận; chủ nhiệm (mọi vai trò trừ QT/NNB) có thể lập,
+kiểm tra và nộp một đề xuất đầy đủ cùng tệp và lịch sử nộp; hệ thống tự động giao
+CV phụ trách theo mảng và CV phụ trách xử lý yêu cầu rút/sửa sau nộp.
 
-**FRs covered:** FR9, FR10, FR11, FR12, FR13, FR14.
+**FRs covered:** FR9, FR10, FR11, FR12, FR13, FR14, FR72 (Story 4.7), FR76.
 
 ### Epic 5: Kiểm tra, đánh giá và phê duyệt đề xuất
 
-Đề xuất đã nộp có thể đi trọn luồng bổ sung, đánh giá độc lập, tổng hợp và ra
-quyết định với trạng thái, phân quyền và che giấu thông tin đúng chính sách.
+Đề xuất đã nộp có thể đi trọn luồng bổ sung, đánh giá độc lập, tổng hợp, tờ trình
+qua Phòng KHQS (CV → TB → TP → BGĐ), BGĐ ký thành lập hội đồng và GĐ quyết định đề
+tài cùng kinh phí, với trạng thái, phân quyền và che giấu thông tin đúng chính sách.
 
-**FRs covered:** FR15, FR16, FR17, FR18, FR19, FR19a, FR20, FR21, FR22.
+**FRs covered:** FR15, FR16, FR17, FR18, FR19, FR19a, FR20, FR21, FR22, FR71, FR73.
 
 ### Epic 6: Theo dõi và nghiệm thu đề tài đã phê duyệt
 
 Golden Flow 4 refinement: [Project Execution contract](../docs/contracts/project-execution.md).
 Implementation stories remain 6.x (the earlier product grouping calls this Epic 5).
 Stories 6.1–6.7 and execution/history portions of 6.10 form this vertical slice;
-6.8–6.9 acceptance/councils remain deferred. Assigned proposal Staff creates; Head separately assigns project Staff, who
-confirms setup. Leadership approval is the proposal gate before execution; after
-activation, assigned Staff owns progress-report review/acceptance and Project
-Adjustment approval, while scoped Head owns Project Extension approval. Leadership
-does not decide either project request type, and Head does not decide Project
-Adjustment.
+6.8–6.9 acceptance/councils remain deferred. The assigned proposal CV creates the
+project; TP¹/TB¹ separately assign the project CV, who confirms setup. GĐ's topic +
+funding approval is the proposal gate before execution; after activation, the
+assigned CV³ owns progress-report review/acceptance (no tờ trình) and appraises
+Project Adjustment and Project Extension requests, which go through approval
+routing (TB → TP) and are signed by GĐ or PGĐ-KH (Story 6.11). Funding metadata
+and liquidation (signed by GĐ only) are Story 6.12. No Phòng KHQS role decides an
+adjustment or extension.
+
+> Role names and decision rights in the done and in-flight stories of this epic
+> predate the 10-role model; see `docs/permission-matrix.md`. The cross-story ACs
+> below belong to in-flight Stories 6.1–6.7 and are retained unchanged (decision
+> 2026-10-18: keep AC + delta story); their Staff adjustment and Head extension
+> decision rights are superseded by Story 6.11 (CV appraisal → routing → GĐ or
+> PGĐ-KH signs).
 
 **Cross-story acceptance criteria:**
 
@@ -1367,11 +1534,11 @@ Adjustment.
   verified without relying on seed identities in policy.
 
 
-Chủ nhiệm, thành viên, chuyên viên và người có thẩm quyền có thể quản lý tiến
-độ, báo cáo, điều chỉnh, gia hạn, hồ sơ nghiệm thu và quyết định cuối của đề
-tài.
+Chủ nhiệm, thành viên, CV phụ trách, TB/TP (bước tờ trình) và người ký BGĐ có thể
+quản lý tiến độ, báo cáo, điều chỉnh, gia hạn, kinh phí, hồ sơ nghiệm thu, thanh lý
+và quyết định cuối của đề tài.
 
-**FRs covered:** FR23, FR24, FR25, FR26, FR27, FR27a, FR28, FR29, FR30, FR30a, FR30b.
+**FRs covered:** FR23, FR24, FR25, FR26, FR27, FR27a, FR28, FR29, FR30, FR30a, FR30b, FR73, FR74.
 
 ### Epic 7: Giao việc và theo dõi thực hiện
 
@@ -1382,8 +1549,9 @@ hồ sơ nghiệp vụ, đồng thời nhận biết việc sắp đến hạn v
 
 ### Epic 8: Quản lý seminar và nghiên cứu sinh viên
 
-Chuyên viên có thể quản lý kế hoạch, mốc, điều chỉnh, sản phẩm, kết quả và lịch
-sử của seminar hoặc hoạt động nghiên cứu sinh viên.
+CV có thể quản lý kế hoạch, mốc, điều chỉnh, sản phẩm, kết quả và lịch sử của
+seminar hoặc hoạt động nghiên cứu sinh viên; đề tài sinh viên NCKH do CV/NCV đăng
+ký với tư cách giảng viên hướng dẫn và CV¹ duyệt, quản lý, hoàn thành (Story 8.6).
 
 **FRs covered:** FR50, FR51, FR52, FR53.
 
@@ -1396,25 +1564,25 @@ theo hiệu lực, phiên bản và phạm vi dữ liệu.
 
 ### Epic 10: Hội đồng và hồ sơ đạo đức
 
-Chuyên viên, chủ nhiệm, thư ký, thành viên hội đồng và người có thẩm quyền có
-thể xử lý kế hoạch hội đồng hoặc hồ sơ đạo đức trọn vòng đời với đánh giá và
-quyết định đúng phân công.
+TP¹/TB¹/CV³, chủ nhiệm, thư ký hội đồng, thành viên hội đồng/IRB và người ký BGĐ
+(GĐ hoặc PGĐ-KH) có thể xử lý kế hoạch hội đồng hoặc hồ sơ đạo đức (IRB) trọn vòng
+đời với đánh giá, tờ trình và chữ ký đúng phân công.
 
-**FRs covered:** FR58, FR59, FR60, FR61, FR62, FR63, FR64.
+**FRs covered:** FR58, FR59, FR60, FR61, FR62, FR63, FR64, FR73.
 
 ### Epic 11: Thông báo, nhắc việc và khu “Của tôi”
 
 Mỗi người dùng nhận được thông báo và nhắc việc đúng quyền, đồng thời có một
 khu làm việc cá nhân hợp nhất cho hồ sơ tham gia và hành động đang chờ.
 
-**FRs covered:** FR41, FR42, FR43, FR44.
+**FRs covered:** FR41, FR42, FR43, FR44, FR78.
 
 ### Epic 12: Dashboard, tìm kiếm, báo cáo và xuất dữ liệu
 
 Người dùng có thể tìm kiếm, theo dõi chỉ số, đi đến hồ sơ nguồn và xuất báo cáo
 trong đúng phạm vi được phép trên tất cả phân hệ đã hoàn thành.
 
-**FRs covered:** FR45, FR46, FR47, FR48, FR49.
+**FRs covered:** FR45, FR45a, FR46, FR47, FR48, FR49, FR74 (Story 12.6).
 
 ### Epic 13: Lý lịch khoa học (BM-06)
 
@@ -1429,6 +1597,8 @@ cảm được bảo vệ và thay đổi được truy vết.
 Quản trị viên có thể vận hành tài khoản, vai trò hệ thống, phạm vi tổ chức,
 quan hệ theo hồ sơ, ủy quyền và cấu hình dùng chung; người dùng đăng nhập vào
 một không gian làm việc duy nhất với quyền do backend quyết định.
+
+> Role names and decision rights in the done and in-flight stories of this epic predate the 10-role model; see `docs/permission-matrix.md`. Stories 1.1–1.9 are done and keep their text; the 10-role registry, account migration and segments are delta Stories 1.11 and 1.12.
 
 ### Story 1.1: Khởi tạo workspace Nx và khung ứng dụng nội bộ [FR4, FR5]
 
@@ -1733,11 +1903,81 @@ So that quan hệ cũ hoặc chức danh thư ký không cấp quyền ngoài nh
 **When** họ gọi detail, file hoặc mutation endpoint
 **Then** backend fail closed và không lộ metadata của record.
 
+### Story 1.11: Registry mười vai trò và chuyển đổi tài khoản [FR2]
+
+As a quản trị viên hệ thống (QT),
+I want hệ thống dùng đúng mười vai trò của ma trận phân quyền và chuyển đổi tài khoản cũ có kiểm soát,
+So that mỗi tài khoản giữ đúng một vai trò hiện hành mà không ai được cấp hoặc mất quyền do đoán sai.
+
+> Trạng thái 2026-10-18: commit 0a39db3 đã giao registry mười mã và migration `20261016500000` (HEAD → TP, STAFF → CV, CHECK mười giá trị). Phần còn lại: phân loại từng tài khoản `RESEARCH_OVERSIGHT_AUTHORITY` cũ, báo cáo tài khoản mơ hồ, ràng buộc một người giữ TB và audit gán vai trò/chức danh.
+
+**Acceptance Criteria:**
+
+**Given** registry vai trò hệ thống
+**When** session, API và UI đọc danh sách vai trò
+**Then** chỉ có mười mã: `SYSTEM_ADMIN`, `LEADERSHIP_APPROVAL_AUTHORITY`, `SCIENCE_DEPUTY_DIRECTOR`, `RESEARCH_OVERSIGHT_AUTHORITY`, `RESEARCH_MANAGEMENT_HEAD`, `RESEARCH_MANAGEMENT_DEPUTY_HEAD`, `RESEARCH_BOARD_HEAD`, `RESEARCH_MANAGEMENT_STAFF`, `RESEARCHER_INTERNAL_USER`, `EXTERNAL_RESEARCHER_USER`
+**And** mã cũ `SCIENTIFIC_MANAGEMENT_HEAD` / `SCIENTIFIC_MANAGEMENT_STAFF` không còn cấp quyền nào.
+
+**Given** tài khoản đang giữ `SCIENTIFIC_MANAGEMENT_HEAD` hoặc `SCIENTIFIC_MANAGEMENT_STAFF`
+**When** migration chạy
+**Then** HEAD chuyển thành `RESEARCH_MANAGEMENT_HEAD` (TP) và STAFF chuyển thành `RESEARCH_MANAGEMENT_STAFF` (CV) trong một forward migration mới
+**And** migration đã áp dụng trước đó không bị sửa; scope, quan hệ hồ sơ và lịch sử được giữ nguyên.
+
+**Given** tài khoản đang giữ `RESEARCH_OVERSIGHT_AUTHORITY` theo nghĩa cũ (Phó Giám đốc phụ trách khoa học)
+**When** migration chạy
+**Then** hệ thống không tự đoán vai trò mới
+**And** tài khoản được đưa vào báo cáo để QT phân loại từng người thành `SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH) hoặc `RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD).
+
+**Given** tài khoản có dữ liệu vai trò mơ hồ hoặc không khớp mười giá trị
+**When** migration hoặc session đánh giá
+**Then** tài khoản được báo cáo để xử lý thủ công và mọi hành động được bảo vệ fail closed
+**And** không cấp quyền song song giữa mã cũ và mã mới.
+
+**Given** QT gán vai trò `RESEARCH_BOARD_HEAD` (TB)
+**When** đã có một tài khoản active khác giữ TB
+**Then** backend từ chối vì TB chỉ có một người giữ
+**And** tài khoản PP, TB và PGĐ-TD được tạo mới, không suy ra từ tài khoản cũ.
+
+**Given** QT gán vai trò, scope hoặc chức danh hiển thị theo đơn vị (Trưởng khoa, Chủ nhiệm Bộ môn, …)
+**When** thay đổi được lưu
+**Then** audit ghi actor, tài khoản đích, vai trò, scope, chức danh và thời điểm
+**And** chức danh đơn vị chỉ để hiển thị, không cấp quyền.
+
+### Story 1.12: Danh mục mảng và giao mảng cho CV [FR72]
+
+As a Trưởng phòng KHQS (TP),
+I want quản lý danh mục mảng (cấp + tính chất) và giao mảng cho từng CV,
+So that hồ sơ nộp vào được tự động giao đúng chuyên viên phụ trách.
+
+**Acceptance Criteria:**
+
+**Given** TP có unit scope
+**When** TP tạo, cập nhật hoặc ngừng dùng một mảng gồm cấp và tính chất
+**Then** backend validate và lưu mảng với version
+**And** giá trị phân loại cấp và tính chất lấy từ danh mục được cấu hình, không hard-code trong story này.
+
+**Given** TP giao, đổi hoặc thu hồi mảng cho một CV active
+**When** thay đổi được lưu
+**Then** liên kết CV–mảng có trạng thái và hiệu lực, lịch sử cũ được giữ
+**And** audit ghi actor, CV, mảng (cấp/tính chất) và thời điểm.
+
+**Given** actor là QT, BGĐ, PP, TB, CV, NCV hoặc NNB
+**When** họ cố tạo mảng hoặc giao mảng cho CV
+**Then** backend từ chối vì chỉ TP giao mảng
+**And** TB và CV chỉ được xem mảng trong phạm vi được phép.
+
+**Given** một CV bị ngừng hoạt động hoặc đổi vai trò
+**When** auto-assignment đánh giá ứng viên
+**Then** liên kết mảng của tài khoản đó không còn được dùng
+**And** hồ sơ đang giao không tự chuyển mà cần TP¹/TB¹ giao lại có audit *(cần xác nhận)*.
+
 ## Epic 2: Hồ sơ nhà khoa học và định danh quan hệ
 
 Người có thẩm quyền có thể quản lý hồ sơ nhà khoa học, liên kết tài khoản và
 lịch sử tham gia, tìm kiếm đúng phạm vi và ngăn xung đột lợi ích ngay từ nguồn
 định danh.
+
+> Role names and decision rights in the done and in-flight stories of this epic predate the 10-role model; see `docs/permission-matrix.md`. Story 2.1 (in review) keeps its ACs; the QT/TP¹/CV¹ profile-manager delta is Story 2.8 and the duplicate-merge decision is Story 2.7.
 
 ### Story 2.1: Tạo và duy trì hồ sơ nhà khoa học [FR65]
 
@@ -1782,13 +2022,13 @@ So that hệ thống quản lý được cả nhà khoa học đã và chưa có
 
 ### Story 2.2: Liên kết hồ sơ nhà khoa học với tài khoản [FR66]
 
-As a người quản lý được ủy quyền,
+As a người quản lý hồ sơ (QT trong platform scope, TP¹ hoặc CV¹),
 I want liên kết đúng hồ sơ nhà khoa học với đúng tài khoản,
 So that quan hệ nghiệp vụ có thể tham chiếu một định danh thống nhất mà không biến hồ sơ thành vai trò hệ thống.
 
 **Acceptance Criteria:**
 
-**Given** hồ sơ nhà khoa học và tài khoản đều tồn tại trong phạm vi cho phép
+**Given** hồ sơ nhà khoa học và tài khoản đều tồn tại trong phạm vi cho phép của QT, TP¹ hoặc CV¹
 **When** người quản lý tạo liên kết
 **Then** liên kết được lưu với trạng thái, effective interval và version
 **And** không thay đổi vai trò hệ thống hoặc tự cấp bất kỳ record action nào.
@@ -1800,7 +2040,12 @@ So that quan hệ nghiệp vụ có thể tham chiếu một định danh thốn
 
 **Given** tài khoản liên kết đang `PENDING_ACTIVATION`
 **When** người quản lý gửi lại kích hoạt
-**Then** token chưa dùng trước đó bị vô hiệu hóa và email kích hoạt mới có hạn đúng 48 giờ được phát hành.
+**Then** token chưa dùng trước đó bị vô hiệu hóa và email kích hoạt mới chỉ chứa link đặt mật khẩu dùng một lần, có hạn đúng 48 giờ, được phát hành
+**And** không tạo hoặc gửi mật khẩu tạm thời.
+
+**Given** actor là TB, PP, BGĐ, NCV hoặc NNB không có quyền quản lý hồ sơ
+**When** họ tạo, sửa hoặc hủy liên kết hồ sơ–tài khoản
+**Then** backend từ chối mà không lộ dữ liệu hồ sơ ngoài phạm vi.
 
 **Given** nhà nghiên cứu đã kích hoạt tài khoản
 **When** họ đặt username duy nhất trong My Profile
@@ -1846,24 +2091,24 @@ So that tôi có bức tranh đúng mà không dùng bản sao lịch sử để
 
 ### Story 2.4: Kiểm tra xung đột lợi ích trước khi phân công [FR67a]
 
-As a chuyên viên quản lý khoa học,
+As a TP¹, TB¹ hoặc CV³ phụ trách hồ sơ,
 I want kiểm tra xung đột trước khi gán vai trò nhạy cảm,
 So that không xảy ra tự đánh giá, tự phê duyệt hoặc thư ký ra quyết định trái thẩm quyền.
 
 **Acceptance Criteria:**
 
-**Given** a participant is proposed as management officer, reviewer or evaluation/acceptance council member, or a current holder is proposed as participant
+**Given** a participant is proposed as responsible officer (CV), reviewer, evaluation/acceptance/IRB council member, tờ trình reviewer/approver (TB/TP step) or BGĐ signer, or a current holder is proposed as participant
 **When** assignment/participation is created or changed, and again when the protected action executes
 **Then** the same-record conflict denies the mutation; reviewer/final-decision conflict for the same round and mutually exclusive council positions also deny
 **And** an unrelated record's legitimate relationship neither blocks participation nor grants management access.
 
-**Given** actor được đề xuất làm reviewer, council member, ethics reviewer, secretary hoặc approver
+**Given** actor được đề xuất làm CV phụ trách, reviewer, council member, IRB member, secretary, người rà soát/duyệt tờ trình (bước TB/TP) hoặc người ký BGĐ
 **When** source domain gọi conflict preflight với target record
 **Then** service đánh giá mọi quan hệ tham gia đang hoạt động của actor trên chính record
 **And** trả decision code, reason và context version mà không chọn một “vai trò cao nhất”.
 
 **Given** actor là PI, `TOPIC_MEMBER` hoặc team secretary của record
-**When** họ được phân công review hoặc approval cho record đó
+**When** họ được phân công review, bước tờ trình, chữ ký hoặc approval cho record đó
 **Then** backend từ chối `CONFLICT_DENIED`
 **And** không tạo assignment dù actor có system role hoặc quan hệ khác cho phép.
 
@@ -1890,7 +2135,7 @@ council member hoặc reviewer/council reviewer của cùng evaluation context
 
 ### Story 2.5: Tìm kiếm và xem danh bạ nhà khoa học theo phạm vi [FR68]
 
-As a người dùng được phép,
+As a người quản lý hồ sơ (QT, TP¹, CV¹) hoặc người dùng được phép tìm ứng viên,
 I want tìm kiếm nhà khoa học theo tên, đơn vị, lĩnh vực và chuyên môn,
 So that tôi có thể tìm đúng người cho nhu cầu nghiệp vụ trong phạm vi được giao.
 
@@ -1938,6 +2183,62 @@ So that tôi có thể truy vết ai đã thay đổi thông tin hoặc quan h�
 **When** audit append thất bại trong transaction bắt buộc
 **Then** mutation không được hoàn tất một phần
 **And** hệ thống trả lỗi có correlation ID để hỗ trợ xử lý.
+
+### Story 2.7: Cảnh báo hồ sơ trùng và TB/TP quyết định gộp [FR75]
+
+As a TB¹ hoặc TP¹,
+I want nhận cảnh báo hồ sơ nhà khoa học trùng và quyết định gộp,
+So that mỗi nhà khoa học có một định danh thống nhất mà lịch sử không bị mất.
+
+**Acceptance Criteria:**
+
+**Given** QT, TP¹ hoặc CV¹ tạo hoặc sửa hồ sơ có dấu hiệu trùng định danh
+**When** họ xác nhận cảnh báo trùng
+**Then** hệ thống tạo một cảnh báo trùng có audit
+**And** TB¹ và TP¹ trong phạm vi nhận thông báo.
+
+**Given** TB¹ hoặc TP¹ mở cảnh báo
+**When** họ quyết định gộp hoặc không gộp, kèm lý do
+**Then** quyết định được ghi với actor, hồ sơ liên quan và thời điểm
+**And** khi gộp, liên kết tài khoản, quan hệ tham gia và lý lịch khoa học được giữ lịch sử, không xóa vật lý hồ sơ cũ.
+
+**Given** actor là QT, CV, PP, BGĐ, NCV hoặc NNB
+**When** họ cố quyết định gộp
+**Then** backend từ chối vì chỉ TB/TP quyết định
+**And** QT, TP và CV vẫn được nêu cảnh báo.
+
+**Given** hai hồ sơ có tài khoản liên kết active xung đột hoặc quan hệ đang dùng trong phân công
+**When** gộp được yêu cầu
+**Then** backend kiểm tra lại conflict và liên kết, từ chối nếu không an toàn
+**And** không tạo hai liên kết active cho một tài khoản.
+
+### Story 2.8: Delta cho 2.1: người quản lý hồ sơ QT/TP¹/CV¹ [FR65]
+
+As a người quản lý hồ sơ nhà khoa học (QT trong platform scope, TP¹ hoặc CV¹),
+I want quyền quản lý hồ sơ theo mô hình mười vai trò,
+So that Story 2.1 (đang review, giữ nguyên AC) vận hành đúng ma trận phân quyền mới.
+
+**Acceptance Criteria:**
+
+**Given** actor là QT, TP¹ hoặc CV¹
+**When** họ tạo, sửa, kích hoạt/ngừng hồ sơ hoặc tạo/liên kết/hủy liên kết tài khoản trong phạm vi
+**Then** backend cho phép theo đúng scope được cấp
+**And** audit ghi actor, hồ sơ, hành động và context.
+
+**Given** actor là TB, PP, GĐ, PGĐ-KH, PGĐ-TD, NCV hoặc NNB
+**When** họ gọi thao tác quản lý hồ sơ của người khác
+**Then** backend từ chối
+**And** họ vẫn tự cập nhật lý lịch khoa học của mình qua My Profile.
+
+**Given** dữ liệu và seed đang dùng mã vai trò cũ cho người quản lý hồ sơ
+**When** Story 1.11 đã chuyển đổi tài khoản
+**Then** quyền quản lý hồ sơ dùng `RESEARCH_MANAGEMENT_HEAD` và `RESEARCH_MANAGEMENT_STAFF`
+**And** không mã cũ nào còn cấp quyền quản lý hồ sơ.
+
+**Given** hồ sơ được cấp tài khoản
+**When** email kích hoạt được gửi
+**Then** email chỉ chứa link đặt mật khẩu dùng một lần có hạn 48 giờ
+**And** không tạo, gửi hoặc lưu mật khẩu tạm thời.
 
 ## Epic 3: Tệp nghiệp vụ, lịch sử và kiểm toán
 
@@ -2018,6 +2319,11 @@ So that tôi biết hồ sơ đã đi qua các bước nào và cần làm gì t
 **Then** event được lược bỏ hoặc chuyển thành trạng thái tổng quát theo disclosure matrix
 **And** timeline không để lộ dữ liệu qua title, count hoặc attachment.
 
+**Given** viewer là PI hoặc reviewer của record (ẩn danh hai chiều)
+**When** họ yêu cầu timeline hoặc action log của record
+**Then** backend không trả action log của record cho họ
+**And** PI chỉ thấy trạng thái và lịch sử bước tờ trình của chính hồ sơ mình, không có danh tính reviewer.
+
 **Given** source domain trả stale, unresolved hoặc version mismatch
 **When** timeline được tải
 **Then** toàn bộ timeline tương ứng fail closed
@@ -2050,6 +2356,11 @@ So that hệ thống có bằng chứng về ai đã làm gì và dựa trên qu
 **When** audit append thất bại
 **Then** mutation rollback hoặc được đưa vào cơ chế transactional outbox đã được kiến trúc chấp thuận
 **And** không có trạng thái nghiệp vụ thành công nhưng mất audit bắt buộc.
+
+**Given** tờ trình được submit, forward, return, approve hoặc sign, hoặc CV phụ trách được giao/giao lại/thu hồi (thủ công hoặc tự động theo mảng)
+**When** action hoàn tất
+**Then** audit ghi actor (hoặc `System` cho tự động giao), tờ trình/record, loại thủ tục, bước, quyết định, lý do, mảng khớp và thời điểm theo matrix §11
+**And** các event gán mảng cho CV, thay đổi kinh phí và thanh lý cũng được audit.
 
 **Given** audit có before/after values
 **When** event được ghi
@@ -2084,37 +2395,76 @@ So that tôi có thể điều tra hoặc đối chiếu một hành động mà
 **Then** backend từ chối mà không tiết lộ event existence hoặc count
 **And** hành vi được kiểm thử cho allowed, denied và incomplete-context cases.
 
+**Given** actor là PI hoặc reviewer của record
+**When** họ gọi audit/action-log API của record đó
+**Then** backend từ chối theo ẩn danh hai chiều
+**And** cùng bộ lọc áp dụng cho list, detail, file và export.
+
+### Story 3.6: Ẩn danh hai chiều và danh tính reviewer cho TB/TP [FR77]
+
+As a TB¹ hoặc TP¹,
+I want xem danh tính reviewer trên hồ sơ trong phạm vi trong khi chủ nhiệm và reviewer không thấy nhật ký hành động,
+So that đánh giá giữ ẩn danh hai chiều mà người điều phối vẫn kiểm soát được phân công.
+
+**Acceptance Criteria:**
+
+**Given** viewer là PI, thành viên đề tài hoặc reviewer của record
+**When** họ gọi list, detail, file, history, notification hoặc export
+**Then** action log của record và danh tính reviewer bị loại khỏi response
+**And** không lộ qua count, tên file, metadata hay tiêu đề thông báo.
+
+**Given** viewer là TB¹ hoặc TP¹ có unit scope trên record
+**When** họ mở danh sách phân công hoặc đánh giá
+**Then** họ thấy danh tính reviewer
+**And** quyền này không mở raw score/comment ngoài mức disclosure đã được định nghĩa.
+
+**Given** viewer là reviewer khác trên cùng record
+**When** họ yêu cầu danh tính hoặc đánh giá của reviewer khác
+**Then** backend từ chối
+**And** quyết định áp dụng giống nhau trên list, detail, file và export.
+
+**Given** policy ẩn danh đổi giữa lúc tải danh sách và lúc xuất file
+**When** export chạy
+**Then** export re-authorize và áp dụng bộ lọc hiện hành
+**And** không chứa cột danh tính hoặc action log bị cấm.
+
 ## Epic 4: Tiếp nhận và nộp đề xuất nghiên cứu
 
-Chuyên viên có thể mở đợt tiếp nhận; chủ nhiệm có thể lập, kiểm tra và nộp một
-đề xuất đầy đủ cùng tệp và lịch sử nộp.
+TP và CV có thể mở đợt tiếp nhận; chủ nhiệm (mọi vai trò trừ QT/NNB) có thể lập,
+kiểm tra và nộp một đề xuất đầy đủ cùng tệp và lịch sử nộp; hệ thống tự động giao
+CV phụ trách theo mảng và CV phụ trách xử lý yêu cầu rút/sửa sau nộp.
 
 ### Story 4.1: Tạo và quản lý đợt tiếp nhận đề xuất [FR9]
 
-As a chuyên viên quản lý khoa học,
+As a TP hoặc CV,
 I want cấu hình đợt tiếp nhận với thời hạn và bộ hồ sơ bắt buộc,
 So that chủ nhiệm biết khi nào và cần nộp những gì.
 
 **Acceptance Criteria:**
 
-**Given** Staff may operate an intake through its separately granted capability/scope
-**When** viewing intake proposals or counts
-**Then** intake authority does not grant management visibility to every submission; proposal visibility and counts use Head oversight or exact officer/participation access.
+**Given** TP hoặc CV vận hành đợt tiếp nhận theo capability/scope riêng
+**When** xem đề xuất hoặc số liệu của đợt
+**Then** quyền quản lý đợt không cấp quyền quản lý mọi hồ sơ nộp; quyền xem và số liệu đề xuất theo unit scope của TP/TB/PP, CV³ phụ trách hoặc quan hệ tham gia.
 
-**Given** chuyên viên có quyền trong organization scope
+**Given** TP hoặc CV có quyền trong organization scope
 **When** họ tạo đợt với tên, thời gian, phạm vi áp dụng, loại đề xuất, checklist và gói tệp bắt buộc
 **Then** backend lưu đợt đã validate
 **And** trả capability cho các action cập nhật, kích hoạt hoặc kết thúc.
 
 **Given** thời gian đợt không hợp lệ hoặc xung đột với quy tắc cấu hình
-**When** chuyên viên lưu
+**When** TP hoặc CV lưu
 **Then** toàn bộ mutation bị từ chối với lỗi gắn đúng trường
 **And** không tạo đợt có trạng thái một phần.
 
-**Given** actor ngoài scope hoặc không phải chuyên viên được phép
-**When** họ tạo, sửa hoặc kích hoạt đợt
+**Given** actor ngoài scope hoặc không phải TP/CV (kể cả QT, BGĐ, PP, TB, NCV, NNB)
+**When** họ tạo, sửa, mở hoặc đóng đợt
 **Then** backend từ chối theo policy
 **And** audit ghi kết quả từ chối mà không lộ dữ liệu ngoài phạm vi.
+
+**Given** đợt đang mở
+**When** người dùng liệt kê đợt tiếp nhận
+**Then** mọi vai trò trừ QT và NNB thấy đợt áp dụng cho mình
+**And** QT và NNB không thấy đợt nào.
 
 **Given** đợt đang mở
 **When** thời hạn hoặc trạng thái thay đổi
@@ -2129,19 +2479,19 @@ So that trách nhiệm và quyền của từng người được xác định t
 
 **Acceptance Criteria:**
 
-**Given** a proposal exists without a management officer
-**When** Head or Staff queries it
-**Then** Head sees it as unassigned within authorized scope; Staff has no management access until explicitly assigned
-**And** legitimate PI/team/review access is evaluated independently; creation never auto-assigns an officer.
+**Given** a draft proposal exists without a responsible CV
+**When** TP, TB or CV queries it
+**Then** TP/TB see it within unit scope; a CV has no management access until assigned (auto-assignment happens only on submit/resubmit, Story 4.7)
+**And** legitimate PI/team/review access is evaluated independently; draft creation never assigns an officer.
 
-**Given** actor có researcher profile liên kết và đợt tiếp nhận đang cho phép lập hồ sơ
+**Given** actor giữ bất kỳ vai trò nào trừ QT/NNB, có researcher profile liên kết và đợt tiếp nhận đang cho phép lập hồ sơ
 **When** họ tạo proposal draft
 **Then** proposal được tạo với actor là `PROPOSAL_PI` đang hoạt động
 **And** capability cho phép PI tiếp tục chỉnh sửa trong trạng thái nháp.
 
-**Given** actor chỉ có system role `EXTERNAL_RESEARCHER_USER`
+**Given** actor có system role `EXTERNAL_RESEARCHER_USER` hoặc `SYSTEM_ADMIN`
 **When** họ cố tạo proposal draft
-**Then** backend từ chối vì external không có quyền tạo proposal
+**Then** backend từ chối vì NNB và QT không bao giờ là PI
 **And** không tạo proposal, relationship hoặc file side effect.
 
 **Given** PI thêm `TOPIC_MEMBER` hoặc `TOPIC_SECRETARY` hợp lệ
@@ -2150,7 +2500,7 @@ So that trách nhiệm và quyền của từng người được xác định t
 **And** không thêm global role hoặc thay đổi system role của người tham gia.
 
 **Given** một quan hệ bị trùng, chồng lấn sai multiplicity hoặc ngoài organization rule
-**When** PI/chuyên viên cập nhật danh sách
+**When** PI cập nhật danh sách
 **Then** backend từ chối thay đổi không hợp lệ
 **And** giữ nguyên roster và context version cũ.
 
@@ -2243,7 +2593,7 @@ So that tôi có thể hoàn thiện dữ liệu trước khi nộp chính thứ
 **Then** hệ thống dùng version cấu hình hiện hành phù hợp với quy tắc đợt
 **And** không dựa vào kết quả readiness đã cache quá hạn.
 
-**Given** actor chỉ có quyền sửa/tệp nhưng không phải current internal PI
+**Given** actor chỉ có quyền sửa/tệp nhưng không phải PI hiện tại
 **When** họ chạy readiness hoặc cố nộp
 **Then** họ có thể xem lỗi trong phạm vi tệp/dữ liệu được phép nhưng không thể submit
 **And** UI hiển thị submit bị chặn với lý do backend.
@@ -2261,12 +2611,12 @@ So that tôi biết hồ sơ đã vào quy trình tiếp nhận.
 
 **Acceptance Criteria:**
 
-**Given** proposal đạt readiness, đợt đang nhận và actor là current internal PI
+**Given** proposal đạt readiness, đợt đang nhận và actor là PI hiện tại (mọi vai trò trừ QT/NNB)
 **When** actor xác nhận nộp
 **Then** owning service re-authorize và chuyển state trong cùng transaction
 **And** tạo submission-history event với actor, thời gian, version hồ sơ và bộ tệp.
 
-**Given** actor là delegate, secretary, member, staff hoặc external researcher
+**Given** actor là delegate, secretary, member, người quản lý không phải PI của hồ sơ (TP/PP/TB/CV/BGĐ) hoặc external researcher
 **When** actor cố nộp proposal
 **Then** backend từ chối trước mutation
 **And** không tạo submission event hoặc delegated capability.
@@ -2286,14 +2636,90 @@ So that tôi biết hồ sơ đã vào quy trình tiếp nhận.
 **Then** backend từ chối dù actor có profile link, cùng đơn vị hoặc draft relationship
 **And** không tạo submission history hoặc đổi trạng thái.
 
+### Story 4.7: Tự động giao CV phụ trách theo mảng khi nộp [FR72]
+
+As a TP¹,
+I want hệ thống tự động giao một CV phụ trách theo mảng khi đề xuất được nộp hoặc nộp lại,
+So that mỗi hồ sơ có người xử lý ngay và tôi chỉ phải giao tay các hồ sơ không khớp mảng.
+
+**Acceptance Criteria:**
+
+**Given** đề xuất chuyển sang `submitted` hoặc `resubmitted` và chưa có CV phụ trách active
+**When** auto-assignment chạy (service-only, audit actor `System`)
+**Then** hệ thống chọn đúng một CV active có mảng khớp cấp và tính chất của đề xuất: mảng cụ thể hơn được ưu tiên, nếu bằng nhau chọn CV đang phụ trách ít hồ sơ active hơn
+**And** quan hệ `PROPOSAL_MANAGEMENT_OFFICER` và audit (mảng khớp, CV mới, thời điểm) được ghi cùng transaction với việc nộp.
+
+**Given** không CV active nào khớp mảng
+**When** auto-assignment chạy
+**Then** hồ sơ ở trạng thái chưa giao và hiển thị "Chưa có người phụ trách" cho TP
+**And** việc nộp vẫn thành công, không giao cho CV ngẫu nhiên.
+
+**Given** hồ sơ đã có CV phụ trách active khi nộp lại
+**When** auto-assignment đánh giá
+**Then** CV hiện tại được giữ nguyên
+**And** không tạo hai CV phụ trách active.
+
+**Given** TP¹ hoặc TB¹ giao, giao lại hoặc thu hồi CV phụ trách
+**When** thay đổi được lưu
+**Then** CV cũ kết thúc atomically, lịch sử và lý do được giữ, audit ghi actor, CV cũ/mới
+**And** CV mới không được là PI, thành viên, reviewer hoặc người có conflict trên hồ sơ.
+
+**Given** CV cũ sau khi bị thay
+**When** họ cố thao tác trên hồ sơ
+**Then** backend từ chối vì phân công trong quá khứ không cấp quyền
+**And** hai yêu cầu giao đồng thời không thể tạo hai CV phụ trách.
+
+### Story 4.8: Rút, sửa sau nộp và mở lại do CV phụ trách [FR76]
+
+As a chủ nhiệm đề xuất,
+I want gửi yêu cầu rút hoặc sửa hồ sơ sau khi đã nộp và để CV phụ trách xử lý,
+So that hồ sơ đã nộp không bị ghi đè mà vẫn có đường điều chỉnh chính thức.
+
+**Acceptance Criteria:**
+
+**Given** đề xuất đã nộp và actor là PI hiện tại
+**When** PI gửi yêu cầu rút hoặc yêu cầu sửa kèm lý do
+**Then** yêu cầu được lưu với version hồ sơ và audit
+**And** phiên bản đã nộp không thay đổi trước khi có quyết định.
+
+**Given** yêu cầu rút hoặc sửa đang chờ
+**When** CV³ phụ trách chấp thuận hoặc từ chối kèm lý do
+**Then** quyết định áp dụng atomically (rút hồ sơ hoặc mở phạm vi sửa được chấp thuận) với history/audit
+**And** PI nhận thông báo kết quả.
+
+**Given** hồ sơ ở trạng thái cho phép mở lại
+**When** CV³ phụ trách mở lại với lý do bắt buộc
+**Then** hồ sơ chuyển trạng thái theo state machine và audit ghi actor, lý do, trạng thái trước/sau
+**And** thiếu lý do thì backend từ chối.
+
+**Given** actor là TP, TB, PP, BGĐ, QT, CV không phụ trách hồ sơ, thành viên hoặc reviewer
+**When** họ cố duyệt yêu cầu hoặc mở lại
+**Then** backend từ chối
+**And** CV phụ trách là PI hoặc thành viên của chính hồ sơ cũng bị từ chối do conflict.
+
+**Given** hồ sơ chưa có CV phụ trách ("Chưa có người phụ trách")
+**When** PI gửi yêu cầu
+**Then** yêu cầu được lưu và chờ đến khi TP¹/TB¹ giao CV *(cần xác nhận)*
+**And** không ai khác được duyệt thay.
+
 ## Epic 5: Kiểm tra, đánh giá và phê duyệt đề xuất
 
 Đề xuất đã nộp có thể đi trọn luồng bổ sung, đánh giá độc lập, tổng hợp và ra
 quyết định với trạng thái, phân quyền và che giấu thông tin đúng chính sách.
 
-**Refinement 2026-09-21:** The user-authorized Golden Flow moves assignment and synthesis to Head, retains Staff completeness/monitoring, and requires explicit synthesis finalization before submission. Governing policy reconciliation is an implementation prerequisite. Proposal Review & Approval uses existing Stories
-5.3 → 5.4 → 5.5 → 5.7 → 5.8, after 5.1–5.2. Story 5.6 is independent and
-not a prerequisite. No new epic/story is required. See the scoped
+> Role names and decision rights in the done and in-flight stories of this epic
+> predate the 10-role model; see `docs/permission-matrix.md`. Story 5.3 (in review)
+> keeps its ACs; its 10-role delta is Story 5.11.
+
+**Refinement 2026-10-18 (replaces 2026-09-21):** Completeness and supplement belong
+to TB¹/CV³ (never TP); reviewer/council assignment and synthesis belong to
+TP¹/TB¹/CV³; the council secretary drafts synthesis/minutes without scoring; the
+finalized package reaches GĐ only through approval routing (Story 5.9); GĐ or
+PGĐ-KH signs the evaluation council establishment and GĐ alone decides topic +
+funding (Story 5.10). Explicit synthesis finalization before submission is kept.
+Proposal Review & Approval uses Stories 5.1–5.2 → 5.3 (+ delta 5.11) → 5.4 → 5.5 →
+5.9 → 5.10 → 5.7 → 5.8; 5.9 precedes 5.10, 5.11, 6.11 and 6.12. Story 5.6 is
+independent and not a prerequisite. See the scoped
 [implementation plan](implementation-artifacts/epic-05-proposal-review-and-approval/implementation-plan.md)
 for current-code evidence, dependencies and verification gates.
 `REVIEWER` denotes an effective proposal assignment, never a new system role.
@@ -2306,39 +2732,39 @@ read surface, append-only evidence/audit, and backend-calculated capabilities.
 
 ### Story 5.1: Kiểm tra tính đầy đủ và yêu cầu bổ sung [FR15]
 
-As a chuyên viên quản lý khoa học,
+As a TB¹ hoặc CV³ phụ trách hồ sơ,
 I want kiểm tra hồ sơ đã nộp và yêu cầu bổ sung có hạn xử lý,
 So that hồ sơ chỉ vào đánh giá khi đáp ứng điều kiện hành chính.
 
 **Acceptance Criteria:**
 
-**Given** Staff requests completeness checking or a supplement on a proposal
+**Given** TB or CV requests completeness checking or a supplement on a proposal
 **When** the action executes
-**Then** an effective `PROPOSAL_MANAGEMENT_OFFICER`, explicit scope, current state/context and no participation conflict are required
-**And** Head visibility or Staff participation alone cannot grant that action.
+**Then** TB needs unit scope (¹) and CV needs the effective `PROPOSAL_MANAGEMENT_OFFICER` assignment (³), plus current state/context and no participation conflict
+**And** TP, PP, BGĐ, QT or a CV's participation alone cannot grant that action.
 
-**Given** proposal is `submitted` or `resubmitted` and in the Staff officer’s explicit organization scope
-**When** chuyên viên mở completeness review
+**Given** proposal is `submitted` or `resubmitted` and within TB's unit scope or assigned to the CV
+**When** TB hoặc CV phụ trách mở completeness review
 **Then** họ xem được structured data, submission package, checklist và file được phép
 **And** capability chỉ mở các action hợp lệ với state hiện hành.
 
-**Given** chuyên viên đã xác nhận đầy đủ cho phiên bản nộp hiện tại
+**Given** TB hoặc CV phụ trách đã xác nhận đầy đủ cho phiên bản nộp hiện tại
 **When** họ xem lại hoặc gửi lại action xác nhận
 **Then** nút xác nhận bị disabled với lý do và backend từ chối thao tác lặp
 **And** một phiên bản nộp lại mới được phép xác nhận đúng một lần.
 
 **Given** hồ sơ thiếu hoặc không hợp lệ
-**When** chuyên viên gửi yêu cầu bổ sung với lý do và hạn
+**When** TB hoặc CV phụ trách gửi yêu cầu bổ sung với lý do và hạn
 **Then** proposal chuyển sang `SUPPLEMENT_REQUESTED` atomically
 **And** tạo history, audit và notification cho PI mà không kèm dữ liệu nội bộ không cần thiết.
 
-**Given** actor là PI, member, secretary hoặc người ngoài scope
+**Given** actor là PI, member, secretary, TP, CV không phụ trách hồ sơ hoặc người ngoài scope
 **When** họ cố tạo/đóng completeness review không được cấp
 **Then** backend từ chối
 **And** UI hiển thị blocked action với lý do thay vì mở form có thể gửi.
 
 **Given** request state/version đã cũ
-**When** chuyên viên gửi yêu cầu bổ sung
+**When** TB hoặc CV phụ trách gửi yêu cầu bổ sung
 **Then** backend trả state/context-version mismatch
 **And** không tạo yêu cầu hoặc notification trùng.
 
@@ -2362,8 +2788,8 @@ So that đề xuất có thể tiếp tục quy trình đánh giá.
 
 **Given** hồ sơ đáp ứng yêu cầu và PI có `proposal.resubmit`
 **When** PI xác nhận nộp lại
-**Then** state atomically becomes `resubmitted`, awaiting Staff completeness re-check
-**And** resubmission grants no review readiness; Head assignment is denied until current-submission completeness is confirmed
+**Then** state atomically becomes `resubmitted` and returns to the responsible CV's workflow, awaiting TB¹/CV³ completeness re-check
+**And** resubmission grants no review readiness; reviewer assignment is denied until current-submission completeness is confirmed
 **And** submission history ghi actor và version bộ hồ sơ.
 
 **Given** quá hạn hoặc relationship hết hiệu lực
@@ -2439,10 +2865,15 @@ So that tôi hoàn thành nhiệm vụ đánh giá độc lập.
 
 **Acceptance Criteria:**
 
-**Given** reviewer assignment đang hoạt động và proposal ở state cho phép
+**Given** reviewer được mời nhưng chưa chấp nhận
+**When** họ mở lời mời
+**Then** họ chỉ thấy tên đề xuất, vai trò, hạn và người mời
+**And** có thể chấp nhận hoặc từ chối (từ chối bắt buộc lý do); thành viên hội đồng chỉ đọc hồ sơ sau khi BGĐ ký quyết định thành lập hội đồng.
+
+**Given** reviewer assignment đã được chấp nhận, đang hoạt động và proposal ở state cho phép
 **When** reviewer mở assignment
-**Then** họ thấy proposal và file hỗ trợ cần thiết theo minimum disclosure
-**And** không thấy assignment, danh tính hoặc đánh giá của reviewer khác.
+**Then** họ thấy proposal và file hỗ trợ cần thiết theo minimum disclosure, kể cả hồ sơ ngoài đơn vị của mình
+**And** không thấy assignment, danh tính hoặc đánh giá của reviewer khác, cũng như action log của hồ sơ.
 
 **Given** reviewer nhập score, comment và recommendation hợp lệ
 **When** họ lưu nháp hoặc submit
@@ -2467,75 +2898,80 @@ So that tôi hoàn thành nhiệm vụ đánh giá độc lập.
 **Given** user có assignment hiệu lực với một trong hai duty, bất kể system role
 **When** mở “Đánh giá của tôi” từ navigation/My Work rồi mở proposal
 **Then** queue, detail, package, file và own-review cùng một disclosure/authorization policy;
-không gọi staff progress/roster để dựng form; unrelated records không xuất hiện.
+không gọi progress/roster của Phòng KHQS để dựng form; unrelated records không xuất hiện.
 
 **Given** review đang nháp trong `under_review`
 **When** lưu nháp nhiều lần rồi submit với rubric đầy đủ, comment, recommendation
 và `contextVersion` hiện hành
 **Then** mỗi lần lưu trả hoặc tải lại context; submit khóa review, hoàn thành assignment,
-ghi history/audit và event cho staff, proposal vẫn `under_review`
+ghi history/audit và event cho CV phụ trách, proposal vẫn `under_review`
 **And** overdue chỉ là tracking flag; expiry/revocation/conflict mới chặn theo policy;
 `revise` là recommendation, không tự mở vòng bổ sung hoặc chuyển trạng thái.
 
-**Given** cùng account còn có role staff/leadership hoặc biết URL của reviewer khác
+**Given** cùng account còn giữ vai trò Phòng KHQS (TP/PP/TB/CV) hoặc BGĐ, hoặc biết URL của reviewer khác
 **When** truy cập roster, progress, submitted-review, supplement history hoặc file
 **Then** assignment không nâng disclosure sang dữ liệu nội bộ/phiếu của người khác;
 backend bỏ field bị ẩn và từ chối file ngoài package, không chỉ ẩn UI.
 
-### Story 5.5: Staff monitoring and Head synthesis/finalization/submission [FR19, FR19a]
+### Story 5.5: Theo dõi tiến độ và tổng hợp đánh giá nội bộ [FR19, FR19a]
 
-As an assigned Staff officer, I want to monitor review work;
-as a scoped Scientific Management Head, I want to synthesize completed reviews,
-finalize the synthesis and submit the package for a leadership decision.
+As a TP¹, TB¹ hoặc CV³ phụ trách hồ sơ,
+I want theo dõi công việc đánh giá, tổng hợp các đánh giá đã hoàn tất và chốt bản tổng hợp,
+So that gói hồ sơ có thể được lập tờ trình và trình GĐ quyết định qua luồng phê duyệt.
 
 **Acceptance Criteria:**
 
-**Given** Staff monitors a proposal
-**When** progress or operational queue data is requested
-**Then** current active officer assignment, explicit scope and no conflict are required
-**And** named assignments, status, pending/submitted counts N/M, deadlines, overdue work,
-completion and reasons synthesis remains blocked are returned by the backend.
+**Given** TP, TB hoặc CV theo dõi một proposal
+**When** progress hoặc operational queue data được yêu cầu
+**Then** TP/TB cần unit scope (¹), CV cần current officer assignment (³), và không có conflict
+**And** backend trả named assignments, trạng thái lời mời, status, số pending/submitted N/M, deadlines, overdue work,
+completion và lý do synthesis còn bị chặn.
 
-**Given** Staff can monitor review progress
-**When** Staff attempts synthesis save, finalization or package submission
-**Then** backend denies the Head-only action and UI exposes no enabled write control.
+**Given** PP, BGĐ, QT, CV không phụ trách hồ sơ hoặc người có quan hệ tham gia/review trên hồ sơ
+**When** họ cố lưu, chốt synthesis hoặc lập tờ trình
+**Then** backend từ chối và UI không có control ghi được bật.
 
-**Given** Head has scope and no participation or current/historical review conflict
-**When** Head requests the review package or synthesis action
-**Then** backend authorizes the required submitted-review projection
-**And** every synthesis save/finalization requires all required valid current-round reviews;
-incomplete, revoked, stale or incompatible evidence cannot open synthesis.
+**Given** TP¹, TB¹ hoặc CV³ không có participation hoặc current/historical review conflict
+**When** họ yêu cầu review package hoặc synthesis action
+**Then** backend cấp projection submitted-review cần thiết
+**And** mọi lần lưu/chốt synthesis cần đủ các review hợp lệ của vòng hiện hành;
+evidence thiếu, bị thu hồi, stale hoặc không tương thích không mở được synthesis.
 
-**Given** exactly two reviewers and at least three distinct committee members have
-submitted all required current-version reviews
-**When** Head creates or edits a draft synthesis
-**Then** the summary records actor, revision, source reviews and immutable evidence/audit
-**And** no reviewer submission is overwritten and the proposal stays `under_review`.
+**Given** đúng hai reviewer và ít nhất ba committee member khác nhau đã nộp đủ
+review của phiên bản hiện hành (baseline hiện hành)
+**When** TP¹/TB¹/CV³ tạo hoặc sửa draft synthesis
+**Then** summary ghi actor, revision, source reviews và immutable evidence/audit
+**And** không ghi đè review nào và proposal vẫn `under_review`.
 
-**Given** the synthesis draft has valid summary/recommendation and current evidence
-**When** Head explicitly finalizes it with current context
-**Then** its own lifecycle becomes finalized, with actor/time/revision and audit evidence
-**And** finalization alone does not submit the proposal or allow a leadership decision.
+**Given** thư ký hội đồng của hồ sơ (note 6)
+**When** họ soạn dự thảo tổng hợp hoặc biên bản
+**Then** backend cho phép soạn mà không cấp quyền chấm điểm, chốt synthesis hoặc lập tờ trình
+**And** dự thảo được ghi history/audit với actor và quan hệ.
 
-**Given** a finalized synthesis bound to the current complete review package
-**When** Head explicitly submits to Leadership
-**Then** the locked backend mutation rechecks completeness, roster, submitted reviews,
-source version, scope/conflict and finalized evidence; persists the routed package;
-and transitions `under_review` → `ready_for_approval` with history/audit.
+**Given** draft synthesis có summary/recommendation hợp lệ và evidence hiện hành
+**When** TP¹/TB¹/CV³ chốt synthesis với context hiện hành
+**Then** lifecycle của synthesis chuyển finalized với actor/time/revision và audit evidence
+**And** chỉ việc chốt không trình proposal và không mở quyết định của GĐ.
 
-**Given** a draft synthesis, changed source evidence or stale context
-**When** submission or final decision is attempted
-**Then** the backend rejects it without partial writes or duplicate history.
+**Given** synthesis đã chốt gắn với review package đầy đủ hiện hành
+**When** TP¹/TB¹/CV³ lập tờ trình `DECISION_PACKAGE`
+**Then** backend kiểm tra lại completeness, roster, submitted reviews, source version, scope/conflict và finalized evidence,
+và tạo approval submission theo Story 5.9 (người lập → TB → TP → GĐ; tờ trình do TB lập bắt đầu ở TP)
+**And** proposal chỉ tới quyết định của GĐ sau khi submission đã qua `HEAD_REVIEW`; không còn thao tác "trình lãnh đạo" trực tiếp.
 
-**Given** a finalized or submitted synthesis
-**When** an ordinary edit is attempted
-**Then** it is denied; any later reopening/revision requires an explicit approved workflow,
-never a silent overwrite or inferred policy.
+**Given** synthesis còn nháp, source evidence đã đổi hoặc context stale
+**When** lập tờ trình hoặc quyết định được thực hiện
+**Then** backend từ chối mà không ghi một phần hoặc lặp history.
 
-**Given** PI/team/secretary or an unauthorized external participant requests data
-**When** synthesis and review material have not been disclosed
-**Then** protected identity/score/comment/synthesis fields are omitted across every
-implemented API, file, history, list/count, export and notification projection.
+**Given** synthesis đã chốt hoặc đã vào luồng tờ trình
+**When** có thao tác sửa thông thường
+**Then** bị từ chối; mọi mở lại/sửa đổi sau đó cần workflow được phê duyệt rõ ràng
+(ví dụ tờ trình bị trả lại kèm lý do), không ghi đè âm thầm.
+
+**Given** PI/team/secretary hoặc external participant không được phép yêu cầu dữ liệu
+**When** synthesis và review material chưa được công bố
+**Then** identity/score/comment/synthesis được bảo vệ bị loại khỏi mọi API, file, history,
+list/count, export và notification projection.
 
 ### Story 5.6: Thư ký khoa học hỗ trợ hành chính cho quy trình đánh giá [FR6d]
 
@@ -2555,7 +2991,7 @@ So that quy trình đánh giá được hỗ trợ mà không trao quyền chuy�
 **Then** service chỉ cung cấp input đã được policy phê duyệt cho action đó
 **And** draft không làm lộ reviewer identity hoặc raw content qua file/notification/history.
 
-**Given** secretary cố assign reviewer, submit score, thay membership, consolidate như chuyên viên, approve hoặc reject
+**Given** secretary cố assign reviewer, submit score, thay membership, consolidate như TP/TB/CV, lập hoặc duyệt tờ trình, approve hoặc reject
 **When** request được gửi
 **Then** backend từ chối theo action/non-delegable registry
 **And** blocked action vẫn hiện với lý do dễ hiểu nếu UX yêu cầu.
@@ -2565,16 +3001,21 @@ So that quy trình đánh giá được hỗ trợ mà không trao quyền chuy�
 **Then** capability bị thu hồi tại request hiện hành
 **And** tài liệu đã tạo vẫn được bảo tồn theo quyền của hồ sơ.
 
+**Given** actor là thư ký hội đồng đánh giá của hồ sơ (note 6), khác với `TOPIC_SECRETARY`
+**When** họ soạn dự thảo tổng hợp đánh giá hoặc biên bản họp hội đồng
+**Then** backend cho phép soạn trong phạm vi hội đồng đó mà không cho chấm điểm
+**And** `TOPIC_SECRETARY` không nhận quyền này vì là người tham gia hồ sơ.
+
 ### Story 5.7: Lãnh đạo xem hồ sơ trình quyết định [FR20]
 
-As a người có thẩm quyền phê duyệt,
-I want xem hồ sơ, lịch sử và bản tổng hợp được phép,
+As a GĐ (`LEADERSHIP_APPROVAL_AUTHORITY`),
+I want xem hồ sơ, lịch sử, bản tổng hợp và lịch sử tờ trình được phép,
 So that tôi có đủ căn cứ trước khi ra quyết định.
 
 **Acceptance Criteria:**
 
-**Given** proposal ở `ready_for_approval`, actor có explicit approval authority
-scope hợp lệ và record đã được route
+**Given** proposal ở `ready_for_approval`, actor là GĐ có scope hợp lệ và tờ trình
+`DECISION_PACKAGE` đã qua bước TB và TP (`HEAD_REVIEW`)
 **When** họ mở hồ sơ trình
 **Then** response gồm proposal version, submission history, supporting files, consolidation và decision capability cần thiết
 **And** disclosure chỉ mở dữ liệu đúng duty của actor.
@@ -2599,14 +3040,14 @@ scope hợp lệ và record đã được route
 **Then** UI yêu cầu tải lại context
 **And** mutation sau đó không thể dùng dữ liệu cũ.
 
-**Given** leadership có authority/scope rõ ràng, proposal đã được staff trình và
+**Given** GĐ có scope rõ ràng, proposal đã được trình qua luồng tờ trình (người lập → TB → TP) và
 không có participation/reviewer conflict
 **When** mở queue hoặc package
 **Then** server lọc queue/count trước khi trả; package dùng đúng submitted proposal,
 file versions, submitted reviews và consolidation version đã trình
 **And** không chỉ trả attachment count hoặc dùng mutable current data thay evidence.
 
-**Given** role leadership nhưng thiếu scope/duty, chưa được trình hoặc có conflict
+**Given** actor là PGĐ-KH, PGĐ-TD hoặc GĐ thiếu scope, hồ sơ chưa qua `HEAD_REVIEW` hoặc có conflict
 **When** gọi decision package, review-progress, file hoặc queue endpoint
 **Then** không trả private package/roster/raw review; route biết trước không vượt quyền;
 trên proposal còn được xem qua quan hệ khác chỉ hiện action liên quan disabled với lý do an toàn
@@ -2614,18 +3055,18 @@ trên proposal còn được xem qua quan hệ khác chỉ hiện action liên q
 
 ### Story 5.8: Phê duyệt, từ chối và công bố kết quả đề xuất [FR21, FR22]
 
-As a người có thẩm quyền phê duyệt,
-I want ghi quyết định hợp lệ và công bố mức thông tin được phép,
+As a GĐ (`LEADERSHIP_APPROVAL_AUTHORITY`),
+I want ghi quyết định đề tài cùng kinh phí hợp lệ và công bố mức thông tin được phép,
 So that proposal kết thúc quy trình minh bạch mà không lộ phản biện nội bộ.
 
 **Acceptance Criteria:**
 
-**Given** Leadership attempts approve/reject
+**Given** GĐ attempts approve/reject of topic and funding
 **When** the backend evaluates the action inside the proposal mutation
-**Then** only active `LEADERSHIP_APPROVAL_AUTHORITY` with explicit scope and no
-participation/reviewer conflict may decide, after current completeness, all required
-submitted reviews, finalized synthesis and explicit package submission are rechecked
-**And** Staff, Head and `RESEARCH_OVERSIGHT_AUTHORITY` have no final decision authority.
+**Then** only active `LEADERSHIP_APPROVAL_AUTHORITY` (GĐ) with explicit scope and no
+participation/reviewer/council conflict may decide, after current completeness, all required
+submitted reviews, finalized synthesis and a `DECISION_PACKAGE` submission that passed TB and TP are rechecked
+**And** TP, PP, TB, CV, `SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH), `RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD), QT and reviewers have no topic decision authority.
 
 
 **Given** proposal ở `ready_for_approval`, actor không conflict và có exact decision action
@@ -2655,7 +3096,7 @@ submitted reviews, finalized synthesis and explicit package submission are reche
 
 **Given** current package/context và exact `proposal.decision.approve` hoặc
 `proposal.decision.reject` từ backend
-**When** leadership xác nhận approve, hoặc reject với lý do không rỗng
+**When** GĐ xác nhận approve (đề tài và kinh phí cùng nhau), hoặc reject với lý do không rỗng
 **Then** transaction recheck current account/scope/conflict, readiness và package version,
 liên kết decision với evidence đã xem và ghi published summary riêng với internal note
 **And** chuyển `ready_for_approval` → `approved` | `rejected` đúng một lần;
@@ -2667,11 +3108,125 @@ không tự tạo approved project, mở vòng review mới hoặc cho reviewer 
 là dữ liệu được duyệt để công bố, không sao chép raw comments/internal consolidation
 **And** notification retries không lặp business event; lỗi delivery không rollback decision.
 
+### Story 5.9: Luồng tờ trình CV → TB → TP → BGĐ [FR71]
+
+As a CV³ (hoặc TB¹/TP¹) lập tờ trình,
+I want trình mọi thủ tục cần BGĐ ký qua một luồng thống nhất qua TB và TP,
+So that không thủ tục nào tới Ban giám đốc mà thiếu bước rà soát và duyệt của Phòng KHQS.
+
+**Acceptance Criteria:**
+
+**Given** một thủ tục thuộc tám loại `EVALUATION_COUNCIL`, `DECISION_PACKAGE`, `IRB_COUNCIL`, `IRB_CERTIFICATE`, `ACCEPTANCE_COUNCIL`, `PROJECT_EXTENSION`, `PROJECT_ADJUSTMENT`, `LIQUIDATION`
+**When** tác giả có quyền (TP¹, TB¹ hoặc CV³) lập tờ trình
+**Then** hệ thống tạo một `approval_submissions` gắn loại, đối tượng nguồn, tác giả và người ký theo loại: `DIRECTOR` cho `DECISION_PACKAGE` và `LIQUIDATION`, `DIRECTOR_OR_SCIENCE_DEPUTY` cho sáu loại còn lại
+**And** mỗi loại và đối tượng chỉ có tối đa một submission đang mở.
+
+**Given** tờ trình do CV hoặc TP lập
+**When** được trình
+**Then** submission bắt đầu ở stage `BOARD_REVIEW` với status `PENDING`
+**And** tờ trình do TB lập bắt đầu ở `HEAD_REVIEW`; tờ trình do TP lập vẫn qua bước TB.
+
+**Given** submission ở `BOARD_REVIEW`
+**When** TB¹ không phải tác giả rà soát
+**Then** TB chuyển sang `HEAD_REVIEW` hoặc trả lại tác giả với lý do bắt buộc
+**And** TB không rà soát tờ trình mình lập.
+
+**Given** submission ở `HEAD_REVIEW`
+**When** TP¹ không phải tác giả duyệt
+**Then** TP chuyển sang `LEADERSHIP` hoặc trả lại tác giả với lý do bắt buộc
+**And** PP không có bước nào trong luồng, kể cả khi TP vắng.
+
+**Given** submission ở `LEADERSHIP`
+**When** người ký đúng loại (GĐ; hoặc GĐ/PGĐ-KH) không conflict ký
+**Then** submission chuyển `CLOSED` / `APPROVED` và thay đổi nguồn được áp dụng atomically trong cùng transaction
+**And** người ký là participant, reviewer hoặc thành viên hội đồng trên record bị từ chối.
+
+**Given** bất kỳ actor nào cố bỏ bước, tự rà soát/duyệt tờ trình mình lập, xử lý ngoài unit scope hoặc dùng context cũ
+**When** request được gửi
+**Then** backend từ chối không ghi một phần
+**And** PP, PGĐ-TD, QT, NCV và NNB không có action nào trong luồng.
+
+**Given** mỗi lần submit, forward, return, approve hoặc sign
+**When** action hoàn tất
+**Then** audit ghi actor, submission, loại thủ tục, bước, quyết định, lý do và thời điểm
+**And** người ở bước kế tiếp hoặc tác giả (khi bị trả lại) nhận thông báo; lịch sử bước hiển thị theo scope.
+
+**Given** submission ở trạng thái `RETURNED`, `REJECTED` hoặc `CANCELLED`
+**When** người dùng xem hồ sơ nguồn
+**Then** trạng thái và lý do hiển thị read-only theo scope
+**And** quy tắc ai được đặt `REJECTED`/`CANCELLED` theo bản routing của `tuan/DocManS` khi port (câu hỏi mở).
+
+### Story 5.10: BGĐ ký thành lập hội đồng đánh giá và quyết định đề tài cùng kinh phí [FR73, FR20]
+
+As a GĐ hoặc PGĐ-KH,
+I want ký thành lập hội đồng đánh giá sau khi mọi thành viên đã chấp nhận, và (riêng GĐ) quyết định đề tài cùng kinh phí,
+So that hội đồng và quyết định cuối có thẩm quyền đúng ma trận ký.
+
+**Acceptance Criteria:**
+
+**Given** hội đồng đánh giá có mọi thành viên đã chấp nhận lời mời
+**When** TP¹/TB¹/CV³ lập tờ trình `EVALUATION_COUNCIL`
+**Then** submission đi qua Story 5.9
+**And** nếu còn thành viên chưa chấp nhận hoặc đã từ chối, backend từ chối lập tờ trình.
+
+**Given** tờ trình `EVALUATION_COUNCIL` ở stage `LEADERSHIP`
+**When** GĐ hoặc PGĐ-KH không conflict ký
+**Then** hội đồng được thành lập và thành viên đã chấp nhận mới được đọc hồ sơ
+**And** audit ghi người ký và thời điểm.
+
+**Given** tờ trình `DECISION_PACKAGE` ở stage `LEADERSHIP`
+**When** GĐ phê duyệt hoặc từ chối (lý do bắt buộc khi từ chối)
+**Then** đề tài và kinh phí được quyết định cùng nhau qua Story 5.8
+**And** PGĐ-KH, PGĐ-TD, TP, PP, TB, CV, QT và reviewer không có quyền quyết định đề tài.
+
+**Given** người ký là PI, thành viên, reviewer hoặc thành viên hội đồng của hồ sơ
+**When** họ cố ký hoặc quyết định
+**Then** backend từ chối do conflict
+**And** action hiển thị bị khóa kèm lý do.
+
+### Story 5.11: Delta cho 5.3: TP¹/TB¹/CV³ phân công, ứng viên ngoài QT, chấp nhận/từ chối [FR17]
+
+As a TP¹, TB¹ hoặc CV³ phụ trách hồ sơ,
+I want mời reviewer và thành viên hội đồng từ mọi tài khoản có lý lịch khoa học trừ QT,
+So that Story 5.3 (đang review, giữ nguyên AC) vận hành đúng mô hình mười vai trò.
+
+**Acceptance Criteria:**
+
+**Given** proposal đã xác nhận đầy đủ cho phiên bản nộp hiện tại
+**When** TP¹, TB¹ hoặc CV³ tìm ứng viên hoặc phân công/thu hồi
+**Then** backend cho phép theo scope (TP/TB unit scope, CV chỉ hồ sơ mình phụ trách) cùng các kiểm tra eligibility và conflict của Story 5.3
+**And** PP, BGĐ, QT và CV không phụ trách hồ sơ bị từ chối.
+
+**Given** ứng viên là bất kỳ tài khoản active có lý lịch khoa học (GĐ, PGĐ-KH, PGĐ-TD, TP, PP, TB, CV, NCV, NNB)
+**When** ứng viên không phải người tham gia hồ sơ và không có conflict
+**Then** ứng viên có thể được mời
+**And** QT không bao giờ xuất hiện trong danh sách ứng viên.
+
+**Given** người phân công tự chọn chính mình
+**When** phân công được xác nhận
+**Then** backend từ chối tự phân công theo quy tắc loại trừ cuối matrix §8
+**And** quy tắc "kể cả chính mình" của Story 5.3 không còn áp dụng.
+
+**Given** người được mời
+**When** họ chấp nhận hoặc từ chối (từ chối bắt buộc lý do)
+**Then** quyết định được lưu với history/audit
+**And** trước khi chấp nhận họ chỉ thấy tên, vai trò, hạn và người mời; mọi vai trò được mời vào hội đồng đều chấm điểm.
+
+**Given** quy tắc roster "đúng hai reviewer và ít nhất ba committee member" của Story 5.3
+**When** delta này được triển khai
+**Then** quy tắc được giữ nguyên (câu hỏi mở, chưa có trong matrix)
+**And** không thay đổi điều kiện readiness.
+
 ## Epic 6: Theo dõi và nghiệm thu đề tài đã phê duyệt
 
-Chủ nhiệm, thành viên, chuyên viên và người có thẩm quyền có thể quản lý tiến
-độ, báo cáo, điều chỉnh, gia hạn, hồ sơ nghiệm thu và quyết định cuối của đề
-tài.
+Chủ nhiệm, thành viên, CV phụ trách, TB/TP (bước tờ trình) và người ký BGĐ có thể
+quản lý tiến độ, báo cáo, điều chỉnh, gia hạn, kinh phí, hồ sơ nghiệm thu, thanh lý
+và quyết định cuối của đề tài.
+
+> Role names and decision rights in the done and in-flight stories of this epic
+> predate the 10-role model; see `docs/permission-matrix.md`. In-flight Stories
+> 6.1–6.7 and 6.10 keep their ACs; the routed adjustment/extension decision is
+> delta Story 6.11 and funding/liquidation is Story 6.12.
 
 ### Story 6.1: Khởi tạo đề tài từ proposal được phê duyệt [FR23]
 
@@ -2963,12 +3518,12 @@ So that đề tài có thể được xem xét kết thúc theo quy trình.
 **Given** hồ sơ đầy đủ và actor có quyền
 **When** PI xác nhận nộp
 **Then** dossier chuyển state atomically, khóa submitted version và tạo history/audit
-**And** không tạo bất kỳ approval/final-decision authority cho PI.
+**And** không tạo bất kỳ approval/final-decision authority cho PI; CV phụ trách nhận việc chuẩn bị hội đồng nghiệm thu.
 
 ### Story 6.9: Rà soát và quyết định nghiệm thu hoặc đánh giá cuối [FR28]
 
-As a chuyên viên hoặc người có thẩm quyền được phân công,
-I want rà soát và ra quyết định đối với hồ sơ nghiệm thu,
+As a CV³ phụ trách đề tài, TB/TP ở bước tờ trình hoặc GĐ/PGĐ-KH ký,
+I want rà soát hồ sơ nghiệm thu, lập hội đồng nghiệm thu qua tờ trình và ra quyết định,
 So that kết quả cuối của đề tài có căn cứ và không bị tự phê duyệt.
 
 **Acceptance Criteria:**
@@ -2976,12 +3531,17 @@ So that kết quả cuối của đề tài có căn cứ và không bị tự p
 **Given** a participant is selected for evaluation/acceptance council or final decision on the same project
 **When** assignment changes or the protected evaluation/decision executes
 **Then** conflict denies; same-round reviewer/final-decision and mutually exclusive council positions are also checked
-**And** Head/Staff management visibility cannot bypass these rules or leadership decision authority.
+**And** TP/TB/CV management visibility or Academy-wide project view cannot bypass these rules or BGĐ signature authority.
 
 **Given** dossier đã nộp
-**When** chuyên viên completeness review
-**Then** họ có thể yêu cầu bổ sung hoặc route hồ sơ đủ điều kiện sang bước quyết định
+**When** CV³ phụ trách completeness review
+**Then** họ có thể yêu cầu bổ sung, hoặc mời thành viên hội đồng nghiệm thu (mọi vai trò trừ QT, không phải người tham gia) và sau khi mọi thành viên chấp nhận thì lập tờ trình `ACCEPTANCE_COUNCIL`
 **And** state/history/notification thay đổi atomically.
+
+**Given** tờ trình `ACCEPTANCE_COUNCIL` đã qua TB và TP
+**When** GĐ hoặc PGĐ-KH không conflict ký thành lập hội đồng nghiệm thu
+**Then** hội đồng được thành lập và thành viên mới được đọc dossier
+**And** chữ ký không do TP, TB, CV, PP hay PGĐ-TD thực hiện.
 
 **Given** actor có final-review/acceptance decision assignment và không conflict
 **When** họ xem dossier
@@ -3030,6 +3590,67 @@ So that các tích hợp sau có nguồn dữ liệu hoàn chỉnh và an toàn.
 **Then** source trả canonical failure code
 **And** không cung cấp partial data có thể làm sai queue hoặc dashboard.
 
+### Story 6.11: Delta GF4: điều chỉnh/gia hạn qua tờ trình, GĐ hoặc PGĐ-KH ký [FR28, FR73]
+
+As a CV³ phụ trách đề tài,
+I want thẩm định yêu cầu điều chỉnh hoặc gia hạn và trình qua luồng tờ trình để GĐ hoặc PGĐ-KH ký,
+So that thay đổi kế hoạch đề tài có đúng người ký thay cho đường quyết định Staff/Head của Stories 6.6–6.7.
+
+**Acceptance Criteria:**
+
+**Given** PI đã nộp Project Adjustment (mốc, phạm vi/kế hoạch, thành viên, có hoặc không đổi kinh phí) hoặc Project Extension (ngày kết thúc muộn hơn)
+**When** CV³ phụ trách thẩm định
+**Then** CV ghi kết quả thẩm định và lập tờ trình `PROJECT_ADJUSTMENT` hoặc `PROJECT_EXTENSION` qua Story 5.9
+**And** thẩm định tự nó không áp dụng thay đổi nào cho đề tài.
+
+**Given** tờ trình đã qua TB và TP và ở stage `LEADERSHIP`
+**When** GĐ hoặc PGĐ-KH không conflict ký
+**Then** request và thay đổi đề tài (kế hoạch/mốc/thành viên/kinh phí, hoặc ngày kết thúc và version) được áp dụng atomically
+**And** history/audit ghi trước/sau, người ký và thời điểm.
+
+**Given** CV, TP, TB, PP, PGĐ-TD, QT, PI, thành viên hoặc reviewer
+**When** họ cố phê duyệt hoặc từ chối cuối cùng một điều chỉnh/gia hạn
+**Then** backend trả `ACTION_NOT_GRANTED` hoặc conflict denial và không thay đổi request hay đề tài
+**And** đường quyết định cuối của Staff (điều chỉnh) và Head (gia hạn) trong Stories 6.6–6.7 bị thay thế.
+
+**Given** không có actor đủ điều kiện ở bước TB/TP hoặc không có người ký GĐ/PGĐ-KH không conflict
+**When** request không thể được quyết định
+**Then** PI rút request theo đường rút hiện có (`project.adjustment.withdraw`, `project.extension.withdraw`) để giải phóng đề tài
+**And** quy tắc này được hiển thị cho PI kèm lý do bị chặn.
+
+**Given** tên trạng thái cũ `under_staff_review`, `under_staff_validation`, `ready_for_head_decision`
+**When** delta được triển khai
+**Then** các trạng thái này được đối chiếu với giai đoạn và trạng thái routing (matrix §6)
+**And** story không tự đặt tên trạng thái mới; tên cuối cùng theo quyết định của Architect.
+
+### Story 6.12: Kinh phí dạng metadata và thanh lý [FR74]
+
+As a GĐ, TP/TB hoặc CV³ phụ trách đề tài,
+I want ghi nhận số liệu cấp, giải ngân, quyết toán kinh phí kèm tài liệu và trình thanh lý,
+So that kinh phí đề tài truy vết được mà không biến hệ thống thành sổ kế toán.
+
+**Acceptance Criteria:**
+
+**Given** đề tài đang thực hiện
+**When** GĐ, TP/TB (toàn Học viện) hoặc CV³ phụ trách ghi số liệu cấp, giải ngân hoặc quyết toán kèm tài liệu
+**Then** backend lưu metadata có version và audit (actor, đề tài, số tiền/tài liệu, thời điểm)
+**And** không có sổ cái, thanh toán, ngân hàng hay tích hợp ERP.
+
+**Given** người xem kinh phí theo đề tài
+**When** dữ liệu được trả
+**Then** GĐ, PGĐ-KH, TP, TB xem tất cả; CV chỉ đề tài phụ trách; PP, PI và thành viên chỉ đề tài mình tham gia
+**And** PGĐ-TD chỉ thấy số liệu tổng hợp, cột kinh phí từng đề tài để trống.
+
+**Given** PGĐ-KH, PGĐ-TD, PP, QT, PI hoặc thành viên
+**When** họ cố sửa số liệu kinh phí
+**Then** backend từ chối
+**And** thay đổi kinh phí qua điều chỉnh đề tài đi theo Story 6.11.
+
+**Given** đề tài đủ điều kiện thanh lý
+**When** CV³ phụ trách lập biên bản thanh lý và trình tờ trình `LIQUIDATION`
+**Then** submission đi qua TB → TP theo Story 5.9 và chỉ GĐ được ký
+**And** PGĐ-KH không ký thanh lý; chữ ký áp dụng kết quả thanh lý atomically với audit.
+
 ## Epic 7: Giao việc và theo dõi thực hiện
 
 Người dùng có thể tạo, giao, phối hợp và hoàn tất công việc độc lập hoặc gắn với
@@ -3062,6 +3683,11 @@ So that công việc có mục tiêu, người chịu trách nhiệm và ngữ c
 **When** họ cố tạo linked task
 **Then** backend fail closed
 **And** không tạo task độc lập bị mất liên kết để né policy.
+
+**Given** actor là QT hoặc BGĐ (GĐ, PGĐ-KH, PGĐ-TD)
+**When** họ cố tạo task
+**Then** backend từ chối vì QT/BGĐ không tạo task
+**And** TP/TB/CV chỉ tạo task trong phạm vi của mình (CV trên hồ sơ mình phụ trách), PI trong đề tài của mình.
 
 ### Story 7.2: Phân công và quản lý vòng đời người thực hiện [FR32]
 
@@ -3177,12 +3803,13 @@ So that tôi có thể ưu tiên xử lý đúng lúc.
 
 ## Epic 8: Quản lý seminar và nghiên cứu sinh viên
 
-Chuyên viên có thể quản lý kế hoạch, mốc, điều chỉnh, sản phẩm, kết quả và lịch
-sử của seminar hoặc hoạt động nghiên cứu sinh viên.
+CV có thể quản lý kế hoạch, mốc, điều chỉnh, sản phẩm, kết quả và lịch sử của
+seminar hoặc hoạt động nghiên cứu sinh viên; đề tài sinh viên NCKH do CV/NCV đăng
+ký với tư cách giảng viên hướng dẫn và CV¹ duyệt, quản lý, hoàn thành (Story 8.6).
 
 ### Story 8.1: Tạo hoặc nhập bản ghi hoạt động đã được phê duyệt [FR50]
 
-As a chuyên viên quản lý khoa học,
+As a CV (chuyên viên QLKH),
 I want tạo hoặc nhập seminar/nghiên cứu sinh viên từ quyết định nguồn,
 So that hoạt động được theo dõi với đơn vị, người tham gia và căn cứ rõ ràng.
 
@@ -3199,7 +3826,7 @@ So that hoạt động được theo dõi với đơn vị, người tham gia v�
 **And** không tạo global role hoặc quyền ngoài record.
 
 **Given** source reference đã tồn tại hoặc payload import không đơn nghĩa
-**When** chuyên viên xác nhận
+**When** CV xác nhận
 **Then** hệ thống từ chối duplicate/ambiguous record
 **And** cung cấp báo cáo lỗi mà không tạo dữ liệu một phần.
 
@@ -3210,7 +3837,7 @@ So that hoạt động được theo dõi với đơn vị, người tham gia v�
 
 ### Story 8.2: Quản lý kế hoạch, mốc, tài liệu và ghi chú hành chính [FR51]
 
-As a chuyên viên hoặc người phụ trách được phép,
+As a CV hoặc người phụ trách được phép,
 I want duy trì kế hoạch và các mốc của hoạt động,
 So that lịch thực hiện và tài liệu hỗ trợ luôn cập nhật.
 
@@ -3238,7 +3865,7 @@ So that lịch thực hiện và tài liệu hỗ trợ luôn cập nhật.
 
 ### Story 8.3: Ghi nhận điều chỉnh, kinh phí, sản phẩm và kết quả [FR52]
 
-As a chuyên viên hoặc người phụ trách được phép,
+As a CV hoặc người phụ trách được phép,
 I want ghi nhận thay đổi, kinh phí và đầu ra của hoạt động,
 So that kết quả thực tế có thể đối chiếu với kế hoạch.
 
@@ -3294,7 +3921,7 @@ So that tôi biết việc đã hoàn tất và bước tiếp theo.
 
 ### Story 8.5: Danh sách được phân quyền và contract tích hợp hoạt động [FR53]
 
-As a chuyên viên hoặc người tham gia,
+As a CV hoặc người tham gia,
 I want tìm và theo dõi các hoạt động trong phạm vi của mình,
 So that reminder, dashboard và báo cáo có nguồn dữ liệu đáng tin cậy.
 
@@ -3320,6 +3947,29 @@ So that reminder, dashboard và báo cáo có nguồn dữ liệu đáng tin c�
 **Then** source fail closed
 **And** không trả partial aggregation hoặc count sai.
 
+### Story 8.6: Đăng ký và duyệt đề tài sinh viên NCKH [FR50, FR51, FR52, FR53]
+
+As a CV hoặc NCV làm giảng viên hướng dẫn,
+I want đăng ký đề tài sinh viên NCKH và để CV¹ duyệt, quản lý, hoàn thành,
+So that đề tài sinh viên được theo dõi đúng ma trận §9.6.
+
+**Acceptance Criteria:**
+
+**Given** actor là CV hoặc NCV
+**When** họ đăng ký đề tài sinh viên với tư cách giảng viên hướng dẫn
+**Then** backend lưu đăng ký của chính họ với audit
+**And** QT, BGĐ, TP, PP, TB và NNB không đăng ký được.
+
+**Given** đăng ký đang chờ trong unit scope
+**When** CV¹ duyệt, quản lý hoặc hoàn thành đề tài
+**Then** trạng thái chuyển theo state machine với history/audit
+**And** vai trò khác không có action duyệt, quản lý hoặc hoàn thành.
+
+**Given** seminar records
+**When** story này được triển khai
+**Then** quyền seminar giữ nguyên như Stories 8.1–8.5
+**And** quyền seminar là câu hỏi mở chưa có trong matrix.
+
 ## Epic 9: Quản lý văn bản liên quan
 
 Người dùng có thẩm quyền có thể đăng ký, liên kết, thay thế và truy xuất văn bản
@@ -3327,7 +3977,7 @@ theo hiệu lực, phiên bản và phạm vi dữ liệu.
 
 ### Story 9.1: Đăng ký văn bản và tệp nội dung [FR54]
 
-As a người quản lý văn bản được phép,
+As a người quản lý văn bản khoa học (QT, TP, TB hoặc CV),
 I want đăng ký văn bản với metadata và bản tệp chính thức,
 So that hệ thống có một sổ văn bản thống nhất và có khả năng truy vết.
 
@@ -3348,7 +3998,7 @@ So that hệ thống có một sổ văn bản thống nhất và có khả năn
 **Then** hệ thống không tạo current document/version một phần
 **And** trả lỗi gắn đúng field/file.
 
-**Given** actor ngoài scope hoặc không có action
+**Given** actor ngoài scope, không có action hoặc không phải QT/TP/TB/CV (BGĐ, PP, NCV, NNB)
 **When** họ gọi register API
 **Then** backend từ chối
 **And** audit không tiết lộ metadata của văn bản ngoài quyền.
@@ -3383,7 +4033,7 @@ So that căn cứ và tài liệu liên quan được truy cập từ đúng ng�
 
 ### Story 9.3: Quản lý phiên bản, thay thế và trạng thái hiệu lực [FR56]
 
-As a người quản lý văn bản,
+As a người quản lý văn bản khoa học (QT, TP, TB hoặc CV),
 I want thay thế văn bản và quản lý hiệu lực,
 So that người dùng nhận biết bản hiện hành, hết hiệu lực hoặc bị thay thế.
 
@@ -3439,7 +4089,7 @@ So that tôi nhanh chóng lấy đúng căn cứ đang áp dụng.
 
 ### Story 9.5: Nhắc hiệu lực và contract tích hợp văn bản [FR56, FR57]
 
-As a chuyên viên quản lý khoa học,
+As a người quản lý văn bản khoa học (QT, TP, TB hoặc CV),
 I want phát hiện văn bản sắp hết hiệu lực hoặc thiếu liên kết,
 So that các workflow sử dụng căn cứ đúng và được cập nhật kịp thời.
 
@@ -3467,14 +4117,14 @@ So that các workflow sử dụng căn cứ đúng và được cập nhật k�
 
 ## Epic 10: Hội đồng và hồ sơ đạo đức
 
-Chuyên viên, chủ nhiệm, thư ký, thành viên hội đồng và người có thẩm quyền có
-thể xử lý kế hoạch hội đồng hoặc hồ sơ đạo đức trọn vòng đời với đánh giá và
-quyết định đúng phân công.
+TP¹/TB¹/CV³, chủ nhiệm, thư ký hội đồng, thành viên hội đồng/IRB và người ký BGĐ
+(GĐ hoặc PGĐ-KH) có thể xử lý kế hoạch hội đồng hoặc hồ sơ đạo đức (IRB) trọn vòng
+đời với đánh giá, tờ trình và chữ ký đúng phân công.
 
 ### Story 10.1: Lập kế hoạch hội đồng, thành viên và căn cứ liên quan [FR58]
 
-As a chuyên viên quản lý khoa học,
-I want lập kế hoạch hội đồng với mục đích, lịch, thành viên và căn cứ,
+As a TP¹, TB¹ hoặc CV³ phụ trách hồ sơ,
+I want lập kế hoạch hội đồng (đánh giá, nghiệm thu, IRB) với mục đích, lịch, thành viên và căn cứ,
 So that mỗi hội đồng có phạm vi và trách nhiệm được phê chuẩn rõ ràng.
 
 **Acceptance Criteria:**
@@ -3484,7 +4134,7 @@ So that mỗi hội đồng có phạm vi và trách nhiệm được phê chu�
 **Then** backend validate và tạo council ở controlled initial state
 **And** lưu source record/context versions cho các liên kết.
 
-**Given** active user accounts được đề xuất cho chair/member/reviewer/secretary roles
+**Given** active user accounts có lý lịch khoa học (mọi vai trò trừ QT) được mời cho chair/member/reviewer/secretary roles
 **When** assignment preflight chạy
 **Then** hệ thống kiểm tra account status, active participation, organization rule,
 multiplicity và conflict; linked profile nếu có chỉ là provenance
@@ -3492,8 +4142,13 @@ multiplicity và conflict; linked profile nếu có chỉ là provenance
 council và evaluation round; không tạo assignment khi context unresolved/stale,
 candidate xung đột hoặc interval trùng/chồng lấn.
 
+**Given** người được mời vào hội đồng
+**When** họ chấp nhận hoặc từ chối (từ chối bắt buộc lý do)
+**Then** quyết định được lưu với history/audit
+**And** tờ trình thành lập hội đồng (`EVALUATION_COUNCIL`, `ACCEPTANCE_COUNCIL` hoặc `IRB_COUNCIL`) chỉ được lập khi mọi thành viên đã chấp nhận; thành viên chỉ đọc hồ sơ sau khi GĐ hoặc PGĐ-KH ký.
+
 **Given** legal/administrative document đã tồn tại trong Epic 9
-**When** chuyên viên có quyền ở cả hai phía tạo council-document association
+**When** TP¹/TB¹/CV³ có quyền ở cả hai phía tạo council-document association
 **Then** typed link được tạo và audit
 **And** document scope không bị mở rộng cho unrelated council actors.
 
@@ -3537,13 +4192,13 @@ So that hội đồng vận hành đầy đủ mà tôi không có quyền đán
 
 ### Story 10.3: Tạo, hoàn thiện và nộp hồ sơ đạo đức [FR59]
 
-As a chủ nhiệm hoặc chuyên viên được phép,
-I want lập hồ sơ đạo đức với dữ liệu và tệp bắt buộc,
+As a chủ nhiệm hoặc CV³ phụ trách hồ sơ,
+I want lập hồ sơ đạo đức (IRB) với dữ liệu và tệp bắt buộc,
 So that nghiên cứu có thể được hội đồng xem xét chính thức.
 
 **Acceptance Criteria:**
 
-**Given** target proposal/project phù hợp và actor là PI hoặc staff có exact create action
+**Given** target proposal/project phù hợp và actor là PI hoặc CV³ phụ trách có exact create action
 **When** họ tạo ethics dossier
 **Then** dossier lưu source record/version, applicant, organization và initial state
 **And** PI relationship được lấy từ source record chứ không từ global role.
@@ -3554,7 +4209,7 @@ So that nghiên cứu có thể được hội đồng xem xét chính thức.
 **And** metadata/file access kiểm tra cả ethics dossier và source disclosure.
 
 **Given** dossier đạt readiness và actor có `ethics-dossier.submit`
-**When** PI, authorized staff hoặc delegate submit hợp lệ xác nhận
+**When** PI, CV³ phụ trách hoặc delegate submit hợp lệ xác nhận
 **Then** state chuyển atomically và submitted version bị khóa
 **And** history/audit ghi actor, grantor context nếu có và source versions.
 
@@ -3565,19 +4220,19 @@ So that nghiên cứu có thể được hội đồng xem xét chính thức.
 
 ### Story 10.4: Kiểm tra hồ sơ đạo đức và xử lý bổ sung [FR60]
 
-As a chuyên viên quản lý khoa học,
-I want kiểm tra tính đầy đủ và yêu cầu bổ sung hồ sơ đạo đức,
+As a TB¹ hoặc CV³ phụ trách hồ sơ,
+I want kiểm tra tính đầy đủ và yêu cầu bổ sung hồ sơ đạo đức (IRB),
 So that chỉ hồ sơ hợp lệ được đưa vào đánh giá.
 
 **Acceptance Criteria:**
 
 **Given** dossier đã nộp trong scope
-**When** chuyên viên completeness review
+**When** TB¹ hoặc CV³ completeness review
 **Then** họ xem structured data, checklist, source context và attachment được phép
 **And** capability phản ánh state hiện hành.
 
 **Given** hồ sơ thiếu
-**When** chuyên viên tạo supplement request với reason, section/file và due date
+**When** TB¹ hoặc CV³ tạo supplement request với reason, section/file và due date
 **Then** dossier chuyển state atomically
 **And** PI nhận notification tối thiểu, history và audit.
 
@@ -3586,33 +4241,33 @@ So that chỉ hồ sơ hợp lệ được đưa vào đánh giá.
 **Then** version mới được khóa và route lại completeness review
 **And** prior submitted/supplement versions vẫn truy vết được.
 
-**Given** secretary, council member hoặc actor ngoài scope cố quyết định completeness
+**Given** secretary, council member, TP, PP, BGĐ hoặc actor ngoài scope cố quyết định completeness
 **When** request được gửi
 **Then** backend từ chối nếu exact action không được cấp
-**And** không để administrative role suy diễn thành staff authority.
+**And** không để administrative role suy diễn thành quyền của TB/CV.
 
 ### Story 10.5: Phân công hội đồng và reviewer với eligibility/conflict [FR58, FR61]
 
-As a chuyên viên quản lý khoa học,
+As a TP¹, TB¹ hoặc CV³ phụ trách hồ sơ,
 I want phân công người đánh giá đủ điều kiện cho hồ sơ,
 So that đánh giá độc lập, đúng phạm vi và không có tự đánh giá.
 
 **Acceptance Criteria:**
 
 **Given** dossier/council ở state cho phép assignment
-**When** chuyên viên chọn candidate
+**When** TP¹/TB¹/CV³ chọn candidate từ mọi tài khoản có lý lịch khoa học (không bao giờ là QT)
 **Then** preflight kiểm tra active account, active council membership/assignment,
 source participation, organization rule và conflict
 **And** trả allowed/blocked reason cùng context version.
 
-**Given** candidate là PI, topic team member, `TOPIC_SECRETARY` hoặc approver có conflict trên source record
+**Given** candidate là PI, topic team member, `TOPIC_SECRETARY`, người rà soát/duyệt tờ trình hoặc người ký BGĐ có conflict trên source record, hoặc chính actor đang phân công
 **When** assignment được xác nhận
 **Then** backend từ chối `CONFLICT_DENIED`
 **And** không tạo assignment dù candidate giữ system role khác.
 
 **Given** candidate đủ điều kiện
-**When** chuyên viên gán exact evaluation duty, deadline và criteria
-**Then** source council/ethics tạo lifecycle assignment
+**When** TP¹/TB¹/CV³ mời với exact evaluation duty, deadline và criteria
+**Then** source council/ethics tạo lifecycle assignment ở trạng thái chờ chấp nhận; invitee chấp nhận hoặc từ chối kèm lý do
 **And** notification/audit không công bố assignment cho participant audience.
 
 **Given** candidate đã có chair, council secretary, council member hoặc
@@ -3662,21 +4317,26 @@ So that tôi hoàn thành trách nhiệm mà không thấy đánh giá của ng�
 
 ### Story 10.7: Theo dõi, tổng hợp và trình kết quả hội đồng [FR62]
 
-As a chuyên viên quản lý khoa học,
+As a TP¹, TB¹ hoặc CV³ phụ trách hồ sơ,
 I want theo dõi tiến độ và tổng hợp đánh giá hợp lệ,
-So that hồ sơ sẵn sàng được trình người có thẩm quyền.
+So that kết luận hội đồng/IRB sẵn sàng được lập tờ trình và trình BGĐ ký.
 
 **Acceptance Criteria:**
 
 **Given** council/ethics record có các assignment trong scope
-**When** chuyên viên mở progress
+**When** TP¹/TB¹/CV³ mở progress
 **Then** họ thấy status/deadline/completeness được phép của từng assignment
 **And** counts dùng cùng authorization/disclosure policy.
 
 **Given** đủ submitted evaluations
-**When** chuyên viên tạo consolidation
+**When** TP¹/TB¹/CV³ tạo consolidation (thư ký IRB/hội đồng soạn dự thảo kết luận/biên bản, không chấm điểm)
 **Then** summary có version và source evaluation references
 **And** raw evaluation không bị chỉnh sửa hoặc mất truy vết.
+
+**Given** kết luận IRB đã chốt
+**When** TP¹/TB¹/CV³ lập tờ trình `IRB_CERTIFICATE`
+**Then** submission đi qua luồng tờ trình (Story 5.9) tới GĐ hoặc PGĐ-KH ký
+**And** không có đường route trực tiếp bỏ qua bước TB hoặc TP.
 
 **Given** evaluation version thay đổi/thu hồi hoặc context mismatch
 **When** consolidation được route
@@ -3690,19 +4350,19 @@ So that hồ sơ sẵn sàng được trình người có thẩm quyền.
 
 ### Story 10.8: Quyết định hội đồng hoặc hồ sơ đạo đức [FR63]
 
-As a người có thẩm quyền,
-I want approve, reject hoặc disposition hồ sơ theo workflow,
+As a GĐ hoặc PGĐ-KH (người ký BGĐ),
+I want ký thành lập hội đồng (đánh giá, nghiệm thu, IRB) và cấp giấy IRB theo workflow,
 So that kết quả được ghi nhận hợp lệ và có thể công bố đúng mức.
 
 **Acceptance Criteria:**
 
-**Given** record ở pending-decision state và actor có assignment/scope hợp lệ
-**When** họ mở hồ sơ quyết định
+**Given** tờ trình của record đã qua TB và TP (`HEAD_REVIEW`) và actor là GĐ hoặc PGĐ-KH có scope hợp lệ
+**When** họ mở hồ sơ ký
 **Then** response có dossier/council version, allowed internal summary, file và decision capability
 **And** context version bao phủ source record và consolidation.
 
-**Given** actor là PI, participant, reviewer trên chính record, secretary hoặc có conflict
-**When** họ cố quyết định
+**Given** actor là PI, participant, reviewer hoặc thành viên hội đồng trên chính record, secretary, có conflict, hoặc là TP/PP/TB/CV/PGĐ-TD/QT
+**When** họ cố ký hoặc quyết định
 **Then** conflict/non-delegable denial thắng mọi allow
 **And** UI hiển thị action bị khóa với reason.
 
@@ -3761,6 +4421,11 @@ So that tôi biết có phân công, yêu cầu bổ sung, quyết định hoặ
 **When** notification service xử lý event
 **Then** event có stable source ID/version, intended audience, exact target action và idempotency key
 **And** duplicate processing không tạo thông báo nghiệp vụ trùng.
+
+**Given** tờ trình được submit, forward, approve hoặc return
+**When** notification service xử lý event
+**Then** người ở bước kế tiếp (TB, TP hoặc người ký BGĐ của loại thủ tục) hoặc tác giả (khi bị trả lại) nhận thông báo
+**And** PP và PGĐ-TD không nhận thông báo yêu cầu hành động tờ trình.
 
 **Given** recipient được xác định từ relationship/assignment
 **When** thông báo được materialize hoặc đọc
@@ -3841,7 +4506,7 @@ So that tôi không cần chuyển vai trò hoặc dò từng phân hệ.
 
 **Acceptance Criteria:**
 
-**Given** người dùng đã xác thực
+**Given** người dùng đã xác thực với mọi vai trò trừ QT (QT không có khu “Của tôi”)
 **When** personal-work request bắt đầu
 **Then** hệ thống tạo một request-wide `asOf` và gọi mọi enabled source contract
 **And** mỗi source trả `PersonalWorkEntryV1` đã authorization/disclosure.
@@ -3872,7 +4537,7 @@ So that tôi hiểu trách nhiệm của mình trong một workspace duy nhất.
 **Given** personal-work response hợp lệ
 **When** trang “Của tôi” hiển thị
 **Then** có các nhóm hồ sơ chủ trì, hồ sơ tham gia và việc chờ xử lý với role labels, state, due date và contextual action
-**And** trang luôn có trong navigation, không phụ thuộc system role và không có role switcher.
+**And** trang luôn có trong navigation của mọi vai trò trừ QT (QT không có “Của tôi”), không có role switcher.
 
 **Given** entry bị conflict hoặc denial nhưng actor được phép biết record
 **When** UI hiển thị
@@ -3889,6 +4554,34 @@ So that tôi hiểu trách nhiệm của mình trong một workspace duy nhất.
 **Then** layout không tràn trang, focus/labels/counts rõ và trạng thái không chỉ dựa màu
 **And** loading/error/empty states phân biệt được whole-response failure với danh sách thực sự rỗng.
 
+### Story 11.6: Hàng đợi công việc theo vai trò [FR78]
+
+As a người dùng mọi vai trò trừ QT,
+I want một hàng đợi đúng vai trò của mình,
+So that tôi thấy ngay việc chờ tôi rà soát, duyệt, ký, xử lý hoặc chấm điểm.
+
+**Acceptance Criteria:**
+
+**Given** người dùng đăng nhập
+**When** hàng đợi công việc được tải
+**Then** TB thấy tờ trình chờ rà soát, TP thấy tờ trình chờ duyệt, CV thấy hồ sơ mình phụ trách, GĐ thấy quyết định đề tài/kinh phí và chữ ký, PGĐ-KH thấy chữ ký, reviewer thấy lời mời và đánh giá được giao
+**And** QT không có hàng đợi công việc.
+
+**Given** TP mở hàng đợi
+**When** có hồ sơ chưa giao CV
+**Then** nhóm "Chưa có người phụ trách" hiển thị trong phạm vi
+**And** TP có thể giao CV từ đó.
+
+**Given** PP hoặc PGĐ-TD mở hàng đợi
+**When** dữ liệu được tải
+**Then** chỉ có mục theo dõi, không có hành động duyệt, ký hay tờ trình
+**And** PGĐ-TD không thấy kinh phí từng đề tài.
+
+**Given** mục trong hàng đợi bị conflict hoặc state/scope đã đổi
+**When** người dùng mở mục
+**Then** source endpoint re-authorize và hiển thị blocked với lý do
+**And** mục bị chặn không tính vào số đếm actionable.
+
 ## Epic 12: Dashboard, tìm kiếm, báo cáo và xuất dữ liệu
 
 Người dùng có thể tìm kiếm, theo dõi chỉ số, đi đến hồ sơ nguồn và xuất báo cáo
@@ -3902,10 +4595,10 @@ So that tôi nhanh chóng đến đúng bản ghi trong phạm vi của mình.
 
 **Acceptance Criteria:**
 
-**Given** Head filters proposals/projects by responsible Staff or unassigned state
+**Given** TP or TB filters proposals/projects by responsible CV or unassigned state ("Chưa có người phụ trách")
 **When** search, counts or facets run
-**Then** they include only the Head's authorized Scientific Management scope
-**And** Staff cannot use these filters to discover other officers' records; participation-only results grant no management actions.
+**Then** proposals include only their unit scope and projects follow the Academy-wide project view
+**And** a CV cannot use these filters to discover other CVs' records; participation-only results grant no management actions.
 
 **Given** actor tìm trong proposal, project, activity, council/ethics, document, task hoặc report sources
 **When** query được gửi
@@ -3929,16 +4622,21 @@ So that tôi nhanh chóng đến đúng bản ghi trong phạm vi của mình.
 
 ### Story 12.2: Dashboard điều hành theo vai trò và phạm vi [FR45]
 
-As a lãnh đạo hoặc chuyên viên quản lý khoa học,
-I want xem các chỉ số và hàng chờ quan trọng trong phạm vi,
-So that tôi ưu tiên phê duyệt, đề tài chậm, task quá hạn và rủi ro.
+As a người dùng có dashboard nghiệp vụ (mọi vai trò trừ QT),
+I want xem các chỉ số và hàng chờ quan trọng của vai trò mình trong phạm vi,
+So that tôi ưu tiên phê duyệt, chữ ký, tờ trình, đề tài chậm, task quá hạn và rủi ro.
 
 **Acceptance Criteria:**
 
-**Given** Head opens the management dashboard
+**Given** TP or TB opens the management dashboard
 **When** workload, status and deadline widgets load
-**Then** Head can see current responsible Staff and unassigned proposals/projects, filter/group by Staff, and drill down within authorized scope
-**And** Staff management widgets include only their active officer assignments; participation/review work uses its separate access basis.
+**Then** they see the current responsible CV and unassigned proposals/projects, filter/group by responsible CV and by nature (Quân sự / Dân sự / Chưa phân loại), and drill down within authorized scope
+**And** CV management widgets include only their active officer assignments; participation/review work uses its separate access basis.
+
+**Given** GĐ or PGĐ-KH opens the authority dashboard
+**When** widgets load
+**Then** GĐ sees topic/funding decision and signature queues and PGĐ-KH sees signature queues only
+**And** QT has no business dashboard.
 
 **Given** actor có dashboard action và organization scope
 **When** dashboard được tải
@@ -3990,16 +4688,16 @@ So that tôi kiểm tra được số liệu và thực hiện hành động t�
 
 ### Story 12.4: Báo cáo tổng hợp theo phạm vi nghiệp vụ [FR49]
 
-As a lãnh đạo hoặc chuyên viên được phép,
-I want xem báo cáo theo đơn vị, lĩnh vực, trạng thái, kỳ và phân hệ,
+As a người dùng có quyền báo cáo (mọi vai trò trừ QT, trong phạm vi của mình),
+I want xem báo cáo theo năm, đơn vị, cấp, lĩnh vực, tính chất, trạng thái, kỳ và phân hệ,
 So that tôi đánh giá hoạt động nghiên cứu bằng số liệu có nguồn gốc.
 
 **Acceptance Criteria:**
 
 **Given** management workload reporting is requested
-**When** Head groups by responsible Staff, unassigned state, workflow status or deadline
+**When** TP or TB groups by responsible CV, unassigned state, workflow status or deadline
 **Then** reports use the same authorized record set as list/dashboard
-**And** Staff reports do not include others' assignments through role alone.
+**And** CV reports do not include others' assignments through role alone; PGĐ-TD reports show aggregate funding only.
 
 **Given** actor chọn report definition và filter
 **When** report chạy
@@ -4031,7 +4729,7 @@ So that tôi sử dụng số liệu ngoài hệ thống mà vẫn đúng phạm
 
 **Given** management assignment or scope changes after an export request
 **When** export is generated or downloaded
-**Then** current source authorization is rechecked, including officer filters, unassigned scope and disclosure
+**Then** current source authorization is rechecked, including responsible-CV filters, unassigned scope, disclosure and PGĐ-TD aggregate-only funding
 **And** stale responsibility does not preserve export access or leak records through totals/history.
 
 **Given** actor có exact export action và filter/report hợp lệ
@@ -4055,23 +4753,55 @@ So that tôi sử dụng số liệu ngoài hệ thống mà vẫn đúng phạm
 **And** trạng thái success/failure/cancel cùng correlation ID có thể truy vết.
 
 
+### Story 12.6: Dashboard theo dõi cho PP và PGĐ-TD [FR45, FR74]
+
+As a PP hoặc PGĐ-TD,
+I want dashboard theo dõi tiến độ và số lượng trong phạm vi,
+So that tôi giám sát được hoạt động nghiên cứu mà không có quyền duyệt, ký hay xem kinh phí vượt phạm vi.
+
+**Acceptance Criteria:**
+
+**Given** PP mở dashboard
+**When** widget tải
+**Then** PP thấy tiến độ và số lượng đề xuất/đề tài trong unit scope, lọc theo năm, đơn vị, cấp, lĩnh vực và tính chất
+**And** kinh phí từng đề tài chỉ hiện cho đề tài PP là PI/thành viên.
+
+**Given** PGĐ-TD mở dashboard, báo cáo hoặc xuất Excel
+**When** dữ liệu được tính
+**Then** chỉ có số liệu tổng hợp, kể cả kinh phí tổng hợp
+**And** cột kinh phí từng đề tài/đề xuất để trống trên dashboard, drill-down và export.
+
+**Given** PP hoặc PGĐ-TD
+**When** họ cố duyệt, ký, trình tờ trình hoặc sửa dữ liệu từ dashboard
+**Then** không có action nào được cấp
+**And** backend từ chối nếu gọi API trực tiếp.
+
+**Given** count trên dashboard và danh sách drill-down
+**When** cùng filter và source version
+**Then** số liệu khớp và dùng cùng authorization
+**And** breakdown theo CV phụ trách có nhóm "chưa giao".
+
 ## Researcher Profile completion — 2026-09-15
 
 [Researcher Profile / Account / My Profile contract](../docs/contracts/researcher-profile-access.md) is the current
 source of truth for this feature, including API/data fields, authorization,
 credential delivery, migration compatibility and history retention.
 
-- Scoped SYSTEM_ADMIN, SCIENTIFIC_MANAGEMENT_HEAD and SCIENTIFIC_MANAGEMENT_STAFF manage internal/external
-  profiles independently of Accounts, including academic/contact information,
+- QT `SYSTEM_ADMIN` (platform scope) and TP¹/CV¹ (`RESEARCH_MANAGEMENT_HEAD` /
+  `RESEARCH_MANAGEMENT_STAFF`, unit scope) manage internal/external profiles
+  independently of Accounts, including academic/contact information,
   position, military rank, expertise, publications and self-reported project
   history (title, role, Academy/institutional/Ministry/other level, dates, status,
   notes). Profile activation and account activation remain separate actions.
 - Account provisioning creates linked `PENDING_ACTIVATION` researcher accounts:
   INTERNAL profiles provision by default with required email; EXTERNAL profiles
-  provision only when staff/admin checks `Tạo tài khoản truy cập hệ thống`.
+  provision only when the profile manager (QT, TP or CV) checks `Tạo tài khoản truy cập hệ thống`.
+- Every role except QT has a scientific CV and self-updates it through My Profile.
+- A duplicate-profile warning (raised by QT, TP¹ or CV¹) is notified to TB¹ and TP¹,
+  who decide the merge; history is kept (Story 2.7).
 - Activation uses hashed single-use tokens, expires exactly after 48 hours and
   sends only a setup-password link. No temporary password is generated, emailed,
-  persisted, returned to staff or placed in audit.
+  persisted, returned to the profile manager or placed in audit.
 - Login accepts either configured username or account email. Username is optional
   at provisioning, unique when set later by the linked researcher in My Profile,
   and never inferred from email.
@@ -4082,6 +4812,8 @@ credential delivery, migration compatibility and history retention.
   safe transactional change facts.
 
 ## Epic 13: Lý lịch khoa học (BM-06)
+
+> Role names and decision rights in the done and in-flight stories of this epic predate the 10-role model; see `docs/permission-matrix.md`. Epic 13 is done; Story 13.10 already covers own CV for managers.
 
 Mở rộng Epic 2. Nguồn: [SPEC](specs/spec-scientific-cv/SPEC.md) và
 [hợp đồng dữ liệu](specs/spec-scientific-cv/cv-data-contract.md). Tham chiếu hành vi:
