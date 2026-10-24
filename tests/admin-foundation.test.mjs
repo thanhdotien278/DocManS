@@ -144,6 +144,9 @@ function createAdminPrisma() {
       async findUnique({ where }) {
         return store.users.find((user) => user.id === where.id || user.usernameKey === where.usernameKey) ?? null;
       },
+      async findFirst({ where }) {
+        return store.users.find((user) => user.systemRole === where.systemRole && user.status === where.status && user.id !== where.id?.not) ?? null;
+      },
       async create({ data }) {
         const record = { id: "user-created", createdAt: new Date(), updatedAt: new Date(), ...data };
         store.users.push(record);
@@ -153,6 +156,11 @@ function createAdminPrisma() {
         const index = store.users.findIndex((user) => user.id === where.id);
         store.users[index] = { ...store.users[index], ...data, updatedAt: new Date() };
         return store.users[index];
+      }
+    },
+    systemRoleMigrationIssue: {
+      async deleteMany() {
+        return { count: 0 };
       }
     },
     userRoleAssignment: {
@@ -348,6 +356,19 @@ describe("admin foundation API behavior", () => {
 
     assert.equal(prisma.store.organizationScopes.length, 5);
     assert.deepEqual(auditLog.records.map((record) => record.action), ["AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01"]);
+  });
+
+  it("Story 1.11: only one active account may hold RESEARCH_BOARD_HEAD", async () => {
+    const prisma = createAdminPrisma();
+    const service = new AdminUsersService(prisma, createAuditLog(), createPasswordService());
+    const input = { password: "ChangeMe123", systemRole: "RESEARCH_BOARD_HEAD", organizationUnitId: "org-root" };
+
+    await service.createUser(adminUser, { ...input, username: "tb.one", displayName: "TB One" });
+    await assert.rejects(() => service.createUser(adminUser, { ...input, username: "tb.two", displayName: "TB Two" }), { name: "ConflictException" });
+
+    prisma.store.users.push({ id: "other", username: "other", usernameKey: "other", displayName: "Other", status: "active", systemRole: "RESEARCHER_INTERNAL_USER", unit: "Học viện Quân y" });
+    await assert.rejects(() => service.updateUser(adminUser, "other", { systemRole: "RESEARCH_BOARD_HEAD" }), { name: "ConflictException" });
+    assert.equal(prisma.store.users.find((user) => user.id === "other").systemRole, "RESEARCHER_INTERNAL_USER");
   });
 
   it("Story 1.4: rolls back user creation when the initial organization scope cannot be written", async () => {
