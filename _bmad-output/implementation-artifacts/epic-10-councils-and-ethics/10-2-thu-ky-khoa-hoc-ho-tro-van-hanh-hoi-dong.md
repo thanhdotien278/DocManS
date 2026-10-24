@@ -5,7 +5,7 @@ spec: _bmad-output/specs/spec-hoi-dong-tham-dinh.md
 
 # Story 10.2: Thư ký khoa học hỗ trợ vận hành hội đồng (thư ký hội đồng đánh giá)
 
-Status: ready-for-dev (thư ký soạn dự thảo tổng hợp/biên bản); backlog (chương trình, tài liệu họp, điểm danh, task, tệp biên bản, thư ký IRB/nghiệm thu)
+Status: review (thư ký soạn dự thảo tổng hợp/biên bản); backlog (chương trình, tài liệu họp, điểm danh, task, tệp biên bản, thư ký IRB/nghiệm thu)
 
 ## Story
 

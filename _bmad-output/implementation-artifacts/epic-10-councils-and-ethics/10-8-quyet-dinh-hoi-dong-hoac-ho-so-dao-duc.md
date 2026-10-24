@@ -5,7 +5,7 @@ spec: _bmad-output/specs/spec-hoi-dong-tham-dinh.md
 
 # Story 10.8: Quyết định hội đồng hoặc hồ sơ đạo đức (ký thành lập hội đồng đánh giá)
 
-Status: ready-for-dev (ký thành lập hội đồng đánh giá); backlog (ký hội đồng IRB, cấp giấy IRB, ký hội đồng nghiệm thu)
+Status: review (ký thành lập hội đồng đánh giá); backlog (ký hội đồng IRB, cấp giấy IRB, ký hội đồng nghiệm thu)
 
 ## Story
 
