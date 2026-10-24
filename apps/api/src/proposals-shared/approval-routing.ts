@@ -197,6 +197,15 @@ async function recordStep(
   });
 }
 
+/** Hủy tờ trình PENDING của (kind, subject, ref): lập lại (D-035) hoặc người nộp rút yêu cầu nguồn. */
+export async function cancelPendingApprovals(tx: Prisma.TransactionClient, actor: SafeUserContext, key: ApprovalKey, note: string) {
+  const pending = (await tx.approvalSubmission.findMany({ where: { ...keyWhere(key), status: "PENDING" } })) as ApprovalSubmissionRow[];
+  for (const old of pending) {
+    await tx.approvalSubmission.update({ where: { id: old.id }, data: { status: "CANCELLED", stage: "CLOSED", closedAt: new Date() } });
+    await recordStep(tx, actor, old, { action: "CANCEL", stage: old.stage, note, toStage: "CLOSED", toStatus: "CANCELLED", auditAction: "cancel-approval-submission" });
+  }
+}
+
 /**
  * Lập tờ trình. Tác giả phải là CV/TB/TP trong scope đơn vị chủ quản. Tờ trình PENDING cũ của cùng
  * (kind, subject) chuyển CANCELLED/CLOSED trong cùng transaction (D-035).
@@ -213,11 +222,7 @@ export async function openApprovalSubmission(
   if (!getOrganizationScopeIds(actor).includes(input.hostOrganizationUnitId)) throw new ForbiddenException({ code: "APPROVAL_SCOPE_DENIED", message: "Hồ sơ ngoài phạm vi đơn vị của bạn." });
   const note = readApprovalNote(input.note, false);
   const stage: ApprovalStage = isResearchBoardHead(actor) ? "HEAD_REVIEW" : "BOARD_REVIEW";
-  const cancelled = (await tx.approvalSubmission.findMany({ where: { ...keyWhere(key), status: "PENDING" } })) as ApprovalSubmissionRow[];
-  for (const old of cancelled) {
-    await tx.approvalSubmission.update({ where: { id: old.id }, data: { status: "CANCELLED", stage: "CLOSED", closedAt: new Date() } });
-    await recordStep(tx, actor, old, { action: "CANCEL", stage: old.stage, note: "Thay bằng tờ trình mới", toStage: "CLOSED", toStatus: "CANCELLED", auditAction: "cancel-approval-submission" });
-  }
+  await cancelPendingApprovals(tx, actor, key, "Thay bằng tờ trình mới");
   const created = (await tx.approvalSubmission.create({
     data: { ...keyWhere(key), title: input.title.slice(0, 500), hostOrganizationUnitId: input.hostOrganizationUnitId, stage, status: "PENDING", signer: APPROVAL_SIGNERS[key.kind], submittedById: actor.id, authorRole: actor.systemRole ?? "", lastNote: note }
   })) as ApprovalSubmissionRow;
@@ -254,16 +259,34 @@ async function closeRow(tx: Prisma.TransactionClient, actor: SafeUserContext, ro
 }
 
 /**
- * Trả lại thì nguồn về trạng thái sửa được. Mới `DECISION_PACKAGE` có nguồn do Story 5.9 sở hữu
- * (gói đánh giá → "đã chốt", hồ sơ → `under_review`). Các loại khác do story lập tờ trình tương ứng xử lý
- * (5.5 hội đồng, 6.11 gia hạn/điều chỉnh, 6.12 thanh lý, 10.7–10.8 IRB/nghiệm thu).
+ * Trả lại thì nguồn về trạng thái sửa được: `DECISION_PACKAGE` (gói đánh giá → "đã chốt", hồ sơ → `under_review`);
+ * `PROJECT_ADJUSTMENT`/`PROJECT_EXTENSION` (Story 6.11, yêu cầu về bước CV thẩm định); `LIQUIDATION` (Story 6.12, biên bản về nháp).
+ * Các loại khác do story lập tờ trình tương ứng xử lý (5.5 hội đồng, 10.7–10.8 IRB/nghiệm thu).
  */
 async function revertSourceOnReturn(tx: Prisma.TransactionClient, actor: SafeUserContext, row: ApprovalSubmissionRow, note: string) {
+  if (row.kind === "PROJECT_ADJUSTMENT" || row.kind === "PROJECT_EXTENSION") return revertProjectRequest(tx, actor, row, note);
+  if (row.kind === "LIQUIDATION") {
+    // Cập nhật có điều kiện: đường trả lại của TB/TP không giữ khóa đề tài.
+    const moved = await tx.projectLiquidation.updateMany({ where: { id: row.subjectRef, status: "SUBMITTED" }, data: { status: "DRAFT" } });
+    if (moved.count) await tx.projectHistory.create({ data: { projectId: row.subjectId, actorId: actor.id, action: "project.liquidation.return", fromStatus: "SUBMITTED", toStatus: "DRAFT", reason: note, afterFacts: { liquidationId: row.subjectRef } } });
+    return;
+  }
   if (row.kind !== "DECISION_PACKAGE") return;
   const moved = await tx.researchProposal.updateMany({ where: { id: row.subjectId, status: "ready_for_approval" }, data: { status: "under_review", authorizationContextUpdatedAt: new Date() } });
   if (!moved.count) return;
   await tx.proposalEvaluationSummary.updateMany({ where: { proposalId: row.subjectId, status: "ready_for_approval" }, data: { status: "finalized", markedReadyAt: null } });
   await tx.proposalSubmissionEvent.create({ data: { proposalId: row.subjectId, actorId: actor.id, fromStatus: "ready_for_approval", toStatus: "under_review", submittedAt: new Date(), note: `Tờ trình bị trả lại: ${note}` } });
+}
+
+/** Yêu cầu điều chỉnh/gia hạn: ready_for_head_decision (đã trình) → bước CV thẩm định của loại đó, CV sửa rồi trình lại. */
+async function revertProjectRequest(tx: Prisma.TransactionClient, actor: SafeUserContext, row: ApprovalSubmissionRow, note: string) {
+  const back = row.kind === "PROJECT_ADJUSTMENT" ? "under_staff_review" : "under_staff_validation";
+  const moved = await tx.projectRequest.updateMany({ where: { id: row.subjectRef, projectId: row.subjectId, status: "ready_for_head_decision" }, data: { status: back, preparedById: null, preparedAt: null } });
+  if (!moved.count) return;
+  const requestType = row.kind === "PROJECT_ADJUSTMENT" ? "adjustment" : "extension";
+  const action = `project.${requestType}.return`;
+  await tx.projectRequestHistory.create({ data: { requestId: row.subjectRef, actorId: actor.id, action, fromStatus: "ready_for_head_decision", toStatus: back, reason: note } });
+  await tx.projectHistory.create({ data: { projectId: row.subjectId, actorId: actor.id, action, requestId: row.subjectRef, fromStatus: "ready_for_head_decision", toStatus: back, reason: note } });
 }
 
 /**

@@ -61,6 +61,8 @@ model User {
   decidedProjectRequests ProjectRequest[] @relation("ProjectRequestDecider")
   preparedProjectRequests ProjectRequest[] @relation("ProjectRequestPreparer")
   projectHistory ProjectHistory[] @relation("ProjectHistoryActor")
+  projectFundingRecords ProjectFundingRecord[] @relation("ProjectFundingRecorder")
+  projectLiquidations ProjectLiquidation[] @relation("ProjectLiquidationAuthor")
   projectRequestHistory ProjectRequestHistory[] @relation("ProjectRequestHistoryActor")
   createdProjectRequestRevisions ProjectRequestRevision[] @relation("ProjectRequestRevisionCreator")
   createdProjectMilestones ProjectMilestone[] @relation("ProjectMilestoneCreator")
@@ -753,6 +755,8 @@ model ApprovedProject {
   reports                   ProjectReportRevision[]
   requests                  ProjectRequest[]
   history                   ProjectHistory[]
+  fundingRecords            ProjectFundingRecord[]
+  liquidations              ProjectLiquidation[]
 
   @@index([hostOrganizationUnitId, status])
   @@index([status, endDate])
@@ -1034,4 +1038,47 @@ model ApprovalStep {
 
   @@index([submissionId])
   @@map("approval_steps")
+}
+
+// Story 6.12: kinh phí chỉ là metadata (cấp, giải ngân, quyết toán), chỉ thêm phiên bản mới, không sổ cái/thanh toán.
+model ProjectFundingRecord {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  project     ApprovedProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  entryId     String   @map("entry_id")
+  version     Int      @default(1)
+  kind        String
+  amount      Decimal  @db.Decimal(18, 2)
+  recordedOn  DateTime @db.Date @map("recorded_on")
+  note        String?
+  fileRecordIds String[] @map("file_record_ids")
+  recordedById String  @map("recorded_by_id")
+  recordedBy  User     @relation("ProjectFundingRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([entryId, version])
+  @@index([projectId, kind])
+  @@map("project_funding_records")
+}
+
+// Story 6.12: biên bản thanh lý. Chỉ chữ ký GĐ trên tờ trình LIQUIDATION mới chuyển SIGNED và đóng đề tài.
+model ProjectLiquidation {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  project     ApprovedProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  authorId    String   @map("author_id")
+  author      User     @relation("ProjectLiquidationAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  report      String
+  fileRecordIds String[] @map("file_record_ids")
+  /// Kết quả nghiệm thu của đề tài lúc lập biên bản (accepted | failed).
+  outcome     String
+  status      String   @default("DRAFT")
+  decidedById String?  @map("decided_by_id")
+  decidedAt   DateTime? @map("decided_at")
+  decisionNote String? @map("decision_note")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([projectId, status])
+  @@map("project_liquidations")
 }

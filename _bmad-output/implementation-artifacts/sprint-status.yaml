@@ -1,5 +1,5 @@
 # generated: 2026-07-29T17:30:00+07:00
-# last_updated: 2026-10-24T10:00:00+07:00
+# last_updated: 2026-10-24T18:00:00+07:00
 # project: DocManSystem
 # project_key: NOKEY
 # tracking_system: file-system
@@ -93,13 +93,13 @@ development_status:
   6-3-chu-nhiem-nop-bao-cao-tien-do-va-bang-chung: in-progress
   6-4-thanh-vien-dong-gop-tep-va-minh-chung-trong-pham-vi-duoc-giao: in-progress
   6-5-ra-soat-bao-cao-va-theo-doi-cham-tien-do: in-progress
-  6-6-gui-yeu-cau-dieu-chinh-hoac-gia-han: in-progress
-  6-7-quyet-dinh-dieu-chinh-hoac-gia-han: in-progress
+  6-6-gui-yeu-cau-dieu-chinh-hoac-gia-han: review
+  6-7-quyet-dinh-dieu-chinh-hoac-gia-han: review
   6-8-chuan-bi-va-nop-ho-so-nghiem-thu-hoac-danh-gia-cuoi: backlog
   6-9-ra-soat-va-quyet-dinh-nghiem-thu-hoac-danh-gia-cuoi: backlog
   6-10-trang-thai-lich-su-va-truy-van-duoc-phan-quyen-cua-de-tai: in-progress
-  6-11-adjustment-extension-via-approval-routing: backlog
-  6-12-funding-metadata-and-liquidation: backlog
+  6-11-adjustment-extension-via-approval-routing: review
+  6-12-funding-metadata-and-liquidation: review
   epic-6-retrospective: optional
   epic-7: backlog
   7-1-tao-cong-viec-doc-lap-hoac-lien-ket-ho-so: backlog

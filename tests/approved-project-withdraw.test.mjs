@@ -13,7 +13,7 @@ const actor = (id) => ({ id, username: id, displayName: id, systemRole: "RESEARC
 
 // Minimal in-memory Prisma: only the tables ApprovedProjectsService touches for requests.
 function fakePrisma(requests, piId = "pi") {
-  const store = { requests, revisions: [], requestHistory: [], projectHistory: [], audit: [] };
+  const store = { requests, revisions: [], requestHistory: [], projectHistory: [], audit: [], submissions: [], steps: [] };
   const project = { id: "p1", proposalId: "prop-1", hostOrganizationUnitId: "unit-1", status: "executing", updatedAt: past, aggregateVersion: 1, relationshipVersion: 1, conflictVersion: 0, delegationVersion: 0, endDate: new Date("2030-01-01T00:00:00Z"), scopeSnapshot: {}, planSnapshot: {}, milestones: [], checkpoints: [], reports: [], history: [],
     members: [{ id: "m-pi", userId: piId, participationRole: "TOPIC_PI", status: "ACTIVE", effectiveFrom: past, effectiveUntil: null }] };
   const withRelations = (request) => ({ ...request, revisions: store.revisions.filter((item) => item.requestId === request.id), evidence: [] });
@@ -30,6 +30,11 @@ function fakePrisma(requests, piId = "pi") {
     },
     projectRequestRevision: { create: async ({ data }) => { store.revisions.push(data); return data; } },
     projectRequestHistory: { create: async ({ data }) => store.requestHistory.push(data) },
+    approvalSubmission: {
+      findMany: async ({ where }) => store.submissions.filter((row) => Object.entries(where).every(([key, value]) => row[key] === value)).map((row) => ({ ...row })),
+      update: async ({ where, data }) => Object.assign(store.submissions.find((row) => row.id === where.id), data)
+    },
+    approvalStep: { create: async ({ data }) => store.steps.push(data) },
     projectHistory: { create: async ({ data }) => store.projectHistory.push(data) },
     auditLog: { create: async ({ data }) => { store.audit.push(data); return { id: "a", timestamp: new Date(), ...data }; } }
   };
@@ -50,8 +55,17 @@ test("requester PI withdraws an open request with history and audit", async () =
     assert.equal(row.toStatus, "withdrawn");
     assert.equal(row.reason, "Không cần nữa");
   }
-  assert.equal(store.audit[0].action, "project.extension.withdraw");
-  assert.equal(store.audit[0].reason, "Không cần nữa");
+  assert.equal(store.audit.find((row) => row.action === "project.extension.withdraw").reason, "Không cần nữa");
+});
+
+test("withdrawing a request already in routing cancels its open tờ trình and records the step", async () => {
+  const { db, store, contextVersion } = fakePrisma([open({ status: "ready_for_head_decision" })]);
+  store.submissions.push({ id: "sub-1", kind: "PROJECT_EXTENSION", subjectType: "project", subjectId: "p1", subjectRef: "req-1", status: "PENDING", stage: "HEAD_REVIEW" });
+  store.submissions.push({ id: "sub-2", kind: "PROJECT_EXTENSION", subjectType: "project", subjectId: "p1", subjectRef: "other-request", status: "PENDING", stage: "HEAD_REVIEW" });
+  await service(db).withdrawRequest(actor("pi"), "p1", "extension", { requestId: "req-1", reason: "Không còn người ký", contextVersion });
+  assert.deepEqual([store.submissions[0].status, store.submissions[0].stage], ["CANCELLED", "CLOSED"]);
+  assert.equal(store.submissions[1].status, "PENDING", "another request's tờ trình is untouched");
+  assert.deepEqual([store.steps[0].action, store.steps[0].stage], ["CANCEL", "HEAD_REVIEW"]);
 });
 
 test("withdraw denies a non-requester, a terminal request and a wrong path type", async () => {
