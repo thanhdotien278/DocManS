@@ -6,7 +6,8 @@ import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
-import { isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
+import { openApprovalSubmission } from "../proposals-shared/approval-routing.js";
+import { isResearchBoardHead, isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
 import {
   getRecommendationLabel,
   REVIEW_ASSIGNMENT_STATUS,
@@ -22,7 +23,7 @@ import {
   summarizeReviewProgress,
   assertCurrentCompletenessEvidence,
   assertEvaluationReadScope,
-  assertScientificManagementHeadScope,
+  assertProposalManagementWriteScope,
   findCurrentSubmissionEvidence,
   findEvaluationProposal,
   resolveActorConflict,
@@ -93,9 +94,9 @@ export class ProposalEvaluationSummaryService {
         proposalStatus: proposal.status,
         proposalStatusLabel: PROPOSAL_STATUS_LABELS[proposal.status] ?? proposal.status,
         ...operationalProgress,
-        assignments: isResearchManagementHead(actor) && !conflict.conflicted ? assignmentRecords.map((assignment) => this.assignments.toAssignmentResponse(assignment, reviewRecords)) : [],
-        reviews: isResearchManagementHead(actor) && !conflict.conflicted ? reviewRecords.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => this.reviews.toSubmittedReviewResponse(review)) : [],
-        ...(isResearchManagementHead(actor) && !conflict.conflicted ? { evaluationSummary: this.toSummaryResponse(summary) } : {}),
+        assignments: (isResearchManagementHead(actor) || isResearchBoardHead(actor)) && !conflict.conflicted ? assignmentRecords.map((assignment) => this.assignments.toAssignmentResponse(assignment, reviewRecords)) : [],
+        reviews: (isResearchManagementHead(actor) || isResearchBoardHead(actor)) && !conflict.conflicted ? reviewRecords.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => this.reviews.toSubmittedReviewResponse(review)) : [],
+        ...((isResearchManagementHead(actor) || isResearchBoardHead(actor)) && !conflict.conflicted ? { evaluationSummary: this.toSummaryResponse(summary) } : {}),
         reviewDeadlines: assignmentRecords.filter((assignment) => ["assigned", "completed"].includes(assignment.status)).map((assignment) => ({ role: assignment.assignmentRole, status: assignment.status, dueDate: assignment.dueDate?.toISOString() ?? null })),
         recommendations: REVIEW_RECOMMENDATIONS.map((code) => ({ code, label: REVIEW_RECOMMENDATION_LABELS[code] }))
       };
@@ -107,15 +108,16 @@ export class ProposalEvaluationSummaryService {
       ...progress,
       assignments: assignmentRecords.map((assignment) => this.assignments.toAssignmentResponse(assignment, reviewRecords)),
       reviews: reviewRecords.filter((review) => review.status === REVIEW_STATUS.submitted).map((review) => this.reviews.toSubmittedReviewResponse(review)),
+      evaluationSummary: this.toSummaryResponse(summary),
       recommendations: REVIEW_RECOMMENDATIONS.map((code) => ({ code, label: REVIEW_RECOMMENDATION_LABELS[code] }))
     };
   }
 
-  /** Head-only synthesis draft. A draft is allowed to change, but never routes the proposal. */
+  /** Synthesis draft của TP¹/TB¹/CV³. A draft is allowed to change, but never routes the proposal. */
   async saveEvaluationSummary(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>): Promise<any> {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, currentActor) => service.saveEvaluationSummary(currentActor, proposalId, input));
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    assertScientificManagementHeadScope(actor, proposal);
+    await assertProposalManagementWriteScope(this.prisma, actor, proposal);
     assertProposalStatus(proposal, [PROPOSAL_STATUS.underReview], "Chỉ hồ sơ đang đánh giá mới được soạn tổng hợp kết quả.");
     this.assertNoSynthesisBypass(input);
     await this.assertSynthesisActorIsEligible(actor, proposalId);
@@ -196,7 +198,7 @@ export class ProposalEvaluationSummaryService {
           toStatus: proposal.status,
           submittedAt: now,
           snapshot: { ...evidenceSnapshot, kind: "evaluation_summary_draft" },
-          note: "Trưởng phòng lưu bản nháp tổng hợp đánh giá"
+          note: "Lưu bản nháp tổng hợp đánh giá"
         } as never
       });
 
@@ -234,7 +236,7 @@ export class ProposalEvaluationSummaryService {
   async finalizeEvaluationSummary(actor: SafeUserContext, proposalId: string, input: Record<string, unknown> = {}): Promise<any> {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, currentActor) => service.finalizeEvaluationSummary(currentActor, proposalId, input));
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    assertScientificManagementHeadScope(actor, proposal);
+    await assertProposalManagementWriteScope(this.prisma, actor, proposal);
     assertProposalStatus(proposal, [PROPOSAL_STATUS.underReview], "Chỉ hồ sơ đang đánh giá mới được chốt bản tổng hợp.");
     await this.assertSynthesisActorIsEligible(actor, proposalId);
     const existing = await this.findSummary(proposalId);
@@ -273,7 +275,7 @@ export class ProposalEvaluationSummaryService {
         capturedAt: now.toISOString()
       };
       const record = (await tx.proposalEvaluationSummary.update({ where: { id: existing.id }, data: { status: EVALUATION_SUMMARY_STATUS.finalized, updatedById: actor.id, revision, contextVersion: input.contextVersion, evidenceSnapshot } as never, include: { updatedBy: { select: { displayName: true } } } })) as EvaluationSummaryRecord;
-      await tx.proposalSubmissionEvent.create({ data: { proposalId, actorId: actor.id, fromStatus: proposal.status, toStatus: proposal.status, submittedAt: now, snapshot: { ...evidenceSnapshot, kind: "evaluation_summary_finalized" }, note: "Trưởng phòng chốt bản tổng hợp đánh giá" } as never });
+      await tx.proposalSubmissionEvent.create({ data: { proposalId, actorId: actor.id, fromStatus: proposal.status, toStatus: proposal.status, submittedAt: now, snapshot: { ...evidenceSnapshot, kind: "evaluation_summary_finalized" }, note: "Chốt bản tổng hợp đánh giá" } as never });
       await tx.auditLog.create({ data: { action: "finalize-evaluation-summary", result: "success", actorId: actor.id, targetEntity: "proposal-evaluation-summary", targetEntityId: record.id, username: actor.username, reason: JSON.stringify({ proposalId, revision, submissionEventId: submissionEvidence.eventId }) } });
       return record;
     })) as unknown as EvaluationSummaryRecord;
@@ -286,7 +288,7 @@ export class ProposalEvaluationSummaryService {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, currentActor) => service.submitCompletedPackage(currentActor, proposalId, input));
 
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    assertScientificManagementHeadScope(actor, proposal);
+    await assertProposalManagementWriteScope(this.prisma, actor, proposal);
     assertProposalStatus(proposal, [PROPOSAL_STATUS.underReview], "Chỉ hồ sơ đang đánh giá mới được trình gói hoàn tất.");
 
     const conflict = await resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId);
@@ -294,7 +296,7 @@ export class ProposalEvaluationSummaryService {
 
     const existing = await this.findSummary(proposalId);
     if (!existing || existing.status !== EVALUATION_SUMMARY_STATUS.finalized) {
-      throw new BadRequestException({ message: "Bản tổng hợp phải được Trưởng phòng chốt trước khi trình lãnh đạo." });
+      throw new BadRequestException({ message: "Bản tổng hợp phải được chốt trước khi lập tờ trình." });
     }
     const submissionEvidence = await assertCurrentCompletenessEvidence(this.prisma, proposal);
     const finalizedEvidence = existing.evidenceSnapshot as { lifecycle?: unknown; submissionEventId?: unknown } | null | undefined;
@@ -328,8 +330,10 @@ export class ProposalEvaluationSummaryService {
       if (statusUpdate.count !== 1) throw new BadRequestException({ message: "Trạng thái hồ sơ vừa thay đổi. Vui lòng tải lại hồ sơ." });
       const record = (await tx.proposalEvaluationSummary.update({ where: { id: existing.id }, data: { status: EVALUATION_SUMMARY_STATUS.readyForApproval, updatedById: actor.id, markedReadyAt: now } as never, include: { updatedBy: { select: { displayName: true } } } })) as EvaluationSummaryRecord;
       await tx.proposalReviewAssignment.updateMany({ where: { proposalId, reviewedSubmissionEventId: currentEvidence.eventId, status: REVIEW_ASSIGNMENT_STATUS.assigned }, data: { status: REVIEW_ASSIGNMENT_STATUS.completed, completedAt: now } as never });
-      await tx.proposalSubmissionEvent.create({ data: { proposalId, actorId: actor.id, fromStatus: PROPOSAL_STATUS.underReview, toStatus: PROPOSAL_STATUS.readyForApproval, submittedAt: now, snapshot: { kind: "evaluation_package_submitted", schemaVersion: "proposal-evaluation-package.v1", revision: currentSummary.revision, submissionEventId: currentEvidence.eventId, finalizedEvidence }, note: "Trưởng phòng trình gói đánh giá đã chốt tới lãnh đạo" } as never });
+      await tx.proposalSubmissionEvent.create({ data: { proposalId, actorId: actor.id, fromStatus: PROPOSAL_STATUS.underReview, toStatus: PROPOSAL_STATUS.readyForApproval, submittedAt: now, snapshot: { kind: "evaluation_package_submitted", schemaVersion: "proposal-evaluation-package.v1", revision: currentSummary.revision, submissionEventId: currentEvidence.eventId, finalizedEvidence }, note: "Lập tờ trình gói đánh giá đã chốt" } as never });
       await tx.auditLog.create({ data: { action: "submit-evaluation-package", result: "success", actorId: actor.id, targetEntity: "proposal-evaluation-summary", targetEntityId: record.id, username: actor.username, reason: JSON.stringify({ proposalId, sourceSummaryUpdatedById: existing.updatedById, submittedReviews: currentProgress.submittedCount, fromStatus: PROPOSAL_STATUS.underReview, toStatus: PROPOSAL_STATUS.readyForApproval }) } });
+      // Gói đánh giá lên BGĐ chỉ qua tờ trình TB → TP (Story 5.9); GĐ ký ở Story 5.10.
+      await openApprovalSubmission(tx, actor, { kind: "DECISION_PACKAGE", subjectType: "proposal", subjectId: proposalId }, { title: proposal.title, hostOrganizationUnitId: proposal.hostOrganizationUnitId });
       return record;
     })) as unknown as EvaluationSummaryRecord;
 

@@ -2,9 +2,16 @@ import { Body, Controller, Get, Param, Post, Put, Query, Req, UseGuards } from "
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
 import { PROPOSAL_DECISIONS, ProposalDecisionsService } from "./proposal-decisions.service.js";
+import { ProposalEvaluationCouncilService } from "./proposal-evaluation-council.service.js";
 import { ProposalEvaluationSummaryService } from "./proposal-evaluation-summary.service.js";
 import {
   assignProposalReviewerPipe,
+  decideEvaluationCouncilPipe,
+  respondReviewInvitationPipe,
+  submitEvaluationCouncilPipe,
+  type DecideEvaluationCouncilDto,
+  type RespondReviewInvitationDto,
+  type SubmitEvaluationCouncilDto,
   proposalDecisionPipe,
   revokeReviewAssignmentPipe,
   saveEvaluationSummaryPipe,
@@ -32,7 +39,8 @@ export class ProposalEvaluationsController {
     private readonly assignments: ProposalReviewAssignmentsService,
     private readonly reviews: ProposalReviewsService,
     private readonly summaries: ProposalEvaluationSummaryService,
-    private readonly decisions: ProposalDecisionsService
+    private readonly decisions: ProposalDecisionsService,
+    private readonly councils: ProposalEvaluationCouncilService
   ) {}
 
   // ST-3.2 ------------------------------------------------------------------------------------
@@ -70,6 +78,34 @@ export class ProposalEvaluationsController {
     @Body(revokeReviewAssignmentPipe) body: RevokeReviewAssignmentDto
   ) {
     return { assignment: await this.assignments.revokeAssignment(request.currentUser!, id, assignmentId, { reason: body.note, contextVersion: body.contextVersion }) };
+  }
+
+  /** Người được mời trả lời; không cần contextVersion vì họ chưa đọc được hồ sơ. */
+  @Post(":id/review-assignments/:assignmentId/respond")
+  async respondToInvitation(
+    @Req() request: RequestWithCurrentUser,
+    @Param("id") id: string,
+    @Param("assignmentId") assignmentId: string,
+    @Body(respondReviewInvitationPipe) body: RespondReviewInvitationDto
+  ) {
+    return { invitation: await this.assignments.respondToInvitation(request.currentUser!, id, assignmentId, body) };
+  }
+
+  // Story 5.10 — hội đồng đánh giá do BGĐ ký ---------------------------------------------------
+
+  @Get(":id/evaluation-council")
+  async getCouncil(@Req() request: RequestWithCurrentUser, @Param("id") id: string) {
+    return { council: await this.councils.getCouncil(request.currentUser!, id) };
+  }
+
+  @Post(":id/evaluation-council/submit")
+  async submitCouncil(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body(submitEvaluationCouncilPipe) body: SubmitEvaluationCouncilDto) {
+    return this.councils.submitCouncil(request.currentUser!, id, body);
+  }
+
+  @Post(":id/evaluation-council/decide")
+  async decideCouncil(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Body(decideEvaluationCouncilPipe) body: DecideEvaluationCouncilDto) {
+    return this.councils.decideCouncil(request.currentUser!, id, body);
   }
 
   @Get(":id/review-package")

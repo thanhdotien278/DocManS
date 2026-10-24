@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import { PasswordService } from "../auth/password.service.js";
 import { AuthService } from "../auth/auth.service.js";
@@ -179,6 +179,7 @@ export class AdminUsersService {
     }
 
     const organizationUnit = await this.findActiveOrganizationUnit(organizationUnitId);
+    if (systemRole === "RESEARCH_BOARD_HEAD") await this.assertNoOtherActiveBoardHead();
     const passwordHash = await this.passwordService.hashPassword(password);
 
     const user = await this.prisma.$transaction(async (tx) => {
@@ -241,6 +242,7 @@ export class AdminUsersService {
     }
 
     const auditEvents: Array<{ action: string; before: unknown; after: unknown }> = [];
+    let newRole: SystemRole | undefined;
 
     if (input.status !== undefined) {
       const status = this.readUserStatus(input.status);
@@ -253,19 +255,28 @@ export class AdminUsersService {
     }
 
     if (input.systemRole !== undefined) {
-      const systemRole = this.readSystemRole(input.systemRole);
-      data.systemRole = systemRole;
-      auditEvents.push({
-        action: "AUD-ST-1.3-03",
-        before: { systemRole: existing.systemRole },
-        after: { systemRole }
-      });
+      newRole = this.readSystemRole(input.systemRole);
+      data.systemRole = newRole;
     }
 
     const organizationUnit =
       input.organizationUnitId === undefined
         ? undefined
         : await this.findActiveOrganizationUnit(readText(input.organizationUnitId, "organizationUnitId"));
+
+    if (newRole) {
+      auditEvents.push({
+        action: "AUD-ST-1.3-03",
+        before: { systemRole: existing.systemRole },
+        after: { systemRole: newRole, ...(organizationUnit ? { organizationUnitId: organizationUnit.id } : {}) }
+      });
+    }
+
+    const resultingRole = newRole ?? existing.systemRole;
+    const resultingStatus = data.status ?? existing.status;
+    if (resultingRole === "RESEARCH_BOARD_HEAD" && resultingStatus === "active") {
+      await this.assertNoOtherActiveBoardHead(userId);
+    }
 
     if (organizationUnit) {
       data.unit = organizationUnit.name;
@@ -289,6 +300,9 @@ export class AdminUsersService {
         where: { id: userId },
         data
       });
+
+      // QT đã phân loại vai trò: bỏ tài khoản khỏi báo cáo migration 7 → 10 vai trò.
+      if (newRole) await tx.systemRoleMigrationIssue.deleteMany({ where: { userId } });
 
       if (organizationUnit) {
         await tx.userOrganizationScope.updateMany({
@@ -329,6 +343,17 @@ export class AdminUsersService {
       throw new BadRequestException({ message: "Dịch vụ đặt lại mật khẩu chưa sẵn sàng." });
     }
     return this.authService.initiatePasswordReset(actor, userId, context);
+  }
+
+  // TB chỉ có một người giữ; unique index users_single_active_board_head là chốt cuối khi tranh chấp đồng thời.
+  private async assertNoOtherActiveBoardHead(exceptUserId?: string) {
+    const other = await this.prisma.user.findFirst({
+      where: { systemRole: "RESEARCH_BOARD_HEAD", status: "active", ...(exceptUserId ? { id: { not: exceptUserId } } : {}) },
+      select: { id: true }
+    });
+    if (other) {
+      throw new ConflictException({ message: "Đã có tài khoản active giữ vai trò Trưởng ban; chỉ một người được giữ vai trò này." });
+    }
   }
 
   private readSystemRole(value: unknown): SystemRole {
