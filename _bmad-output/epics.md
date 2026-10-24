@@ -1302,6 +1302,11 @@ behavior outside `docs/ux-ui-spec.md`.
 
 ## Workflow-state implementation matrix
 
+The states below map onto the D-033 topic lifecycle (9 steps, 2 phases) through
+the single table in `architecture.md` → "Topic Lifecycle Step Mapping (D-033)".
+Stories that display the lifecycle use those steps; open lifecycle stories and
+AC deltas are proposed in `planning-artifacts/sprint-change-proposal-2026-10-24.md`.
+
 The canonical persisted/derived state names below must be implemented as status
 metadata, allowed/blocked action rules, validation, audit events, and required
 notification hooks. Overdue is a flag/reminder unless explicitly listed as a
@@ -2428,6 +2433,37 @@ So that đánh giá giữ ẩn danh hai chiều mà người điều phối vẫ
 **Then** export re-authorize và áp dụng bộ lọc hiện hành
 **And** không chứa cột danh tính hoặc action log bị cấm.
 
+### Story 3.7: Vòng đời đề tài 9 bước và timeline xuyên hồ sơ [D-033, FR38]
+
+As a người tham gia hoặc quản lý đề tài,
+I want xem đề tài đang ở bước nào trong 9 bước và lịch sử từng bước,
+So that mọi người cùng hiểu tiến trình theo một mô hình vòng đời duy nhất.
+
+Phụ thuộc Stories 3.3, 6.1, 6.10. Bước được suy ra theo bảng
+`architecture.md` → "Topic Lifecycle Step Mapping (D-033)".
+
+**Acceptance Criteria:**
+
+**Given** viewer được đọc proposal hoặc đề tài đã phê duyệt
+**When** detail được tải
+**Then** backend trả bước suy ra (1–9) và giai đoạn theo bảng ánh xạ; UI stepper hiển thị 2 giai đoạn "Giai đoạn đề xuất", "Giai đoạn thực hiện và kết thúc" và 9 bước, đánh dấu bước 5 và 9 là quyết định chính thức
+**And** không lưu trường bước riêng và client không tự suy bước từ status thô.
+
+**Given** đề tài đã phê duyệt có proposal nguồn
+**When** timeline được tải
+**Then** lịch sử proposal (bước 1–5) và lịch sử đề tài (bước 6–9) hiển thị trong một danh sách có thứ tự, mỗi event gắn bước của nó
+**And** disclosure giống Stories 3.3 và 6.10; event bị ẩn không lộ qua bước hay số đếm.
+
+**Given** proposal bị từ chối
+**When** stepper hiển thị
+**Then** vòng đời kết thúc ở bước 5 kèm kết quả từ chối
+**And** proposal đã phê duyệt chưa có đề tài hiển thị bước 5 hoàn tất, bước 6 đang chờ.
+
+**Given** proposal có yêu cầu bổ sung và nộp lại
+**When** stepper và timeline hiển thị
+**Then** hồ sơ quay về bước 2 và vào lại bước 3
+**And** không hiển thị bước lùi nào khác; vòng lặp của bản ghi con (tờ trình trả lại, bổ sung báo cáo/điều chỉnh/gia hạn/hồ sơ nghiệm thu) nằm trong bước hiện tại.
+
 ## Epic 4: Tiếp nhận và nộp đề xuất nghiên cứu
 
 TP và CV có thể mở đợt tiếp nhận; chủ nhiệm (mọi vai trò trừ QT/NNB) có thể lập,
@@ -2691,6 +2727,11 @@ So that hồ sơ đã nộp không bị ghi đè mà vẫn có đường điều
 **When** CV³ phụ trách mở lại với lý do bắt buộc
 **Then** hồ sơ chuyển trạng thái theo state machine và audit ghi actor, lý do, trạng thái trước/sau
 **And** thiếu lý do thì backend từ chối.
+
+**Given** hồ sơ được mở lại
+**When** bước vòng đời D-033 được suy ra
+**Then** bước đích được xác định theo quyết định PO cho câu hỏi Q3 của `sprint-change-proposal-2026-10-24.md` *(cần xác nhận)*
+**And** không tự thêm bước lùi ngoài vòng bổ sung 3 → 2 khi chưa có quyết định.
 
 **Given** actor là TP, TB, PP, BGĐ, QT, CV không phụ trách hồ sơ, thành viên hoặc reviewer
 **When** họ cố duyệt yêu cầu hoặc mở lại
@@ -3505,6 +3546,11 @@ So that đề tài có thể được xem xét kết thúc theo quy trình.
 **Then** dossier draft được gắn project/version
 **And** shared files module áp dụng association và disclosure riêng của acceptance dossier.
 
+**Given** dossier nghiệm thu (bước 8, D-033)
+**When** kết quả được ghi nhận
+**Then** dossier tách kết quả theo cấp: nghiệm thu sản phẩm và nghiệm thu cấp cơ sở
+**And** nghiệm thu cấp trên chờ story riêng sau khi PO trả lời Q1.
+
 **Given** member có responsibility/action đóng góp
 **When** họ cung cấp product/evidence
 **Then** đóng góp được lưu và truy vết
@@ -3520,11 +3566,14 @@ So that đề tài có thể được xem xét kết thúc theo quy trình.
 **Then** dossier chuyển state atomically, khóa submitted version và tạo history/audit
 **And** không tạo bất kỳ approval/final-decision authority cho PI; CV phụ trách nhận việc chuẩn bị hội đồng nghiệm thu.
 
-### Story 6.9: Rà soát và quyết định nghiệm thu hoặc đánh giá cuối [FR28]
+### Story 6.9: Rà soát và ghi nhận kết quả nghiệm thu hoặc đánh giá cuối [FR28]
 
 As a CV³ phụ trách đề tài, TB/TP ở bước tờ trình hoặc GĐ/PGĐ-KH ký,
-I want rà soát hồ sơ nghiệm thu, lập hội đồng nghiệm thu qua tờ trình và ra quyết định,
+I want rà soát hồ sơ nghiệm thu, lập hội đồng nghiệm thu qua tờ trình và ghi nhận kết quả nghiệm thu,
 So that kết quả cuối của đề tài có căn cứ và không bị tự phê duyệt.
+
+> D-033: kết quả nghiệm thu thuộc bước 8, không phải một trong hai quyết định chính
+> thức (bước 5 và 9). Quy tắc thẩm quyền và chữ ký dưới đây giữ nguyên.
 
 **Acceptance Criteria:**
 
@@ -3629,6 +3678,9 @@ As a GĐ, TP/TB hoặc CV³ phụ trách đề tài,
 I want ghi nhận số liệu cấp, giải ngân, quyết toán kinh phí kèm tài liệu và trình thanh lý,
 So that kinh phí đề tài truy vết được mà không biến hệ thống thành sổ kế toán.
 
+> D-033: số liệu cấp, giải ngân, quyết toán thuộc bước 7 (Thực hiện); thanh lý và
+> đóng đề tài thuộc bước 9, quyết định chính thức do GĐ ký.
+
 **Acceptance Criteria:**
 
 **Given** đề tài đang thực hiện
@@ -3650,6 +3702,11 @@ So that kinh phí đề tài truy vết được mà không biến hệ thống 
 **When** CV³ phụ trách lập biên bản thanh lý và trình tờ trình `LIQUIDATION`
 **Then** submission đi qua TB → TP theo Story 5.9 và chỉ GĐ được ký
 **And** PGĐ-KH không ký thanh lý; chữ ký áp dụng kết quả thanh lý atomically với audit.
+
+**Given** tờ trình `LIQUIDATION` của đề tài `Accepted` được GĐ ký
+**When** transaction thành công
+**Then** đề tài chuyển `Closed` atomically cùng kết quả thanh lý, history và audit (bước 9)
+**And** không đường nào khác đóng đề tài `Accepted`; cách đóng đề tài `Failed` chờ PO trả lời Q2 *(cần xác nhận)*.
 
 ## Epic 7: Giao việc và theo dõi thực hiện
 
@@ -4653,6 +4710,11 @@ So that tôi ưu tiên phê duyệt, chữ ký, tờ trình, đề tài chậm, 
 **Then** widget đó hiển thị unavailable và không trả partial count
 **And** widget độc lập khác có thể hiển thị nếu không làm người dùng hiểu nhầm tổng hợp toàn hệ thống.
 
+**Given** widget hiển thị vòng đời đề tài
+**When** số liệu được nhóm
+**Then** nhóm theo 9 bước và 2 giai đoạn của D-033 (bước suy ra từ Story 3.7)
+**And** mỗi số đếm drill-down về hồ sơ nguồn trong cùng scope theo Story 12.3.
+
 **Given** dashboard được đo trong normal phase 1 load
 **When** core widgets tải
 **Then** ít nhất 95% hoàn tất trong 3 giây
@@ -4703,6 +4765,11 @@ So that tôi đánh giá hoạt động nghiên cứu bằng số liệu có ngu
 **When** report chạy
 **Then** từng source query áp dụng current role/scope/relationship/state/conflict/disclosure
 **And** summary chỉ tính authorized records và có report/source versions.
+
+**Given** report theo vòng đời đề tài
+**When** actor chọn chiều nhóm
+**Then** dùng 9 bước và tên 2 giai đoạn của D-033 làm chiều nhóm
+**And** không tự gộp, tách hay đổi thứ tự bước.
 
 **Given** report chứa proposal review, council/ethics hoặc personnel data
 **When** actor không thuộc internal audience phù hợp

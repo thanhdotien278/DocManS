@@ -196,6 +196,22 @@ multiplicity where it does not conflict with §7. Backend authorization is autho
 business-record detail, list, search, count, facet, dashboard, export,
 notification, file-metadata, and file-content disclosure.
 
+## Topic Lifecycle (D-033)
+
+A topic follows a fixed 9-step lifecycle in 2 phases (`.decision-log.md` D-033):
+
+- **Giai đoạn đề xuất:** 1. Đợt tiếp nhận → 2. Hồ sơ đề xuất → 3. Kiểm tra đầy đủ →
+  4. Thẩm định, hội đồng → 5. Phê duyệt, kinh phí.
+- **Giai đoạn thực hiện và kết thúc:** 6. Lập đề tài → 7. Thực hiện (tiến độ, báo
+  cáo, giải ngân) → 8. Nghiệm thu (sản phẩm, cơ sở, cấp trên) → 9. Thanh lý, đóng đề tài.
+
+From step 3 a supplement request returns the dossier to step 2 and the PI's
+resubmission re-enters step 3. Steps 5 (GĐ approves topic + funding) and 9 (GĐ
+signs liquidation and the topic closes) are the only two official decisions.
+Every step keeps history and audit. UI, dashboards and reports that show the
+lifecycle use these 9 steps and phase names. The state-to-step mapping is in
+`architecture.md` → "Topic Lifecycle Step Mapping (D-033)".
+
 ## Success Criteria
 
 ### User Success
