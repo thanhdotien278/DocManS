@@ -7,10 +7,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
 import {
   loadCouncilAnonymousReviews,
-  loadProposalReviewProgress,
   saveProposalEvaluationSummary,
   type CouncilAnonymousReviews,
-  type ProposalEvaluationSummary,
+  type SecretarySummary,
   type ReviewRecommendationOption
 } from "@/lib/proposal-evaluations-api";
 
@@ -20,13 +19,20 @@ const FALLBACK_RECOMMENDATIONS: ReviewRecommendationOption[] = [
   { code: "reject", label: "Đề nghị không phê duyệt" }
 ];
 
+const CRITERION_LABELS: Record<string, string> = {
+  "scientific-value": "Giá trị khoa học",
+  feasibility: "Tính khả thi",
+  "practical-impact": "Hiệu quả ứng dụng",
+  "budget-suitability": "Tính hợp lý của kinh phí"
+};
+
 /**
  * Spec hội đồng S7 — thư ký xem phiếu ẩn danh (không tên/vai trò người chấm), soạn và lưu nháp tổng hợp/biên bản.
  * Thư ký không chấm, không chốt, không trình: panel chỉ có "Lưu nháp".
  */
 export function CouncilSecretaryPanel({ proposalId, contextVersion, onChanged }: { proposalId: string; contextVersion?: ViewerAuthorizationV1["contextVersion"]; onChanged?: () => void }) {
   const [data, setData] = useState<CouncilAnonymousReviews | null>(null);
-  const [summary, setSummary] = useState<ProposalEvaluationSummary | null>(null);
+  const [summary, setSummary] = useState<SecretarySummary | null>(null);
   const [options, setOptions] = useState(FALLBACK_RECOMMENDATIONS);
   const [text, setText] = useState("");
   const [recommendation, setRecommendation] = useState("");
@@ -38,15 +44,13 @@ export function CouncilSecretaryPanel({ proposalId, contextVersion, onChanged }:
 
   async function load() {
     try {
-      setData(await loadCouncilAnonymousReviews(proposalId));
-      // Bản nháp hiện có chỉ là tiện ích: thư ký có thể không được đọc tiến độ tổng thể, khi đó bắt đầu từ trống.
-      const progress = await loadProposalReviewProgress(proposalId).catch(() => null);
-      if (progress) {
-        setSummary(progress.evaluationSummary ?? null);
-        if (progress.recommendations?.length) setOptions(progress.recommendations);
-        setText((current) => current || progress.evaluationSummary?.summary || "");
-        setRecommendation((current) => current || progress.evaluationSummary?.recommendation || "");
-      }
+      const reviews = await loadCouncilAnonymousReviews(proposalId);
+      setData(reviews);
+      // Bản nháp/trạng thái tổng hợp lấy từ chính endpoint của thư ký (không gọi review-progress: thư ký bị 403).
+      const saved = reviews.evaluationSummary ?? null;
+      setSummary(saved);
+      setText((current) => current || saved?.summary || "");
+      setRecommendation((current) => current || saved?.recommendation || "");
       setState("ready");
     } catch (thrown) {
       setLoadError(thrown instanceof Error ? thrown.message : "Không tải được phiếu đánh giá.");
@@ -99,7 +103,7 @@ export function CouncilSecretaryPanel({ proposalId, contextVersion, onChanged }:
               <span className="timeline-dot" />
               <div>
                 <p className="timeline-title">{review.label} · {review.totalScore ?? "—"}/{review.maxTotalScore} điểm · {review.recommendationLabel}</p>
-                <p className="timeline-meta">{Object.entries(review.scoreData).map(([code, score]) => `${code.replace(/[-_]/g, " ")}: ${score}`).join(" · ")}</p>
+                <p className="timeline-meta">{Object.entries(review.scoreData).map(([code, score]) => `${CRITERION_LABELS[code] ?? code}: ${score}`).join(" · ")}</p>
                 {review.comment ? <p className="timeline-meta">{review.comment}</p> : null}
               </div>
             </article>
@@ -122,7 +126,7 @@ export function CouncilSecretaryPanel({ proposalId, contextVersion, onChanged }:
         <p className="form-error" role="alert" aria-live="polite">{error}</p>
         {message ? <p className="state-message success" role="status">{message}</p> : null}
         {locked ? (
-          <p className="record-meta">Bản tổng hợp đã được {summary?.updatedByDisplayName || "người có thẩm quyền"} chốt, chỉ đọc.</p>
+          <p className="record-meta">Trạng thái: {summary?.statusLabel}. Bản tổng hợp đã được {summary?.updatedByDisplayName || "người có thẩm quyền"} chốt, chỉ đọc.</p>
         ) : (
           <button className="button primary" type="submit" disabled={saving || !contextVersion} title={!contextVersion ? "Tải lại hồ sơ để cập nhật quyền." : undefined}>
             <Save size={16} aria-hidden="true" />

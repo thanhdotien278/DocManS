@@ -1426,6 +1426,18 @@ summary:focus-visible {
   padding: 12px;
 }
 
+.setting-row > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .setting-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 .reference-item {
   justify-content: flex-start;
 }
