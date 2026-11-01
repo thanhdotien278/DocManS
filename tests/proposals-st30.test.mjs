@@ -42,6 +42,7 @@ const adminUser = {
 const piUser = {
   ...staffUser,
   id: "user-pi",
+  researcherProfileId: "profile-pi",
   username: "patuan",
   displayName: "Phạm Anh Tuấn",
   role: "principal-investigator",
@@ -94,7 +95,10 @@ const legacyPiUser = {
   username: "pi.khong-quan-he"
 };
 
-const ACCOUNTS = [adminUser, staffUser, piUser, memberUser, secretaryUser, outsiderUser];
+const headPiUser = { ...piUser, id: "user-head-pi", username: "tphead", systemRole: "RESEARCH_MANAGEMENT_HEAD" };
+const noProfilePiUser = { ...piUser, id: "user-no-profile", username: "khonghoso", researcherProfileId: undefined };
+const externalPiUser = { ...piUser, id: "user-external", username: "nnb", systemRole: "EXTERNAL_RESEARCHER_USER" };
+const ACCOUNTS = [adminUser, staffUser, piUser, memberUser, secretaryUser, outsiderUser, headPiUser, noProfilePiUser, externalPiUser];
 
 const profileBase = { managementOrganizationUnit: { name: "Khoa Toán - Tin học" }, academicRankCatalogItem: null, academicDegreeCatalogItem: { name: "Tiến sĩ" }, contactEmail: "lan@hvqy.vn", contactEmailKey: "lan@hvqy.vn", contactPhone: "0900000000", externalAffiliation: null };
 const RESEARCHER_PROFILES = [
@@ -273,14 +277,14 @@ function createPrisma() {
         return store.researcherProfiles.filter((record) => matches(record, where ?? {})).slice(0, take ?? Infinity);
       }
     },
-    organizationUnit: { count: async () => 0 },
+    organizationUnit: { count: async () => 0, findFirst: async ({ where }) => (where.id === "missing-unit" ? null : { id: where.id }) },
     catalogItem: { findFirst: async () => ({ id: "catalog-stub" }) },
     proposalManagementOfficer: { findMany: async () => [] },
     approvalSubmission: { findMany: async () => [] },
     user: {
       async findUnique({ where }) {
         const user = ACCOUNTS.find((item) => item.id === where.id);
-        return user ? { ...user, status: "active", organizationScopes: user.organizationScopes.map((scope) => ({ organizationUnit: { ...scope, status: "active" } })) } : null;
+        return user ? { ...user, status: "active", organizationScopes: user.organizationScopes.map((scope) => ({ organizationUnit: { ...scope, status: "active" } })), researcherProfile: user.researcherProfileId ? { id: user.researcherProfileId, status: "ACTIVE" } : null } : null;
       },
       async findMany({ where }) {
         const ids = where?.OR?.flatMap((clause) => clause.id?.in ?? []) ?? [];
@@ -487,7 +491,20 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     assert.equal(lan.hasAccount, true);
     assert.deepEqual(await proposalService.listMemberCandidates(piUser, "n"), []);
     assert.deepEqual(await proposalService.listMemberCandidates(piUser, "khach@example.com"), []);
-    await assert.rejects(() => proposalService.listMemberCandidates(staffUser, "nguyen"), ForbiddenException);
+    await assert.rejects(() => proposalService.listMemberCandidates(adminUser, "nguyen"), ForbiddenException);
+  });
+
+  it("Story 4.2: mọi vai trò trừ QT/NNB có hồ sơ liên kết làm được chủ nhiệm; QT, NNB, thiếu hồ sơ bị từ chối và không tạo gì", async () => {
+    const services = createServices();
+    const intake = await createOpenIntake(services.intakeService);
+    const body = { intakePeriodId: intake.id, title: "Tạo bởi vai trò khác", hostOrganizationUnitId: "org-khti" };
+    const created = await services.proposalService.createDraft(headPiUser, body);
+    assert.equal(created.status, "draft");
+    assert.equal(created.ownerId, headPiUser.id);
+    for (const actor of [adminUser, externalPiUser, noProfilePiUser]) {
+      await assert.rejects(() => services.proposalService.createDraft(actor, body), ForbiddenException);
+    }
+    assert.equal(services.prisma.store.proposals.length, 1);
   });
 
   it("rejects a participant naming an account that does not exist without persisting a draft", async () => {

@@ -10,7 +10,7 @@ import { AuditLogService } from "../../auth/audit-log.service.js";
 import type { SafeUserContext } from "../../auth/auth.types.js";
 import type { ObjectStorage } from "../../infrastructure/minio/minio-object-storage.service.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { assertHasOrganizationScope, isInternalResearcherEligible } from "../../proposals-shared/proposal-access.js";
+import { isInternalResearcherEligible } from "../../proposals-shared/proposal-access.js";
 import { ProposalManagementOfficerService } from "../../proposals-shared/proposal-management-officer.service.js";
 import { ProposalReviewAccessService } from "../../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../../research-proposals/proposal-participation.service.js";
@@ -391,7 +391,6 @@ export class FilesService {
       throw new ForbiddenException({ message: "Chỉ PI hoặc thư ký nội bộ được tải tệp cho hồ sơ đề xuất." });
     }
     const proposal = await this.findRelatedProposal(relatedEntityType, relatedEntityId);
-    assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
     if (proposal.status !== "draft" && proposal.status !== "supplement_requested") {
       throw new ForbiddenException({ message: "Hồ sơ không còn cho phép tải tệp." });
     }

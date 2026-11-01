@@ -167,7 +167,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
   const { refreshCurrentUser } = useSession();
   const [profile, setProfile] = useState<ResearcherProfile | null>(null);
   const [draft, setDraft] = useState<CvDraft | null>(null);
-  const [catalogs, setCatalogs] = useState<CvCatalogs>({ organizationUnits: [], researchFields: [], academicRanks: [], academicDegrees: [] });
+  const [catalogs, setCatalogs] = useState<CvCatalogs>({ organizationUnits: [], organizationUnitOptions: [], researchFields: [], academicRanks: [], academicDegrees: [] });
   const [tab, setTab] = useState<CvTab>("general");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);

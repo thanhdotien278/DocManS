@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CatalogItem } from "@/lib/admin-api";
 import { loadProposalCatalogs } from "@/lib/research-proposals-api";
+import { getResearcherProfile, loadResearcherProfileCatalogs } from "@/lib/researcher-profiles-api";
 import { ProposalMembersEditor } from "@/components/research-proposals/proposal-members-editor";
 import { useEffect, useMemo, useState } from "react";
 import { Eye, FileText, Plus, Save, Search } from "lucide-react";
@@ -56,8 +57,8 @@ function defaultForm(hostOrganizationUnitId = ""): ProposalDraftInput {
 export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { allowCreate: boolean; creationOnly?: boolean }) {
   const router = useRouter();
   const { account } = useSession();
-  const initialHostScope = account?.organizationScopes?.[0]?.id ?? "";
   const [catalogs, setCatalogs] = useState<CatalogItem[]>([]);
+  const [unitOptions, setUnitOptions] = useState<Array<{ id: string; name: string }>>([]);
   const [state, setState] = useState<LoadState>("loading");
   const [proposals, setProposals] = useState<ResearchProposal[]>([]);
   const [intakes, setIntakes] = useState<ProposalIntakePeriod[]>([]);
@@ -65,7 +66,7 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
   const [reviewQueue, setReviewQueue] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [managementOfficerFilter, setManagementOfficerFilter] = useState("");
-  const [form, setForm] = useState<ProposalDraftInput>(() => defaultForm(initialHostScope));
+  const [form, setForm] = useState<ProposalDraftInput>(() => defaultForm());
   const [formError, setFormError] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,8 +80,7 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
       setState("ready");
       setForm((current) => ({
         ...current,
-        intakePeriodId: current.intakePeriodId || intakeData.find((intake) => intake.capabilities?.canCreateProposal)?.id || "",
-        hostOrganizationUnitId: current.hostOrganizationUnitId || initialHostScope
+        intakePeriodId: current.intakePeriodId || intakeData.find((intake) => intake.capabilities?.canCreateProposal)?.id || ""
       }));
     } catch {
       setState("error");
@@ -90,7 +90,21 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
   useEffect(() => {
     void loadProposalCatalogs().then(setCatalogs).catch(() => setMessage("Không tải được danh mục. Vui lòng tải lại."));
     void refresh();
-  }, [initialHostScope]);
+    if (!allowCreate) return;
+    // Mặc định đơn vị chủ trì = "Đơn vị quản lý / Đơn vị công tác" của PI (khớp theo tên), dự phòng đơn vị quản lý của hồ sơ.
+    void Promise.all([loadResearcherProfileCatalogs(), getResearcherProfile("my-profile")]).then(([cat, { profile }]) => {
+      setUnitOptions(cat.organizationUnitOptions);
+      const orgName = profile.curriculumVitae?.personalInfo?.organization?.trim();
+      const fallbackId = profile.managementOrganization?.id ?? "";
+      const defaultId = cat.organizationUnitOptions.find((unit) => unit.name === orgName)?.id
+        ?? (cat.organizationUnitOptions.some((unit) => unit.id === fallbackId) ? fallbackId : "");
+      setForm((current) => ({ ...current, hostOrganizationUnitId: current.hostOrganizationUnitId || defaultId }));
+    }).catch(() => setMessage("Không tải được danh sách đơn vị. Vui lòng tải lại."));
+  }, []);
+
+  const selectedIntake = intakes.find((intake) => intake.id === form.intakePeriodId);
+  const intakeUnitIds = selectedIntake?.applicableOrganizationUnitIds?.length ? selectedIntake.applicableOrganizationUnitIds : selectedIntake?.applicableOrganizationUnitId ? [selectedIntake.applicableOrganizationUnitId] : [];
+  const hostUnitChoices = intakeUnitIds.length ? unitOptions.filter((unit) => intakeUnitIds.includes(unit.id)) : unitOptions;
 
   const officerWorkloads = useMemo(() => {
     const workload = new Map<string, { displayName: string; count: number }>();
@@ -164,7 +178,7 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
       errors.title = "Nhập tên đề tài.";
     }
     if (!form.hostOrganizationUnitId?.trim()) {
-      errors.hostOrganizationUnitId = "Nhập mã đơn vị chủ trì.";
+      errors.hostOrganizationUnitId = "Chọn đơn vị chủ trì.";
     }
     if (form.startDate && form.endDate && new Date(form.endDate).getTime() <= new Date(form.startDate).getTime()) {
       errors.endDate = "Ngày kết thúc phải sau ngày bắt đầu.";
@@ -194,7 +208,7 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
       router.push(`/proposals/${result.proposal.id}`);
       setMessage("Đã lưu hồ sơ nháp.");
       setProposals((current) => [result.proposal, ...current]);
-      setForm(defaultForm(initialHostScope));
+      setForm({ ...defaultForm(), hostOrganizationUnitId: form.hostOrganizationUnitId });
     } catch (error) {
       setMessage("");
       setFormError({ submit: error instanceof Error ? error.message : "Không thể tạo hồ sơ nháp." });
@@ -406,7 +420,7 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
               <label className="field">
                 <span>Đơn vị chủ trì *</span>
                 <select required value={form.hostOrganizationUnitId} onChange={(e) => setForm({ ...form, hostOrganizationUnitId: e.target.value })}>
-                  <option value="">Chọn đơn vị chủ trì</option>{account?.organizationScopes?.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
+                  <option value="">Chọn đơn vị chủ trì</option>{hostUnitChoices.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
                 </select>
                 {formError.hostOrganizationUnitId ? <span className="field-error">{formError.hostOrganizationUnitId}</span> : null}
               </label>

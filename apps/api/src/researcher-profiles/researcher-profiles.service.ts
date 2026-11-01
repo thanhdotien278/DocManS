@@ -123,9 +123,10 @@ export class ResearcherProfilesService {
   async listCatalogs(actor: SafeUserContext) {
     if (!canManageResearcherProfiles(actor)) await this.getMyProfile(actor);
     const items = await this.prisma.catalogItem.findMany({ where: { status: "active", deletedAt: null, type: { in: ["research-field", "academic-rank", "academic-degree"] } }, orderBy: [{ type: "asc" }, { name: "asc" }] });
-    const units = await this.prisma.organizationUnit.findMany({ where: { status: "active", code: { not: "EXT" } }, select: { name: true }, orderBy: { name: "asc" } });
+    const units = await this.prisma.organizationUnit.findMany({ where: { status: "active", code: { not: "EXT" } }, select: { id: true, code: true, name: true }, orderBy: { name: "asc" } });
     return {
       organizationUnits: units.map((unit) => unit.name),
+      organizationUnitOptions: units,
       researchFields: items.filter((item) => item.type === "research-field"),
       academicRanks: items.filter((item) => item.type === "academic-rank"),
       academicDegrees: items.filter((item) => item.type === "academic-degree")

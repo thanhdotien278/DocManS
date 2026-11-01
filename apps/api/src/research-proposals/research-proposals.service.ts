@@ -241,10 +241,13 @@ export class ResearchProposalsService {
   async createDraft(actor: SafeUserContext, input: Record<string, unknown>): Promise<any> {
     if (!this.transactional) return this.mutate(actor, null, undefined, (service, a) => service.createDraft(a, input));
     const pi = assertCanCreateProposalDraft(actor);
+    if (!pi.researcherProfileId) {
+      throw new ForbiddenException({ message: "Tài khoản chưa liên kết hồ sơ nhà khoa học đang hoạt động nên chưa thể làm chủ nhiệm đề xuất." });
+    }
     await this.validateCatalogs(input);
     const intakePeriodId = readText(input.intakePeriodId, "intakePeriodId", 80);
     const hostOrganizationUnitId = readText(input.hostOrganizationUnitId, "hostOrganizationUnitId", 80);
-    assertHasOrganizationScope(pi, hostOrganizationUnitId);
+    await this.assertHostUnitSelectable(hostOrganizationUnitId);
 
     const intake = await this.findIntakePeriod(intakePeriodId);
     this.assertIntakeEligibleForProposal(pi, intake);
@@ -322,7 +325,7 @@ export class ResearchProposalsService {
     }
     if (input.hostOrganizationUnitId !== undefined) {
       const hostOrganizationUnitId = readText(input.hostOrganizationUnitId, "hostOrganizationUnitId", 80);
-      assertHasOrganizationScope(actor, hostOrganizationUnitId);
+      await this.assertHostUnitSelectable(hostOrganizationUnitId);
       this.assertIntakeUnit(await this.findIntakePeriod(proposal.intakePeriodId), hostOrganizationUnitId);
       data.hostOrganizationUnitId = hostOrganizationUnitId;
     }
@@ -814,6 +817,11 @@ export class ResearchProposalsService {
     }
   }
 
+  private async assertHostUnitSelectable(unitId: string) {
+    const unit = await this.prisma.organizationUnit.findFirst({ where: { id: unitId, status: "active", code: { not: "EXT" } }, select: { id: true } });
+    if (!unit) throw new BadRequestException({ message: "Đơn vị chủ trì không tồn tại hoặc không còn hoạt động." });
+  }
+
   private assertIntakeUnit(intake: IntakePeriodRecord, unitId: string) {
     const ids = intake.applicableOrganizationUnitIds?.length ? intake.applicableOrganizationUnitIds : intake.applicableOrganizationUnitId ? [intake.applicableOrganizationUnitId] : [];
     if (ids.length && !ids.includes(unitId)) throw new BadRequestException({ message: "Đơn vị chủ trì không thuộc phạm vi đợt tiếp nhận." });
@@ -915,7 +923,6 @@ export class ResearchProposalsService {
   private assertCanMutateProposalDraft(actor: SafeUserContext, proposal: ResearchProposalRecord) {
     assertCanCreateProposalDraft(actor);
     const pi = assertCanEditProposalDraft(actor, proposal);
-    assertHasOrganizationScope(pi, proposal.hostOrganizationUnitId);
     this.assertEditableDraft(proposal);
     return pi;
   }
@@ -923,7 +930,6 @@ export class ResearchProposalsService {
   private assertCanMutateProposalContent(actor: SafeUserContext, proposal: ResearchProposalRecord, participation?: ProposalParticipation) {
     assertCanCreateProposalDraft(actor);
     const pi = assertCanEditProposalDraft(actor, proposal, participation);
-    assertHasOrganizationScope(pi, proposal.hostOrganizationUnitId);
     if (proposal.status !== "draft" && proposal.status !== "supplement_requested") {
       throw new BadRequestException({ message: "Hồ sơ không ở trạng thái cho phép chỉnh sửa." });
     }
@@ -959,7 +965,6 @@ export class ResearchProposalsService {
   private assertCanResubmitSupplement(actor: SafeUserContext, proposal: ResearchProposalRecord) {
     assertCanCreateProposalDraft(actor);
     const pi = assertCanEditProposalDraft(actor, proposal);
-    assertHasOrganizationScope(pi, proposal.hostOrganizationUnitId);
     if (proposal.status !== "supplement_requested") {
       throw new BadRequestException({ message: "Chỉ hồ sơ đang chờ bổ sung mới được nộp lại." });
     }

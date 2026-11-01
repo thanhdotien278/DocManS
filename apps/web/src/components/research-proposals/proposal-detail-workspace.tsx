@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { CatalogItem } from "@/lib/admin-api";
 import { loadProposalCatalogs } from "@/lib/research-proposals-api";
+import { loadResearcherProfileCatalogs } from "@/lib/researcher-profiles-api";
 import { ProposalMembersEditor } from "@/components/research-proposals/proposal-members-editor";
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Download, FileText, Pencil, Save, Send, Trash2, UploadCloud, X } from "lucide-react";
@@ -91,6 +92,7 @@ function toDraftInput(proposal: ResearchProposal): ProposalDraftInput {
 export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) {
   const { account } = useSession();
   const [catalogs, setCatalogs] = useState<CatalogItem[]>([]);
+  const [unitOptions, setUnitOptions] = useState<Array<{ id: string; name: string }>>([]);
   const [state, setState] = useState<LoadState>("loading");
   const [proposal, setProposal] = useState<ResearchProposal | null>(null);
   const [readiness, setReadiness] = useState<ProposalReadiness | null>(null);
@@ -147,6 +149,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
 
   useEffect(() => {
     void loadProposalCatalogs().then(setCatalogs).catch(() => setMessage("Không tải được danh mục. Vui lòng tải lại."));
+    void loadResearcherProfileCatalogs().then((cat) => setUnitOptions(cat.organizationUnitOptions)).catch(() => undefined);
     void refresh();
   }, [proposalId]);
 
@@ -198,7 +201,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   const researchFieldLabel = catalogs.find((item) => item.type === "research-field" && item.code === proposal?.researchFieldCode)?.name ?? proposal?.researchFieldCode ?? "Chưa có";
   const proposalTypeLabel = catalogs.find((item) => item.type === "proposal-type" && item.code === proposal?.proposalTypeCode)?.name ?? proposal?.proposalTypeCode ?? "Chưa có";
   const proposalNatureLabel = catalogs.find((item) => item.type === "proposal-nature" && item.code === proposal?.proposalNatureCode)?.name ?? proposal?.proposalNatureCode ?? "Chưa có";
-  const hostOrganizationLabel = account?.organizationScopes?.find((unit) => unit.id === proposal?.hostOrganizationUnitId)?.name ?? proposal?.hostOrganizationUnitId ?? "Chưa có";
+  const hostOrganizationLabel = (unitOptions.find((unit) => unit.id === proposal?.hostOrganizationUnitId) ?? account?.organizationScopes?.find((unit) => unit.id === proposal?.hostOrganizationUnitId))?.name ?? proposal?.hostOrganizationUnitId ?? "Chưa có";
 
 
   function getSubmissionActorName(event: NonNullable<ResearchProposal["history"]>[number]) {
@@ -551,8 +554,8 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               <label className="field">
                 <span>Đơn vị chủ trì</span>
                 <select disabled={!canEditAllFields} value={form.hostOrganizationUnitId} onChange={(event) => setForm({ ...form, hostOrganizationUnitId: event.target.value })}>
-                  {!account?.organizationScopes?.some((unit) => unit.id === form.hostOrganizationUnitId) ? <option value={form.hostOrganizationUnitId}>{form.hostOrganizationUnitId}</option> : null}
-                  {account?.organizationScopes?.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
+                  {!unitOptions.some((unit) => unit.id === form.hostOrganizationUnitId) ? <option value={form.hostOrganizationUnitId}>{hostOrganizationLabel}</option> : null}
+                  {unitOptions.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
                 </select>
                 {formError.hostOrganizationUnitId ? <span className="field-error">{formError.hostOrganizationUnitId}</span> : null}
               </label>
