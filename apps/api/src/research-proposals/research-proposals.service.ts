@@ -393,7 +393,23 @@ export class ResearchProposalsService {
   async getReadiness(actor: SafeUserContext, proposalId: string) {
     const proposal = await this.findProposal(proposalId);
     await this.assertReadableProposal(actor, proposal);
-    return this.computeReadiness(proposal);
+    // External researcher không có section được giao nên không nhận chi tiết thiếu sót (Story 4.5).
+    if (actor.systemRole === "EXTERNAL_RESEARCHER_USER") {
+      return { ready: false, missingFields: [], missingFiles: [], blockers: [], canSubmit: false, submitBlockedReason: "Chỉ chủ nhiệm đề xuất được nộp hồ sơ." };
+    }
+    const readiness = await this.computeReadiness(proposal);
+    // Đợt tính lại mỗi lần gọi, không cache; chỉ áp cho hồ sơ nháp (nộp lại không bị chặn bởi đợt).
+    const blockers: ProposalMissingItem[] = [];
+    if (proposal.status === "draft" && !isIntakeOpenForSubmission(await this.findIntakePeriod(proposal.intakePeriodId))) {
+      blockers.push({ code: "intake-period", label: "Đợt tiếp nhận không còn mở" });
+    }
+    let submitBlockedReason: string | null = null;
+    try {
+      this.assertCanMutateProposalDraft(actor, proposal);
+    } catch (error) {
+      submitBlockedReason = (error as { response?: { message?: string } }).response?.message ?? "Bạn không thể nộp hồ sơ này.";
+    }
+    return { ...readiness, ready: readiness.ready && blockers.length === 0, blockers, canSubmit: submitBlockedReason === null && readiness.ready && blockers.length === 0, submitBlockedReason };
   }
 
   async submitProposal(actor: SafeUserContext, proposalId: string, input: { contextVersion?: unknown } = {}): Promise<any> {
@@ -1177,7 +1193,7 @@ export class ResearchProposalsService {
     const missingFields = this.getMissingFields(proposal, members);
     const missingFiles = requiredPackage
       .filter((item) => !attachments.some((attachment) => attachment.requirementCode === item.code && item.allowedMimeTypes.includes(attachment.mimeType) && (item.maxSizeMb === null || attachment.sizeBytes <= item.maxSizeMb * 1024 * 1024)))
-      .map((item) => ({ code: item.code, label: item.label }));
+      .map((item) => ({ code: item.code, label: item.label, section: "files" }));
 
     return {
       ready: missingFields.length === 0 && missingFiles.length === 0,
@@ -1217,7 +1233,7 @@ export class ResearchProposalsService {
     if (!budget || typeof budget.amount !== "number" || budget.amount < 0) {
       missing.push({ code: "budget", label: "Kinh phí dự kiến" });
     }
-    return missing;
+    return missing.map((item) => ({ ...item, section: item.code === "budget" ? "budget" : item.code === "timeline" ? "timeline" : "general" }));
   }
 
   private async toProposalDetailResponse(
