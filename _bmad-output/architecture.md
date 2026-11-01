@@ -254,7 +254,8 @@ Head/Staff/Leadership decision rights are superseded. Authoritative source:
 `docs/permission-matrix.md` (§7 wins on conflict).
 
 1. **Responsible CV (D-038).** Mỗi đợt tiếp nhận (`proposal_intake_periods`) có đúng một CV
-   phụ trách do TP giao; đợt chưa có CV thì chưa được mở. Khi nộp, hồ sơ nhận CV của đợt làm
+   phụ trách, do TP giao hoặc là CV mở đợt khi đợt chưa có CV (gán cùng transaction với việc mở,
+   audit actor `System`); TP mở đợt chưa có CV thì bị chặn. Khi nộp, hồ sơ nhận CV của đợt làm
    `PROPOSAL_MANAGEMENT_OFFICER` trong cùng transaction (audit actor `System`); nộp lại giữ CV
    hiện tại. TP đổi CV của cả đợt (áp dụng cho các hồ sơ trong đợt) hoặc của từng hồ sơ; TB giao,
    chuyển, thu hồi CV theo từng hồ sơ (`PROPOSAL_MANAGEMENT_OFFICER` /

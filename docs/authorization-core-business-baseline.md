@@ -61,7 +61,7 @@ role; thay đổi có audit. Một user có system role lãnh đạo hoặc qu�
 | TP | `RESEARCH_MANAGEMENT_HEAD` | Đề xuất trong scope đơn vị¹; mọi đề tài toàn Học viện | Duyệt mọi tờ trình trước khi lên BGĐ; giao CV phụ trách cho đợt tiếp nhận và đổi CV cả đợt hoặc từng hồ sơ (D-038); giao/thu hồi CV phụ trách; tổng hợp, lập tờ trình trong scope¹; phân công phản biện/hội đồng, lập hội đồng IRB theo cấu hình QT⁸ (mặc định có); quản lý kinh phí toàn Học viện; quản lý đợt tiếp nhận | Không kiểm tra đầy đủ, không yêu cầu bổ sung; không ký thay BGĐ; không duyệt tờ trình mình lập |
 | PP | `RESEARCH_MANAGEMENT_DEPUTY_HEAD` | Scope đơn vị¹, chỉ theo dõi | Theo dõi tiến độ, số lượng; xem kinh phí đề tài mình là PI/thành viên⁴ | Không có bước trong luồng tờ trình, không duyệt/ký, kể cả khi TP vắng |
 | TB | `RESEARCH_BOARD_HEAD` | Đề xuất trong scope đơn vị¹; mọi đề tài toàn Học viện | Rà soát tờ trình do CV lập rồi trình TP hoặc trả tác giả; giao/chuyển/thu hồi CV phụ trách theo từng hồ sơ (D-038); kiểm tra đầy đủ, yêu cầu bổ sung, tổng hợp, lập tờ trình trong scope¹; phân công phản biện/hội đồng, lập hội đồng IRB theo cấu hình QT⁸ (mặc định có); quản lý kinh phí toàn Học viện | Không rà soát tờ trình mình lập; không ký thay BGĐ |
-| CV | `RESEARCH_MANAGEMENT_STAFF` | Chỉ hồ sơ/đề tài đang được giao phụ trách³ | Kiểm tra đầy đủ, yêu cầu bổ sung, tổng hợp, lập tờ trình; mời phản biện/hội đồng, lập hội đồng IRB chỉ khi QT cấu hình tích role CV⁸; nghiệp vụ đề tài hằng ngày; kinh phí trong phạm vi giao; tạo/mở/đóng đợt; quản lý hồ sơ nhà khoa học và NCKH sinh viên trong scope¹ | Không thao tác hồ sơ giao cho CV khác; không giao/thu hồi CV; quan hệ tham gia không cấp quyền quản lý |
+| CV | `RESEARCH_MANAGEMENT_STAFF` | Chỉ hồ sơ/đề tài đang được giao phụ trách³ | Kiểm tra đầy đủ, yêu cầu bổ sung, tổng hợp, lập tờ trình; mời phản biện/hội đồng, lập hội đồng IRB chỉ khi QT cấu hình tích role CV⁸; nghiệp vụ đề tài hằng ngày; kinh phí trong phạm vi giao; tạo/mở/đóng đợt; quản lý hồ sơ nhà khoa học và NCKH sinh viên trong scope¹ | Không thao tác hồ sơ giao cho CV khác; không giao/thu hồi CV (việc hệ thống gán CV mở đợt khi đợt chưa có CV không phải CV tự giao, D-038); quan hệ tham gia không cấp quyền quản lý |
 | NCV | `RESEARCHER_INTERNAL_USER` | Bản ghi có quan hệ hợp lệ⁴ | Tạo/sửa/nộp đề xuất với tư cách PI; làm việc PI/thành viên; reviewer, hội đồng, IRB khi được mời⁵ ⁶; đăng ký NCKH sinh viên với tư cách GVHD | Không xem bản ghi không liên quan, không tự phân công, không quyết định |
 | NNB | `EXTERNAL_RESEARCHER_USER` | Chỉ bản ghi có quan hệ được cấp | Reviewer, thành viên hội đồng/IRB, thư ký hội đồng hoặc thành viên đề tài qua quan hệ tường minh | Không bao giờ là PI; không thấy đợt tiếp nhận; không tạo/sửa/nộp đề xuất; không phân công hoặc quyết định |
 
@@ -107,9 +107,11 @@ Cập nhật 2026-10-18 theo mô hình 10 vai trò.
 | `PROPOSAL_MANAGEMENT_OFFICER` | Một proposal | Tối đa một CV phụ trách đang hiệu lực trên mỗi proposal |
 | `PROJECT_MANAGEMENT_OFFICER` | Một project | Tối đa một CV phụ trách đang hiệu lực trên mỗi project |
 
-Mỗi đợt tiếp nhận có đúng một CV phụ trách do TP giao (D-038); mọi hồ sơ nộp trong đợt do
-CV đó phụ trách, hệ thống áp dụng CV của đợt cho hồ sơ khi nộp/nộp lại. Đợt chưa có CV thì
-chưa được mở, nên hồ sơ nộp vào đợt luôn có CV ngay. “Chưa có người phụ trách” chỉ còn khi
+Mỗi đợt tiếp nhận có đúng một CV phụ trách (D-038): TP giao, hoặc khi CV mở một đợt chưa có
+CV thì hệ thống gán chính CV đó cùng transaction với việc mở (audit actor System, ghi người mở).
+TP mở đợt chưa có CV thì bị chặn; đợt đã có CV thì mở/mở lại không đổi CV. Mọi hồ sơ nộp
+trong đợt do CV đó phụ trách, hệ thống áp dụng CV của đợt cho hồ sơ khi nộp/nộp lại, nên hồ sơ
+nộp vào đợt luôn có CV ngay. “Chưa có người phụ trách” chỉ còn khi
 TP/TB thu hồi CV mà chưa giao lại. Không có officer đang hiệu lực nghĩa là **chưa phân
 công**, không phải context bị lỗi. TP¹/TB¹
 thấy hồ sơ này trong scope; CV không nhận management visibility trên hồ sơ không giao
@@ -217,7 +219,8 @@ invoices or ERP integration.
   học không biến thành system role mới.
 - Đợt tiếp nhận do TP hoặc CV tạo/mở/đóng, có phạm vi `Toàn Học viện` hoặc `Chọn đơn vị`.
   Đợt mặc định là `Toàn Học viện`; khi chọn đơn vị, chỉ các đơn vị được chọn được nộp.
-  Mỗi đợt có đúng một CV phụ trách do TP giao; đợt chưa có CV thì chưa được mở (D-038).
+  Mỗi đợt có đúng một CV phụ trách, do TP giao hoặc là CV mở đợt khi đợt chưa có CV; TP mở
+  đợt chưa có CV thì bị chặn (D-038).
   Mọi role trừ QT và NNB xem được đợt đang mở.
 - Mọi đơn vị được phép tạo/nộp đề xuất trong đợt áp dụng; PI chọn đơn vị quản
   lý chính phù hợp với scope của mình.
@@ -272,8 +275,8 @@ không. Lịch sử quan hệ cũ vẫn giữ.
 
 | Hành động | Quyền |
 | --- | --- |
-| Tạo, sửa, mở, đóng đợt | TP hoặc CV có scope đợt được cấp rõ; không cấp quyền xem proposal/project trong đợt; chặn mở đợt khi chưa có CV phụ trách (D-038) |
-| Giao, đổi CV phụ trách cho đợt | TP giao đúng một CV cho mỗi đợt và đổi CV cả đợt (áp dụng cho các hồ sơ trong đợt) hoặc từng hồ sơ (D-038); giữ lịch sử và audit |
+| Tạo, sửa, mở, đóng đợt | TP hoặc CV có scope đợt được cấp rõ; không cấp quyền xem proposal/project trong đợt; TP mở đợt chưa có CV phụ trách thì bị chặn; CV mở đợt chưa có CV thì hệ thống gán chính CV đó (D-038) |
+| Giao, đổi CV phụ trách cho đợt | TP giao đúng một CV cho mỗi đợt (hoặc hệ thống gán CV mở đợt khi đợt chưa có CV) và đổi CV cả đợt (áp dụng cho các hồ sơ trong đợt) hoặc từng hồ sơ (D-038); giữ lịch sử và audit |
 | Xem đợt đang mở | Mọi role trừ QT và NNB |
 | Chọn phạm vi | `Toàn Học viện` hoặc `Chọn đơn vị`; mặc định toàn Học viện |
 | Quá hạn | Chỉ đánh dấu quá hạn và nhắc; không tự từ chối/đóng/chuyển trạng thái |

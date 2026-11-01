@@ -170,7 +170,7 @@ Deputy Director; it means the other Deputy Directors, who only monitor.
   CV and performs completeness, supplement, reviewer/council assignment and synthesis in unit scope.
 - CV works only on proposals/projects where it is the current responsible officer
   (`PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER`) and never on another CV's records.
-  Mỗi đợt tiếp nhận có đúng một CV phụ trách do TP giao, đợt chưa có CV thì chưa được mở; hồ sơ
+  Mỗi đợt tiếp nhận có đúng một CV phụ trách, do TP giao hoặc là CV mở đợt khi đợt chưa có CV (TP mở đợt chưa có CV thì bị chặn); hồ sơ
   nộp trong đợt nhận CV đó (D-038). "Chưa có người phụ trách" chỉ còn sau khi thu hồi CV mà chưa
   giao lại. TP/PP/TB/CV có thể là PI hoặc thành viên đề tài; TB và CV phụ trách vẫn được kiểm tra
   đầy đủ và yêu cầu bổ sung trên hồ sơ của chính mình (chỉ hai thao tác này); các kiểm tra xung

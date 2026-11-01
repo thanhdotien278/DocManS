@@ -136,7 +136,7 @@ quan hệ đó. Thu hồi quản lý không thu hồi quan hệ độc lập, nh
 visibility/action. TP/TB có bộ lọc/nhóm theo CV phụ trách và chưa phân công, chỉ số workload,
 trạng thái/hạn; count, drill-down và export dùng cùng tập hồ sơ được phép.
 
-Mỗi đợt tiếp nhận có đúng một CV phụ trách do TP giao (chưa có CV thì chưa mở đợt); hồ sơ nộp trong đợt thuộc CV đó (D-038). TP đổi CV cả đợt hoặc từng hồ sơ; TB giao/chuyển/thu hồi CV theo từng hồ sơ. TP/PP/TB/CV có thể là PI/thành viên đề tài; TB và CV phụ trách vẫn kiểm tra đầy đủ, yêu cầu bổ sung hồ sơ của chính mình. Tờ trình đi
+Mỗi đợt tiếp nhận có đúng một CV phụ trách, do TP giao hoặc là CV đã mở đợt khi đợt chưa có CV (TP mở đợt chưa có CV thì bị chặn); hồ sơ nộp trong đợt thuộc CV đó (D-038). TP đổi CV cả đợt hoặc từng hồ sơ; TB giao/chuyển/thu hồi CV theo từng hồ sơ. TP/PP/TB/CV có thể là PI/thành viên đề tài; TB và CV phụ trách vẫn kiểm tra đầy đủ, yêu cầu bổ sung hồ sơ của chính mình. Tờ trình đi
 CV lập → TB rà soát → TP duyệt → BGĐ ký; trả lại ở bước nào cũng về người lập kèm lý do.
 GĐ quyết định cuối khi đủ điều kiện và không có xung đột; PGĐ-TD và PP chỉ theo dõi.
 Phạm vi triển khai hiện tại và funding metadata tuân theo baseline §2.1; backend dự án,

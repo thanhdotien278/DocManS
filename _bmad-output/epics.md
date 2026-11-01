@@ -74,7 +74,7 @@ story backlog below (10-role model, decisions of 18/10/2026):
 - **Responsible CV.** Every CV proposal/project operation requires the current
   responsible-officer assignment (³); participation/review access never supplies
   it, and a CV never operates on records assigned to another CV. Theo D-038, mỗi đợt tiếp nhận có đúng một CV phụ trách do TP giao; mọi hồ sơ nộp trong đợt do CV đó phụ trách
-  (gán cùng transaction với việc nộp) và đợt chưa có CV thì chưa được mở. TP¹ đổi CV của cả đợt
+  (gán cùng transaction với việc nộp). TP mở đợt chưa có CV thì bị chặn; CV mở đợt chưa có CV thì hệ thống gán chính CV đó làm CV của đợt. TP¹ đổi CV của cả đợt
   hoặc của từng hồ sơ; TB¹ giao, chuyển, thu hồi CV theo từng hồ sơ; mọi thay đổi giữ lịch sử và audit.
   "Chưa có người phụ trách" chỉ còn khi TP/TB thu hồi CV mà chưa giao lại. TP, PP, TB, CV đều có thể là
   PI/thành viên đề tài, kể cả CV của đợt trong đợt mình phụ trách; TB¹/CV³ vẫn kiểm tra đầy đủ và
@@ -215,7 +215,7 @@ mảng/tự giao theo mảng); hồ sơ chỉ chưa có người phụ trách sa
 - FR69: The system can preserve researcher profile history and audit important profile changes according to role and data-scope permissions.
 - FR70: Researchers can maintain a scientific CV (Lý lịch khoa học, form BM-06) on their researcher profile — general info, education, work history, research experience — validated server-side, with sensitive fields protected, and can view/print it in Vietnamese and English; authorized scoped managers can view it.
 - FR71: The system routes every BGĐ-bound procedure (8 kinds: evaluation council, decision package, IRB council, IRB certificate, acceptance council, project extension, project adjustment, liquidation) through approval routing with a signer per kind (matrix §7.4): CV drafts → TB review → TP approval → BGĐ signature. Any step can return the submission to its author with a mandatory reason. No step skipping and no self-review; a TB-authored submission starts at TP. One open submission per kind and subject.
-- FR72 (viết lại theo D-038): mỗi đợt tiếp nhận có đúng một CV phụ trách do TP giao; đợt chưa có CV thì chưa được mở. Mọi hồ sơ nộp trong đợt do CV đó phụ trách (trở thành `PROPOSAL_MANAGEMENT_OFFICER`, gán cùng transaction với việc nộp, audit). TP đổi CV của cả đợt (áp dụng cho các hồ sơ trong đợt) hoặc của từng hồ sơ; TB giao, chuyển, thu hồi CV theo từng hồ sơ; mỗi lần đổi giữ lịch sử và audit, CV cũ mất quyền ngay. "Chưa có người phụ trách" chỉ còn khi TP/TB thu hồi CV mà chưa giao lại. TP, PP, TB, CV đều có thể là PI/thành viên đề tài, kể cả CV của đợt trong đợt mình phụ trách. Việc phân mảng (cấp + tính chất), giao mảng cho CV và tự giao CV theo mảng bị thay thế và không triển khai.
+- FR72 (viết lại theo D-038): mỗi đợt tiếp nhận có đúng một CV phụ trách, do TP giao hoặc là CV mở đợt khi đợt chưa có CV (hệ thống gán cùng transaction với việc mở); TP mở đợt chưa có CV thì bị chặn. Mọi hồ sơ nộp trong đợt do CV đó phụ trách (trở thành `PROPOSAL_MANAGEMENT_OFFICER`, gán cùng transaction với việc nộp, audit). TP đổi CV của cả đợt (áp dụng cho các hồ sơ trong đợt) hoặc của từng hồ sơ; TB giao, chuyển, thu hồi CV theo từng hồ sơ; mỗi lần đổi giữ lịch sử và audit, CV cũ mất quyền ngay. "Chưa có người phụ trách" chỉ còn khi TP/TB thu hồi CV mà chưa giao lại. TP, PP, TB, CV đều có thể là PI/thành viên đề tài, kể cả CV của đợt trong đợt mình phụ trách. Việc phân mảng (cấp + tính chất), giao mảng cho CV và tự giao CV theo mảng bị thay thế và không triển khai.
 - FR73: BGĐ signatures: GĐ or PGĐ-KH signs councils (evaluation, IRB, acceptance), the IRB certificate, project extension and project adjustment; GĐ alone signs topic + funding and liquidation. A signer cannot be a participant or reviewer on the record.
 - FR74: Funding is recorded as audited metadata (allocation, disbursement and settlement figures plus documents; no ledger, payments, banking or ERP). View: GĐ/PGĐ-KH/TP/TB all; CV assigned; PP and PI/members own participation; PGĐ-TD aggregate only. Manage: GĐ, and TP/TB Academy-wide; CV assigned. Liquidation: CV drafts → routing → GĐ signs.
 - FR75: A duplicate researcher-profile warning (raised by QT, TP or CV) is notified to TB/TP, who decide the merge; history is kept.
@@ -2690,9 +2690,18 @@ So that mỗi hồ sơ có người xử lý ngay khi nộp mà không cần ph�
 **And** audit ghi actor, đợt, CV và thời điểm.
 
 **Given** đợt tiếp nhận chưa có CV phụ trách active
-**When** người dùng cố mở đợt
+**When** TP cố mở đợt mà không chọn CV
 **Then** backend từ chối với lý do rõ ràng và đợt giữ nguyên trạng thái chưa mở
 **And** không tạo trạng thái mở một phần.
+
+**Given** đợt tiếp nhận chưa có CV phụ trách active
+**When** một CV active trong scope mở đợt
+**Then** hệ thống gán chính CV đó làm CV phụ trách của đợt trong cùng transaction với việc mở (audit actor `System`, ghi người mở)
+**And** nếu gán thất bại thì đợt không mở; UI báo trước cho CV rằng mình sẽ thành CV phụ trách của đợt.
+
+**Given** đợt đã có CV phụ trách active (kể cả do TP giao trước)
+**When** TP hoặc một CV khác mở hoặc mở lại đợt
+**Then** CV phụ trách của đợt giữ nguyên.
 
 **Given** đợt đang mở có CV phụ trách active và PI nộp hoặc nộp lại một đề xuất trong đợt
 **When** việc nộp thành công

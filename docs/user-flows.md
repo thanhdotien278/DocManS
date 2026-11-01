@@ -60,8 +60,8 @@ flowchart LR
 
 ### Luồng giám sát và phân công quản lý
 
-1. Mỗi đợt tiếp nhận có đúng một CV phụ trách do TP giao (D-038); đợt chưa có CV thì chưa
-   được mở. Khi nộp, hệ thống áp dụng CV của đợt cho hồ sơ; “Chưa có người phụ trách” chỉ còn
+1. Mỗi đợt tiếp nhận có đúng một CV phụ trách (D-038), do TP giao hoặc là CV mở đợt khi đợt
+   chưa có CV; TP mở đợt chưa có CV thì bị chặn. Khi nộp, hệ thống áp dụng CV của đợt cho hồ sơ; “Chưa có người phụ trách” chỉ còn
    khi TP/TB thu hồi CV mà chưa giao lại. TP/TB mở danh sách proposal/project trong scope, thấy
    officer hiện tại hoặc “Chưa phân công”; lọc/nhóm theo CV để xem workload, trạng thái và hạn.
 2. TP giao CV cho đợt và đổi CV cả đợt (áp dụng cho các hồ sơ trong đợt) hoặc từng hồ sơ; TB
@@ -112,7 +112,7 @@ flowchart TD
 ```mermaid
 flowchart LR
   subgraph staff["CV — RESEARCH_MANAGEMENT_STAFF: hồ sơ đang được giao (TP/TB làm được trong scope, trừ ô ghi rõ)"]
-    open["TP / CV: tạo và mở đợt tiếp nhận<br/>(chặn mở khi chưa có CV phụ trách, D-038)"]
+    open["TP / CV: tạo và mở đợt tiếp nhận<br/>(TP mở đợt chưa có CV: chặn; CV mở: hệ thống gán chính CV đó, D-038)"]
     check["TB / CV: kiểm tra đầy đủ / thủ tục<br/>(TP không làm; được làm cả hồ sơ của mình, D-038)"]
     assign["Phân công phản biện / mời hội đồng<br/>(role do QT cấu hình, mặc định TP/TB)<br/>+ conflict check"]
     consolidate["Đủ phiếu → Soạn tổng hợp → Chốt tổng hợp"]
