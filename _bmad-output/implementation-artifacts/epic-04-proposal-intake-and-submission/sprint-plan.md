@@ -15,8 +15,8 @@
 | 4.2 | Tạo đề xuất nháp và thiết lập quan hệ tham gia | `review` |
 | 4.3 | Nhập và cộng tác trên thông tin đề xuất có cấu trúc | `done` |
 | 4.4 | Đính kèm và quản lý tệp đề xuất | `backlog` |
-| 4.5 | Kiểm tra mức độ sẵn sàng trước khi nộp | `backlog` |
-| 4.6 | Nộp chính thức và xem lịch sử nộp đề xuất | `backlog` |
+| 4.5 | Kiểm tra mức độ sẵn sàng trước khi nộp | `review` |
+| 4.6 | Nộp chính thức và xem lịch sử nộp đề xuất | `review` |
 | 4.7 | Auto-assign responsible CV by segment on submit | `backlog` |
 | 4.8 | Post-submission withdraw/edit/reopen by assigned CV | `backlog` |
 
