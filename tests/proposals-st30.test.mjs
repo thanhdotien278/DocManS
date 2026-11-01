@@ -173,6 +173,7 @@ function createPrisma() {
           code: null,
           researchFieldCode: null,
           proposalTypeCode: null,
+          proposalNatureCode: null,
           objectives: null,
           summary: null,
           startDate: null,
@@ -413,6 +414,7 @@ async function createProposalWithParticipants(services, members) {
     hostOrganizationUnitId: "org-khti",
     researchFieldCode: "biomedical-tech",
     proposalTypeCode: "academy-level",
+    proposalNatureCode: "military",
     startDate: futureDate(30),
     endDate: futureDate(210),
     objectives: "Xây dựng mô hình thử nghiệm hỗ trợ phân tích dữ liệu.",
@@ -657,6 +659,24 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     assert.equal(locked.viewerAuthorization.allowedActions.includes("proposal.draft.update"), false);
     const lockedToken = await token(secretaryUser);
     await assert.rejects(() => proposalService.updateDraft(secretaryUser, created.id, { summary: "Sau khi nộp", contextVersion: lockedToken }), BadRequestException);
+  });
+
+  it("Tính chất đề tài: lưu, từ chối mã ngoài catalog và báo thiếu khi chưa chọn", async () => {
+    const services = createServices();
+    const created = await createProposalWithParticipants(services, []);
+    assert.equal(created.proposalNatureCode, "military");
+
+    const noNature = await services.proposalService.createDraft(piUser, {
+      intakePeriodId: created.intakePeriodId, title: "Chưa chọn tính chất", hostOrganizationUnitId: "org-khti"
+    });
+    const readiness = await services.proposalService.getReadiness(piUser, noNature.id);
+    assert.equal(readiness.missingFields.some((item) => item.label === "Tính chất đề tài"), true);
+
+    services.prisma.catalogItem.findFirst = async ({ where }) => (where.type === "proposal-nature" ? null : { id: "catalog-stub" });
+    await assert.rejects(
+      () => services.proposalService.createDraft(piUser, { intakePeriodId: created.intakePeriodId, title: "Sai tính chất", hostOrganizationUnitId: "org-khti", proposalNatureCode: "bogus" }),
+      (error) => error instanceof BadRequestException && error.getResponse().field === "proposalNatureCode"
+    );
   });
 
   it("Story 1.4 Session 4: legacy PI, reviewer, and council labels grant no proposal authority without a record relationship", async () => {

@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 const catalogTypes = [
   { value: "research-field", label: "Lĩnh vực nghiên cứu" },
   { value: "proposal-type", label: "Loại hồ sơ" },
+  { value: "proposal-nature", label: "Tính chất đề tài" },
   { value: "priority", label: "Mức ưu tiên" },
   { value: "report-type", label: "Loại báo cáo" },
   { value: "scoring-criterion", label: "Tiêu chí chấm điểm" }
