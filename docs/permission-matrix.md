@@ -693,6 +693,14 @@ and history retention.
 
 These profile permissions do not widen any business-record permission in this matrix.
 
+**Narrow exception — proposal member lookup (D-039, 2026-11-01):** a user allowed to create
+proposal drafts may look up researcher profiles through
+`GET /api/v1/research-proposals/member-candidates?keyword=` solely to pick research team
+members. It matches on full name only (`fullNameKey`, at least 2 characters, at most 20
+results), ACTIVE profiles only, every unit, INTERNAL and EXTERNAL. Results carry only `id`,
+full name, academic rank, academic degree, organization and `hasAccount`; never email, phone
+or other contact fields. This is not a directory: `GET /researcher-profiles` stays as above.
+
 ### Implementation scope
 
 On `DocManS` the model is implemented on the existing proposal, intake,

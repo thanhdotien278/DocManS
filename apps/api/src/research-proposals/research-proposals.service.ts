@@ -36,6 +36,7 @@ import { MANAGEMENT_OFFICER_STATUS, ProposalManagementOfficerService, type Propo
 import { PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import type { ProposalMemberPersistInput, ProposalMissingItem } from "../proposals-shared/proposal-types.js";
 import { ProposalParticipationService } from "./proposal-participation.service.js";
+import { normalizeResearcherKey } from "../researcher-profiles/researcher-profiles.dto.js";
 import { projectProposalViewerAuthorizationV1 } from "../permissions/proposal-capability-v1.js";
 import { readCouncilFormationConfig, type CouncilFormationConfig } from "../proposals-shared/council-formation.js";
 import {
@@ -95,6 +96,7 @@ type ProposalMemberRecord = {
   role: string;
   organization: string;
   userId: string | null;
+  researcherProfileId?: string | null;
   participationRole: string | null;
   status: string;
   effectiveFrom: Date;
@@ -748,6 +750,39 @@ export class ResearchProposalsService {
     return this.toManagementOfficerResponse({ resolved: true, officer: null });
   }
 
+  /**
+   * Narrow member lookup for the proposal form (permission-matrix exception to "no directory"):
+   * name match only, ACTIVE profiles of every unit, and no contact fields in the projection.
+   */
+  async listMemberCandidates(actor: SafeUserContext, keyword: string | undefined) {
+    assertCanCreateProposalDraft(actor);
+    const key = normalizeResearcherKey(keyword ?? "");
+    if (key.length < 2 || key.length > 160) return [];
+    const profiles = await this.prisma.researcherProfile.findMany({
+      where: { status: "ACTIVE", fullNameKey: { contains: key } },
+      select: {
+        id: true,
+        fullName: true,
+        profileType: true,
+        externalAffiliation: true,
+        linkedUserId: true,
+        managementOrganizationUnit: { select: { name: true } },
+        academicRankCatalogItem: { select: { name: true } },
+        academicDegreeCatalogItem: { select: { name: true } }
+      },
+      orderBy: [{ fullNameKey: "asc" }, { id: "asc" }],
+      take: 20
+    });
+    return profiles.map((profile) => ({
+      id: profile.id,
+      fullName: profile.fullName,
+      academicRank: profile.academicRankCatalogItem?.name ?? "",
+      academicDegree: profile.academicDegreeCatalogItem?.name ?? "",
+      organization: (profile.profileType === "EXTERNAL" && profile.externalAffiliation) || profile.managementOrganizationUnit?.name || "",
+      hasAccount: Boolean(profile.linkedUserId)
+    }));
+  }
+
   async listCatalogs() {
     return this.prisma.catalogItem.findMany({ where: { status: "active", deletedAt: null, type: { in: ["research-field", "proposal-type"] } }, select: { id: true, type: true, code: true, name: true, status: true }, orderBy: [{ type: "asc" }, { name: "asc" }] });
   }
@@ -940,8 +975,8 @@ export class ResearchProposalsService {
       if (reviewConflict.unresolved) throw new ConflictException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được lịch sử phản biện của thành viên." });
       if (reviewConflict.isAssignedReviewer || reviewConflict.hasPersistedReview) throw new BadRequestException({ code: "CONFLICT_DENIED", message: "Không thể thêm người đang hoặc đã đánh giá hồ sơ vào nhóm tham gia." });
     }
-    const key = (member: { userId?: string | null; participationRole?: string | null; name: string; role: string; organization: string }) =>
-      `${member.userId ?? `external:${member.name}:${member.organization}`}:${normalizeParticipationRole(member.participationRole ?? member.role)}`;
+    const key = (member: { userId?: string | null; researcherProfileId?: string | null; participationRole?: string | null; name: string; role: string; organization: string }) =>
+      `${member.userId ?? (member.researcherProfileId ? `profile:${member.researcherProfileId}` : `external:${member.name}:${member.organization}`)}:${normalizeParticipationRole(member.participationRole ?? member.role)}`;
     const desiredKeys = members.map((member) => key(member));
     if (new Set(desiredKeys).size !== desiredKeys.length) {
       throw new BadRequestException({ message: "Không thể lưu quan hệ trùng loại trên cùng hồ sơ." });
@@ -960,7 +995,7 @@ export class ResearchProposalsService {
         active = previous.filter(isCurrentlyActive);
         const activeByKey = new Map(active.map((member) => [key(member), member]));
         const sameMember = (current: ProposalMemberRecord, next: ProposalMemberPersistInput) =>
-          current.name === next.name && current.role === next.role && current.organization === next.organization && current.userId === next.userId && current.participationRole === next.participationRole;
+          current.name === next.name && current.role === next.role && current.organization === next.organization && current.userId === next.userId && (current.researcherProfileId ?? null) === next.researcherProfileId && current.participationRole === next.participationRole;
         const ending = previous.filter((member) => {
           if (member.status !== "ACTIVE" || !isCurrentlyActive(member)) return member.status === "ACTIVE";
           const next = desired.get(key(member));
@@ -1199,6 +1234,7 @@ export class ResearchProposalsService {
       role: participationRole === "unknown" ? member.role : participationRole,
       organization: member.organization,
       userId: member.userId ?? "",
+      researcherProfileId: member.researcherProfileId ?? "",
       isAccountLinked: Boolean(member.userId),
       participationRole,
       participationRoleLabel: getParticipationRoleLabel(participationRole),
