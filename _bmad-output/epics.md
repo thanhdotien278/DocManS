@@ -2562,20 +2562,15 @@ So that hồ sơ có thể được hoàn thiện dần trước khi nộp.
 **Then** backend validate và lưu atomically
 **And** response trả field errors hoặc capability mới theo state hiện hành.
 
-**Given** `TOPIC_MEMBER` có responsibility/action được cấp rõ ràng
-**When** họ sửa phần được giao
-**Then** backend chỉ cho phép các field/section nằm trong action đó
-**And** từ chối thay đổi ngoài phạm vi mà không ảnh hưởng phần hợp lệ đã lưu trước đó.
+**Given** actor là `TOPIC_MEMBER` hoặc người tham gia ngoài chỉ có quan hệ tham gia
+**When** họ cố sửa thông tin đề xuất
+**Then** backend từ chối và không lưu thay đổi nào
+**And** UI hiển thị hồ sơ ở chế độ chỉ đọc, kèm lý do từ backend.
 
-**Given** external researcher có draft contribution được phân công
-**When** họ sửa proposal
-**Then** backend chỉ lưu section/field được giao và file đóng góp được phép
-**And** PI, roster, objective, budget, status và submit vẫn bị chặn.
-
-**Given** `TOPIC_SECRETARY` đang hoạt động
-**When** họ cập nhật dữ liệu hành chính, meeting material, tracking hoặc draft summary được cấp
-**Then** action hợp lệ được lưu và audit
-**And** họ không thể tự thay đổi roster nhạy cảm, nộp thay PI, đánh giá hoặc quyết định.
+**Given** `TOPIC_SECRETARY` đang hoạt động và hồ sơ ở trạng thái nháp hoặc cho phép sửa
+**When** họ cập nhật phần tóm tắt nháp
+**Then** thay đổi hợp lệ được lưu và audit
+**And** họ không thể đổi PI, roster, mục tiêu, kinh phí, trạng thái, nộp thay PI, đánh giá hoặc quyết định.
 
 **Given** actor có nhiều quan hệ trên proposal
 **When** detail được tải

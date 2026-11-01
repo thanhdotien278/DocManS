@@ -159,6 +159,8 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
 
   const capabilityState = proposal ? getProposalCapabilityState(proposal) : { capability: null, reloadRequired: true, reason: "Đang tải quyền thao tác." };
   const canEdit = canPerformProposalAction(capabilityState, "proposal.draft.update");
+  // Người có quyền sửa nhưng không phải PI (thư ký) chỉ được sửa ô tóm tắt.
+  const canEditAllFields = canEdit && Boolean(proposal?.viewerParticipation?.isOwner);
   const unsaved = Boolean(form && proposal && JSON.stringify(form) !== JSON.stringify(toDraftInput(proposal)));
   const canSubmit = canPerformProposalAction(capabilityState, "proposal.submit");
   const canRequestSupplement = canPerformProposalAction(capabilityState, "proposal.supplement.request");
@@ -235,13 +237,13 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   async function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
-    if (!proposal || !form || !canEdit || !validateDraft()) {
+    if (!proposal || !form || !canEdit || (canEditAllFields && !validateDraft())) {
       return;
     }
 
     setIsSaving(true);
     try {
-      const payload = {
+      const payload = !canEditAllFields ? { summary: form.summary } : {
         ...form,
         budgetMetadata: {
           amount: Number(form.budgetMetadata?.amount ?? 0),
@@ -475,7 +477,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
           </SectionCard>
         ) : null}
         {proposal.versions?.length ? <SectionCard title="Phiên bản đã nộp" subtitle="Nội dung đã khóa được giữ nguyên"><div>{proposal.versions.map((version) => <details key={version.id}><summary>Phiên bản {version.version} — {formatDate(version.submittedAt)}</summary><h3>{version.content.title}</h3><p style={{ whiteSpace: "pre-wrap" }}>{version.content.objectives}</p><p style={{ whiteSpace: "pre-wrap" }}>{version.content.summary}</p><ul>{version.content.attachments?.map((file) => <li key={file.id}><a href={getProposalAttachmentDownloadUrl(file.id)}>{file.fileName}</a></li>)}</ul></details>)}</div></SectionCard> : null}
-        {proposal.viewerParticipation?.isOwner ? (
+        {(proposal.viewerParticipation?.isOwner || proposal.viewerParticipation?.isParticipant) ? (
         <SectionCard title="Thông tin hồ sơ" subtitle={canEdit ? "Có thể lưu nháp nhiều lần trước khi nộp chính thức" : "Hồ sơ đang ở trạng thái chỉ đọc"}>
           <form className="admin-form" onSubmit={(event) => void handleSave(event)}>
             <div className="meta-grid">
@@ -521,26 +523,26 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               <div className="section-mini-heading">Thông tin chung</div>
               <label className="field">
                 <span>Tên đề tài</span>
-                <input disabled={!canEdit} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
+                <input disabled={!canEditAllFields} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
                 {formError.title ? <span className="field-error">{formError.title}</span> : null}
               </label>
               <div className="form-grid two">
                 <label className="field">
                   <span>Lĩnh vực</span>
-                  <select disabled={!canEdit} value={form.researchFieldCode} onChange={(event) => setForm({ ...form, researchFieldCode: event.target.value })}>
+                  <select disabled={!canEditAllFields} value={form.researchFieldCode} onChange={(event) => setForm({ ...form, researchFieldCode: event.target.value })}>
                     <option value="">Chọn lĩnh vực</option>{catalogs.filter((item) => item.type === "research-field" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
                   </select>
                 </label>
                 <label className="field">
                   <span>Loại đề tài</span>
-                  <select disabled={!canEdit} value={form.proposalTypeCode} onChange={(event) => setForm({ ...form, proposalTypeCode: event.target.value })}>
+                  <select disabled={!canEditAllFields} value={form.proposalTypeCode} onChange={(event) => setForm({ ...form, proposalTypeCode: event.target.value })}>
                     <option value="">Chọn loại đề tài</option>{catalogs.filter((item) => item.type === "proposal-type" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
                   </select>
                 </label>
               </div>
               <label className="field">
                 <span>Đơn vị chủ trì</span>
-                <select disabled={!canEdit} value={form.hostOrganizationUnitId} onChange={(event) => setForm({ ...form, hostOrganizationUnitId: event.target.value })}>
+                <select disabled={!canEditAllFields} value={form.hostOrganizationUnitId} onChange={(event) => setForm({ ...form, hostOrganizationUnitId: event.target.value })}>
                   {!account?.organizationScopes?.some((unit) => unit.id === form.hostOrganizationUnitId) ? <option value={form.hostOrganizationUnitId}>{form.hostOrganizationUnitId}</option> : null}
                   {account?.organizationScopes?.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
                 </select>
@@ -551,14 +553,14 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
             <div className="form-section-inline">
               <div className="section-mini-heading">Chủ nhiệm, team và thời gian</div>
               <div className="form-grid two">
-                <ProposalMembersEditor members={form.members ?? []} disabled={!canEdit || isSaving} onChange={(members) => setForm({ ...form, members })} />
+                <ProposalMembersEditor members={form.members ?? []} disabled={!canEditAllFields || isSaving} onChange={(members) => setForm({ ...form, members })} />
                 <label className="field">
                   <span>Bắt đầu</span>
-                  <input disabled={!canEdit} type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} />
+                  <input disabled={!canEditAllFields} type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} />
                 </label>
                 <label className="field">
                   <span>Kết thúc</span>
-                  <input disabled={!canEdit} type="date" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })} />
+                  <input disabled={!canEditAllFields} type="date" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })} />
                   {formError.endDate ? <span className="field-error">{formError.endDate}</span> : null}
                 </label>
               </div>
@@ -584,7 +586,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               <div className="section-mini-heading">Mục tiêu, tóm tắt và kinh phí</div>
               <label className="field">
                 <span>Mục tiêu</span>
-                <textarea disabled={!canEdit} rows={3} value={form.objectives} onChange={(event) => setForm({ ...form, objectives: event.target.value })} />
+                <textarea disabled={!canEditAllFields} rows={3} value={form.objectives} onChange={(event) => setForm({ ...form, objectives: event.target.value })} />
               </label>
               <label className="field">
                 <span>Tóm tắt</span>
@@ -593,7 +595,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               <label className="field">
                 <span>Kinh phí dự kiến</span>
                 <input
-                  disabled={!canEdit}
+                  disabled={!canEditAllFields}
                   inputMode="numeric"
                   value={formatVndNumber(form.budgetMetadata?.amount)}
                   onChange={(event) => {
@@ -607,6 +609,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               </label>
             </div>
 
+            {!canEdit ? <p className="record-meta">{blockedProposalAction(capabilityState, "proposal.draft.update")?.reason ?? capabilityState.reason}</p> : null}
             {formError.submit ? <p className="form-error">{formError.submit}</p> : null}
             <div className="button-row">
               <button className="button primary" type="submit" disabled={!canEdit || isSaving}>
