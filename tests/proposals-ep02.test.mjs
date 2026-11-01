@@ -254,6 +254,7 @@ function createEp02Prisma() {
         return store.members.filter((item) => proposalIds.includes(item.proposalId));
       }
     },
+    organizationUnit: { findFirst: async ({ where }) => (where.id === "missing-unit" ? null : { id: where.id }) },
     user: {
       async findMany({ where }) {
         const ids = where?.OR?.flatMap((clause) => clause.id?.in ?? []) ?? [];

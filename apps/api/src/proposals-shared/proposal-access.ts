@@ -55,8 +55,9 @@ export function isResearcherInternalUser(user?: SafeUserContext) {
   return user?.systemRole === "RESEARCHER_INTERNAL_USER";
 }
 
+/** Ma trận §7: mọi vai trò trừ QT và NNB được làm chủ nhiệm (tạo, sửa, nộp đề xuất). */
 export function isInternalResearcherEligible(user?: SafeUserContext) {
-  return isResearcherInternalUser(user) || isResearchOversightAuthority(user);
+  return Boolean(user) && !isSystemAdmin(user) && user?.systemRole !== "EXTERNAL_RESEARCHER_USER";
 }
 
 export function isLeadership(user?: SafeUserContext) {
@@ -73,7 +74,7 @@ export function assertCanManageIntakePeriods(user?: SafeUserContext) {
 
 export function assertCanCreateProposalDraft(user?: SafeUserContext) {
   if (!isInternalResearcherEligible(user)) {
-    throw new ForbiddenException({ message: "Chỉ người dùng nghiên cứu nội bộ được tạo hồ sơ đề xuất." });
+    throw new ForbiddenException({ message: "Quản trị hệ thống và nhà nghiên cứu bên ngoài không được tạo hồ sơ đề xuất." });
   }
 
   return user as SafeUserContext;
@@ -125,12 +126,13 @@ export function canReadProposal(
     return true;
   }
 
-  if (!getOrganizationScopeIds(user).includes(proposal.hostOrganizationUnitId)) {
-    return false;
+  // PI chọn đơn vị chủ trì tự do trong danh mục: chủ hồ sơ/thành viên luôn đọc được hồ sơ của mình dù đơn vị ngoài phạm vi tài khoản.
+  if (participation?.isParticipant || proposal.ownerId === user.id) {
+    return true;
   }
 
-  if (participation?.isParticipant) {
-    return true;
+  if (!getOrganizationScopeIds(user).includes(proposal.hostOrganizationUnitId)) {
+    return false;
   }
 
   if (isResearchManagementHead(user) || isResearchOversightAuthority(user) || isResearchBoardHead(user) || isResearchManagementDeputyHead(user)) {
