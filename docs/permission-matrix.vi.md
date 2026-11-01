@@ -685,6 +685,13 @@ lịch sử.
 
 Các quyền về hồ sơ này không mở rộng bất kỳ quyền nào với bản ghi nghiệp vụ trong ma trận.
 
+**Ngoại lệ hẹp — tra cứu thành viên đề tài (D-039, 2026-11-01):** người có quyền tạo hồ sơ đề
+xuất được tra cứu hồ sơ nhà khoa học qua `GET /api/v1/research-proposals/member-candidates?keyword=`
+chỉ để chọn thành viên nhóm nghiên cứu. Chỉ khớp theo họ tên (`fullNameKey`, tối thiểu 2 ký tự,
+tối đa 20 kết quả), chỉ hồ sơ `ACTIVE`, mọi đơn vị, gồm cả INTERNAL lẫn EXTERNAL. Kết quả chỉ
+gồm `id`, họ tên, học hàm, học vị, đơn vị và `hasAccount`; không có email, số điện thoại hay
+trường liên hệ khác. Đây không phải danh bạ: `GET /researcher-profiles` vẫn theo bảng trên.
+
 ### Phạm vi triển khai
 
 Trên `DocManS`, mô hình này đã triển khai cho các chức năng đề xuất, tiếp nhận, hồ sơ nhà

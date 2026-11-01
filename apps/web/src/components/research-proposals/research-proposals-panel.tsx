@@ -187,7 +187,7 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
           amount: Number(form.budgetMetadata?.amount ?? 0),
           currency: form.budgetMetadata?.currency || "VND"
         },
-        members: form.members?.filter((member) => member.name.trim() && member.role.trim() && member.organization.trim())
+        members: form.members?.filter((member) => member.researcherProfileId || (member.name.trim() && member.role.trim() && member.organization.trim()))
       };
       const result = await createResearchProposalDraft(payload);
       router.push(`/proposals/${result.proposal.id}`);

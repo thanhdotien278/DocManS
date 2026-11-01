@@ -95,6 +95,13 @@ const legacyPiUser = {
 
 const ACCOUNTS = [adminUser, staffUser, piUser, memberUser, secretaryUser, outsiderUser];
 
+const profileBase = { managementOrganizationUnit: { name: "Khoa Toán - Tin học" }, academicRankCatalogItem: null, academicDegreeCatalogItem: { name: "Tiến sĩ" }, contactEmail: "lan@hvqy.vn", contactEmailKey: "lan@hvqy.vn", contactPhone: "0900000000", externalAffiliation: null };
+const RESEARCHER_PROFILES = [
+  { ...profileBase, id: "profile-lan", fullName: "Nguyễn Thị Lan", fullNameKey: "nguyen thi lan", profileType: "INTERNAL", linkedUserId: "user-member", status: "ACTIVE" },
+  { ...profileBase, id: "profile-ext", fullName: "Nguyễn Văn Khách", fullNameKey: "nguyen van khach", profileType: "EXTERNAL", externalAffiliation: "Đại học Y Hà Nội", linkedUserId: null, status: "ACTIVE", contactEmail: "khach@example.com", contactEmailKey: "khach@example.com" },
+  { ...profileBase, id: "profile-inactive", fullName: "Nguyễn Văn Nghỉ", fullNameKey: "nguyen van nghi", profileType: "INTERNAL", linkedUserId: null, status: "INACTIVE" }
+];
+
 function futureDate(days) {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 }
@@ -123,7 +130,8 @@ function createPrisma() {
     fileRecords: [],
     submissionEvents: [],
     supplementRequests: [],
-    auditLogs: []
+    auditLogs: [],
+    researcherProfiles: RESEARCHER_PROFILES
   };
 
   function nextId(prefix, collection) {
@@ -248,6 +256,19 @@ function createPrisma() {
       async findMany({ where }) {
         const proposalIds = Array.isArray(where?.proposalId?.in) ? where.proposalId.in : [where?.proposalId];
         return store.members.filter((item) => proposalIds.includes(item.proposalId));
+      }
+    },
+    researcherProfile: {
+      // Evaluates the where clause literally so a widened filter (e.g. matching contact email) shows up in tests.
+      async findMany({ where, take }) {
+        const matches = (record, clause) =>
+          Object.entries(clause).every(([field, condition]) => {
+            if (field === "OR") return condition.some((item) => matches(record, item));
+            if (condition && typeof condition === "object" && "in" in condition) return condition.in.includes(record[field]);
+            if (condition && typeof condition === "object" && "contains" in condition) return (record[field] ?? "").includes(condition.contains);
+            return record[field] === condition;
+          });
+        return store.researcherProfiles.filter((record) => matches(record, where ?? {})).slice(0, take ?? Infinity);
       }
     },
     user: {
@@ -421,6 +442,41 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
 
     assert.equal(byName.get("ThS. Trần Thanh Minh").participationRole, "TOPIC_SECRETARY");
     assert.equal(byName.get("ThS. Trần Thanh Minh").participationRoleLabel, "Thư ký");
+  });
+
+  it("overwrites catalog members from the researcher profile and rejects inactive or duplicate profiles", async () => {
+    const { participationService } = createServices();
+    const [lan, ext, legacy, manual] = await participationService.resolveMemberAccounts([
+      { researcherProfileId: "profile-lan", name: "sai", organization: "sai", userId: "user-outsider", role: "TOPIC_MEMBER" },
+      { researcherProfileId: "profile-ext", name: "", organization: "", role: "TOPIC_SECRETARY" },
+      { name: "ThS. Trần Thanh Minh", organization: "Phòng KHQS", userId: "user-secretary", role: "TOPIC_MEMBER" },
+      { name: "Người ngoài", organization: "Bệnh viện X", role: "TOPIC_MEMBER" }
+    ]);
+    assert.deepEqual([manual.name, manual.organization, manual.userId, manual.researcherProfileId], ["Người ngoài", "Bệnh viện X", null, null]);
+    assert.deepEqual([lan.name, lan.organization, lan.userId, lan.researcherProfileId], ["Nguyễn Thị Lan", "Khoa Toán - Tin học", memberUser.id, "profile-lan"]);
+    assert.deepEqual([ext.organization, ext.userId], ["Đại học Y Hà Nội", null]);
+    // A legacy row (account linked, no profile) keeps its userId.
+    assert.deepEqual([legacy.userId, legacy.researcherProfileId], [secretaryUser.id, null]);
+
+    for (const members of [
+      [{ researcherProfileId: "profile-inactive", name: "", organization: "", role: "TOPIC_MEMBER" }],
+      [{ researcherProfileId: "profile-missing", name: "", organization: "", role: "TOPIC_MEMBER" }],
+      [{ researcherProfileId: "profile-ext", name: "", organization: "", role: "TOPIC_MEMBER" }, { researcherProfileId: "profile-ext", name: "", organization: "", role: "TOPIC_SECRETARY" }]
+    ]) {
+      await assert.rejects(() => participationService.resolveMemberAccounts(members), BadRequestException);
+    }
+  });
+
+  it("member lookup matches names only, returns no contact fields, and is limited to proposal creators", async () => {
+    const { proposalService } = createServices();
+    const items = await proposalService.listMemberCandidates(piUser, "nguyễn");
+    assert.deepEqual(items.map((item) => item.id).sort(), ["profile-ext", "profile-lan"]);
+    const lan = items.find((item) => item.id === "profile-lan");
+    assert.deepEqual(Object.keys(lan).sort(), ["academicDegree", "academicRank", "fullName", "hasAccount", "id", "organization"]);
+    assert.equal(lan.hasAccount, true);
+    assert.deepEqual(await proposalService.listMemberCandidates(piUser, "n"), []);
+    assert.deepEqual(await proposalService.listMemberCandidates(piUser, "khach@example.com"), []);
+    await assert.rejects(() => proposalService.listMemberCandidates(staffUser, "nguyen"), ForbiddenException);
   });
 
   it("rejects a participant naming an account that does not exist without persisting a draft", async () => {

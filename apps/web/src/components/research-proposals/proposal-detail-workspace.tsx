@@ -247,7 +247,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
           amount: Number(form.budgetMetadata?.amount ?? 0),
           currency: form.budgetMetadata?.currency || "VND"
         },
-        members: form.members?.filter((member) => member.name.trim() && member.role.trim() && member.organization.trim())
+        members: form.members?.filter((member) => member.researcherProfileId || (member.name.trim() && member.role.trim() && member.organization.trim()))
       };
       const result = await updateResearchProposalDraft(proposal.id, payload, proposal.viewerAuthorization?.contextVersion);
       setProposal(result.proposal);

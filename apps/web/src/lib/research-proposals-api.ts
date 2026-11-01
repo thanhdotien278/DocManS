@@ -16,6 +16,10 @@ export type ProposalMember = {
   userId?: string;
   /** Write-only alternative to `userId` — the API resolves it to an account. */
   username?: string;
+  /** Catalog researcher; the API fills name/organization/userId from this profile. Empty for manual rows. */
+  researcherProfileId?: string;
+  /** UI-only: row is entered by hand (outside the catalog). Ignored by the API. */
+  manual?: boolean;
   isAccountLinked?: boolean;
   participationRole?: ProposalParticipationRole;
   participationRoleLabel?: string;
@@ -265,6 +269,20 @@ export async function createResearchProposalDraft(input: ProposalDraftInput) {
     method: "POST",
     body: JSON.stringify(input)
   });
+}
+
+export type ProposalMemberCandidate = {
+  id: string;
+  fullName: string;
+  academicRank: string;
+  academicDegree: string;
+  organization: string;
+  hasAccount: boolean;
+};
+
+export async function searchProposalMemberCandidates(keyword: string) {
+  const response = await requestJson<{ items: ProposalMemberCandidate[] }>(`/research-proposals/member-candidates?keyword=${encodeURIComponent(keyword)}`);
+  return response.items;
 }
 
 export async function loadResearchProposal(id: string) {

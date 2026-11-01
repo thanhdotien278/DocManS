@@ -28,6 +28,8 @@ export type ProposalMemberInput = {
   userId?: string;
   /** Alternative to `userId`: the API resolves it to an account id before persisting. */
   username?: string;
+  /** Catalog researcher; when set the API overwrites name/organization/userId from the profile. */
+  researcherProfileId?: string;
   participationRole?: ProposalTeamRole;
 };
 
@@ -37,6 +39,7 @@ export type ProposalMemberPersistInput = {
   role: ProposalTeamRole;
   organization: string;
   userId: string | null;
+  researcherProfileId: string | null;
   participationRole: ProposalTeamRole;
 };
 

@@ -137,6 +137,33 @@ export class ProposalParticipationService implements ProposalRelationshipFactPro
    * saved unlinked, because a silently-unlinked participant defeats the conflict rule.
    */
   async resolveMemberAccounts(members: ProposalMemberInput[]): Promise<ProposalMemberPersistInput[]> {
+    const profileIds = members.map((member) => member.researcherProfileId).filter((value): value is string => Boolean(value));
+    if (new Set(profileIds).size !== profileIds.length) {
+      throw new BadRequestException({ message: "Một nhà khoa học được chọn nhiều lần trong danh sách thành viên." });
+    }
+    const profiles = profileIds.length
+      ? ((await this.prisma.researcherProfile.findMany({
+          where: { id: { in: profileIds }, status: "ACTIVE" },
+          select: { id: true, fullName: true, profileType: true, externalAffiliation: true, linkedUserId: true, managementOrganizationUnit: { select: { name: true } } }
+        })) as Array<{ id: string; fullName: string; profileType: string; externalAffiliation: string | null; linkedUserId: string | null; managementOrganizationUnit: { name: string } | null }>)
+      : [];
+    const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
+    // The profile is the trusted source: client-sent name/organization/userId/username are ignored.
+    members = members.map((member) => {
+      if (!member.researcherProfileId) return member;
+      const profile = profileById.get(member.researcherProfileId);
+      if (!profile) {
+        throw new BadRequestException({ message: member.name ? `Không tìm thấy hồ sơ nhà khoa học đang hoạt động cho thành viên "${member.name}".` : "Không tìm thấy hồ sơ nhà khoa học đang hoạt động cho thành viên đã chọn." });
+      }
+      return {
+        ...member,
+        name: profile.fullName,
+        organization: (profile.profileType === "EXTERNAL" && profile.externalAffiliation) || profile.managementOrganizationUnit?.name || "",
+        userId: profile.linkedUserId ?? undefined,
+        username: undefined
+      };
+    });
+
     const requestedIds = [...new Set(members.map((member) => member.userId).filter((value): value is string => Boolean(value)))];
     const requestedUsernames = [
       ...new Set(members.map((member) => member.username?.trim().toLowerCase()).filter((value): value is string => Boolean(value)))
@@ -179,6 +206,7 @@ export class ProposalParticipationService implements ProposalRelationshipFactPro
         role: member.role,
         organization: member.organization,
         userId,
+        researcherProfileId: member.researcherProfileId ?? null,
         participationRole: readProposalTeamRole(member.participationRole ?? member.role)
       };
     });
