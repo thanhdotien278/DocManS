@@ -294,9 +294,24 @@ export class ResearchProposalsService {
   }
 
   async updateDraft(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>): Promise<any> {
-    if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, a) => service.updateDraft(a, proposalId, input));
+    if (!this.transactional) {
+      try {
+        return await this.mutate(actor, proposalId, input.contextVersion, (service, a) => service.updateDraft(a, proposalId, input));
+      } catch (error) {
+        // Giao dịch đã rollback nên audit từ chối phải ghi ngoài giao dịch.
+        if (error instanceof ForbiddenException) {
+          await this.auditLog.record({ action: "update-proposal-draft", result: "failure", actorId: actor.id, targetEntity: "research-proposal", targetEntityId: proposalId, username: actor.username, reason: "ACTION_NOT_GRANTED" }).catch(() => undefined);
+        }
+        throw error;
+      }
+    }
     const proposal = await this.findProposal(proposalId);
-    this.assertCanMutateProposalContent(actor, proposal);
+    const participation = await this.participation.resolveForProposal(actor.id, proposal);
+    this.assertCanMutateProposalContent(actor, proposal, participation);
+    // Thư ký chỉ sửa tóm tắt: field khác thì từ chối toàn bộ trước khi ghi gì.
+    if (proposal.ownerId !== actor.id && Object.keys(input).some((key) => key !== "summary" && key !== "contextVersion" && input[key] !== undefined)) {
+      throw new ForbiddenException({ message: "Thư ký chỉ được sửa phần tóm tắt của hồ sơ." });
+    }
     await this.validateCatalogs(input);
 
     const data: Record<string, unknown> = {};
@@ -900,9 +915,9 @@ export class ResearchProposalsService {
     return pi;
   }
 
-  private assertCanMutateProposalContent(actor: SafeUserContext, proposal: ResearchProposalRecord) {
+  private assertCanMutateProposalContent(actor: SafeUserContext, proposal: ResearchProposalRecord, participation?: ProposalParticipation) {
     assertCanCreateProposalDraft(actor);
-    const pi = assertCanEditProposalDraft(actor, proposal);
+    const pi = assertCanEditProposalDraft(actor, proposal, participation);
     assertHasOrganizationScope(pi, proposal.hostOrganizationUnitId);
     if (proposal.status !== "draft" && proposal.status !== "supplement_requested") {
       throw new BadRequestException({ message: "Hồ sơ không ở trạng thái cho phép chỉnh sửa." });
@@ -1328,7 +1343,7 @@ export class ResearchProposalsService {
           reviewAccess,
           managementOfficer,
           canRead,
-          canEdit: canEditDraft,
+          canEdit: canEditDraft || this.canSecretaryEditSummary(actor, proposal, participation),
           canManageFiles: this.canMutateProposalFiles(actor, proposal, participation),
           completenessCheckCompleted,
           evaluationSummaryStatus: evaluationSummaryStatus ?? undefined,
@@ -1403,6 +1418,10 @@ export class ResearchProposalsService {
       this.prisma.proposalReview.findMany({ where: { proposalId: proposal.id, submissionEventId: submission.id } })
     ]);
     return summarizeReviewProgress(filterCurrentRoundAssignments(assignments, submission.id), reviews);
+  }
+
+  private canSecretaryEditSummary(actor: SafeUserContext | undefined, proposal: ResearchProposalRecord, participation?: ProposalParticipation) {
+    return proposal.ownerId !== actor?.id && (participation?.roles.includes("TOPIC_SECRETARY") ?? false) && this.canMutateProposalFiles(actor, proposal, participation);
   }
 
   private canEditProposalDraft(actor: SafeUserContext | undefined, proposal: ResearchProposalRecord) {

@@ -163,13 +163,14 @@ export function assertCanReadProposal(
   return user as SafeUserContext;
 }
 
-export function assertCanEditProposalDraft(user: SafeUserContext | undefined, proposal: ProposalLike) {
+/** PI luôn được sửa; thư ký hiệu lực chỉ được khi caller truyền `participation` (chỉ nhánh sửa nội dung nháp). */
+export function assertCanEditProposalDraft(user: SafeUserContext | undefined, proposal: ProposalLike, participation?: ProposalParticipation) {
   if (!user) {
     throw new ForbiddenException({ message: "Không có quyền sửa hồ sơ đề xuất này." });
   }
   const actor = user;
 
-  if (proposal.ownerId !== actor.id) {
+  if (proposal.ownerId !== actor.id && !participation?.roles.includes("TOPIC_SECRETARY")) {
     throw new ForbiddenException({ message: "Không có quyền sửa hồ sơ đề xuất này." });
   }
 
