@@ -191,3 +191,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-proposal-member-picker.md`
   summary: Thêm render test cho ProposalMembersEditor (chọn, đổi người, nhập thủ công, bàn phím).
   evidence: Chưa có hạ tầng render test cho UI đề xuất; hiện chỉ có test quét source.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-7-cv-phu-trach-theo-dot-tiep-nhan.md`
+  summary: Trang chi tiết hồ sơ hiển thị chuyên viên phụ trách cho PI (và mọi người xem được hồ sơ, kể cả phản biện — người dùng chốt 2026-11-01); bấm tên mở hộp thoại có email (`contactEmail ?? credentialEmail`) và số điện thoại (`contactPhone`) của CV.
+  evidence: Tách khỏi spec 4.7 vì spec gộp vượt ~3.000 token; người dùng chọn tách.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-7-cv-phu-trach-theo-dot-tiep-nhan.md`
+  summary: Trên trang đợt tiếp nhận, CV bấm vào một đợt thì mở danh sách hồ sơ của đợt đó mà mình đang phụ trách (lọc từ `GET /research-proposals` theo `intakePeriodId` và `managementOfficer.current.officerUserId`).
+  evidence: Tách khỏi spec 4.7 vì spec gộp vượt ~3.000 token; người dùng chọn tách.
