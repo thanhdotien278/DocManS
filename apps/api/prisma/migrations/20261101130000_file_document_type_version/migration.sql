@@ -11,3 +11,6 @@ FROM (
 WHERE f."id" = r."id";
 
 ALTER TABLE "file_records" ALTER COLUMN "document_type" SET NOT NULL;
+
+-- CreateIndex
+CREATE INDEX "file_records_entity_doctype_idx" ON "file_records"("related_entity_type", "related_entity_id", "document_type");

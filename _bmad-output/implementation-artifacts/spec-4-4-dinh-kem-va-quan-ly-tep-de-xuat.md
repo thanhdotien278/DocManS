@@ -63,11 +63,24 @@ context:
 ## Implementation Notes
 
 - Test mới ở `tests/proposal-files-4-4.test.mjs` (suite `proposals-ep02` đỏ sẵn 9/10 ca, không chạy được logic upload). Đã đổi assertion 403→404 ở `proposals-ep02`, `ep03`, `st30` cho ca người ngoài quyền đọc tệp.
+- Vòng 2 đổi `listFiles` theo hồ sơ sang 404 cho người ngoài quyền (đã sửa assertion ở ep02/st30, chưa chạy được vì suite đỏ).
 - `intake-periods.service.ts` tạo `FileRecord` trực tiếp nên được gán `documentType = item.code`.
 
 ## Spec Change Log
 
 ## Review Triage Log
+
+Vòng 2 (`bmad-review`, commit `6fbaa92`), đã vá:
+
+| Finding | Xử lý |
+|---|---|
+| Lớp gọi công khai (ngoài transaction) chưa có test | Thêm test, `mutate` không được chạy cho người ngoài quyền đọc |
+| 403→404 chỉ nằm trong suite đỏ; chưa có ca member chạy thật | Thêm test member với `assertCanUpload` thật (upload/sửa/xóa 403, tải được) |
+| `listFiles` theo hồ sơ vẫn 403; hồ sơ mồ côi 404 khác thông điệp | `hideUnreadable` dùng chung: Forbidden và NotFound cùng một 404 cho tải/sửa/xóa và `listFiles` |
+| `downloadFile` kiểm quyền đọc hai lần | Bỏ lần hai cho tệp đề xuất |
+| Version đọc hết bản ghi, thiếu index | `aggregate({ _max })`, thêm index `file_records_entity_doctype_idx` |
+
+Vòng 1 (xem bảng bên dưới) giữ nguyên.
 
 | Finding | Verdict | Xử lý |
 |---|---|---|
