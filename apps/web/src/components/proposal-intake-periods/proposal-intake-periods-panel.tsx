@@ -111,6 +111,7 @@ export function ProposalIntakePeriodsPanel() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
+    setListError("");
     setFormError("");
 
     if (!form.code || !form.title || !form.startsAt || !form.endsAt || form.requiredPackage.some((item) => !item.file && !item.templateFileId && !item.label)) {
