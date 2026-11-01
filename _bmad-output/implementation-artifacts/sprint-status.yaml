@@ -1,5 +1,5 @@
 # generated: 2026-07-29T17:30:00+07:00
-# last_updated: 2026-10-24T18:00:00+07:00
+# last_updated: 2026-11-01T00:00:00+07:00
 # project: DocManSystem
 # project_key: NOKEY
 # tracking_system: file-system
@@ -59,9 +59,9 @@ development_status:
   3-6-two-way-anonymity-and-reviewer-identity: backlog
   3-7-vong-doi-de-tai-9-buoc-va-timeline-xuyen-ho-so: backlog
   epic-3-retrospective: optional
-  epic-4: backlog
-  4-1-tao-va-quan-ly-dot-tiep-nhan-de-xuat: backlog
-  4-2-tao-de-xuat-nhap-va-thiet-lap-quan-he-tham-gia: backlog
+  epic-4: in-progress
+  4-1-tao-va-quan-ly-dot-tiep-nhan-de-xuat: review
+  4-2-tao-de-xuat-nhap-va-thiet-lap-quan-he-tham-gia: review
   4-3-nhap-va-cong-tac-tren-thong-tin-de-xuat-co-cau-truc: backlog
   4-4-dinh-kem-va-quan-ly-tep-de-xuat: backlog
   4-5-kiem-tra-muc-do-san-sang-truoc-khi-nop: backlog
