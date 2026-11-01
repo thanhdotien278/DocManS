@@ -569,7 +569,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     await assert.rejects(() => services.filesService.downloadFile(outsiderUser, uploaded.id), NotFoundException);
     await assert.rejects(
       () => services.filesService.listFiles(outsiderUser, { relatedEntityType: "research_proposal", relatedEntityId: created.id }),
-      ForbiddenException
+      NotFoundException
     );
     await assert.rejects(() => services.filesService.downloadFile(adminUser, uploaded.id), NotFoundException);
 

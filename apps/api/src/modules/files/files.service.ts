@@ -170,8 +170,8 @@ export class FilesService {
         // change between the initial authorization and metadata write rolls back the usable file.
         await this.assertCanUpload(actor, input.relatedEntityType, input.relatedEntityId);
         // Gồm cả bản đã xóa để số version không bị dùng lại.
-        const sameEntity = (await tx.fileRecord.findMany({ where: { relatedEntityType: input.relatedEntityType, relatedEntityId: input.relatedEntityId } })) as Array<{ documentType: string; version: number }>;
-        const version = Math.max(0, ...sameEntity.filter((item) => item.documentType === input.filePurpose).map((item) => item.version)) + 1;
+        const latest = await tx.fileRecord.aggregate({ _max: { version: true }, where: { relatedEntityType: input.relatedEntityType, relatedEntityId: input.relatedEntityId, documentType: input.filePurpose } });
+        const version = (latest._max.version ?? 0) + 1;
         return tx.fileRecord.create({
           data: {
             id: fileId,
@@ -224,13 +224,13 @@ export class FilesService {
       const fullAccess = project.viewerAuthorization.viewerRelationships.some((relationship: { type: string }) => relationship.type === "TOPIC_PI") || ["RESEARCH_MANAGEMENT_STAFF", "RESEARCH_MANAGEMENT_HEAD"].includes(actor.systemRole);
       return Promise.all(records.filter((record) => fullAccess || record.uploadedById === actor.id).map(async (record) => this.toFileResponse(record, { canMutate: await this.canMutateFile(actor, record) })));
     }
-    const proposal = await new ResearchProposalsService(this.prisma, this.auditLog, this.participation, this.reviewAccess, this.managementOfficers).getProposal(actor, input.relatedEntityId);
+    const proposal = await this.hideUnreadable("Không tìm thấy hồ sơ đề xuất.", () => new ResearchProposalsService(this.prisma, this.auditLog, this.participation, this.reviewAccess, this.managementOfficers).getProposal(actor, input.relatedEntityId));
     return proposal.attachments;
   }
 
   async downloadFile(actor: SafeUserContext, fileId: string) {
     const record = await this.findReadableFile(actor, fileId);
-    await this.assertCanRead(actor, record.relatedEntityType, record.relatedEntityId);
+    if (record.relatedEntityType !== RESEARCH_PROPOSAL_ENTITY_TYPE) await this.assertCanRead(actor, record.relatedEntityType, record.relatedEntityId);
     await this.assertProjectFileOwnership(actor, record, false);
     const canMutate = await this.canMutateFile(actor, record);
     let content: Awaited<ReturnType<ObjectStorage["getObject"]>>;
@@ -457,13 +457,18 @@ export class FilesService {
   private async findReadableFile(actor: SafeUserContext, fileId: string) {
     const record = await this.findActiveFile(fileId);
     if (record.relatedEntityType !== RESEARCH_PROPOSAL_ENTITY_TYPE) return record;
+    await this.hideUnreadable("Không tìm thấy tệp.", () => this.assertCanRead(actor, record.relatedEntityType, record.relatedEntityId));
+    return record;
+  }
+
+  /** Từ chối quyền và hồ sơ không tồn tại cùng trả một 404, cùng nội dung. */
+  private async hideUnreadable<T>(message: string, read: () => Promise<T>): Promise<T> {
     try {
-      await this.assertCanRead(actor, record.relatedEntityType, record.relatedEntityId);
+      return await read();
     } catch (error) {
-      if (error instanceof ForbiddenException) throw new NotFoundException({ message: "Không tìm thấy tệp." });
+      if (error instanceof ForbiddenException || error instanceof NotFoundException) throw new NotFoundException({ message });
       throw error;
     }
-    return record;
   }
 
   private async findActiveFile(fileId: string) {

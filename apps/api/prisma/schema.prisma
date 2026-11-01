@@ -568,6 +568,7 @@ model FileRecord {
   projectRequestEvidence ProjectRequestEvidence[]
 
   @@index([relatedEntityType, relatedEntityId])
+  @@index([relatedEntityType, relatedEntityId, documentType], map: "file_records_entity_doctype_idx")
   @@index([uploadedById])
   @@index([filePurpose])
   @@index([status])
