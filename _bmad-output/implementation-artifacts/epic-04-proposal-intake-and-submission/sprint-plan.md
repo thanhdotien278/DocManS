@@ -2,7 +2,7 @@
 
 **Authorization refinement — 2026-10-18 (10-role model, supersedes 2026-09-21):** Intake scope never grants proposal visibility. TP and CV create/open/close intake periods; every role except QT/NNB sees open periods and may be PI (NNB is denied). Story 4.2 must represent unassigned proposals ("Chưa có người phụ trách"); TP/TB see them within unit scope, CV needs the current officer assignment (`PROPOSAL_MANAGEMENT_OFFICER`). The system auto-assigns a responsible CV by segment on submit/resubmit (new 4.7); post-submission withdraw/edit/reopen is handled by the assigned CV (new 4.8). Preserve independent PI/team access and existing PI submission restrictions. `RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD) monitors only; only GĐ decides topic + funding. Proposal implementation is current; project/council/dashboard/reporting/notification backends absent from the repository remain backlog.
 
-- **Epic status:** `backlog`
+- **Epic status:** `in-progress`
 - **Canonical source:** [epics.md](../../epics.md)
 - **Planning order:** sequential, in the order below
 - **Retrospective:** optional after all stories are done
@@ -11,8 +11,8 @@
 
 | Order | Story | Initial status |
 |---|---|---|
-| 4.1 | Tạo và quản lý đợt tiếp nhận đề xuất | `backlog` |
-| 4.2 | Tạo đề xuất nháp và thiết lập quan hệ tham gia | `backlog` |
+| 4.1 | Tạo và quản lý đợt tiếp nhận đề xuất | `review` |
+| 4.2 | Tạo đề xuất nháp và thiết lập quan hệ tham gia | `review` |
 | 4.3 | Nhập và cộng tác trên thông tin đề xuất có cấu trúc | `backlog` |
 | 4.4 | Đính kèm và quản lý tệp đề xuất | `backlog` |
 | 4.5 | Kiểm tra mức độ sẵn sàng trước khi nộp | `backlog` |
