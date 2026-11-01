@@ -82,8 +82,8 @@ Directors who monitor; it is no longer the Science Deputy Director.
 ### TP — Trưởng phòng KHQS
 
 - Approves every submission dossier (tờ trình) before it goes to BGĐ.
-- Assigns topic segments (mảng) to CV, assigns/reassigns/revokes the responsible CV
-  on proposals and projects, coordinates every proposal within unit scope.
+- Giao đúng một CV phụ trách cho mỗi đợt tiếp nhận và đổi CV cả đợt hoặc từng hồ sơ (D-038);
+  giao/chuyển/thu hồi CV phụ trách trên đề xuất và đề tài, coordinates every proposal within unit scope.
 - May also perform CV-level evaluation work (synthesis, drafting tờ trình; reviewer/council
   assignment and IRB council per QT configuration, on by default, note 8) within unit scope.
 - Sees every project in the Academy; manages funding Academy-wide.
@@ -98,7 +98,7 @@ Directors who monitor; it is no longer the Science Deputy Director.
 ### TB — Trưởng ban QLKH
 
 - Reviews CV-authored tờ trình, then forwards to TP or returns to the author.
-- Assigns/revokes the responsible CV within unit scope; performs completeness,
+- Assigns/revokes the responsible CV within unit scope (theo từng hồ sơ, D-038); performs completeness,
   supplement, synthesis and tờ trình drafting within unit scope; reviewer/council
   assignment and IRB council per QT configuration (on by default, note 8).
 - Sees every project in the Academy; manages funding Academy-wide.
@@ -142,7 +142,7 @@ conflict policy.
 
 | Role Type | Examples | Scope Boundary | Important Limits |
 | --- | --- | --- | --- |
-| Management responsibility | `PROPOSAL_MANAGEMENT_OFFICER`, `PROJECT_MANAGEMENT_OFFICER` (a CV) | One proposal/project | At most one active responsible CV per record; auto-assigned by segment on submission, or assigned by TP/TB; history/audit retained. |
+| Management responsibility | `PROPOSAL_MANAGEMENT_OFFICER`, `PROJECT_MANAGEMENT_OFFICER` (a CV) | One proposal/project | At most one active responsible CV per record; CV của đợt tiếp nhận tự áp dụng cho hồ sơ nộp trong đợt (TP giao, D-038), TP/TB giao/chuyển/thu hồi theo từng hồ sơ; history/audit retained. |
 | Proposal participation | `PROPOSAL_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | One proposal | No access to unrelated proposals; PI is derived from `ownerId`. |
 | Approved-topic participation | `TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | One approved topic | Depends on active relationship and workflow state. |
 | Review assignment | Evaluation reviewer / evaluation council member | One proposal | Invited from any account with a scientific CV (every role except QT, including GĐ, PGĐ, TP, PP, TB, CV); must accept invitation; scores; reads records outside own unit. |
@@ -205,9 +205,9 @@ never grants an action by itself.
 | State Rule | Authorization Meaning |
 | --- | --- |
 | Draft | Proposal draft content may be created or updated only by its current PI (any role except QT/NNB); no team member, secretary, delegate or manager edits or submits it. |
-| Open intake | Intake periods created/opened/closed by TP or CV; visible to every role except QT and NNB. |
+| Open intake | Intake periods created/opened/closed by TP or CV; visible to every role except QT and NNB. Đợt chưa có CV phụ trách (do TP giao) thì chưa được mở (D-038). |
 | Closed intake | New submissions are blocked; read access remains scope-controlled. |
-| Submitted | Locked from draft edits; system auto-assigns a responsible CV by segment (level + nature); unmatched records show "Chưa có người phụ trách" for TP to assign. |
+| Submitted | Locked from draft edits; hệ thống áp dụng CV phụ trách của đợt tiếp nhận cho hồ sơ (D-038); "Chưa có người phụ trách" chỉ còn khi TP/TB thu hồi CV mà chưa giao lại. |
 | Needs supplement | PI may revise only the requested content or files allowed by workflow. |
 | Resubmitted | Returns to the responsible CV's workflow. |
 | Under review | Assigned, accepted reviewers perform review actions; unrelated users cannot access review material. |
@@ -237,12 +237,13 @@ never creates a new system role.
 | Có lý lịch khoa học, tự cập nhật | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Quản lý văn bản khoa học | ✓ | — | — | — | ✓ | — | ✓ | ✓ | — | — |
 | **Đợt tiếp nhận** | | | | | | | | | | |
-| Tạo, mở, đóng đợt | — | — | — | — | ✓ | — | — | ✓ | — | — |
+| Tạo, mở, đóng đợt (chặn mở đợt khi chưa có CV phụ trách, D-038) | — | — | — | — | ✓ | — | — | ✓ | — | — |
+| Giao hoặc đổi CV phụ trách cho đợt tiếp nhận (D-038) | — | — | — | — | ✓ | — | — | — | — | — |
 | Xem đợt đang mở | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | **Hồ sơ đề xuất** | | | | | | | | | | |
 | Tạo, sửa, nộp đề xuất (tư cách chủ nhiệm) | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | Xem hồ sơ | — | Xem² | Xem² | Xem¹ | Xem¹ | Xem¹ | Xem¹ | ◐3 | ◐4 | ◐5 |
-| Giao hoặc thu hồi chuyên viên phụ trách hồ sơ, phân mảng | — | — | — | — | ✓¹ | — | ✓¹ | — | — | — |
+| Giao hoặc thu hồi chuyên viên phụ trách hồ sơ (TP giao cho đợt tiếp nhận hoặc từng hồ sơ; TB theo từng hồ sơ, D-038) | — | — | — | — | ✓¹ | — | ✓¹ | — | — | — |
 | Kiểm tra đầy đủ, yêu cầu bổ sung | — | — | — | — | — | — | ✓¹ | ◐3 | — | — |
 | Phân công phản biện, lập hội đồng đánh giá (theo cấu hình QT⁸) | — | — | — | — | ✓¹ ⁸ | — | ✓¹ ⁸ | ◐3, 8 | — | — |
 | Chấm phiếu đánh giá | — | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 |
@@ -293,7 +294,11 @@ never creates a new system role.
 
 - **Conflict of interest.** PI, member or reviewer of a proposal/project cannot use
   management authority on that same record (assignment, completeness check,
-  synthesis, decision, funding).
+  synthesis, decision, funding). Ngoại lệ (D-038): TB hoặc CV phụ trách là PI/thành viên
+  của hồ sơ vẫn được kiểm tra đầy đủ và yêu cầu bổ sung trên hồ sơ đó, chỉ cho hai thao tác
+  này; TP vẫn không làm; các kiểm tra xung đột khác (phân công phản biện/hội đồng, chấm
+  điểm, tổng hợp, tờ trình) giữ nguyên. TP, PP, TB, CV đều có thể là PI/thành viên đề tài,
+  kể cả CV của đợt trong đợt mình phụ trách.
 - **Two-way anonymity.** PI and reviewers cannot view the record's action log.
 - **Tờ trình flow.** CV drafts → TB reviews → TP approves → BGĐ signs. A TB-authored
   tờ trình goes straight to TP; a TP-authored one still passes the TB step. Return at
@@ -405,7 +410,7 @@ Module tables use the same column groups as §8. Where a module row and §7 disa
 | Assign role (exactly one per account) | Manage | None | None | None | None | None | Platform scope | Yes | FR2, Story 1.3 |
 | Assign organization/unit scope | Manage | None | None | None | None | None | Platform scope | Yes | FR3, FR6, Story 1.3 |
 | Assign display-only unit title | Manage | None | None | None | None | None | Platform scope | Yes | Role hierarchy GĐ1 |
-| Assign topic segments (mảng) to CV | None | TP | None | None | None | None | Unit scope | Yes | Role hierarchy GĐ1 |
+| Giao CV phụ trách cho đợt tiếp nhận (TP giao, đổi cả đợt hoặc từng hồ sơ) | None | TP | None | None | None | None | Unit scope | Yes | D-038 |
 | Load role-aware session context | Read own | Read own | Read own | Read own | Read own | Read own | Current user | No | FR4, FR5, FR6 |
 
 ### 9.2 Catalogs And Configuration
@@ -422,14 +427,14 @@ Module tables use the same column groups as §8. Where a module row and §7 disa
 
 | Action | QT | Phòng KHQS | BGĐ | PI | Topic Team | Reviewer / Council | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Create/update/open/close intake period | None | TP, CV | None | None | None | None | Unit scope | Draft, open intake | Yes | FR9, Story 2.1 |
+| Create/update/open/close intake period (chặn mở đợt khi chưa có CV phụ trách, D-038) | None | TP, CV | None | None | None | None | Unit scope | Draft, open intake | Yes | FR9, Story 2.1 |
 | List open intake periods | None | Read | Read | Read applicable (not NNB) | None | None | Unit scope | Open intake | No | FR9, Story 2.1 |
 | Create/update proposal draft | None | None from management role | None from management role | Own (any role except QT/NNB) | None | None | Own proposal scope | Open intake, draft | Yes | FR10, FR11, Story 2.2 |
 | Upload proposal attachment | None | None | None | Create own | Secretary: Create; Member: None | None | Proposal relationship scope | Draft, needs supplement | Yes | FR12, FR36, Story 2.3 |
 | View/download proposal attachment | None | TP/TB/PP¹, CV³ | GĐ/PGĐ-KH², PGĐ-TD¹ | Read own | Read if participating | Read assigned⁵ | Record-level scope | Any allowed state | Yes for important downloads | FR12, FR36, Story 2.3 |
 | Check submission readiness | None | None | None | Read own | Read if participating | None | Own proposal scope | Draft | No | FR13, Story 2.3 |
 | Submit proposal formally | None | None | None | Submit own | None | None | Own proposal scope; omit the submit section for non-PI viewers | Draft, open intake | Yes | FR14, FR22, Story 2.4 |
-| Auto-assign responsible CV | System | TP: assign unmatched records | None | None | None | None | Segment match | Submitted, resubmitted | Yes | Role hierarchy GĐ1 |
+| Áp dụng CV của đợt cho hồ sơ nộp | System | TP: đổi CV cả đợt hoặc từng hồ sơ; TB: giao/chuyển/thu hồi theo hồ sơ | None | None | None | None | Đợt tiếp nhận của hồ sơ | Submitted, resubmitted | Yes | D-038 |
 | View submission history | None | Scoped | Scoped | Read own | Read if participating | None | Same as proposal scope | Submitted or later | No | FR14, FR38, Story 2.4 |
 
 ### 9.4 Proposal Review, Supplement And Approval
@@ -467,7 +472,7 @@ for implementation gaps.
 | Reviewer file read | Same assignment lookup as the proposal read. Upload still requires proposal ownership. | `FilesService.assertCanRead` |
 | BGĐ read | GĐ/PGĐ-KH: submitted-or-later proposals in unit scope (note 2); PGĐ-TD: unit scope read-only, no per-record funding. | Shared proposal/evaluation/file authorization |
 | Topic decision | `LEADERSHIP_APPROVAL_AUTHORITY` plus scope, routed record through TB and TP, ready state and no conflict. PGĐ-KH, QT and reviewers grant no topic decision. | Shared decision mutation |
-| Management evaluation actions | TP/TB with unit scope; CV only on assigned records; completeness only TB/CV; no conflict. | Shared capability check |
+| Management evaluation actions | TP/TB with unit scope; CV only on assigned records; completeness only TB/CV (D-038: TB/CV kiểm tra được cả hồ sơ mình là PI/thành viên); no conflict cho các thao tác khác. | Shared capability check |
 | Decision/consolidation conflict | Participation and reviewer conflicts override role/scope; persisted evaluations keep the conflict after assignment revocation. | Shared conflict resolver |
 
 Proposal detail UI renders review/approval sections only from the current proposal's
@@ -577,9 +582,11 @@ reconciled with the tờ trình routing implemented on `tuan/DocManS`.
 - Users must not see cross-unit proposal data unless explicitly permitted.
 - Reviewers, council and IRB members must not access unassigned records.
 - Officer, reviewer, council or IRB assignment is denied when the candidate is PI,
-  participant, `TOPIC_SECRETARY` or another excluded role on the same record.
+  participant, `TOPIC_SECRETARY` or another excluded role on the same record. Ngoại lệ D-038:
+  CV phụ trách đợt tiếp nhận có thể là PI/thành viên đề tài trong chính đợt mình phụ trách.
 - A PI, member or reviewer never uses management authority (assignment, completeness,
-  synthesis, decision, funding) on the same record.
+  synthesis, decision, funding) on the same record; ngoại lệ D-038: TB/CV phụ trách tự kiểm
+  tra đầy đủ và yêu cầu bổ sung hồ sơ của mình, chỉ cho hai thao tác này.
 - The PI must not edit submitted proposals unless the workflow allows supplement or resubmission.
 - File access must not be granted by object key alone.
 - Direct status mutation is forbidden; transitions go through explicit domain actions.
@@ -595,13 +602,13 @@ reconciled with the tờ trình routing implemented on `tuan/DocManS`.
 | login / logout | Yes | actor, username, timestamp, result, request/session context |
 | create/update/deactivate user | Yes | actor, target user, action, before/after status where feasible |
 | assign role/scope/unit title | Yes | actor, target user, role, scope, title, timestamp |
-| assign CV segment | Yes | actor, CV, segment (level/nature), timestamp |
+| giao CV cho đợt tiếp nhận (D-038) | Yes | actor, intake period, CV cũ/mới, timestamp |
 | create/update/open/close intake period | Yes | actor, intake period id/code, from/to status, timestamp |
 | create/update proposal draft | Yes | actor, proposal id, changed section or safe summary, timestamp |
 | upload/download/replace important file | Yes | actor, file id, target entity, action, timestamp, safe metadata |
 | submit / resubmit proposal | Yes | actor, proposal id, from/to status, timestamp |
 | request supplement | Yes | actor, proposal id, reason, due date, timestamp |
-| assign/reassign/revoke responsible CV (manual or automatic) | Yes | actor or system, record, old/new officer, segment match, timestamp, reason |
+| assign/reassign/revoke responsible CV (thủ công hoặc áp dụng CV của đợt) | Yes | actor or system, record, old/new officer, đợt tiếp nhận, timestamp, reason |
 | invite/accept/decline/revoke reviewer, council or IRB member | Yes | actor, record, member, role, decision, reason, timestamp |
 | submit score/comment | Yes | actor, proposal id, review id, submitted status, timestamp |
 | consolidate evaluation | Yes | actor, proposal id, evaluation summary id, timestamp |

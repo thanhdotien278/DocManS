@@ -100,7 +100,7 @@ mọi hồ sơ.
 | `LEADERSHIP_APPROVAL_AUTHORITY` (GĐ) | Duy nhất phê duyệt đề tài, kinh phí và thanh lý; ký mọi thủ tục PGĐ-KH ký; xem mọi đề tài trong Học viện | Không sửa nội dung, bỏ qua bước tờ trình hoặc quyết định hồ sơ mình tham gia |
 | `SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH) | Ký thành lập hội đồng đánh giá/nghiệm thu/IRB, cấp giấy IRB, gia hạn và điều chỉnh (kể cả đổi kinh phí); xem mọi đề tài | Không phê duyệt đề tài, kinh phí đề tài, thanh lý; không quản lý kinh phí |
 | `RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD) | Theo dõi tiến độ, số lượng, kinh phí tổng hợp | Không xem kinh phí từng đề tài; không ký |
-| `RESEARCH_MANAGEMENT_HEAD` (TP) | Duyệt tờ trình trước khi lên BGĐ; giao mảng cho CV; giao/thu hồi CV phụ trách; phân công phản biện/hội đồng, tổng hợp trong scope đơn vị; quản lý kinh phí toàn Học viện | Không kiểm tra đầy đủ, không yêu cầu bổ sung; không tự rà soát tờ trình mình lập |
+| `RESEARCH_MANAGEMENT_HEAD` (TP) | Duyệt tờ trình trước khi lên BGĐ; giao CV phụ trách cho từng đợt tiếp nhận (đổi cả đợt hoặc từng hồ sơ); giao/thu hồi CV phụ trách; phân công phản biện/hội đồng, tổng hợp trong scope đơn vị; quản lý kinh phí toàn Học viện | Không kiểm tra đầy đủ, không yêu cầu bổ sung; không tự rà soát tờ trình mình lập |
 | `RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP) | Theo dõi tiến độ, số lượng trong scope đơn vị | Không có bước trong luồng tờ trình; không phê duyệt |
 | `RESEARCH_BOARD_HEAD` (TB) | Rà soát tờ trình của CV rồi trình TP hoặc trả lại; giao/thu hồi CV; kiểm tra đầy đủ, phân công, tổng hợp trong scope đơn vị; quản lý kinh phí toàn Học viện | Không phê duyệt; không tự rà soát tờ trình mình lập |
 | `RESEARCH_MANAGEMENT_STAFF` (CV) | Vận hành hồ sơ/đề tài mình đang phụ trách: kiểm tra đầy đủ, yêu cầu bổ sung, mời phản biện/hội đồng, tổng hợp, lập tờ trình, nghiệp vụ hằng ngày của đề tài; quản lý đợt và hồ sơ nhà khoa học trong scope đơn vị | Không thao tác hồ sơ của CV khác; không quyết định cuối |
@@ -136,7 +136,7 @@ quan hệ đó. Thu hồi quản lý không thu hồi quan hệ độc lập, nh
 visibility/action. TP/TB có bộ lọc/nhóm theo CV phụ trách và chưa phân công, chỉ số workload,
 trạng thái/hạn; count, drill-down và export dùng cùng tập hồ sơ được phép.
 
-Hệ thống tự giao CV theo mảng khi nộp; TP/TB giao/chuyển/thu hồi CV phụ trách. Tờ trình đi
+Mỗi đợt tiếp nhận có đúng một CV phụ trách do TP giao (chưa có CV thì chưa mở đợt); hồ sơ nộp trong đợt thuộc CV đó (D-038). TP đổi CV cả đợt hoặc từng hồ sơ; TB giao/chuyển/thu hồi CV theo từng hồ sơ. TP/PP/TB/CV có thể là PI/thành viên đề tài; TB và CV phụ trách vẫn kiểm tra đầy đủ, yêu cầu bổ sung hồ sơ của chính mình. Tờ trình đi
 CV lập → TB rà soát → TP duyệt → BGĐ ký; trả lại ở bước nào cũng về người lập kèm lý do.
 GĐ quyết định cuối khi đủ điều kiện và không có xung đột; PGĐ-TD và PP chỉ theo dõi.
 Phạm vi triển khai hiện tại và funding metadata tuân theo baseline §2.1; backend dự án,

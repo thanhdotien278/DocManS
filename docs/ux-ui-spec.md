@@ -46,9 +46,9 @@ below are its condition notes (¹ unit scope, ³ assigned responsible CV only).
 | GĐ | `LEADERSHIP_APPROVAL_AUTHORITY` | Only role that approves/rejects topic + funding and liquidation; also signs everything PGĐ-KH signs; sees all projects and per-project funding |
 | PGĐ-KH | `SCIENCE_DEPUTY_DIRECTOR` | Signs evaluation/acceptance/IRB council establishment, IRB certificate, extension and adjustment; no topic/funding/liquidation decision |
 | PGĐ-TD | `RESEARCH_OVERSIGHT_AUTHORITY` | Other deputy directors: monitoring only (progress, counts, aggregate funding); no per-record funding; signs nothing |
-| TP | `RESEARCH_MANAGEMENT_HEAD` | Approves every tờ trình before BGĐ; assigns segments and responsible CV¹; may do reviewer/council assignment, synthesis, IRB council and tờ trình drafting¹; never completeness/supplement |
+| TP | `RESEARCH_MANAGEMENT_HEAD` | Approves every tờ trình before BGĐ; giao CV phụ trách cho đợt tiếp nhận và đổi CV cả đợt hoặc từng hồ sơ (D-038), assigns responsible CV¹; may do reviewer/council assignment, synthesis, IRB council and tờ trình drafting¹; never completeness/supplement |
 | PP | `RESEARCH_MANAGEMENT_DEPUTY_HEAD` | Monitoring only within unit scope; no tờ trình step or approval |
-| TB | `RESEARCH_BOARD_HEAD` | Reviews CV-authored tờ trình and forwards to TP or returns to author; assigns responsible CV¹; completeness, supplement, reviewer/council assignment, synthesis, IRB council, tờ trình drafting¹ |
+| TB | `RESEARCH_BOARD_HEAD` | Reviews CV-authored tờ trình and forwards to TP or returns to author; giao/chuyển/thu hồi CV phụ trách theo từng hồ sơ (D-038)¹; completeness, supplement, reviewer/council assignment, synthesis, IRB council, tờ trình drafting¹ |
 | CV | `RESEARCH_MANAGEMENT_STAFF` | Record operations only on proposals/projects where currently the responsible officer³; intake periods; researcher profiles¹; student research¹ |
 | NCV | `RESEARCHER_INTERNAL_USER` | Researcher-owned and related records |
 | NNB | `EXTERNAL_RESEARCHER_USER` | Only explicitly related approved-topic/task records and assigned review work; never PI, no intake periods |
@@ -91,14 +91,17 @@ Responsible Staff is operational metadata explicitly visible to Head, not permis
 expose hidden reviewer/council identities. Head participation conflicts retain disclosure limits.
 
 Officer assignment/reassignment/revocation controls use the Head backend capability
-(baseline §2.1), with scope, conflict and current context checks. When authorized,
+(baseline §2.1), with scope and current context checks. TP giao CV cho đợt tiếp nhận và đổi CV
+cả đợt hoặc từng hồ sơ; TB giao/chuyển/thu hồi theo từng hồ sơ (D-038). CV của đợt có thể là
+PI/thành viên đề tài trong đợt mình phụ trách. When authorized,
 show the current/new responsible Staff, reason and effective change; after success refresh
 capabilities and queues. Preserve history/audit and reject stale/concurrent competing
 assignments. No extra approval step. No more than one active primary officer per record.
 
 Recheck conflicts on assignment/participation changes and protected actions: participant
 versus officer/reviewer/evaluation or acceptance council/final decision, reviewer versus
-same-round final decision, and mutually exclusive council positions. TP, TB and CV never
+same-round final decision, and mutually exclusive council positions (ngoại lệ D-038: CV của đợt không bị chặn làm officer
+của hồ sơ mình là PI/thành viên, và TB/CV phụ trách không bị chặn kiểm tra đầy đủ/yêu cầu bổ sung hồ sơ của mình). TP, TB and CV never
 receive BGĐ approve/reject/sign controls from their management role; PP and PGĐ-TD never
 approve, sign or route. PI and reviewers never see the record's action log (two-way anonymity). Existing intake/profile
 capabilities remain separately scoped and do not grant proposal/project visibility.
@@ -110,7 +113,7 @@ capabilities remain separately scoped and do not grant proposal/project visibili
 | User | Must accomplish quickly |
 | --- | --- |
 | System administrator | Maintain accounts, one active system role per account, organization scope, catalogs, configuration, and operational audit views without gaining implicit business-data access. |
-| Phòng KHQS (TP / TB / CV) | CV: open/close intake periods; CV³: check completeness, request supplements, assign reviewers/council, synthesize results, draft tờ trình, create approved projects, track reports. TB¹: the same evaluation work plus tờ trình review queue. TP¹: tờ trình approval queue, responsible-CV assignment and coordination (never completeness/supplement). PP¹: monitoring only. |
+| Phòng KHQS (TP / TB / CV) | CV: open/close intake periods (không mở được đợt khi chưa có CV phụ trách, D-038); CV³: check completeness, request supplements, assign reviewers/council, synthesize results, draft tờ trình, create approved projects, track reports. TB¹: the same evaluation work plus tờ trình review queue. TP¹: tờ trình approval queue, responsible-CV assignment and coordination (never completeness/supplement). PP¹: monitoring only. |
 | Ban giám đốc (GĐ / PGĐ-KH / PGĐ-TD) | GĐ: approve or reject topic + funding and liquidation with the required reason. GĐ or PGĐ-KH: sign council/IRB/acceptance establishment, IRB certificate, extension and adjustment. PGĐ-TD: monitor progress and aggregate figures only. |
 | Principal investigator / internal researcher | Create a draft, complete required sections, upload evidence, submit, respond to supplements, track an approved project, submit reports, and request adjustments or acceptance. |
 | Topic team member | See only related proposal/topic information, responsibilities, permitted files, milestones, tasks, and contribution evidence. |
@@ -274,13 +277,13 @@ refresh after `CONTEXT_VERSION_MISMATCH`.
 
 | Screen / route | Roles | Purpose and main data | Empty/loading/error/denied behavior; actions | Validation and API needs |
 | --- | --- | --- | --- | --- |
-| Intake periods `/intakes` | TP and CV manage; every role except QT and NNB views open periods | Intake name/code, dates, scope, required package, status, proposal count, deadline flags. | TP/CV create/edit/open/close within policy. Empty state offers “Tạo đợt tiếp nhận” only when allowed. Closed intake is read-only for configuration and blocks new proposals. | Start < end; scope is Academy-wide or explicit units; required package non-empty. `GET/POST/PATCH /proposal-intake-periods`; state changes are explicit and audited. |
+| Intake periods `/intakes` | TP and CV manage; every role except QT and NNB views open periods | Intake name/code, dates, scope, required package, status, proposal count, deadline flags. | TP/CV create/edit/open/close within policy; TP giao CV phụ trách cho đợt, chặn mở đợt khi chưa có CV (D-038). Empty state offers “Tạo đợt tiếp nhận” only when allowed. Closed intake is read-only for configuration and blocks new proposals. | Start < end; scope is Academy-wide or explicit units; required package non-empty. `GET/POST/PATCH /proposal-intake-periods`; state changes are explicit and audited. |
 | Proposal list `/proposals` and `/my-proposals` | Staff, internal researchers, and related participants within returned scope | Code, title, PI, managing unit, field, intake, status, submitted date, due/risk flag, viewer relationship. | Filters persist in URL; list skeleton matches table; no-results distinguishes “no matches” from “no accessible records”; denied detail is not revealed. Staff manages workflow; only a current internal PI can create when an applicable intake exists. | Search/filter/sort are server-side and authorization-scoped. `GET /research-proposals`; counts/facets use the same scope. |
 | Proposal detail `/proposals/:id` | Authorized viewer by relationship/assignment/scope | Header: code/title/status, managing unit, PI, intake, due flag, viewer relationship, next action. The PI gets the edit/submit workspace; management roles get a read-only proposal, team, schedule, and expected-budget board. Review/approval sections render only from this proposal's capability/assignment result: `ACTION_NOT_GRANTED` omits the section; conflict/state denials stay visible and disabled with the backend reason. PI and reviewers do not receive the action-log tab. | Loading skeleton; not-found and unauthorized use a safe response; stale context offers refresh; forbidden action remains disabled with reason when the record is visible. Non-PI viewers do not receive the PI submit section. | `GET /research-proposals/:id` returns disclosure-filtered detail, capability response, version token, history, and allowed tabs. |
 | Create/edit proposal `/proposals/new`, `/proposals/:id/edit` | Current internal PI only | Sectioned form: intake, title/type/field, managing unit, PI/team, dates, objectives/content, budget metadata, required files, readiness summary. | Save draft at any time when allowed; section completion indicators; submitted/locked version opens read-only; non-PI viewers remain read-only with a safe denial. | Required fields and files; date range; non-negative budget; team/account uniqueness; PI is owner-derived and immutable. `POST/PATCH /research-proposals/:id`; backend validation and draft audit. |
 | Submit confirmation `/proposals/:id/submit` | Current internal PI only | Final readiness checklist, version number, intake deadline, file summary, responsibility statement, immutable-version warning. | Confirm submit; cancel returns to edit; success shows timestamp and next state; failure keeps draft and lists correctable issues. Non-PI requests are denied without mutation. | Readiness is backend-calculated. `POST /research-proposals/:id/submit` with context token; audit actor; no direct status PATCH or delegation input. |
 | Supplement request `/proposals/:id/supplement` | TB¹ or assigned CV³ (never TP) | Locked proposal snapshot, missing items, reason, response due date, instructions, prior requests. | Save/send request only while requestable; sent request becomes immutable history; empty state is not applicable. | Reason and whole-day due date required; due date must be future and within policy. `POST /research-proposals/:id/supplement-requests`; status becomes `supplement_requested` only through domain operation. |
-| Staff check `/proposals/:id/check` | TB¹ or assigned CV³ (never TP) | Completeness checklist, field/file evidence, eligibility/readiness result, warnings, reviewer readiness, previous supplement history. | Mark complete once per submitted/resubmitted version or request supplement; after confirmation, keep the action visible but disabled with its reason. | Checklist version, required package, current-submission evidence, and decision are backend-owned. Repeat `POST /checks/complete` is denied; audit result and reason. |
+| Staff check `/proposals/:id/check` | TB¹ or assigned CV³ (never TP), kể cả hồ sơ mình là PI/thành viên (ngoại lệ D-038) | Completeness checklist, field/file evidence, eligibility/readiness result, warnings, reviewer readiness, previous supplement history. | Mark complete once per submitted/resubmitted version or request supplement; after confirmation, keep the action visible but disabled with its reason. | Checklist version, required package, current-submission evidence, and decision are backend-owned. Repeat `POST /checks/complete` is denied; audit result and reason. |
 | Reviewer assignment (“Phân công đánh giá”) `/proposals/:id/assignments` | TP¹, TB¹ or assigned CV³ without conflict; BGĐ monitors progress¹ | Candidate active account, assignment role, conflict result, whole-day effective dates/deadline, current assignments, assignment history. | Search candidate; run conflict check; assign, change, revoke, or complete assignment where allowed. Date inputs omit hours/minutes. Conflict result blocks assign and displays safe reason. | Candidate must be an active account with a scientific CV (any role except QT; may be outside the unit); no PI/member/conflicted reviewer; council tờ trình routes only after every member accepts; dates valid; assignment deadline valid. `GET /assignable-reviewers`, `POST/PATCH /review-assignments`; audit all changes. |
 | Reviewer evaluation `/reviews/:assignmentId` | Assigned reviewer/council member/ethics reviewer for own assignment | Authorized review package, rubric criteria, score inputs, total, comment, recommendation, due date, assignment status. | Save draft; submit once; after submit fields lock and a correction creates a controlled new review version if policy permits. Reviewer cannot see another review or consolidation. | Score within criterion range; all required criteria; comment/recommendation requirements; submit confirmation. `GET/PATCH/POST /review-assignments/:id/evaluation`; audit draft/submit and lock version. |
 | Result aggregation `/proposals/:id/aggregation` | TP¹, TB¹ or assigned CV³ without conflict; council secretary drafts synthesis/minutes (no scoring) | Submitted-review count, expected count, allowed review material, calculated totals, missing/late reviews, synthesis, recommendation, readiness for tờ trình routing. | Save synthesis while consolidatable; finalize and start the tờ trình (CV drafts → TB reviews → TP approves → GĐ decides) only when required reviews/conditions pass; no raw review data shown to unauthorized viewers. | No manual total outside backend calculation; synthesis required; all assignment/context versions checked. `GET/PATCH/POST /aggregations`; transition to `ready_for_approval` is explicit and audited. |
@@ -514,9 +517,9 @@ accounts cannot enter; network failure keeps the form and offers retry.
    and locked-version warning.
 6. PI confirms; API validates readiness, intake, relationship, scope, conflict,
    state, and context version atomically.
-7. Success shows submission timestamp and `Đã nộp / Chờ kiểm tra`; the system auto-assigns a
-   responsible CV by segment (unmatched records show “Chưa có người phụ trách”
-   for TP/TB to assign), and that CV receives a scoped notification and audit event.
+7. Success shows submission timestamp and `Đã nộp / Chờ kiểm tra`; hệ thống áp dụng CV phụ trách
+   của đợt tiếp nhận cho hồ sơ (D-038; đợt chưa có CV thì chưa được mở, “Chưa có người phụ trách”
+   chỉ còn khi TP/TB thu hồi CV mà chưa giao lại), and that CV receives a scoped notification and audit event.
 
 Failure: missing data returns field/section errors; stale context asks refresh;
 closed intake blocks new submission; API denial leaves the draft intact.
@@ -533,7 +536,9 @@ closed intake blocks new submission; API denial leaves the draft intact.
 6. Staff sees the request in history and the next owner as PI.
 
 No generic “edit status” action is offered. A conflict, stale context, or
-non-requestable state disables the action with the backend reason.
+non-requestable state disables the action with the backend reason. Ngoại lệ D-038: TB hoặc CV
+phụ trách là PI/thành viên của hồ sơ vẫn kiểm tra đầy đủ và yêu cầu bổ sung được trên hồ sơ
+đó (chỉ hai thao tác này; TP vẫn không làm).
 
 ### Flow 4 — PI resubmits supplement
 
