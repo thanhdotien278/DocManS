@@ -56,7 +56,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
   }
 
   if (state === "forbidden" || !decisionPackage) {
-    return <SectionCard title="Quyết định phê duyệt" subtitle="Lãnh đạo phê duyệt hoặc từ chối hồ sơ"><button className="button primary" type="button" disabled title={blockedReason}>Phê duyệt</button><p className="record-meta">{blockedReason}</p></SectionCard>;
+    return <SectionCard title="Quyết định phê duyệt" subtitle="Giám đốc phê duyệt hoặc từ chối đề tài cùng kinh phí"><button className="button primary" type="button" disabled title={blockedReason}>Phê duyệt</button><p className="record-meta">{blockedReason}</p></SectionCard>;
   }
 
   const { conflict, evaluationSummary, progress } = decisionPackage;
@@ -100,7 +100,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
   return (
     <SectionCard
       title="Quyết định phê duyệt"
-      subtitle="Kết quả đánh giá, tổng hợp của Trưởng phòng và quyết định của lãnh đạo"
+      subtitle="Kết quả đánh giá, bản tổng hợp và quyết định của Giám đốc"
       action={<StatusBadge status={decisionPackage.proposalStatus} />}
     >
       <div className="meta-grid">
@@ -121,6 +121,10 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
           <span className="meta-value">{decisionPackage.attachmentCount}</span>
         </div>
         <div className="meta-item">
+          <span className="meta-label">Tờ trình</span>
+          <span className="meta-value">{decisionPackage.approval ? `${decisionPackage.approval.statusLabel} · ${decisionPackage.approval.stageLabel}` : "Chưa có tờ trình"}</span>
+        </div>
+        <div className="meta-item">
           <span className="meta-label">Kết luận tổng hợp</span>
           <span className="meta-value">{evaluationSummary?.recommendationLabel || "Chưa tổng hợp"}</span>
         </div>
@@ -134,7 +138,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
 
       {evaluationSummary ? (
         <div className="form-section-inline">
-          <div className="section-mini-heading">Tổng hợp của Trưởng phòng</div>
+          <div className="section-mini-heading">Bản tổng hợp đánh giá</div>
           <p className="record-title">{evaluationSummary.summary}</p>
           <p className="record-meta">
             {evaluationSummary.updatedByDisplayName || "Chuyên viên quản lý khoa học"} · Chuyển trình{" "}
@@ -224,7 +228,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
         </div>
         {(!canDecide || !decisionPackage.canDecide) ? (
           <p className="record-meta">
-            {blockedReason || `Hồ sơ đang ở trạng thái "${decisionPackage.proposalStatusLabel}" nên chưa thể ra quyết định phê duyệt.`}
+            {blockedReason || `Hồ sơ đang ở trạng thái "${decisionPackage.proposalStatusLabel}"${decisionPackage.approval ? `, tờ trình: ${decisionPackage.approval.statusLabel} (${decisionPackage.approval.stageLabel})` : ""} nên chưa thể ra quyết định phê duyệt.`}
           </p>
         ) : null}
       </form>

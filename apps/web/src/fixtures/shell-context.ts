@@ -82,8 +82,8 @@ export const accountProfiles: AccountProfile[] = [
     id: "oversight-vu-nhat-dinh",
     username: "vndinh",
     name: "Thiếu tướng PGS. TS. Vũ Nhất Định",
-    role: "RESEARCH_OVERSIGHT_AUTHORITY",
-    roleLabel: "Lãnh đạo giám sát nghiên cứu",
+    role: "SCIENCE_DEPUTY_DIRECTOR",
+    roleLabel: "Phó Giám đốc phụ trách Khoa học",
     unit: "Ban Giám Đốc",
     initials: "Đ"
   },

@@ -14,17 +14,33 @@ export const REVIEW_ASSIGNMENT_STATUS = {
 
 export type ReviewAssignmentStatus = (typeof REVIEW_ASSIGNMENT_STATUS)[keyof typeof REVIEW_ASSIGNMENT_STATUS];
 
-export type ReviewAssignmentRole = "reviewer" | "committee_member";
+/** Vị trí trong hội đồng thẩm định (spec hội đồng §5). `reviewer` = Phản biện, `committee_member` = Ủy viên. */
+export type ReviewAssignmentRole = "council_chair" | "reviewer" | "committee_member" | "council_secretary";
+
+export const REVIEW_ASSIGNMENT_ROLES = ["council_chair", "reviewer", "committee_member", "council_secretary"] as const satisfies readonly ReviewAssignmentRole[];
 
 export const REVIEW_ASSIGNMENT_ROLE_LABELS: Record<ReviewAssignmentRole, string> = {
-  reviewer: "Người phản biện",
-  committee_member: "Thành viên hội đồng"
+  council_chair: "Chủ tịch hội đồng",
+  reviewer: "Phản biện",
+  committee_member: "Ủy viên",
+  council_secretary: "Thư ký hội đồng"
 };
+
+/** Thư ký soạn tổng hợp/biên bản, không chấm phiếu. */
+export function isScoringRole(role: unknown) {
+  return normalizeAssignmentRole(role) !== "council_secretary";
+}
 
 export const REVIEW_ASSIGNMENT_STATUS_LABELS: Record<string, string> = {
   [REVIEW_ASSIGNMENT_STATUS.assigned]: "Đang được phân công",
   [REVIEW_ASSIGNMENT_STATUS.revoked]: "Đã thu hồi",
   [REVIEW_ASSIGNMENT_STATUS.completed]: "Đã hoàn thành"
+};
+
+export const INVITATION_STATUS_LABELS: Record<string, string> = {
+  invited: "Chờ chấp nhận",
+  accepted: "Đã chấp nhận",
+  declined: "Đã từ chối"
 };
 
 export const REVIEW_STATUS = {
@@ -67,6 +83,10 @@ export type ReviewAssignmentLike = {
   assignedAt?: Date | null;
   effectiveFrom?: Date | null;
   effectiveUntil?: Date | null;
+  /** Story 5.11: chỉ `accepted` mới đọc được hồ sơ. Thiếu trường (dữ liệu/mock cũ) coi là đã chấp nhận. */
+  invitationStatus?: string | null;
+  /** Story 5.10: thiếu trường coi là đã thành lập; null nghĩa là BGĐ chưa ký hội đồng. */
+  councilEstablishedAt?: Date | null;
 };
 
 export type ProposalReviewAccess = {
@@ -95,21 +115,24 @@ const NO_REVIEW_ACCESS: ProposalReviewAccess = {
   conflictUnresolved: false
 };
 
-export function normalizeAssignmentRole(value: unknown): ReviewAssignmentRole {
-  if (typeof value !== "string") {
-    return "reviewer";
-  }
-
+/** Giá trị lạ trả `null` để mutation từ chối 400; đường đọc dùng `?? "reviewer"` (dữ liệu cũ). */
+export function normalizeAssignmentRole(value: unknown): ReviewAssignmentRole | null {
+  if (typeof value !== "string") return null;
   const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, "_");
-  return normalized === "committee_member" ? "committee_member" : "reviewer";
+  return (REVIEW_ASSIGNMENT_ROLES as readonly string[]).includes(normalized) ? (normalized as ReviewAssignmentRole) : null;
 }
 
 export function getAssignmentRoleLabel(role: string) {
-  return REVIEW_ASSIGNMENT_ROLE_LABELS[normalizeAssignmentRole(role)];
+  return REVIEW_ASSIGNMENT_ROLE_LABELS[normalizeAssignmentRole(role) ?? "reviewer"];
 }
 
 export function getRecommendationLabel(value: string | null | undefined) {
   return value && value in REVIEW_RECOMMENDATION_LABELS ? REVIEW_RECOMMENDATION_LABELS[value as ReviewRecommendation] : "";
+}
+
+/** Hồ sơ chỉ mở cho thành viên đã chấp nhận và hội đồng đã được BGĐ ký thành lập. */
+export function grantsReviewAccess(assignment: Pick<ReviewAssignmentLike, "invitationStatus" | "councilEstablishedAt">) {
+  return (assignment.invitationStatus ?? "accepted") === "accepted" && assignment.councilEstablishedAt !== null;
 }
 
 /**
@@ -125,6 +148,7 @@ export function resolveProposalReviewAccess(assignments?: ReviewAssignmentLike[]
   const active = assignments
     .filter((assignment) =>
       (assignment.status === REVIEW_ASSIGNMENT_STATUS.assigned || assignment.status === REVIEW_ASSIGNMENT_STATUS.completed) &&
+      grantsReviewAccess(assignment) &&
       (!assignment.effectiveFrom || assignment.effectiveFrom <= asOf) &&
       (!assignment.effectiveUntil || asOf < assignment.effectiveUntil)
     )
@@ -137,7 +161,7 @@ export function resolveProposalReviewAccess(assignments?: ReviewAssignmentLike[]
   return {
     isAssignedReviewer: true,
     assignmentId: active.id,
-    assignmentRole: normalizeAssignmentRole(active.assignmentRole),
+    assignmentRole: normalizeAssignmentRole(active.assignmentRole) ?? "reviewer",
     effectiveFrom: (active.effectiveFrom ?? active.assignedAt)?.toISOString() ?? "",
     effectiveUntil: active.effectiveUntil?.toISOString() ?? null
   };

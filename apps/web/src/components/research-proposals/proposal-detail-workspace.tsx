@@ -7,6 +7,9 @@ import { ProposalMembersEditor } from "@/components/research-proposals/proposal-
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Download, FileText, Pencil, Save, Send, Trash2, UploadCloud, X } from "lucide-react";
 import { useSession } from "@/components/auth/session-provider";
+import { RoutingStatus } from "@/components/approvals/routing-status";
+import { ProposalCouncilPanel } from "@/components/research-proposals/proposal-council-panel";
+import { CouncilSecretaryPanel } from "@/components/research-proposals/council-secretary-panel";
 import { ProposalDecisionPanel } from "@/components/research-proposals/proposal-decision-panel";
 import { ProposalEvaluationPanel } from "@/components/research-proposals/proposal-evaluation-panel";
 import { ProposalReviewForm } from "@/components/research-proposals/proposal-review-form";
@@ -16,6 +19,7 @@ import { ParticipationBadge } from "@/components/ui/participation-badge";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatIntakeDate, intakeDateToIso, toIntakeDateInput } from "@/lib/intake-dates";
+import { loadMyReviewAssignments } from "@/lib/proposal-evaluations-api";
 import { formatVndNumber, numberToVietnameseWords, parseVndNumber } from "@/lib/vietnamese-currency";
 import {
   deleteProposalAttachment,
@@ -109,6 +113,8 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   const [supplementError, setSupplementError] = useState("");
   const [isRequestingSupplement, setIsRequestingSupplement] = useState(false);
   const [isResubmitting, setIsResubmitting] = useState(false);
+  // Thư ký (đã nhận lời, đã thành lập) không gọi được evaluation-council nên nhận diện qua hàng đợi của chính mình (spec S7).
+  const [isCouncilSecretary, setIsCouncilSecretary] = useState(false);
 
   async function refresh() {
     setState("loading");
@@ -142,6 +148,14 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
     void loadProposalCatalogs().then(setCatalogs).catch(() => setMessage("Không tải được danh mục. Vui lòng tải lại."));
     void refresh();
   }, [proposalId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadMyReviewAssignments()
+      .then((items) => { if (!cancelled) setIsCouncilSecretary(items.some((item) => item.access === "granted" && item.proposalId === proposalId && item.assignmentRole === "council_secretary")); })
+      .catch(() => { if (!cancelled) setIsCouncilSecretary(false); });
+    return () => { cancelled = true; };
+  }, [proposalId, proposal?.status]);
 
   const capabilityState = proposal ? getProposalCapabilityState(proposal) : { capability: null, reloadRequired: true, reason: "Đang tải quyền thao tác." };
   const canEdit = canPerformProposalAction(capabilityState, "proposal.draft.update");
@@ -233,7 +247,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
           amount: Number(form.budgetMetadata?.amount ?? 0),
           currency: form.budgetMetadata?.currency || "VND"
         },
-        members: form.members?.filter((member) => member.name.trim() && member.role.trim() && member.organization.trim())
+        members: form.members?.filter((member) => member.researcherProfileId || (member.name.trim() && member.role.trim() && member.organization.trim()))
       };
       const result = await updateResearchProposalDraft(proposal.id, payload, proposal.viewerAuthorization?.contextVersion);
       setProposal(result.proposal);
@@ -269,7 +283,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
       setUploadFiles((current) => ({ ...current, [requirementCode]: null }));
       setUploadDescriptions((current) => ({ ...current, [requirementCode]: "" }));
       setFileInputKeys((current) => ({ ...current, [requirementCode]: (current[requirementCode] ?? 0) + 1 }));
-      setMessage("Đã tải tệp và cập nhật readiness.");
+      setMessage("Đã tải tệp và cập nhật tình trạng đầy đủ hồ sơ.");
       await refresh();
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "Không thể tải tệp.");
@@ -621,7 +635,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               <div className="meta-item"><span className="meta-label">Kinh phí dự kiến</span><span className="meta-value">{formatVndNumber(proposal.budgetMetadata?.amount)} VND</span></div>
             </div>
             <div className="form-section-inline">
-              <div className="section-mini-heading">Team members</div>
+              <div className="section-mini-heading">Thành viên nhóm nghiên cứu</div>
               {proposal.members?.length ? (
                 <ul className="participation-list">
                   {proposal.members.map((member, index) => (
@@ -669,7 +683,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                 ))}
               </div>
             ) : (
-              <EmptyState title="Chưa có yêu cầu bổ sung" message="Staff có thể gửi yêu cầu khi hồ sơ đã nộp cần hoàn thiện thêm." />
+              <EmptyState title="Chưa có yêu cầu bổ sung" message="Cán bộ phụ trách có thể gửi yêu cầu khi hồ sơ đã nộp cần hoàn thiện thêm." />
             )}
 
             <form className="admin-form compact-form" onSubmit={(event) => void handleRequestSupplement(event)}>
@@ -691,11 +705,18 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
           </SectionCard>
         ) : null}
 
-        {showReviewForm ? <ProposalReviewForm contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} onReviewSubmitted={() => void refreshWorkflowState()} canSubmitReview={canPerformProposalAction(capabilityState, "proposal.review.submit")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.submit")?.reason ?? capabilityState.reason} /> : null}
+        {isCouncilSecretary ? <CouncilSecretaryPanel proposalId={proposal.id} contextVersion={proposal.viewerAuthorization?.contextVersion} onChanged={() => void refreshWorkflowState()} /> : null}
+
+        {showReviewForm && !isCouncilSecretary ? <ProposalReviewForm contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} onReviewSubmitted={() => void refreshWorkflowState()} canSubmitReview={canPerformProposalAction(capabilityState, "proposal.review.submit")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.submit")?.reason ?? capabilityState.reason} /> : null}
+
+        <RoutingStatus subjectType="proposal" subjectId={proposal.id} refreshKey={proposal.status} onChanged={() => void refreshWorkflowState()} />
 
         {showEvaluationProgress ? (
-          <ProposalEvaluationPanel contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} proposalStatus={proposal.status} onWorkflowChange={refreshWorkflowState} canReadProgress={canReadReviewProgress} canAssignReviewers={canPerformProposalAction(capabilityState, "proposal.review.assign")} canConsolidate={canPerformProposalAction(capabilityState, "proposal.review.consolidate")} canFinalize={canPerformProposalAction(capabilityState, "proposal.review.finalize")} canSubmitPackage={canPerformProposalAction(capabilityState, "proposal.review.submit-package")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.assign")?.reason ?? capabilityState.reason} consolidateBlockedReason={blockedProposalAction(capabilityState, "proposal.review.consolidate")?.reason ?? capabilityState.reason} finalizeBlockedReason={blockedProposalAction(capabilityState, "proposal.review.finalize")?.reason ?? capabilityState.reason} submitPackageBlockedReason={blockedProposalAction(capabilityState, "proposal.review.submit-package")?.reason ?? capabilityState.reason} />
+          <ProposalEvaluationPanel contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} proposalStatus={proposal.status} onWorkflowChange={refreshWorkflowState} canReadProgress={canReadReviewProgress} canAssignReviewers={canPerformProposalAction(capabilityState, "proposal.review.assign")} canConsolidate={canPerformProposalAction(capabilityState, "proposal.review.consolidate")} canFinalize={canPerformProposalAction(capabilityState, "proposal.review.finalize")} canSubmitPackage={canPerformProposalAction(capabilityState, "proposal.review.submit-package")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.assign")?.reason ?? capabilityState.reason} consolidateBlockedReason={blockedProposalAction(capabilityState, "proposal.review.consolidate")?.reason ?? capabilityState.reason} finalizeBlockedReason={blockedProposalAction(capabilityState, "proposal.review.finalize")?.reason ?? capabilityState.reason} finalizeWorkflowBlocked={blockedProposalAction(capabilityState, "proposal.review.finalize")?.code === "WORKFLOW_STATE_DENIED"} submitPackageBlockedReason={blockedProposalAction(capabilityState, "proposal.review.submit-package")?.reason ?? capabilityState.reason} />
         ) : null}
+
+        {/* Panel hội đồng tự ẩn khi backend trả 401/403 (người xem không lập, rà soát hay ký). */}
+        {["submitted", "resubmitted", "under_review"].includes(proposal.status) ? <ProposalCouncilPanel proposalId={proposal.id} onChanged={() => void refreshWorkflowState()} /> : null}
 
         {showDecisionPanel ? <ProposalDecisionPanel contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} onDecision={() => void refreshWorkflowState()} canDecide={canPerformProposalAction(capabilityState, "proposal.decision.approve")} blockedReason={blockedProposalAction(capabilityState, "proposal.decision.approve")?.reason ?? capabilityState.reason} /> : null}
 
