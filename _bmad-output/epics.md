@@ -2487,7 +2487,7 @@ So that chủ nhiệm biết khi nào và cần nộp những gì.
 **Then** quyền quản lý đợt không cấp quyền quản lý mọi hồ sơ nộp; quyền xem và số liệu đề xuất theo unit scope của TP/TB/PP, CV³ phụ trách hoặc quan hệ tham gia.
 
 **Given** TP hoặc CV có quyền trong organization scope
-**When** họ tạo đợt với tên, thời gian, phạm vi áp dụng, loại đề xuất, checklist và gói tệp bắt buộc
+**When** họ tạo đợt với tên, thời gian, phạm vi áp dụng và gói tệp bắt buộc (checklist chính là gói tệp bắt buộc; loại và tính chất đề tài do PI chọn trên hồ sơ)
 **Then** backend lưu đợt đã validate
 **And** trả capability cho các action cập nhật, kích hoạt hoặc kết thúc.
 

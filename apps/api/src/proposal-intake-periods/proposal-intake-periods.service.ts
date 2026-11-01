@@ -52,7 +52,7 @@ export class ProposalIntakePeriodsService {
   private transactional = false;
   private uploadedKeys: string[] = [];
 
-  private async mutate<T>(actor: SafeUserContext, periodId: string | null, expected: unknown, work: (service: ProposalIntakePeriodsService, actor: SafeUserContext) => Promise<T>): Promise<T> {
+  private async mutate<T>(action: string, actor: SafeUserContext, periodId: string | null, expected: unknown, work: (service: ProposalIntakePeriodsService, actor: SafeUserContext) => Promise<T>): Promise<T> {
     const uploadedKeys: string[] = [];
     try {
       return await runProposalMutation(this.prisma, actor, null, undefined, async (tx, currentActor) => {
@@ -69,6 +69,12 @@ export class ProposalIntakePeriodsService {
       });
     } catch (error) {
       await Promise.allSettled(uploadedKeys.map((key) => this.storage.deleteObject(key)));
+      // Giao dịch đã rollback nên audit từ chối phải ghi ngoài giao dịch.
+      if (error instanceof ForbiddenException) {
+        await this.auditLog.record({ action, result: "failure", actorId: actor.id, targetEntity: "proposal-intake-period", targetEntityId: periodId ?? undefined, username: actor.username, reason: "ACTION_NOT_GRANTED" }).catch(() => undefined);
+      }
+      const prismaError = error as { code?: string; meta?: { target?: unknown } };
+      if (prismaError.code === "P2002" && String(prismaError.meta?.target ?? "").includes("code")) throw new ConflictException({ code: "INTAKE_CODE_EXISTS", field: "code", message: "Mã đợt tiếp nhận đã tồn tại." });
       throw error;
     }
   }
@@ -164,7 +170,7 @@ export class ProposalIntakePeriodsService {
   }
 
   async createPeriod(actor: SafeUserContext, input: Record<string, unknown>, files: IntakeTemplateUpload[] = []): Promise<any> {
-    if (!this.transactional) return this.mutate(actor, null, undefined, (s, a) => s.createPeriod(a, input, files));
+    if (!this.transactional) return this.mutate("create-proposal-intake-period", actor, null, undefined, (s, a) => s.createPeriod(a, input, files));
     assertCanManageIntakePeriods(actor);
     const applicableOrganizationUnitId = readOptionalText(input.applicableOrganizationUnitId, "applicableOrganizationUnitId", 80);
     if (applicableOrganizationUnitId) {
@@ -198,14 +204,15 @@ export class ProposalIntakePeriodsService {
       actorId: actor.id,
       targetEntity: "proposal-intake-period",
       targetEntityId: period.id,
-      username: actor.username
+      username: actor.username,
+      reason: this.auditReason(null, period)
     });
 
     return this.toResponse(period, actor);
   }
 
   async updatePeriod(actor: SafeUserContext, periodId: string, input: Record<string, unknown>, files: IntakeTemplateUpload[] = []): Promise<any> {
-    if (!this.transactional) return this.mutate(actor, periodId, input.contextVersion, (s, a) => s.updatePeriod(a, periodId, input, files));
+    if (!this.transactional) return this.mutate("update-proposal-intake-period", actor, periodId, input.contextVersion, (s, a) => s.updatePeriod(a, periodId, input, files));
     assertCanManageIntakePeriods(actor);
 
     const existing = await this.findPeriod(periodId);
@@ -255,17 +262,19 @@ export class ProposalIntakePeriodsService {
       actorId: actor.id,
       targetEntity: "proposal-intake-period",
       targetEntityId: period.id,
-      username: actor.username
+      username: actor.username,
+      reason: this.auditReason(existing, period)
     });
 
     return this.toResponse(period, actor);
   }
 
   async openPeriod(actor: SafeUserContext, periodId: string, input: Record<string, unknown> = {}): Promise<any> {
-    if (!this.transactional) return this.mutate(actor, periodId, input.contextVersion, (s, a) => s.openPeriod(a, periodId, input));
+    if (!this.transactional) return this.mutate("open-proposal-intake-period", actor, periodId, input.contextVersion, (s, a) => s.openPeriod(a, periodId, input));
     assertCanManageIntakePeriods(actor);
     const existing = await this.findPeriod(periodId);
     this.assertIntakeScope(actor, existing);
+    if (existing.status === "open") throw new BadRequestException({ message: "Đợt tiếp nhận đang mở." });
     if (existing.status === "closed" || existing.endsAt <= new Date()) throw new BadRequestException({ message: "Không thể mở đợt đã đóng hoặc hết hạn." });
     assertDateRange(existing.startsAt, existing.endsAt);
 
@@ -284,14 +293,15 @@ export class ProposalIntakePeriodsService {
       actorId: actor.id,
       targetEntity: "proposal-intake-period",
       targetEntityId: period.id,
-      username: actor.username
+      username: actor.username,
+      reason: this.auditReason(existing, period)
     });
 
     return this.toResponse(period, actor);
   }
 
   async closePeriod(actor: SafeUserContext, periodId: string, input: Record<string, unknown> = {}): Promise<any> {
-    if (!this.transactional) return this.mutate(actor, periodId, input.contextVersion, (s, a) => s.closePeriod(a, periodId, input));
+    if (!this.transactional) return this.mutate("close-proposal-intake-period", actor, periodId, input.contextVersion, (s, a) => s.closePeriod(a, periodId, input));
     assertCanManageIntakePeriods(actor);
     const existing = await this.findPeriod(periodId);
     this.assertIntakeScope(actor, existing);
@@ -308,7 +318,8 @@ export class ProposalIntakePeriodsService {
       actorId: actor.id,
       targetEntity: "proposal-intake-period",
       targetEntityId: period.id,
-      username: actor.username
+      username: actor.username,
+      reason: this.auditReason(existing, period)
     });
 
     return this.toResponse(period, actor);
@@ -340,6 +351,11 @@ export class ProposalIntakePeriodsService {
     if (!intakeAppliesToUser(period, actor)) {
       throw new ForbiddenException({ message: "Không có quyền thao tác trong phạm vi đơn vị này." });
     }
+  }
+
+  private auditReason(before: IntakePeriodRecord | null, after: IntakePeriodRecord) {
+    const snapshot = (p: IntakePeriodRecord | null) => p && { code: p.code, title: p.title, startsAt: p.startsAt, endsAt: p.endsAt, status: p.status, applicableOrganizationUnitIds: p.applicableOrganizationUnitIds, requiredPackage: p.requiredPackage };
+    return JSON.stringify({ before: snapshot(before), after: snapshot(after), contextVersion: after.updatedAt.toISOString() });
   }
 
   private effectiveStatus(period: IntakePeriodRecord): IntakeStatus {

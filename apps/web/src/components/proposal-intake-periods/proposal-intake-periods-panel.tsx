@@ -49,6 +49,7 @@ export function ProposalIntakePeriodsPanel() {
   const [form, setForm] = useState(emptyForm);
   const [message, setMessage] = useState("");
   const [formError, setFormError] = useState("");
+  const [listError, setListError] = useState("");
   const [fileInputVersion, setFileInputVersion] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -131,6 +132,7 @@ export function ProposalIntakePeriodsPanel() {
         await createProposalIntakePeriod({ ...form, requiredPackage, applicableOrganizationUnitId: undefined, startsAt: intakeDateToIso(form.startsAt), endsAt: intakeDateToIso(form.endsAt, true) }, files);
         setMessage("Đã tạo đợt tiếp nhận.");
       }
+      setShowCreate(false);
       resetForm();
       await refresh();
     } catch (error) {
@@ -144,13 +146,13 @@ export function ProposalIntakePeriodsPanel() {
     if (isSubmitting || !window.confirm(action === "close" ? "Đóng đợt tiếp nhận? Các hồ sơ đã nộp vẫn tiếp tục được xử lý." : "Mở đợt tiếp nhận?")) return;
     setIsSubmitting(true);
     setMessage("");
-    setFormError("");
+    setListError("");
     try {
       const result = action === "open" ? await openProposalIntakePeriod(period.id, period.contextVersion) : await closeProposalIntakePeriod(period.id, period.contextVersion);
       setPeriods((current) => current.map((item) => (item.id === period.id ? result.intakePeriod : item)));
       setMessage(action === "open" ? "Đã mở đợt tiếp nhận." : "Đã đóng đợt tiếp nhận.");
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Không thể cập nhật trạng thái.");
+      setListError(error instanceof Error ? error.message : "Không thể cập nhật trạng thái.");
     } finally { setIsSubmitting(false); }
   }
 
@@ -177,6 +179,8 @@ export function ProposalIntakePeriodsPanel() {
           </label>
         </div>
 
+        {message ? <p className="state-message success" role="status">{message}</p> : null}
+        {listError ? <p className="state-message error" role="alert">{listError}</p> : null}
         {state === "loading" ? <p className="state-message">Đang tải đợt tiếp nhận...</p> : null}
         {state === "error" ? <p className="state-message error">Không thể tải danh sách đợt tiếp nhận.</p> : null}
         {state === "ready" && filteredPeriods.length === 0 ? (
@@ -330,7 +334,6 @@ export function ProposalIntakePeriodsPanel() {
             <button className="button" type="button" onClick={() => setForm({ ...form, requiredPackage: [...form.requiredPackage, { ...defaultPackage[0], code: `template-${crypto.randomUUID()}` }] })}>Thêm file</button>
           </div>
           {formError ? <p className="form-error">{formError}</p> : null}
-          {message ? <p className="state-message success">{message}</p> : null}
           <div className="button-row">
             <button className="button primary" type="submit" disabled={isSubmitting}>
               {isSubmitting ? <Save size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
