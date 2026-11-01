@@ -200,12 +200,16 @@ export type ResearchProposal = {
 export type ReadinessItem = {
   code: string;
   label: string;
+  section?: string;
 };
 
 export type ProposalReadiness = {
   ready: boolean;
   missingFields: ReadinessItem[];
   missingFiles: ReadinessItem[];
+  blockers?: ReadinessItem[];
+  canSubmit?: boolean;
+  submitBlockedReason?: string | null;
 };
 
 export type ProposalDraftInput = {

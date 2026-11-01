@@ -966,8 +966,12 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                 {readiness?.missingFiles.map((item) => (
                   <span key={item.code}>Tài liệu: {item.label}</span>
                 ))}
+                {readiness?.blockers?.map((item) => (
+                  <span key={item.code}>Đợt: {item.label}</span>
+                ))}
               </div>
             )}
+            {readiness?.submitBlockedReason ? <p className="state-message compact-state">{readiness.submitBlockedReason}</p> : null}
             <button
               className="button primary submit-button"
               type="button"
