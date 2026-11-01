@@ -203,3 +203,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-3-nhap-va-cong-tac-tren-thong-tin-de-xuat.md`
   summary: Thêm kiểm chứng UI cho thư ký (payload chỉ `summary`) và thành viên (chỉ đọc kèm lý do).
   evidence: Repo chỉ có test dạng regex trên source (`tests/proposal-capability-ui-source.test.mjs`); chưa có harness render.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-va-lech-ac-dot-tiep-nhan.md`
+  summary: Audit cho từ chối không phải 403 (400, 404, 409 version cũ) của đợt tiếp nhận.
+  evidence: `mutate` chỉ audit `ForbiddenException`; AC hiện chỉ yêu cầu audit từ chối theo policy.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-va-lech-ac-dot-tiep-nhan.md`
+  summary: Test từ chối do `assertIntakeScope` (đợt có đơn vị) và kiểm chứng panel đợt tiếp nhận.
+  evidence: Cần fixture đợt có `applicableOrganizationUnitIds`; repo chưa có harness render component web.

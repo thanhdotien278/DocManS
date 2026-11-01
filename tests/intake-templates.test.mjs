@@ -64,7 +64,7 @@ test('intake period open/close, context version, duplicate code and denied audit
         const row = { ...data, createdAt: new Date(), updatedAt: new Date(++tick) }; periods.push(row); return row;
       },
       findUnique: async ({ where }) => periods.find(p => p.id === where.id) ?? null,
-      update: async ({ where, data }) => { const i = periods.findIndex(p => p.id === where.id); return periods[i] = { ...periods[i], ...data, updatedAt: new Date(++tick) }; },
+      update: async ({ where, data }) => { if (data.code && periods.some(p => p.id !== where.id && p.code === data.code)) throw Object.assign(new Error('unique'), { code: 'P2002', meta: { target: ['code'] } }); const i = periods.findIndex(p => p.id === where.id); return periods[i] = { ...periods[i], ...data, updatedAt: new Date(++tick) }; },
       findMany: async () => periods
     }
   };
@@ -84,7 +84,18 @@ test('intake period open/close, context version, duplicate code and denied audit
   await assert.rejects(service.openPeriod(actor, created.id, { contextVersion: opened.contextVersion }), e => e.status === 400);
   const closed = await service.closePeriod(actor, created.id, { contextVersion: opened.contextVersion });
   assert.equal(closed.status, 'closed');
+  const closeReason = JSON.parse(audits.find(a => a.action === 'close-proposal-intake-period' && a.result === 'success').reason);
+  assert.equal(closeReason.before.status, 'open');
+  assert.equal(closeReason.after.status, 'closed');
+  const second = await service.createPeriod(actor, { ...input, code: 'P2', title: 'P2' });
+  await assert.rejects(service.updatePeriod(actor, second.id, { code: 'P1', contextVersion: second.contextVersion }), e => e.status === 409 && e.response.field === 'code');
+  const updated = await service.updatePeriod(actor, second.id, { title: 'P2 sửa', contextVersion: second.contextVersion });
+  const updateReason = JSON.parse(audits.find(a => a.action === 'update-proposal-intake-period' && a.result === 'success').reason);
+  assert.equal(updateReason.before.title, 'P2');
+  assert.equal(updateReason.after.title, 'P2 sửa');
   actor.systemRole = 'RESEARCH_BOARD_HEAD';
   await assert.rejects(service.openPeriod(actor, created.id, { contextVersion: closed.contextVersion }), e => e.status === 403);
-  assert.ok(audits.some(a => a.action === 'open-proposal-intake-period' && a.result === 'failure' && a.actorId === 'staff' && a.targetEntityId === created.id));
+  // Actor không có quyền gửi version cũ vẫn nhận 403, không lộ 409.
+  await assert.rejects(service.closePeriod(actor, second.id, { contextVersion: 'cũ' }), e => e.status === 403);
+  assert.ok(audits.some(a => a.action === 'open-proposal-intake-period' && a.result === 'failure' && a.actorId === 'staff' && a.targetEntityId === created.id && a.reason === 'ACTION_NOT_GRANTED'));
 });
