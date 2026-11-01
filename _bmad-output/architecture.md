@@ -253,13 +253,14 @@ Replaces the "Scientific Management Head / Staff boundary — 2026-09-21" sectio
 Head/Staff/Leadership decision rights are superseded. Authoritative source:
 `docs/permission-matrix.md` (§7 wins on conflict).
 
-1. **Responsible CV.** TP¹ or TB¹ assigns, reassigns or revokes the responsible CV
-   (`PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER`). On submit, and on
-   resubmit while no officer is active, the system auto-assigns one CV whose segment
-   (mảng = proposal level + nature Quân sự/Dân sự) matches. Tie-break: the more specific
-   segment first, then the CV with fewer active records. Unmatched records show
-   "Chưa có người phụ trách" for TP to assign. CV acts only on records it currently holds;
-   a past assignment grants nothing.
+1. **Responsible CV (D-038).** Mỗi đợt tiếp nhận (`proposal_intake_periods`) có đúng một CV
+   phụ trách do TP giao; đợt chưa có CV thì chưa được mở. Khi nộp, hồ sơ nhận CV của đợt làm
+   `PROPOSAL_MANAGEMENT_OFFICER` trong cùng transaction (audit actor `System`); nộp lại giữ CV
+   hiện tại. TP đổi CV của cả đợt (áp dụng cho các hồ sơ trong đợt) hoặc của từng hồ sơ; TB giao,
+   chuyển, thu hồi CV theo từng hồ sơ (`PROPOSAL_MANAGEMENT_OFFICER` /
+   `PROJECT_MANAGEMENT_OFFICER`). "Chưa có người phụ trách" chỉ còn sau khi thu hồi CV mà chưa
+   giao lại. CV acts only on records it currently holds; a past assignment grants nothing.
+   Cơ chế tự giao theo mảng (segment) đã bị D-038 thay thế.
 2. **Approval routing replaces package submission.** Every BGĐ-bound procedure is an
    `approval_submissions` record with `approval_steps` history (model per
    `tuan/DocManS`, migration `20261018000000_approval_routing`):
@@ -285,8 +286,8 @@ Head/Staff/Leadership decision rights are superseded. Authoritative source:
 Proposal/project modules own the management-officer relationships, their lifecycle,
 current-officer query projection and audit. At most one responsible CV is active per
 record; reassignment ends the old interval and creates the new one atomically under
-concurrency control. Keep immutable history, actor (or `System` for auto-assignment),
-time, segment match and reason; zero officers means unassigned. Do not copy authority
+concurrency control. Keep immutable history, actor (or `System` khi hồ sơ nhận CV của đợt),
+time, phạm vi đổi CV (cả đợt hoặc từng hồ sơ) and reason; zero officers means unassigned. Do not copy authority
 from the source proposal to a created project automatically.
 
 Capability context retains the access basis: TP/TB unit-scope coordination, BGĐ/TP/TB
@@ -304,8 +305,9 @@ mutually exclusive council-position checks remain. Management visibility never b
 participant disclosure or conflict restrictions. If no eligible TB/TP step actor or
 conflict-free signer exists, the PI withdraws the request.
 
-Migration adds proposal-owned officer history and role registry checks; segment
-persistence (`management_portfolios`) and routing persistence port from `tuan/DocManS`.
+Migration adds proposal-owned officer history and role registry checks and the
+responsible CV of the intake period (D-038; no `management_portfolios`/segment persistence);
+routing persistence ports from `tuan/DocManS`.
 Project officer persistence awaits the approved-project domain; no orphan generic
 assignment store is introduced.
 
@@ -707,8 +709,8 @@ must complete before dependent stories rely on it.
   notification
 - **Prevents:** role-only or scope-only permission decisions
 - **Rule:** evaluate system role, organization scope, active record
-  relationships, assignment scope (including the segment-based responsible-CV
-  assignment), valid delegation, workflow state (including the approval-routing
+  relationships, assignment scope (including the responsible CV of the intake period or of the
+  record, D-038), valid delegation, workflow state (including the approval-routing
   stage `BOARD_REVIEW`/`HEAD_REVIEW`/`LEADERSHIP` and its signer), and
   conflict policy; applicable resolvers distinguish resolved-value,
   resolved-empty, not-applicable, and unresolved/error; only unresolved,
@@ -1473,14 +1475,14 @@ erDiagram
 - `council_evaluations`
 - `council_decisions`
 
-**Approval Routing And Segment Ownership (port from `tuan/DocManS`):**
+**Approval Routing Ownership (port from `tuan/DocManS`):**
 
 - `approval_submissions` (kind, subject, stage, status, signer; one open submission per
   kind and subject)
 - `approval_steps` (append-only step history: `SUBMIT`, `FORWARD`, `APPROVE`, `REJECT`,
   `RETURN`)
-- `management_portfolios` (TP-assigned CV segments: proposal level and/or nature; null
-  means any value)
+- `proposal_intake_periods` thêm CV phụ trách của đợt (D-038); thay cho `management_portfolios`
+  (mảng/segment) không còn triển khai
 
 **Operational Support Ownership:**
 
@@ -1808,7 +1810,7 @@ Replaces "Finalized implementation scope — 2026-09-21". On `DocManS` the model
 implemented on the existing proposal, intake, researcher-profile, file and evaluation
 features. Approved projects, council/IRB lifecycles, institutional dashboards, general
 search/report/export and notification/My Work backends remain planned where no
-operational source exists; approval routing, segment auto-assignment, council invitations
+operational source exists; approval routing, council invitations
 and dashboard breakdowns exist on `tuan/DocManS` and must be ported (that branch has no
 merge base with `DocManS`). `PROJECT_MANAGEMENT_OFFICER` is a contract relationship, not a
 persisted orphan assignment. Dashboard showcase data is not an institutional report or
@@ -1818,7 +1820,7 @@ relationship, conflict and disclosure checks before aggregates or drill-down.
 Work queues follow matrix §9.10:
 
 - TB: tờ trình review queue (`BOARD_REVIEW`); TP: tờ trình approval queue
-  (`HEAD_REVIEW`) plus the "Chưa có người phụ trách" unassigned view;
+  (`HEAD_REVIEW`) plus the "Chưa có người phụ trách" view (chỉ còn sau khi thu hồi CV mà chưa giao lại, D-038);
 - CV: records it is currently assigned to, and its own submitted tờ trình;
 - GĐ: topic + funding decision queue and every signature queue (`LEADERSHIP`);
 - PGĐ-KH: signature queue for `DIRECTOR_OR_SCIENCE_DEPUTY` kinds only;

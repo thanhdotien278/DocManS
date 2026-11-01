@@ -20,7 +20,7 @@ policy and current workflow rules, use the linked normative documents.
 | **Business record** | A domain aggregate such as a proposal, project, council, ethics dossier, task, or related document. Its authorization is evaluated in its own context. |
 | **Proposal** | A research submission moving through intake, checking, evaluation, and final decision. A proposal is distinct from an approved project. |
 | **Approved project** | A managed research project created by scientific management after approval of a proposal. It receives new project relationships; it does not reuse proposal relationships as mutable shared data. |
-| **Intake period** | The controlled window that determines whether eligible internal researchers may create and submit proposals. Closing it stops new submissions, not processing of submitted proposals. |
+| **Intake period** | The controlled window that determines whether eligible internal researchers may create and submit proposals. Closing it stops new submissions, not processing of submitted proposals. Mỗi đợt có đúng một CV phụ trách do TP giao và đợt chưa có CV thì chưa được mở (D-038). |
 | **Relationship** | A record-scoped participation fact, such as proposal PI/team secretary/team member or approved-topic PI/team secretary/team member. It has a lifecycle and grants no authority outside its owning record. |
 | **Assignment** | A record-scoped duty, such as proposal/project management officer, reviewer, council member, ethics reviewer, or task assignee. It grants only the actions and disclosure needed for that assignment. |
 | **Delegation** | A time-bounded, approved grant for an exact action on one record where the owning contract permits delegation. It is not a general substitute for role, relationship, assignment, or decision authority; proposal submission is PI-only and non-delegable. |
@@ -89,10 +89,15 @@ history and audit. Project management responsibility is independent of its propo
 A CV may access other records through legitimate participation/review/council/task
 relationships, which grant no management actions. Backend
 capabilities must distinguish this access basis; revocation removes only the relevant
-grant. Unassigned is a valid state; missing/ambiguous context fails closed.
-Independent intake/profile scope does not widen proposal/project access. The system
-auto-assigns a CV by segment on submission; TP/TB assign/reassign/revoke the officer.
-TB¹ or the assigned CV³ checks completeness (never TP). TP¹, TB¹ or the assigned CV³
+grant. Unassigned (chỉ khi TP/TB thu hồi CV mà chưa giao lại) is a valid state; missing/ambiguous context fails closed.
+Independent intake/profile scope does not widen proposal/project access.
+Mỗi đợt tiếp nhận có đúng một CV phụ trách do TP giao (D-038); hồ sơ nộp trong đợt do CV đó
+phụ trách, TP đổi CV cả đợt hoặc từng hồ sơ, TB giao/chuyển/thu hồi CV theo từng hồ sơ; đợt chưa
+có CV thì chưa được mở. TP, PP, TB, CV đều có thể là PI/thành viên đề tài (kể cả CV trong đợt
+mình phụ trách).
+TB¹ or the assigned CV³ checks completeness (never TP); theo D-038, TB/CV được kiểm tra đầy đủ
+và yêu cầu bổ sung cả trên hồ sơ mình là PI/thành viên (ngoại lệ `CONFLICT_DENIED` chỉ cho hai
+thao tác này; các kiểm tra xung đột khác giữ nguyên). TP¹, TB¹ or the assigned CV³
 assign reviewers/councils and prepare synthesis; the tờ trình routes CV → TB → TP → BGĐ.
 GĐ alone decides topic + funding and liquidation; GĐ or PGĐ-KH sign councils, IRB,
 extensions and adjustments. PGĐ-TD and PP only monitor. Oversight never bypasses disclosure.
