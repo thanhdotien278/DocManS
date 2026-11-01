@@ -1,4 +1,5 @@
 import { filterCurrentRoundAssignments, summarizeReviewProgress } from "../proposal-evaluations/proposal-evaluation-support.js";
+import { pendingApprovalStages } from "../proposals-shared/approval-routing.js";
 import { runProposalMutation } from "../proposals-shared/proposal-mutation.js";
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 // @ts-ignore The runtime package is JavaScript; its TypeScript source entry supplies this contract.
@@ -35,7 +36,9 @@ import { MANAGEMENT_OFFICER_STATUS, ProposalManagementOfficerService, type Propo
 import { PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import type { ProposalMemberPersistInput, ProposalMissingItem } from "../proposals-shared/proposal-types.js";
 import { ProposalParticipationService } from "./proposal-participation.service.js";
+import { normalizeResearcherKey } from "../researcher-profiles/researcher-profiles.dto.js";
 import { projectProposalViewerAuthorizationV1 } from "../permissions/proposal-capability-v1.js";
+import { readCouncilFormationConfig, type CouncilFormationConfig } from "../proposals-shared/council-formation.js";
 import {
   assertDateRange,
   normalizeRequiredPackage,
@@ -93,6 +96,7 @@ type ProposalMemberRecord = {
   role: string;
   organization: string;
   userId: string | null;
+  researcherProfileId?: string | null;
   participationRole: string | null;
   status: string;
   effectiveFrom: Date;
@@ -191,7 +195,9 @@ export class ResearchProposalsService {
       orderBy: { createdAt: "desc" },
       include: { owner: { select: { displayName: true } } }
     })) as ResearchProposalRecord[];
-    return this.projectProposalList(actor, records);
+    // Hồ sơ chờ phê duyệt chỉ vào hàng đợi của GĐ khi tờ trình đã qua TB và TP (5.7).
+    const stages = await pendingApprovalStages(this.prisma as never, "proposal", records.filter((r) => r.status === "ready_for_approval").map((r) => r.id));
+    return this.projectProposalList(actor, records.filter((r) => r.status !== "ready_for_approval" || stages.get(r.id)?.DECISION_PACKAGE?.stage === "LEADERSHIP"));
   }
 
   private async projectProposalList(actor: SafeUserContext, records: ResearchProposalRecord[]) {
@@ -206,14 +212,15 @@ export class ResearchProposalsService {
       ),
       this.managementOfficers.resolveForProposals(records.map((proposal) => proposal.id), asOf)
     ]);
+    const councilFormationConfig = await this.readCouncilFormationConfigForView();
     // ponytail: per-visible-record evidence reads; batch these if proposal queues grow large.
     return Promise.all(records
       .filter((proposal) => canReadProposal(actor, proposal, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), managementOfficerByProposal.get(proposal.id)))
       .map(async (proposal) => {
-        const [checked, summaryStatus, reviewReadiness] = await Promise.all([
-          this.hasCurrentCompletenessCheck(proposal), this.findEvaluationSummaryStatus(proposal.id), this.findReviewReadiness(proposal)
+        const [checked, summaryStatus, reviewReadiness, approvalStage] = await Promise.all([
+          this.hasCurrentCompletenessCheck(proposal), this.findEvaluationSummaryStatus(proposal.id), this.findReviewReadiness(proposal), this.findDecisionApprovalStage(proposal.id)
         ]);
-        return this.toProposalResponse(proposal, actor, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), checked, managementOfficerByProposal.get(proposal.id), summaryStatus, reviewReadiness);
+        return this.toProposalResponse(proposal, actor, participationByProposal.get(proposal.id), reviewAccessByProposal.get(proposal.id), checked, managementOfficerByProposal.get(proposal.id), summaryStatus, reviewReadiness, approvalStage, councilFormationConfig);
       }));
   }
 
@@ -743,6 +750,39 @@ export class ResearchProposalsService {
     return this.toManagementOfficerResponse({ resolved: true, officer: null });
   }
 
+  /**
+   * Narrow member lookup for the proposal form (permission-matrix exception to "no directory"):
+   * name match only, ACTIVE profiles of every unit, and no contact fields in the projection.
+   */
+  async listMemberCandidates(actor: SafeUserContext, keyword: string | undefined) {
+    assertCanCreateProposalDraft(actor);
+    const key = normalizeResearcherKey(keyword ?? "");
+    if (key.length < 2 || key.length > 160) return [];
+    const profiles = await this.prisma.researcherProfile.findMany({
+      where: { status: "ACTIVE", fullNameKey: { contains: key } },
+      select: {
+        id: true,
+        fullName: true,
+        profileType: true,
+        externalAffiliation: true,
+        linkedUserId: true,
+        managementOrganizationUnit: { select: { name: true } },
+        academicRankCatalogItem: { select: { name: true } },
+        academicDegreeCatalogItem: { select: { name: true } }
+      },
+      orderBy: [{ fullNameKey: "asc" }, { id: "asc" }],
+      take: 20
+    });
+    return profiles.map((profile) => ({
+      id: profile.id,
+      fullName: profile.fullName,
+      academicRank: profile.academicRankCatalogItem?.name ?? "",
+      academicDegree: profile.academicDegreeCatalogItem?.name ?? "",
+      organization: (profile.profileType === "EXTERNAL" && profile.externalAffiliation) || profile.managementOrganizationUnit?.name || "",
+      hasAccount: Boolean(profile.linkedUserId)
+    }));
+  }
+
   async listCatalogs() {
     return this.prisma.catalogItem.findMany({ where: { status: "active", deletedAt: null, type: { in: ["research-field", "proposal-type"] } }, select: { id: true, type: true, code: true, name: true, status: true }, orderBy: [{ type: "asc" }, { name: "asc" }] });
   }
@@ -935,8 +975,8 @@ export class ResearchProposalsService {
       if (reviewConflict.unresolved) throw new ConflictException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được lịch sử phản biện của thành viên." });
       if (reviewConflict.isAssignedReviewer || reviewConflict.hasPersistedReview) throw new BadRequestException({ code: "CONFLICT_DENIED", message: "Không thể thêm người đang hoặc đã đánh giá hồ sơ vào nhóm tham gia." });
     }
-    const key = (member: { userId?: string | null; participationRole?: string | null; name: string; role: string; organization: string }) =>
-      `${member.userId ?? `external:${member.name}:${member.organization}`}:${normalizeParticipationRole(member.participationRole ?? member.role)}`;
+    const key = (member: { userId?: string | null; researcherProfileId?: string | null; participationRole?: string | null; name: string; role: string; organization: string }) =>
+      `${member.userId ?? (member.researcherProfileId ? `profile:${member.researcherProfileId}` : `external:${member.name}:${member.organization}`)}:${normalizeParticipationRole(member.participationRole ?? member.role)}`;
     const desiredKeys = members.map((member) => key(member));
     if (new Set(desiredKeys).size !== desiredKeys.length) {
       throw new BadRequestException({ message: "Không thể lưu quan hệ trùng loại trên cùng hồ sơ." });
@@ -955,7 +995,7 @@ export class ResearchProposalsService {
         active = previous.filter(isCurrentlyActive);
         const activeByKey = new Map(active.map((member) => [key(member), member]));
         const sameMember = (current: ProposalMemberRecord, next: ProposalMemberPersistInput) =>
-          current.name === next.name && current.role === next.role && current.organization === next.organization && current.userId === next.userId && current.participationRole === next.participationRole;
+          current.name === next.name && current.role === next.role && current.organization === next.organization && current.userId === next.userId && (current.researcherProfileId ?? null) === next.researcherProfileId && current.participationRole === next.participationRole;
         const ending = previous.filter((member) => {
           if (member.status !== "ACTIVE" || !isCurrentlyActive(member)) return member.status === "ACTIVE";
           const next = desired.get(key(member));
@@ -1169,7 +1209,7 @@ export class ResearchProposalsService {
     const completenessCheckCompleted = await this.hasCurrentCompletenessCheck(proposal);
     const managementOfficerHistory = await this.managementOfficers.listHistory(proposal.id);
 
-    const response = this.toProposalResponse(proposal, actor, participation, reviewAccess, completenessCheckCompleted, managementOfficer, evaluationSummaryStatus ?? await this.findEvaluationSummaryStatus(proposal.id), await this.findReviewReadiness(proposal));
+    const response = this.toProposalResponse(proposal, actor, participation, reviewAccess, completenessCheckCompleted, managementOfficer, evaluationSummaryStatus ?? await this.findEvaluationSummaryStatus(proposal.id), await this.findReviewReadiness(proposal), await this.findDecisionApprovalStage(proposal.id), await this.readCouncilFormationConfigForView());
     const versions = await this.prisma.proposalSubmissionEvent.findMany({ where: { proposalId: proposal.id, toStatus: { in: ["submitted", "resubmitted"] } }, orderBy: { submittedAt: "asc" }, select: { id: true, submittedAt: true, snapshot: true } });
     return {
       ...response,
@@ -1194,6 +1234,7 @@ export class ResearchProposalsService {
       role: participationRole === "unknown" ? member.role : participationRole,
       organization: member.organization,
       userId: member.userId ?? "",
+      researcherProfileId: member.researcherProfileId ?? "",
       isAccountLinked: Boolean(member.userId),
       participationRole,
       participationRoleLabel: getParticipationRoleLabel(participationRole),
@@ -1255,6 +1296,15 @@ export class ResearchProposalsService {
     }
   }
 
+  /** Chỉ để hiển thị capability; backend vẫn kiểm lại khi mời. Cấu hình hỏng → mặc định (hiển thị), không chặn danh sách. */
+  private async readCouncilFormationConfigForView(): Promise<CouncilFormationConfig | undefined> {
+    try {
+      return await readCouncilFormationConfig(this.prisma, "EVALUATION");
+    } catch {
+      return undefined;
+    }
+  }
+
   private toProposalResponse(
     proposal: ResearchProposalRecord,
     actor?: SafeUserContext,
@@ -1263,7 +1313,9 @@ export class ResearchProposalsService {
     completenessCheckCompleted = false,
     managementOfficer?: ProposalManagementOfficerResolution,
     evaluationSummaryStatus?: string | null,
-    reviewReadiness?: ReturnType<typeof summarizeReviewProgress> | null
+    reviewReadiness?: ReturnType<typeof summarizeReviewProgress> | null,
+    decisionApprovalStage?: string | null,
+    councilFormationConfig?: CouncilFormationConfig
   ) {
     const canEditDraft = this.canEditProposalDraft(actor, proposal);
     const canRead = canReadProposal(actor, proposal, participation, reviewAccess, managementOfficer);
@@ -1280,7 +1332,9 @@ export class ResearchProposalsService {
           canManageFiles: this.canMutateProposalFiles(actor, proposal, participation),
           completenessCheckCompleted,
           evaluationSummaryStatus: evaluationSummaryStatus ?? undefined,
-          allReviewsSubmitted: reviewReadiness?.allReviewsSubmitted ?? false
+          allReviewsSubmitted: reviewReadiness?.allReviewsSubmitted ?? false,
+          decisionApprovalStage: decisionApprovalStage ?? undefined,
+          councilFormationConfig
         })
       : undefined;
 
@@ -1327,6 +1381,12 @@ export class ResearchProposalsService {
       } } : {}),
       ...(canExposeEvaluationSummaryStatus && !participation?.isParticipant && !reviewAccess?.hasReviewConflict && !reviewAccess?.isAssignedReviewer ? { evaluationSummaryStatus: evaluationSummaryStatus ?? "" } : {})
     };
+  }
+
+  /** Bước hiện tại của tờ trình DECISION_PACKAGE đang mở (undefined nếu không có). */
+  private async findDecisionApprovalStage(proposalId: string) {
+    const stages = await pendingApprovalStages(this.prisma as never, "proposal", [proposalId]);
+    return stages.get(proposalId)?.DECISION_PACKAGE?.stage ?? null;
   }
 
   private async findEvaluationSummaryStatus(proposalId: string) {

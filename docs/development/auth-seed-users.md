@@ -6,9 +6,7 @@ Run `npm run db:setup` for a new local database, or `npm run prisma:seed` after 
 
 > **Role model:** the table lists the role codes the seed and code on the `DocManS` branch run
 > (all ten codes exist; PGĐ-KH, PP and TB have no permissions yet). The current business model has ten roles
-> ([`permission-matrix.md`](../permission-matrix.md) §2); still missing here: `vndinh`
-> (PGĐ phụ trách Khoa học) becomes `SCIENCE_DEPUTY_DIRECTOR`, not
-> `RESEARCH_OVERSIGHT_AUTHORITY`. The seed changes when that role is ported from `tuan/DocManS`.
+> ([`permission-matrix.md`](../permission-matrix.md) §2); the seed has one account per role.
 
 | Username | System role | Demo responsibility |
 | --- | --- | --- |
@@ -16,8 +14,11 @@ Run `npm run db:setup` for a new local database, or `npm run prisma:seed` after 
 | `nmphuong` | `RESEARCH_MANAGEMENT_HEAD` | Trưởng phòng KHQS: scoped portfolio, officer assignment/reassignment/revocation, summary review and eligible package submission |
 | `hdtien1`, `hdtien2` | `RESEARCH_MANAGEMENT_STAFF` | Trợ lý/Chuyên viên KHQS: manage only proposals actively assigned to that account |
 | `tvtien` | `LEADERSHIP_APPROVAL_AUTHORITY` | Giám đốc: oversight plus eligible final decisions, subject to conflicts |
-| `vndinh` | `RESEARCH_OVERSIGHT_AUTHORITY` | Thiếu tướng PGS. TS. Vũ Nhất Định — Phó Giám đốc phụ trách NCKH; read-only institutional oversight plus independent researcher capabilities |
-| `patuan`, `nmtrung`, `int1`–`int3` | `RESEARCHER_INTERNAL_USER` | Researcher accounts; PI/member/reviewer/council responsibilities come from record relationships |
+| `vndinh` | `SCIENCE_DEPUTY_DIRECTOR` | Thiếu tướng PGS. TS. Vũ Nhất Định — Phó Giám đốc phụ trách Khoa học (PGĐ-KH); has no business permissions yet, plus independent researcher capabilities |
+| `ndbac` | `RESEARCH_OVERSIGHT_AUTHORITY` | Nguyễn Duy Bắc — PGĐ-TD; read-only institutional oversight |
+| `dnbinh` | `RESEARCH_MANAGEMENT_DEPUTY_HEAD` | Đỗ Như Bình — Phó phòng KHQS (PP) |
+| `nmtrung` | `RESEARCH_BOARD_HEAD` | TS. Đỗ Minh Trung — Trưởng ban QLKH (TB) |
+| `patuan`, `int1`–`int3` | `RESEARCHER_INTERNAL_USER` | Researcher accounts; PI/member/reviewer/council responsibilities come from record relationships |
 | `ex1`–`ex3` | `EXTERNAL_RESEARCHER_USER` | Assigned external research/review work only |
 
 Check `apps/api/prisma/seed.mjs` for the complete current seed identity list. Titles shown
@@ -47,7 +48,7 @@ cannot be assigned management responsibility. Do not create automatic officers t
 older broad Staff access.
 
 A `LEADERSHIP_APPROVAL_AUTHORITY` user who is already a participant/reviewer retains the corresponding conflict and
-cannot make the final decision. `vndinh` can read institutional records but receives no final
+cannot make the final decision. `ndbac` can read institutional records but receives no final
 approval/rejection actions. As PI of an eligible own proposal, the same account can create,
 edit and submit through ordinary researcher rules. Sensitive reviewer data remains protected.
 

@@ -1,7 +1,7 @@
 import { BadRequestException, type PipeTransform } from "@nestjs/common";
 // @ts-ignore: runtime package is JavaScript; repository consumers use its TypeScript source contract.
 import { isContextVersionTokenV1, type ContextVersionTokenV1 } from "@rtms/permissions";
-import { REVIEW_RECOMMENDATIONS, type ReviewRecommendation } from "../proposals-shared/proposal-review-access.js";
+import { REVIEW_ASSIGNMENT_ROLES, REVIEW_RECOMMENDATIONS, type ReviewRecommendation } from "../proposals-shared/proposal-review-access.js";
 import { readOptionalDate } from "../proposals-shared/proposal-validation.js";
 
 const EVALUATION_VALIDATION_MESSAGE = "Dữ liệu đánh giá hồ sơ không hợp lệ.";
@@ -10,7 +10,7 @@ export class AssignProposalReviewerDto {
   [key: string]: unknown;
 
   reviewerUserId!: string;
-  assignmentRole?: string;
+  assignmentRole!: string;
   dueDate?: string;
   effectiveFrom?: string;
   effectiveUntil?: string;
@@ -97,13 +97,13 @@ export const assignProposalReviewerPipe: PipeTransform<unknown, AssignProposalRe
       throw new BadRequestException({ message: "Chọn người đánh giá bằng tài khoản." });
     }
     assertRequiredText(input.reviewerUserId, "reviewerUserId", 80);
-    assertOptionalText(input.assignmentRole, "assignmentRole", 40);
+    assertRequiredText(input.assignmentRole, "assignmentRole", 40);
     assertOptionalText(input.dueDate, "dueDate", 40);
     assertOptionalText(input.effectiveFrom, "effectiveFrom", 40);
     assertOptionalText(input.effectiveUntil, "effectiveUntil", 40);
 
-    if (input.assignmentRole !== undefined && !["reviewer", "committee_member"].includes(String(input.assignmentRole))) {
-      throw new BadRequestException({ message: "Vai trò phân công không hợp lệ." });
+    if (!(REVIEW_ASSIGNMENT_ROLES as readonly string[]).includes(String(input.assignmentRole))) {
+      throw new BadRequestException({ code: "INVALID_ASSIGNMENT_ROLE", message: "Vai trò phân công không hợp lệ." });
     }
 
     readOptionalDate(input.dueDate, "dueDate");
@@ -189,5 +189,38 @@ export const finalizeEvaluationSummaryPipe: PipeTransform<unknown, FinalizeEvalu
   transform(value: unknown) {
     const input = assertRecord(value);
     return { contextVersion: readContextVersion(input) } as FinalizeEvaluationSummaryDto;
+  }
+};
+
+export type RespondReviewInvitationDto = { decision: "accept" | "decline"; reason?: string };
+
+/** Người được mời không có contextVersion của hồ sơ, nên route này không đòi. */
+export const respondReviewInvitationPipe: PipeTransform<unknown, RespondReviewInvitationDto> = {
+  transform(value: unknown) {
+    const input = assertRecord(value);
+    if (input.decision !== "accept" && input.decision !== "decline") throw new BadRequestException({ message: "Chọn chấp nhận hoặc từ chối lời mời." });
+    assertOptionalText(input.reason, "reason", 2000);
+    return { decision: input.decision, reason: typeof input.reason === "string" ? input.reason : undefined };
+  }
+};
+
+export type SubmitEvaluationCouncilDto = { contextVersion: ContextVersionTokenV1; note?: string };
+
+export const submitEvaluationCouncilPipe: PipeTransform<unknown, SubmitEvaluationCouncilDto> = {
+  transform(value: unknown) {
+    const input = assertRecord(value);
+    assertOptionalText(input.note, "note", 2000);
+    return { contextVersion: readContextVersion(input), note: typeof input.note === "string" ? input.note : undefined };
+  }
+};
+
+export type DecideEvaluationCouncilDto = { decision: "sign" | "return"; note?: string; contextVersion: ContextVersionTokenV1 };
+
+export const decideEvaluationCouncilPipe: PipeTransform<unknown, DecideEvaluationCouncilDto> = {
+  transform(value: unknown) {
+    const input = assertRecord(value);
+    if (input.decision !== "sign" && input.decision !== "return") throw new BadRequestException({ message: "Chọn ký hoặc trả lại." });
+    assertOptionalText(input.note, "note", 2000);
+    return { decision: input.decision, note: typeof input.note === "string" ? input.note : undefined, contextVersion: readContextVersion(input) };
   }
 };

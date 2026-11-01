@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Put, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Put, Req, UseGuards } from "@nestjs/common";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import { assertSystemAdmin, type RequestWithCurrentUser } from "./admin-access.js";
 import { adminRequestPipe } from "./admin-request.pipe.js";
@@ -30,6 +30,22 @@ export class AdminConfigController {
   async updateSystemParameter(@Req() request: RequestWithCurrentUser, @Body(systemParameterPipe) body: Record<string, unknown>) {
     const actor = assertSystemAdmin(request.currentUser);
     return { parameter: await this.configService.updateSystemParameter(actor, body as Record<string, unknown>) };
+  }
+
+  @Get("council-formation")
+  async listCouncilFormation(@Req() request: RequestWithCurrentUser) {
+    assertSystemAdmin(request.currentUser);
+    return this.configService.listCouncilFormation();
+  }
+
+  @Put("council-formation/:councilType")
+  async updateCouncilFormation(
+    @Req() request: RequestWithCurrentUser,
+    @Param("councilType") councilType: string,
+    @Body() body: { allowedRoles?: unknown; memberCount?: unknown }
+  ) {
+    const actor = assertSystemAdmin(request.currentUser);
+    return this.configService.updateCouncilFormation(actor, councilType, body ?? {});
   }
 
   @Get("notification-templates")

@@ -5,6 +5,7 @@ import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
 import { ProposalDecisionsService } from "./proposal-decisions.service.js";
+import { ProposalEvaluationCouncilService } from "./proposal-evaluation-council.service.js";
 import { ProposalEvaluationSummaryService } from "./proposal-evaluation-summary.service.js";
 import { ProposalEvaluationsController } from "./proposal-evaluations.controller.js";
 import { ProposalReviewAssignmentsService } from "./proposal-review-assignments.service.js";
@@ -26,6 +27,7 @@ import { ProposalReviewsService } from "./proposal-reviews.service.js";
     ProposalReviewAssignmentsService,
     ProposalReviewsService,
     ProposalEvaluationSummaryService,
+    ProposalEvaluationCouncilService,
     ProposalDecisionsService
   ],
   exports: [ProposalReviewAccessService]

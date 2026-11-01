@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
 import {
@@ -40,6 +40,11 @@ export class ResearchProposalsController {
   @Get("catalogs")
   async catalogs() {
     return { items: await this.proposalsService.listCatalogs() };
+  }
+
+  @Get("member-candidates")
+  async memberCandidates(@Req() request: RequestWithCurrentUser, @Query("keyword") keyword?: string) {
+    return { items: await this.proposalsService.listMemberCandidates(request.currentUser!, typeof keyword === "string" ? keyword : undefined) };
   }
 
   @Get(":id")
