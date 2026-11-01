@@ -46,4 +46,5 @@ export type ProposalMemberPersistInput = {
 export type ProposalMissingItem = {
   code: string;
   label: string;
+  section?: string;
 };
