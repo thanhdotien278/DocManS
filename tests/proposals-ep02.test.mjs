@@ -820,7 +820,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
         }),
       ForbiddenException
     );
-    await assert.rejects(() => filesService.listFiles(otherPiUser, { relatedEntityType: "research_proposal", relatedEntityId: draft.id }), ForbiddenException);
+    await assert.rejects(() => filesService.listFiles(otherPiUser, { relatedEntityType: "research_proposal", relatedEntityId: draft.id }), NotFoundException);
     await assert.rejects(() => filesService.downloadFile(otherPiUser, attachment.id), NotFoundException);
     const staffProposalAttachments = await proposalService.listAttachments(staffUser, draft.id);
     assert.equal(staffProposalAttachments[0].canEdit, false);
