@@ -100,7 +100,7 @@ export class ProposalIntakePeriodsService {
         await this.storage.putObject({ objectKey, content: file.buffer, mimeType: mime, sizeBytes: file.size });
         this.uploadedKeys.push(objectKey);
         await this.prisma.fileRecord.create({ data: {
-          id, relatedEntityType: "proposal_intake_period", relatedEntityId: periodId, filePurpose: item.code,
+          id, relatedEntityType: "proposal_intake_period", relatedEntityId: periodId, filePurpose: item.code, documentType: item.code,
           originalFileName: name, description: item.description, mimeType: mime, sizeBytes: file.size,
           storageBucket: process.env.MINIO_BUCKET_NAME ?? "rtms-files", storageObjectKey: objectKey,
           uploadedById: actor.id, status: "active"

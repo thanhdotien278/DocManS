@@ -209,3 +209,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-1-va-lech-ac-dot-tiep-nhan.md`
   summary: Test từ chối do `assertIntakeScope` (đợt có đơn vị) và kiểm chứng panel đợt tiếp nhận.
   evidence: Cần fixture đợt có `applicableOrganizationUnitIds`; repo chưa có harness render component web.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-4-dinh-kem-va-quan-ly-tep-de-xuat.md`
+  summary: Thêm test migration backfill `document_type`/`version` và cân nhắc index (entity, document_type) cho `file_records`.
+  evidence: Migration `20261101130000_file_document_type_version` chưa có test SQL; mock prisma không chạy SQL.
