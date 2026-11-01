@@ -550,6 +550,8 @@ model FileRecord {
   relatedEntityType String    @map("related_entity_type")
   relatedEntityId   String    @map("related_entity_id")
   filePurpose       String    @map("file_purpose")
+  documentType      String    @map("document_type")
+  version           Int       @default(1)
   originalFileName  String    @map("original_file_name")
   description       String?
   mimeType          String    @map("mime_type")

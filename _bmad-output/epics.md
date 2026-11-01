@@ -2590,15 +2590,14 @@ So that bộ hồ sơ có đủ tài liệu và vẫn được bảo vệ theo q
 **Then** request đi qua shared files module
 **And** metadata gắn proposal ID, document type, uploader, version và context version.
 
-**Given** member chỉ được cấp contribution-file action
-**When** họ tải tệp minh chứng vào loại được phép
-**Then** upload thành công
-**And** replace/delete/submit action không tự động được cộng thêm.
+**Given** `TOPIC_MEMBER` hoặc người tham gia ngoài
+**When** họ gọi upload, replace hoặc delete tệp của đề xuất
+**Then** backend từ chối, không lưu gì
+**And** họ vẫn xem và tải được các tệp do PI hoặc thư ký tải lên, quyền này không mở rộng quyền đọc, sửa hay nộp.
 
-**Given** external researcher có contribution-file action được cấp trên draft
-**When** họ tải file
-**Then** upload chỉ được phép trong association/type đã cấp
-**And** file action không mở rộng quyền đọc/sửa proposal hoặc quyền submit.
+**Given** PI hoặc thư ký tải lại tệp cùng loại tài liệu
+**When** upload thành công
+**Then** `version` của tệp tăng so với bản trước cùng loại, kể cả bản đã xóa.
 
 **Given** actor không liên quan, quan hệ hết hạn hoặc context unresolved
 **When** họ biết file ID và gọi metadata/download trực tiếp
