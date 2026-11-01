@@ -35,6 +35,18 @@ export function isResearchManagementHead(user?: SafeUserContext) {
   return user?.systemRole === "RESEARCH_MANAGEMENT_HEAD";
 }
 
+export function isResearchManagementDeputyHead(user?: SafeUserContext) {
+  return user?.systemRole === "RESEARCH_MANAGEMENT_DEPUTY_HEAD";
+}
+
+export function isResearchBoardHead(user?: SafeUserContext) {
+  return user?.systemRole === "RESEARCH_BOARD_HEAD";
+}
+
+export function isScienceDeputyDirector(user?: SafeUserContext) {
+  return user?.systemRole === "SCIENCE_DEPUTY_DIRECTOR";
+}
+
 export function isResearchOversightAuthority(user?: SafeUserContext) {
   return user?.systemRole === "RESEARCH_OVERSIGHT_AUTHORITY";
 }
@@ -121,7 +133,12 @@ export function canReadProposal(
     return true;
   }
 
-  if (isResearchManagementHead(user) || isResearchOversightAuthority(user) || isLeadership(user)) {
+  if (isResearchManagementHead(user) || isResearchOversightAuthority(user) || isResearchBoardHead(user) || isResearchManagementDeputyHead(user)) {
+    return true;
+  }
+
+  // Director and Science Deputy Director read only proposals already in the formal workflow (matrix 7.1, note 2).
+  if ((isLeadership(user) || isScienceDeputyDirector(user)) && isWorkflowVisibleStatus(proposal.status)) {
     return true;
   }
 

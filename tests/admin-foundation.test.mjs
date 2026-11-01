@@ -144,6 +144,9 @@ function createAdminPrisma() {
       async findUnique({ where }) {
         return store.users.find((user) => user.id === where.id || user.usernameKey === where.usernameKey) ?? null;
       },
+      async findFirst({ where }) {
+        return store.users.find((user) => user.systemRole === where.systemRole && user.status === where.status && user.id !== where.id?.not) ?? null;
+      },
       async create({ data }) {
         const record = { id: "user-created", createdAt: new Date(), updatedAt: new Date(), ...data };
         store.users.push(record);
@@ -153,6 +156,11 @@ function createAdminPrisma() {
         const index = store.users.findIndex((user) => user.id === where.id);
         store.users[index] = { ...store.users[index], ...data, updatedAt: new Date() };
         return store.users[index];
+      }
+    },
+    systemRoleMigrationIssue: {
+      async deleteMany() {
+        return { count: 0 };
       }
     },
     userRoleAssignment: {
@@ -249,6 +257,12 @@ function createAdminPrisma() {
       }
     },
     systemParameter: {
+      async findUnique({ where }) {
+        return store.systemParameters.find((item) => item.key === where.key) ?? null;
+      },
+      async findMany() {
+        return store.systemParameters;
+      },
       async upsert({ where, create, update }) {
         const index = store.systemParameters.findIndex((item) => item.key === where.key);
         if (index >= 0) {
@@ -348,6 +362,19 @@ describe("admin foundation API behavior", () => {
 
     assert.equal(prisma.store.organizationScopes.length, 5);
     assert.deepEqual(auditLog.records.map((record) => record.action), ["AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01"]);
+  });
+
+  it("Story 1.11: only one active account may hold RESEARCH_BOARD_HEAD", async () => {
+    const prisma = createAdminPrisma();
+    const service = new AdminUsersService(prisma, createAuditLog(), createPasswordService());
+    const input = { password: "ChangeMe123", systemRole: "RESEARCH_BOARD_HEAD", organizationUnitId: "org-root" };
+
+    await service.createUser(adminUser, { ...input, username: "tb.one", displayName: "TB One" });
+    await assert.rejects(() => service.createUser(adminUser, { ...input, username: "tb.two", displayName: "TB Two" }), { name: "ConflictException" });
+
+    prisma.store.users.push({ id: "other", username: "other", usernameKey: "other", displayName: "Other", status: "active", systemRole: "RESEARCHER_INTERNAL_USER", unit: "Học viện Quân y" });
+    await assert.rejects(() => service.updateUser(adminUser, "other", { systemRole: "RESEARCH_BOARD_HEAD" }), { name: "ConflictException" });
+    assert.equal(prisma.store.users.find((user) => user.id === "other").systemRole, "RESEARCHER_INTERNAL_USER");
   });
 
   it("Story 1.4: rolls back user creation when the initial organization scope cannot be written", async () => {
@@ -659,6 +686,58 @@ describe("admin foundation API behavior", () => {
     assert.deepEqual(
       auditLog.records.map((record) => record.action),
       ["create-catalog", "update-catalog", "update-catalog", "soft-delete-catalog"]
+    );
+  });
+
+  it("D-035: council formation config validates, defaults, audits and is admin-only", async () => {
+    const prisma = createAdminPrisma();
+    const auditLog = createAuditLog();
+    const controller = new AdminConfigController(new AdminConfigService(prisma, auditLog));
+
+    await assert.rejects(() => controller.listCouncilFormation({ currentUser: staffUser }), ForbiddenException);
+    await assert.rejects(
+      () => controller.updateCouncilFormation({ currentUser: staffUser }, "EVALUATION", { allowedRoles: ["RESEARCH_BOARD_HEAD"], memberCount: 7 }),
+      ForbiddenException
+    );
+
+    const initial = await controller.listCouncilFormation({ currentUser: adminUser });
+    const evaluation = initial.configs.find((config) => config.councilType === "EVALUATION");
+    assert.deepEqual(evaluation.allowedRoles, ["RESEARCH_MANAGEMENT_HEAD", "RESEARCH_BOARD_HEAD"]);
+    assert.equal(evaluation.memberCount, 7);
+    assert.equal(evaluation.isDefault, true);
+
+    for (const body of [
+      { allowedRoles: ["SYSTEM_ADMIN"], memberCount: 7 },
+      { allowedRoles: [], memberCount: 7 },
+      { allowedRoles: ["RESEARCH_BOARD_HEAD"], memberCount: 4 },
+      { allowedRoles: ["RESEARCH_BOARD_HEAD"], memberCount: 16 }
+    ]) {
+      await assert.rejects(
+        () => controller.updateCouncilFormation({ currentUser: adminUser }, "EVALUATION", body),
+        (error) => error.getResponse().code === "COUNCIL_CONFIG_INVALID"
+      );
+    }
+    await assert.rejects(
+      () => controller.updateCouncilFormation({ currentUser: adminUser }, "UNKNOWN", { allowedRoles: ["RESEARCH_BOARD_HEAD"], memberCount: 7 }),
+      { name: "NotFoundException" }
+    );
+    assert.equal(prisma.store.systemParameters.length, 0);
+
+    const saved = await controller.updateCouncilFormation(
+      { currentUser: adminUser },
+      "EVALUATION",
+      { allowedRoles: ["RESEARCH_MANAGEMENT_STAFF", "RESEARCH_BOARD_HEAD"], memberCount: 9 }
+    );
+    assert.deepEqual(saved.config.allowedRoles, ["RESEARCH_BOARD_HEAD", "RESEARCH_MANAGEMENT_STAFF"]);
+    assert.equal(saved.config.isDefault, false);
+    const audit = auditLog.records.find((record) => record.action === "update-council-formation-config");
+    assert.equal(audit.beforeFacts.memberCount, 7);
+    assert.equal(audit.afterFacts.memberCount, 9);
+
+    // route chung dùng cùng validator
+    await assert.rejects(
+      () => controller.updateSystemParameter({ currentUser: adminUser }, { key: "council_formation.IRB", value: '{"allowedRoles":[],"memberCount":5}', label: "x" }),
+      (error) => error.getResponse().code === "COUNCIL_CONFIG_INVALID"
     );
   });
 

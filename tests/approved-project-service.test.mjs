@@ -10,7 +10,7 @@ const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z")
 const unit = { id: "unit-1", code: "UNIT", name: "Unit", status: "active" };
 const scope = { organizationUnitId: unit.id, organizationUnit: unit };
 const person = (id, systemRole) => ({ id, username: id, displayName: id, systemRole, status: "active", unit: "u", organizationScopes: [scope] });
-const USERS = [person("pi", "RESEARCHER_INTERNAL_USER"), person("member", "RESEARCHER_INTERNAL_USER"), person("staff", "RESEARCH_MANAGEMENT_STAFF"), person("staff2", "RESEARCH_MANAGEMENT_STAFF"), person("head", "RESEARCH_MANAGEMENT_HEAD")];
+const USERS = [person("pi", "RESEARCHER_INTERNAL_USER"), person("member", "RESEARCHER_INTERNAL_USER"), person("staff", "RESEARCH_MANAGEMENT_STAFF"), person("staff2", "RESEARCH_MANAGEMENT_STAFF"), person("head", "RESEARCH_MANAGEMENT_HEAD"), person("director", "LEADERSHIP_APPROVAL_AUTHORITY"), person("science", "SCIENCE_DEPUTY_DIRECTOR"), person("board", "RESEARCH_BOARD_HEAD")];
 const actor = (id) => { const user = USERS.find((item) => item.id === id); return { ...user, organizationScopes: [{ id: unit.id, code: unit.code, name: unit.name }] }; };
 const code = (expected) => (error) => (error?.response?.code ?? error?.code) === expected;
 
@@ -38,6 +38,7 @@ function table(name, rows = []) {
       for (const [key, value] of Object.entries(data)) row[key] = value && typeof value === "object" && "increment" in value ? (row[key] ?? 0) + value.increment : value;
       return { ...row };
     },
+    updateMany: async ({ where, data }) => { const hit = rows.filter((row) => match(row, where)); for (const row of hit) Object.assign(row, data); return { count: hit.length }; },
     count: async ({ where }) => rows.filter((row) => match(row, where)).length
   };
   return self;
@@ -45,7 +46,7 @@ function table(name, rows = []) {
 
 function world({ status = "executing", milestones, checkpoints } = {}) {
   const db = {};
-  for (const name of ["approvedProjectMember", "projectManagementOfficer", "projectMilestone", "projectCheckpoint", "projectReportRevision", "projectReportEvidence", "projectRequest", "projectRequestRevision", "projectRequestEvidence", "projectRequestHistory", "projectHistory", "fileRecord", "proposalReviewAssignment", "proposalReview"]) db[name] = table(name);
+  for (const name of ["approvedProjectMember", "projectManagementOfficer", "projectMilestone", "projectCheckpoint", "projectReportRevision", "projectReportEvidence", "projectRequest", "projectRequestRevision", "projectRequestEvidence", "projectRequestHistory", "projectHistory", "fileRecord", "proposalReviewAssignment", "proposalReview", "approvalSubmission", "approvalStep"]) db[name] = table(name);
   db.user = table("user", USERS.map((user) => ({ ...user })));
   db.auditLog = table("auditLog");
   const auditCreate = db.auditLog.create;
@@ -83,11 +84,15 @@ function world({ status = "executing", milestones, checkpoints } = {}) {
   return { db, service, ctx, project };
 }
 
+// Bước TB/TP do approval-routing kiểm thử riêng (tests/approval-routing-db.test.mjs); ở đây đặt tờ trình tới BGĐ.
+const atLeadership = (w) => { for (const row of w.db.approvalSubmission.rows) if (row.status === "PENDING") row.stage = "LEADERSHIP"; };
+
 async function extensionReady(w, requestedEndDate = "2030-06-01") {
   const draft = await w.service.createExtension(actor("pi"), "p1", { proposedValues: { requestedEndDate }, reason: "Cần thêm thời gian", contextVersion: await w.ctx() });
   await w.service.submitRequest(actor("pi"), "p1", "extension", { requestId: draft.id, contextVersion: await w.ctx() });
   await w.service.validateExtension(actor("staff"), "p1", { requestId: draft.id, contextVersion: await w.ctx() });
-  await w.service.prepareExtension(actor("staff"), "p1", { requestId: draft.id, note: "Đủ hồ sơ", contextVersion: await w.ctx() });
+  await w.service.prepareRequest(actor("staff"), "p1", "extension", { requestId: draft.id, note: "Đủ hồ sơ", contextVersion: await w.ctx() });
+  atLeadership(w);
   return draft.id;
 }
 
@@ -95,6 +100,8 @@ async function adjustmentReady(w, proposedValues) {
   const draft = await w.service.createAdjustment(actor("pi"), "p1", { proposedValues, reason: "Điều chỉnh", contextVersion: await w.ctx() });
   await w.service.submitRequest(actor("pi"), "p1", "adjustment", { requestId: draft.id, contextVersion: await w.ctx() });
   await w.service.reviewAdjustment(actor("staff"), "p1", { requestId: draft.id, contextVersion: await w.ctx() });
+  await w.service.prepareRequest(actor("staff"), "p1", "adjustment", { requestId: draft.id, note: "Hợp lý", contextVersion: await w.ctx() });
+  atLeadership(w);
   return draft.id;
 }
 
@@ -109,10 +116,10 @@ async function reportUnderReview(w, checkpointId = "cp-1") {
   return draft.id;
 }
 
-test("Head approves an extension: end date and plan snapshot move together; reject leaves them", async () => {
+test("GĐ signs an extension: end date and plan snapshot move together; reject leaves them", async () => {
   const w = world();
   const id = await extensionReady(w);
-  const decided = await w.service.decideRequest(actor("head"), "p1", "extension", "approve", { requestId: id, contextVersion: await w.ctx() });
+  const decided = await w.service.decideRequest(actor("director"), "p1", "extension", "approve", { requestId: id, contextVersion: await w.ctx() });
   assert.equal(decided.status, "approved");
   assert.equal(w.project().endDate.toISOString(), "2030-06-01T00:00:00.000Z");
   assert.equal(w.project().planSnapshot.endDate, "2030-06-01T00:00:00.000Z");
@@ -120,16 +127,16 @@ test("Head approves an extension: end date and plan snapshot move together; reje
 
   const r = world();
   const rejected = await extensionReady(r);
-  await assert.rejects(r.service.decideRequest(actor("head"), "p1", "extension", "reject", { requestId: rejected, contextVersion: await r.ctx() }));
-  await r.service.decideRequest(actor("head"), "p1", "extension", "reject", { requestId: rejected, reason: "Chưa đủ căn cứ", contextVersion: await r.ctx() });
+  await assert.rejects(r.service.decideRequest(actor("director"), "p1", "extension", "reject", { requestId: rejected, contextVersion: await r.ctx() }));
+  await r.service.decideRequest(actor("director"), "p1", "extension", "reject", { requestId: rejected, reason: "Chưa đủ căn cứ", contextVersion: await r.ctx() });
   assert.equal(r.project().endDate.toISOString(), "2030-01-01T00:00:00.000Z");
   assert.equal(r.project().planSnapshot.endDate, "2030-01-01T00:00:00.000Z");
 });
 
-test("Staff approves an adjustment that reassigns a milestone and ends its old member; reject changes nothing", async () => {
+test("PGĐ-KH signs an adjustment that reassigns a milestone and ends its old member; reject changes nothing", async () => {
   const w = world();
   const id = await adjustmentReady(w, { scope: { title: "Tên mới" }, milestoneChanges: [{ id: "ms-1", responsibleMemberId: "m-pi" }], membershipChanges: [{ action: "end", memberId: "m-1" }] });
-  await w.service.decideRequest(actor("staff"), "p1", "adjustment", "approve", { requestId: id, contextVersion: await w.ctx() });
+  await w.service.decideRequest(actor("director"), "p1", "adjustment", "approve", { requestId: id, contextVersion: await w.ctx() });
   assert.equal(w.project().title, "Tên mới");
   assert.equal(w.project().scopeSnapshot.title, "Tên mới");
   assert.equal(w.db.projectMilestone.rows.find((row) => row.id === "ms-1").responsibleMemberId, "m-pi");
@@ -138,21 +145,34 @@ test("Staff approves an adjustment that reassigns a milestone and ends its old m
 
   const r = world();
   const rejected = await adjustmentReady(r, { scope: { title: "Tên mới" } });
-  await r.service.decideRequest(actor("staff"), "p1", "adjustment", "reject", { requestId: rejected, reason: "Không phù hợp", contextVersion: await r.ctx() });
+  await r.service.decideRequest(actor("director"), "p1", "adjustment", "reject", { requestId: rejected, reason: "Không phù hợp", contextVersion: await r.ctx() });
   assert.equal(r.project().title, "T");
   assert.deepEqual(r.project().scopeSnapshot, { title: "T", summary: "S" });
 });
 
-test("a deciding officer who is a project member is denied; a Head member is not granted", async () => {
+test("only GĐ or PGĐ-KH sign; CV, TP, TB, PP-less roles, PI and members get ACTION_NOT_GRANTED; a signer who is a project member is denied", async () => {
   const w = world();
   const id = await adjustmentReady(w, { scope: { summary: "Mới" } });
-  w.db.approvedProjectMember.rows.push({ id: "m-staff", projectId: "p1", userId: "staff", name: "Staff", participationRole: "TOPIC_MEMBER", status: "ACTIVE", effectiveFrom: past, effectiveUntil: null });
-  await assert.rejects(w.service.decideRequest(actor("staff"), "p1", "adjustment", "approve", { requestId: id, contextVersion: await w.ctx() }), code("CONFLICT_DENIED"));
+  for (const who of ["staff", "head", "board", "pi", "member"]) await assert.rejects(w.service.decideRequest(actor(who), "p1", "adjustment", "approve", { requestId: id, contextVersion: await w.ctx() }), code("ACTION_NOT_GRANTED"), who);
+  assert.deepEqual(w.project().scopeSnapshot, { title: "T", summary: "S" });
+  w.db.approvedProjectMember.rows.push({ id: "m-dir", projectId: "p1", userId: "director", name: "GĐ", participationRole: "TOPIC_MEMBER", status: "ACTIVE", effectiveFrom: past, effectiveUntil: null });
+  await assert.rejects(w.service.decideRequest(actor("director"), "p1", "adjustment", "approve", { requestId: id, contextVersion: await w.ctx() }), code("CONFLICT_DENIED"));
+  assert.equal(w.db.projectRequest.rows.find((row) => row.id === id).status, "ready_for_head_decision");
+});
 
-  const h = world();
-  const ext = await extensionReady(h);
-  h.db.approvedProjectMember.rows.push({ id: "m-head", projectId: "p1", userId: "head", name: "Head", participationRole: "TOPIC_MEMBER", status: "ACTIVE", effectiveFrom: past, effectiveUntil: null });
-  await assert.rejects(h.service.decideRequest(actor("head"), "p1", "extension", "approve", { requestId: ext, contextVersion: await h.ctx() }), code("ACTION_NOT_GRANTED"));
+test("a request before the LEADERSHIP stage cannot be signed; the appraisal needs a note and does not change the project", async () => {
+  const w = world();
+  const draft = await w.service.createExtension(actor("pi"), "p1", { proposedValues: { requestedEndDate: "2030-06-01" }, reason: "x", contextVersion: await w.ctx() });
+  await w.service.submitRequest(actor("pi"), "p1", "extension", { requestId: draft.id, contextVersion: await w.ctx() });
+  await w.service.validateExtension(actor("staff"), "p1", { requestId: draft.id, contextVersion: await w.ctx() });
+  await assert.rejects(w.service.prepareRequest(actor("staff"), "p1", "extension", { requestId: draft.id, contextVersion: await w.ctx() }), code("APPRAISAL_REQUIRED"));
+  await w.service.prepareRequest(actor("staff"), "p1", "extension", { requestId: draft.id, note: "Đủ căn cứ", contextVersion: await w.ctx() });
+  assert.equal(w.project().endDate.toISOString(), "2030-01-01T00:00:00.000Z");
+  assert.equal(w.db.approvalSubmission.rows[0].stage, "BOARD_REVIEW");
+  await assert.rejects(w.service.decideRequest(actor("director"), "p1", "extension", "approve", { requestId: draft.id, contextVersion: await w.ctx() }), code("APPROVAL_NOT_READY"));
+  const board = await w.service.getProject(actor("board"), "p1");
+  assert.equal(board.requests[0].approval.stage, "BOARD_REVIEW");
+  assert.deepEqual(board.requests[0].allowedActions, []);
 });
 
 test("report submit and accept completes the checkpoint and its milestone; an empty report cannot be submitted", async () => {
@@ -173,22 +193,22 @@ test("D1: unrelated changes do not stale a request; a change to its baseline doe
   const ext = await extensionReady(w);
   const report = await reportUnderReview(w, "cp-2");
   await w.service.acceptReport(actor("staff"), "p1", { reportId: report, contextVersion: await w.ctx() });
-  assert.equal((await w.service.decideRequest(actor("head"), "p1", "extension", "approve", { requestId: ext, contextVersion: await w.ctx() })).status, "approved");
+  assert.equal((await w.service.decideRequest(actor("director"), "p1", "extension", "approve", { requestId: ext, contextVersion: await w.ctx() })).status, "approved");
 
   const a = world();
   const adj = await adjustmentReady(a, { milestoneChanges: [{ id: "ms-1", title: "Mốc 1 mới" }] });
   await a.service.assignOfficer(actor("head"), "p1", { officerUserId: "staff2", reason: "Thay chuyên viên", contextVersion: await a.ctx() });
-  assert.equal((await a.service.decideRequest(actor("staff2"), "p1", "adjustment", "approve", { requestId: adj, contextVersion: await a.ctx() })).status, "approved");
+  assert.equal((await a.service.decideRequest(actor("science"), "p1", "adjustment", "approve", { requestId: adj, contextVersion: await a.ctx() })).status, "approved");
 
   const s = world();
   const stale = await extensionReady(s);
   Object.assign(s.project(), { endDate: new Date("2030-03-01T00:00:00Z"), aggregateVersion: 5 });
-  await assert.rejects(s.service.decideRequest(actor("head"), "p1", "extension", "approve", { requestId: stale, contextVersion: await s.ctx() }), code("CONTEXT_VERSION_MISMATCH"));
+  await assert.rejects(s.service.decideRequest(actor("director"), "p1", "extension", "approve", { requestId: stale, contextVersion: await s.ctx() }), code("CONTEXT_VERSION_MISMATCH"));
 
   const m = world();
   const touched = await adjustmentReady(m, { milestoneChanges: [{ id: "ms-1", title: "Mốc 1 mới" }] });
   m.db.projectMilestone.rows.find((row) => row.id === "ms-1").dueDate = new Date("2028-12-01T00:00:00Z");
-  await assert.rejects(m.service.decideRequest(actor("staff"), "p1", "adjustment", "approve", { requestId: touched, contextVersion: await m.ctx() }), code("CONTEXT_VERSION_MISMATCH"));
+  await assert.rejects(m.service.decideRequest(actor("director"), "p1", "adjustment", "approve", { requestId: touched, contextVersion: await m.ctx() }), code("CONTEXT_VERSION_MISMATCH"));
 
   const d = world();
   const draft = await d.service.createExtension(actor("pi"), "p1", { proposedValues: { requestedEndDate: "2030-06-01" }, reason: "x", contextVersion: await d.ctx() });
@@ -277,7 +297,7 @@ test("each request and report carries the viewer's own allowed actions", async (
   assert.deepEqual(staff.reports.find((row) => row.id === report).allowedActions, ["project.report.accept", "project.report.request-supplement"]);
   const head = await w.service.getProject(actor("head"), "p1");
   assert.deepEqual(head.requests[0].allowedActions, []);
-  assert.ok(head.viewerAuthorization.allowedActions.includes("project.extension.request-supplement"));
+  assert.ok(!head.viewerAuthorization.allowedActions.includes("project.extension.request-supplement"), "TP no longer asks for supplements; routing returns the tờ trình");
   // The PI's submit and correction buttons depend only on these per-report actions.
   await w.service.requestReportSupplement(actor("staff"), "p1", { reportId: report, reason: "Bổ sung", responseDeadline: "2027-07-15", contextVersion: await w.ctx() });
   const own = await reportDraft(w);

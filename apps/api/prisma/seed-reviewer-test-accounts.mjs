@@ -4,7 +4,7 @@ import { scryptSync } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-// Local test fixtures only. Run after the base seed; existing accounts are untouched.
+// Local test fixtures only. Run after the base seed; only adds linked profiles for tvtien (Director) and nmtrung (Board Head); no account is changed.
 const databaseUrl = new URL(process.env.DATABASE_URL);
 assert(["localhost", "127.0.0.1", "[::1]"].includes(databaseUrl.hostname), "Local database required");
 assert.notEqual(process.env.NODE_ENV, "production");
@@ -54,6 +54,26 @@ try {
         });
       }
     }
+    // Director and Board Head need a linked profile to be review candidates (council scenarios). Idempotent.
+    const staffProfiles = [
+      ["user-leadership", "profile-leadership-tvtien", "GS. TS. Trần Viết Tiến"],
+      ["user-board-head-nmtrung", "profile-board-head-nmtrung", "Nguyễn Mạnh Trung"]
+    ];
+    for (const [id, profileId, fallbackName] of staffProfiles) {
+      const user = await tx.user.findUniqueOrThrow({ where: { id } });
+      const fullName = user.displayName || fallbackName;
+      await tx.researcherProfile.upsert({
+        where: { id: profileId }, update: {},
+        create: {
+          id: profileId, linkedUserId: id, managementOrganizationUnitId: host.id, profileType: "INTERNAL",
+          fullName, fullNameKey: fullName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").toLowerCase(),
+          status: "ACTIVE", createdById: creator.id, updatedById: creator.id,
+          accountLinks: { create: { userId: id, effectiveFrom: new Date(), createdById: creator.id, reason: "Local reviewer/council test seed" } },
+          history: { create: { actorId: creator.id, action: "seed-test-profile", reason: "Local reviewer/council test seed", afterFacts: { linkedUserId: id, profileType: "INTERNAL" } } }
+        }
+      });
+    }
+    assert.equal(await tx.researcherProfile.count({ where: { id: { in: staffProfiles.map(([, profileId]) => profileId) }, status: "ACTIVE", linkedUser: { is: { status: "active" } } } }), 2);
     assert.equal(await tx.researcherProfile.count({ where: {
       id: { in: usernames.map((username) => `profile-${username}`) }, status: "ACTIVE",
       managementOrganizationUnitId: host.id,

@@ -59,7 +59,8 @@ data. Funding currently covers requested proposal metadata, not actual expenditu
 
 Local accounts (current seed): `nmphuong` (`RESEARCH_MANAGEMENT_HEAD`, TP),
 `hdtien1`/`hdtien2` (`RESEARCH_MANAGEMENT_STAFF`, CV), `tvtien` (`LEADERSHIP_APPROVAL_AUTHORITY`, GĐ),
-`vndinh` (`RESEARCH_OVERSIGHT_AUTHORITY` today, PGĐ-KH in the new model). See
+`vndinh` (`SCIENCE_DEPUTY_DIRECTOR`, PGĐ-KH), `ndbac` (`RESEARCH_OVERSIGHT_AUTHORITY`, PGĐ-TD),
+`dnbinh` (`RESEARCH_MANAGEMENT_DEPUTY_HEAD`, PP), `nmtrung` (`RESEARCH_BOARD_HEAD`, TB). See
 [local demo accounts](docs/development/auth-seed-users.md). Existing proposals remain unassigned
 until TP explicitly assigns a CV; organization scope alone gives a CV no management access.
 

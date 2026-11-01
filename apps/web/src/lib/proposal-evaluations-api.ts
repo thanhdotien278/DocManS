@@ -10,7 +10,15 @@ import { getApiBaseUrl } from "@/lib/session";
  * state and conflict on each call, so a stale flag can never widen what actually happens.
  */
 
-export type ReviewAssignmentRole = "reviewer" | "committee_member";
+/** Vị trí trong hội đồng thẩm định (spec hội đồng §5). `reviewer` = Phản biện, `committee_member` = Ủy viên. */
+export type CouncilPosition = "council_chair" | "reviewer" | "committee_member" | "council_secretary";
+export type ReviewAssignmentRole = CouncilPosition;
+export const COUNCIL_POSITION_LABELS: Record<CouncilPosition, string> = {
+  council_chair: "Chủ tịch hội đồng",
+  reviewer: "Phản biện",
+  committee_member: "Ủy viên",
+  council_secretary: "Thư ký hội đồng"
+};
 export type ReviewRecommendation = "approve" | "revise" | "reject";
 
 export type ProposalReviewAssignment = {
@@ -25,6 +33,11 @@ export type ProposalReviewAssignment = {
   assignmentRoleLabel: string;
   status: "assigned" | "revoked" | "completed";
   statusLabel: string;
+  invitationStatus: "invited" | "accepted" | "declined";
+  invitationStatusLabel: string;
+  respondedAt: string;
+  declineReason: string;
+  councilEstablishedAt: string;
   assignedById: string;
   assignedByDisplayName: string;
   assignedAt: string;
@@ -39,9 +52,20 @@ export type ProposalReviewAssignment = {
   reviewTotalScore: number | null;
   reviewRecommendation: string;
   reviewRecommendationLabel: string;
+  /** false cho thư ký hội đồng: không chấm phiếu. */
+  scoring?: boolean;
 };
 
-export type ReviewerQueueItem = Pick<ProposalReviewAssignment, "id" | "proposalId" | "assignmentRole" | "assignmentRoleLabel" | "status" | "statusLabel" | "assignedAt" | "effectiveFrom" | "effectiveUntil" | "dueDate" | "completedAt"> & {
+/** Trước khi chấp nhận / trước khi BGĐ ký hội đồng: chỉ tên hồ sơ, vai trò, hạn và người mời (Story 5.11). */
+export type ReviewInvitationPreview = Pick<ProposalReviewAssignment, "id" | "proposalId" | "assignmentRole" | "assignmentRoleLabel" | "invitationStatus" | "invitationStatusLabel" | "dueDate" | "assignedByDisplayName"> & {
+  access: "preview";
+  proposal: { title: string };
+};
+
+export type ReviewerQueueItem = ReviewerGrantedItem | ReviewInvitationPreview;
+
+export type ReviewerGrantedItem = Pick<ProposalReviewAssignment, "id" | "proposalId" | "assignmentRole" | "assignmentRoleLabel" | "status" | "statusLabel" | "assignedAt" | "effectiveFrom" | "effectiveUntil" | "dueDate" | "completedAt"> & {
+  access: "granted";
   proposal: {
     id: string;
     code: string;
@@ -52,6 +76,7 @@ export type ReviewerQueueItem = Pick<ProposalReviewAssignment, "id" | "proposalI
   };
   myReviewStatus: string;
   myReviewSubmittedAt: string;
+  scoring?: boolean;
 };
 
 export type ReviewScoreCriterion = {
@@ -116,9 +141,11 @@ export type ProposalEvaluationSummary = {
 };
 
 export type ReviewProgressCounts = {
-  reviewerCount: number;
-  committeeMemberCount: number;
-  assignmentRequirementsMet: boolean;
+  reviewerCount?: number;
+  committeeMemberCount?: number;
+  assignmentRequirementsMet?: boolean;
+  scoringMemberCount?: number;
+  secretaryAssigned?: boolean;
   activeAssignmentCount: number;
   submittedCount: number;
   pendingCount: number;
@@ -162,6 +189,8 @@ export type ProposalDecisionPackage = {
   proposalStatus: string;
   proposalStatusLabel: string;
   canDecide: boolean;
+  /** Tờ trình DECISION_PACKAGE gần nhất; GĐ chỉ quyết định khi stage là LEADERSHIP và status PENDING. */
+  approval: { id: string; stage: string; stageLabel: string; status: string; statusLabel: string; lastNote: string } | null;
   conflict: {
     conflicted: boolean;
     reasonCode: string;
@@ -234,6 +263,7 @@ export type EvaluationApiError = Error & {
   code?: string;
   fieldErrors?: Record<string, string>;
   pendingReviewers?: Array<{ reviewerDisplayName: string }>;
+  blockers?: string[];
 };
 
 /**
@@ -268,6 +298,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     message?: string;
     fieldErrors?: Record<string, string>;
     pendingReviewers?: Array<{ reviewerDisplayName: string }>;
+    blockers?: string[];
   };
 
   if (!response.ok) {
@@ -276,6 +307,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     error.code = body.code;
     error.fieldErrors = body.fieldErrors;
     error.pendingReviewers = body.pendingReviewers;
+    error.blockers = body.blockers;
     throw error;
   }
 
@@ -291,7 +323,7 @@ export async function loadProposalReviewAssignments(proposalId: string) {
 
 export async function assignProposalReviewer(
   proposalId: string,
-  input: { reviewerUserId: string; assignmentRole: ReviewAssignmentRole; dueDate?: string; effectiveFrom?: string; effectiveUntil?: string; contextVersion: ViewerAuthorizationV1["contextVersion"] }
+  input: { reviewerUserId: string; assignmentRole: ReviewAssignmentRole; dueDate?: string; contextVersion: ViewerAuthorizationV1["contextVersion"] }
 ) {
   const response = await requestJson<{ assignment: ProposalReviewAssignment }>(`/research-proposals/${proposalId}/review-assignments`, {
     method: "POST",
@@ -306,6 +338,70 @@ export async function revokeProposalReviewAssignment(proposalId: string, assignm
     { method: "POST", body: JSON.stringify({ note, contextVersion }) }
   );
   return response.assignment;
+}
+
+export async function respondToReviewInvitation(proposalId: string, assignmentId: string, decision: "accept" | "decline", reason?: string) {
+  const response = await requestJson<{ invitation: { id: string; invitationStatus: string; invitationStatusLabel: string } }>(
+    `/research-proposals/${proposalId}/review-assignments/${assignmentId}/respond`,
+    { method: "POST", body: JSON.stringify({ decision, reason }) }
+  );
+  return response.invitation;
+}
+
+// Story 5.10 — hội đồng đánh giá ----------------------------------------------------------------
+
+export type CouncilStatus = "NOT_APPLICABLE" | "FORMING" | "READY_TO_SUBMIT" | "IN_APPROVAL" | "ESTABLISHED";
+
+/** Hợp đồng spec §8.3. Mọi cờ `viewer.*` do backend quyết định; UI không tự suy quyền từ role. */
+export type EvaluationCouncil = {
+  contextVersion: ViewerAuthorizationV1["contextVersion"];
+  roundId: string;
+  status: CouncilStatus;
+  statusLabel: string;
+  legacyRound: boolean;
+  config: { memberCount: number; structure: Record<CouncilPosition, number> };
+  slots: Array<{ position: CouncilPosition; positionLabel: string; required: number; filled: number; accepted: number }>;
+  blockers: string[];
+  viewer: {
+    canInvite: boolean; inviteBlockedReason: string;
+    canRevoke: boolean;
+    canSubmit: boolean; submitBlockedReason: string;
+    canSign: boolean; canReturn: boolean; signBlockedReason: string;
+  };
+  approval: { id: string; stage: "BOARD_REVIEW" | "HEAD_REVIEW" | "LEADERSHIP" | "CLOSED"; stageLabel: string; status: string; statusLabel: string; submittedByName: string; lastNote: string } | null;
+  establishedAt: string;
+  members: Array<{
+    assignmentId: string; reviewerUserId: string; displayName: string; username: string; unit: string;
+    assignmentRole: CouncilPosition; assignmentRoleLabel: string; scoring: boolean;
+    invitationStatus: "invited" | "accepted" | "declined"; invitationStatusLabel: string;
+    declineReason: string; respondedAt: string; dueDate: string; assignedByDisplayName: string;
+    councilEstablishedAt: string;
+  }>;
+};
+
+export async function loadEvaluationCouncil(proposalId: string) {
+  return (await requestJson<{ council: EvaluationCouncil }>(`/research-proposals/${proposalId}/evaluation-council`)).council;
+}
+
+export async function submitEvaluationCouncil(proposalId: string, contextVersion: EvaluationCouncil["contextVersion"], note?: string) {
+  return requestJson<{ submissionId: string; stage: string }>(`/research-proposals/${proposalId}/evaluation-council/submit`, { method: "POST", body: JSON.stringify({ contextVersion, note: note || undefined }) });
+}
+
+export async function decideEvaluationCouncil(proposalId: string, decision: "sign" | "return", note: string, contextVersion: EvaluationCouncil["contextVersion"]) {
+  return requestJson<{ submissionId: string; status: "APPROVED" | "RETURNED"; establishedAt?: string }>(`/research-proposals/${proposalId}/evaluation-council/decide`, { method: "POST", body: JSON.stringify({ decision, note, contextVersion }) });
+}
+
+/** Chỉ thư ký (P7): phiếu ẩn danh "Phiếu 1..N", không có tên người chấm. */
+export type SecretarySummary = Pick<ProposalEvaluationSummary, "status" | "statusLabel" | "summary" | "recommendation" | "recommendationLabel" | "updatedByDisplayName" | "updatedAt">;
+
+export type CouncilAnonymousReviews = {
+  reviews: Array<{ label: string; totalScore: number | null; maxTotalScore: number; scoreData: Record<string, number>; recommendation: string; recommendationLabel: string; comment: string; submittedAt: string }>;
+  progress: { scoringMemberCount: number; submittedCount: number; pendingCount: number; averageTotalScore: number | null };
+  evaluationSummary?: SecretarySummary | null;
+};
+
+export function loadCouncilAnonymousReviews(proposalId: string) {
+  return requestJson<CouncilAnonymousReviews>(`/research-proposals/${proposalId}/evaluation-council/reviews`);
 }
 
 export async function loadMyReviewAssignments() {
@@ -393,4 +489,6 @@ export async function decideProposal(proposalId: string, decision: "approve" | "
 }
 
 export type ReviewerCandidates = { users: Array<{ id: string; displayName: string; username: string | null }> };
-export function loadReviewerCandidates(proposalId: string, query = "") { return requestJson<ReviewerCandidates>(`/research-proposals/${proposalId}/assignable-reviewers?q=${encodeURIComponent(query)}`); }
+export function loadReviewerCandidates(proposalId: string, query = "", position?: CouncilPosition) {
+  return requestJson<ReviewerCandidates>(`/research-proposals/${proposalId}/assignable-reviewers?q=${encodeURIComponent(query)}${position ? `&position=${position}` : ""}`);
+}

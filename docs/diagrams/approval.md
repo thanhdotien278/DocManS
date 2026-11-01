@@ -8,7 +8,7 @@ flowchart TD
   supplement["Yêu cầu bổ sung; nêu lý do và hạn"]
   pi_correct(["PI: bổ sung hoặc chỉnh sửa"])
   resubmit(["PI: duyệt nội dung cuối và nộp lại"])
-  assign(["TP / TB / CV phụ trách: phân công phản biện hoặc mời hội đồng"])
+  assign(["Role do QT cấu hình (mặc định TP / TB): phân công phản biện hoặc mời hội đồng"])
   accepted_all{"Mọi thành viên hội đồng đã chấp nhận?"}
   council_sign(["Tờ trình hội đồng: CV → TB → TP; GĐ hoặc PGĐ-KH ký thành lập"])
   review(["Reviewer hoặc council: xem đúng gói được giao"])

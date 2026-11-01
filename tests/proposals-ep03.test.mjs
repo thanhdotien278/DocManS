@@ -10,6 +10,7 @@ import { ProposalReviewsService } from "../dist/apps/api/proposal-evaluations/pr
 import { ProposalParticipationService } from "../dist/apps/api/research-proposals/proposal-participation.service.js";
 import { ProposalReviewAccessService } from "../dist/apps/api/proposals-shared/proposal-review-access.service.js";
 import { ResearchProposalsService } from "../dist/apps/api/research-proposals/research-proposals.service.js";
+import { canReadProposal } from "../dist/apps/api/proposals-shared/proposal-access.js";
 import { createEvaluationTables, createUserLookup } from "./helpers/evaluation-prisma.mjs";
 
 const ORG_KHTI = "org-khti";
@@ -504,7 +505,7 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     assert.equal(assignment.reviewerUserId, reviewerUser.id);
     assert.equal(assignment.reviewerDisplayName, reviewerUser.displayName);
     assert.equal(assignment.assignmentRole, "committee_member");
-    assert.equal(assignment.assignmentRoleLabel, "Thành viên hội đồng");
+    assert.equal(assignment.assignmentRoleLabel, "Ủy viên");
     assert.equal(assignment.status, "assigned");
     assert.equal(assignment.assignedById, staffUser.id);
     assert.notEqual(assignment.dueDate, "");
@@ -544,7 +545,7 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     const detail = await services.proposalService.getProposal(reviewerUser, proposal.id);
     assert.equal(detail.id, proposal.id);
     assert.equal(detail.viewerReviewAssignment.isAssignedReviewer, true);
-    assert.equal(detail.viewerReviewAssignment.assignmentRoleLabel, "Người phản biện");
+    assert.equal(detail.viewerReviewAssignment.assignmentRoleLabel, "Phản biện");
     // Assignment grants read only — it never turns into an edit right.
     assert.equal(detail.canEdit, false);
     assert.equal(detail.canSubmit, false);
@@ -1270,5 +1271,19 @@ describe("ST-3.5 approval decision", () => {
     // An authority with no relationship to the record still decides normally.
     const clean = await reviewing.decisions.decide(leadershipUser, reviewedProposal.id, "approved", {});
     assert.equal(clean.proposalStatus, "approved");
+  });
+});
+
+describe("matrix 7.1 proposal read scope", () => {
+  const read = (systemRole, status, scope = ORG_KHTI) =>
+    canReadProposal({ id: `u-${systemRole}`, systemRole, organizationScopes: [{ id: scope }] }, { ownerId: "pi", hostOrganizationUnitId: ORG_KHTI, status });
+
+  it("Board Head and Deputy Head read in scope; Director and Science Deputy only once submitted; no one out of scope", () => {
+    for (const role of ["RESEARCH_BOARD_HEAD", "RESEARCH_MANAGEMENT_DEPUTY_HEAD"]) assert.equal(read(role, "submitted"), true, role);
+    for (const role of ["SCIENCE_DEPUTY_DIRECTOR", "LEADERSHIP_APPROVAL_AUTHORITY"]) {
+      assert.equal(read(role, "submitted"), true, role);
+      assert.equal(read(role, "draft"), false, `${role} draft`);
+    }
+    for (const role of ["RESEARCH_BOARD_HEAD", "RESEARCH_MANAGEMENT_DEPUTY_HEAD", "SCIENCE_DEPUTY_DIRECTOR"]) assert.equal(read(role, "submitted", "org-other"), false, `${role} scope`);
   });
 });

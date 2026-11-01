@@ -124,6 +124,7 @@ test('any active account can be assigned reviewer/council unless it participates
       const contextVersion = await currentContext();
       await assert.rejects(() => assignments.assignReviewer(staffActor, proposal.id, {
         reviewerUserId: conflicted.id,
+        assignmentRole: 'committee_member',
         contextVersion
       }), /Không thể phân công/);
     }
@@ -131,6 +132,7 @@ test('any active account can be assigned reviewer/council unless it participates
       const contextVersion = await currentContext();
       await assert.rejects(() => assignments.assignReviewer(staffActor, proposal.id, {
         reviewerUserId: unavailable.id,
+        assignmentRole: 'committee_member',
         contextVersion
       }), /không hoạt động hoặc không tồn tại/);
     }
@@ -213,6 +215,7 @@ test('any active account can be assigned reviewer/council unless it participates
     const duplicateContext = await currentContext();
     await assert.rejects(() => assignments.assignReviewer(staffActor, proposal.id, {
       reviewerUserId: users.admin.id,
+      assignmentRole: 'reviewer',
       contextVersion: duplicateContext
     }), /đã gửi phiếu đánh giá/);
     await assignments.revokeAssignment(staffActor, proposal.id, reviewerAssignment.id, {
@@ -261,8 +264,11 @@ test('any active account can be assigned reviewer/council unless it participates
 
 test('assignment DTO accepts account selector and rejects legacy selectors', () => {
   const contextVersion = { domain: 'proposal', recordId: 'proposal-1', aggregateVersion: 1, relationshipVersion: 0, conflictVersion: 0, delegationVersion: 0, policyVersion: 'v1' };
-  const accepted = assignProposalReviewerPipe.transform({ reviewerUserId: 'user-1', contextVersion });
+  const accepted = assignProposalReviewerPipe.transform({ reviewerUserId: 'user-1', assignmentRole: 'council_secretary', contextVersion });
   assert.equal(accepted.reviewerUserId, 'user-1');
+  for (const assignmentRole of [undefined, 'chair', 'legacy']) {
+    assert.throws(() => assignProposalReviewerPipe.transform({ reviewerUserId: 'user-1', assignmentRole, contextVersion }));
+  }
   for (const legacy of [
     { researcherProfileId: 'profile-1', contextVersion },
     { reviewerUsername: 'legacy-user', contextVersion },

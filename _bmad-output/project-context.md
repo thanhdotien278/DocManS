@@ -42,7 +42,7 @@ Key operational scope inside those modules includes:
 - task assignment, reminders, overdue tracking, and completion monitoring
 - related governing, legal, planning, proposal, project, seminar, and council documents with metadata, effective status, and version context
 - council plans, member roles, ethics dossiers, completeness checks, scoring, consolidated evaluation, and approval routing
-- tờ trình approval routing (CV → TB → TP → BGĐ signer) for every BGĐ-bound procedure, topic segments (mảng) with auto-assigned responsible CV, and funding as audited metadata only (no ledger, payments, banking or ERP)
+- tờ trình approval routing (CV → TB → TP → BGĐ signer) for every BGĐ-bound procedure, a responsible CV assigned per intake period (D-038), and funding as audited metadata only (no ledger, payments, banking or ERP)
 - executive dashboard views, filtered reporting, Excel export, PDF export, and traceable business history
 
 # Technology Stack
@@ -114,7 +114,6 @@ The phase 1 domain should be organized around these modules:
 - `proposal-intake-periods`
 - `proposal-evaluations`
 - `approvals` (approval routing: `approval_submissions` / `approval_steps`; stages `BOARD_REVIEW` → `HEAD_REVIEW` → `LEADERSHIP`)
-- `segments` (segment catalog by level + nature; CV segment assignment and responsible-CV auto-assignment)
 - `funding` (audited funding metadata: allocation, disbursement, settlement, liquidation documents; no ledger)
 - `approved-projects`
 - `progress-milestones`
@@ -164,15 +163,18 @@ former 7-role model: `SCIENTIFIC_MANAGEMENT_HEAD` → `RESEARCH_MANAGEMENT_HEAD`
 migrations and historical files. `RESEARCH_OVERSIGHT_AUTHORITY` is no longer the Science
 Deputy Director; it means the other Deputy Directors, who only monitor.
 
-- TP approves every tờ trình before BGĐ, assigns segments (mảng) to CV, assigns/revokes the
-  responsible CV, and coordinates within unit scope. TP never performs completeness checks
+- TP approves every tờ trình before BGĐ, assigns the responsible CV of each intake period (and may change it for the whole period
+  or per proposal), assigns/revokes the responsible CV, and coordinates within unit scope. TP never performs completeness checks
   or supplement requests.
 - TB (one holder) reviews CV-authored tờ trình and forwards to TP or returns it; also assigns
   CV and performs completeness, supplement, reviewer/council assignment and synthesis in unit scope.
 - CV works only on proposals/projects where it is the current responsible officer
   (`PROPOSAL_MANAGEMENT_OFFICER` / `PROJECT_MANAGEMENT_OFFICER`) and never on another CV's records.
-  The system auto-assigns one responsible CV on submit/resubmit by segment (level + nature);
-  unmatched records show "Chưa có người phụ trách" for TP.
+  Mỗi đợt tiếp nhận có đúng một CV phụ trách do TP giao, đợt chưa có CV thì chưa được mở; hồ sơ
+  nộp trong đợt nhận CV đó (D-038). "Chưa có người phụ trách" chỉ còn sau khi thu hồi CV mà chưa
+  giao lại. TP/PP/TB/CV có thể là PI hoặc thành viên đề tài; TB và CV phụ trách vẫn được kiểm tra
+  đầy đủ và yêu cầu bổ sung trên hồ sơ của chính mình (chỉ hai thao tác này); các kiểm tra xung
+  đột khác giữ nguyên.
 - PP and PGĐ-TD only monitor; they have no step in the tờ trình flow. PGĐ-TD sees aggregate figures only.
 - Signers: GĐ alone approves topic + funding and liquidation. GĐ or PGĐ-KH signs evaluation,
   IRB and acceptance council establishment, the IRB certificate, extension and adjustment
@@ -197,7 +199,7 @@ surface, including files and workflow/business history. Missing/ambiguous contex
 
 Implementation status: code on `DocManS` has all ten role codes (commit 0a39db3, migration
 `20261016500000`), with TP/CV keeping the former HEAD/STAFF permissions; PGĐ-KH, PP and TB gain business permissions only after
-the routing, segment and IRB implementation is ported from `tuan/DocManS` (no merge base).
+the routing and IRB implementation is ported from `tuan/DocManS` (no merge base).
 Account migration: HEAD → TP and STAFF → CV are done (migration `20261016500000`); former
 `RESEARCH_OVERSIGHT_AUTHORITY` holders are re-classified per person; ambiguous accounts are reported, not guessed.
 
@@ -266,8 +268,8 @@ Mandatory audit-log actions:
 - update task status
 - upload important file
 - download important file
-- assign CV segment
-- assign, reassign or revoke responsible CV (manual or automatic)
+- assign or change the responsible CV of an intake period
+- assign, reassign or revoke responsible CV (per intake period or per record)
 - invite, accept, decline or revoke reviewer, council or IRB member
 - tờ trình submit, forward, return, approve and sign (procedure type, step, decision, reason)
 - sign adjustment or extension

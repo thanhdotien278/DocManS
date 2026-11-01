@@ -5,8 +5,9 @@ quyết định là `docs/permission-matrix.md` §7 (theo `docs/Ma_tran-phan-qqu
 Mỗi tài khoản có đúng một vai trò hệ thống; quyền thực tế còn phụ thuộc phạm vi đơn vị và
 quan hệ của người dùng với từng hồ sơ, đề tài. Phòng KHQS phân cấp Trưởng phòng → Trưởng ban
 QLKH → Chuyên viên; Phó phòng chỉ theo dõi. Chuyên viên chỉ thao tác trên hồ sơ/đề tài mình
-đang được phân công phụ trách (hệ thống tự giao theo mảng: cấp đề tài + tính chất Quân sự/Dân
-sự; Trưởng phòng hoặc Trưởng ban giao/thu hồi). Mọi thủ tục lên Ban giám đốc đi qua tờ trình:
+đang được phân công phụ trách (mỗi đợt tiếp nhận có đúng một Chuyên viên phụ trách do Trưởng phòng giao, hồ sơ nộp
+trong đợt do người đó phụ trách — D-038; Trưởng phòng đổi cả đợt hoặc từng hồ sơ, Trưởng ban
+giao/chuyển/thu hồi theo từng hồ sơ). Mọi thủ tục lên Ban giám đốc đi qua tờ trình:
 Chuyên viên lập → Trưởng ban rà soát → Trưởng phòng duyệt → Ban giám đốc ký. Chỉ Giám đốc phê
 duyệt đề tài, kinh phí, thanh lý; Giám đốc hoặc Phó GĐ phụ trách Khoa học ký hội đồng, IRB,
 nghiệm thu, gia hạn, điều chỉnh.
@@ -338,7 +339,8 @@ Nên có rule như sau:
 | Người A là thư ký khoa học DT-001 | Không được approve/reject DT-001 |
 | Người A là reviewer DT-002 và PI DT-003 | Hợp lệ vì khác đề tài |
 | Người A là thư ký hội đồng của council X | Chỉ có quyền secretary trong council X, không lan sang council khác |
-| Người A là Chuyên viên/Trưởng ban/Trưởng phòng và là PI, thành viên hoặc phản biện DT-001 | Không phân công, kiểm tra, tổng hợp, quyết định hay xử lý kinh phí trên DT-001 |
+| Người A là Chuyên viên/Trưởng ban/Trưởng phòng và là PI, thành viên hoặc phản biện DT-001 | Không phân công, kiểm tra, tổng hợp, quyết định hay xử lý kinh phí trên DT-001 (ngoại lệ D-038 ở hàng dưới) |
+| Người A là Trưởng ban hoặc Chuyên viên phụ trách và là PI hoặc thành viên DT-001 | Vẫn kiểm tra đầy đủ và yêu cầu bổ sung được trên DT-001 (D-038, chỉ hai thao tác này; Trưởng phòng vẫn không làm; phân công phản biện/hội đồng, chấm điểm, tổng hợp, tờ trình giữ nguyên); Chuyên viên của đợt có thể là PI/thành viên đề tài trong đợt mình phụ trách |
 | Người A là Giám đốc/Phó GĐ KH và là PI DT-001 | Không tự ký/phê duyệt DT-001 |
 | Người A là Trưởng ban/Trưởng phòng và tự lập tờ trình | Không tự rà soát/duyệt tờ trình của mình |
 | Người A là PI hoặc phản biện DT-001 | Không xem nhật ký hành động của DT-001 (ẩn danh hai chiều) |
@@ -445,9 +447,10 @@ Bảng 7.1 so sánh vai trò trong hồ sơ (persona), không phải vai trò h�
 | Quản trị tài khoản, đơn vị, danh mục, cấu hình | ✓ | — | — | — | — | — | — | — | — | — |
 | Quản lý hồ sơ nhà khoa học | ✓ | — | — | — | ✓¹ | — | — | ✓¹ | — | — |
 | Có lý lịch khoa học, tự cập nhật | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Tạo, mở, đóng đợt tiếp nhận | — | — | — | — | ✓ | — | — | ✓ | — | — |
+| Tạo, mở, đóng đợt tiếp nhận (chặn mở đợt khi chưa có CV phụ trách, D-038) | — | — | — | — | ✓ | — | — | ✓ | — | — |
+| Giao hoặc đổi CV phụ trách cho đợt tiếp nhận (D-038) | — | — | — | — | ✓ | — | — | — | — | — |
 | Tạo, sửa, nộp đề xuất (tư cách chủ nhiệm) | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
-| Giao chuyên viên phụ trách, phân mảng | — | — | — | — | ✓¹ | — | ✓¹ | — | — | — |
+| Giao chuyên viên phụ trách hồ sơ (TP: cho đợt hoặc từng hồ sơ; TB: từng hồ sơ, D-038) | — | — | — | — | ✓¹ | — | ✓¹ | — | — | — |
 | Kiểm tra đầy đủ, yêu cầu bổ sung | — | — | — | — | — | — | ✓¹ | ◐3 | — | — |
 | Phân công phản biện, lập hội đồng đánh giá, hội đồng IRB | — | — | — | — | ✓¹ | — | ✓¹ | ◐3 | — | — |
 | Tổng hợp, chốt, trình kết quả đánh giá | — | — | — | — | ✓¹ | — | ✓¹ | ◐3 | ◐6 | ◐6 |

@@ -60,8 +60,8 @@ proposal has one owner-derived `PROPOSAL_PI`; active proposal/topic team rows us
 Reviewer, council and IRB duties remain assignments. Every BGĐ-bound procedure passes
 through a mandatory tờ trình routing (CV → TB → TP → BGĐ); GĐ alone approves topics
 with their funding and liquidation, while GĐ or PGĐ-KH sign councils, IRB, acceptance,
-extension and adjustment. Each submitted record gets one responsible CV, auto-assigned
-by segment (mảng).
+extension and adjustment. Mỗi đợt tiếp nhận có đúng một CV phụ trách do TP giao; mọi hồ sơ nộp trong đợt do CV đó
+phụ trách (D-038).
 The product must preserve complex internal workflows rather than flatten them. It
 must support controlled state transitions, organization-scoped data access,
 role-based and state-based permissions, mandatory audit logging for critical actions,
@@ -96,9 +96,14 @@ This section replaces the "Scientific Management implementation boundary — 202
   re-classified per person as PGĐ-KH (`SCIENCE_DEPUTY_DIRECTOR`) or PGĐ-TD
   (`RESEARCH_OVERSIGHT_AUTHORITY`, monitoring only); PP, TB and PGĐ-TD accounts are
   created fresh, and TB has exactly one holder. Legacy codes must not be used in new work.
-- TP¹/TB¹ assign or revoke the responsible CV. The system auto-assigns a CV on
-  submit/resubmit by segment (level + nature); unmatched records show "Chưa có người phụ
-  trách" for TP.
+- TP giao một CV phụ trách cho mỗi đợt tiếp nhận (D-038): đợt chưa có CV thì chưa được mở;
+  hồ sơ nộp hoặc nộp lại trong đợt tự thuộc CV của đợt, không còn tự giao theo mảng. TP¹ đổi CV
+  của cả đợt hoặc của từng hồ sơ; TB¹ giao, chuyển hoặc thu hồi CV theo từng hồ sơ.
+  "Chưa có người phụ trách" chỉ còn khi TP/TB thu hồi CV mà chưa giao lại.
+- TP, PP, TB và CV đều có thể là PI hoặc thành viên đề tài, kể cả CV của đợt là PI/thành viên
+  đề tài trong đợt mình phụ trách (D-038). TB hoặc CV phụ trách vẫn kiểm tra đầy đủ và yêu
+  cầu bổ sung được trên hồ sơ mình là PI/thành viên; TP vẫn không làm hai thao tác này. Các
+  kiểm tra xung đột khác (phân công phản biện/hội đồng, chấm điểm, tổng hợp, tờ trình) giữ nguyên.
 - Package submission is replaced by approval routing (tờ trình): CV drafts → TB review
   → TP approval → BGĐ signer per procedure; return goes to the author with a mandatory
   reason; no step skipping and no self-review; TB-authored submissions start at the TP step.
@@ -109,7 +114,7 @@ This section replaces the "Scientific Management implementation boundary — 202
 
 **Code status.** The code on the `DocManS` branch has all ten role codes (commit 0a39db3;
 migration `20261016500000` renames HEAD → TP and STAFF → CV), but PGĐ-KH, PP and TB have no
-business permissions there yet, and approval routing, segment assignment and IRB signing
+business permissions there yet, and approval routing, segment assignment (đã được D-038 thay bằng CV phụ trách theo đợt) and IRB signing
 exist only on `tuan/DocManS`. That branch has no merge base
 with `DocManS`; this PRD describes the target until `tuan/DocManS` is merged or ported.
 
@@ -136,10 +141,11 @@ with `DocManS`; this PRD describes the target until `tuan/DocManS` is merged or 
   approves topics with their funding and liquidation. PGĐ-KH signs councils, IRB,
   acceptance, extension and adjustment but never approves topics, topic funding or
   liquidation. PGĐ-TD and PP only monitor; PGĐ-TD sees aggregate funding only. TP
-  approves every tờ trình before BGĐ, assigns segments and responsible CVs, and never
+  approves every tờ trình before BGĐ, assigns the responsible CV of each intake period (and may
+  change it for the whole period or per record; D-038), and never
   performs completeness checks or supplement requests. TB reviews CV-authored tờ trình
-  and assigns responsible CVs. CV acts only on records it currently holds as responsible
-  officer. Workflow, conflict and disclosure checks always apply.
+  and assigns responsible CVs per record. CV acts only on records it currently holds as responsible
+  officer. TP, PP, TB and CV may each be PI or member of a topic (D-038). Workflow, conflict and disclosure checks always apply.
 - **Scope superscripts:** ¹ = only within the user's unit scope; ² = proposals already in
   workflow (submitted or later) within unit scope; ³ = only records to which the CV is
   currently assigned as responsible officer; ⁴ = own participation (PI or member);
@@ -151,10 +157,11 @@ with `DocManS`; this PRD describes the target until `tuan/DocManS` is merged or 
   CV drafts → TB reviews → TP approves → BGĐ signs. A return at any step goes back to
   the author with a mandatory reason; no step is skipped and no one reviews a tờ trình
   they authored.
-- **Mảng (segment):** A level + nature (Quân sự / Dân sự) combination that TP assigns to
-  a CV and that drives auto-assignment of the responsible CV.
+- **Mảng (segment):** Khái niệm cũ (cấp + tính chất Quân sự / Dân sự) dùng để tự giao CV;
+  đã bị D-038 thay bằng CV phụ trách theo đợt tiếp nhận và không còn dùng trong việc mới.
 - **Responsible CV:** The single current `PROPOSAL_MANAGEMENT_OFFICER` /
-  `PROJECT_MANAGEMENT_OFFICER` of a record; zero is a valid "Chưa có người phụ trách" state.
+  `PROJECT_MANAGEMENT_OFFICER` of a record. Hồ sơ nộp trong một đợt tiếp nhận mặc định thuộc CV
+  phụ trách của đợt (D-038); "Chưa có người phụ trách" chỉ còn khi TP/TB thu hồi CV mà chưa giao lại.
 - **IRB:** The ethics council and its certificate; establishment and
   certificate are signed by GĐ or PGĐ-KH.
 - **Two-way anonymity:** PI and reviewers never see the record's action log; only TB¹
@@ -216,7 +223,7 @@ lifecycle use these 9 steps and phase names. The state-to-step mapping is in
 
 ### User Success
 
-- TP or CV can open an intake period; the responsible CV (auto-assigned by segment) checks completeness, requests supplements and monitors reviews; TP¹/TB¹/CV³ assign reviewers and synthesize results; the result is routed through the tờ trình flow (CV → TB → TP → BGĐ) without relying on external spreadsheets or ad hoc trackers.
+- TP or CV can open an intake period once TP has assigned its responsible CV (D-038); that CV (responsible for every record submitted in the period) checks completeness, requests supplements and monitors reviews; TP¹/TB¹/CV³ assign reviewers and synthesize results; the result is routed through the tờ trình flow (CV → TB → TP → BGĐ) without relying on external spreadsheets or ad hoc trackers.
 - GĐ and PGĐ-KH can immediately see items awaiting their decision or signature, overdue work, delayed projects, and unit-level summary metrics from role-scoped dashboard views; PP and PGĐ-TD can monitor progress and counts (PGĐ-TD with aggregate funding only).
 - Principal investigators can submit proposals, understand current status, respond to supplement requests, track approved project milestones, and submit periodic reports without needing manual email follow-up to know what happens next.
 - Reviewers and committee members can access only assigned proposals, submit scores and review comments, and complete evaluation work within a controlled and traceable workflow.
@@ -258,7 +265,7 @@ lifecycle use these 9 steps and phase names. The state-to-step mapping is in
 - Role-based dashboard and reporting for Phòng KHQS (TP, PP, TB, CV) and BGĐ (GĐ, PGĐ-KH, PGĐ-TD), including waiting items, risk indicators, delayed work, and summary metrics by unit, field, status, and reporting cycle.
 - Related-document management for governing, legal, planning, proposal, project, seminar, and council documents with metadata, version context, effective status, and permission-checked access.
 - Council and ethics (IRB) management, including council plans, member roles, ethics dossier submission, completeness review, scoring, consolidation, and tờ trình approval routing to the BGĐ signer.
-- Approval routing (tờ trình) CV → TB → TP → BGĐ for every BGĐ-bound procedure, segment-based auto-assignment of the responsible CV, and funding recorded as audited metadata.
+- Approval routing (tờ trình) CV → TB → TP → BGĐ for every BGĐ-bound procedure, responsible CV assigned per intake period (D-038), and funding recorded as audited metadata.
 - Researcher profile management, including scientist identity, academic information, unit, expertise, account linkage, participation links, search, history, and auditability.
 - Role-based and scope-based authorization, audit logs, file management, in-app notifications, email notifications for important events, and export capabilities for core Excel/PDF reporting needs.
 
@@ -280,8 +287,8 @@ lifecycle use these 9 steps and phase names. The state-to-step mapping is in
 ### TP, TB and PP oversight within the Phòng KHQS workspace
 
 TP opens the unit-scoped proposal portfolio and the Academy-wide project portfolio,
-checks the "Chưa có người phụ trách" records left unmatched by segment auto-assignment,
-assigns or reassigns the responsible CV, filters/groups by responsible CV and monitors
+assigns the responsible CV of each intake period before it opens, changes the CV of a whole period or of a single record
+(D-038), checks any "Chưa có người phụ trách" records left after a revocation, filters/groups by responsible CV and monitors
 workload, status and deadlines. TP works the tờ trình approval queue and forwards
 approved submissions to the BGĐ signer. TB works the tờ trình review queue, forwards
 CV-authored submissions to TP or returns them to the author with a reason, and may also
@@ -293,9 +300,9 @@ participation.
 
 ### UJ-1: CV Runs A Proposal Intake Cycle
 
-Lan is a CV (`RESEARCH_MANAGEMENT_STAFF`). She may create and open intake periods, and she manages only proposals where she is the current `PROPOSAL_MANAGEMENT_OFFICER`, normally because the system auto-assigned her by segment when the proposal was submitted. She is preparing a new intake period for school-level research proposals. Today she coordinates the process through spreadsheets, email threads, and paper-based follow-up, which makes it hard to know which proposals are complete, who still owes feedback, and which approvals are stuck.
+Lan is a CV (`RESEARCH_MANAGEMENT_STAFF`). She may create intake periods and, once TP has assigned the period's responsible CV, open them. She manages only proposals where she is the current `PROPOSAL_MANAGEMENT_OFFICER`, normally because TP assigned her as the responsible CV of the intake period the proposal was submitted into (D-038). She is preparing a new intake period for school-level research proposals. Today she coordinates the process through spreadsheets, email threads, and paper-based follow-up, which makes it hard to know which proposals are complete, who still owes feedback, and which approvals are stuck.
 
-In RTMS, she creates an intake period, configures required documents, opens the submission window, and monitors incoming proposals from a single operational view. As submissions arrive, the system assigns each one to the CV whose segment matches; on her assigned proposals she checks completeness, requests supplements where needed, confirms current-version readiness, invites reviewers or council members by field, monitors review progress and synthesizes the results. She then drafts the tờ trình, which goes to TB for review, then to TP for approval, and finally to GĐ for the topic and funding decision; a return at any step comes back to her with a reason. The climax of her journey is not proposal creation; it is operational control. She can see which records are waiting, which are overdue, and which actor owns the next step.
+In RTMS, she creates an intake period, configures required documents, opens the submission window, and monitors incoming proposals from a single operational view. As submissions arrive, each one automatically belongs to the period's responsible CV (D-038); on her assigned proposals she checks completeness, requests supplements where needed, confirms current-version readiness, invites reviewers or council members by field, monitors review progress and synthesizes the results. She then drafts the tờ trình, which goes to TB for review, then to TP for approval, and finally to GĐ for the topic and funding decision; a return at any step comes back to her with a reason. The climax of her journey is not proposal creation; it is operational control. She can see which records are waiting, which are overdue, and which actor owns the next step.
 
 If something goes wrong, such as an incomplete resubmission or a late reviewer, Lan needs visible recovery tools: supplement history, due-date reminders, review status tracking, and clear escalation paths. The journey succeeds when she can run the whole intake cycle without maintaining shadow trackers outside the system.
 
@@ -364,7 +371,7 @@ silently expands into reviewer or decision authority.
 
 These journeys require the system to support:
 
-- structured proposal intake periods, submission flows, segment-based responsible-CV assignment, supplement cycles, reviewer assignment, scoring, tờ trình approval routing, and history visibility
+- structured proposal intake periods, submission flows, responsible-CV assignment per intake period (D-038), supplement cycles, reviewer assignment, scoring, tờ trình approval routing, and history visibility
 - role-aware dashboards that lead to filtered operational lists and decision screens
 - scoped access to proposals, projects, reviews, tasks, files, and reports based on role, organization, assignment, and state
 - notifications and reminders for assignments, supplement requests, approvals, due dates, overdue items, and reporting milestones
@@ -520,14 +527,14 @@ RTMS is a browser-based internal administrative web application optimized for mu
 - FR4a: Authenticated users can change their own password, and authorized administrators can initiate a controlled password reset flow for internal users.
 - FR5: The system can enforce role-based access rules across all protected capabilities.
 - FR6: The system can enforce explicit organization-scope or unit-scope access rules across proposals, projects, seminars, student research activities, councils, IRB dossiers, related documents, tasks, files, dashboards, and reports. Project view is Academy-wide for GĐ, PGĐ-KH, TP and TB; proposals always follow unit scope; CV operations require the current responsible-officer assignment on the record; PP and PGĐ-TD are read-only. Parent/child units never imply scope.
-- FR6f: Distinguish coordination from record operations. TP¹ and TB¹ coordinate proposals within unit scope and see every project in the Academy; CV needs an effective `PROPOSAL_MANAGEMENT_OFFICER` or `PROJECT_MANAGEMENT_OFFICER` on the exact record and never operates on records assigned to another CV; PP and PGĐ-TD only monitor. Each record has at most one active responsible CV; assignment, reassignment and revocation preserve history and audit, including concurrent changes. No Phòng KHQS role decides topics, adjustments or extensions; those go through tờ trình routing to the BGĐ signer (FR71, FR73).
-- FR6g: Preserve independent PI/member/secretary/reviewer/council/task access for Phòng KHQS users on other records without management actions. Backend capabilities identify the access basis. On one record, the responsible officer, reviewer, council member, tờ trình reviewer/approver and final signer are mutually exclusive with participation and with each other (matrix §8 closing rule); also deny reviewer + final decision in the same round and mutually exclusive council positions; check every relationship creation/change and protected action. Apply the same authorization/disclosure to list, detail, search, counts/facets, dashboards, reports/export, notifications, files and workflow/business history.
+- FR6f: Distinguish coordination from record operations. TP¹ and TB¹ coordinate proposals within unit scope and see every project in the Academy; CV needs an effective `PROPOSAL_MANAGEMENT_OFFICER` or `PROJECT_MANAGEMENT_OFFICER` on the exact record and never operates on records assigned to another CV; PP and PGĐ-TD only monitor. Each record has at most one active responsible CV, which by default is the CV of its intake period (D-038); assignment, reassignment and revocation preserve history and audit, including concurrent changes. No Phòng KHQS role decides topics, adjustments or extensions; those go through tờ trình routing to the BGĐ signer (FR71, FR73).
+- FR6g: Preserve independent PI/member/secretary/reviewer/council/task access for Phòng KHQS users on other records without management actions. Backend capabilities identify the access basis. On one record, the responsible officer, reviewer, council member, tờ trình reviewer/approver and final signer are mutually exclusive with participation and with each other (matrix §8 closing rule), except that D-038 allows the responsible CV (and TB) to be PI/member of the record and to perform completeness checks and supplement requests on it; the other checks (reviewer/council assignment, scoring, synthesis, tờ trình) are unchanged; also deny reviewer + final decision in the same round and mutually exclusive council positions; check every relationship creation/change and protected action. Apply the same authorization/disclosure to list, detail, search, counts/facets, dashboards, reports/export, notifications, files and workflow/business history.
 - FR6a: The system can distinguish account-level system roles from record-scoped relationships or assignments, including owner-derived PI, `TOPIC_SECRETARY`, `TOPIC_MEMBER`, reviewer, council member, and ethics reviewer, so those relationships only grant permissions within the specific proposal, approved topic, council, review, ethics dossier, task, or related record context.
 - FR6b: Proposal creation, submission, and resubmission are owner-only actions requiring the current PI to be an active account with any system role except QT (`SYSTEM_ADMIN`) and NNB (`EXTERNAL_RESEARCHER_USER`); NNB can never be PI; no proposal-submit delegation or delegated capability is supported.
 - FR6c: Protected record responses can state the current user's record-scoped relationships, allowed actions, blocked actions, and plain-language denial reasons as calculated by backend authorization policy.
 - FR6d: A record-scoped `TOPIC_SECRETARY` can perform only the explicitly authorized administrative, meeting, minutes, document, task, tracking, and draft-summary actions for the assigned proposal, approved topic, council, or ethics record; the secretary relationship alone never grants reviewer scoring or final approval/rejection authority.
 - FR6e: Proposal participation, project participation, council membership, reviewer assignment, task assignment, and ethics assignment relationships can be activated, suspended, ended, or revoked with effective dates and status, and an inactive relationship immediately stops granting access or capabilities.
-- FR72: Segments (level + nature) assigned by TP to CV. Auto-assignment of one responsible CV on submit/resubmit: more specific match first, then fewer active records. Unmatched → "Chưa có người phụ trách". TP/TB assign/reassign/revoke, keeping history.
+- FR72 (viết lại theo D-038): Mỗi đợt tiếp nhận có đúng một CV phụ trách do TP giao; đợt chưa có CV thì chưa được mở. Mọi hồ sơ nộp hoặc nộp lại trong đợt tự thuộc CV của đợt (`PROPOSAL_MANAGEMENT_OFFICER`), không còn mảng/segment hay tự giao theo mảng. TP đổi CV của cả đợt (áp dụng cho các hồ sơ trong đợt) hoặc của từng hồ sơ; TB giao, chuyển, thu hồi CV theo từng hồ sơ. Mỗi lần đổi giữ lịch sử và audit, CV cũ mất quyền ngay. "Chưa có người phụ trách" chỉ còn khi TP/TB thu hồi CV mà chưa giao lại. TP, PP, TB, CV đều có thể là PI/thành viên đề tài, kể cả CV của đợt là PI/thành viên đề tài trong đợt mình phụ trách.
 - FR79: Account activation by a 48-hour single-use setup-password link; no temporary password.
 
 ### Shared Catalogs And Configuration
@@ -537,7 +544,7 @@ RTMS is a browser-based internal administrative web application optimized for mu
 
 ### Research Proposal Intake And Submission
 
-- FR9: TP and CV can create, open, close and manage proposal intake periods with dates, required submission packages, and either Academy-wide scope (the default) or an explicit selected-unit scope. Open intake periods are visible to every role except QT and NNB.
+- FR9: TP and CV can create, open, close and manage proposal intake periods with dates, required submission packages, and either Academy-wide scope (the default) or an explicit selected-unit scope. Mỗi đợt có đúng một CV phụ trách do TP giao (D-038); đợt chưa có CV thì chưa mở được. Open intake periods are visible to every role except QT and NNB.
 - FR10: A PI holding any system role except QT/NNB, with applicable unit scope, can create a proposal draft, save progress, and submit a proposal formally within an applicable intake period; NNB (external researchers) can never be PI and cannot create or submit proposals.
 - FR11: Principal investigators can enter structured proposal information including title, field, host unit, participants, timeline, objectives, content summary, and proposed budget metadata.
 - FR12: Principal investigators can upload required proposal attachments and supporting documents to a proposal record.
@@ -547,7 +554,7 @@ RTMS is a browser-based internal administrative web application optimized for mu
 
 ### Proposal Review, Supplement, And Approval Workflow
 
-- FR15: TB¹ or the CV assigned as the current proposal management officer (CV³) can review proposal completeness once per submitted/resubmitted version and request supplements with a stated reason and whole-calendar-day due date; repeat completeness confirmation for the current version is denied. TP never performs completeness checks or supplement requests.
+- FR15: TB¹ or the CV assigned as the current proposal management officer (CV³) can review proposal completeness once per submitted/resubmitted version and request supplements with a stated reason and whole-calendar-day due date; repeat completeness confirmation for the current version is denied. TP never performs completeness checks or supplement requests. Theo D-038, TB hoặc CV phụ trách vẫn được kiểm tra đầy đủ và yêu cầu bổ sung trên hồ sơ mình là PI/thành viên (không áp dụng `CONFLICT_DENIED` cho riêng hai thao tác này).
 - FR16: Principal investigators can view supplement requests, revise proposal content or attachments, and resubmit the proposal.
 - FR17: TP¹, TB¹ or the assigned CV³ can invite, assign, revoke or change proposal reviewer/council evaluation positions, with a conflict check, for eligible active accounts of any system role except QT, regardless of host-unit scope or profile linkage; retain optional linked-profile provenance and enforce actor scope, current-submission completeness, workflow, source-participation conflict, one active mutually exclusive evaluation position per person/context, non-overlapping lifecycle, mutation-time context revalidation, append-only history/audit and disclosure. Invitees must accept or decline (declining requires a reason). See the compatibility/multiplicity definition in `docs/authorization-core-business-baseline.md`.
 - FR18: Reviewers and committee members who accepted their invitation can access assigned proposals and submit scores, comments, and recommendations; every invited evaluation council member scores, whatever their system role. Council members read the dossier only after BGĐ signs the council establishment.
@@ -693,7 +700,7 @@ Monitors progress, counts and aggregate funding only; never sees per-record fund
 
 ### Trưởng phòng KHQS (TP)
 
-Approves every tờ trình before it goes to BGĐ; assigns segments to CVs and assigns/reassigns/revokes the responsible CV; coordinates proposals within unit scope and may also do CV-level evaluation work (reviewer/council assignment, synthesis, IRB council, drafting tờ trình). Sees every project in the Academy and manages funding Academy-wide. Never performs completeness checks or supplement requests.
+Approves every tờ trình before it goes to BGĐ; giao CV phụ trách cho từng đợt tiếp nhận, đổi CV của cả đợt hoặc từng hồ sơ và thu hồi CV (D-038); coordinates proposals within unit scope and may also do CV-level evaluation work (reviewer/council assignment, synthesis, IRB council, drafting tờ trình). Sees every project in the Academy and manages funding Academy-wide. Never performs completeness checks or supplement requests.
 
 ### Phó phòng KHQS (PP)
 
@@ -701,11 +708,11 @@ Monitors progress and counts within unit scope only; has no step in the tờ tr�
 
 ### Trưởng ban QLKH (TB)
 
-A single holder. Reviews CV-authored tờ trình and forwards them to TP or returns them to the author; assigns/revokes the responsible CV; performs completeness, supplement, reviewer/council assignment, synthesis, IRB council and tờ trình drafting within unit scope. Sees every project in the Academy, manages funding Academy-wide, and may see reviewer identity.
+A single holder. Reviews CV-authored tờ trình and forwards them to TP or returns them to the author; giao/chuyển/thu hồi CV phụ trách theo từng hồ sơ (D-038); performs completeness, supplement, reviewer/council assignment, synthesis, IRB council and tờ trình drafting within unit scope. Sees every project in the Academy, manages funding Academy-wide, and may see reviewer identity.
 
 ### Chuyên viên QLKH (CV)
 
-On proposals/projects where CV is the current responsible officer, runs the operational workflow: completeness, supplement requests, reviewer/council invitation, synthesis, IRB council, drafting tờ trình, and daily project operations (milestones, report review, appraising adjustments/extensions, acceptance, products, drafting liquidation, closing). Also creates intake periods, manages researcher profiles and student research in unit scope. Never operates on records assigned to another CV. This is the most workflow-intensive persona in phase 1.
+On proposals/projects where CV is the current responsible officer, runs the operational workflow: completeness, supplement requests, reviewer/council invitation, synthesis, IRB council, drafting tờ trình, and daily project operations (milestones, report review, appraising adjustments/extensions, acceptance, products, drafting liquidation, closing). Also creates intake periods, manages researcher profiles and student research in unit scope. Là CV phụ trách của đợt tiếp nhận do TP giao, kể cả khi mình là PI/thành viên đề tài trong đợt đó (D-038). Never operates on records assigned to another CV. This is the most workflow-intensive persona in phase 1.
 
 ### Principal Investigator
 
@@ -756,7 +763,7 @@ reviewer, and secretary authority remains record-scoped.
 - PI and reviewers never see the record's action log (two-way anonymity); only TB¹ and TP¹ may see reviewer identity.
 - QT is never assignable as reviewer, council or IRB member; every other role may be invited.
 - `PROPOSAL_PI`, `TOPIC_PI`, `TOPIC_MEMBER`, `TOPIC_SECRETARY`, reviewer, council member, and ethics reviewer status must be treated only as record-scoped relationship or assignment context and must not be configured as account-level system roles.
-- Authorization must evaluate conflict-of-interest rules before sensitive assignments or decisions, including responsible-CV assignment, reviewer assignment, council membership assignment, tờ trình review/approval, proposal approval, adjustment/extension signature, and council or IRB signature.
+- Authorization must evaluate conflict-of-interest rules before sensitive assignments or decisions, including reviewer assignment (responsible-CV assignment no longer blocks PI/members; D-038), council membership assignment, tờ trình review/approval, proposal approval, adjustment/extension signature, and council or IRB signature.
 - A topic team member cannot formally create, submit, or resubmit a proposal,
   change official membership, approve a report, or make a project decision.
 - A topic secretary may update only the files, administrative fields, meeting
@@ -796,7 +803,7 @@ reviewer, and secretary authority remains record-scoped.
 
 ## Audit-Log Requirements
 
-- The system must create audit logs for login, logout, change password, initiate or complete password reset, create, update, soft delete, create/update/deactivate user, assign role/scope/unit title, assign CV segment, create/update/open/close intake period, create/update proposal draft, submit or resubmit proposal, post-submission withdraw/edit/reopen, request supplement, assign/reassign/revoke responsible CV (manual or automatic, recording actor or system, old/new officer and segment match), invite/accept/decline/revoke reviewer, council or IRB member, submit score and comment, consolidate evaluation, tờ trình submit/forward/return/approve/sign (with procedure type, step, decision and reason), approve or reject topic and funding, create approved project / milestone change, submit progress report, create/withdraw adjustment or extension request, sign adjustment/extension, funding disbursement/settlement and liquidation, create task, assign task, update task status, register or replace important related documents, create or update researcher profile, link researcher profile to user account or business record, submit IRB dossier, update council decision, upload important file, download important file, and export report (`docs/permission-matrix.md` §11).
+- The system must create audit logs for login, logout, change password, initiate or complete password reset, create, update, soft delete, create/update/deactivate user, assign role/scope/unit title, assign the responsible CV of an intake period (D-038), create/update/open/close intake period, create/update proposal draft, submit or resubmit proposal, post-submission withdraw/edit/reopen, request supplement, assign/reassign/revoke responsible CV (manual or automatic, recording actor or system, old/new officer and scope: whole period or single record; D-038), invite/accept/decline/revoke reviewer, council or IRB member, submit score and comment, consolidate evaluation, tờ trình submit/forward/return/approve/sign (with procedure type, step, decision and reason), approve or reject topic and funding, create approved project / milestone change, submit progress report, create/withdraw adjustment or extension request, sign adjustment/extension, funding disbursement/settlement and liquidation, create task, assign task, update task status, register or replace important related documents, create or update researcher profile, link researcher profile to user account or business record, submit IRB dossier, update council decision, upload important file, download important file, and export report (`docs/permission-matrix.md` §11).
 - Audit-log entries must include actor, action, timestamp, target record, and sufficient business context to support investigation.
 - Audit logs must be retained in a form that supports operational review, dispute resolution, and timeline-style history where appropriate.
 
@@ -819,7 +826,7 @@ reviewer, and secretary authority remains record-scoped.
 - Dashboard content must be role-based and scope-filtered.
 - GĐ dashboards must prioritize topic + funding decisions, liquidation and other tờ trình awaiting signature; PGĐ-KH dashboards must prioritize tờ trình awaiting signature (councils, IRB, acceptance, extension, adjustment). Both also show delayed projects, overdue tasks, upcoming reports, unit-level summaries, and action-oriented queues.
 - PGĐ-TD dashboards show progress, counts and aggregate funding only; per-project/proposal funding columns stay empty. PP dashboards show progress and counts within unit scope.
-- TB dashboards prioritize the tờ trình review queue and TP dashboards the tờ trình approval queue and the "Chưa có người phụ trách" records; both include a responsible-CV breakdown with an "unassigned" group.
+- TB dashboards prioritize the tờ trình review queue and TP dashboards the tờ trình approval queue and the "Chưa có người phụ trách" records (chỉ còn sau khi thu hồi CV; D-038); both include a responsible-CV breakdown with an "unassigned" group.
 - CV dashboards must prioritize assigned operational backlogs, supplement queues, review progress, seminar/student research milestones, document status gaps, council/IRB queues, reporting deadlines, and unresolved issues.
 - QT has no business dashboard. Dashboard filters include year, unit, level, field and nature (Quân sự / Dân sự / Chưa phân loại).
 - Dashboard signals must link directly to filtered lists or detail views that explain the underlying records requiring action.
@@ -987,11 +994,17 @@ reviewer, and secretary authority remains record-scoped.
 - AC-PERM-16: Given TP has unit scope over a submitted proposal, when TP attempts a
   completeness check or supplement request, then the backend denies it; TB¹ and the
   assigned CV³ are allowed.
-- AC-PERM-17: Given a proposal is submitted or resubmitted, when segment
-  auto-assignment runs, then exactly one responsible CV is assigned (more specific
-  segment match first, then fewer active records) and audited with actor System; when
-  no segment matches, the record shows "Chưa có người phụ trách" and appears for TP to
-  assign.
+- AC-PERM-17 (viết lại theo D-038): Given TP mở một đợt tiếp nhận chưa có CV phụ trách, then
+  hệ thống từ chối mở đợt cho tới khi TP giao đúng một CV. Given một hồ sơ được nộp hoặc nộp
+  lại trong đợt đã mở, then hồ sơ tự thuộc CV của đợt (đúng một CV phụ trách hiện hành) và việc
+  giao được ghi audit với actor System (hoặc giữ nguyên chủ thể đã giao CV cho đợt). Given TP
+  đổi CV, then đổi cả đợt áp dụng cho các hồ sơ trong đợt, đổi riêng một hồ sơ chỉ ảnh hưởng hồ
+  sơ đó; TB chỉ giao/chuyển/thu hồi theo từng hồ sơ; CV cũ mất quyền ngay và có lịch sử, audit.
+  "Chưa có người phụ trách" chỉ xuất hiện khi TP/TB thu hồi CV mà chưa giao lại.
+- AC-PERM-17a (D-038): Given CV phụ trách hoặc TB là PI/thành viên của một đề tài, when họ kiểm
+  tra đầy đủ hoặc yêu cầu bổ sung trên đề tài đó, then hệ thống cho phép (không `CONFLICT_DENIED`);
+  TP vẫn bị từ chối (AC-PERM-16); các kiểm tra xung đột khác (phân công phản biện/hội đồng,
+  chấm điểm, tổng hợp, tờ trình) giữ nguyên.
 - AC-PERM-18: Given a liquidation tờ trình reaches BGĐ, when any role other than GĐ
   attempts to sign it, then the action is denied; GĐ signing succeeds when no
   conflict exists.

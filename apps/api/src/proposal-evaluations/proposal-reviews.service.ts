@@ -302,6 +302,9 @@ export class ProposalReviewsService {
     if (!access.isAssignedReviewer) {
       throw new ForbiddenException({ message: "Bạn không được phân công đánh giá hồ sơ này." });
     }
+    if (access.assignmentRole === "council_secretary") {
+      throw new ForbiddenException({ code: "SECRETARY_CANNOT_SCORE", message: "Thư ký hội đồng không chấm phiếu." });
+    }
 
     const assignment = (await this.prisma.proposalReviewAssignment.findUnique({ where: { id: access.assignmentId } })) as { id: string; proposalId: string; reviewedSubmissionEventId: string | null } | null;
     const evidence = await assertCurrentCompletenessEvidence(this.prisma, proposal);

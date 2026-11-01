@@ -19,6 +19,11 @@ contains an approved specification or plan.
 Keep changes scoped to the requested task.
 Do not refactor unrelated code.
 
+### Ngôn ngữ tài liệu
+
+- Mọi file tài liệu `.md` tạo mới hoặc cập nhật (BMAD, `docs/`, decisions, stories, specs, báo cáo) phải viết bằng tiếng Việt.
+- Giữ nguyên tiếng Anh cho định danh kỹ thuật: tên file, đường dẫn, lệnh, mã code, tên biến, mã trạng thái.
+
 ### Before Adding a Test
 
 - When writing, changing, reviewing, or deciding whether to add tests, use the `test-audit` skill.
