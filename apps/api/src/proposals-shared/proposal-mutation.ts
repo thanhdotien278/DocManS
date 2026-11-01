@@ -38,7 +38,9 @@ export async function runProposalMutation<T>(prisma: PrismaService, actor: SafeU
       return work(joinedTransaction(tx), currentActor);
     }, { isolationLevel: "Serializable", timeout: 15000 });
   } catch (error) {
-    if ((error as { code?: string }).code === "P2034") throw new ConflictException({ code: "CONTEXT_VERSION_MISMATCH", message: "Hồ sơ đã thay đổi. Vui lòng tải lại và thực hiện lại thao tác." });
+    // Serialization failure từ $queryRaw (SELECT ... FOR UPDATE) về dạng P2010 kèm SQLSTATE 40001, không phải P2034.
+    const failure = error as { code?: string; message?: string };
+    if (failure.code === "P2034" || (failure.code === "P2010" && failure.message?.includes("40001"))) throw new ConflictException({ code: "CONTEXT_VERSION_MISMATCH", message: "Hồ sơ đã thay đổi. Vui lòng tải lại và thực hiện lại thao tác." });
     throw error;
   }
 }

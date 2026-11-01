@@ -141,6 +141,7 @@ export type ProposalHistoryEvent = {
   toStatus: string;
   submittedAt: string;
   note: string;
+  submissionVersion?: number;
 };
 
 export type ProposalSupplementRequest = {

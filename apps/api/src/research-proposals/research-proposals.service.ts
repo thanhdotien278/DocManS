@@ -1,6 +1,6 @@
 import { filterCurrentRoundAssignments, summarizeReviewProgress } from "../proposal-evaluations/proposal-evaluation-support.js";
 import { pendingApprovalStages } from "../proposals-shared/approval-routing.js";
-import { runProposalMutation } from "../proposals-shared/proposal-mutation.js";
+import { proposalContextVersion, runProposalMutation } from "../proposals-shared/proposal-mutation.js";
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 // @ts-ignore The runtime package is JavaScript; its TypeScript source entry supplies this contract.
 import { isContextVersionTokenV1, type ContextVersionTokenV1 } from "@rtms/permissions";
@@ -849,7 +849,8 @@ export class ResearchProposalsService {
     const { ownerId, id, title, researchFieldCode, proposalTypeCode, proposalNatureCode, objectives, summary, startDate, endDate, budgetMetadata, hostOrganizationUnitId } = proposal;
     return JSON.parse(JSON.stringify({ id, ownerId, title, researchFieldCode, proposalTypeCode, proposalNatureCode, objectives, summary, startDate, endDate, budgetMetadata, hostOrganizationUnitId,
       members: (await this.findMembers(proposal.id)).filter((m) => isRelationshipActiveAt(m, new Date())).map((m) => this.toMemberResponse(m)),
-      attachments: await this.findAttachments(proposal.id), requiredPackage: await this.getRequiredPackageForProposal(proposal) }));
+      attachments: await this.findAttachments(proposal.id), requiredPackage: await this.getRequiredPackageForProposal(proposal),
+      authorizationContext: proposalContextVersion(proposal) }));
   }
 
   async completeCheck(actor: SafeUserContext, proposalId: string, input: Record<string, unknown>): Promise<any> {
@@ -1539,7 +1540,12 @@ export class ResearchProposalsService {
       }
     })) as ProposalSubmissionEventRecord[];
 
-    return records.map((record) => this.toHistoryResponse(record));
+    let submissionVersion = 0;
+    return records.map((record) => {
+      const snapshot = record.snapshot as { kind?: string } | null | undefined;
+      const isSubmission = ["submitted", "resubmitted"].includes(record.toStatus) && !snapshot?.kind;
+      return this.toHistoryResponse(record, isSubmission ? ++submissionVersion : undefined);
+    });
   }
 
   private async findOpenSupplementRequest(proposalId: string) {
@@ -1577,7 +1583,7 @@ export class ResearchProposalsService {
     };
   }
 
-  private toHistoryResponse(record: ProposalSubmissionEventRecord) {
+  private toHistoryResponse(record: ProposalSubmissionEventRecord, submissionVersion?: number) {
     const reviewSubmission = (record.snapshot as { kind?: string } | null | undefined)?.kind === "review_submitted";
     return {
       id: record.id,
@@ -1587,7 +1593,8 @@ export class ResearchProposalsService {
       fromStatus: record.fromStatus,
       toStatus: record.toStatus,
       submittedAt: record.submittedAt.toISOString(),
-      note: record.note ?? ""
+      note: record.note ?? "",
+      submissionVersion
     };
   }
 }
