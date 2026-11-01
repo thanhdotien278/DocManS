@@ -1002,7 +1002,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                     <tr key={event.id}>
                       <td>{getSubmissionActorName(event)}</td>
                       <td>{formatDate(event.submittedAt)}</td>
-                      <td>{event.note || event.toStatus}</td>
+                      <td>{event.note || event.toStatus}{event.submissionVersion ? ` — Phiên bản nộp ${event.submissionVersion}` : ""}</td>
                     </tr>
                   ))}
                 </tbody>
