@@ -135,12 +135,17 @@ export function readMembers(value: unknown): ProposalMemberInput[] | undefined {
       throw new BadRequestException({ message: `members[${index}].role không khớp participationRole.` });
     }
 
+    const researcherProfileId = readOptionalText(record.researcherProfileId, `members[${index}].researcherProfileId`, 80);
+    // Catalog members get name/organization from the profile server-side, so the client copy is optional.
     return {
-      name: readText(record.name, `members[${index}].name`, 160),
+      name: researcherProfileId ? readOptionalText(record.name, `members[${index}].name`, 160) ?? "" : readText(record.name, `members[${index}].name`, 160),
       role,
-      organization: readText(record.organization, `members[${index}].organization`, 160),
+      organization: researcherProfileId
+        ? readOptionalText(record.organization, `members[${index}].organization`, 160) ?? ""
+        : readText(record.organization, `members[${index}].organization`, 160),
       userId: readOptionalText(record.userId, `members[${index}].userId`, 80),
       username: readOptionalText(record.username, `members[${index}].username`, 80),
+      researcherProfileId,
       participationRole
     };
   });

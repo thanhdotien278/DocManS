@@ -250,6 +250,7 @@ model ResearcherProfile {
   participations             ResearcherProfileParticipation[]
   history                    ResearcherProfileHistory[]
   credentialDeliveries       AccountCredentialDelivery[]
+  proposalMembers            ProposalMember[]
 
   @@index([managementOrganizationUnitId, status, fullNameKey])
   @@index([contactEmailKey])
@@ -481,6 +482,8 @@ model ProposalMember {
   proposal          ResearchProposal @relation(fields: [proposalId], references: [id])
   userId            String?          @map("user_id")
   user              User?            @relation("ProposalParticipant", fields: [userId], references: [id])
+  researcherProfileId String?        @map("researcher_profile_id")
+  researcherProfile ResearcherProfile? @relation(fields: [researcherProfileId], references: [id], onDelete: Restrict)
   name              String
   role              String
   participationRole String           @default("TOPIC_MEMBER") @map("participation_role")
@@ -493,6 +496,7 @@ model ProposalMember {
   @@index([proposalId])
   @@index([userId])
   @@index([participationRole])
+  @@index([researcherProfileId])
   @@index([proposalId, userId, participationRole, status])
   @@map("proposal_members")
 }

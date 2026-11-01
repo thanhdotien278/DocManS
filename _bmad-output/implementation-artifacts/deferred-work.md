@@ -169,3 +169,25 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-golden-flow-4-project-execution.md`
   summary: Accepting a report may stale a pending adjustment that touches the completed milestone (maybe-false).
   evidence: Milestone baseline includes status; needs a service test on a touched milestone.
+
+- source_spec: none
+  summary: Khi liên kết tài khoản cho hồ sơ nhà khoa học, tự gán userId cho các ProposalMember đang hoạt động trỏ tới hồ sơ đó.
+  evidence: Tách khỏi story chọn thành viên từ danh mục (spec-proposal-member-picker) vì có thể ship độc lập.
+- source_spec: none
+  summary: Bắt buộc thành viên vai trò Thư ký có tài khoản khi nộp chính thức hồ sơ đề xuất (không chặn lúc lưu nháp).
+  evidence: Tách khỏi story chọn thành viên từ danh mục (spec-proposal-member-picker) vì có thể ship độc lập.
+- source_spec: `_bmad-output/implementation-artifacts/spec-proposal-member-picker.md`
+  summary: Thành viên đã lưu mà hồ sơ nhà khoa học chuyển INACTIVE thì vẫn nên giữ liên kết khi lưu lại nháp, thay vì trả 400 (hiện chỉ nêu tên thành viên trong thông báo lỗi).
+  evidence: `updateDraft` luôn gửi lại toàn bộ thành viên và `resolveMemberAccounts` từ chối hồ sơ không ACTIVE, nên mọi lần lưu bị chặn cho tới khi chủ nhiệm "Đổi người".
+- source_spec: `_bmad-output/implementation-artifacts/spec-proposal-member-picker.md`
+  summary: Đồng bộ tên/đơn vị/tài khoản của ProposalMember khi hồ sơ nhà khoa học đổi tên hoặc liên kết tài khoản, tránh kết thúc và tạo lại dòng thành viên ở lần lưu kế tiếp.
+  evidence: `sameMember` so sánh name/organization/userId với giá trị mới ghi đè từ hồ sơ.
+- source_spec: `_bmad-output/implementation-artifacts/spec-proposal-member-picker.md`
+  summary: Thêm test luồng createDraft/updateDraft lưu và trả researcherProfileId (kể cả nhánh `profile:` của key và lưu lại không tạo dòng mới) sau khi sửa fake prisma của proposals-st30/ep02/ep03.
+  evidence: 11 test trong proposals-st30 hỏng sẵn vì fake thiếu `tx.user.findUnique`; test mới phải gọi thẳng service.
+- source_spec: `_bmad-output/implementation-artifacts/spec-proposal-member-picker.md`
+  summary: Không lọc im lặng dòng thành viên chưa chọn hoặc thiếu thông tin khi lưu nháp; chặn lưu và đánh dấu dòng lỗi.
+  evidence: Bộ lọc payload trong research-proposals-panel.tsx và proposal-detail-workspace.tsx bỏ dòng thiếu tên/đơn vị mà không báo.
+- source_spec: `_bmad-output/implementation-artifacts/spec-proposal-member-picker.md`
+  summary: Thêm render test cho ProposalMembersEditor (chọn, đổi người, nhập thủ công, bàn phím).
+  evidence: Chưa có hạ tầng render test cho UI đề xuất; hiện chỉ có test quét source.
