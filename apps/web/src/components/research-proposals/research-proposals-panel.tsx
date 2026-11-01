@@ -44,7 +44,7 @@ function defaultForm(hostOrganizationUnitId = ""): ProposalDraftInput {
     hostOrganizationUnitId,
     researchFieldCode: "biomedical-tech",
     proposalTypeCode: "academy-level",
-    proposalNatureCode: "",
+    proposalNatureCode: "military",
     startDate: todayInput(30),
     endDate: todayInput(210),
     objectives: "",
@@ -59,6 +59,7 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
   const { account } = useSession();
   const [catalogs, setCatalogs] = useState<CatalogItem[]>([]);
   const [unitOptions, setUnitOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [piUnit, setPiUnit] = useState<{ name: string; id: string } | null>(null);
   const [state, setState] = useState<LoadState>("loading");
   const [proposals, setProposals] = useState<ResearchProposal[]>([]);
   const [intakes, setIntakes] = useState<ProposalIntakePeriod[]>([]);
@@ -92,15 +93,15 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
     void refresh();
     if (!allowCreate) return;
     // Mặc định đơn vị chủ trì = "Đơn vị quản lý / Đơn vị công tác" của PI (khớp theo tên), dự phòng đơn vị quản lý của hồ sơ.
-    void Promise.all([loadResearcherProfileCatalogs(), getResearcherProfile("my-profile")]).then(([cat, { profile }]) => {
-      setUnitOptions(cat.organizationUnitOptions);
-      const orgName = profile.curriculumVitae?.personalInfo?.organization?.trim();
-      const fallbackId = profile.managementOrganization?.id ?? "";
-      const defaultId = cat.organizationUnitOptions.find((unit) => unit.name === orgName)?.id
-        ?? (cat.organizationUnitOptions.some((unit) => unit.id === fallbackId) ? fallbackId : "");
-      setForm((current) => ({ ...current, hostOrganizationUnitId: current.hostOrganizationUnitId || defaultId }));
-    }).catch(() => setMessage("Không tải được danh sách đơn vị. Vui lòng tải lại."));
+    void loadResearcherProfileCatalogs().then((cat) => setUnitOptions(cat.organizationUnitOptions ?? [])).catch(() => setMessage("Không tải được danh sách đơn vị. Vui lòng tải lại."));
+    void getResearcherProfile("my-profile").then(({ profile }) => setPiUnit({ name: profile.curriculumVitae?.personalInfo?.organization?.trim() ?? "", id: profile.managementOrganization?.id ?? "" })).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (!piUnit || !unitOptions.length) return;
+    const defaultId = unitOptions.find((unit) => unit.name === piUnit.name)?.id ?? (unitOptions.some((unit) => unit.id === piUnit.id) ? piUnit.id : "");
+    setForm((current) => ({ ...current, hostOrganizationUnitId: current.hostOrganizationUnitId || defaultId }));
+  }, [piUnit, unitOptions]);
 
   const selectedIntake = intakes.find((intake) => intake.id === form.intakePeriodId);
   const intakeUnitIds = selectedIntake?.applicableOrganizationUnitIds?.length ? selectedIntake.applicableOrganizationUnitIds : selectedIntake?.applicableOrganizationUnitId ? [selectedIntake.applicableOrganizationUnitId] : [];
