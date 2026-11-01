@@ -408,13 +408,13 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
                 <label className="field">
                   <span>Loại đề tài</span>
                   <select disabled={isSubmitting} value={form.proposalTypeCode} onChange={(event) => setForm({ ...form, proposalTypeCode: event.target.value })}>
-                    <option value="">Chọn loại đề tài</option>{catalogs.filter((item) => item.type === "proposal-type" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
+                    {catalogs.filter((item) => item.type === "proposal-type" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
                   </select>
                 </label>
                 <label className="field">
                   <span>Tính chất đề tài</span>
                   <select disabled={isSubmitting} value={form.proposalNatureCode} onChange={(event) => setForm({ ...form, proposalNatureCode: event.target.value })}>
-                    <option value="">Chọn tính chất</option>{catalogs.filter((item) => item.type === "proposal-nature" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
+                    {catalogs.filter((item) => item.type === "proposal-nature" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
                   </select>
                 </label>
               </div>
