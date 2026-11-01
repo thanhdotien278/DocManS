@@ -81,8 +81,8 @@ làm nhiệm vụ theo dõi, không còn là Phó GĐ phụ trách Khoa học.
 ### TP — Trưởng phòng KHQS
 
 - Duyệt mọi tờ trình trước khi lên BGĐ.
-- Giao mảng đề tài cho CV, giao/đổi/thu hồi chuyên viên phụ trách hồ sơ và đề tài, điều
-  phối mọi hồ sơ trong phạm vi đơn vị.
+- Giao đúng một CV phụ trách cho mỗi đợt tiếp nhận và đổi CV cả đợt hoặc từng hồ sơ (D-038);
+  giao/đổi/thu hồi chuyên viên phụ trách hồ sơ và đề tài, điều phối mọi hồ sơ trong phạm vi đơn vị.
 - Có thể làm cả việc đánh giá ở mức CV (tổng hợp, lập tờ trình; phân công phản biện/hội
   đồng và hội đồng IRB theo cấu hình QT, mặc định có, ghi chú 8) trong phạm vi đơn vị.
 - Xem mọi đề tài trong Học viện; quản lý kinh phí toàn Học viện.
@@ -97,7 +97,7 @@ làm nhiệm vụ theo dõi, không còn là Phó GĐ phụ trách Khoa học.
 ### TB — Trưởng ban QLKH
 
 - Rà soát tờ trình do CV lập, rồi trình TP hoặc trả lại người lập.
-- Giao/thu hồi chuyên viên phụ trách trong phạm vi đơn vị; làm kiểm tra đầy đủ, yêu cầu
+- Giao/chuyển/thu hồi chuyên viên phụ trách theo từng hồ sơ trong phạm vi đơn vị (D-038); làm kiểm tra đầy đủ, yêu cầu
   bổ sung, tổng hợp và lập tờ trình trong phạm vi đơn vị; phân công phản biện/hội đồng và
   hội đồng IRB theo cấu hình QT (mặc định có, ghi chú 8).
 - Xem mọi đề tài trong Học viện; quản lý kinh phí toàn Học viện.
@@ -141,7 +141,7 @@ trạng thái workflow và chính sách xung đột.
 
 | Loại vai trò | Ví dụ | Phạm vi | Giới hạn quan trọng |
 | --- | --- | --- | --- |
-| Trách nhiệm quản lý | `PROPOSAL_MANAGEMENT_OFFICER`, `PROJECT_MANAGEMENT_OFFICER` (một CV) | Một hồ sơ/đề tài | Tối đa một CV phụ trách hiện hành mỗi bản ghi; tự giao theo mảng khi nộp, hoặc do TP/TB giao; giữ lịch sử/audit. |
+| Trách nhiệm quản lý | `PROPOSAL_MANAGEMENT_OFFICER`, `PROJECT_MANAGEMENT_OFFICER` (một CV) | Một hồ sơ/đề tài | Tối đa một CV phụ trách hiện hành mỗi bản ghi; CV của đợt tiếp nhận tự áp dụng cho hồ sơ nộp trong đợt (TP giao, D-038), TP/TB giao/chuyển/thu hồi theo từng hồ sơ; giữ lịch sử/audit. |
 | Tham gia hồ sơ đề xuất | `PROPOSAL_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | Một hồ sơ | Không truy cập hồ sơ không liên quan; PI suy ra từ `ownerId`. |
 | Tham gia đề tài đã duyệt | `TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | Một đề tài | Phụ thuộc quan hệ đang hiệu lực và trạng thái workflow. |
 | Phân công đánh giá | Phản biện / thành viên hội đồng đánh giá | Một hồ sơ | Mời từ mọi tài khoản có lý lịch khoa học (mọi vai trò trừ QT, kể cả GĐ, PGĐ, TP, PP, TB, CV); phải nhận lời; chấm phiếu; đọc được hồ sơ ngoài đơn vị. |
@@ -203,9 +203,9 @@ không bao giờ dùng ủy quyền. Dữ liệu capability trên UI tự nó kh
 | Trạng thái | Ý nghĩa phân quyền |
 | --- | --- |
 | Nháp | Nội dung nháp chỉ do chủ nhiệm hiện hành tạo/sửa (mọi vai trò trừ QT/NNB); thành viên, thư ký, người được ủy quyền hay người quản lý không sửa hoặc nộp thay. |
-| Đợt đang mở | Đợt do TP hoặc CV tạo/mở/đóng; mọi vai trò trừ QT và NNB đều xem được. |
+| Đợt đang mở | Đợt do TP hoặc CV tạo/mở/đóng; mọi vai trò trừ QT và NNB đều xem được. Đợt chưa có CV phụ trách (do TP giao) thì chưa được mở (D-038). |
 | Đợt đã đóng | Chặn nộp mới; quyền đọc vẫn theo phạm vi. |
-| Đã nộp | Khóa sửa nháp; hệ thống tự giao CV phụ trách theo mảng (cấp + tính chất); hồ sơ không khớp hiện "Chưa có người phụ trách" để TP giao. |
+| Đã nộp | Khóa sửa nháp; hệ thống áp dụng CV phụ trách của đợt tiếp nhận cho hồ sơ (D-038); "Chưa có người phụ trách" chỉ còn khi TP/TB thu hồi CV mà chưa giao lại. |
 | Cần bổ sung | Chủ nhiệm chỉ sửa nội dung hoặc file được yêu cầu theo workflow. |
 | Đã nộp lại | Quay về luồng xử lý của CV phụ trách. |
 | Đang đánh giá | Người được phân công và đã nhận lời thực hiện đánh giá; người không liên quan không xem được tài liệu đánh giá. |
@@ -235,12 +235,13 @@ bao giờ tạo ra vai trò hệ thống mới.
 | Có lý lịch khoa học, tự cập nhật | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Quản lý văn bản khoa học | ✓ | — | — | — | ✓ | — | ✓ | ✓ | — | — |
 | **Đợt tiếp nhận** | | | | | | | | | | |
-| Tạo, mở, đóng đợt | — | — | — | — | ✓ | — | — | ✓ | — | — |
+| Tạo, mở, đóng đợt (chặn mở đợt khi chưa có CV phụ trách, D-038) | — | — | — | — | ✓ | — | — | ✓ | — | — |
+| Giao hoặc đổi CV phụ trách cho đợt tiếp nhận (D-038) | — | — | — | — | ✓ | — | — | — | — | — |
 | Xem đợt đang mở | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | **Hồ sơ đề xuất** | | | | | | | | | | |
 | Tạo, sửa, nộp đề xuất (tư cách chủ nhiệm) | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | Xem hồ sơ | — | Xem² | Xem² | Xem¹ | Xem¹ | Xem¹ | Xem¹ | ◐3 | ◐4 | ◐5 |
-| Giao hoặc thu hồi chuyên viên phụ trách hồ sơ, phân mảng | — | — | — | — | ✓¹ | — | ✓¹ | — | — | — |
+| Giao hoặc thu hồi chuyên viên phụ trách hồ sơ (TP giao cho đợt tiếp nhận hoặc từng hồ sơ; TB theo từng hồ sơ, D-038) | — | — | — | — | ✓¹ | — | ✓¹ | — | — | — |
 | Kiểm tra đầy đủ, yêu cầu bổ sung | — | — | — | — | — | — | ✓¹ | ◐3 | — | — |
 | Phân công phản biện, lập hội đồng đánh giá (theo cấu hình QT⁸) | — | — | — | — | ✓¹ ⁸ | — | ✓¹ ⁸ | ◐3, 8 | — | — |
 | Chấm phiếu đánh giá | — | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 | ◐5 |
@@ -291,7 +292,11 @@ bao giờ tạo ra vai trò hệ thống mới.
 
 - **Xung đột lợi ích.** Chủ nhiệm, thành viên hoặc phản biện của một hồ sơ/đề tài không
   dùng quyền quản lý trên chính hồ sơ/đề tài đó (phân công, kiểm tra, tổng hợp, quyết
-  định, kinh phí).
+  định, kinh phí). Ngoại lệ (D-038): TB hoặc CV phụ trách là chủ nhiệm/thành viên của hồ sơ
+  vẫn được kiểm tra đầy đủ và yêu cầu bổ sung trên hồ sơ đó, chỉ cho hai thao tác này; TP vẫn
+  không làm; các kiểm tra xung đột khác (phân công phản biện/hội đồng, chấm điểm, tổng hợp,
+  tờ trình) giữ nguyên. TP, PP, TB, CV đều có thể là chủ nhiệm/thành viên đề tài, kể cả CV
+  của đợt trong đợt mình phụ trách.
 - **Ẩn danh hai chiều.** Chủ nhiệm và phản biện không xem nhật ký hành động của hồ sơ.
 - **Luồng tờ trình.** CV lập → TB rà soát → TP duyệt → BGĐ ký. Tờ trình do TB lập đi thẳng
   lên TP; tờ trình do TP lập vẫn qua bước TB. Trả lại ở bước nào cũng về người lập (bắt
@@ -400,7 +405,7 @@ Các bảng phân hệ dùng cùng nhóm cột như §8. Khi một dòng ở đ�
 | Gán vai trò (đúng một mỗi tài khoản) | Quản lý | Không | Không | Không | Không | Không | Nền tảng | Có | FR2, Story 1.3 |
 | Gán phạm vi tổ chức/đơn vị | Quản lý | Không | Không | Không | Không | Không | Nền tảng | Có | FR3, FR6, Story 1.3 |
 | Gán chức danh đơn vị (chỉ hiển thị) | Quản lý | Không | Không | Không | Không | Không | Nền tảng | Có | Role hierarchy GĐ1 |
-| Giao mảng đề tài cho CV | Không | TP | Không | Không | Không | Không | Đơn vị | Có | Role hierarchy GĐ1 |
+| Giao CV phụ trách cho đợt tiếp nhận (TP giao, đổi cả đợt hoặc từng hồ sơ) | Không | TP | Không | Không | Không | Không | Đơn vị | Có | D-038 |
 | Nạp ngữ cảnh phiên theo vai trò | Xem của mình | Xem của mình | Xem của mình | Xem của mình | Xem của mình | Xem của mình | Người dùng hiện tại | Không | FR4, FR5, FR6 |
 
 ### 9.2 Danh mục và cấu hình
@@ -417,14 +422,14 @@ Các bảng phân hệ dùng cùng nhóm cột như §8. Khi một dòng ở đ�
 
 | Thao tác | QT | Phòng KHQS | BGĐ | Chủ nhiệm | Nhóm đề tài | Phản biện / Hội đồng | Phạm vi | Trạng thái | Audit | Nguồn yêu cầu |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Tạo/sửa/mở/đóng đợt tiếp nhận | Không | TP, CV | Không | Không | Không | Không | Đơn vị | Nháp, đang mở | Có | FR9, Story 2.1 |
+| Tạo/sửa/mở/đóng đợt tiếp nhận (chặn mở đợt khi chưa có CV phụ trách, D-038) | Không | TP, CV | Không | Không | Không | Không | Đơn vị | Nháp, đang mở | Có | FR9, Story 2.1 |
 | Liệt kê đợt đang mở | Không | Xem | Xem | Xem đợt áp dụng (trừ NNB) | Không | Không | Đơn vị | Đang mở | Không | FR9, Story 2.1 |
 | Tạo/sửa nháp đề xuất | Không | Không từ vai trò quản lý | Không từ vai trò quản lý | Của mình (mọi vai trò trừ QT/NNB) | Không | Không | Hồ sơ của mình | Đang mở, nháp | Có | FR10, FR11, Story 2.2 |
 | Tải lên file đính kèm đề xuất | Không | Không | Không | Tạo của mình | Thư ký: Tạo; Thành viên: Không | Không | Quan hệ với hồ sơ | Nháp, cần bổ sung | Có | FR12, FR36, Story 2.3 |
 | Xem/tải về file đính kèm đề xuất | Không | TP/TB/PP¹, CV³ | GĐ/PGĐ-KH², PGĐ-TD¹ | Xem của mình | Xem nếu tham gia | Xem được phân công⁵ | Theo bản ghi | Mọi trạng thái cho phép | Có khi tải file quan trọng | FR12, FR36, Story 2.3 |
 | Kiểm tra sẵn sàng nộp | Không | Không | Không | Xem của mình | Xem nếu tham gia | Không | Hồ sơ của mình | Nháp | Không | FR13, Story 2.3 |
 | Nộp đề xuất chính thức | Không | Không | Không | Nộp của mình | Không | Không | Hồ sơ của mình; ẩn mục nộp với người không phải chủ nhiệm | Nháp, đợt đang mở | Có | FR14, FR22, Story 2.4 |
-| Tự giao CV phụ trách | Hệ thống | TP: giao hồ sơ không khớp mảng | Không | Không | Không | Không | Khớp mảng | Đã nộp, đã nộp lại | Có | Role hierarchy GĐ1 |
+| Áp dụng CV của đợt cho hồ sơ nộp | Hệ thống | TP: đổi CV cả đợt hoặc từng hồ sơ; TB: giao/chuyển/thu hồi theo hồ sơ | Không | Không | Không | Không | Đợt tiếp nhận của hồ sơ | Đã nộp, đã nộp lại | Có | D-038 |
 | Xem lịch sử nộp | Không | Theo phạm vi | Theo phạm vi | Xem của mình | Xem nếu tham gia | Không | Như phạm vi hồ sơ | Đã nộp trở đi | Không | FR14, FR38, Story 2.4 |
 
 ### 9.4 Đánh giá, bổ sung và phê duyệt đề xuất
@@ -462,7 +467,7 @@ về các phần chưa triển khai.
 | Phản biện đọc file | Dùng cùng phép tra phân công như đọc hồ sơ. Tải lên vẫn yêu cầu là chủ hồ sơ. | `FilesService.assertCanRead` |
 | BGĐ đọc hồ sơ | GĐ/PGĐ-KH: hồ sơ đã nộp trở đi trong phạm vi đơn vị (ghi chú 2); PGĐ-TD: chỉ xem trong phạm vi đơn vị, không xem kinh phí từng bản ghi. | Phân quyền dùng chung cho hồ sơ/đánh giá/file |
 | Quyết định đề tài | `LEADERSHIP_APPROVAL_AUTHORITY` cộng phạm vi, bản ghi đã luân chuyển qua TB và TP, trạng thái sẵn sàng và không xung đột. PGĐ-KH, QT và phản biện không có quyền quyết định đề tài. | Mutation quyết định dùng chung |
-| Thao tác đánh giá của quản lý | TP/TB trong phạm vi đơn vị; CV chỉ trên hồ sơ được giao; kiểm tra đầy đủ chỉ TB/CV; không xung đột. | Kiểm tra capability dùng chung |
+| Thao tác đánh giá của quản lý | TP/TB trong phạm vi đơn vị; CV chỉ trên hồ sơ được giao; kiểm tra đầy đủ chỉ TB/CV (D-038: TB/CV kiểm tra được cả hồ sơ mình là chủ nhiệm/thành viên); không xung đột cho các thao tác khác. | Kiểm tra capability dùng chung |
 | Xung đột quyết định/tổng hợp | Xung đột tham gia và phản biện thắng vai trò/phạm vi; phiếu đánh giá đã lưu giữ nguyên xung đột sau khi phân công bị thu hồi. | Bộ phân giải xung đột dùng chung |
 
 UI chi tiết hồ sơ chỉ hiển thị các mục đánh giá/phê duyệt theo kết quả capability/phân công
@@ -573,8 +578,11 @@ triển khai trên `tuan/DocManS`.
 - Phản biện, thành viên hội đồng và IRB không được truy cập hồ sơ không được phân công.
 - Từ chối phân công chuyên viên phụ trách, phản biện, hội đồng hoặc IRB khi ứng viên là
   chủ nhiệm, người tham gia, `TOPIC_SECRETARY` hoặc vai trò bị loại trừ khác trên cùng bản ghi.
+  Ngoại lệ D-038: CV phụ trách đợt tiếp nhận có thể là chủ nhiệm/thành viên đề tài trong chính
+  đợt mình phụ trách.
 - Chủ nhiệm, thành viên hoặc phản biện không bao giờ dùng quyền quản lý (phân công, kiểm
-  tra, tổng hợp, quyết định, kinh phí) trên cùng bản ghi.
+  tra, tổng hợp, quyết định, kinh phí) trên cùng bản ghi; ngoại lệ D-038: TB/CV phụ trách tự
+  kiểm tra đầy đủ và yêu cầu bổ sung hồ sơ của mình, chỉ cho hai thao tác này.
 - Chủ nhiệm không được sửa đề xuất đã nộp trừ khi workflow cho phép bổ sung hoặc nộp lại.
 - Không cấp quyền truy cập file chỉ dựa vào object key.
 - Cấm sửa trạng thái trực tiếp; chuyển trạng thái phải qua thao tác nghiệp vụ tường minh.
@@ -590,13 +598,13 @@ triển khai trên `tuan/DocManS`.
 | đăng nhập / đăng xuất | Có | người thao tác, username, thời điểm, kết quả, ngữ cảnh request/phiên |
 | tạo/sửa/vô hiệu hóa người dùng | Có | người thao tác, người dùng đích, thao tác, trạng thái trước/sau nếu khả thi |
 | gán vai trò/phạm vi/chức danh đơn vị | Có | người thao tác, người dùng đích, vai trò, phạm vi, chức danh, thời điểm |
-| giao mảng cho CV | Có | người thao tác, CV, mảng (cấp/tính chất), thời điểm |
+| giao CV cho đợt tiếp nhận (D-038) | Có | người thao tác, đợt tiếp nhận, CV cũ/mới, thời điểm |
 | tạo/sửa/mở/đóng đợt tiếp nhận | Có | người thao tác, id/mã đợt, trạng thái từ/đến, thời điểm |
 | tạo/sửa nháp đề xuất | Có | người thao tác, id hồ sơ, phần thay đổi hoặc tóm tắt an toàn, thời điểm |
 | tải lên/tải về/thay thế file quan trọng | Có | người thao tác, id file, thực thể đích, thao tác, thời điểm, metadata an toàn |
 | nộp / nộp lại đề xuất | Có | người thao tác, id hồ sơ, trạng thái từ/đến, thời điểm |
 | yêu cầu bổ sung | Có | người thao tác, id hồ sơ, lý do, hạn, thời điểm |
-| giao/đổi/thu hồi CV phụ trách (thủ công hoặc tự động) | Có | người thao tác hoặc hệ thống, bản ghi, người phụ trách cũ/mới, mảng khớp, thời điểm, lý do |
+| giao/đổi/thu hồi CV phụ trách (thủ công hoặc áp dụng CV của đợt) | Có | người thao tác hoặc hệ thống, bản ghi, người phụ trách cũ/mới, đợt tiếp nhận, thời điểm, lý do |
 | mời/nhận lời/từ chối/thu hồi phản biện, hội đồng hoặc IRB | Có | người thao tác, bản ghi, thành viên, vai trò, quyết định, lý do, thời điểm |
 | nộp điểm/nhận xét | Có | người thao tác, id hồ sơ, id phiếu, trạng thái đã nộp, thời điểm |
 | tổng hợp đánh giá | Có | người thao tác, id hồ sơ, id bản tổng hợp, thời điểm |

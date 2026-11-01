@@ -58,9 +58,9 @@ role; thay đổi có audit. Một user có system role lãnh đạo hoặc qu�
 | GĐ | `LEADERSHIP_APPROVAL_AUTHORITY` | Toàn Học viện cho đề tài; đề xuất đã vào quy trình trong scope² | Duy nhất phê duyệt đề tài kèm kinh phí và phê duyệt thanh lý; ký mọi thứ PGĐ-KH ký; xem kinh phí từng đề tài; quản lý kinh phí, giải ngân, quyết toán | Không sửa nội dung hồ sơ, không bỏ qua phản biện/tổng hợp/tờ trình; không ký/quyết hồ sơ mình là PI/thành viên/reviewer |
 | PGĐ-KH | `SCIENCE_DEPUTY_DIRECTOR` | Như GĐ (xem) | Ký thành lập hội đồng đánh giá, nghiệm thu, IRB; cấp giấy IRB; ký gia hạn, điều chỉnh (kể cả có đổi kinh phí); xem kinh phí từng đề tài | Không phê duyệt đề tài, kinh phí đề tài, thanh lý; không quản lý kinh phí |
 | PGĐ-TD | `RESEARCH_OVERSIGHT_AUTHORITY` | Scope đơn vị¹, chỉ theo dõi | Theo dõi tiến độ, số lượng, báo cáo kinh phí **tổng hợp**⁷ | Không xem kinh phí từng bản ghi, không ký, không duyệt, không chuyển tờ trình |
-| TP | `RESEARCH_MANAGEMENT_HEAD` | Đề xuất trong scope đơn vị¹; mọi đề tài toàn Học viện | Duyệt mọi tờ trình trước khi lên BGĐ; phân mảng cho CV; giao/thu hồi CV phụ trách; tổng hợp, lập tờ trình trong scope¹; phân công phản biện/hội đồng, lập hội đồng IRB theo cấu hình QT⁸ (mặc định có); quản lý kinh phí toàn Học viện; quản lý đợt tiếp nhận | Không kiểm tra đầy đủ, không yêu cầu bổ sung; không ký thay BGĐ; không duyệt tờ trình mình lập |
+| TP | `RESEARCH_MANAGEMENT_HEAD` | Đề xuất trong scope đơn vị¹; mọi đề tài toàn Học viện | Duyệt mọi tờ trình trước khi lên BGĐ; giao CV phụ trách cho đợt tiếp nhận và đổi CV cả đợt hoặc từng hồ sơ (D-038); giao/thu hồi CV phụ trách; tổng hợp, lập tờ trình trong scope¹; phân công phản biện/hội đồng, lập hội đồng IRB theo cấu hình QT⁸ (mặc định có); quản lý kinh phí toàn Học viện; quản lý đợt tiếp nhận | Không kiểm tra đầy đủ, không yêu cầu bổ sung; không ký thay BGĐ; không duyệt tờ trình mình lập |
 | PP | `RESEARCH_MANAGEMENT_DEPUTY_HEAD` | Scope đơn vị¹, chỉ theo dõi | Theo dõi tiến độ, số lượng; xem kinh phí đề tài mình là PI/thành viên⁴ | Không có bước trong luồng tờ trình, không duyệt/ký, kể cả khi TP vắng |
-| TB | `RESEARCH_BOARD_HEAD` | Đề xuất trong scope đơn vị¹; mọi đề tài toàn Học viện | Rà soát tờ trình do CV lập rồi trình TP hoặc trả tác giả; giao/thu hồi CV phụ trách; kiểm tra đầy đủ, yêu cầu bổ sung, tổng hợp, lập tờ trình trong scope¹; phân công phản biện/hội đồng, lập hội đồng IRB theo cấu hình QT⁸ (mặc định có); quản lý kinh phí toàn Học viện | Không rà soát tờ trình mình lập; không ký thay BGĐ |
+| TB | `RESEARCH_BOARD_HEAD` | Đề xuất trong scope đơn vị¹; mọi đề tài toàn Học viện | Rà soát tờ trình do CV lập rồi trình TP hoặc trả tác giả; giao/chuyển/thu hồi CV phụ trách theo từng hồ sơ (D-038); kiểm tra đầy đủ, yêu cầu bổ sung, tổng hợp, lập tờ trình trong scope¹; phân công phản biện/hội đồng, lập hội đồng IRB theo cấu hình QT⁸ (mặc định có); quản lý kinh phí toàn Học viện | Không rà soát tờ trình mình lập; không ký thay BGĐ |
 | CV | `RESEARCH_MANAGEMENT_STAFF` | Chỉ hồ sơ/đề tài đang được giao phụ trách³ | Kiểm tra đầy đủ, yêu cầu bổ sung, tổng hợp, lập tờ trình; mời phản biện/hội đồng, lập hội đồng IRB chỉ khi QT cấu hình tích role CV⁸; nghiệp vụ đề tài hằng ngày; kinh phí trong phạm vi giao; tạo/mở/đóng đợt; quản lý hồ sơ nhà khoa học và NCKH sinh viên trong scope¹ | Không thao tác hồ sơ giao cho CV khác; không giao/thu hồi CV; quan hệ tham gia không cấp quyền quản lý |
 | NCV | `RESEARCHER_INTERNAL_USER` | Bản ghi có quan hệ hợp lệ⁴ | Tạo/sửa/nộp đề xuất với tư cách PI; làm việc PI/thành viên; reviewer, hội đồng, IRB khi được mời⁵ ⁶; đăng ký NCKH sinh viên với tư cách GVHD | Không xem bản ghi không liên quan, không tự phân công, không quyết định |
 | NNB | `EXTERNAL_RESEARCHER_USER` | Chỉ bản ghi có quan hệ được cấp | Reviewer, thành viên hội đồng/IRB, thư ký hội đồng hoặc thành viên đề tài qua quan hệ tường minh | Không bao giờ là PI; không thấy đợt tiếp nhận; không tạo/sửa/nộp đề xuất; không phân công hoặc quyết định |
@@ -107,18 +107,23 @@ Cập nhật 2026-10-18 theo mô hình 10 vai trò.
 | `PROPOSAL_MANAGEMENT_OFFICER` | Một proposal | Tối đa một CV phụ trách đang hiệu lực trên mỗi proposal |
 | `PROJECT_MANAGEMENT_OFFICER` | Một project | Tối đa một CV phụ trách đang hiệu lực trên mỗi project |
 
-Khi hồ sơ được nộp, hệ thống tự giao CV phụ trách theo mảng (cấp + tính chất) mà TP đã
-phân. Không khớp mảng thì hồ sơ hiển thị “Chưa có người phụ trách” để TP giao. Không có
-officer đang hiệu lực nghĩa là **chưa phân công**, không phải context bị lỗi. TP¹/TB¹
+Mỗi đợt tiếp nhận có đúng một CV phụ trách do TP giao (D-038); mọi hồ sơ nộp trong đợt do
+CV đó phụ trách, hệ thống áp dụng CV của đợt cho hồ sơ khi nộp/nộp lại. Đợt chưa có CV thì
+chưa được mở, nên hồ sơ nộp vào đợt luôn có CV ngay. “Chưa có người phụ trách” chỉ còn khi
+TP/TB thu hồi CV mà chưa giao lại. Không có officer đang hiệu lực nghĩa là **chưa phân
+công**, không phải context bị lỗi. TP¹/TB¹
 thấy hồ sơ này trong scope; CV không nhận management visibility trên hồ sơ không giao
 cho mình. Project có quan hệ quản lý riêng, không chia sẻ hàng quan hệ với proposal và
 không tự sao chép officer từ proposal.
 
-Chỉ TP¹/TB¹ giao, chuyển hoặc thu hồi CV phụ trách (ngoài tự giao theo mảng). Mỗi lần
+Chỉ TP¹/TB¹ giao, chuyển hoặc thu hồi CV phụ trách (ngoài CV của đợt). TP đổi CV của cả đợt
+(áp dụng cho các hồ sơ trong đợt) hoặc của từng hồ sơ; TB giao/chuyển/thu hồi theo từng hồ
+sơ. TP, PP, TB, CV đều có thể là PI/thành viên đề tài, kể cả CV của đợt trong đợt mình phụ
+trách (D-038). Mỗi lần
 phải kiểm tra actor có capability phân công, candidate là CV đang hoạt động, scope,
 conflict và context hiện thời. Chuyển phân công kết thúc quan hệ cũ rồi ghi quan hệ mới
 trong cùng giao dịch; không ghi đè lịch sử. Ngăn hai officer đồng thời kể cả request
-cạnh tranh. Giữ actor (hoặc system), thời điểm, record, officer cũ/mới, mảng khớp, thời
+cạnh tranh. Giữ actor (hoặc system), thời điểm, record, đợt tiếp nhận, officer cũ/mới, thời
 gian hiệu lực và lý do trong history/audit. Thu hồi/hết hiệu lực chấm dứt quyền quản
 lý ngay; phân công cũ không cấp gì.
 
@@ -136,7 +141,8 @@ giám sát để xem review ẩn hoặc tự xử lý/quyết định hồ sơ c
 
 Trong các bảng nghiệp vụ bên dưới, “Phòng KHQS” trên proposal/project nghĩa là TP¹/TB¹
 cho điều phối và CV³ cho thao tác bản ghi, trừ khi ô ghi rõ role. Kiểm tra đầy đủ và
-yêu cầu bổ sung chỉ thuộc TB¹/CV³, không bao giờ thuộc TP. Không suy ra quyền ký/quyết
+yêu cầu bổ sung chỉ thuộc TB¹/CV³, không bao giờ thuộc TP; TB/CV được làm cả trên hồ sơ mình là
+PI/thành viên (ngoại lệ D-038). Không suy ra quyền ký/quyết
 định của BGĐ từ system role TP/TB.
 
 Nghiệp vụ độc lập như đợt tiếp nhận và hồ sơ nhà khoa học tiếp tục dùng capability/
@@ -146,7 +152,7 @@ thêm officer relationship cho các domain khác trong thay đổi này.
 ### Final decisions replacing the pre-coding questions
 
 - TP¹/TB¹ own officer assignment/reassignment/revocation within explicit scope and without
-  conflict; the system auto-assigns by segment on submission. Assignment takes effect at
+  conflict (D-038: CV của đợt tiếp nhận do TP giao được áp dụng cho hồ sơ khi nộp, thay cho tự giao theo mảng). Assignment takes effect at
   transaction time; prior rows and audit are retained. Unassigned records remain valid.
 - After current-submission completeness confirmation (TB¹/CV³), the QT-configured roles⁸
   (default TP¹/TB¹) assign reviewers/council; TP¹/TB¹ or the assigned CV³ read submitted
@@ -211,6 +217,7 @@ invoices or ERP integration.
   học không biến thành system role mới.
 - Đợt tiếp nhận do TP hoặc CV tạo/mở/đóng, có phạm vi `Toàn Học viện` hoặc `Chọn đơn vị`.
   Đợt mặc định là `Toàn Học viện`; khi chọn đơn vị, chỉ các đơn vị được chọn được nộp.
+  Mỗi đợt có đúng một CV phụ trách do TP giao; đợt chưa có CV thì chưa được mở (D-038).
   Mọi role trừ QT và NNB xem được đợt đang mở.
 - Mọi đơn vị được phép tạo/nộp đề xuất trong đợt áp dụng; PI chọn đơn vị quản
   lý chính phù hợp với scope của mình.
@@ -225,7 +232,10 @@ invoices or ERP integration.
   reviewer, người đánh giá/nghiệm thu, thành viên hội đồng đánh giá/nghiệm thu/IRB,
   người rà soát/duyệt tờ trình hoặc người ký/quyết định cuối trên cùng hồ sơ. PI, thành
   viên hoặc reviewer không dùng quyền quản lý (phân công, kiểm tra đầy đủ, tổng hợp,
-  quyết định, kinh phí) trên cùng hồ sơ. Reviewer không quyết định/ký cùng hồ sơ/vòng.
+  quyết định, kinh phí) trên cùng hồ sơ. Ngoại lệ D-038: CV phụ trách đợt tiếp nhận có thể
+  là PI/thành viên đề tài trong đợt mình phụ trách, và TB hoặc CV phụ trách vẫn kiểm tra đầy
+  đủ và yêu cầu bổ sung trên hồ sơ mình là PI/thành viên (chỉ hai thao tác này; TP vẫn không
+  làm; phân công phản biện/hội đồng, chấm điểm, tổng hợp, tờ trình giữ nguyên). Reviewer không quyết định/ký cùng hồ sơ/vòng.
   Các vị trí loại trừ nhau trong cùng hội đồng không được kiêm nhiệm. Kiểm tra cả khi
   tạo/thay đổi mọi phía của quan hệ (kể cả thêm participant) và khi thực thi hành động
   được bảo vệ; preflight/UI không thay thế kiểm tra hiện thời.
@@ -262,7 +272,8 @@ không. Lịch sử quan hệ cũ vẫn giữ.
 
 | Hành động | Quyền |
 | --- | --- |
-| Tạo, sửa, mở, đóng đợt | TP hoặc CV có scope đợt được cấp rõ; không cấp quyền xem proposal/project trong đợt |
+| Tạo, sửa, mở, đóng đợt | TP hoặc CV có scope đợt được cấp rõ; không cấp quyền xem proposal/project trong đợt; chặn mở đợt khi chưa có CV phụ trách (D-038) |
+| Giao, đổi CV phụ trách cho đợt | TP giao đúng một CV cho mỗi đợt và đổi CV cả đợt (áp dụng cho các hồ sơ trong đợt) hoặc từng hồ sơ (D-038); giữ lịch sử và audit |
 | Xem đợt đang mở | Mọi role trừ QT và NNB |
 | Chọn phạm vi | `Toàn Học viện` hoặc `Chọn đơn vị`; mặc định toàn Học viện |
 | Quá hạn | Chỉ đánh dấu quá hạn và nhắc; không tự từ chối/đóng/chuyển trạng thái |
@@ -276,8 +287,8 @@ không. Lịch sử quan hệ cũ vẫn giữ.
 | Sửa bản nháp | Chỉ PI hiện tại |
 | Thêm thành viên | PI đề xuất; thay đổi quan hệ phải qua kiểm tra và quyền quản lý |
 | Nộp chính thức | Chỉ PI hiện tại; không ủy quyền; section nộp không hiển thị cho người không phải PI |
-| Tự giao CV phụ trách | Hệ thống theo mảng khi nộp/nộp lại; TP giao hồ sơ không khớp mảng; TP¹/TB¹ giao/thu hồi |
-| Kiểm tra đầy đủ/yêu cầu bổ sung | TB¹ hoặc CV³ (không phải TP); mỗi phiên bản nộp/nộp lại chỉ được xác nhận đầy đủ một lần; yêu cầu bổ sung phải nêu lý do và hạn theo ngày |
+| Áp dụng CV của đợt cho hồ sơ nộp | Hệ thống áp dụng CV của đợt tiếp nhận khi nộp/nộp lại (D-038); TP đổi CV cả đợt hoặc từng hồ sơ; TB giao/chuyển/thu hồi theo từng hồ sơ |
+| Kiểm tra đầy đủ/yêu cầu bổ sung | TB¹ hoặc CV³ (không phải TP), kể cả trên hồ sơ mình là PI/thành viên (ngoại lệ D-038, chỉ hai thao tác này); mỗi phiên bản nộp/nộp lại chỉ được xác nhận đầy đủ một lần; yêu cầu bổ sung phải nêu lý do và hạn theo ngày |
 | Phản hồi và nộp lại | Chỉ PI hiện tại; không delegation |
 | Phân công/thay đổi phản biện, hội đồng, hội đồng IRB | role do QT cấu hình theo loại hội đồng⁸ (mặc định TP¹/TB¹); CV³ chỉ khi được tích; QT chỉ cấu hình, không tự lập/mời (D-035); có conflict check |
 | Chấm điểm/nhận xét | Chỉ người được mời và đã chấp nhận (mọi role trừ QT)⁵; thư ký hội đồng không chấm; gửi xong thì khóa; sửa lỗi bằng phiên bản nhận xét mới được duyệt |
@@ -328,6 +339,11 @@ nor grant an assignment.
 | An active/scheduled evaluation position | A different mutually exclusive position with an overlapping interval for the same person | Deny `INCOMPATIBLE_COUNCIL_POSITION` |
 | An active evaluation position, or any persisted draft/submitted evaluation by the person in this round | Consolidation, final approve/reject decision or BGĐ signature for the same source record and round | Deny `REVIEWER_DECISION_CONFLICT`; persisted evaluation keeps the conflict after the assignment ends or is revoked |
 | A relationship or evaluation position only on another source record, council or round | Otherwise eligible assignment/action in this context | No conflict from that unrelated relationship |
+
+Ngoại lệ D-038 cho dòng đầu của bảng: việc áp dụng CV của đợt tiếp nhận làm
+`PROPOSAL_MANAGEMENT_OFFICER` không bị `SOURCE_PARTICIPATION_CONFLICT` chặn, và TB hoặc CV phụ
+trách không bị `CONFLICT_DENIED` khi kiểm tra đầy đủ/yêu cầu bổ sung hồ sơ mình là
+PI/thành viên; các dòng và hành động khác của bảng giữ nguyên.
 
 The mutually exclusive evaluation-position set is `COUNCIL_CHAIR`,
 `COUNCIL_SECRETARY`, `COUNCIL_MEMBER`, and `REVIEWER`;
@@ -480,7 +496,7 @@ Trạng thái: `Chuẩn bị triển khai → Đang thực hiện → Tạm dừ
   cấp đặc biệt. PI và reviewer không xem nhật ký thao tác của bản ghi.
   Search/count/facet/export dùng cùng filter.
 - Audit bất biến cho create/update/soft-delete, chuyển trạng thái, phân công (kể cả
-  tự giao CV theo mảng), delegation, truy cập/tải tệp nhạy cảm, từng bước tờ trình
+  giao CV cho đợt tiếp nhận và áp dụng CV của đợt), delegation, truy cập/tải tệp nhạy cảm, từng bước tờ trình
   (lập/chuyển/trả/duyệt/ký), quyết định, chỉnh sửa sau nộp, mở lại, rút hồ sơ, liên
   kết hồ sơ và thay đổi tài khoản/role/scope.
 
@@ -526,7 +542,7 @@ Account bị khóa không xóa profile hoặc lịch sử quan hệ. Profile ina
 TP/CV mở đợt tiếp nhận
   → PI tạo bản nháp
   → PI sửa và nộp
-  → Hệ thống tự giao CV theo mảng (không khớp: TP giao)
+  → Hệ thống áp dụng CV phụ trách của đợt (TP đã giao khi mở đợt)
   → TB/CV kiểm tra đầy đủ
   → (bổ sung/chỉnh sửa sau nộp nếu cần)
   → Role do QT cấu hình (mặc định TP/TB) mời phản biện/hội đồng; tờ trình hội đồng → GĐ/PGĐ-KH ký
