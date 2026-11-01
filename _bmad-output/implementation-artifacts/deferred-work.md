@@ -197,3 +197,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-7-cv-phu-trach-theo-dot-tiep-nhan.md`
   summary: Trên trang đợt tiếp nhận, CV bấm vào một đợt thì mở danh sách hồ sơ của đợt đó mà mình đang phụ trách (lọc từ `GET /research-proposals` theo `intakePeriodId` và `managementOfficer.current.officerUserId`).
   evidence: Tách khỏi spec 4.7 vì spec gộp vượt ~3.000 token; người dùng chọn tách.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-3-nhap-va-cong-tac-tren-thong-tin-de-xuat.md`
+  summary: Ghi audit cho từ chối do sai trạng thái (`BadRequestException`) ở `updateDraft`.
+  evidence: Chỉ `ForbiddenException` được audit; phải tách lỗi validate khỏi từ chối nghiệp vụ, reason hiện cố định `ACTION_NOT_GRANTED`.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-3-nhap-va-cong-tac-tren-thong-tin-de-xuat.md`
+  summary: Thêm kiểm chứng UI cho thư ký (payload chỉ `summary`) và thành viên (chỉ đọc kèm lý do).
+  evidence: Repo chỉ có test dạng regex trên source (`tests/proposal-capability-ui-source.test.mjs`); chưa có harness render.

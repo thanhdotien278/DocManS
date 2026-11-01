@@ -5,6 +5,7 @@ import { FilesService } from "../dist/apps/api/modules/files/files.service.js";
 import { ProposalIntakePeriodsService } from "../dist/apps/api/proposal-intake-periods/proposal-intake-periods.service.js";
 import { ProposalParticipationService } from "../dist/apps/api/research-proposals/proposal-participation.service.js";
 import { ProposalReviewAccessService } from "../dist/apps/api/proposals-shared/proposal-review-access.service.js";
+import { ProposalManagementOfficerService } from "../dist/apps/api/proposals-shared/proposal-management-officer.service.js";
 import { ResearchProposalsService } from "../dist/apps/api/research-proposals/research-proposals.service.js";
 import { createEvaluationTables } from "./helpers/evaluation-prisma.mjs";
 import {
@@ -271,7 +272,15 @@ function createPrisma() {
         return store.researcherProfiles.filter((record) => matches(record, where ?? {})).slice(0, take ?? Infinity);
       }
     },
+    organizationUnit: { count: async () => 0 },
+    catalogItem: { findFirst: async () => ({ id: "catalog-stub" }) },
+    proposalManagementOfficer: { findMany: async () => [] },
+    approvalSubmission: { findMany: async () => [] },
     user: {
+      async findUnique({ where }) {
+        const user = ACCOUNTS.find((item) => item.id === where.id);
+        return user ? { ...user, status: "active", organizationScopes: user.organizationScopes.map((scope) => ({ organizationUnit: { ...scope, status: "active" } })) } : null;
+      },
       async findMany({ where }) {
         const ids = where?.OR?.flatMap((clause) => clause.id?.in ?? []) ?? [];
         const usernameKeys = where?.OR?.flatMap((clause) => clause.usernameKey?.in ?? []) ?? [];
@@ -374,7 +383,7 @@ function createServices() {
     objectStorage,
     participationService,
     intakeService: new ProposalIntakePeriodsService(prisma, auditLog),
-    proposalService: new ResearchProposalsService(prisma, auditLog, participationService, new ProposalReviewAccessService(prisma)),
+    proposalService: new ResearchProposalsService(prisma, auditLog, participationService, new ProposalReviewAccessService(prisma), new ProposalManagementOfficerService(prisma)),
     filesService: new FilesService(prisma, objectStorage, auditLog, participationService, new ProposalReviewAccessService(prisma), {
       maxFileSizeBytes: 1024 * 1024,
       allowedExtensions: [".doc", ".docx", ".pdf", ".xls", ".xlsx"]
@@ -393,7 +402,7 @@ async function createOpenIntake(intakeService) {
     requiredPackage: [{ code: "proposal-form", label: "Thuyết minh đề tài", allowedMimeTypes: ["application/pdf"], maxSizeMb: 5 }]
   });
 
-  return intakeService.openPeriod(staffUser, intake.id);
+  return intakeService.openPeriod(staffUser, intake.id, { contextVersion: intake.updatedAt });
 }
 
 async function createProposalWithParticipants(services, members) {
@@ -615,6 +624,39 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
       hostOrganizationUnitId: "org-khti"
     });
     await assert.rejects(() => services.proposalService.getProposal(memberUser, other.id), ForbiddenException);
+  });
+
+  it("Story 4.3: secretary edits only the summary of a draft and cannot submit", async () => {
+    const services = createServices();
+    const created = await createProposalWithParticipants(services, LINKED_TEAM);
+    const { proposalService } = services;
+    const token = async (user) => (await proposalService.getProposal(user, created.id)).viewerAuthorization.contextVersion;
+
+    const view = await proposalService.getProposal(secretaryUser, created.id);
+    assert.equal(view.viewerAuthorization.allowedActions.includes("proposal.draft.update"), true);
+    assert.equal(view.viewerAuthorization.allowedActions.includes("proposal.submit"), false);
+
+    const updated = await proposalService.updateDraft(secretaryUser, created.id, { summary: "Tóm tắt do thư ký", contextVersion: await token(secretaryUser) });
+    assert.equal(updated.summary, "Tóm tắt do thư ký");
+
+    // Field khác kèm theo: từ chối toàn bộ, tóm tắt không đổi.
+    const editToken = await token(secretaryUser);
+    await assert.rejects(() => proposalService.updateDraft(secretaryUser, created.id, { summary: "Lén sửa", objectives: "Đổi mục tiêu", contextVersion: editToken }), ForbiddenException);
+    assert.equal((await proposalService.getProposal(piUser, created.id)).summary, "Tóm tắt do thư ký");
+    const failures = services.auditLog.find("update-proposal-draft").filter((record) => record.result === "failure");
+    assert.equal(failures.length >= 1 && failures.every((record) => record.actorId === secretaryUser.id && record.reason === "ACTION_NOT_GRANTED"), true);
+
+    const memberToken = await token(memberUser);
+    await assert.rejects(() => proposalService.updateDraft(memberUser, created.id, { summary: "Thành viên sửa", contextVersion: memberToken }), ForbiddenException);
+    const submitToken = await token(secretaryUser);
+    await assert.rejects(() => proposalService.submitProposal(secretaryUser, created.id, { contextVersion: submitToken }), ForbiddenException);
+
+    // Hồ sơ đã nộp: thư ký không còn quyền sửa.
+    await services.prisma.researchProposal.update({ where: { id: created.id }, data: { status: "submitted" } });
+    const locked = await proposalService.getProposal(secretaryUser, created.id);
+    assert.equal(locked.viewerAuthorization.allowedActions.includes("proposal.draft.update"), false);
+    const lockedToken = await token(secretaryUser);
+    await assert.rejects(() => proposalService.updateDraft(secretaryUser, created.id, { summary: "Sau khi nộp", contextVersion: lockedToken }), BadRequestException);
   });
 
   it("Story 1.4 Session 4: legacy PI, reviewer, and council labels grant no proposal authority without a record relationship", async () => {
