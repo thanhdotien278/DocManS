@@ -375,7 +375,7 @@ export class ProposalIntakePeriodsService {
   private toResponse(period: IntakePeriodRecord, actor: SafeUserContext) {
     return {
       contextVersion: period.updatedAt.toISOString(),
-      capabilities: { canEdit: isResearchManagement(actor) && period.status !== "closed", canOpen: isResearchManagement(actor) && period.status === "draft" && period.endsAt > new Date(), canClose: isResearchManagement(actor) && period.status === "open", canCreateProposal: isInternalResearcherEligible(actor) && isIntakeOpenForSubmission(period) && intakeAppliesToUser(period, actor) },
+      capabilities: { canEdit: isResearchManagement(actor) && period.status !== "closed", canOpen: isResearchManagement(actor) && period.status === "draft" && period.endsAt > new Date(), canClose: isResearchManagement(actor) && period.status === "open", canCreateProposal: isInternalResearcherEligible(actor) && Boolean(actor.researcherProfileId) && isIntakeOpenForSubmission(period) && intakeAppliesToUser(period, actor) },
       applicableOrganizationUnitIds: period.applicableOrganizationUnitIds?.length ? period.applicableOrganizationUnitIds : period.applicableOrganizationUnitId ? [period.applicableOrganizationUnitId] : [],
       id: period.id,
       code: period.code,
