@@ -112,6 +112,8 @@ type ProposalAttachmentRecord = {
   proposalId?: string;
   filePurpose?: string;
   requirementCode?: string;
+  documentType?: string;
+  version?: number;
   originalFileName?: string;
   fileName?: string;
   description?: string | null;
@@ -1494,6 +1496,8 @@ export class ResearchProposalsService {
       relatedEntityId: attachment.relatedEntityId ?? attachment.proposalId ?? "",
       filePurpose: attachment.filePurpose ?? attachment.requirementCode ?? "",
       requirementCode: attachment.requirementCode ?? attachment.filePurpose ?? "",
+      documentType: attachment.documentType ?? attachment.filePurpose ?? "",
+      version: attachment.version ?? 1,
       fileName: attachment.fileName ?? attachment.originalFileName ?? "",
       description: attachment.description ?? null,
       mimeType: attachment.mimeType,

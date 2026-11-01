@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { BadRequestException, ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { FilesService } from "../dist/apps/api/modules/files/files.service.js";
 import { ProposalIntakePeriodsService } from "../dist/apps/api/proposal-intake-periods/proposal-intake-periods.service.js";
 import { ProposalDecisionsService } from "../dist/apps/api/proposal-evaluations/proposal-decisions.service.js";
@@ -569,7 +569,7 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     // AC-ST-3.2-02: the same account role with no assignment gets nothing, and leaks no metadata.
     await assert.rejects(() => services.proposalService.getProposal(unassignedReviewerUser, proposal.id), ForbiddenException);
     await assert.rejects(() => services.assignments.getReviewPackage(unassignedReviewerUser, proposal.id), ForbiddenException);
-    await assert.rejects(() => services.filesService.downloadFile(unassignedReviewerUser, files[0].id), ForbiddenException);
+    await assert.rejects(() => services.filesService.downloadFile(unassignedReviewerUser, files[0].id), NotFoundException);
     assert.deepEqual(await services.proposalService.listProposals(unassignedReviewerUser), []);
 
     // A council-member label is also inert until an explicit committee assignment exists.

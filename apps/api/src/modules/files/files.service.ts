@@ -21,6 +21,8 @@ type FileRecord = {
   relatedEntityType: string;
   relatedEntityId: string;
   filePurpose: string;
+  documentType: string;
+  version: number;
   originalFileName: string;
   description: string | null;
   mimeType: string;
@@ -167,12 +169,17 @@ export class FilesService {
         // Object storage has no transaction with Postgres. Rechecking here ensures a lifecycle
         // change between the initial authorization and metadata write rolls back the usable file.
         await this.assertCanUpload(actor, input.relatedEntityType, input.relatedEntityId);
+        // Gồm cả bản đã xóa để số version không bị dùng lại.
+        const sameEntity = (await tx.fileRecord.findMany({ where: { relatedEntityType: input.relatedEntityType, relatedEntityId: input.relatedEntityId } })) as Array<{ documentType: string; version: number }>;
+        const version = Math.max(0, ...sameEntity.filter((item) => item.documentType === input.filePurpose).map((item) => item.version)) + 1;
         return tx.fileRecord.create({
           data: {
             id: fileId,
             relatedEntityType: input.relatedEntityType,
             relatedEntityId: input.relatedEntityId,
             filePurpose: input.filePurpose,
+            documentType: input.filePurpose,
+            version,
             originalFileName,
             description,
             mimeType: input.mimeType,
@@ -222,7 +229,7 @@ export class FilesService {
   }
 
   async downloadFile(actor: SafeUserContext, fileId: string) {
-    const record = await this.findActiveFile(fileId);
+    const record = await this.findReadableFile(actor, fileId);
     await this.assertCanRead(actor, record.relatedEntityType, record.relatedEntityId);
     await this.assertProjectFileOwnership(actor, record, false);
     const canMutate = await this.canMutateFile(actor, record);
@@ -266,8 +273,8 @@ export class FilesService {
   }
 
   async updateFile(actor: SafeUserContext, fileId: string, input: { description: string | null; contextVersion?: unknown }): Promise<any> {
-    if (!this.transactional) { const file = await this.findActiveFile(fileId); return file.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE ? this.mutateProject(actor, file.relatedEntityId, input.contextVersion, (s, a) => s.updateFile(a, fileId, input)) : this.mutate(actor, file.relatedEntityId, input.contextVersion, (s, a) => s.updateFile(a, fileId, input)); }
-    const record = await this.findActiveFile(fileId);
+    if (!this.transactional) { const file = await this.findReadableFile(actor, fileId); return file.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE ? this.mutateProject(actor, file.relatedEntityId, input.contextVersion, (s, a) => s.updateFile(a, fileId, input)) : this.mutate(actor, file.relatedEntityId, input.contextVersion, (s, a) => s.updateFile(a, fileId, input)); }
+    const record = await this.findReadableFile(actor, fileId);
     await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId);
     await this.assertProjectFileOwnership(actor, record, true);
     await this.assertUnsubmittedFile(record);
@@ -298,8 +305,8 @@ export class FilesService {
   }
 
   async deleteFile(actor: SafeUserContext, fileId: string, contextVersion?: unknown): Promise<any> {
-    if (!this.transactional) { const file = await this.findActiveFile(fileId); return file.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE ? this.mutateProject(actor, file.relatedEntityId, contextVersion, (s, a) => s.deleteFile(a, fileId, contextVersion)) : this.mutate(actor, file.relatedEntityId, contextVersion, (s, a) => s.deleteFile(a, fileId, contextVersion)); }
-    const record = await this.findActiveFile(fileId);
+    if (!this.transactional) { const file = await this.findReadableFile(actor, fileId); return file.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE ? this.mutateProject(actor, file.relatedEntityId, contextVersion, (s, a) => s.deleteFile(a, fileId, contextVersion)) : this.mutate(actor, file.relatedEntityId, contextVersion, (s, a) => s.deleteFile(a, fileId, contextVersion)); }
+    const record = await this.findReadableFile(actor, fileId);
     await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId);
     await this.assertProjectFileOwnership(actor, record, true);
     await this.assertUnsubmittedFile(record);
@@ -446,6 +453,19 @@ export class FilesService {
     return proposal;
   }
 
+  /** Tệp đề xuất ngoài quyền đọc trả cùng 404 như tệp không tồn tại, để không lộ sự tồn tại của tệp. */
+  private async findReadableFile(actor: SafeUserContext, fileId: string) {
+    const record = await this.findActiveFile(fileId);
+    if (record.relatedEntityType !== RESEARCH_PROPOSAL_ENTITY_TYPE) return record;
+    try {
+      await this.assertCanRead(actor, record.relatedEntityType, record.relatedEntityId);
+    } catch (error) {
+      if (error instanceof ForbiddenException) throw new NotFoundException({ message: "Không tìm thấy tệp." });
+      throw error;
+    }
+    return record;
+  }
+
   private async findActiveFile(fileId: string) {
     const record = (await this.prisma.fileRecord.findUnique({
       where: { id: fileId },
@@ -475,6 +495,8 @@ export class FilesService {
       proposalId: record.relatedEntityType === RESEARCH_PROPOSAL_ENTITY_TYPE ? record.relatedEntityId : "",
       filePurpose: record.filePurpose,
       requirementCode: record.filePurpose,
+      documentType: record.documentType,
+      version: record.version,
       fileName: record.originalFileName,
       description: record.description ?? null,
       mimeType: record.mimeType,

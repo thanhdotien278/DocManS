@@ -800,7 +800,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                           {group.attachments.map((attachment) => (
                             <tr key={attachment.id}>
                               <td>
-                                <span className="record-title">{attachment.fileName}</span>
+                                <span className="record-title">{attachment.fileName}</span>{attachment.version ? <span className="muted"> v{attachment.version}</span> : null}
                               </td>
                               <td>{attachment.description || "Chưa có mô tả"}</td>
                               <td>{formatBytes(attachment.sizeBytes)}</td>
@@ -854,7 +854,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                             <FileText size={17} aria-hidden="true" />
                           </span>
                           <div>
-                            <span className="record-title">{attachment.fileName}</span>
+                            <span className="record-title">{attachment.fileName}</span>{attachment.version ? <span className="muted"> v{attachment.version}</span> : null}
                             <dl className="document-meta-list">
                               <div>
                                 <dt>Mô tả tài liệu</dt>

@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-10-24T22:00:00+07:00
+last_updated: 2026-11-01T13:00:00+07:00
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -63,7 +63,7 @@ development_status:
   4-1-tao-va-quan-ly-dot-tiep-nhan-de-xuat: done
   4-2-tao-de-xuat-nhap-va-thiet-lap-quan-he-tham-gia: review
   4-3-nhap-va-cong-tac-tren-thong-tin-de-xuat-co-cau-truc: done
-  4-4-dinh-kem-va-quan-ly-tep-de-xuat: backlog
+  4-4-dinh-kem-va-quan-ly-tep-de-xuat: review
   4-5-kiem-tra-muc-do-san-sang-truoc-khi-nop: backlog
   4-6-nop-chinh-thuc-va-xem-lich-su-nop-de-xuat: backlog
   # D-038: đổi từ tự giao CV theo mảng sang giao CV phụ trách cho từng đợt tiếp nhận (TP giao/đổi; chặn mở đợt khi chưa có CV).

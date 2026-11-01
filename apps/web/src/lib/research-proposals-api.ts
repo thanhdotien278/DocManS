@@ -117,6 +117,8 @@ export type ProposalAttachment = {
   proposalId: string;
   filePurpose: string;
   requirementCode: string;
+  documentType?: string;
+  version?: number;
   fileName: string;
   description?: string | null;
   mimeType: string;

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { BadRequestException, ConflictException, ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { FilesService } from "../dist/apps/api/modules/files/files.service.js";
 import { ProposalIntakePeriodsService } from "../dist/apps/api/proposal-intake-periods/proposal-intake-periods.service.js";
 import { ProposalParticipationService } from "../dist/apps/api/research-proposals/proposal-participation.service.js";
@@ -566,12 +566,12 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     assert.equal(download.fileName, "thuyet-minh.pdf");
 
     // A user with no relationship to the proposal is still refused.
-    await assert.rejects(() => services.filesService.downloadFile(outsiderUser, uploaded.id), ForbiddenException);
+    await assert.rejects(() => services.filesService.downloadFile(outsiderUser, uploaded.id), NotFoundException);
     await assert.rejects(
       () => services.filesService.listFiles(outsiderUser, { relatedEntityType: "research_proposal", relatedEntityId: created.id }),
       ForbiddenException
     );
-    await assert.rejects(() => services.filesService.downloadFile(adminUser, uploaded.id), ForbiddenException);
+    await assert.rejects(() => services.filesService.downloadFile(adminUser, uploaded.id), NotFoundException);
 
     // Participation grants read only: the participant cannot upload to someone else's draft.
     await assert.rejects(
