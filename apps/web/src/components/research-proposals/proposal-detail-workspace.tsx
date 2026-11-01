@@ -78,6 +78,7 @@ function toDraftInput(proposal: ResearchProposal): ProposalDraftInput {
     title: proposal.title,
     researchFieldCode: proposal.researchFieldCode,
     proposalTypeCode: proposal.proposalTypeCode,
+    proposalNatureCode: proposal.proposalNatureCode,
     startDate: toIntakeDateInput(proposal.startDate),
     endDate: toIntakeDateInput(proposal.endDate),
     objectives: proposal.objectives,
@@ -196,6 +197,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   const budgetWords = numberToVietnameseWords(form?.budgetMetadata?.amount);
   const researchFieldLabel = catalogs.find((item) => item.type === "research-field" && item.code === proposal?.researchFieldCode)?.name ?? proposal?.researchFieldCode ?? "Chưa có";
   const proposalTypeLabel = catalogs.find((item) => item.type === "proposal-type" && item.code === proposal?.proposalTypeCode)?.name ?? proposal?.proposalTypeCode ?? "Chưa có";
+  const proposalNatureLabel = catalogs.find((item) => item.type === "proposal-nature" && item.code === proposal?.proposalNatureCode)?.name ?? proposal?.proposalNatureCode ?? "Chưa có";
   const hostOrganizationLabel = account?.organizationScopes?.find((unit) => unit.id === proposal?.hostOrganizationUnitId)?.name ?? proposal?.hostOrganizationUnitId ?? "Chưa có";
 
 
@@ -539,6 +541,12 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                     <option value="">Chọn loại đề tài</option>{catalogs.filter((item) => item.type === "proposal-type" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
                   </select>
                 </label>
+                <label className="field">
+                  <span>Tính chất đề tài</span>
+                  <select disabled={!canEditAllFields} value={form.proposalNatureCode} onChange={(event) => setForm({ ...form, proposalNatureCode: event.target.value })}>
+                    <option value="">Chọn tính chất</option>{catalogs.filter((item) => item.type === "proposal-nature" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
+                  </select>
+                </label>
               </div>
               <label className="field">
                 <span>Đơn vị chủ trì</span>
@@ -631,6 +639,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               <div className="meta-item"><span className="meta-label">Chủ nhiệm (PI)</span><span className="meta-value">{proposal.ownerDisplayName || proposal.ownerId}</span></div>
               <div className="meta-item"><span className="meta-label">Lĩnh vực</span><span className="meta-value">{researchFieldLabel}</span></div>
               <div className="meta-item"><span className="meta-label">Loại đề tài</span><span className="meta-value">{proposalTypeLabel}</span></div>
+              <div className="meta-item"><span className="meta-label">Tính chất đề tài</span><span className="meta-value">{proposalNatureLabel || "Chưa có"}</span></div>
               <div className="meta-item"><span className="meta-label">Đơn vị chủ trì</span><span className="meta-value">{hostOrganizationLabel}</span></div>
               <div className="meta-item"><span className="meta-label">Trạng thái</span><span className="meta-value"><StatusBadge status={proposal.status} /></span></div>
               <div className="meta-item"><span className="meta-label">Bắt đầu</span><span className="meta-value">{formatIntakeDate(proposal.startDate)}</span></div>

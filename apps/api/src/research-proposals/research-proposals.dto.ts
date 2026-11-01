@@ -18,6 +18,7 @@ export class CreateResearchProposalDraftDto {
   title!: string;
   researchFieldCode?: string;
   proposalTypeCode?: string;
+  proposalNatureCode?: string;
   objectives?: string;
   summary?: string;
   startDate?: string;
@@ -33,6 +34,7 @@ export class UpdateResearchProposalDraftDto {
   title?: string;
   researchFieldCode?: string;
   proposalTypeCode?: string;
+  proposalNatureCode?: string;
   objectives?: string;
   summary?: string;
   startDate?: string;
@@ -84,6 +86,7 @@ export const createResearchProposalDraftPipe: PipeTransform<unknown, CreateResea
     readText(input.title, "title", 260);
     readOptionalCode(input.researchFieldCode, "researchFieldCode");
     readOptionalCode(input.proposalTypeCode, "proposalTypeCode");
+    readOptionalCode(input.proposalNatureCode, "proposalNatureCode");
     readOptionalText(input.objectives, "objectives", 3000);
     readOptionalText(input.summary, "summary", 3000);
     readOptionalDate(input.startDate, "startDate");
@@ -109,6 +112,9 @@ export const updateResearchProposalDraftPipe: PipeTransform<unknown, UpdateResea
     }
     if (input.proposalTypeCode !== undefined) {
       readOptionalCode(input.proposalTypeCode, "proposalTypeCode");
+    }
+    if (input.proposalNatureCode !== undefined) {
+      readOptionalCode(input.proposalNatureCode, "proposalNatureCode");
     }
     if (input.objectives !== undefined) {
       readOptionalText(input.objectives, "objectives", 3000);

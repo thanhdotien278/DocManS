@@ -71,6 +71,7 @@ type ResearchProposalRecord = {
   hostOrganizationUnitId: string;
   researchFieldCode: string | null;
   proposalTypeCode: string | null;
+  proposalNatureCode: string | null;
   title: string;
   objectives: string | null;
   summary: string | null;
@@ -267,6 +268,7 @@ export class ResearchProposalsService {
         title: readText(input.title, "title", 260),
         researchFieldCode: readOptionalCode(input.researchFieldCode, "researchFieldCode"),
         proposalTypeCode: readOptionalCode(input.proposalTypeCode, "proposalTypeCode"),
+        proposalNatureCode: readOptionalCode(input.proposalNatureCode, "proposalNatureCode"),
         objectives: readOptionalText(input.objectives, "objectives", 3000),
         summary: readOptionalText(input.summary, "summary", 3000),
         startDate,
@@ -329,6 +331,9 @@ export class ResearchProposalsService {
     }
     if (input.proposalTypeCode !== undefined) {
       data.proposalTypeCode = readOptionalCode(input.proposalTypeCode, "proposalTypeCode") ?? null;
+    }
+    if (input.proposalNatureCode !== undefined) {
+      data.proposalNatureCode = readOptionalCode(input.proposalNatureCode, "proposalNatureCode") ?? null;
     }
     if (input.objectives !== undefined) {
       data.objectives = readOptionalText(input.objectives, "objectives", 3000) ?? null;
@@ -799,13 +804,13 @@ export class ResearchProposalsService {
   }
 
   async listCatalogs() {
-    return this.prisma.catalogItem.findMany({ where: { status: "active", deletedAt: null, type: { in: ["research-field", "proposal-type"] } }, select: { id: true, type: true, code: true, name: true, status: true }, orderBy: [{ type: "asc" }, { name: "asc" }] });
+    return this.prisma.catalogItem.findMany({ where: { status: "active", deletedAt: null, type: { in: ["research-field", "proposal-type", "proposal-nature"] } }, select: { id: true, type: true, code: true, name: true, status: true }, orderBy: [{ type: "asc" }, { name: "asc" }] });
   }
 
   private async validateCatalogs(input: Record<string, unknown>) {
-    for (const [field, type] of [["researchFieldCode", "research-field"], ["proposalTypeCode", "proposal-type"]]) {
+    for (const [field, type] of [["researchFieldCode", "research-field"], ["proposalTypeCode", "proposal-type"], ["proposalNatureCode", "proposal-nature"]]) {
       const code = input[field!];
-      if (typeof code === "string" && code.trim() && !await this.prisma.catalogItem.findFirst({ where: { type, code: code.trim(), status: "active", deletedAt: null } })) throw new BadRequestException({ message: "Lĩnh vực hoặc loại đề tài không còn hợp lệ." });
+      if (typeof code === "string" && code.trim() && !await this.prisma.catalogItem.findFirst({ where: { type, code: code.trim(), status: "active", deletedAt: null } })) throw new BadRequestException({ message: field === "proposalNatureCode" ? "Tính chất đề tài không còn hợp lệ." : "Lĩnh vực hoặc loại đề tài không còn hợp lệ.", field });
     }
   }
 
@@ -815,8 +820,8 @@ export class ResearchProposalsService {
   }
 
   private async submissionSnapshot(proposal: ResearchProposalRecord) {
-    const { ownerId, id, title, researchFieldCode, proposalTypeCode, objectives, summary, startDate, endDate, budgetMetadata, hostOrganizationUnitId } = proposal;
-    return JSON.parse(JSON.stringify({ id, ownerId, title, researchFieldCode, proposalTypeCode, objectives, summary, startDate, endDate, budgetMetadata, hostOrganizationUnitId,
+    const { ownerId, id, title, researchFieldCode, proposalTypeCode, proposalNatureCode, objectives, summary, startDate, endDate, budgetMetadata, hostOrganizationUnitId } = proposal;
+    return JSON.parse(JSON.stringify({ id, ownerId, title, researchFieldCode, proposalTypeCode, proposalNatureCode, objectives, summary, startDate, endDate, budgetMetadata, hostOrganizationUnitId,
       members: (await this.findMembers(proposal.id)).filter((m) => isRelationshipActiveAt(m, new Date())).map((m) => this.toMemberResponse(m)),
       attachments: await this.findAttachments(proposal.id), requiredPackage: await this.getRequiredPackageForProposal(proposal) }));
   }
@@ -1190,6 +1195,9 @@ export class ResearchProposalsService {
     if (!proposal.proposalTypeCode) {
       missing.push({ code: "proposal-type", label: "Loại đề tài" });
     }
+    if (!proposal.proposalNatureCode) {
+      missing.push({ code: "proposal-nature", label: "Tính chất đề tài" });
+    }
     if (!proposal.startDate || !proposal.endDate || proposal.endDate.getTime() <= proposal.startDate.getTime()) {
       missing.push({ code: "timeline", label: "Thời gian thực hiện hợp lệ" });
     }
@@ -1372,6 +1380,7 @@ export class ResearchProposalsService {
       hostOrganizationUnitId: proposal.hostOrganizationUnitId,
       researchFieldCode: proposal.researchFieldCode ?? "",
       proposalTypeCode: proposal.proposalTypeCode ?? "",
+      proposalNatureCode: proposal.proposalNatureCode ?? "",
       title: proposal.title,
       objectives: proposal.objectives ?? "",
       summary: proposal.summary ?? "",

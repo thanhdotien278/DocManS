@@ -349,10 +349,29 @@ const catalogs = [
   ["academic-degree", "bsckii", "BSCKII"],
   ["academic-degree", "other", "Khác"],
   ["proposal-type", "academy-level", "Đề tài cấp Học viện"],
+  ["proposal-nature", "military", "Quân sự"],
+  ["proposal-nature", "civil", "Dân sự"],
   ["priority", "high", "Ưu tiên cao"],
   ["report-type", "periodic", "Báo cáo định kỳ"],
   ["scoring-criterion", "scientific-value", "Giá trị khoa học"]
 ];
+
+// Loại đề tài bổ sung: bỏ qua nếu DB đã có mục cùng type và name (có thể nhập tay với mã khác).
+const extraProposalTypes = [
+  ["student-research", "Đề tài Sinh viên / Học viên NCKH"],
+  ["ministry-defense", "Đề tài cấp Bộ Quốc phòng"],
+  ["base-level", "Đề tài cấp Cơ sở"],
+  ["sector-level", "Đề tài cấp Ngành / Cục"],
+  ["national-level", "Đề tài cấp Quốc gia"]
+];
+for (const [code, name] of extraProposalTypes) {
+  if (await prisma.catalogItem.findFirst({ where: { type: "proposal-type", name } })) continue;
+  await prisma.catalogItem.upsert({
+    where: { type_code: { type: "proposal-type", code } },
+    update: {},
+    create: { type: "proposal-type", code, name, status: "active" }
+  });
+}
 
 for (const [type, code, name] of catalogs) {
   await prisma.catalogItem.upsert({
