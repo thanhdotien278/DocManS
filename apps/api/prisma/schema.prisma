@@ -442,6 +442,7 @@ model ResearchProposal {
   hostOrganizationUnit   OrganizationUnit          @relation(fields: [hostOrganizationUnitId], references: [id])
   researchFieldCode      String?                   @map("research_field_code")
   proposalTypeCode       String?                   @map("proposal_type_code")
+  proposalNatureCode     String?                   @map("proposal_nature_code")
   title                  String
   objectives             String?
   summary                String?

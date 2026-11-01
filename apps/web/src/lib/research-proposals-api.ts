@@ -164,6 +164,7 @@ export type ResearchProposal = {
   hostOrganizationUnitId: string;
   researchFieldCode: string;
   proposalTypeCode: string;
+  proposalNatureCode: string;
   title: string;
   objectives: string;
   summary: string;
@@ -211,6 +212,7 @@ export type ProposalDraftInput = {
   title: string;
   researchFieldCode?: string;
   proposalTypeCode?: string;
+  proposalNatureCode?: string;
   startDate?: string;
   endDate?: string;
   objectives?: string;
