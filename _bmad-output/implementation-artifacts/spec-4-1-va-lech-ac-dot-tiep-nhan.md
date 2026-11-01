@@ -60,6 +60,23 @@ context:
 - Given mã đợt đã tồn tại, when tạo hoặc sửa, then trả 409 gắn trường `code`.
 - Given thao tác mở hoặc đóng từ danh sách thất bại hoặc thành công, then panel hiển thị kết quả.
 
+## Review Triage Log
+
+| Finding | Verdict | Bằng chứng / xử lý |
+|---|---|---|
+| Actor không có quyền gửi version cũ nhận 404/409, không audit, lộ đợt | medium, patch | Đã sửa: `assertCanManageIntakePeriods` chạy đầu `mutate`; test thêm ca TB gửi version cũ nhận 403. |
+| Đợt `open` đã hết hạn báo "đang mở" thay vì hết hạn | low, patch | Đã đảo thứ tự kiểm tra trong `openPeriod`. |
+| Audit từ chối luôn ghi `ACTION_NOT_GRANTED` | low, patch | Đã sửa: lấy `code` của lỗi, mặc định `ACTION_NOT_GRANTED`. |
+| Nhận diện P2002 `includes("code")` mong manh | low, patch | Đã sửa: duỗi `meta.target`, so khớp tên cột/chỉ mục `code`. |
+| `listError` và `message` cũ còn khi gửi form mới | low, patch | Đã `setListError("")` đầu `handleSubmit`. |
+| Thiếu test update before/after, close before/after, mã trùng khi update | medium, patch | Đã mở rộng ca test (kèm kiểm tra `reason`). |
+| `epic-4-context` Readiness còn ghi "checklist, loại" | low, patch | Đã sửa câu. |
+| Chỉ 403 được audit, 400/404/409 không | low, defer | Ngoài AC (AC nói từ chối do policy). |
+| Test scope-denied và UI render | medium, defer | Cần fixture đợt có đơn vị; repo chưa có harness render. |
+| `auditReason` có thể lớn, `requiredPackage` đầy đủ | low, false | `requiredPackage` chỉ chứa mã, nhãn, `templateFileId`; không có object key. |
+| CV scope hẹp vẫn tạo đợt toàn Học viện | false | Quyết định đã ghi trong spec (giữ như hiện nay). |
+| `refresh()` lỗi sau khi lưu rơi vào `formError` | low, defer | Hiếm gặp, sửa cần tách luồng làm mới. |
+
 ## Implementation Notes
 
 ## Verification

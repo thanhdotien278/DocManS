@@ -56,6 +56,8 @@ export class ProposalIntakePeriodsService {
     const uploadedKeys: string[] = [];
     try {
       return await runProposalMutation(this.prisma, actor, null, undefined, async (tx, currentActor) => {
+        // Kiểm tra quyền trước khi khóa/đọc đợt để actor không có quyền không nhận 404/409 làm lộ đợt.
+        assertCanManageIntakePeriods(currentActor);
         if (periodId) {
           await tx.$queryRaw`SELECT id FROM proposal_intake_periods WHERE id = ${periodId} FOR UPDATE`;
           const period = await tx.proposalIntakePeriod.findUnique({ where: { id: periodId } });
@@ -71,10 +73,10 @@ export class ProposalIntakePeriodsService {
       await Promise.allSettled(uploadedKeys.map((key) => this.storage.deleteObject(key)));
       // Giao dịch đã rollback nên audit từ chối phải ghi ngoài giao dịch.
       if (error instanceof ForbiddenException) {
-        await this.auditLog.record({ action, result: "failure", actorId: actor.id, targetEntity: "proposal-intake-period", targetEntityId: periodId ?? undefined, username: actor.username, reason: "ACTION_NOT_GRANTED" }).catch(() => undefined);
+        await this.auditLog.record({ action, result: "failure", actorId: actor.id, targetEntity: "proposal-intake-period", targetEntityId: periodId ?? undefined, username: actor.username, reason: String((error.getResponse() as { code?: unknown })?.code ?? "ACTION_NOT_GRANTED") }).catch(() => undefined);
       }
       const prismaError = error as { code?: string; meta?: { target?: unknown } };
-      if (prismaError.code === "P2002" && String(prismaError.meta?.target ?? "").includes("code")) throw new ConflictException({ code: "INTAKE_CODE_EXISTS", field: "code", message: "Mã đợt tiếp nhận đã tồn tại." });
+      if (prismaError.code === "P2002" && [prismaError.meta?.target].flat().some((target) => /(^|_)code(_|$)/.test(String(target)))) throw new ConflictException({ code: "INTAKE_CODE_EXISTS", field: "code", message: "Mã đợt tiếp nhận đã tồn tại." });
       throw error;
     }
   }
@@ -274,8 +276,8 @@ export class ProposalIntakePeriodsService {
     assertCanManageIntakePeriods(actor);
     const existing = await this.findPeriod(periodId);
     this.assertIntakeScope(actor, existing);
-    if (existing.status === "open") throw new BadRequestException({ message: "Đợt tiếp nhận đang mở." });
     if (existing.status === "closed" || existing.endsAt <= new Date()) throw new BadRequestException({ message: "Không thể mở đợt đã đóng hoặc hết hạn." });
+    if (existing.status === "open") throw new BadRequestException({ message: "Đợt tiếp nhận đang mở." });
     assertDateRange(existing.startsAt, existing.endsAt);
 
     if (normalizeRequiredPackage(existing.requiredPackage).length === 0) {
