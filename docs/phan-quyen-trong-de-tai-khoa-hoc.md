@@ -447,7 +447,7 @@ Bảng 7.1 so sánh vai trò trong hồ sơ (persona), không phải vai trò h�
 | Quản trị tài khoản, đơn vị, danh mục, cấu hình | ✓ | — | — | — | — | — | — | — | — | — |
 | Quản lý hồ sơ nhà khoa học | ✓ | — | — | — | ✓¹ | — | — | ✓¹ | — | — |
 | Có lý lịch khoa học, tự cập nhật | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Tạo, mở, đóng đợt tiếp nhận (chặn mở đợt khi chưa có CV phụ trách, D-038) | — | — | — | — | ✓ | — | — | ✓ | — | — |
+| Tạo, mở, đóng đợt tiếp nhận (TP mở đợt chưa có CV thì bị chặn; CV mở thì hệ thống gán chính CV đó, D-038) | — | — | — | — | ✓ | — | — | ✓ | — | — |
 | Giao hoặc đổi CV phụ trách cho đợt tiếp nhận (D-038) | — | — | — | — | ✓ | — | — | — | — | — |
 | Tạo, sửa, nộp đề xuất (tư cách chủ nhiệm) | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | Giao chuyên viên phụ trách hồ sơ (TP: cho đợt hoặc từng hồ sơ; TB: từng hồ sơ, D-038) | — | — | — | — | ✓¹ | — | ✓¹ | — | — | — |

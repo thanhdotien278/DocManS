@@ -141,7 +141,7 @@ trạng thái workflow và chính sách xung đột.
 
 | Loại vai trò | Ví dụ | Phạm vi | Giới hạn quan trọng |
 | --- | --- | --- | --- |
-| Trách nhiệm quản lý | `PROPOSAL_MANAGEMENT_OFFICER`, `PROJECT_MANAGEMENT_OFFICER` (một CV) | Một hồ sơ/đề tài | Tối đa một CV phụ trách hiện hành mỗi bản ghi; CV của đợt tiếp nhận tự áp dụng cho hồ sơ nộp trong đợt (TP giao, D-038), TP/TB giao/chuyển/thu hồi theo từng hồ sơ; giữ lịch sử/audit. |
+| Trách nhiệm quản lý | `PROPOSAL_MANAGEMENT_OFFICER`, `PROJECT_MANAGEMENT_OFFICER` (một CV) | Một hồ sơ/đề tài | Tối đa một CV phụ trách hiện hành mỗi bản ghi; CV của đợt tiếp nhận tự áp dụng cho hồ sơ nộp trong đợt (TP giao hoặc CV mở đợt, D-038), TP/TB giao/chuyển/thu hồi theo từng hồ sơ; giữ lịch sử/audit. |
 | Tham gia hồ sơ đề xuất | `PROPOSAL_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | Một hồ sơ | Không truy cập hồ sơ không liên quan; PI suy ra từ `ownerId`. |
 | Tham gia đề tài đã duyệt | `TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | Một đề tài | Phụ thuộc quan hệ đang hiệu lực và trạng thái workflow. |
 | Phân công đánh giá | Phản biện / thành viên hội đồng đánh giá | Một hồ sơ | Mời từ mọi tài khoản có lý lịch khoa học (mọi vai trò trừ QT, kể cả GĐ, PGĐ, TP, PP, TB, CV); phải nhận lời; chấm phiếu; đọc được hồ sơ ngoài đơn vị. |
@@ -203,7 +203,7 @@ không bao giờ dùng ủy quyền. Dữ liệu capability trên UI tự nó kh
 | Trạng thái | Ý nghĩa phân quyền |
 | --- | --- |
 | Nháp | Nội dung nháp chỉ do chủ nhiệm hiện hành tạo/sửa (mọi vai trò trừ QT/NNB); thành viên, thư ký, người được ủy quyền hay người quản lý không sửa hoặc nộp thay. |
-| Đợt đang mở | Đợt do TP hoặc CV tạo/mở/đóng; mọi vai trò trừ QT và NNB đều xem được. Đợt chưa có CV phụ trách (do TP giao) thì chưa được mở (D-038). |
+| Đợt đang mở | Đợt do TP hoặc CV tạo/mở/đóng; mọi vai trò trừ QT và NNB đều xem được. TP mở đợt chưa có CV phụ trách thì bị chặn; CV mở đợt chưa có CV thì hệ thống gán chính CV đó làm CV phụ trách của đợt (D-038). |
 | Đợt đã đóng | Chặn nộp mới; quyền đọc vẫn theo phạm vi. |
 | Đã nộp | Khóa sửa nháp; hệ thống áp dụng CV phụ trách của đợt tiếp nhận cho hồ sơ (D-038); "Chưa có người phụ trách" chỉ còn khi TP/TB thu hồi CV mà chưa giao lại. |
 | Cần bổ sung | Chủ nhiệm chỉ sửa nội dung hoặc file được yêu cầu theo workflow. |
@@ -235,7 +235,7 @@ bao giờ tạo ra vai trò hệ thống mới.
 | Có lý lịch khoa học, tự cập nhật | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Quản lý văn bản khoa học | ✓ | — | — | — | ✓ | — | ✓ | ✓ | — | — |
 | **Đợt tiếp nhận** | | | | | | | | | | |
-| Tạo, mở, đóng đợt (chặn mở đợt khi chưa có CV phụ trách, D-038) | — | — | — | — | ✓ | — | — | ✓ | — | — |
+| Tạo, mở, đóng đợt (TP mở đợt chưa có CV thì bị chặn; CV mở thì hệ thống gán chính CV đó, D-038) | — | — | — | — | ✓ | — | — | ✓ | — | — |
 | Giao hoặc đổi CV phụ trách cho đợt tiếp nhận (D-038) | — | — | — | — | ✓ | — | — | — | — | — |
 | Xem đợt đang mở | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | **Hồ sơ đề xuất** | | | | | | | | | | |
@@ -422,7 +422,7 @@ Các bảng phân hệ dùng cùng nhóm cột như §8. Khi một dòng ở đ�
 
 | Thao tác | QT | Phòng KHQS | BGĐ | Chủ nhiệm | Nhóm đề tài | Phản biện / Hội đồng | Phạm vi | Trạng thái | Audit | Nguồn yêu cầu |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Tạo/sửa/mở/đóng đợt tiếp nhận (chặn mở đợt khi chưa có CV phụ trách, D-038) | Không | TP, CV | Không | Không | Không | Không | Đơn vị | Nháp, đang mở | Có | FR9, Story 2.1 |
+| Tạo/sửa/mở/đóng đợt tiếp nhận (TP mở đợt chưa có CV thì bị chặn; CV mở thì hệ thống gán chính CV đó, D-038) | Không | TP, CV | Không | Không | Không | Không | Đơn vị | Nháp, đang mở | Có | FR9, Story 2.1 |
 | Liệt kê đợt đang mở | Không | Xem | Xem | Xem đợt áp dụng (trừ NNB) | Không | Không | Đơn vị | Đang mở | Không | FR9, Story 2.1 |
 | Tạo/sửa nháp đề xuất | Không | Không từ vai trò quản lý | Không từ vai trò quản lý | Của mình (mọi vai trò trừ QT/NNB) | Không | Không | Hồ sơ của mình | Đang mở, nháp | Có | FR10, FR11, Story 2.2 |
 | Tải lên file đính kèm đề xuất | Không | Không | Không | Tạo của mình | Thư ký: Tạo; Thành viên: Không | Không | Quan hệ với hồ sơ | Nháp, cần bổ sung | Có | FR12, FR36, Story 2.3 |

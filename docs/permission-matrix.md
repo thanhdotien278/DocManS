@@ -142,7 +142,7 @@ conflict policy.
 
 | Role Type | Examples | Scope Boundary | Important Limits |
 | --- | --- | --- | --- |
-| Management responsibility | `PROPOSAL_MANAGEMENT_OFFICER`, `PROJECT_MANAGEMENT_OFFICER` (a CV) | One proposal/project | At most one active responsible CV per record; CV của đợt tiếp nhận tự áp dụng cho hồ sơ nộp trong đợt (TP giao, D-038), TP/TB giao/chuyển/thu hồi theo từng hồ sơ; history/audit retained. |
+| Management responsibility | `PROPOSAL_MANAGEMENT_OFFICER`, `PROJECT_MANAGEMENT_OFFICER` (a CV) | One proposal/project | At most one active responsible CV per record; CV của đợt tiếp nhận tự áp dụng cho hồ sơ nộp trong đợt (TP giao hoặc CV mở đợt, D-038), TP/TB giao/chuyển/thu hồi theo từng hồ sơ; history/audit retained. |
 | Proposal participation | `PROPOSAL_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | One proposal | No access to unrelated proposals; PI is derived from `ownerId`. |
 | Approved-topic participation | `TOPIC_PI`, `TOPIC_SECRETARY`, `TOPIC_MEMBER` | One approved topic | Depends on active relationship and workflow state. |
 | Review assignment | Evaluation reviewer / evaluation council member | One proposal | Invited from any account with a scientific CV (every role except QT, including GĐ, PGĐ, TP, PP, TB, CV); must accept invitation; scores; reads records outside own unit. |
@@ -205,7 +205,7 @@ never grants an action by itself.
 | State Rule | Authorization Meaning |
 | --- | --- |
 | Draft | Proposal draft content may be created or updated only by its current PI (any role except QT/NNB); no team member, secretary, delegate or manager edits or submits it. |
-| Open intake | Intake periods created/opened/closed by TP or CV; visible to every role except QT and NNB. Đợt chưa có CV phụ trách (do TP giao) thì chưa được mở (D-038). |
+| Open intake | Intake periods created/opened/closed by TP or CV; visible to every role except QT and NNB. TP mở đợt chưa có CV phụ trách thì bị chặn; CV mở đợt chưa có CV thì hệ thống gán chính CV đó làm CV phụ trách của đợt (D-038). |
 | Closed intake | New submissions are blocked; read access remains scope-controlled. |
 | Submitted | Locked from draft edits; hệ thống áp dụng CV phụ trách của đợt tiếp nhận cho hồ sơ (D-038); "Chưa có người phụ trách" chỉ còn khi TP/TB thu hồi CV mà chưa giao lại. |
 | Needs supplement | PI may revise only the requested content or files allowed by workflow. |
@@ -237,8 +237,8 @@ never creates a new system role.
 | Có lý lịch khoa học, tự cập nhật | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Quản lý văn bản khoa học | ✓ | — | — | — | ✓ | — | ✓ | ✓ | — | — |
 | **Đợt tiếp nhận** | | | | | | | | | | |
-| Tạo, mở, đóng đợt (chặn mở đợt khi chưa có CV phụ trách, D-038) | — | — | — | — | ✓ | — | — | ✓ | — | — |
-| Giao hoặc đổi CV phụ trách cho đợt tiếp nhận (D-038) | — | — | — | — | ✓ | — | — | — | — | — |
+| Tạo, mở, đóng đợt (TP mở đợt chưa có CV thì bị chặn; CV mở thì hệ thống gán chính CV đó, D-038) | — | — | — | — | ✓ | — | — | ✓ | — | — |
+| Giao hoặc đổi CV phụ trách cho đợt tiếp nhận (D-038; CV mở đợt chưa có CV do hệ thống gán, không phải CV tự giao) | — | — | — | — | ✓ | — | — | — | — | — |
 | Xem đợt đang mở | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | **Hồ sơ đề xuất** | | | | | | | | | | |
 | Tạo, sửa, nộp đề xuất (tư cách chủ nhiệm) | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
@@ -427,7 +427,7 @@ Module tables use the same column groups as §8. Where a module row and §7 disa
 
 | Action | QT | Phòng KHQS | BGĐ | PI | Topic Team | Reviewer / Council | Scope Rule | State Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Create/update/open/close intake period (chặn mở đợt khi chưa có CV phụ trách, D-038) | None | TP, CV | None | None | None | None | Unit scope | Draft, open intake | Yes | FR9, Story 2.1 |
+| Create/update/open/close intake period (TP mở đợt chưa có CV thì bị chặn; CV mở thì hệ thống gán chính CV đó, D-038) | None | TP, CV | None | None | None | None | Unit scope | Draft, open intake | Yes | FR9, Story 2.1 |
 | List open intake periods | None | Read | Read | Read applicable (not NNB) | None | None | Unit scope | Open intake | No | FR9, Story 2.1 |
 | Create/update proposal draft | None | None from management role | None from management role | Own (any role except QT/NNB) | None | None | Own proposal scope | Open intake, draft | Yes | FR10, FR11, Story 2.2 |
 | Upload proposal attachment | None | None | None | Create own | Secretary: Create; Member: None | None | Proposal relationship scope | Draft, needs supplement | Yes | FR12, FR36, Story 2.3 |
