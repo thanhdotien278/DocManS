@@ -44,12 +44,16 @@ type IntakePeriodRecord = {
   applicableOrganizationUnitIds: string[];
   responsibleOfficerUserId?: string | null;
   responsibleOfficerAssignedById?: string | null;
-  responsibleOfficer?: { id: string; displayName: string } | null;
+  responsibleOfficer?: OfficerNameRow | null;
   createdAt: Date;
   updatedAt: Date;
 };
 
-const PERIOD_INCLUDE = { responsibleOfficer: { select: { id: true, displayName: true } } };
+type OfficerNameRow = { id: string; displayName: string; researcherProfile?: { fullName: string } | null };
+const OFFICER_NAME_SELECT = { id: true, displayName: true, researcherProfile: { select: { fullName: true } } };
+const PERIOD_INCLUDE = { responsibleOfficer: { select: OFFICER_NAME_SELECT } };
+// Tên hiển thị lấy từ hồ sơ khoa học như các màn hồ sơ đề xuất.
+const officerName = (user: OfficerNameRow | null | undefined) => user?.researcherProfile?.fullName || user?.displayName || "";
 
 @Injectable()
 export class ProposalIntakePeriodsService {
@@ -154,7 +158,8 @@ export class ProposalIntakePeriodsService {
 
   async officerCandidates(actor: SafeUserContext) {
     if (!isResearchManagementHead(actor)) throw new ForbiddenException({ message: "Chỉ trưởng phòng được chọn chuyên viên phụ trách đợt." });
-    return this.prisma.user.findMany({ where: this.officerCandidateWhere(actor), select: { id: true, displayName: true }, orderBy: [{ displayName: "asc" }, { id: "asc" }] });
+    const users = (await this.prisma.user.findMany({ where: this.officerCandidateWhere(actor), select: OFFICER_NAME_SELECT })) as OfficerNameRow[];
+    return users.map((user) => ({ id: user.id, displayName: officerName(user) })).sort((a, b) => a.displayName.localeCompare(b.displayName, "vi") || a.id.localeCompare(b.id));
   }
 
   /** undefined = không đổi. Chỉ TP được đổi; CV gửi giá trị khác hiện tại bị 403. */
@@ -479,7 +484,7 @@ export class ProposalIntakePeriodsService {
       applicableOrganizationUnitId: period.applicableOrganizationUnitId ?? "",
       requiredPackage: normalizeRequiredPackage(period.requiredPackage),
       // Chỉ phòng QLKH thấy CV của đợt; hiển thị cho PI thuộc phần việc khác.
-      responsibleOfficer: isResearchManagement(actor) && period.responsibleOfficerUserId ? { userId: period.responsibleOfficerUserId, displayName: period.responsibleOfficer?.displayName ?? "" } : null,
+      responsibleOfficer: isResearchManagement(actor) && period.responsibleOfficerUserId ? { userId: period.responsibleOfficerUserId, displayName: officerName(period.responsibleOfficer) } : null,
       createdAt: period.createdAt.toISOString(),
       updatedAt: period.updatedAt.toISOString()
     };
