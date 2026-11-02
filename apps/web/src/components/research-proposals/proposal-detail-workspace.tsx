@@ -541,13 +541,13 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                 <label className="field">
                   <span>Loại đề tài</span>
                   <select disabled={!canEditAllFields} value={form.proposalTypeCode} onChange={(event) => setForm({ ...form, proposalTypeCode: event.target.value })}>
-                    {!form.proposalTypeCode ? <option value="">Chọn loại đề tài</option> : null}{catalogs.filter((item) => item.type === "proposal-type" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
+                    {catalogs.filter((item) => item.type === "proposal-type" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
                   </select>
                 </label>
                 <label className="field">
                   <span>Tính chất đề tài</span>
                   <select disabled={!canEditAllFields} value={form.proposalNatureCode} onChange={(event) => setForm({ ...form, proposalNatureCode: event.target.value })}>
-                    {!form.proposalNatureCode ? <option value="">Chọn tính chất</option> : null}{catalogs.filter((item) => item.type === "proposal-nature" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
+                    {catalogs.filter((item) => item.type === "proposal-nature" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
                   </select>
                 </label>
               </div>
