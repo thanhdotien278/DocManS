@@ -1333,14 +1333,7 @@ export class ResearchProposalsService {
     }
 
     const isSecretary = participation?.roles.includes("TOPIC_SECRETARY") ?? false;
-    if (proposal.ownerId !== actor.id && !isSecretary) return false;
-
-    try {
-      assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
-      return true;
-    } catch {
-      return false;
-    }
+    return proposal.ownerId === actor.id || isSecretary;
   }
 
   /** Chỉ để hiển thị capability; backend vẫn kiểm lại khi mời. Cấu hình hỏng → mặc định (hiển thị), không chặn danh sách. */
@@ -1466,12 +1459,8 @@ export class ResearchProposalsService {
       return false;
     }
 
-    try {
-      assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
-      return true;
-    } catch {
-      return false;
-    }
+    // Đơn vị chủ trì do PI tự chọn từ danh mục nên không đòi PI thuộc đơn vị đó.
+    return true;
   }
 
   private toManagementOfficerResponse(resolution?: ProposalManagementOfficerResolution, history: ProposalManagementOfficer[] = []) {
