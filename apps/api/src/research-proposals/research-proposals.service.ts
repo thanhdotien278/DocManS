@@ -87,7 +87,7 @@ type ResearchProposalRecord = {
   authorizationContextUpdatedAt: Date;
   createdAt: Date;
   updatedAt: Date;
-  owner?: { displayName: string } | null;
+  owner?: { displayName: string; researcherProfile?: { fullName: string } | null } | null;
 };
 
 type ProposalMemberRecord = {
@@ -125,6 +125,7 @@ type ProposalAttachmentRecord = {
   updatedAt: Date;
   uploadedBy?: {
     displayName: string;
+    researcherProfile?: { fullName: string } | null;
   } | null;
 };
 
@@ -179,7 +180,7 @@ export class ResearchProposalsService {
   async listProposals(actor: SafeUserContext) {
     const records = (await this.prisma.researchProposal.findMany({
       orderBy: { createdAt: "desc" },
-      include: { owner: { select: { displayName: true } } }
+      include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } } }
     })) as ResearchProposalRecord[];
     return this.projectProposalList(actor, records);
   }
@@ -196,7 +197,7 @@ export class ResearchProposalsService {
         status: { in: ["ready_for_approval", "approved", "rejected"] }
       },
       orderBy: { createdAt: "desc" },
-      include: { owner: { select: { displayName: true } } }
+      include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } } }
     })) as ResearchProposalRecord[];
     // Hồ sơ chờ phê duyệt chỉ vào hàng đợi của GĐ khi tờ trình đã qua TB và TP (5.7).
     const stages = await pendingApprovalStages(this.prisma as never, "proposal", records.filter((r) => r.status === "ready_for_approval").map((r) => r.id));
@@ -875,7 +876,7 @@ export class ResearchProposalsService {
   private async findProposal(proposalId: string) {
     const proposal = (await this.prisma.researchProposal.findUnique({
       where: { id: proposalId },
-      include: { owner: { select: { displayName: true } } }
+      include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } } }
     })) as ResearchProposalRecord | null;
 
     if (!proposal) {
@@ -1164,7 +1165,7 @@ export class ResearchProposalsService {
       orderBy: { createdAt: "asc" },
       include: {
         uploadedBy: {
-          select: { displayName: true }
+          select: { displayName: true, researcherProfile: { select: { fullName: true } } }
         }
       }
     })) as ProposalAttachmentRecord[];
@@ -1245,6 +1246,10 @@ export class ResearchProposalsService {
     resolvedManagementOfficer?: ProposalManagementOfficerResolution,
     evaluationSummaryStatus?: string | null
   ) {
+    // Các luồng ghi (lưu nháp, nộp...) trả bản ghi không kèm chủ hồ sơ nên nạp lại để có tên hiển thị.
+    if (proposal.owner === undefined) {
+      proposal = { ...proposal, owner: await this.prisma.user.findUnique({ where: { id: proposal.ownerId }, select: { displayName: true, researcherProfile: { select: { fullName: true } } } }) };
+    }
     const members = await this.findMembers(proposal.id);
     const participation = resolvedParticipation ?? (await this.participation.resolveForProposal(actor?.id, proposal, members));
     const reviewAccess = resolvedReviewAccess ?? (await this.reviewAccess.resolveForProposal(actor?.id, proposal.id));
@@ -1393,7 +1398,7 @@ export class ResearchProposalsService {
       id: proposal.id,
       code: proposal.code ?? "",
       intakePeriodId: proposal.intakePeriodId,
-      ...(reviewAccess?.isAssignedReviewer && !participation?.isParticipant ? {} : { ownerId: proposal.ownerId, ownerDisplayName: proposal.owner?.displayName ?? "" }),
+      ...(reviewAccess?.isAssignedReviewer && !participation?.isParticipant ? {} : { ownerId: proposal.ownerId, ownerDisplayName: proposal.owner?.researcherProfile?.fullName || proposal.owner?.displayName || "" }),
       hostOrganizationUnitId: proposal.hostOrganizationUnitId,
       researchFieldCode: proposal.researchFieldCode ?? "",
       proposalTypeCode: proposal.proposalTypeCode ?? "",
@@ -1509,7 +1514,7 @@ export class ResearchProposalsService {
       mimeType: attachment.mimeType,
       sizeBytes: attachment.sizeBytes,
       uploadedById: attachment.uploadedById,
-      uploaderDisplayName: attachment.uploadedBy?.displayName ?? "",
+      uploaderDisplayName: attachment.uploadedBy?.researcherProfile?.fullName || attachment.uploadedBy?.displayName || "",
       status: attachment.status,
       createdAt: attachment.createdAt.toISOString(),
       updatedAt: attachment.updatedAt.toISOString(),
