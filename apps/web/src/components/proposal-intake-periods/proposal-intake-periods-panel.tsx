@@ -10,6 +10,7 @@ import { formatIntakeDate as formatDate, toIntakeDateInput as toDateInput, intak
 import {
   closeProposalIntakePeriod,
   intakeTemplateUrl,
+  loadIntakeOfficerCandidates,
   loadIntakeOptions,
   type IntakeOptions,
   createProposalIntakePeriod,
@@ -35,6 +36,7 @@ const emptyForm = {
   endsAt: "",
   applicableOrganizationUnitId: "",
   applicableOrganizationUnitIds: [] as string[],
+  responsibleOfficerUserId: "",
   requiredPackage: defaultPackage
 };
 
@@ -52,12 +54,14 @@ export function ProposalIntakePeriodsPanel() {
   const [listError, setListError] = useState("");
   const [fileInputVersion, setFileInputVersion] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [officerCandidates, setOfficerCandidates] = useState<Array<{ id: string; displayName: string }>>([]);
 
   async function refresh() {
     setState("loading");
     try {
       const [periods, available] = await Promise.all([loadProposalIntakePeriods(), loadIntakeOptions()]);
       setPeriods(periods); setOptions(available);
+      if (available.canChooseOfficer) setOfficerCandidates(await loadIntakeOfficerCandidates().catch(() => []));
       setState("ready");
     } catch {
       setState("error");
@@ -95,6 +99,7 @@ export function ProposalIntakePeriodsPanel() {
       endsAt: toDateInput(period.endsAt),
       applicableOrganizationUnitId: period.applicableOrganizationUnitId,
       applicableOrganizationUnitIds: period.applicableOrganizationUnitIds,
+      responsibleOfficerUserId: period.responsibleOfficer?.userId ?? "",
       requiredPackage: period.requiredPackage.length ? period.requiredPackage : defaultPackage
     });
     setMessage("");
@@ -124,13 +129,16 @@ export function ProposalIntakePeriodsPanel() {
       const uploadIndex = file ? files.push(file) - 1 : undefined;
       return { ...item, fileName: file?.name || item.fileName, label: (file?.name || item.fileName || item.label).slice(0, 160), uploadIndex };
     });
+    // Chỉ TP gửi CV phụ trách; CV gửi giá trị khác hiện tại sẽ bị backend từ chối.
+    const { responsibleOfficerUserId, ...fields } = form;
+    const input = { ...fields, ...(options.canChooseOfficer ? { responsibleOfficerUserId: responsibleOfficerUserId || null } : {}) };
     setIsSubmitting(true);
     try {
       if (editingId) {
-        await updateProposalIntakePeriod(editingId, { ...form, requiredPackage, applicableOrganizationUnitId: undefined, startsAt: intakeDateToIso(form.startsAt), endsAt: intakeDateToIso(form.endsAt, true), contextVersion: periods.find((p) => p.id === editingId)?.contextVersion }, files);
+        await updateProposalIntakePeriod(editingId, { ...input, requiredPackage, applicableOrganizationUnitId: undefined, startsAt: intakeDateToIso(form.startsAt), endsAt: intakeDateToIso(form.endsAt, true), contextVersion: periods.find((p) => p.id === editingId)?.contextVersion }, files);
         setMessage("Đã cập nhật đợt tiếp nhận.");
       } else {
-        await createProposalIntakePeriod({ ...form, requiredPackage, applicableOrganizationUnitId: undefined, startsAt: intakeDateToIso(form.startsAt), endsAt: intakeDateToIso(form.endsAt, true) }, files);
+        await createProposalIntakePeriod({ ...input, requiredPackage, applicableOrganizationUnitId: undefined, startsAt: intakeDateToIso(form.startsAt), endsAt: intakeDateToIso(form.endsAt, true) }, files);
         setMessage("Đã tạo đợt tiếp nhận.");
       }
       setShowCreate(false);
@@ -144,7 +152,14 @@ export function ProposalIntakePeriodsPanel() {
   }
 
   async function handleStatusAction(period: ProposalIntakePeriod, action: "open" | "close") {
-    if (isSubmitting || !window.confirm(action === "close" ? "Đóng đợt tiếp nhận? Các hồ sơ đã nộp vẫn tiếp tục được xử lý." : "Mở đợt tiếp nhận?")) return;
+    if (action === "open" && !period.responsibleOfficer && options.canChooseOfficer) {
+      setListError("Cần chọn chuyên viên phụ trách trước khi mở đợt.");
+      return;
+    }
+    const openPrompt = !period.responsibleOfficer && !options.canChooseOfficer
+      ? "Đợt chưa có chuyên viên phụ trách. Khi mở, bạn sẽ trở thành chuyên viên phụ trách của đợt này. Tiếp tục?"
+      : "Mở đợt tiếp nhận?";
+    if (isSubmitting || !window.confirm(action === "close" ? "Đóng đợt tiếp nhận? Các hồ sơ đã nộp vẫn tiếp tục được xử lý." : openPrompt)) return;
     setIsSubmitting(true);
     setMessage("");
     setListError("");
@@ -197,6 +212,7 @@ export function ProposalIntakePeriodsPanel() {
                     <th>Hiệu lực</th>
                     <th>Phạm vi</th>
                     <th>Tệp bắt buộc</th>
+                    <th>CV phụ trách</th>
                     <th>Trạng thái</th>
                     <th>Thao tác</th>
                   </tr>
@@ -213,6 +229,7 @@ export function ProposalIntakePeriodsPanel() {
                       </td>
                       <td>{period.applicableOrganizationUnitIds?.map((id) => options.organizationUnits.find((u) => u.id === id)?.name ?? id).join(", ") || "Toàn Học viện"}</td>
                       <td>{period.requiredPackage.map((item, index) => <span key={item.code}>{index > 0 ? ", " : ""}{item.templateFileId ? <a href={intakeTemplateUrl(period.id, item.templateFileId)} title={item.description}>{item.fileName || item.label}</a> : item.label}</span>)}</td>
+                      <td>{period.responsibleOfficer?.displayName || "Chưa chọn"}</td>
                       <td>
                         <StatusBadge status={period.status} />
                       </td>
@@ -253,6 +270,7 @@ export function ProposalIntakePeriodsPanel() {
                   <span className="record-meta">
                     {formatDate(period.startsAt)} - {formatDate(period.endsAt)}
                   </span>
+                  <span className="record-meta">CV phụ trách: {period.responsibleOfficer?.displayName || "Chưa chọn"}</span>
                   <span className="record-meta">{period.requiredPackage.map((item, index) => <span key={item.code}>{index > 0 ? ", " : ""}{item.templateFileId ? <a href={intakeTemplateUrl(period.id, item.templateFileId)} title={item.description}>{item.fileName || item.label}</a> : item.label}</span>)}</span>
                   <div className="button-row">
                     <button className="button" type="button" disabled={isSubmitting || !period.capabilities?.canEdit} onClick={() => startEdit(period)}>
@@ -313,6 +331,17 @@ export function ProposalIntakePeriodsPanel() {
             <span>Không chọn đơn vị: Toàn Học viện.</span>
             <button className="button" type="button" onClick={() => setForm({ ...form, applicableOrganizationUnitIds: [] })}>Toàn Học viện</button>
           </label>
+          {options.canChooseOfficer ? (
+            <label className="field">
+              <span>Chuyên viên phụ trách</span>
+              <select value={form.responsibleOfficerUserId} onChange={(event) => setForm({ ...form, responsibleOfficerUserId: event.target.value })}>
+                <option value="">Chưa chọn</option>
+                {form.responsibleOfficerUserId && !officerCandidates.some((user) => user.id === form.responsibleOfficerUserId) ? <option value={form.responsibleOfficerUserId}>{periods.find((p) => p.id === editingId)?.responsibleOfficer?.displayName || form.responsibleOfficerUserId}</option> : null}
+                {officerCandidates.map((user) => <option key={user.id} value={user.id}>{user.displayName}</option>)}
+              </select>
+              <span>Bắt buộc trước khi trưởng phòng mở đợt. Đổi chuyên viên sẽ chuyển các hồ sơ đã nộp đang do chuyên viên cũ phụ trách hoặc chưa có người phụ trách.</span>
+            </label>
+          ) : null}
           <div className="form-section-inline">
             <div className="section-mini-heading">
               <CalendarClock size={16} aria-hidden="true" />

@@ -213,3 +213,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-4-dinh-kem-va-quan-ly-tep-de-xuat.md`
   summary: Thêm test migration backfill `document_type`/`version` và cân nhắc index (entity, document_type) cho `file_records`.
   evidence: Migration `20261101130000_file_document_type_version` chưa có test SQL; mock prisma không chạy SQL.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-7-cv-phu-trach-theo-dot-tiep-nhan.md`
+  summary: Sửa fixture lỗi thời của `tests/proposals-ep02.test.mjs` để 9 test cũ chạy lại (contextVersion ở các lời gọi mở/đóng/sửa đợt trong thân test cũ, `catalogItem` khi tạo nháp, các bảng quy trình phê duyệt…).
+  evidence: Baseline 1/10 pass; sau 4.7 vẫn 9 test cũ hỏng vì fixture, test mới của 4.7 pass. `proposals-ep03` (1/26) và `proposals-st30` (12/19) không đổi so với baseline.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-7-cv-phu-trach-theo-dot-tiep-nhan.md`
+  summary: Ứng viên CV phụ trách đợt đang lọc theo phạm vi của TP, không theo đơn vị áp dụng của đợt; có thể chọn CV không có phạm vi trên hồ sơ của đợt.
+  evidence: Chưa xác minh (có thể medium) — cần kiểm tra CV được gán qua `ProposalManagementOfficer` có thao tác được hồ sơ ngoài `organizationScopes` của mình hay không.

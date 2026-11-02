@@ -8,11 +8,16 @@ import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import {
   assertHasOrganizationScope,
   assertCanManageIntakePeriods,
+  getOrganizationScopeIds,
   intakeAppliesToUser,
   isIntakeOpenForSubmission,
   isInternalResearcherEligible,
   isResearchManagement,
+  isResearchManagementHead,
 } from "../proposals-shared/proposal-access.js";
+import { ProposalManagementOfficerService, replaceProposalManagementOfficer } from "../proposals-shared/proposal-management-officer.service.js";
+import { readTransactionClockV1 } from "../permissions/authorization-v1.service.js";
+import { PROPOSAL_STATUS } from "../proposals-shared/proposal-workflow.js";
 import type { IntakeStatus } from "../proposals-shared/proposal-types.js";
 import {
   assertDateRange,
@@ -37,9 +42,14 @@ type IntakePeriodRecord = {
   applicableOrganizationUnitId: string | null;
   requiredPackage: unknown;
   applicableOrganizationUnitIds: string[];
+  responsibleOfficerUserId?: string | null;
+  responsibleOfficerAssignedById?: string | null;
+  responsibleOfficer?: { id: string; displayName: string } | null;
   createdAt: Date;
   updatedAt: Date;
 };
+
+const PERIOD_INCLUDE = { responsibleOfficer: { select: { id: true, displayName: true } } };
 
 @Injectable()
 export class ProposalIntakePeriodsService {
@@ -135,7 +145,50 @@ export class ProposalIntakePeriodsService {
   async options(actor: SafeUserContext) {
     if (!isResearchManagement(actor) && !isInternalResearcherEligible(actor)) throw new ForbiddenException();
     const ids = actor.organizationScopes.map((s) => s.id);
-    return { canCreate: isResearchManagement(actor), organizationUnits: await this.prisma.organizationUnit.findMany({ where: { id: { in: ids }, status: "active" }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }) };
+    return { canCreate: isResearchManagement(actor), canChooseOfficer: isResearchManagementHead(actor), organizationUnits: await this.prisma.organizationUnit.findMany({ where: { id: { in: ids }, status: "active" }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }) };
+  }
+
+  private officerCandidateWhere(actor: SafeUserContext) {
+    return { status: "active", systemRole: "RESEARCH_MANAGEMENT_STAFF", organizationScopes: { some: { organizationUnitId: { in: getOrganizationScopeIds(actor) } } } };
+  }
+
+  async officerCandidates(actor: SafeUserContext) {
+    if (!isResearchManagementHead(actor)) throw new ForbiddenException({ message: "Chỉ trưởng phòng được chọn chuyên viên phụ trách đợt." });
+    return this.prisma.user.findMany({ where: this.officerCandidateWhere(actor), select: { id: true, displayName: true }, orderBy: [{ displayName: "asc" }, { id: "asc" }] });
+  }
+
+  /** undefined = không đổi. Chỉ TP được đổi; CV gửi giá trị khác hiện tại bị 403. */
+  private async readResponsibleOfficer(actor: SafeUserContext, value: unknown, current: string | null, status: string) {
+    if (value === undefined) return undefined;
+    const next = readOptionalText(value, "responsibleOfficerUserId", 120) ?? null;
+    if (next === current) return undefined;
+    if (!isResearchManagementHead(actor)) throw new ForbiddenException({ message: "Chỉ trưởng phòng được chọn chuyên viên phụ trách đợt." });
+    if (next === null) {
+      if (status === "open") throw new BadRequestException({ message: "Đợt đang mở phải có chuyên viên phụ trách." });
+      return null;
+    }
+    const officer = await this.prisma.user.findFirst({ where: { id: next, ...this.officerCandidateWhere(actor) }, select: { id: true } });
+    if (!officer) throw new BadRequestException({ message: "Chuyên viên phụ trách phải là chuyên viên đang hoạt động trong phạm vi quản lý." });
+    return next;
+  }
+
+  /** Quyết định 2026-11-01: chuyển hồ sơ đã nộp đang do CV cũ của đợt phụ trách hoặc chưa có CV; hồ sơ giao riêng giữ nguyên. */
+  private async transferProposalOfficers(actor: SafeUserContext, periodId: string, oldOfficerUserId: string | null, newOfficerUserId: string) {
+    await this.prisma.$queryRaw`SELECT id FROM research_proposals WHERE intake_period_id = ${periodId} FOR UPDATE`;
+    const now = await readTransactionClockV1(this.prisma);
+    const officers = new ProposalManagementOfficerService(this.prisma);
+    // Hồ sơ nháp không có CV (Story 4.2); hồ sơ đã kết thúc giữ CV cũ (người dùng chốt 2026-11-02).
+    const proposals = await this.prisma.researchProposal.findMany({ where: { intakePeriodId: periodId, status: { notIn: [PROPOSAL_STATUS.draft, PROPOSAL_STATUS.approved, PROPOSAL_STATUS.rejected] } }, select: { id: true } });
+    const moved: string[] = [];
+    for (const { id } of proposals) {
+      const current = await officers.resolveForProposal(id, now);
+      if (!current.resolved) throw new ConflictException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được cán bộ quản lý hiện tại của hồ sơ trong đợt." });
+      const currentUserId = current.officer?.officerUserId ?? null;
+      if (currentUserId !== null && currentUserId !== oldOfficerUserId) continue;
+      await replaceProposalManagementOfficer(this.prisma, { proposalId: id, officerUserId: newOfficerUserId, assignedById: actor.id, reason: "Đổi chuyên viên phụ trách đợt tiếp nhận", now });
+      moved.push(id);
+    }
+    return moved;
   }
 
   private async readUnits(actor: SafeUserContext, value: unknown) {
@@ -151,7 +204,8 @@ export class ProposalIntakePeriodsService {
     }
 
     const records = (await this.prisma.proposalIntakePeriod.findMany({
-      orderBy: { startsAt: "desc" }
+      orderBy: { startsAt: "desc" },
+      include: PERIOD_INCLUDE
     })) as IntakePeriodRecord[];
     const statusFilter = typeof filters.status === "string" ? filters.status : "";
 
@@ -184,6 +238,7 @@ export class ProposalIntakePeriodsService {
     assertDateRange(startsAt, endsAt);
 
     const periodId = randomUUID();
+    const responsibleOfficerUserId = (await this.readResponsibleOfficer(actor, input.responsibleOfficerUserId, null, "draft")) ?? null;
     const requiredPackage = await this.readTemplatePackage(actor, periodId, input.requiredPackage, files);
     const period = (await this.prisma.proposalIntakePeriod.create({
       data: {
@@ -196,8 +251,10 @@ export class ProposalIntakePeriodsService {
         status: "draft",
         applicableOrganizationUnitId,
         applicableOrganizationUnitIds: await this.readUnits(actor, input.applicableOrganizationUnitIds ?? []),
-        requiredPackage
-      }
+        requiredPackage,
+        ...(responsibleOfficerUserId ? { responsibleOfficerUserId, responsibleOfficerAssignedById: actor.id, responsibleOfficerAssignedAt: new Date() } : {})
+      },
+      include: PERIOD_INCLUDE
     })) as IntakePeriodRecord;
 
     await this.auditLog.record({
@@ -221,6 +278,9 @@ export class ProposalIntakePeriodsService {
     this.assertIntakeScope(actor, existing);
     if (existing.status === "closed") throw new BadRequestException({ message: "Đợt đã đóng không được chỉnh sửa." });
     const data: Record<string, unknown> = {};
+    const oldOfficerUserId = existing.responsibleOfficerUserId ?? null;
+    const newOfficerUserId = await this.readResponsibleOfficer(actor, input.responsibleOfficerUserId, oldOfficerUserId, existing.status);
+    if (newOfficerUserId !== undefined) Object.assign(data, { responsibleOfficerUserId: newOfficerUserId, responsibleOfficerAssignedById: newOfficerUserId ? actor.id : null, responsibleOfficerAssignedAt: newOfficerUserId ? new Date() : null });
     if (input.applicableOrganizationUnitIds !== undefined) { data.applicableOrganizationUnitIds = await this.readUnits(actor, input.applicableOrganizationUnitIds); data.applicableOrganizationUnitId = null; }
 
     if (input.code !== undefined) {
@@ -255,7 +315,8 @@ export class ProposalIntakePeriodsService {
 
     const period = (await this.prisma.proposalIntakePeriod.update({
       where: { id: periodId },
-      data
+      data,
+      include: PERIOD_INCLUDE
     })) as IntakePeriodRecord;
 
     await this.auditLog.record({
@@ -267,6 +328,19 @@ export class ProposalIntakePeriodsService {
       username: actor.username,
       reason: this.auditReason(existing, period)
     });
+
+    if (newOfficerUserId) {
+      const movedProposalIds = await this.transferProposalOfficers(actor, periodId, oldOfficerUserId, newOfficerUserId);
+      await this.auditLog.record({
+        action: "change-intake-period-responsible-officer",
+        result: "success",
+        actorId: actor.id,
+        targetEntity: "proposal-intake-period",
+        targetEntityId: period.id,
+        username: actor.username,
+        reason: JSON.stringify({ oldOfficerUserId, newOfficerUserId, movedProposalIds })
+      });
+    }
 
     return this.toResponse(period, actor);
   }
@@ -284,9 +358,17 @@ export class ProposalIntakePeriodsService {
       throw new BadRequestException({ message: "Cần cấu hình danh sách tệp bắt buộc trước khi mở đợt tiếp nhận." });
     }
 
+    // D-038: đợt mở luôn có CV. TP phải chọn trước; CV mở đợt chưa có CV thì thành CV của đợt.
+    const selfAssign = !existing.responsibleOfficerUserId;
+    if (selfAssign && isResearchManagementHead(actor)) throw new BadRequestException({ message: "Cần chọn chuyên viên phụ trách trước khi mở đợt." });
+    if (!selfAssign && !(await this.prisma.user.findFirst({ where: { id: existing.responsibleOfficerUserId!, status: "active", systemRole: "RESEARCH_MANAGEMENT_STAFF" }, select: { id: true } }))) {
+      throw new BadRequestException({ message: "Chuyên viên phụ trách không còn hoạt động, cần chọn lại trước khi mở đợt." });
+    }
+
     const period = (await this.prisma.proposalIntakePeriod.update({
       where: { id: periodId },
-      data: { status: "open" }
+      data: selfAssign ? { status: "open", responsibleOfficerUserId: actor.id, responsibleOfficerAssignedById: null, responsibleOfficerAssignedAt: new Date() } : { status: "open" },
+      include: PERIOD_INCLUDE
     })) as IntakePeriodRecord;
 
     await this.auditLog.record({
@@ -298,6 +380,15 @@ export class ProposalIntakePeriodsService {
       username: actor.username,
       reason: this.auditReason(existing, period)
     });
+    if (selfAssign) {
+      await this.auditLog.record({
+        action: "assign-intake-period-responsible-officer",
+        result: "success",
+        targetEntity: "proposal-intake-period",
+        targetEntityId: period.id,
+        reason: JSON.stringify({ officerUserId: actor.id, trigger: "open-proposal-intake-period", openedByUserId: actor.id, openedByUsername: actor.username })
+      });
+    }
 
     return this.toResponse(period, actor);
   }
@@ -311,7 +402,8 @@ export class ProposalIntakePeriodsService {
     if (existing.status !== "open") throw new BadRequestException({ message: "Chỉ đợt đang mở mới được đóng." });
     const period = (await this.prisma.proposalIntakePeriod.update({
       where: { id: periodId },
-      data: { status: "closed" }
+      data: { status: "closed" },
+      include: PERIOD_INCLUDE
     })) as IntakePeriodRecord;
 
     await this.auditLog.record({
@@ -356,7 +448,7 @@ export class ProposalIntakePeriodsService {
   }
 
   private auditReason(before: IntakePeriodRecord | null, after: IntakePeriodRecord) {
-    const snapshot = (p: IntakePeriodRecord | null) => p && { code: p.code, title: p.title, startsAt: p.startsAt, endsAt: p.endsAt, status: p.status, applicableOrganizationUnitIds: p.applicableOrganizationUnitIds, requiredPackage: p.requiredPackage };
+    const snapshot = (p: IntakePeriodRecord | null) => p && { code: p.code, title: p.title, startsAt: p.startsAt, endsAt: p.endsAt, status: p.status, applicableOrganizationUnitIds: p.applicableOrganizationUnitIds, requiredPackage: p.requiredPackage, responsibleOfficerUserId: p.responsibleOfficerUserId ?? null };
     return JSON.stringify({ before: snapshot(before), after: snapshot(after), contextVersion: after.updatedAt.toISOString() });
   }
 
@@ -386,6 +478,8 @@ export class ProposalIntakePeriodsService {
       status: this.effectiveStatus(period),
       applicableOrganizationUnitId: period.applicableOrganizationUnitId ?? "",
       requiredPackage: normalizeRequiredPackage(period.requiredPackage),
+      // Chỉ phòng QLKH thấy CV của đợt; hiển thị cho PI thuộc phần việc khác.
+      responsibleOfficer: isResearchManagement(actor) && period.responsibleOfficerUserId ? { userId: period.responsibleOfficerUserId, displayName: period.responsibleOfficer?.displayName ?? "" } : null,
       createdAt: period.createdAt.toISOString(),
       updatedAt: period.updatedAt.toISOString()
     };

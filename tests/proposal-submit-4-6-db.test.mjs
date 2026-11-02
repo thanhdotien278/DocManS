@@ -75,3 +75,16 @@ test("hai request nộp đồng thời: đúng một thành công, không event 
   const e = results.find((r) => r.status === "rejected").reason; assert.ok(status(409)(e));
   assert.equal(await db.proposalSubmissionEvent.count({ where: { proposalId: proposal.id } }), 1);
 });
+
+test("Story 4.7: nộp vào đợt có CV tạo đúng một officer ACTIVE, tăng version quyền và audit System", async () => {
+  const { people, proposal, ctx } = await setup("D");
+  const staff = await db.user.create({ data: { username: "chuyenvien-D", usernameKey: "chuyenvien-D", displayName: "Chuyên viên", passwordHash: "x", status: "active", systemRole: "RESEARCH_MANAGEMENT_STAFF", unit: "Phòng D" } });
+  await db.proposalIntakePeriod.update({ where: { id: proposal.intakePeriodId }, data: { responsibleOfficerUserId: staff.id, responsibleOfficerAssignedById: people.head.id } });
+  const before = await db.researchProposal.findUnique({ where: { id: proposal.id } });
+  await service.submitProposal(people.pi, proposal.id, { contextVersion: await ctx() });
+  const rows = await db.proposalManagementOfficer.findMany({ where: { proposalId: proposal.id, status: "ACTIVE" } });
+  assert.deepEqual(rows.map((row) => row.officerUserId), [staff.id]);
+  assert.equal((await db.researchProposal.findUnique({ where: { id: proposal.id } })).authorizationRelationshipVersion, before.authorizationRelationshipVersion + 1);
+  const audit = await db.auditLog.findFirst({ where: { action: "assign-proposal-management-officer", targetEntityId: rows[0].id } });
+  assert.equal(audit.actorId, null);
+});
