@@ -2,7 +2,8 @@
 title: 'Story 4.7: CV phụ trách theo đợt tiếp nhận'
 type: 'feature'
 created: '2026-11-01'
-status: 'ready-for-dev'
+baseline_commit: '3182b49bbff4e625a23535c6b35870373f55aa10'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
 context:
@@ -61,11 +62,11 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `apps/api/prisma/schema.prisma` + migration -- thêm 3 cột -- nguồn dữ liệu CV của đợt.
-- [ ] `proposal-intake-periods.service.ts/.controller.ts/.dto.ts` -- validate CV, chặn TP mở khi thiếu CV, gán khi CV mở, đổi CV kèm chuyển hồ sơ theo Quyết định, endpoint ứng viên, trả `responsibleOfficer { userId, displayName }` -- I/O 1–6.
-- [ ] `research-proposals.service.ts` -- gán CV của đợt khi nộp -- I/O 7–8.
-- [ ] `proposal-intake-periods-api.ts`, `proposal-intake-periods-panel.tsx` -- select CV, cột CV, xác nhận khi CV mở.
-- [ ] `tests/proposals-ep02.test.mjs` -- TP mở thiếu CV bị từ chối; CV mở được gán; nộp hồ sơ nhận CV của đợt; TP đổi CV chuyển đúng hồ sơ.
+- [x] `apps/api/prisma/schema.prisma` + migration -- thêm 3 cột -- nguồn dữ liệu CV của đợt.
+- [x] `proposal-intake-periods.service.ts/.controller.ts/.dto.ts` -- validate CV, chặn TP mở khi thiếu CV, gán khi CV mở, đổi CV kèm chuyển hồ sơ theo Quyết định, endpoint ứng viên, trả `responsibleOfficer { userId, displayName }` -- I/O 1–6.
+- [x] `research-proposals.service.ts` -- gán CV của đợt khi nộp -- I/O 7–8.
+- [x] `proposal-intake-periods-api.ts`, `proposal-intake-periods-panel.tsx` -- select CV, cột CV, xác nhận khi CV mở.
+- [x] `tests/proposals-ep02.test.mjs` -- TP mở thiếu CV bị từ chối; CV mở được gán; nộp hồ sơ nhận CV của đợt; TP đổi CV chuyển đúng hồ sơ.
 
 **Acceptance Criteria:**
 - Given TP tạo đợt có chọn CV, when TP mở đợt, then đợt `open` với CV đã chọn và audit ghi actor, đợt, CV.
@@ -74,9 +75,42 @@ context:
 
 ## Implementation Notes
 
+- Migration `20261102000000_intake_period_responsible_officer` sinh bằng `prisma migrate diff` (FK `responsible_officer_user_id` → `users`, `ON DELETE RESTRICT`); `responsibleOfficerAssignedById` là cột thường, không FK.
+- Hàm dùng chung `replaceProposalManagementOfficer` (`proposals-shared/proposal-management-officer.service.ts`) cho cả gán khi nộp và chuyển khi đổi CV đợt; `assignManagementOfficer`/`revokeManagementOfficer` giữ nguyên.
+- `ProposalManagementOfficer.assignedById` bắt buộc nên khi hệ thống gán lúc nộp dùng `responsibleOfficerAssignedById ?? responsibleOfficerUserId` của đợt; đợt do CV tự gán khi mở có `responsibleOfficerAssignedById = null`.
+- Đổi CV đợt chỉ chuyển hồ sơ có `status != draft` (hồ sơ nháp không có CV theo Story 4.2); hồ sơ không xác định được CV hiện hành → 409 và rollback.
+- `responsibleOfficer` trong response đợt chỉ trả cho TP/CV (`isResearchManagement`); PI nhận `null`.
+- `options` trả thêm `canChooseOfficer` (chỉ TP); panel chỉ gửi `responsibleOfficerUserId` khi là TP.
+- Sau khi gán CV lúc nộp, `submitProposal` đọc lại hồ sơ để context token trả về khớp version quyền mới.
+- Fake prisma của `tests/proposals-ep02.test.mjs` được bổ sung `user.findUnique/findFirst`, `organizationUnit.count`, `proposalManagementOfficer`, `approvalSubmission`; 9 test cũ của file vẫn hỏng sẵn như baseline (fixture lỗi thời, ghi ở `deferred-work.md`).
+
 ## Spec Change Log
 
+- 2026-11-02 (review vòng 1): hai finding intent_gap được người dùng chốt ngay — (1) đổi CV đợt **không** chuyển hồ sơ `approved`/`rejected`; (2) CV của đợt không còn là `RESEARCH_MANAGEMENT_STAFF` active: khi nộp thì bỏ qua gán (hồ sơ chưa có CV), khi mở đợt thì 400 yêu cầu chọn lại. Vì sửa nhỏ và đã rõ, áp dụng như patch thay vì revert/làm lại; giữ nguyên phần còn lại của implementation (KEEP: `replaceProposalManagementOfficer`, khóa `FOR UPDATE`, đọc lại hồ sơ sau khi gán).
+
 ## Review Triage Log
+
+| # | Nguồn | Finding | Verdict | Route | Bằng chứng |
+|---|-------|---------|---------|-------|------------|
+| 1 | blind, edge | Đổi CV chuyển cả hồ sơ approved/rejected | medium | intent_gap → người dùng chốt, patch | `transferProposalOfficers` chỉ lọc `not: draft`. |
+| 2 | blind, edge | CV đợt bị vô hiệu hóa vẫn được gán khi nộp / vẫn mở được đợt | medium | intent_gap → người dùng chốt, patch | Kiểm tra active chỉ chạy lúc chọn CV. |
+| 3 | blind, edge | Lỗi tải ứng viên làm cả panel lỗi | low | patch | `refresh` await ứng viên trong cùng try. |
+| 4 | vgap | Thiếu test: xóa CV đợt đang mở, PI thấy null, contextVersion sau nộp, officer-candidates/canChooseOfficer | medium | patch | Đã đọc test 4.7, không có assertion tương ứng. |
+| 5 | vgap | Nhánh nộp mới chưa chạy trên Postgres thật | medium | patch | `proposal-submit-4-6-db.test.mjs` không tạo đợt có CV. |
+| 6 | blind | Mục deferred ep02 còn ghi contextVersion đã sửa | low | patch | `createOpenIntake` đã truyền contextVersion. |
+| 7 | vgap | File ep02 có 9 test hỏng sẵn nên đỏ không báo hiệu | medium | defer | Có sẵn từ baseline (1/10); đã ghi deferred. |
+| 8 | vgap | Fake `user.findFirst` bỏ qua `status` | low | gộp vào #4 | Patch #2 cần fake tôn trọng `status`. |
+| 9 | edge | Ứng viên lọc theo phạm vi TP, không theo đơn vị của đợt | maybe-false | defer (medium chưa xác minh) | Cần xác minh quyền CV với hồ sơ ngoài phạm vi. |
+| 10 | blind | CV tự gán khi mở không kiểm phạm vi đợt | false | reject | `openPeriod` đã qua `assertIntakeScope`. |
+| 11 | blind | `assignedById` fallback ghi sai người | false | reject | Cột bắt buộc non-null; audit ghi rõ trigger hệ thống. |
+| 12 | edge | Dòng officer ACTIVE hẹn ngày tương lai bị kết thúc | false | reject | `assignManagementOfficer` luôn dùng `effectiveFrom = now`. |
+| 13 | blind | FK không có index | low | reject | Xóa user hiếm; không ảnh hưởng dùng hằng ngày. |
+| 14 | blind | TP đổi CV không có xác nhận / không báo số hồ sơ chuyển | low | reject | Spec không yêu cầu; form có ghi chú. |
+| 15 | blind | Nút Mở không disable khi TP chưa chọn CV | low | reject | Có thông báo lỗi rõ khi bấm. |
+| 16 | blind | Chuyển hồ sơ chạy từng hồ sơ khi giữ khóa | low | reject | Số hồ sơ mỗi đợt nhỏ. |
+| 17 | blind | Trộn `new Date()` và clock giao dịch | low | reject | Chênh mili giây, không ảnh hưởng nghiệp vụ. |
+| 18 | blind | Audit CV đợt không đồng đều (tạo/xóa ở nháp) | low | reject | Snapshot before/after đã có `responsibleOfficerUserId`. |
+| 19 | edge | Danh sách cũ: CV xác nhận tự gán trong khi TP vừa gán | low | reject | contextVersion trả 409. |
 
 ## Verification
 

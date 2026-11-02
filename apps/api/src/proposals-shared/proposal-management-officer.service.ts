@@ -98,3 +98,22 @@ export class ProposalManagementOfficerService {
       })) as ProposalManagementOfficer[];
   }
 }
+
+/**
+ * Story 4.7 (D-038): hệ thống gán CV của đợt cho hồ sơ. Kết thúc dòng ACTIVE cũ, tạo dòng mới và tăng
+ * các authorization*Version như assignManagementOfficer; không kiểm tra xung đột PI/thành viên.
+ * Phải chạy trong transaction của mutation gọi nó.
+ */
+export async function replaceProposalManagementOfficer(prisma: PrismaService, input: { proposalId: string; officerUserId: string; assignedById: string; reason: string; now: Date }) {
+  const { proposalId, officerUserId, assignedById, reason, now } = input;
+  const activeRows = await prisma.proposalManagementOfficer.findMany({ where: { proposalId, status: MANAGEMENT_OFFICER_STATUS.active }, select: { id: true, effectiveUntil: true } });
+  for (const row of activeRows) {
+    await prisma.proposalManagementOfficer.update({ where: { id: row.id }, data: { status: MANAGEMENT_OFFICER_STATUS.ended, effectiveUntil: row.effectiveUntil && row.effectiveUntil <= now ? row.effectiveUntil : now } });
+  }
+  const record = await prisma.proposalManagementOfficer.create({ data: { proposalId, officerUserId, assignedById, status: MANAGEMENT_OFFICER_STATUS.active, effectiveFrom: now, effectiveUntil: null, reason } as never });
+  await prisma.researchProposal.update({
+    where: { id: proposalId },
+    data: { authorizationRelationshipVersion: { increment: 1 }, authorizationConflictVersion: { increment: 1 }, authorizationDelegationVersion: { increment: 1 }, authorizationContextUpdatedAt: now } as never
+  });
+  return record;
+}

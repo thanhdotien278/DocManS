@@ -44,6 +44,7 @@ model User {
   proposalReviewAssignments ProposalReviewAssignment[] @relation("ReviewAssignmentReviewer")
   assignedProposalReviews ProposalReviewAssignment[] @relation("ReviewAssignmentAssigner")
   proposalManagementOfficerAssignments ProposalManagementOfficer[] @relation("ProposalManagementOfficerUser")
+  responsibleIntakePeriods ProposalIntakePeriod[] @relation("IntakePeriodResponsibleOfficer")
   assignedProposalManagementOfficers ProposalManagementOfficer[] @relation("ProposalManagementOfficerAssigner")
   proposalReviews ProposalReview[] @relation("ProposalReviewReviewer")
   createdEvaluationSummaries ProposalEvaluationSummary[] @relation("EvaluationSummaryCreator")
@@ -422,6 +423,10 @@ model ProposalIntakePeriod {
   applicableOrganizationUnit   OrganizationUnit? @relation(fields: [applicableOrganizationUnitId], references: [id])
   requiredPackage              Json              @map("required_package")
   applicableOrganizationUnitIds String[]          @default([]) @map("applicable_organization_unit_ids")
+  responsibleOfficerUserId     String?           @map("responsible_officer_user_id")
+  responsibleOfficer           User?             @relation("IntakePeriodResponsibleOfficer", fields: [responsibleOfficerUserId], references: [id], onDelete: Restrict)
+  responsibleOfficerAssignedById String?         @map("responsible_officer_assigned_by_id")
+  responsibleOfficerAssignedAt DateTime?         @map("responsible_officer_assigned_at")
   createdAt                    DateTime          @default(now()) @map("created_at")
   updatedAt                    DateTime          @updatedAt @map("updated_at")
   proposals                    ResearchProposal[]

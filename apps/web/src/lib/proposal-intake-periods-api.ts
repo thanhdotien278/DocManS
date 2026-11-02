@@ -24,6 +24,7 @@ export type ProposalIntakePeriod = {
   status: "draft" | "open" | "closed" | "expired";
   applicableOrganizationUnitId: string;
   requiredPackage: RequiredPackageItem[];
+  responsibleOfficer: { userId: string; displayName: string } | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -37,6 +38,7 @@ export type IntakePeriodInput = {
   startsAt: string;
   endsAt: string;
   applicableOrganizationUnitId?: string;
+  responsibleOfficerUserId?: string | null;
   requiredPackage: RequiredPackageItem[];
 };
 
@@ -101,5 +103,9 @@ export async function closeProposalIntakePeriod(id: string, contextVersion: stri
   });
 }
 
-export type IntakeOptions = { canCreate: boolean; organizationUnits: Array<{ id: string; name: string; code: string }> };
+export type IntakeOptions = { canCreate: boolean; canChooseOfficer?: boolean; organizationUnits: Array<{ id: string; name: string; code: string }> };
 export function loadIntakeOptions() { return requestJson<IntakeOptions>("/proposal-intake-periods/options"); }
+
+export async function loadIntakeOfficerCandidates() {
+  return (await requestJson<{ users: Array<{ id: string; displayName: string }> }>("/proposal-intake-periods/officer-candidates")).users;
+}
