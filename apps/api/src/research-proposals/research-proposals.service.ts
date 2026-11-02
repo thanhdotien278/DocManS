@@ -32,7 +32,7 @@ import {
 } from "../proposals-shared/proposal-participation.js";
 import { getAssignmentRoleLabel, type ProposalReviewAccess } from "../proposals-shared/proposal-review-access.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
-import { MANAGEMENT_OFFICER_STATUS, ProposalManagementOfficerService, type ProposalManagementOfficer, type ProposalManagementOfficerResolution } from "../proposals-shared/proposal-management-officer.service.js";
+import { MANAGEMENT_OFFICER_STATUS, ProposalManagementOfficerService, replaceProposalManagementOfficer, type ProposalManagementOfficer, type ProposalManagementOfficerResolution } from "../proposals-shared/proposal-management-officer.service.js";
 import { PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import type { ProposalMemberPersistInput, ProposalMissingItem } from "../proposals-shared/proposal-types.js";
 import { ProposalParticipationService } from "./proposal-participation.service.js";
@@ -61,6 +61,8 @@ type IntakePeriodRecord = {
   applicableOrganizationUnitId: string | null;
   requiredPackage: unknown;
   applicableOrganizationUnitIds: string[];
+  responsibleOfficerUserId?: string | null;
+  responsibleOfficerAssignedById?: string | null;
 };
 
 type ResearchProposalRecord = {
@@ -434,7 +436,7 @@ export class ResearchProposalsService {
 
     const submittedAt = new Date();
     const submitted = (await this.prisma.$transaction(async (tx) => {
-      const updated = (await tx.researchProposal.update({
+      let updated = (await tx.researchProposal.update({
         where: { id: proposalId },
         data: {
           status: "submitted",
@@ -454,6 +456,37 @@ export class ResearchProposalsService {
           note: "PI nộp hồ sơ chính thức"
         } as never
       });
+
+      // D-038: hồ sơ nhận CV của đợt khi nộp lần đầu; bỏ qua kiểm tra xung đột. Đợt chưa có CV hoặc CV không còn hoạt động thì để trống.
+      const intakeOfficerActive = intake.responsibleOfficerUserId
+        ? await tx.user.findFirst({ where: { id: intake.responsibleOfficerUserId, status: "active", systemRole: "RESEARCH_MANAGEMENT_STAFF" }, select: { id: true } })
+        : null;
+      if (intake.responsibleOfficerUserId && intakeOfficerActive) {
+        const now = await readTransactionClockV1(tx);
+        const current = await new ProposalManagementOfficerService(tx as unknown as PrismaService).resolveForProposal(proposalId, now);
+        if (!current.resolved) throw new ConflictException({ code: "CONTEXT_UNRESOLVED", message: "Không xác định được cán bộ quản lý hiện tại." });
+        if (!current.officer) {
+          const officer = await replaceProposalManagementOfficer(tx as unknown as PrismaService, {
+            proposalId,
+            officerUserId: intake.responsibleOfficerUserId,
+            assignedById: intake.responsibleOfficerAssignedById ?? intake.responsibleOfficerUserId,
+            reason: "Chuyên viên phụ trách đợt tiếp nhận",
+            now
+          });
+          // Version quyền vừa tăng: trả bản ghi mới để context token của client không lệch.
+          updated = (await tx.researchProposal.findUnique({ where: { id: proposalId } })) as unknown as ResearchProposalRecord;
+          await tx.auditLog.create({
+            data: {
+              action: "assign-proposal-management-officer",
+              result: "success",
+              actorId: null,
+              targetEntity: "proposal-management-officer",
+              targetEntityId: officer.id,
+              reason: JSON.stringify({ proposalId, officerUserId: intake.responsibleOfficerUserId, trigger: "submit-proposal", intakePeriodId: intake.id, submittedByUserId: actor.id })
+            }
+          });
+        }
+      }
 
       await tx.auditLog.create({
         data: {

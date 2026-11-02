@@ -23,6 +23,9 @@ export class ProposalIntakePeriodsController {
   @Get("options")
   async options(@Req() request: RequestWithCurrentUser) { return this.intakePeriodsService.options(request.currentUser!); }
 
+  @Get("officer-candidates")
+  async officerCandidates(@Req() request: RequestWithCurrentUser) { return { users: await this.intakePeriodsService.officerCandidates(request.currentUser!) }; }
+
   @Get()
   async listPeriods(@Req() request: RequestWithCurrentUser, @Query(listProposalIntakePeriodsQueryPipe) query: ListProposalIntakePeriodsQueryDto) {
     return { intakePeriods: await this.intakePeriodsService.listPeriods(request.currentUser!, query) };

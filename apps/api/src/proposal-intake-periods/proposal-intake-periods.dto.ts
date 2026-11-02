@@ -24,6 +24,7 @@ export class CreateProposalIntakePeriodDto {
   startsAt!: string;
   endsAt!: string;
   applicableOrganizationUnitId?: string;
+  responsibleOfficerUserId?: string | null;
   requiredPackage!: unknown[];
 }
 
@@ -36,6 +37,7 @@ export class UpdateProposalIntakePeriodDto {
   startsAt?: string;
   endsAt?: string;
   applicableOrganizationUnitId?: string;
+  responsibleOfficerUserId?: string | null;
   requiredPackage?: unknown[];
 }
 
@@ -71,6 +73,7 @@ export const createProposalIntakePeriodPipe: PipeTransform<unknown, CreatePropos
     readDate(input.startsAt, "startsAt");
     readDate(input.endsAt, "endsAt");
     readOptionalText(input.applicableOrganizationUnitId, "applicableOrganizationUnitId", 80);
+    readOptionalText(input.responsibleOfficerUserId, "responsibleOfficerUserId", 120);
     readRequiredPackage(input.requiredPackage);
 
     return input as unknown as CreateProposalIntakePeriodDto;
@@ -101,6 +104,7 @@ export const updateProposalIntakePeriodPipe: PipeTransform<unknown, UpdatePropos
     if (input.requiredPackage !== undefined) {
       readRequiredPackage(input.requiredPackage);
     }
+    readOptionalText(input.responsibleOfficerUserId, "responsibleOfficerUserId", 120);
 
     return input as UpdateProposalIntakePeriodDto;
   }

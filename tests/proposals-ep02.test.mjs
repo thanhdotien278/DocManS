@@ -16,6 +16,8 @@ import { ProposalParticipationService } from "../dist/apps/api/research-proposal
 import { ProposalReviewAccessService } from "../dist/apps/api/proposals-shared/proposal-review-access.service.js";
 import { ResearchProposalsService } from "../dist/apps/api/research-proposals/research-proposals.service.js";
 import { FilesService } from "../dist/apps/api/modules/files/files.service.js";
+import { proposalContextVersion } from "../dist/apps/api/proposals-shared/proposal-mutation.js";
+import { ProposalManagementOfficerService } from "../dist/apps/api/proposals-shared/proposal-management-officer.service.js";
 import { createEvaluationTables } from "./helpers/evaluation-prisma.mjs";
 
 const adminUser = {
@@ -42,6 +44,29 @@ const staffUser = {
     { id: "org-khqs", code: "KHQS", name: "Phòng KHQS" },
     { id: "org-khti", code: "KHTI", name: "Khoa Toán - Tin học" }
   ]
+};
+
+const headUser = {
+  ...staffUser,
+  id: "user-head",
+  username: "head",
+  displayName: "Trưởng phòng",
+  systemRole: "RESEARCH_MANAGEMENT_HEAD"
+};
+
+const secondStaffUser = {
+  ...staffUser,
+  id: "user-staff-2",
+  username: "staff2",
+  displayName: "Chuyên viên 2"
+};
+
+const inactiveStaffUser = {
+  ...staffUser,
+  id: "user-staff-inactive",
+  username: "staff-inactive",
+  displayName: "Chuyên viên nghỉ",
+  status: "inactive"
 };
 
 const outOfScopeStaffUser = {
@@ -115,14 +140,16 @@ function createEp02Prisma() {
     fileRecords: [],
     supplementRequests: [],
     submissionEvents: [],
-    auditLogs: []
+    auditLogs: [],
+    officers: []
   };
+  const allUsers = [adminUser, staffUser, piUser, otherPiUser, headUser, secondStaffUser, outOfScopeStaffUser, inactiveStaffUser];
 
   function nextId(prefix, collection) {
     return `${prefix}-${collection.length + 1}`;
   }
 
-  const knownUsers = [adminUser, staffUser, piUser, otherPiUser].map((user) => ({
+  const knownUsers = allUsers.map((user) => ({
     id: user.id,
     username: user.username,
     usernameKey: user.username.toLowerCase(),
@@ -203,8 +230,8 @@ function createEp02Prisma() {
       async findUnique({ where }) {
         return store.proposals.find((item) => item.id === where.id) ?? null;
       },
-      async findMany() {
-        return [...store.proposals].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      async findMany({ where } = {}) {
+        return [...store.proposals].filter((item) => (!where?.intakePeriodId || item.intakePeriodId === where.intakePeriodId) && !where?.status?.notIn?.includes(item.status)).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       },
       async updateMany({ where, data }) {
         let count = 0;
@@ -254,8 +281,35 @@ function createEp02Prisma() {
         return store.members.filter((item) => proposalIds.includes(item.proposalId));
       }
     },
-    organizationUnit: { findFirst: async ({ where }) => (where.id === "missing-unit" ? null : { id: where.id }) },
+    organizationUnit: { findFirst: async ({ where }) => (where.id === "missing-unit" ? null : { id: where.id }), count: async ({ where }) => where.id.in.length, findMany: async () => [] },
+    approvalSubmission: { findMany: async () => [] },
+    proposalManagementOfficer: {
+      async findMany({ where }) {
+        return store.officers.filter((item) => item.proposalId === where.proposalId && (!where.status || item.status === where.status))
+          .map((item) => ({ ...item, officer: { id: item.officerUserId, displayName: userDisplayName(item.officerUserId) } }));
+      },
+      async create({ data }) {
+        const record = { id: nextId("officer", store.officers), createdAt: new Date(), updatedAt: new Date(), ...data };
+        store.officers.push(record);
+        return record;
+      },
+      async update({ where, data }) {
+        const index = store.officers.findIndex((item) => item.id === where.id);
+        store.officers[index] = { ...store.officers[index], ...data };
+        return store.officers[index];
+      }
+    },
     user: {
+      async findUnique({ where }) {
+        const user = allUsers.find((item) => item.id === where.id);
+        return user ? { ...user, status: user.status ?? "active", organizationScopes: user.organizationScopes.map((unit) => ({ organizationUnit: { ...unit, status: "active" } })), researcherProfile: { id: `profile-${user.id}`, status: "ACTIVE" } } : null;
+      },
+      async findFirst({ where }) {
+        const user = allUsers.find((item) => item.id === where.id);
+        const scopeIds = where.organizationScopes?.some.organizationUnitId.in;
+        return user && user.systemRole === where.systemRole && (!where.status || (user.status ?? "active") === where.status) &&
+          (!scopeIds || user.organizationScopes.some((unit) => scopeIds.includes(unit.id))) ? { id: user.id } : null;
+      },
       async findMany({ where }) {
         const ids = where?.OR?.flatMap((clause) => clause.id?.in ?? []) ?? [];
         const usernameKeys = where?.OR?.flatMap((clause) => clause.usernameKey?.in ?? []) ?? [];
@@ -395,7 +449,7 @@ function createEp02Prisma() {
       }
     },
     // EP-03 tables: the proposal and file read paths resolve reviewer assignments (ST-3.2).
-    ...createEvaluationTables(store, [adminUser, staffUser, piUser, otherPiUser]),
+    ...createEvaluationTables(store, allUsers),
     async $queryRaw() {
       return [{ asOf: new Date() }];
     },
@@ -434,7 +488,7 @@ async function createOpenIntake(service, actor = staffUser) {
     ]
   });
 
-  return service.openPeriod(actor, intake.id);
+  return service.openPeriod(actor, intake.id, { contextVersion: intake.contextVersion });
 }
 
 async function createDraft({ prisma, intakeService, proposalService }) {
@@ -1163,5 +1217,102 @@ describe("EP-02 proposal intake and submission behavior", () => {
         }),
       BadRequestException
     );
+  });
+
+  it("Story 4.7: intake period responsible officer is required to open, assigned on submit and transferred on change", async () => {
+    const prisma = createEp02Prisma();
+    const auditLog = createAuditLog();
+    const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
+    const base = {
+      title: "Đợt 4.7",
+      startsAt: futureDate(-1),
+      endsAt: futureDate(15),
+      requiredPackage: [{ code: "proposal-form", label: "Thuyết minh đề tài", allowedMimeTypes: ["application/pdf"], maxSizeMb: 5 }]
+    };
+
+    assert.equal((await intakeService.options(staffUser)).canChooseOfficer, false);
+    assert.equal((await intakeService.options(headUser)).canChooseOfficer, true);
+    await assert.rejects(intakeService.officerCandidates(staffUser), (error) => error.status === 403);
+
+    // TP mở đợt chưa có CV bị chặn; đợt giữ nháp.
+    const headDraft = await intakeService.createPeriod(headUser, { ...base, code: "P47-HEAD" });
+    assert.equal(headDraft.responsibleOfficer, null);
+    await assert.rejects(intakeService.openPeriod(headUser, headDraft.id, { contextVersion: headDraft.contextVersion }), (error) =>
+      error.status === 400 && error.getResponse().message === "Cần chọn chuyên viên phụ trách trước khi mở đợt.");
+    assert.equal(prisma.store.intakePeriods.find((item) => item.id === headDraft.id).status, "draft");
+    // CV không đổi được CV của đợt; TP chọn người không phải CV bị 400.
+    await assert.rejects(intakeService.updatePeriod(staffUser, headDraft.id, { responsibleOfficerUserId: secondStaffUser.id, contextVersion: headDraft.contextVersion }), (error) => error.status === 403);
+    await assert.rejects(intakeService.updatePeriod(headUser, headDraft.id, { responsibleOfficerUserId: piUser.id, contextVersion: headDraft.contextVersion }), (error) => error.status === 400);
+
+    // CV mở đợt chưa có CV thì thành CV của đợt, audit System.
+    const staffDraft = await intakeService.createPeriod(staffUser, { ...base, code: "P47-STAFF" });
+    const staffOpened = await intakeService.openPeriod(staffUser, staffDraft.id, { contextVersion: staffDraft.contextVersion });
+    assert.equal(staffOpened.status, "open");
+    assert.equal(staffOpened.responsibleOfficer.userId, staffUser.id);
+    const systemAudit = prisma.store.auditLogs.find((record) => record.action === "assign-intake-period-responsible-officer");
+    assert.equal(systemAudit.actorId ?? null, null);
+    assert.equal(JSON.parse(systemAudit.reason).openedByUserId, staffUser.id);
+
+    // TP chọn CV khi tạo rồi mở: giữ CV đã chọn, audit mở ghi CV.
+    const chosen = await intakeService.createPeriod(headUser, { ...base, code: "P47-CHOSEN", responsibleOfficerUserId: secondStaffUser.id });
+    const chosenOpened = await intakeService.openPeriod(headUser, chosen.id, { contextVersion: chosen.contextVersion });
+    assert.equal(chosenOpened.responsibleOfficer.userId, secondStaffUser.id);
+    const openAudit = prisma.store.auditLogs.filter((record) => record.action === "open-proposal-intake-period").at(-1);
+    assert.equal(JSON.parse(openAudit.reason).after.responsibleOfficerUserId, secondStaffUser.id);
+    // Đợt đang mở không bỏ trống CV được.
+    await assert.rejects(intakeService.updatePeriod(headUser, chosen.id, { responsibleOfficerUserId: null, contextVersion: chosenOpened.contextVersion }), (error) => error.status === 400);
+    assert.equal(prisma.store.intakePeriods.find((item) => item.id === chosen.id).responsibleOfficerUserId, secondStaffUser.id);
+    // PI không nhận CV của đợt trong danh sách.
+    assert.ok((await intakeService.listPeriods(piUser)).every((period) => period.responsibleOfficer === null));
+    // CV đã lưu không còn hoạt động thì không mở được.
+    const staleDraft = await intakeService.createPeriod(headUser, { ...base, code: "P47-STALE", responsibleOfficerUserId: secondStaffUser.id });
+    prisma.store.intakePeriods.find((item) => item.id === staleDraft.id).responsibleOfficerUserId = inactiveStaffUser.id;
+    await assert.rejects(intakeService.openPeriod(headUser, staleDraft.id, { contextVersion: staleDraft.contextVersion }), (error) =>
+      error.status === 400 && error.getResponse().message === "Chuyên viên phụ trách không còn hoạt động, cần chọn lại trước khi mở đợt.");
+
+    // PI nộp lần đầu: hồ sơ nhận CV của đợt, version quyền tăng.
+    const proposalService = new ResearchProposalsService(prisma, auditLog, new ProposalParticipationService(prisma), new ProposalReviewAccessService(prisma), new ProposalManagementOfficerService(prisma));
+    const ready = await prisma.researchProposal.create({ data: {
+      intakePeriodId: staffOpened.id, ownerId: piUser.id, hostOrganizationUnitId: "org-khti", title: "Hồ sơ 4.7",
+      researchFieldCode: "biomedical-tech", proposalTypeCode: "academy-level", proposalNatureCode: "basic",
+      startDate: new Date(futureDate(30)), endDate: new Date(futureDate(210)), objectives: "Mục tiêu", summary: "Tóm tắt",
+      budgetMetadata: { amount: 1, currency: "VND" }, authorizationDelegationVersion: 0
+    } });
+    await prisma.fileRecord.create({ data: { relatedEntityType: "research_proposal", relatedEntityId: ready.id, filePurpose: "proposal-form", originalFileName: "tm.pdf", mimeType: "application/pdf", sizeBytes: 10, uploadedById: piUser.id } });
+    const submitted = await proposalService.submitProposal(piUser, ready.id, { contextVersion: proposalContextVersion(ready) });
+    assert.deepEqual(submitted.viewerAuthorization.contextVersion, proposalContextVersion(prisma.store.proposals.find((item) => item.id === ready.id)));
+    const assigned = prisma.store.officers.filter((row) => row.proposalId === ready.id);
+    assert.equal(prisma.store.proposals.find((item) => item.id === ready.id).status, "submitted");
+    assert.deepEqual(assigned.map((row) => [row.officerUserId, row.status]), [[staffUser.id, "ACTIVE"]]);
+    assert.equal(prisma.store.proposals.find((item) => item.id === ready.id).authorizationRelationshipVersion, 1);
+    assert.equal(prisma.store.auditLogs.find((row) => row.action === "assign-proposal-management-officer").actorId, null);
+
+    // Đợt có CV không còn hoạt động: nộp thành công, hồ sơ chưa có CV.
+    const inactivePeriod = prisma.store.intakePeriods.find((item) => item.id === chosen.id);
+    inactivePeriod.responsibleOfficerUserId = inactiveStaffUser.id;
+    const orphan = await prisma.researchProposal.create({ data: { ...ready, id: undefined, intakePeriodId: chosen.id, status: "draft", authorizationRelationshipVersion: 0 } });
+    await prisma.fileRecord.create({ data: { relatedEntityType: "research_proposal", relatedEntityId: orphan.id, filePurpose: "proposal-form", originalFileName: "tm.pdf", mimeType: "application/pdf", sizeBytes: 10, uploadedById: piUser.id } });
+    await proposalService.submitProposal(piUser, orphan.id, { contextVersion: proposalContextVersion(orphan) });
+    assert.equal(prisma.store.proposals.find((item) => item.id === orphan.id).status, "submitted");
+    assert.equal(prisma.store.officers.filter((row) => row.proposalId === orphan.id).length, 0);
+
+    // TP đổi CV: hồ sơ của CV cũ và hồ sơ chưa có CV chuyển sang CV mới; hồ sơ giao riêng và nháp giữ nguyên.
+    const seed = async (status) => prisma.researchProposal.create({ data: { intakePeriodId: staffOpened.id, ownerId: piUser.id, hostOrganizationUnitId: "org-khti", title: status, status, authorizationDelegationVersion: 0 } });
+    const unassigned = await seed("submitted");
+    const privately = await seed("submitted");
+    const draft = await seed("draft");
+    const approved = await seed("approved");
+    await prisma.proposalManagementOfficer.create({ data: { proposalId: privately.id, officerUserId: outOfScopeStaffUser.id, assignedById: headUser.id, status: "ACTIVE", effectiveFrom: new Date(Date.now() - 1000), effectiveUntil: null } });
+    const current = prisma.store.intakePeriods.find((item) => item.id === staffOpened.id);
+    const changed = await intakeService.updatePeriod(headUser, staffOpened.id, { responsibleOfficerUserId: secondStaffUser.id, contextVersion: current.updatedAt.toISOString() });
+    assert.equal(changed.responsibleOfficer.userId, secondStaffUser.id);
+    const activeOfficer = (proposalId) => prisma.store.officers.filter((row) => row.proposalId === proposalId && row.status === "ACTIVE").map((row) => row.officerUserId);
+    assert.deepEqual(activeOfficer(ready.id), [secondStaffUser.id]);
+    assert.deepEqual(activeOfficer(unassigned.id), [secondStaffUser.id]);
+    assert.deepEqual(activeOfficer(privately.id), [outOfScopeStaffUser.id]);
+    assert.deepEqual(activeOfficer(draft.id), []);
+    assert.deepEqual(activeOfficer(approved.id), []);
+    const changeAudit = JSON.parse(prisma.store.auditLogs.find((record) => record.action === "change-intake-period-responsible-officer").reason);
+    assert.deepEqual(changeAudit, { oldOfficerUserId: staffUser.id, newOfficerUserId: secondStaffUser.id, movedProposalIds: [ready.id, unassigned.id] });
   });
 });

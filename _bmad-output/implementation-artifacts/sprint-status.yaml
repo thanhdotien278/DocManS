@@ -1,5 +1,5 @@
 # generated: 2026-07-29T17:30:00+07:00
-# last_updated: 2026-11-01T12:00:00+07:00
+# last_updated: 2026-11-02T12:30:00+07:00
 # project: DocManSystem
 # project_key: NOKEY
 # tracking_system: file-system
@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-11-01T13:00:00+07:00
+last_updated: 2026-11-02T12:30:00+07:00
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -67,7 +67,7 @@ development_status:
   4-5-kiem-tra-muc-do-san-sang-truoc-khi-nop: review
   4-6-nop-chinh-thuc-va-xem-lich-su-nop-de-xuat: review
   # D-038: đổi từ tự giao CV theo mảng sang giao CV phụ trách cho từng đợt tiếp nhận (TP giao/đổi; chặn mở đợt khi chưa có CV).
-  4-7-assign-responsible-cv-per-intake-period: backlog
+  4-7-assign-responsible-cv-per-intake-period: review
   4-8-post-submission-withdraw-edit-reopen-by-cv: backlog
   epic-4-retrospective: optional
   # Refined Golden Flow assessment and acceptance gate: epic-05-proposal-review-and-approval/sprint-plan.md
