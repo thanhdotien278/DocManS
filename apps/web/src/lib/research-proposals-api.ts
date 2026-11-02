@@ -162,6 +162,7 @@ export type ResearchProposal = {
   id: string;
   code: string;
   intakePeriodId: string;
+  intakePeriodTitle?: string;
   ownerId: string;
   ownerDisplayName?: string;
   hostOrganizationUnitId: string;
