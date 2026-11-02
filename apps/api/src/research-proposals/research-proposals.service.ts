@@ -88,6 +88,7 @@ type ResearchProposalRecord = {
   createdAt: Date;
   updatedAt: Date;
   owner?: { displayName: string; researcherProfile?: { fullName: string } | null } | null;
+  intakePeriod?: { title: string } | null;
 };
 
 type ProposalMemberRecord = {
@@ -180,7 +181,7 @@ export class ResearchProposalsService {
   async listProposals(actor: SafeUserContext) {
     const records = (await this.prisma.researchProposal.findMany({
       orderBy: { createdAt: "desc" },
-      include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } } }
+      include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } }, intakePeriod: { select: { title: true } } }
     })) as ResearchProposalRecord[];
     return this.projectProposalList(actor, records);
   }
@@ -197,7 +198,7 @@ export class ResearchProposalsService {
         status: { in: ["ready_for_approval", "approved", "rejected"] }
       },
       orderBy: { createdAt: "desc" },
-      include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } } }
+      include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } }, intakePeriod: { select: { title: true } } }
     })) as ResearchProposalRecord[];
     // Hồ sơ chờ phê duyệt chỉ vào hàng đợi của GĐ khi tờ trình đã qua TB và TP (5.7).
     const stages = await pendingApprovalStages(this.prisma as never, "proposal", records.filter((r) => r.status === "ready_for_approval").map((r) => r.id));
@@ -876,7 +877,7 @@ export class ResearchProposalsService {
   private async findProposal(proposalId: string) {
     const proposal = (await this.prisma.researchProposal.findUnique({
       where: { id: proposalId },
-      include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } } }
+      include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } }, intakePeriod: { select: { title: true } } }
     })) as ResearchProposalRecord | null;
 
     if (!proposal) {
@@ -1398,6 +1399,7 @@ export class ResearchProposalsService {
       id: proposal.id,
       code: proposal.code ?? "",
       intakePeriodId: proposal.intakePeriodId,
+      intakePeriodTitle: proposal.intakePeriod?.title ?? "",
       ...(reviewAccess?.isAssignedReviewer && !participation?.isParticipant ? {} : { ownerId: proposal.ownerId, ownerDisplayName: proposal.owner?.researcherProfile?.fullName || proposal.owner?.displayName || "" }),
       hostOrganizationUnitId: proposal.hostOrganizationUnitId,
       researchFieldCode: proposal.researchFieldCode ?? "",

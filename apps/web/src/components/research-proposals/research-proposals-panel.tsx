@@ -288,7 +288,7 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
                   <tr>
                     <th>Hồ sơ</th>
                     <th>Vai trò của tôi</th>
-                    {showManagementOfficerFilter ? <th>Cán bộ phụ trách</th> : null}
+                    <th>Cán bộ phụ trách</th>
                     <th>Đợt</th>
                     <th>Thời gian</th>
                     <th>Kinh phí</th>
@@ -310,13 +310,11 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
                           <span className="status-badge info" key={relationship.type}>{relationshipLabel(relationship.type)}</span>
                         ))}
                       </td>
-                      {showManagementOfficerFilter ? (
-                        <td>
-                          <span className="record-title">{managementOfficerLabel(proposal).label}</span>
-                          <span className="record-meta">{managementOfficerLabel(proposal).detail}</span>
-                        </td>
-                      ) : null}
-                      <td>{intakes.find((intake) => intake.id === proposal.intakePeriodId)?.title ?? proposal.intakePeriodId}</td>
+                      <td>
+                        <span className="record-title">{managementOfficerLabel(proposal).label}</span>
+                        <span className="record-meta">{managementOfficerLabel(proposal).detail}</span>
+                      </td>
+                      <td>{proposal.intakePeriodTitle || intakes.find((intake) => intake.id === proposal.intakePeriodId)?.title || proposal.intakePeriodId}</td>
                       <td>
                         {formatDate(proposal.startDate)} - {formatDate(proposal.endDate)}
                       </td>
@@ -352,9 +350,7 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
                   {(proposal.viewerAuthorization?.viewerRelationships ?? []).map((relationship) => (
                     <span className="status-badge info" key={relationship.type}>{relationshipLabel(relationship.type)}</span>
                   ))}
-                  {showManagementOfficerFilter ? (
-                    <span className="record-meta">Phụ trách: {managementOfficerLabel(proposal).label}</span>
-                  ) : null}
+                  <span className="record-meta">Phụ trách: {managementOfficerLabel(proposal).label}</span>
                   <span className="record-meta">
                     {formatDate(proposal.startDate)} - {formatDate(proposal.endDate)}
                   </span>
