@@ -123,6 +123,10 @@ export function ProposalIntakePeriodsPanel() {
       setFormError("Vui lòng nhập mã, tên, ngày tiếp nhận và chọn file mẫu.");
       return;
     }
+    if (options.canChooseOfficer && !form.responsibleOfficerUserId) {
+      setFormError("Vui lòng chọn chuyên viên phụ trách.");
+      return;
+    }
 
     const files: File[] = [];
     const requiredPackage = form.requiredPackage.map(({ file, ...item }) => {
@@ -335,7 +339,8 @@ export function ProposalIntakePeriodsPanel() {
             <label className="field">
               <span>Chuyên viên phụ trách</span>
               <select value={form.responsibleOfficerUserId} onChange={(event) => setForm({ ...form, responsibleOfficerUserId: event.target.value })}>
-                <option value="">Chưa chọn</option>
+                {/* Không cho chọn "trống": chỉ hiện gợi ý khi đợt chưa có CV. */}
+                {!form.responsibleOfficerUserId ? <option value="" disabled hidden>Chọn chuyên viên phụ trách</option> : null}
                 {form.responsibleOfficerUserId && !officerCandidates.some((user) => user.id === form.responsibleOfficerUserId) ? <option value={form.responsibleOfficerUserId}>{periods.find((p) => p.id === editingId)?.responsibleOfficer?.displayName || form.responsibleOfficerUserId}</option> : null}
                 {officerCandidates.map((user) => <option key={user.id} value={user.id}>{user.displayName}</option>)}
               </select>
