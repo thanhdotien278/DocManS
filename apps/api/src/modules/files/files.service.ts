@@ -36,6 +36,7 @@ type FileRecord = {
   deletedAt: Date | null;
   uploadedBy?: {
     displayName: string;
+    researcherProfile?: { fullName: string } | null;
   } | null;
 };
 
@@ -191,7 +192,7 @@ export class FilesService {
           } as never,
           include: {
             uploadedBy: {
-              select: { displayName: true }
+              select: { displayName: true, researcherProfile: { select: { fullName: true } } }
             }
           }
         });
@@ -285,7 +286,7 @@ export class FilesService {
       } as never,
       include: {
         uploadedBy: {
-          select: { displayName: true }
+          select: { displayName: true, researcherProfile: { select: { fullName: true } } }
         }
       }
     })) as FileRecord;
@@ -318,7 +319,7 @@ export class FilesService {
       } as never,
       include: {
         uploadedBy: {
-          select: { displayName: true }
+          select: { displayName: true, researcherProfile: { select: { fullName: true } } }
         }
       }
     })) as FileRecord;
@@ -476,7 +477,7 @@ export class FilesService {
       where: { id: fileId },
       include: {
         uploadedBy: {
-          select: { displayName: true }
+          select: { displayName: true, researcherProfile: { select: { fullName: true } } }
         }
       }
     })) as FileRecord | null;
@@ -507,7 +508,7 @@ export class FilesService {
       mimeType: record.mimeType,
       sizeBytes: record.sizeBytes,
       uploadedById: record.uploadedById,
-      uploaderDisplayName: record.uploadedBy?.displayName ?? "",
+      uploaderDisplayName: record.uploadedBy?.researcherProfile?.fullName || record.uploadedBy?.displayName || "",
       status: record.status,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
