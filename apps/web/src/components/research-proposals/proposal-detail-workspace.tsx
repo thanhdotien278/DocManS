@@ -180,7 +180,11 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   const showEvaluationPanel = ["proposal.review.assign", "proposal.review.consolidate", "proposal.review.finalize", "proposal.review.submit-package"]
     .some((action) => shouldRenderAction(action as Parameters<typeof canPerformProposalAction>[1]));
   const showEvaluationProgress = showEvaluationPanel || canReadReviewProgress;
-  const showReviewForm = shouldRenderAction("proposal.review.submit");
+  // Phiếu đánh giá chỉ hiện cho người được mời làm reviewer, kể cả khi bị chặn do xung đột lợi ích.
+  // Người trong nhóm đề tài chỉ thấy mục Yêu cầu bổ sung khi đã có yêu cầu thật.
+  const isParticipantViewer = (capabilityState.capability?.viewerRelationships ?? []).some((relationship) => ["PROPOSAL_PI", "TOPIC_MEMBER", "TOPIC_SECRETARY"].includes(relationship.type));
+  const isAssignedReviewer = (capabilityState.capability?.viewerRelationships ?? []).some((relationship) => relationship.type === "REVIEWER_ASSIGNMENT");
+  const showReviewForm = isAssignedReviewer && shouldRenderAction("proposal.review.submit");
   const showDecisionPanel = shouldRenderAction("proposal.decision.approve") || shouldRenderAction("proposal.decision.reject");
   const showManagementOfficerPanel = shouldRenderAction("proposal.management-officer.assign") || shouldRenderAction("proposal.management-officer.revoke");
   const showCompletenessCheck = shouldRenderAction("proposal.completeness.check");
@@ -677,7 +681,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
           />
         ) : null}
 
-        {proposal.supplementRequests?.length || canRequestSupplement || blockedProposalAction(capabilityState, "proposal.supplement.request") ? (
+        {proposal.supplementRequests?.length || (!isParticipantViewer && shouldRenderAction("proposal.supplement.request")) ? (
           <SectionCard title="Yêu cầu bổ sung" subtitle="Lý do, hạn phản hồi và trạng thái xử lý của vòng bổ sung">
             {proposal.supplementRequests?.length ? (
               <div className="timeline">
