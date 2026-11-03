@@ -262,13 +262,21 @@ Head/Staff/Leadership decision rights are superseded. Authoritative source:
    `PROJECT_MANAGEMENT_OFFICER`). "Chưa có người phụ trách" chỉ còn sau khi thu hồi CV mà chưa
    giao lại. CV acts only on records it currently holds; a past assignment grants nothing.
    Cơ chế tự giao theo mảng (segment) đã bị D-038 thay thế.
+   **Đơn vị chủ trì không giới hạn quyền hồ sơ (2026-11-02).** Hiện đơn vị chưa đóng vai trò nghiệp
+   vụ: luồng hồ sơ đề xuất (đọc, capability, kiểm tra đầy đủ, yêu cầu bổ sung, phân công CV/phản
+   biện, hội đồng, tổng hợp, tờ trình, hàng đợi quyết định) không còn kiểm tra
+   `hostOrganizationUnitId` ∈ `organizationScopes`. TP/TB/PP thấy mọi hồ sơ; CV thấy và thao tác hồ
+   sơ mình đang phụ trách; xung đột lợi ích và vai trò vẫn kiểm tra như cũ. Ứng viên CV phụ trách
+   đợt không còn lọc theo phạm vi của TP. Tờ trình (`approval-routing`) dùng chung cho hồ sơ và đề
+   tài nên tờ trình đề tài cũng không còn giới hạn đơn vị; còn `approved-projects.service`, hồ sơ
+   nhà khoa học và đơn vị áp dụng của đợt vẫn kiểm tra phạm vi đơn vị.
 2. **Approval routing replaces package submission.** Every BGĐ-bound procedure is an
    `approval_submissions` record with `approval_steps` history (model per
    `tuan/DocManS`, migration `20261018000000_approval_routing`):
    - CV drafts and submits; stages `BOARD_REVIEW` (TB) → `HEAD_REVIEW` (TP) →
      `LEADERSHIP` (signer per kind) → `CLOSED`;
    - a return at any step goes back to the author with a mandatory reason;
-   - no step skipping and no self-review; TB/TP handle only submissions in their unit scope;
+   - no step skipping and no self-review; unit scope no longer restricts TB/TP (2026-11-02);
    - a TB-authored submission starts at `HEAD_REVIEW`; a TP-authored one still passes
      `BOARD_REVIEW`;
    - one open submission per kind and subject.

@@ -8,7 +8,6 @@ import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import {
   assertHasOrganizationScope,
   assertCanManageIntakePeriods,
-  getOrganizationScopeIds,
   intakeAppliesToUser,
   isIntakeOpenForSubmission,
   isInternalResearcherEligible,
@@ -152,13 +151,13 @@ export class ProposalIntakePeriodsService {
     return { canCreate: isResearchManagement(actor), canChooseOfficer: isResearchManagementHead(actor), organizationUnits: await this.prisma.organizationUnit.findMany({ where: { id: { in: ids }, status: "active" }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }) };
   }
 
-  private officerCandidateWhere(actor: SafeUserContext) {
-    return { status: "active", systemRole: "RESEARCH_MANAGEMENT_STAFF", organizationScopes: { some: { organizationUnitId: { in: getOrganizationScopeIds(actor) } } } };
+  private officerCandidateWhere() {
+    return { status: "active", systemRole: "RESEARCH_MANAGEMENT_STAFF" };
   }
 
   async officerCandidates(actor: SafeUserContext) {
     if (!isResearchManagementHead(actor)) throw new ForbiddenException({ message: "Chỉ trưởng phòng được chọn chuyên viên phụ trách đợt." });
-    const users = (await this.prisma.user.findMany({ where: this.officerCandidateWhere(actor), select: OFFICER_NAME_SELECT })) as OfficerNameRow[];
+    const users = (await this.prisma.user.findMany({ where: this.officerCandidateWhere(), select: OFFICER_NAME_SELECT })) as OfficerNameRow[];
     return users.map((user) => ({ id: user.id, displayName: officerName(user) })).sort((a, b) => a.displayName.localeCompare(b.displayName, "vi") || a.id.localeCompare(b.id));
   }
 
@@ -172,7 +171,7 @@ export class ProposalIntakePeriodsService {
       if (status === "open") throw new BadRequestException({ message: "Đợt đang mở phải có chuyên viên phụ trách." });
       return null;
     }
-    const officer = await this.prisma.user.findFirst({ where: { id: next, ...this.officerCandidateWhere(actor) }, select: { id: true } });
+    const officer = await this.prisma.user.findFirst({ where: { id: next, ...this.officerCandidateWhere() }, select: { id: true } });
     if (!officer) throw new BadRequestException({ message: "Chuyên viên phụ trách phải là chuyên viên đang hoạt động trong phạm vi quản lý." });
     return next;
   }

@@ -219,3 +219,4 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-7-cv-phu-trach-theo-dot-tiep-nhan.md`
   summary: Ứng viên CV phụ trách đợt đang lọc theo phạm vi của TP, không theo đơn vị áp dụng của đợt; có thể chọn CV không có phạm vi trên hồ sơ của đợt.
   evidence: Chưa xác minh (có thể medium) — cần kiểm tra CV được gán qua `ProposalManagementOfficer` có thao tác được hồ sơ ngoài `organizationScopes` của mình hay không.
+  resolution: 2026-11-02 — đã xử lý: bỏ lọc phạm vi ứng viên CV của đợt; luồng hồ sơ bỏ giới hạn theo đơn vị nên CV phụ trách xem/thao tác được hồ sơ ngoài `organizationScopes` (xem `_bmad-output/architecture.md`, mục D-038).

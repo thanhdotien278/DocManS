@@ -1278,12 +1278,20 @@ describe("matrix 7.1 proposal read scope", () => {
   const read = (systemRole, status, scope = ORG_KHTI) =>
     canReadProposal({ id: `u-${systemRole}`, systemRole, organizationScopes: [{ id: scope }] }, { ownerId: "pi", hostOrganizationUnitId: ORG_KHTI, status });
 
-  it("Board Head and Deputy Head read in scope; Director and Science Deputy only once submitted; no one out of scope", () => {
+  it("Board Head and Deputy Head read; Director and Science Deputy only once submitted; unit scope does not restrict", () => {
     for (const role of ["RESEARCH_BOARD_HEAD", "RESEARCH_MANAGEMENT_DEPUTY_HEAD"]) assert.equal(read(role, "submitted"), true, role);
     for (const role of ["SCIENCE_DEPUTY_DIRECTOR", "LEADERSHIP_APPROVAL_AUTHORITY"]) {
       assert.equal(read(role, "submitted"), true, role);
       assert.equal(read(role, "draft"), false, `${role} draft`);
     }
-    for (const role of ["RESEARCH_BOARD_HEAD", "RESEARCH_MANAGEMENT_DEPUTY_HEAD", "SCIENCE_DEPUTY_DIRECTOR"]) assert.equal(read(role, "submitted", "org-other"), false, `${role} scope`);
+    for (const role of ["RESEARCH_BOARD_HEAD", "RESEARCH_MANAGEMENT_DEPUTY_HEAD", "SCIENCE_DEPUTY_DIRECTOR"]) assert.equal(read(role, "submitted", "org-other"), true, `${role} scope`);
+  });
+
+  it("the current management officer reads a proposal hosted outside their unit scope; other staff do not", () => {
+    const staff = (id) => ({ id, systemRole: "RESEARCH_MANAGEMENT_STAFF", organizationScopes: [{ id: "org-other" }] });
+    const proposal = { ownerId: "pi", hostOrganizationUnitId: ORG_KHTI, status: "submitted" };
+    const officer = { resolved: true, officer: { officerUserId: "cv-1" } };
+    assert.equal(canReadProposal(staff("cv-1"), proposal, undefined, undefined, officer), true);
+    assert.equal(canReadProposal(staff("cv-2"), proposal, undefined, undefined, officer), false);
   });
 });
