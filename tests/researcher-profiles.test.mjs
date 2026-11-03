@@ -375,6 +375,7 @@ describe("Story 2.1 researcher profile contracts", () => {
     const { result, prisma } = await attempt(admin, "INTERNAL");
     assert.equal(result.profile.linkedUserId ?? prisma.store.profiles[0].linkedUserId, head.id);
     assert.equal(prisma.store.audits.some((entry) => entry.action === "link-researcher-account"), true);
+    assert.equal(prisma.store.users.find((user) => user.id === head.id).displayName, prisma.store.profiles[0].fullName, "liên kết đồng bộ tên hiển thị theo lý lịch");
     await assert.rejects(attempt(staff, "INTERNAL"), ConflictException);
     await assert.rejects(attempt(admin, "EXTERNAL"), ConflictException);
   });

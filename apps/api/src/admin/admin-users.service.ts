@@ -225,7 +225,7 @@ export class AdminUsersService {
   }
 
   async updateUser(actor: SafeUserContext, userId: string, input: UpdateUserInput) {
-    const existing = await this.prisma.user.findUnique({ where: { id: userId } });
+    const existing = await this.prisma.user.findUnique({ where: { id: userId }, include: { researcherProfile: { select: { fullName: true } } } });
     if (!existing) {
       throw new NotFoundException({ message: "Không tìm thấy người dùng." });
     }
@@ -239,6 +239,9 @@ export class AdminUsersService {
 
     if (input.displayName !== undefined) {
       data.displayName = readText(input.displayName, "displayName");
+      // Tài khoản đã liên kết lý lịch khoa học: tên hiển thị luôn là họ tên trong lý lịch.
+      const profileName = existing.researcherProfile?.fullName;
+      if (profileName && data.displayName !== profileName) throw new BadRequestException({ message: "Tên hiển thị lấy theo họ tên trong lý lịch khoa học; hãy sửa họ tên trong lý lịch." });
     }
 
     const auditEvents: Array<{ action: string; before: unknown; after: unknown }> = [];

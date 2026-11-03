@@ -228,7 +228,7 @@ for (const user of users) {
     update: {
       username: user.username,
       usernameKey: user.username.toLowerCase(),
-      displayName: user.displayName,
+      // displayName chỉ đặt khi tạo: sau đó đồng bộ theo họ tên trong lý lịch khoa học, seed chạy lại không ghi đè.
       passwordHash: user.passwordHash,
       status: user.status,
       systemRole: user.systemRole,
