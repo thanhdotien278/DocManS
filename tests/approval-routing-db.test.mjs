@@ -119,10 +119,10 @@ test("TB-authored goes to TP; TP-authored still goes through TB; nobody reviews 
   assert.deepEqual((await routing.forSubject(people.head, "proposal", proposal.id)).submissions.find((item) => item.id === byHead.id).actions, { advance: false, return: false });
 });
 
-test("only CV/TB/TP in scope author; PP, PGĐ-KH, GĐ, PI and out-of-scope staff have no action", async () => {
+test("only CV/TB/TP author; PP, PGĐ-KH, GĐ, PI have no action; unit scope does not restrict", async () => {
   const a = await setup("C");
   const b = await setup("D", { board: false });
-  for (const actor of [a.people.deputy, a.people.science, a.people.director, a.people.pi, b.people.staff]) {
+  for (const actor of [a.people.deputy, a.people.science, a.people.director, a.people.pi]) {
     await assert.rejects(() => a.open(actor), code(403));
   }
   const submission = await a.open(a.people.staff);
@@ -132,7 +132,8 @@ test("only CV/TB/TP in scope author; PP, PGĐ-KH, GĐ, PI and out-of-scope staff
   }
   assert.deepEqual((await a.routing.forSubject(a.people.board, "proposal", a.proposal.id)).submissions[0].actions, { advance: true, return: true });
   await assert.rejects(() => a.routing.forSubject(a.people.pi, "proposal", a.proposal.id), code(403));
-  await assert.rejects(() => b.routing.forSubject(b.people.head, "proposal", a.proposal.id), code(403), "ngoài scope không xem");
+  // Đơn vị chưa có vai trò: TP đơn vị khác vẫn xem được tờ trình.
+  assert.equal((await b.routing.forSubject(b.people.head, "proposal", a.proposal.id)).submissions[0].id, submission.id);
 });
 
 test("re-opening cancels the pending submission; the DB allows only one PENDING per kind and subject", async () => {

@@ -80,7 +80,7 @@ test("locked submitted reviews cannot be edited and readiness needs every scorin
   assert.equal(service.summarizeProgress(assignments, [...reviews, { assignmentId: "revoked", status: "submitted", totalScore: 0 }]).averageTotalScore, 80);
 });
 
-test("leadership decision queue is server-filtered by authority scope and workflow", async () => {
+test("leadership decision queue is server-filtered by workflow, not by unit scope", async () => {
   let where;
   const service = new ResearchProposalsService(
     { researchProposal: { findMany: async (input) => { where = input.where; return []; } } },
@@ -92,7 +92,7 @@ test("leadership decision queue is server-filtered by authority scope and workfl
   service.projectProposalList = async (_actor, records) => records;
   await assert.rejects(() => service.listDecisionQueue({ systemRole: "RESEARCH_MANAGEMENT_STAFF", organizationScopes: [{ id: "unit-1" }] }), /lãnh đạo/i);
   await service.listDecisionQueue({ systemRole: "LEADERSHIP_APPROVAL_AUTHORITY", organizationScopes: [{ id: "unit-1" }] });
-  assert.deepEqual(where.hostOrganizationUnitId, { in: ["unit-1"] });
+  assert.equal(where.hostOrganizationUnitId, undefined);
   assert.deepEqual(where.status.in, ["ready_for_approval", "approved", "rejected"]);
 });
 
@@ -114,13 +114,13 @@ test("frozen evidence excludes revoked, expired, future, inactive and old-versio
   assert.deepEqual(filterCurrentRoundAssignments(rows, "current", new Date(10)).map(row => row.id), ["active"]);
 });
 
-test("synthesis writes are for TP/TB/CV only; PP, PGĐ-KH, BGĐ, QT and out-of-scope TP/TB are refused before any lookup", async () => {
+test("synthesis writes are for TP/TB/CV only; PP, PGĐ-KH, BGĐ, QT are refused before any lookup; unit scope does not restrict TP/TB", async () => {
   const host = { id: "p", hostOrganizationUnitId: "unit-1" };
   const as = (systemRole, scope = "unit-1") => ({ id: "u", systemRole, organizationScopes: [{ id: scope }] });
   for (const role of ["RESEARCH_MANAGEMENT_DEPUTY_HEAD", "SCIENCE_DEPUTY_DIRECTOR", "LEADERSHIP_APPROVAL_AUTHORITY", "RESEARCH_OVERSIGHT_AUTHORITY", "SYSTEM_ADMIN"]) {
     await assert.rejects(() => assertProposalManagementWriteScope({}, as(role), host), { status: 403 }, role);
   }
   for (const role of ["RESEARCH_MANAGEMENT_HEAD", "RESEARCH_BOARD_HEAD"]) {
-    await assert.rejects(() => assertProposalManagementWriteScope({}, as(role, "unit-2"), host), { status: 403 }, `${role} ngoài scope`);
+    assert.equal((await assertProposalManagementWriteScope({}, as(role, "unit-2"), host)).systemRole, role);
   }
 });

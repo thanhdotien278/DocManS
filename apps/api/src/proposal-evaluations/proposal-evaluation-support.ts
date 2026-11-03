@@ -5,7 +5,7 @@ import { ProposalParticipationService } from "../research-proposals/proposal-par
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import type { PrismaService } from "../infrastructure/prisma/prisma.service.js";
-import { assertHasOrganizationScope, isLeadership, isResearchBoardHead, isScienceDeputyDirector, isResearchManagementDeputyHead, isResearchOversightAuthority, isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
+import { isLeadership, isResearchBoardHead, isScienceDeputyDirector, isResearchManagementDeputyHead, isResearchOversightAuthority, isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
 import type { ProposalConflictDecision } from "../proposals-shared/proposal-participation.js";
 import { isWorkflowVisibleStatus, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import { proposalContextVersion } from "../proposals-shared/proposal-mutation.js";
@@ -196,16 +196,14 @@ export async function assertCurrentCompletenessEvidence(
 }
 
 /**
- * Staff authority for EP-03 operations. Scientific management is scoped to the units it operates,
- * so an in-scope check runs on every consolidation and assignment action (AC-ST-3.2-01,
- * AC-ST-3.4-03) rather than only on the first one.
+ * Staff authority for EP-03 operations: the current officer check runs on every consolidation and
+ * assignment action. Đơn vị chủ trì không giới hạn quyền (2026-11-02).
  */
 export async function assertScientificManagementScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
   if (!actor || !isResearchManagementStaff(actor)) {
     throw new ForbiddenException({ message: "Chỉ chuyên viên quản lý khoa học được phân công cho hồ sơ mới được thực hiện thao tác này." });
   }
 
-  assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
   const current = await prisma.proposalManagementOfficer.findFirst({
     where: {
       proposalId: proposal.id,
@@ -227,51 +225,41 @@ export async function assertScientificManagementScope(prisma: PrismaService, act
 /**
  * Read access to the evaluation surfaces (assignment roster, review progress, submitted reviews).
  *
- * Staff read inside their organization scope only — the read side has to be scoped as tightly as
- * the write side, or out-of-scope staff could read every reviewer's name and score for a unit they
- * do not operate. Leadership reads require an explicit organization scope. Section 7.4 of the permission matrix gives the system administrator `None` for
+ * Only the Head passes here; unit scope no longer restricts it (2026-11-02). Section 7.4 of the permission matrix gives the system administrator `None` for
  * these actions, so an admin role is not accepted here.
  */
 export function assertScientificManagementHeadScope(actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
   if (!actor || !isResearchManagementHead(actor)) {
     throw new ForbiddenException({ message: "Chỉ Trưởng phòng quản lý khoa học được thực hiện nghiệp vụ phân công và tổng hợp hồ sơ." });
   }
-  assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
   return actor;
 }
 
 /**
- * Quyền ghi tổng hợp/chốt/lập tờ trình gói đánh giá: TP¹/TB¹ trong unit scope, CV³ là cán bộ phụ trách hiện hành;
+ * Quyền ghi tổng hợp/chốt/lập tờ trình gói đánh giá: TP¹/TB¹, CV³ là cán bộ phụ trách hiện hành;
  * TP/TB/CV đều không được xung đột (CV kiểm tra ở đây, TP/TB ở từng thao tác). PP, BGĐ, QT và CV không phụ trách bị từ chối.
  */
 export async function assertProposalManagementWriteScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
   if (actor && (isResearchManagementHead(actor) || isResearchBoardHead(actor))) {
-    assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
     return actor; // xung đột do từng thao tác tổng hợp kiểm tra tiếp bằng resolver đã tiêm
   }
   if (actor && isResearchManagementStaff(actor)) return assertScientificManagementScope(prisma, actor, proposal);
   throw new ForbiddenException({ message: "Chỉ Trưởng phòng, Trưởng ban hoặc Chuyên viên phụ trách hồ sơ mới được tổng hợp và lập tờ trình." });
 }
 
-/** Assignment rosters are operational reads for scoped Head/Board Head and assigned Staff. */
+/** Assignment rosters are operational reads for Head/Board Head and assigned Staff. */
 export async function assertReviewAssignmentReadScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
   if (isResearchManagementHead(actor)) return assertScientificManagementHeadScope(actor, proposal);
-  if (actor && isResearchBoardHead(actor)) {
-    assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
-    return actor;
-  }
+  if (actor && isResearchBoardHead(actor)) return actor;
   if (isResearchManagementStaff(actor)) return assertScientificManagementScope(prisma, actor, proposal);
   throw new ForbiddenException({ message: "Không có quyền xem phân công đánh giá của hồ sơ này." });
 }
 
 /** Shared read gate for evaluation progress. Staff require the active officer relationship;
- * Head, Deputy and Director require an explicit organization scope. */
+ * Head, Deputy and Director read without a unit-scope check. */
 export async function assertEvaluationReadScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
   if (!actor) throw new ForbiddenException({ message: "Không có quyền xem thông tin đánh giá của hồ sơ này." });
-  if (isLeadership(actor) || isResearchManagementHead(actor) || isResearchBoardHead(actor) || isResearchOversightAuthority(actor) || isScienceDeputyDirector(actor) || isResearchManagementDeputyHead(actor)) {
-    assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
-    return actor;
-  }
+  if (isLeadership(actor) || isResearchManagementHead(actor) || isResearchBoardHead(actor) || isResearchOversightAuthority(actor) || isScienceDeputyDirector(actor) || isResearchManagementDeputyHead(actor)) return actor;
   if (isResearchManagementStaff(actor)) {
     await assertScientificManagementScope(prisma, actor, proposal);
     return actor;

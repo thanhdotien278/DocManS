@@ -5,7 +5,6 @@ import type { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { resolveActorConflict } from "../proposal-evaluations/proposal-evaluation-support.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
 import {
-  getOrganizationScopeIds,
   isLeadership,
   isResearchBoardHead,
   isResearchManagementDeputyHead,
@@ -122,12 +121,12 @@ export function canSignApproval(actor: SafeUserContext | undefined, signer: Appr
   return isLeadership(actor) || (signer === "DIRECTOR_OR_SCIENCE_DEPUTY" && isScienceDeputyDirector(actor));
 }
 
-/** Người xem được hồ sơ trình nội bộ: cán bộ Phòng KHQS trong scope đơn vị; BGĐ toàn Học viện. */
+/** Người xem được hồ sơ trình nội bộ: cán bộ Phòng KHQS và BGĐ, không giới hạn theo đơn vị. */
 export function canViewApproval(actor: SafeUserContext | undefined, row: Pick<ApprovalSubmissionRow, "hostOrganizationUnitId">) {
   if (!actor) return false;
   if (isLeadership(actor) || isScienceDeputyDirector(actor)) return true;
   const internal = isResearchManagementStaff(actor) || isResearchBoardHead(actor) || isResearchManagementHead(actor) || isResearchManagementDeputyHead(actor);
-  return internal && getOrganizationScopeIds(actor).includes(row.hostOrganizationUnitId);
+  return internal;
 }
 
 /** Xung đột lợi ích trên bản ghi nguồn: participant/reviewer của hồ sơ, thành viên đề tài. */
@@ -145,11 +144,10 @@ async function actorConflicted(tx: Prisma.TransactionClient, actorId: string, ro
   return Boolean(member);
 }
 
-/** Đúng người, đúng bước, đúng scope, không phải tác giả, không xung đột. Ném lỗi nếu không được xử lý. */
+/** Đúng người, đúng bước, không phải tác giả, không xung đột. Ném lỗi nếu không được xử lý. */
 async function assertStageActor(tx: Prisma.TransactionClient, actor: SafeUserContext, row: ApprovalSubmissionRow) {
   const allowed = row.stage === "BOARD_REVIEW" ? isResearchBoardHead(actor) : row.stage === "HEAD_REVIEW" ? isResearchManagementHead(actor) : false;
   if (!allowed) throw new ForbiddenException({ code: "APPROVAL_STAGE_DENIED", message: `Tờ trình đang ở bước "${APPROVAL_STAGE_LABELS[row.stage]}"; bạn không xử lý bước này.` });
-  if (!getOrganizationScopeIds(actor).includes(row.hostOrganizationUnitId)) throw new ForbiddenException({ code: "APPROVAL_SCOPE_DENIED", message: "Tờ trình ngoài phạm vi đơn vị của bạn." });
   if (row.submittedById === actor.id) throw new ForbiddenException({ code: "APPROVAL_SELF_REVIEW", message: "Không tự rà soát tờ trình do chính mình lập." });
   if (await actorConflicted(tx, actor.id, row)) throw new ForbiddenException({ code: "APPROVAL_CONFLICT", message: "Bạn có xung đột lợi ích với hồ sơ này." });
 }
@@ -219,7 +217,6 @@ export async function openApprovalSubmission(
   if (!isResearchManagementStaff(actor) && !isResearchBoardHead(actor) && !isResearchManagementHead(actor)) {
     throw new ForbiddenException({ code: "APPROVAL_AUTHOR_DENIED", message: "Chỉ Chuyên viên, Trưởng ban QLKH hoặc Trưởng phòng KHQS được lập tờ trình." });
   }
-  if (!getOrganizationScopeIds(actor).includes(input.hostOrganizationUnitId)) throw new ForbiddenException({ code: "APPROVAL_SCOPE_DENIED", message: "Hồ sơ ngoài phạm vi đơn vị của bạn." });
   const note = readApprovalNote(input.note, false);
   const stage: ApprovalStage = isResearchBoardHead(actor) ? "HEAD_REVIEW" : "BOARD_REVIEW";
   await cancelPendingApprovals(tx, actor, key, "Thay bằng tờ trình mới");

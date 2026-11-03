@@ -143,14 +143,13 @@ export class ProposalReviewAssignmentsService {
   }
 
   /**
-   * P6/#8: ứng viên là người duy nhất không xung đột có thể giữ bước TB, bước TP (trong đơn vị chủ trì) hoặc người ký (GĐ/PGĐ-KH):
+   * P6/#8: ứng viên là người duy nhất không xung đột có thể giữ bước TB, bước TP hoặc người ký (GĐ/PGĐ-KH):
    * mời họ sẽ làm tờ trình hội đồng không còn ai xử lý.
    */
   private async routingSoleHolderIds(proposal: EvaluationProposalRecord) {
-    const scoped = { organizationScopes: { some: { organizationUnitId: proposal.hostOrganizationUnitId } } };
     const groups = [
-      { systemRole: "RESEARCH_BOARD_HEAD", ...scoped },
-      { systemRole: "RESEARCH_MANAGEMENT_HEAD", ...scoped },
+      { systemRole: "RESEARCH_BOARD_HEAD" },
+      { systemRole: "RESEARCH_MANAGEMENT_HEAD" },
       { systemRole: { in: ["LEADERSHIP_APPROVAL_AUTHORITY", "SCIENCE_DEPUTY_DIRECTOR"] } }
     ];
     const sole = new Set<string>();
