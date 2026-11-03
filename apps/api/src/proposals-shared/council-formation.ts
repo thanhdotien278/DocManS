@@ -133,8 +133,5 @@ export function canFormCouncil(
   if (actor.systemRole === "RESEARCH_MANAGEMENT_STAFF") {
     return isActiveOfficer ? { allowed: true } : deny("Chỉ chuyên viên đang phụ trách hồ sơ được thành lập hội đồng.");
   }
-  if (!actor.organizationScopes.some((scope) => scope.id === proposal.hostOrganizationUnitId)) {
-    return deny("Hồ sơ không thuộc đơn vị trong phạm vi của bạn.");
-  }
   return { allowed: true };
 }

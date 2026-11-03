@@ -126,13 +126,9 @@ export function canReadProposal(
     return true;
   }
 
-  // PI chọn đơn vị chủ trì tự do trong danh mục: chủ hồ sơ/thành viên luôn đọc được hồ sơ của mình dù đơn vị ngoài phạm vi tài khoản.
+  // Đơn vị chủ trì hiện không giới hạn quyền đọc hồ sơ: quyền chỉ theo vai trò và quan hệ (chủ hồ sơ, thành viên, CV phụ trách, phản biện).
   if (participation?.isParticipant || proposal.ownerId === user.id) {
     return true;
-  }
-
-  if (!getOrganizationScopeIds(user).includes(proposal.hostOrganizationUnitId)) {
-    return false;
   }
 
   if (isResearchManagementHead(user) || isResearchOversightAuthority(user) || isResearchBoardHead(user) || isResearchManagementDeputyHead(user)) {

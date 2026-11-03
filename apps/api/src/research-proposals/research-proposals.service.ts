@@ -11,10 +11,8 @@ import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import {
   assertCanEditProposalDraft,
   assertCanReadProposal,
-  assertHasOrganizationScope,
   assertCanCreateProposalDraft,
   canReadProposal,
-  getOrganizationScopeIds,
   isLeadership,
   isInternalResearcherEligible,
   isResearchManagementHead,
@@ -192,11 +190,8 @@ export class ResearchProposalsService {
     if (!isLeadership(actor)) {
       throw new ForbiddenException({ message: "Chỉ lãnh đạo có thẩm quyền phê duyệt được xem hàng đợi quyết định." });
     }
-    const scopeIds = getOrganizationScopeIds(actor);
-    if (!scopeIds.length) return [];
     const records = (await this.prisma.researchProposal.findMany({
       where: {
-        hostOrganizationUnitId: { in: scopeIds },
         status: { in: ["ready_for_approval", "approved", "rejected"] }
       },
       orderBy: { createdAt: "desc" },
@@ -672,8 +667,7 @@ export class ResearchProposalsService {
     const accounts = await this.prisma.user.findMany({
       where: {
         status: "active",
-        systemRole: "RESEARCH_MANAGEMENT_STAFF",
-        organizationScopes: { some: { organizationUnitId: proposal.hostOrganizationUnitId, organizationUnit: { status: "active" } } }
+        systemRole: "RESEARCH_MANAGEMENT_STAFF"
       },
       select: { id: true, username: true, displayName: true, unit: true },
       orderBy: [{ displayName: "asc" }, { id: "asc" }]
@@ -710,15 +704,9 @@ export class ResearchProposalsService {
     const effectiveUntil: Date | null = null;
     if (officerUserId === actor.id) throw new BadRequestException({ message: "Không thể tự phân công chính mình làm cán bộ quản lý hồ sơ." });
 
-    const candidate = await this.prisma.user.findUnique({
-      where: { id: officerUserId },
-      include: { organizationScopes: { include: { organizationUnit: true } } }
-    });
+    const candidate = await this.prisma.user.findUnique({ where: { id: officerUserId } });
     if (!candidate || candidate.status !== "active" || candidate.systemRole !== "RESEARCH_MANAGEMENT_STAFF") {
       throw new BadRequestException({ message: "Cán bộ được chọn phải là tài khoản chuyên viên quản lý khoa học đang hoạt động." });
-    }
-    if (!candidate.organizationScopes.some((scope) => scope.organizationUnitId === proposal.hostOrganizationUnitId && scope.organizationUnit.status === "active")) {
-      throw new ForbiddenException({ message: "Cán bộ được chọn không có phạm vi đơn vị của hồ sơ." });
     }
 
     const candidateConflict = await this.participation.evaluateConflict(candidate.id, proposalId);
@@ -994,7 +982,6 @@ export class ResearchProposalsService {
     if (!isResearchManagementStaff(actor)) {
       throw new ForbiddenException({ message: "Chỉ chuyên viên phụ trách hồ sơ được yêu cầu bổ sung hồ sơ." });
     }
-    assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
     if (!await this.managementOfficers.isCurrentOfficer(proposal.id, actor.id)) {
       throw new ForbiddenException({ message: "Bạn không còn là chuyên viên phụ trách hồ sơ này." });
     }
@@ -1005,7 +992,6 @@ export class ResearchProposalsService {
     if (!isResearchManagementHead(actor)) {
       throw new ForbiddenException({ message: "Chỉ Trưởng phòng quản lý khoa học được phân công hoặc thu hồi cán bộ phụ trách hồ sơ." });
     }
-    assertHasOrganizationScope(actor, proposal.hostOrganizationUnitId);
   }
 
   private async assertNoProposalReviewConflict(userId: string, proposalId: string, message: string) {
