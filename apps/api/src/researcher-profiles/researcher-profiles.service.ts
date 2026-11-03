@@ -418,6 +418,7 @@ export class ResearcherProfilesService {
       const user = await tx.user.findUnique({ where: { id: input.userId }, include: { organizationScopes: { include: { organizationUnit: true } }, researcherProfile: true } });
       if (!user || user.id === actor.id || user.status !== "active" || !linkableAccountRoles(actor, profile.profileType).includes(user.systemRole ?? "") || user.researcherProfile || !user.organizationScopes.some((scope) => scope.organizationUnitId === profile.managementOrganizationUnitId && scope.organizationUnit.status === "active")) throw new ConflictException({ message: "Tài khoản đã liên kết hoặc không phù hợp loại/phạm vi hồ sơ." });
       await tx.researcherProfile.update({ where: { id: profileId }, data: { linkedUserId: user.id, aggregateVersion: { increment: 1 }, updatedById: actor.id } });
+      await tx.user.update({ where: { id: user.id }, data: { displayName: profile.fullName } });
       await tx.researcherProfileAccountLink.create({ data: { researcherProfileId: profileId, userId: user.id, effectiveFrom: new Date(), reason: input.reason, createdById: actor.id } });
       await this.auditLog.record({ action: "link-researcher-account", result: "success", actorId: actor.id, targetEntity: "researcher-profile", targetEntityId: profileId, correlationId, afterFacts: { userId: user.id } }, tx);
       await this.writeProfileHistory(tx, profileId, actor.id, "ACCOUNT_LINKED", { linkedUserId: null }, { linkedUserId: user.id }, input.reason);
