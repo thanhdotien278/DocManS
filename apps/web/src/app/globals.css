@@ -286,6 +286,7 @@ summary:focus-visible {
 }
 
 .topbar-actions {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -293,6 +294,108 @@ summary:focus-visible {
 
 .user-menu {
   position: relative;
+}
+
+/* Story 11.1: chuông thông báo trên topbar. */
+/* Panel neo vào cả cụm topbar-actions (mép phải gần mép màn hình) để không tràn trái trên mobile. */
+.notification-menu {
+  position: static;
+}
+
+.notification-menu summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.notification-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.notification-trigger {
+  position: relative;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  padding: 1px 5px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+}
+
+.notification-panel {
+  position: absolute;
+  z-index: 30;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 12px;
+  color: var(--text-primary);
+}
+
+.notification-panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.notification-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notification-item {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-left: 4px solid transparent;
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 8px 10px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.notification-item.unread {
+  border-left-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.notification-item:hover,
+.notification-item:focus-visible {
+  border-color: var(--primary);
+}
+
+.notification-all {
+  display: block;
+  margin-top: 10px;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.notification-filter {
+  justify-content: flex-start;
+  margin-bottom: 12px;
 }
 
 .user-menu summary {

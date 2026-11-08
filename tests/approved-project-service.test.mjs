@@ -46,7 +46,7 @@ function table(name, rows = []) {
 
 function world({ status = "executing", milestones, checkpoints } = {}) {
   const db = {};
-  for (const name of ["approvedProjectMember", "projectManagementOfficer", "projectMilestone", "projectCheckpoint", "projectReportRevision", "projectReportEvidence", "projectRequest", "projectRequestRevision", "projectRequestEvidence", "projectRequestHistory", "projectHistory", "fileRecord", "proposalReviewAssignment", "proposalReview", "approvalSubmission", "approvalStep"]) db[name] = table(name);
+  for (const name of ["approvedProjectMember", "projectManagementOfficer", "projectMilestone", "projectCheckpoint", "projectReportRevision", "projectReportEvidence", "projectRequest", "projectRequestRevision", "projectRequestEvidence", "projectRequestHistory", "projectHistory", "fileRecord", "proposalReviewAssignment", "proposalReview", "approvalSubmission", "approvalStep", "userNotification"]) db[name] = table(name);
   db.user = table("user", USERS.map((user) => ({ ...user })));
   db.auditLog = table("auditLog");
   const auditCreate = db.auditLog.create;

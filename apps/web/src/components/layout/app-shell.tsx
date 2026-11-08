@@ -9,6 +9,7 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { useSession } from "@/components/auth/session-provider";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { NavLink } from "@/components/layout/nav-link";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { getNavigationItems } from "@/lib/navigation";
 import { getApiBaseUrl } from "@/lib/session";
 
@@ -45,6 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </Link>
           <div className="topbar-actions">
+            <NotificationBell />
             <details className="user-menu">
               <summary className="user-chip" aria-label="Người dùng hiện tại">
                 {account.researcherProfileId ? <HeaderAvatar initials={account.initials} /> : <span className="avatar">{account.initials}</span>}

@@ -35,6 +35,7 @@ function fakePrisma(requests, piId = "pi") {
       update: async ({ where, data }) => Object.assign(store.submissions.find((row) => row.id === where.id), data)
     },
     approvalStep: { create: async ({ data }) => store.steps.push(data) },
+    userNotification: { updateMany: async () => ({ count: 0 }) },
     projectHistory: { create: async ({ data }) => store.projectHistory.push(data) },
     auditLog: { create: async ({ data }) => { store.audit.push(data); return { id: "a", timestamp: new Date(), ...data }; } }
   };

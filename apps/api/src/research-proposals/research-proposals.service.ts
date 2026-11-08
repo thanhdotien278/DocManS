@@ -34,6 +34,7 @@ import { MANAGEMENT_OFFICER_STATUS, ProposalManagementOfficerService, replacePro
 import { PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import type { ProposalMemberPersistInput, ProposalMissingItem } from "../proposals-shared/proposal-types.js";
 import { ProposalParticipationService } from "./proposal-participation.service.js";
+import { notifyUsers } from "../notifications/notification-events.js";
 import { normalizeResearcherKey } from "../researcher-profiles/researcher-profiles.dto.js";
 import { projectProposalViewerAuthorizationV1 } from "../permissions/proposal-capability-v1.js";
 import { readCouncilFormationConfig, type CouncilFormationConfig } from "../proposals-shared/council-formation.js";
@@ -440,7 +441,7 @@ export class ResearchProposalsService {
         } as never
       })) as ResearchProposalRecord;
 
-      await tx.proposalSubmissionEvent.create({
+      const submissionEvent = await tx.proposalSubmissionEvent.create({
         data: {
           proposalId,
           actorId: actor.id,
@@ -482,6 +483,10 @@ export class ResearchProposalsService {
           });
         }
       }
+
+      // Story 11.1: CV phụ trách hiện hành (có thể vừa gán từ đợt) nhận thông báo; không có CV thì không gửi.
+      const officer = await new ProposalManagementOfficerService(tx as unknown as PrismaService).resolveForProposal(proposalId, await readTransactionClockV1(tx));
+      await notifyUsers(tx, { userIds: [officer.officer?.officerUserId], exclude: [actor.id], type: "proposal.submitted", title: "Hồ sơ mới được nộp", body: proposal.title, link: `/proposals/${proposalId}`, sourceType: "proposal", sourceId: proposalId, idempotencyKey: `proposal-submit:${submissionEvent.id}` });
 
       await tx.auditLog.create({
         data: {
@@ -528,7 +533,7 @@ export class ResearchProposalsService {
         data: { status: "supplement_requested" } as never
       })) as ResearchProposalRecord;
 
-      await tx.proposalSupplementRequest.create({
+      const supplementRequest = await tx.proposalSupplementRequest.create({
         data: {
           proposalId,
           actorId: actor.id,
@@ -538,6 +543,8 @@ export class ResearchProposalsService {
           status: "open"
         } as never
       });
+      // Không chép lý do vào thông báo: PI mở hồ sơ để xem.
+      await notifyUsers(tx, { userIds: [proposal.ownerId], exclude: [actor.id], type: "proposal.supplement-requested", title: "Hồ sơ cần bổ sung", body: `${proposal.title} — hạn bổ sung ${dueDate.toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}`, link: `/proposals/${proposalId}`, sourceType: "proposal", sourceId: proposalId, idempotencyKey: `supplement:${supplementRequest.id}` });
 
       await tx.proposalSubmissionEvent.create({
         data: {
@@ -612,7 +619,7 @@ export class ResearchProposalsService {
         } as never
       });
 
-      await tx.proposalSubmissionEvent.create({
+      const submissionEvent = await tx.proposalSubmissionEvent.create({
         data: {
           proposalId,
           actorId: pi.id,
@@ -623,6 +630,8 @@ export class ResearchProposalsService {
           note: "Nộp lại hồ sơ sau yêu cầu bổ sung"
         } as never
       });
+      const officer = await this.managementOfficers.resolveForProposal(proposalId, await readTransactionClockV1(tx));
+      await notifyUsers(tx, { userIds: [officer.officer?.officerUserId], exclude: [pi.id], type: "proposal.resubmitted", title: "Hồ sơ được nộp lại sau bổ sung", body: proposal.title, link: `/proposals/${proposalId}`, sourceType: "proposal", sourceId: proposalId, idempotencyKey: `proposal-submit:${submissionEvent.id}` });
 
       await tx.auditLog.create({
         data: {
@@ -762,6 +771,8 @@ export class ResearchProposalsService {
         authorizationContextUpdatedAt: now
       } as never
     });
+    // `this.prisma` là transaction của `mutate` ở nhánh này.
+    await notifyUsers(this.prisma, { userIds: [officerUserId], exclude: [actor.id], type: "proposal.officer-assigned", title: "Bạn được giao phụ trách hồ sơ", body: proposal.title, link: `/proposals/${proposalId}`, sourceType: "proposal", sourceId: proposalId, idempotencyKey: `officer:${record.id}` });
     await this.auditLog.record({
       action: "assign-proposal-management-officer",
       result: "success",

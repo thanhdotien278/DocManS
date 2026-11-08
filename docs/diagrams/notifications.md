@@ -1,26 +1,31 @@
-# Notification flow
+# Luồng thông báo
 
 ```mermaid
 flowchart TD
-  event{"Document or workflow event?"}
-  role_event["Được giao role hoặc assignment"]
-  state_event["Đổi trạng thái"]
-  supplement_event["Yêu cầu bổ sung hoặc chỉnh sửa"]
-  action_event["Nhận xét cần xử lý"]
-  deadline_event["Sắp hết hạn"]
-  decision_event["Có quyết định"]
-  generate["System: generate workflow notification"]
-  recipient["Recipient: nhận notification trong permission scope"]
-  boundary["Notification không cấp quyền và không chứa dữ liệu nhạy cảm"]
+  event{"Sự kiện nghiệp vụ"}
+  approval_event["Tờ trình: lập, chuyển, trả lại, ký, từ chối"]
+  proposal_event["Hồ sơ: nộp, nộp lại, yêu cầu bổ sung, giao CV, quyết định"]
+  review_event["Mời phản biện"]
+  write["Cùng transaction nghiệp vụ: notifyUsers ghi user_notifications<br/>(bỏ trùng theo user_id + idempotency_key, bỏ tài khoản không active)"]
+  read["Người nhận mở chuông / trang /notifications"]
+  reauth{"Kiểm tra lại quyền hiện hành khi đọc"}
+  shown["Hiện trong danh sách và số chưa đọc"]
+  hidden["Ẩn khỏi danh sách và số đếm"]
+  open["Bấm thông báo: đánh dấu đã đọc, điều hướng"]
+  target["Trang đích tự kiểm tra quyền<br/>(thông báo không cấp quyền)"]
 
-  event --> role_event --> generate
-  event --> state_event --> generate
-  event --> supplement_event --> generate
-  event --> action_event --> generate
-  event --> deadline_event --> generate
-  event --> decision_event --> generate
-  generate --> recipient --> boundary
+  event --> approval_event --> write
+  event --> proposal_event --> write
+  event --> review_event --> write
+  write --> read --> reauth
+  reauth -- "còn quyền" --> shown --> open --> target
+  reauth -- "mất quyền / xung đột / lời mời bị thu hồi" --> hidden
 ```
 
-The source documents generation and receipt of notifications. Marking a
-notification as read is not documented and is not added.
+Story 11.1 (`_bmad-output/implementation-artifacts/spec-11-1-thong-bao-trong-ung-dung-theo-su-kien-nghiep-vu.md`):
+
+- Thông báo ghi trong cùng transaction với thao tác nghiệp vụ; thao tác rollback thì không có thông báo. Quyết định ở D-040 (`_bmad-output/.decision-log.md`).
+- Người nhận tờ trình theo bước đến: TB (`BOARD_REVIEW`), TP (`HEAD_REVIEW`), GĐ và PGĐ-KH khi loại thủ tục cho phép (`LEADERSHIP`); tác giả khi trả lại, ký, từ chối. PP và PGĐ-TD không nhận. Khi bước chuyển, thông báo "chờ xử lý" cũ của tờ trình đó được đánh dấu đã đọc.
+- Khi đọc: `approval` lọc theo `canViewApproval` và xung đột; `proposal` theo `canReadProposal`; `review_assignment` theo assignment còn hiệu lực của chính người xem.
+- Đánh dấu đã đọc: `POST /api/v1/notifications/:id/read` và `POST /api/v1/notifications/read-all`.
+- Chưa có: email (11.2), nhắc hạn (11.3), sự kiện đề tài ngoài tờ trình (xem `deferred-work.md`).

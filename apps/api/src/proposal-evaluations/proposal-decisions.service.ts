@@ -3,6 +3,7 @@ import { runProposalMutation } from "../proposals-shared/proposal-mutation.js";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
+import { notifyUsers } from "../notifications/notification-events.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
 import { APPROVAL_STAGE_LABELS, APPROVAL_STATUS_LABELS, assertReadyForLeadership, closeApprovalSubmission, canSignApproval, type ApprovalKey, type ApprovalSubmissionRow } from "../proposals-shared/approval-routing.js";
@@ -231,6 +232,9 @@ export class ProposalDecisionsService {
         // returns on a later read of the same record.
         include: { decidedBy: { select: { displayName: true } } }
       })) as ProposalDecisionRecord;
+
+      // Story 11.1: PI chỉ nhận trạng thái chung, không ghi chú/tóm tắt công bố (AD-11).
+      await notifyUsers(tx as never, { userIds: [proposal.ownerId], exclude: [actor.id], type: "proposal.decided", title: "Hồ sơ đã có quyết định", body: `${proposal.title} — ${PROPOSAL_STATUS_LABELS[toStatus] ?? toStatus}`, link: `/proposals/${proposalId}`, sourceType: "proposal", sourceId: proposalId, idempotencyKey: `decision:${record.id}` });
 
       await tx.proposalSubmissionEvent.create({
         data: {
