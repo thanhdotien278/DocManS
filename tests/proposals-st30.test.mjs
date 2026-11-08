@@ -98,7 +98,7 @@ const legacyPiUser = {
 const headPiUser = { ...piUser, id: "user-head-pi", username: "tphead", systemRole: "RESEARCH_MANAGEMENT_HEAD" };
 const noProfilePiUser = { ...piUser, id: "user-no-profile", username: "khonghoso", researcherProfileId: undefined };
 const externalPiUser = { ...piUser, id: "user-external", username: "nnb", systemRole: "EXTERNAL_RESEARCHER_USER" };
-const ACCOUNTS = [adminUser, staffUser, piUser, memberUser, secretaryUser, outsiderUser, headPiUser, noProfilePiUser, externalPiUser];
+const ACCOUNTS = [adminUser, staffUser, piUser, memberUser, secretaryUser, outsiderUser, legacyPiUser, headPiUser, noProfilePiUser, externalPiUser];
 
 const profileBase = { managementOrganizationUnit: { name: "Khoa Toán - Tin học" }, academicRankCatalogItem: null, academicDegreeCatalogItem: { name: "Tiến sĩ" }, contactEmail: "lan@hvqy.vn", contactEmailKey: "lan@hvqy.vn", contactPhone: "0900000000", externalAffiliation: null };
 const RESEARCHER_PROFILES = [
@@ -111,9 +111,9 @@ function futureDate(days) {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 }
 
-function createAuditLog() {
+function createAuditLog(records) {
   return {
-    records: [],
+    records,
     async record(input) {
       this.records.push(input);
       return { id: `audit-${this.records.length}`, timestamp: new Date().toISOString(), ...input };
@@ -296,6 +296,11 @@ function createPrisma() {
       }
     },
     fileRecord: {
+      async aggregate({ where }) {
+        const versions = store.fileRecords.filter((row) => row.relatedEntityType === where.relatedEntityType &&
+          row.relatedEntityId === where.relatedEntityId && row.documentType === where.documentType).map((row) => row.version);
+        return { _max: { version: versions.length ? Math.max(...versions) : null } };
+      },
       async create({ data }) {
         const record = {
           id: nextId("file", store.fileRecords),
@@ -378,7 +383,7 @@ function createObjectStorage() {
 
 function createServices() {
   const prisma = createPrisma();
-  const auditLog = createAuditLog();
+  const auditLog = createAuditLog(prisma.store.auditLogs);
   const participationService = new ProposalParticipationService(prisma);
   const objectStorage = createObjectStorage();
 
@@ -528,6 +533,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     await assert.rejects(
       () =>
         services.proposalService.updateDraft(piUser, created.id, {
+          contextVersion: created.viewerAuthorization.contextVersion,
           members: [{ name: "Người không tồn tại", role: "TOPIC_MEMBER", organization: "K1", username: "khong-ton-tai" }]
         }),
       BadRequestException
@@ -542,6 +548,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     const uploaded = await services.filesService.uploadFile(piUser, {
       relatedEntityType: "research_proposal",
       relatedEntityId: created.id,
+      contextVersion: created.viewerAuthorization.contextVersion,
       filePurpose: "proposal-form",
       fileName: "thuyet-minh.pdf",
       originalFileName: "thuyet-minh.pdf",
@@ -579,6 +586,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
         services.filesService.uploadFile(memberUser, {
           relatedEntityType: "research_proposal",
           relatedEntityId: created.id,
+          contextVersion: memberView.viewerAuthorization.contextVersion,
           filePurpose: "proposal-form",
           fileName: "gia-mao.pdf",
           originalFileName: "gia-mao.pdf",
@@ -612,11 +620,11 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     // AC-ST-3.0-03: an unrelated user gets no participation role and no participation-derived read.
     await assert.rejects(() => services.proposalService.getProposal(outsiderUser, created.id), ForbiddenException);
 
-    // Staff read the proposal on their account-level scope, and still hold no record role.
-    const staffView = await services.proposalService.getProposal(staffUser, created.id);
-    assert.equal(staffView.viewerParticipation.role, "none");
-    assert.equal(staffView.viewerParticipation.isParticipant, false);
-    assert.equal(staffView.viewerParticipation.conflict.conflicted, false);
+    await assert.rejects(() => services.proposalService.getProposal(staffUser, created.id), ForbiddenException);
+    const headView = await services.proposalService.getProposal(headPiUser, created.id);
+    assert.equal(headView.viewerParticipation.role, "none");
+    assert.equal(headView.viewerParticipation.isParticipant, false);
+    assert.equal(headView.viewerParticipation.conflict.conflicted, false);
     await assert.rejects(() => services.proposalService.getProposal(adminUser, created.id), ForbiddenException);
     assert.deepEqual(await services.proposalService.listProposals(adminUser), []);
   });
@@ -631,10 +639,10 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
 
     // A participant cannot edit or submit the proposal they merely take part in.
     await assert.rejects(
-      () => services.proposalService.updateDraft(memberUser, created.id, { title: "Đổi tên trái phép" }),
+      () => services.proposalService.updateDraft(memberUser, created.id, { title: "Đổi tên trái phép", contextVersion: memberView.viewerAuthorization.contextVersion }),
       ForbiddenException
     );
-    await assert.rejects(() => services.proposalService.submitProposal(memberUser, created.id), ForbiddenException);
+    await assert.rejects(() => services.proposalService.submitProposal(memberUser, created.id, { contextVersion: memberView.viewerAuthorization.contextVersion }), ForbiddenException);
 
     // Participation on one proposal grants nothing on another proposal.
     const other = await services.proposalService.createDraft(piUser, {
@@ -707,8 +715,8 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     // These fields emulate legacy account data. They must not become proposal permissions.
     for (const actor of [legacyPiUser, outsiderUser]) {
       await assert.rejects(() => services.proposalService.getProposal(actor, created.id), ForbiddenException);
-      await assert.rejects(() => services.proposalService.updateDraft(actor, created.id, { title: "Chiếm quyền" }), ForbiddenException);
-      await assert.rejects(() => services.proposalService.submitProposal(actor, created.id), ForbiddenException);
+      await assert.rejects(() => services.proposalService.updateDraft(actor, created.id, { title: "Chiếm quyền", contextVersion: created.viewerAuthorization.contextVersion }), ForbiddenException);
+      await assert.rejects(() => services.proposalService.submitProposal(actor, created.id, { contextVersion: created.viewerAuthorization.contextVersion }), ForbiddenException);
     }
 
     // A council-member label is equally inert unless it is represented by a proposal relationship.
@@ -728,8 +736,10 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     assert.equal(outsiderList.length, 0);
 
     const staffList = await services.proposalService.listProposals(staffUser);
-    assert.equal(staffList.length, 1);
-    assert.equal(staffList[0].viewerParticipation.role, "none");
+    assert.deepEqual(staffList, []);
+    const headList = await services.proposalService.listProposals(headPiUser);
+    assert.equal(headList.length, 1);
+    assert.equal(headList[0].viewerParticipation.role, "none");
   });
 
   it("Story 1.8: list and detail expose the same viewer capability without leaking other actors", async () => {
