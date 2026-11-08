@@ -1,5 +1,5 @@
 # generated: 2026-07-29T17:30:00+07:00
-# last_updated: 2026-11-08T20:50:00+07:00
+# last_updated: 2026-11-08T23:30:00+07:00
 # project: DocManSystem
 # project_key: NOKEY
 # tracking_system: file-system
@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-11-08T20:50:00+07:00
+last_updated: 2026-11-08T23:30:00+07:00
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -81,7 +81,9 @@ development_status:
   5-3-phan-cong-reviewer-voi-kiem-tra-xung-dot: done
   5-4-reviewer-truy-cap-va-nop-danh-gia-cua-minh: backlog
   5-5-theo-doi-tien-do-va-tong-hop-danh-gia-noi-bo: review
-  5-6-thu-ky-khoa-hoc-ho-tro-hanh-chinh-cho-quy-trinh-danh-gia: backlog
+  # 5.6: review 2026-11-08 (chưa commit). Tệp hành chính MEETING_MATERIAL (thư ký đề tài) và COUNCIL_MINUTES (thư ký hội đồng) khi under_review; migration trigger 20261108230000. UI: thư ký hội đồng tải biên bản PASS, PI bị ẩn/404, TP thấy. Task/tracking note hoãn sang Epic 7. Bằng chứng: refined-flow-verification.md.
+  5-6-thu-ky-khoa-hoc-ho-tro-hanh-chinh-cho-quy-trinh-danh-gia: review
+  # 5.7/5.8: review 2026-11-08 (chưa commit). Gói GĐ có danh sách tệp; PublishedReviewSummaryV1 cho PI/thành viên; thông báo gửi thành viên đang hiệu lực. UI: PGĐ-KH bị chặn, GĐ phê duyệt cc36d963 kèm tóm tắt công bố, PI thấy kết quả không có ghi chú nội bộ. Chưa chạy nhánh từ chối trên UI.
   5-7-lanh-dao-xem-ho-so-trinh-quyet-dinh: review
   5-8-phe-duyet-tu-choi-va-cong-bo-ket-qua-de-xuat: review
   # 5.9: done 2026-11-08. Lõi routing, thông báo (11.1) và UI hai nhánh (phê duyệt, không phê duyệt, trả lại) PASS. Người dùng đồng ý đóng: ký LEADERSHIP áp dụng nguồn cho IRB_COUNCIL, IRB_CERTIFICATE, ACCEPTANCE_COUNCIL chuyển sang story 10.x và 6.8/6.9. Bằng chứng: epic-05-proposal-review-and-approval/refined-flow-verification.md.

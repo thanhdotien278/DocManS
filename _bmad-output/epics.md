@@ -3118,14 +3118,14 @@ So that tôi có đủ căn cứ trước khi ra quyết định.
 **Then** UI yêu cầu tải lại context
 **And** mutation sau đó không thể dùng dữ liệu cũ.
 
-**Given** GĐ có scope rõ ràng, proposal đã được trình qua luồng tờ trình (người lập → TB → TP) và
+**Given** GĐ (phạm vi toàn Học viện — D-042), proposal đã được trình qua luồng tờ trình (người lập → TB → TP) và
 không có participation/reviewer conflict
 **When** mở queue hoặc package
 **Then** server lọc queue/count trước khi trả; package dùng đúng submitted proposal,
 file versions, submitted reviews và consolidation version đã trình
 **And** không chỉ trả attachment count hoặc dùng mutable current data thay evidence.
 
-**Given** actor là PGĐ-KH, PGĐ-TD hoặc GĐ thiếu scope, hồ sơ chưa qua `HEAD_REVIEW` hoặc có conflict
+**Given** actor là PGĐ-KH, PGĐ-TD, hồ sơ chưa qua `HEAD_REVIEW` hoặc có conflict
 **When** gọi decision package, review-progress, file hoặc queue endpoint
 **Then** không trả private package/roster/raw review; route biết trước không vượt quyền;
 trên proposal còn được xem qua quan hệ khác chỉ hiện action liên quan disabled với lý do an toàn
@@ -3141,7 +3141,7 @@ So that proposal kết thúc quy trình minh bạch mà không lộ phản biệ
 
 **Given** GĐ attempts approve/reject of topic and funding
 **When** the backend evaluates the action inside the proposal mutation
-**Then** only active `LEADERSHIP_APPROVAL_AUTHORITY` (GĐ) with explicit scope and no
+**Then** only active `LEADERSHIP_APPROVAL_AUTHORITY` (GĐ, Academy-wide scope — D-042) with no
 participation/reviewer/council conflict may decide, after current completeness, all required
 submitted reviews, finalized synthesis and a `DECISION_PACKAGE` submission that passed TB and TP are rechecked
 **And** TP, PP, TB, CV, `SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH), `RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD), QT and reviewers have no topic decision authority.

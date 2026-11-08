@@ -6,6 +6,7 @@ import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { notifyUsers } from "../notifications/notification-events.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
+import { isRelationshipActiveAt } from "../proposals-shared/proposal-participation.js";
 import { APPROVAL_STAGE_LABELS, APPROVAL_STATUS_LABELS, assertReadyForLeadership, closeApprovalSubmission, canSignApproval, type ApprovalKey, type ApprovalSubmissionRow } from "../proposals-shared/approval-routing.js";
 import { DECIDABLE_STATUSES, PROPOSAL_STATUS, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import {
@@ -42,6 +43,31 @@ const DECISION_LABELS: Record<string, string> = {
   approved: "Phê duyệt",
   rejected: "Không phê duyệt"
 };
+
+/**
+ * Story 5.8 — the only projection of a decision shown to PI, team members and other readers of the
+ * proposal: no internal note, decider, scores, reviewers or synthesis.
+ */
+function readPublished(publicSummary: unknown) {
+  const published = publicSummary as { text?: unknown; requiredFollowUp?: unknown } | null;
+  return {
+    publicSummary: typeof published?.text === "string" ? published.text : "",
+    requiredFollowUp: typeof published?.requiredFollowUp === "string" ? published.requiredFollowUp : ""
+  };
+}
+
+/** Same bound as the publicSummary/requiredFollowUp textareas and the request pipe. */
+const PUBLISHED_TEXT_MAX = 5000;
+
+export function toPublishedReviewSummaryV1(decision: Pick<ProposalDecisionRecord, "decision" | "decidedAt" | "publicSummary">) {
+  return {
+    schemaVersion: "PublishedReviewSummaryV1" as const,
+    decision: decision.decision,
+    decisionLabel: DECISION_LABELS[decision.decision] ?? decision.decision,
+    decidedAt: decision.decidedAt.toISOString(),
+    ...readPublished(decision.publicSummary)
+  };
+}
 
 /**
  * ST-3.5 — the leadership approval decision.
@@ -131,7 +157,17 @@ export class ProposalDecisionsService {
       packageRevision: summary?.revision ?? 0,
       disclosure: { protectedReviewData: "REDACTED" },
       decisions: decisions.map((decision) => this.toDecisionResponse(decision)),
-      attachmentCount: (attachments as unknown[]).length,
+      attachmentCount: attachments.length,
+      // Metadata only; content is downloaded through api/v1/files/:id/download with its own read check.
+      attachments: attachments.map((file) => ({
+        id: file.id,
+        fileName: file.originalFileName,
+        filePurpose: file.filePurpose,
+        version: file.version,
+        sizeBytes: file.sizeBytes,
+        mimeType: file.mimeType,
+        createdAt: file.createdAt.toISOString()
+      })),
       history: (
         history as Array<{
           id: string;
@@ -191,6 +227,11 @@ export class ProposalDecisionsService {
     const note = this.readNote(input.note, { required: decision === PROPOSAL_DECISIONS.rejected });
     const toStatus = DECISION_TARGET_STATUS[decision];
     const decidedAt = new Date();
+    const publicSummaryText = typeof input.publicSummary === "string" ? input.publicSummary.trim() : "";
+    const requiredFollowUp = typeof input.requiredFollowUp === "string" ? input.requiredFollowUp.trim() : "";
+    if (publicSummaryText.length > PUBLISHED_TEXT_MAX || requiredFollowUp.length > PUBLISHED_TEXT_MAX) {
+      throw new BadRequestException({ message: `Tóm tắt công bố và yêu cầu tiếp theo không được vượt quá ${PUBLISHED_TEXT_MAX} ký tự.` });
+    }
 
     const created = (await this.prisma.$transaction(async (tx) => {
       const currentSummary = await tx.proposalEvaluationSummary.findUnique({ where: { id: summary.id } });
@@ -226,15 +267,17 @@ export class ProposalDecisionsService {
           packageRevision,
           contextVersion: input.contextVersion,
           packageSnapshot: currentSummary.evidenceSnapshot,
-          publicSummary: input.publicSummary ? { text: String(input.publicSummary), requiredFollowUp: input.requiredFollowUp ? String(input.requiredFollowUp) : "" } : null
+          publicSummary: publicSummaryText || requiredFollowUp ? { text: publicSummaryText, requiredFollowUp } : null
         } as never,
         // Included so the response names the deciding authority, matching what `findDecisions`
         // returns on a later read of the same record.
         include: { decidedBy: { select: { displayName: true } } }
       })) as ProposalDecisionRecord;
 
-      // Story 11.1: PI chỉ nhận trạng thái chung, không ghi chú/tóm tắt công bố (AD-11).
-      await notifyUsers(tx as never, { userIds: [proposal.ownerId], exclude: [actor.id], type: "proposal.decided", title: "Hồ sơ đã có quyết định", body: `${proposal.title} — ${PROPOSAL_STATUS_LABELS[toStatus] ?? toStatus}`, link: `/proposals/${proposalId}`, sourceType: "proposal", sourceId: proposalId, idempotencyKey: `decision:${record.id}` });
+      // Story 11.1/5.8: PI và thành viên/thư ký đang hiệu lực chỉ nhận trạng thái chung, không ghi chú/tóm tắt công bố (AD-11).
+      const members = await tx.proposalMember.findMany({ where: { proposalId, userId: { not: null } }, select: { userId: true, status: true, effectiveFrom: true, effectiveUntil: true } });
+      const memberUserIds = members.filter((member) => isRelationshipActiveAt(member, decidedAt)).map((member) => member.userId!);
+      await notifyUsers(tx as never, { userIds: [proposal.ownerId, ...memberUserIds], exclude: [actor.id], type: "proposal.decided", title: "Hồ sơ đã có quyết định", body: `${proposal.title} — ${PROPOSAL_STATUS_LABELS[toStatus] ?? toStatus}`, link: `/proposals/${proposalId}`, sourceType: "proposal", sourceId: proposalId, idempotencyKey: `decision:${record.id}` });
 
       await tx.proposalSubmissionEvent.create({
         data: {
@@ -323,8 +366,7 @@ export class ProposalDecisionsService {
       decidedAt: decision.decidedAt.toISOString(),
       fromStatus: decision.fromStatus,
       toStatus: decision.toStatus,
-      publicSummary: (decision.publicSummary as { text?: unknown } | null)?.text ?? "",
-      requiredFollowUp: (decision.publicSummary as { requiredFollowUp?: unknown } | null)?.requiredFollowUp ?? ""
+      ...readPublished(decision.publicSummary)
     };
   }
 }
