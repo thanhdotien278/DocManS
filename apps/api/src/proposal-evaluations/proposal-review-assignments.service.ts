@@ -4,6 +4,7 @@ import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { readTransactionClockV1 } from "../permissions/authorization-v1.service.js";
+import { notifyUsers } from "../notifications/notification-events.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
 import {
   getAssignmentRoleLabel,
@@ -296,6 +297,9 @@ export class ProposalReviewAssignmentsService {
             authorizationContextUpdatedAt: assignedAt
           } as never
         });
+
+        // Story 11.1: lời mời hiện cho reviewer ngay cả khi chưa nhận lời; trang đích tự kiểm tra quyền.
+        await notifyUsers(tx, { userIds: [candidate.id], exclude: [actor.id], type: "review.invited", title: "Lời mời tham gia hội đồng đánh giá", body: proposal.title, link: "/my-reviews", sourceType: "review_assignment", sourceId: assignment.id, idempotencyKey: `review-invite:${assignment.id}` });
 
         // The first assignment is what opens the evaluation phase; later ones join a proposal that is
         // already under review and must not rewrite its status.
