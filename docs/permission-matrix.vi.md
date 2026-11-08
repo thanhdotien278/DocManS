@@ -65,6 +65,9 @@ làm nhiệm vụ theo dõi, không còn là Phó GĐ phụ trách Khoa học.
   IRB, gia hạn và điều chỉnh đề tài.
 - Xem mọi đề tài trong Học viện và kinh phí từng đề tài; quản lý kinh phí, giải ngân,
   quyết toán.
+- Phạm vi toàn Học viện khi quyết định hồ sơ đề xuất (D-042): hàng đợi, gói quyết định, tệp và
+  phê duyệt/từ chối không kiểm tra phạm vi đơn vị; vẫn kiểm tra vai trò, `HEAD_REVIEW`, trạng thái
+  và xung đột.
 
 ### PGĐ-KH — Phó Giám đốc phụ trách Khoa học
 
