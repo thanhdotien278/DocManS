@@ -673,7 +673,8 @@ describe("EP-02 proposal intake and submission behavior", () => {
     });
     const piDetail = await proposalService.getProposal(piUser, draft.id);
     await assert.rejects(() => proposalService.getProposal(staffUser, draft.id), ForbiddenException);
-    const updated = await proposalService.updateDraft(piUser, draft.id, { contextVersion: currentVersion(prisma, draft.id),
+    const updated = await proposalService.updateDraft(piUser, draft.id, {
+      contextVersion: currentVersion(prisma, draft.id),
       title: "Nghiên cứu cập nhật",
       summary: "Tóm tắt mới"
     });
@@ -703,7 +704,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
     const proposalService = createProposalService(prisma, auditLog);
     const filesService = createFilesService({ prisma, auditLog, objectStorage });
-    const draft = await createDraft({ prisma, intakeService, proposalService });
+    const draft = await createDraft({ intakeService, proposalService });
 
     const initialReadiness = await proposalService.getReadiness(piUser, draft.id);
     assert.equal(initialReadiness.ready, false);
@@ -927,7 +928,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
     const proposalService = createProposalService(prisma, auditLog);
     const filesService = createFilesService({ prisma, auditLog, objectStorage });
-    const draft = await createDraft({ prisma, intakeService, proposalService });
+    const draft = await createDraft({ intakeService, proposalService });
 
     const attachment = await filesService.uploadFile(piUser, {
       relatedEntityType: "research_proposal",
@@ -941,7 +942,8 @@ describe("EP-02 proposal intake and submission behavior", () => {
       content: Buffer.alloc(1000, "p")
     });
 
-    const updated = await filesService.updateFile(piUser, attachment.id, { contextVersion: currentVersion(prisma, draft.id),
+    const updated = await filesService.updateFile(piUser, attachment.id, {
+      contextVersion: currentVersion(prisma, draft.id),
       description: "  Bản tổng hợp sau rà soát  "
     });
     assert.equal(updated.description, "Bản tổng hợp sau rà soát");
@@ -979,7 +981,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
     const proposalService = createProposalService(prisma, auditLog);
     const filesService = createFilesService({ prisma, auditLog, objectStorage });
-    const draft = await createDraft({ prisma, intakeService, proposalService });
+    const draft = await createDraft({ intakeService, proposalService });
 
     await assert.rejects(
       () =>
@@ -1023,7 +1025,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     const auditLog = createAuditLog();
     const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
     const proposalService = createProposalService(prisma, auditLog);
-    const draft = await createDraft({ prisma, intakeService, proposalService });
+    const draft = await createDraft({ intakeService, proposalService });
 
     await assert.rejects(() => proposalService.submitProposal(piUser, draft.id, { contextVersion: currentVersion(prisma, draft.id) }), (error) => {
       assert.equal(error instanceof BadRequestException, true);
@@ -1124,7 +1126,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
       return true;
     });
 
-    const readyDraft = await createDraft({ prisma, intakeService, proposalService, intake });
+    const readyDraft = await createDraft({ intakeService, proposalService, intake });
     const filesService = createFilesService({ prisma, auditLog });
     for (const filePurpose of ["proposal-form", "budget-form"]) {
       await filesService.uploadFile(piUser, {
@@ -1153,7 +1155,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     const intakeService = new ProposalIntakePeriodsService(prisma, auditLog);
     const proposalService = createProposalService(prisma, auditLog);
     const filesService = createFilesService({ prisma, auditLog });
-    const draft = await createDraft({ prisma, intakeService, proposalService });
+    const draft = await createDraft({ intakeService, proposalService });
 
     for (const filePurpose of ["proposal-form", "budget-form"]) {
       await filesService.uploadFile(piUser, {
@@ -1175,16 +1177,16 @@ describe("EP-02 proposal intake and submission behavior", () => {
           outOfScopeStaffUser,
           submitted.id,
           {
-          contextVersion: currentVersion(prisma, submitted.id),
-          reason: "Thiếu bản giải trình chỉnh sửa và bảng dự toán chi tiết.",
-          dueDate: futureDate(7)
+            contextVersion: currentVersion(prisma, submitted.id),
+            reason: "Thiếu bản giải trình chỉnh sửa và bảng dự toán chi tiết.",
+            dueDate: futureDate(7)
           }
         ),
       ForbiddenException
     );
 
-    const scopedStaff = { ...staffUser, organizationScopes: [{ id: "org-khti", code: "KHTI", name: "Khoa Toán - Tin học" }] };
-    const supplementRequested = await proposalService.requestSupplement(scopedStaff, submitted.id, { contextVersion: currentVersion(prisma, submitted.id),
+    const supplementRequested = await proposalService.requestSupplement(staffUser, submitted.id, {
+      contextVersion: currentVersion(prisma, submitted.id),
       reason: "Thiếu bản giải trình chỉnh sửa và bảng dự toán chi tiết.",
       dueDate: futureDate(7)
     });
@@ -1194,8 +1196,8 @@ describe("EP-02 proposal intake and submission behavior", () => {
     assert.equal(supplementRequested.canSubmit, false);
     assert.equal(supplementRequested.supplementRequests.length, 1);
     assert.equal(supplementRequested.supplementRequests[0].reason, "Thiếu bản giải trình chỉnh sửa và bảng dự toán chi tiết.");
-    assert.equal(supplementRequested.supplementRequests[0].actorId, scopedStaff.id);
-    assert.equal(supplementRequested.supplementRequests[0].actorDisplayName, scopedStaff.displayName);
+    assert.equal(supplementRequested.supplementRequests[0].actorId, staffUser.id);
+    assert.equal(supplementRequested.supplementRequests[0].actorDisplayName, staffUser.displayName);
     assert.equal(supplementRequested.history.at(-1).toStatus, "supplement_requested");
     assert.equal(prisma.store.auditLogs.at(-1).action, "request-supplement");
 
@@ -1208,7 +1210,8 @@ describe("EP-02 proposal intake and submission behavior", () => {
     await assert.rejects(() => proposalService.updateDraft(otherPiUser, submitted.id, { contextVersion: currentVersion(prisma, submitted.id), title: "Chiếm quyền bổ sung" }), ForbiddenException);
     await assert.rejects(() => proposalService.resubmitProposal(otherPiUser, submitted.id, { contextVersion: currentVersion(prisma, submitted.id) }), ForbiddenException);
 
-    const revised = await proposalService.updateDraft(piUser, submitted.id, { contextVersion: currentVersion(prisma, submitted.id),
+    const revised = await proposalService.updateDraft(piUser, submitted.id, {
+      contextVersion: currentVersion(prisma, submitted.id),
       summary: "Đề tài đã bổ sung bản giải trình và dự toán theo yêu cầu."
     });
     assert.equal(revised.summary, "Đề tài đã bổ sung bản giải trình và dự toán theo yêu cầu.");
@@ -1227,7 +1230,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     assert.equal(extraFile.canEdit, true);
     await assert.rejects(
       () =>
-        filesService.uploadFile(scopedStaff, {
+        filesService.uploadFile(staffUser, {
           relatedEntityType: "research_proposal",
           relatedEntityId: submitted.id,
           contextVersion: currentVersion(prisma, submitted.id),
@@ -1252,7 +1255,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
     assert.equal(prisma.store.auditLogs.at(-1).action, "resubmit-proposal");
 
     await assert.rejects(() => proposalService.resubmitProposal(piUser, submitted.id, { contextVersion: currentVersion(prisma, submitted.id) }), BadRequestException);
-    const secondRequest = await proposalService.requestSupplement(scopedStaff, draft.id, {
+    const secondRequest = await proposalService.requestSupplement(staffUser, draft.id, {
       contextVersion: currentVersion(prisma, draft.id),
       reason: "Cần bổ sung sau lần nộp lại.",
       dueDate: futureDate(5)
