@@ -163,6 +163,16 @@ type ProposalSupplementRequestRecord = {
   } | null;
 };
 
+/** Ẩn dữ liệu như với phản biện: phản biện hiện hành hoặc đã/đang phản biện ở vòng bất kỳ (Story 5.4). */
+function redactsAsReviewer(reviewAccess?: ProposalReviewAccess, participation?: ProposalParticipation) {
+  return Boolean(reviewAccess?.isAssignedReviewer || reviewAccess?.hasReviewConflict) && !participation?.isParticipant;
+}
+
+/** Phản biện hiện hành hoặc từng phản biện/còn phiếu (fail closed) không thấy nhật ký thao tác. */
+function hidesActionLog(reviewAccess: ProposalReviewAccess, participation: ProposalParticipation) {
+  return (reviewAccess.isAssignedReviewer || Boolean(reviewAccess.hasReviewConflict) || Boolean(reviewAccess.conflictUnresolved)) && !participation.isParticipant;
+}
+
 @Injectable()
 export class ResearchProposalsService {
   constructor(
@@ -669,10 +679,9 @@ export class ResearchProposalsService {
     const proposal = await this.findProposal(proposalId);
     const participation = await this.assertReadableProposal(actor, proposal);
     const reviewAccess = await this.reviewAccess.resolveForProposal(actor.id, proposalId);
-    const history = await this.listHistoryForProposal(proposalId);
-    return reviewAccess.isAssignedReviewer && !participation.isParticipant
-      ? history.map(({ actorId, actorDisplayName, ...event }) => event)
-      : history;
+    // Story 5.4 (matrix §9.9): người phản biện, kể cả vòng cũ, không xem nhật ký thao tác.
+    if (hidesActionLog(reviewAccess, participation)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Người đánh giá không xem nhật ký thao tác của hồ sơ." });
+    return this.listHistoryForProposal(proposalId);
   }
 
   async listManagementOfficerCandidates(actor: SafeUserContext, proposalId: string) {
@@ -1347,13 +1356,13 @@ export class ResearchProposalsService {
     const versions = await this.prisma.proposalSubmissionEvent.findMany({ where: { proposalId: proposal.id, toStatus: { in: ["submitted", "resubmitted"] } }, orderBy: { submittedAt: "asc" }, select: { id: true, submittedAt: true, snapshot: true } });
     return {
       ...response,
-      versions: reviewAccess.isAssignedReviewer && !participation.isParticipant ? [] : versions.filter((v) => v.snapshot && !(v.snapshot as { kind?: string }).kind).map((v, index) => ({ id: v.id, version: index + 1, submittedAt: v.submittedAt.toISOString(), content: v.snapshot })),
-      members: members.map((member) => reviewAccess.isAssignedReviewer && !participation.isParticipant
+      versions: redactsAsReviewer(reviewAccess, participation) ? [] : versions.filter((v) => v.snapshot && !(v.snapshot as { kind?: string }).kind).map((v, index) => ({ id: v.id, version: index + 1, submittedAt: v.submittedAt.toISOString(), content: v.snapshot })),
+      members: members.map((member) => redactsAsReviewer(reviewAccess, participation)
         ? { id: member.id, name: member.name, role: normalizeParticipationRole(member.participationRole ?? member.role), organization: member.organization }
         : this.toMemberResponse(member)),
-      attachments: reviewAccess.isAssignedReviewer && !participation.isParticipant ? attachments.map(({ uploadedById, uploaderDisplayName, ...file }) => file) : attachments,
-      history: reviewAccess.isAssignedReviewer && !participation.isParticipant ? history.map(({ actorId, actorDisplayName, ...event }) => event) : history,
-      supplementRequests: reviewAccess.isAssignedReviewer && !participation.isParticipant ? [] : supplementRequests,
+      attachments: redactsAsReviewer(reviewAccess, participation) ? attachments.map(({ uploadedById, uploaderDisplayName, ...file }) => file) : attachments,
+      ...(history ? { history } : {}),
+      supplementRequests: redactsAsReviewer(reviewAccess, participation) ? [] : supplementRequests,
       managementOfficer: this.toManagementOfficerResponse(managementOfficer, managementOfficerHistory),
       requiredPackage,
       publishedDecision: latestDecision ? toPublishedReviewSummaryV1(latestDecision as never) : null
@@ -1490,7 +1499,7 @@ export class ResearchProposalsService {
       code: proposal.code ?? "",
       intakePeriodId: proposal.intakePeriodId,
       intakePeriodTitle: proposal.intakePeriod?.title ?? "",
-      ...(reviewAccess?.isAssignedReviewer && !participation?.isParticipant ? {} : { ownerId: proposal.ownerId, ownerDisplayName: proposal.owner?.researcherProfile?.fullName || proposal.owner?.displayName || "" }),
+      ...(redactsAsReviewer(reviewAccess, participation) ? {} : { ownerId: proposal.ownerId, ownerDisplayName: proposal.owner?.researcherProfile?.fullName || proposal.owner?.displayName || "" }),
       hostOrganizationUnitId: proposal.hostOrganizationUnitId,
       researchFieldCode: proposal.researchFieldCode ?? "",
       proposalTypeCode: proposal.proposalTypeCode ?? "",
@@ -1503,7 +1512,7 @@ export class ResearchProposalsService {
       budgetMetadata: proposal.budgetMetadata ?? {},
       status: proposal.status,
       submittedAt: proposal.submittedAt?.toISOString() ?? "",
-      ...(reviewAccess?.isAssignedReviewer && !participation?.isParticipant ? {} : { submittedById: proposal.submittedById ?? "" }),
+      ...(redactsAsReviewer(reviewAccess, participation) ? {} : { submittedById: proposal.submittedById ?? "" }),
       createdAt: proposal.createdAt.toISOString(),
       updatedAt: proposal.updatedAt.toISOString(),
       canEdit: canEditDraft,
