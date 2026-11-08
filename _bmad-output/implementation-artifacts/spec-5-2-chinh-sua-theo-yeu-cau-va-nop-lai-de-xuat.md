@@ -43,3 +43,7 @@ context: []
 - `at(-1)` lặp ba lần kèm `!` — low, đã sửa.
 - Cờ tính theo đồng hồ client — low, bỏ qua: chỉ là cờ theo dõi, không chặn nghiệp vụ.
 - Tham chiếu D-038 có thể sai (D-041) — false: FR15 trong epics ghi D-038 cho TB/CV kiểm tra đầy đủ/yêu cầu bổ sung trên hồ sơ của chính mình.
+
+## Verification
+
+- Luồng nộp lại thật trên UI (2026-11-08, theo yêu cầu người dùng): PI `int1` bấm "Nộp lại hồ sơ" trên hồ sơ `cc36d963-6b91-4f9f-9c40-c0ccd3c1e8b8` → "Đã nộp lại hồ sơ.", trạng thái `resubmitted`, yêu cầu bổ sung "Đã xử lý". CV `hdtien1` nhận thông báo `proposal.resubmitted`, thấy "Xác nhận hồ sơ đầy đủ" (`proposal.completeness.check` được cấp). TP `nmphuong`: `proposal.review.assign` bị chặn `WORKFLOW_STATE_DENIED` "Cần xác nhận hồ sơ đầy đủ trước khi phân công đánh giá.", `proposal.completeness.check` bị chặn `ACTION_NOT_GRANTED`. Chưa bấm xác nhận đầy đủ (thuộc Story 5.1).
