@@ -56,7 +56,7 @@ export class NotificationsService {
       for (const submission of submissions) {
         if (!canViewApproval(actor, submission)) continue;
         const subject = `${submission.subjectType}:${submission.subjectId}`;
-        if (!conflicts.has(subject)) conflicts.set(subject, await actorConflicted(this.prisma as never, actor.id, submission));
+        if (!conflicts.has(subject)) conflicts.set(subject, await actorConflicted(this.prisma as never, actor, submission));
         if (!conflicts.get(subject)) allowed.add(`approval:${submission.id}`);
       }
     }

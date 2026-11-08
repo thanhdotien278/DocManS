@@ -123,16 +123,33 @@ describe("Story 1.8 viewer capability V1", () => {
       actor: { ...actor, systemRole: "RESEARCH_MANAGEMENT_STAFF" },
       proposal: { ...proposal, status: "under_review" },
       participation: participant,
+      reviewAccess: { isAssignedReviewer: false },
+      managementOfficer: { resolved: true, officer: { officerUserId: "user-1", effectiveFrom: new Date("2026-07-01T00:00:00.000Z"), effectiveUntil: null } },
       canRead: true,
       canEdit: false,
       canManageFiles: false
     });
     assert.equal(staffCapability.blockedActions.find((item) => item.action === "proposal.review.consolidate")?.code, "CONFLICT_DENIED");
-    assert.equal(staffCapability.blockedActions.find((item) => item.action === "proposal.supplement.request")?.code, "CONFLICT_DENIED");
+    // D-038: participation alone never blocks completeness/supplement; only the workflow state does here.
+    assert.equal(staffCapability.blockedActions.find((item) => item.action === "proposal.supplement.request")?.code, "WORKFLOW_STATE_DENIED");
+
+    const boardHeadMember = projectProposalViewerAuthorizationV1({
+      actor: { ...actor, systemRole: "RESEARCH_BOARD_HEAD" },
+      proposal: { ...proposal, status: "submitted" },
+      participation: participant,
+      reviewAccess: { isAssignedReviewer: false },
+      canRead: true,
+      canEdit: false,
+      canManageFiles: false
+    });
+    assert.ok(boardHeadMember.allowedActions.includes("proposal.completeness.check"));
+    assert.ok(boardHeadMember.allowedActions.includes("proposal.supplement.request"));
+    assert.equal(boardHeadMember.blockedActions.find((item) => item.action === "proposal.review.consolidate")?.code, "CONFLICT_DENIED");
 
     const authorityCapability = projectProposalViewerAuthorizationV1({
       actor: { ...actor, systemRole: "LEADERSHIP_APPROVAL_AUTHORITY" },
       proposal: { ...proposal, status: "ready_for_approval" },
+      participation: { role: "none", label: "Không tham gia", roles: [], labels: [], isOwner: false, isParticipant: false, relationshipEffectiveFrom: {}, relationshipEffectiveUntil: {} },
       reviewAccess: { isAssignedReviewer: true, assignmentId: "assignment-1", assignmentRole: "reviewer", effectiveFrom: "2026-07-01T00:00:00.000Z" },
       canRead: true,
       canEdit: false,
@@ -146,6 +163,8 @@ describe("Story 1.8 viewer capability V1", () => {
       actor: { ...actor, systemRole: "RESEARCH_MANAGEMENT_STAFF" },
       proposal: { ...proposal, status: "submitted" },
       participation: { role: "none", label: "Không tham gia", roles: [], labels: [], isOwner: false, isParticipant: false, relationshipEffectiveFrom: {}, relationshipEffectiveUntil: {} },
+      reviewAccess: { isAssignedReviewer: false },
+      managementOfficer: { resolved: true, officer: { officerUserId: "user-1", effectiveFrom: new Date("2026-07-01T00:00:00.000Z"), effectiveUntil: null } },
       canRead: true,
       canEdit: false,
       canManageFiles: false,

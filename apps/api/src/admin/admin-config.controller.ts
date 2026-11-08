@@ -48,6 +48,18 @@ export class AdminConfigController {
     return this.configService.updateCouncilFormation(actor, councilType, body ?? {});
   }
 
+  @Get("participant-policy")
+  async getParticipantPolicy(@Req() request: RequestWithCurrentUser) {
+    assertSystemAdmin(request.currentUser);
+    return this.configService.getParticipantPolicy();
+  }
+
+  @Put("participant-policy")
+  async updateParticipantPolicy(@Req() request: RequestWithCurrentUser, @Body() body: { policy?: unknown }) {
+    const actor = assertSystemAdmin(request.currentUser);
+    return this.configService.updateParticipantPolicy(actor, body ?? {});
+  }
+
   @Get("notification-templates")
   async listNotificationTemplates(@Req() request: RequestWithCurrentUser) {
     assertSystemAdmin(request.currentUser);

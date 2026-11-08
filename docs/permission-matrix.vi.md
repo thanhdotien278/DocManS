@@ -295,8 +295,29 @@ bao giờ tạo ra vai trò hệ thống mới.
   định, kinh phí). Ngoại lệ (D-038): TB hoặc CV phụ trách là chủ nhiệm/thành viên của hồ sơ
   vẫn được kiểm tra đầy đủ và yêu cầu bổ sung trên hồ sơ đó, chỉ cho hai thao tác này; TP vẫn
   không làm; các kiểm tra xung đột khác (phân công phản biện/hội đồng, chấm điểm, tổng hợp,
-  tờ trình) giữ nguyên. TP, PP, TB, CV đều có thể là chủ nhiệm/thành viên đề tài, kể cả CV
+  tờ trình) giữ nguyên (trừ khi vai trò bật "Phụ trách" — D-041 phần 2). TP, PP, TB, CV đều có thể là chủ nhiệm/thành viên đề tài, kể cả CV
   của đợt trong đợt mình phụ trách.
+- **Cấu hình người tham gia (D-041).** QT cấu hình riêng cho TP, TB, CV (khóa `participant_policy`):
+  "Được làm PI/thành viên" (mặc định bật) và "Xem dữ liệu quản lý" (mặc định tắt). Tắt làm PI
+  chỉ chặn tạo nháp mới và thêm thành viên mới (đề xuất hoặc điều chỉnh đề tài); hồ sơ/đề tài
+  đã có vẫn đi tiếp. Bật Xem thì trên hồ sơ đề xuất mình tham gia, người đó thấy tiến độ đánh
+  giá, roster hội đồng, danh tính người đánh giá, phiếu đã gửi và bản tổng hợp như khi không
+  tham gia, trong giới hạn quyền đọc gốc của vai trò (CV vẫn phải là CV phụ trách hiện hành).
+  Xem chỉ mở đọc (thao tác quản lý chỉ mở khi bật "Phụ trách" — D-041 phần 2): mọi thao tác quản lý vẫn bị chặn như quy tắc xung đột ở trên (trừ ngoại lệ
+  D-038 sẵn có: TB/CV phụ trách kiểm tra đầy đủ và yêu cầu bổ sung); người tham gia
+  vẫn không được mời phản biện/hội đồng/IRB và không chấm điểm. PP, GĐ, PGĐ không áp dụng.
+- **Phụ trách hồ sơ/đề tài mình tham gia (D-041 phần 2).** Cấu hình `participant_policy` có thêm
+  cột "Phụ trách" (`manage`, mặc định tắt) cho TP, TB, CV. Bật thì vai trò đó được mọi thao tác
+  quản lý trên hồ sơ đề xuất/đề tài mình là PI, thành viên hoặc thư ký: TP giao/thu hồi CV phụ
+  trách, mời/thu hồi hội đồng, lập tờ trình, tổng hợp/chốt/lập tờ trình quyết định, nghiệp vụ
+  CV phụ trách đề tài, ghi kinh phí. **TB/TP được xử lý (chuyển/trả) bước tờ trình của chính hồ
+  sơ/đề tài mình tham gia** và nhận thông báo chờ xử lý. CV là người tham gia được giao làm CV
+  phụ trách (đề xuất hoặc đề tài) khi vai trò CV bật Phụ trách. Bật Phụ trách kéo theo Xem.
+  Không đổi: chỉ bỏ xung đột do tham gia; xung đột phản biện/đã chấm và ngữ cảnh không xác định
+  vẫn chặn; người tham gia vẫn không được mời phản biện/hội đồng/IRB, không chấm điểm; vẫn cấm
+  tự phân công chính mình và tự rà soát tờ trình do mình lập; quyết định của GĐ/PGĐ-KH không
+  đổi. Mỗi mutation dùng ngoại lệ ghi audit `participant-waiver-used` (người thao tác, hồ sơ/đề
+  tài, thao tác) trong cùng transaction.
 - **Ẩn danh hai chiều.** Chủ nhiệm và phản biện không xem nhật ký hành động của hồ sơ.
 - **Luồng tờ trình.** CV lập → TB rà soát → TP duyệt → BGĐ ký. Tờ trình do TB lập đi thẳng
   lên TP; tờ trình do TP lập vẫn qua bước TB. Trả lại ở bước nào cũng về người lập (bắt
@@ -380,7 +401,9 @@ theo §7.4. Ô không có hoặc bị từ chối là `Không` tường minh.
 | Tìm kiếm/lọc | Chỉ dữ liệu quản trị | Theo phạm vi | Theo phạm vi | Của mình | Nếu tham gia | Được phân công | Vai trò và phạm vi dữ liệu | Mọi | Không với thao tác xem |
 
 Một người tham gia không được đồng thời là chuyên viên phụ trách, phản biện, thành viên hội
-đồng, người rà soát/duyệt tờ trình hoặc người ký cuối trên cùng bản ghi. Phản biện và quyết
+đồng, người rà soát/duyệt tờ trình hoặc người ký cuối trên cùng bản ghi (ngoại lệ D-041 phần 2:
+TP/TB/CV có vai trò bật "Phụ trách" được làm CV phụ trách và rà soát/duyệt tờ trình của hồ
+sơ/đề tài mình tham gia; phản biện, hội đồng và người ký cuối không đổi). Phản biện và quyết
 định cuối trong cùng vòng, và các vị trí loại trừ nhau trong hội đồng, cũng bị từ chối. Kiểm
 tra khi tạo/đổi phân công, khi đổi người tham gia và lại khi thực hiện thao tác được bảo vệ.
 Đổi người phụ trách phải kết thúc người cũ một cách nguyên tử, giữ lịch sử/audit và ngăn hai
