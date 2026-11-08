@@ -235,3 +235,24 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-11-1-thong-bao-trong-ung-dung-theo-su-kien-nghiep-vu.md`
   summary: Đổi CV phụ trách cả đợt (`transferProposalOfficers` trong `proposal-intake-periods.service.ts`) chưa thông báo cho CV mới của các hồ sơ đã nộp.
   evidence: Story 11.1 AC1 có sự kiện "assignment"; đường này ngoài Code Map của spec nên chưa phát `notifyUsers`. Giao CV từng hồ sơ (`assignManagementOfficer`) đã có thông báo.
+- source_spec: `_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/refined-flow-verification.md`
+  summary: Panel "Quyết định phê duyệt" ghi "6/7 phiếu đã gửi" (tính cả thư ký), lệch với panel tiến độ ghi 6/6.
+  evidence: UI 08/11, hồ sơ 8d3d6476.
+- source_spec: `_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/refined-flow-verification.md`
+  summary: Tờ trình do TP lập: TB vẫn thấy nút "Chuyển Trưởng phòng" và lịch sử ghi "Trưởng ban chuyển Trưởng phòng" dù tờ trình đi thẳng Ban giám đốc (D-037).
+  evidence: UI 08/11, DECISION_PACKAGE của hai hồ sơ QA.
+- source_spec: `_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/refined-flow-verification.md`
+  summary: Sau khi tờ trình bị trả lại và đã lập lại, dòng lịch sử của tờ trình cũ không còn hiện bước "Trả lại" (DB vẫn có bước RETURN).
+  evidence: UI 08/11, EVALUATION_COUNCIL hồ sơ 8d3d6476.
+- source_spec: `_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/refined-flow-verification.md`
+  summary: Panel hội đồng không tự cập nhật trạng thái ngay sau thao tác chuyển/trả lại ở panel tờ trình; tải lại trang thì đúng.
+  evidence: UI 08/11.
+- source_spec: `_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/refined-flow-verification.md`
+  summary: Nội dung thông báo trả lại tờ trình hội đồng lặp tiền tố: "Thành lập hội đồng đánh giá: Hội đồng đánh giá: …".
+  evidence: UI 08/11, thông báo của CV hdtien1.
+- source_spec: `_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/refined-flow-verification.md`
+  summary: Mời lại người đã gửi phiếu sau khi bị thu hồi trong cùng vòng không bị chặn; cần chốt có cấm hay không (AC 5.3 chỉ yêu cầu giữ xung đột ở bước tổng hợp/quyết định).
+  evidence: Thông báo "đã gửi phiếu đánh giá" của test cũ không còn trong code API (08/11).
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-9-approval-routing-cv-tb-tp-bgd.md`
+  summary: Ký LEADERSHIP cho IRB_COUNCIL, IRB_CERTIFICATE (story 10.3/10.4) và ACCEPTANCE_COUNCIL (story 6.8/6.9) chưa áp dụng thay đổi nguồn; các story đó phải nối vào `closeApprovalSubmission`.
+  evidence: Người dùng đồng ý đóng 5.9 ngày 2026-11-08; `approval-routing.ts` chỉ xử lý nguồn cho DECISION_PACKAGE, EVALUATION_COUNCIL, PROJECT_ADJUSTMENT/EXTENSION, LIQUIDATION.
