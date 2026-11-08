@@ -86,7 +86,12 @@ context: ['{project-root}/docs/permission-matrix.md']
   - Mở "Hệ thống báo cháy" (`f9f57beb`, vòng cũ): bị từ chối truy cập.
   - CV `hdtien1` trên "Mùa thu 2" vẫn thấy Timeline và "Tiến độ phiếu đánh giá".
 - Sửa sau kiểm chứng UI: `proposal-detail-workspace.tsx` ẩn khối Timeline khi backend không trả `history`. Trước đó reviewer thấy dòng "Chưa có lịch sử nộp", gây hiểu nhầm.
-- Chưa kiểm chứng trên UI: lưu nháp hai lần và thông báo cho CV khi nộp. DB dev không có phân công `under_review` nào thuộc vòng hiện hành; muốn có phải chạy lại cả luồng hội đồng. Phần này mới chỉ được test ở service.
+- Kiểm chứng UI vòng mới (2026-11-08, cùng môi trường):
+  - Dựng vòng đánh giá qua API bằng tài khoản seed trên hồ sơ "Mùa thu 3" (`cc36d963`): CV `hdtien1` xác nhận đầy đủ → TP `nmphuong` mời 7 thành viên → 7/7 nhận lời → tờ trình CV → TB `nmtrung` → TP → PGĐ-KH `vndinh` ký thành lập hội đồng (APPROVED).
+  - Trên UI, reviewer `test_external01` bấm "Lưu nháp" hai lần liên tiếp, không tải lại trang: hai `PUT …/my-review` đều trả 200, không bị 409.
+  - Điền đủ rubric và chọn kết luận `revise` rồi gửi: `POST …/my-review/submit` trả 201; phiếu chuyển sang chỉ đọc, "Tổng 80/100 · Đề nghị chỉnh sửa, bổ sung".
+  - CV `hdtien1` nhận thông báo "Có phiếu đánh giá mới được nộp — Mùa thu 3", không nêu tên reviewer. Hồ sơ vẫn "Đang đánh giá"; tiến độ "Đã gửi 1/6 phiếu".
+- Dữ liệu dev còn sót: lần thử đầu trên hồ sơ "Chưa biết làm gì" (`c2a85efb`) dừng ở tờ trình chờ TB, vì TB `nmtrung` là thành viên của hồ sơ này (`APPROVAL_CONFLICT`, đúng matrix). Hồ sơ đó còn 7 phân công đã nhận lời và 1 tờ trình đang `BOARD_REVIEW`.
 - Dữ liệu cũ: 4 phân công của hồ sơ "Hệ thống báo cháy" (code ngày 16/09) gắn `reviewedSubmissionEventId` vào sự kiện `completeness_check` thay vì lần nộp. Trước story này, các reviewer đó đã bị `assertAssigned` chặn chấm và nộp phiếu; nay bị chặn thêm quyền đọc.
 
 ## Spec Change Log
