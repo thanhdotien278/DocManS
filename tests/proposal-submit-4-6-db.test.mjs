@@ -87,4 +87,17 @@ test("Story 4.7: nộp vào đợt có CV tạo đúng một officer ACTIVE, tă
   assert.equal((await db.researchProposal.findUnique({ where: { id: proposal.id } })).authorizationRelationshipVersion, before.authorizationRelationshipVersion + 1);
   const audit = await db.auditLog.findFirst({ where: { action: "assign-proposal-management-officer", targetEntityId: rows[0].id } });
   assert.equal(audit.actorId, null);
+  // Story 11.1: CV vừa nhận hồ sơ có đúng một thông báo nộp, không có thông báo giao CV riêng.
+  assert.deepEqual((await db.userNotification.findMany({ where: { userId: staff.id } })).map((row) => [row.type, row.sourceId]), [["proposal.submitted", proposal.id]]);
+
+  // Yêu cầu bổ sung → PI (không chép lý do); nộp lại → CV hiện hành, khóa khác lần nộp đầu.
+  const officer = { id: staff.id, username: staff.username, displayName: staff.displayName, systemRole: staff.systemRole, unit: staff.unit, organizationScopes: [] };
+  await service.requestSupplement(officer, proposal.id, { reason: "Thiếu xác nhận đơn vị bí mật", dueDate: "2027-06-01", contextVersion: await ctx() });
+  const piRows = await db.userNotification.findMany({ where: { userId: people.pi.id } });
+  assert.deepEqual(piRows.map((row) => row.type), ["proposal.supplement-requested"]);
+  assert.ok(!`${piRows[0].title} ${piRows[0].body}`.includes("bí mật"));
+  await service.resubmitProposal(people.pi, proposal.id, { contextVersion: await ctx() });
+  const staffRows = await db.userNotification.findMany({ where: { userId: staff.id }, orderBy: { createdAt: "asc" } });
+  assert.deepEqual(staffRows.map((row) => row.type), ["proposal.submitted", "proposal.resubmitted"]);
+  assert.notEqual(staffRows[0].idempotencyKey, staffRows[1].idempotencyKey);
 });
