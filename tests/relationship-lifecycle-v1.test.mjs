@@ -64,6 +64,9 @@ describe("Story 1.9 proposal relationship lifecycle", () => {
         role: "TOPIC_SECRETARY", label: "Thư ký", roles: ["TOPIC_SECRETARY"], labels: ["Thư ký"], isOwner: false,
         isParticipant: true, relationshipEffectiveFrom: { TOPIC_SECRETARY: asOf.toISOString() }
       },
+      councilFormationConfig: { councilType: "EVALUATION", allowedRoles: ["RESEARCH_MANAGEMENT_STAFF"], memberCount: 7 },
+      managementOfficer: { resolved: true, officer: { officerUserId: "secretary", effectiveFrom: asOf, effectiveUntil: null } },
+      reviewAccess: resolveProposalReviewAccess([], asOf),
       canRead: true, canEdit: false, canManageFiles: true
     });
 

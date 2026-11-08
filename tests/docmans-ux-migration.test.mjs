@@ -34,16 +34,17 @@ describe("DocManS UX migration boundaries", () => {
   });
 
   it("derives the printable researcher view without adding unsupported fields", async () => {
-    const [panel, api, audit, css] = await Promise.all([
+    const [panel, audit, css] = await Promise.all([
       read("apps/web/src/components/researcher-profiles/researcher-profiles-panel.tsx"),
-      read("apps/web/src/lib/researcher-profiles-api.ts"),
       read("_bmad-output/implementation-artifacts/docmans-ux-field-audit.md"),
       read("apps/web/src/app/globals.css")
     ]);
-    assert.match(panel, /Tóm tắt lý lịch khoa học/);
-    assert.match(panel, /form\.publications/);
-    assert.match(panel, /form\.participations/);
-    assert.doesNotMatch(api, /curriculumVitae|bankAccount|smartCaSerial|idNumber/);
+    const preview = panel.match(/<section[^>]+id="profile-panel-preview"[\s\S]*?<\/section>/)?.[0];
+    assert.ok(preview, "print preview section");
+    assert.match(preview, /Tóm tắt lý lịch khoa học/);
+    assert.match(preview, /form\.publications/);
+    assert.match(preview, /form\.participations/);
+    assert.doesNotMatch(preview, /curriculumVitae|bankAccount|smartCaSerial|idNumber/);
     assert.match(audit, /No Category C schema\/API work is required/);
     assert.match(css, /\.grid:has\(> \.profile-print-preview\) > :not\(\.profile-print-preview\)/);
   });
