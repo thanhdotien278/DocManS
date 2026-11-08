@@ -1,5 +1,6 @@
 import { AdminConfigPanel } from "@/components/admin/admin-config-panel";
 import { AdminCouncilConfigPanel } from "@/components/admin/admin-council-config-panel";
+import { AdminParticipantPolicyPanel } from "@/components/admin/admin-participant-policy-panel";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -13,6 +14,7 @@ export default function SystemSettingsPage() {
         description="Cập nhật tham số vận hành và skeleton mẫu thông báo dùng cho hệ thống nội bộ."
       />
       <AdminCouncilConfigPanel />
+      <AdminParticipantPolicyPanel />
       <AdminConfigPanel />
     </>
   );

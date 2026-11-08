@@ -19,6 +19,7 @@ import {
 } from "../proposals-shared/proposal-review-access.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { EVALUATION_COUNCIL_STRUCTURE, type CouncilFormationConfig } from "../proposals-shared/council-formation.js";
+import { participantPolicyFor, readParticipantPolicy } from "../proposals-shared/participant-policy.js";
 import { normalizeParticipationRole } from "../proposals-shared/proposal-participation.js";
 import { isWorkflowVisibleStatus, PROPOSAL_STATUS, PROPOSAL_STATUS_LABELS, REVIEWER_ASSIGNABLE_STATUSES } from "../proposals-shared/proposal-workflow.js";
 import {
@@ -30,6 +31,7 @@ import {
   findCurrentSubmissionEvidence,
   findEvaluationProposal,
   resolveActorConflict,
+  resolveManagerConflict,
   updateProposalStatusGuarded,
   type EvaluationProposalRecord,
   type ProposalReviewRecord,
@@ -87,7 +89,7 @@ export class ProposalReviewAssignmentsService {
     }
     const role = position === undefined || position === "" ? null : normalizeAssignmentRole(position);
     if (position !== undefined && position !== "" && !role) throw new BadRequestException({ message: "Vị trí hội đồng không hợp lệ." });
-    const actorConflict = await resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId);
+    const actorConflict = await resolveManagerConflict(this.prisma, { participation: this.participation, reviewAccess: this.reviewAccess }, actor, proposalId);
     if (actorConflict.conflicted) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: actorConflict.viewerMessage });
     await this.assertCompletenessEvidence(proposal);
     const submissionEvidence = await findCurrentSubmissionEvidence(this.prisma, proposal);
@@ -167,9 +169,12 @@ export class ProposalReviewAssignmentsService {
 
   async listAssignments(actor: SafeUserContext, proposalId: string) {
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    await assertReviewAssignmentReadScope(this.prisma, actor, proposal);
+    const { view } = participantPolicyFor(actor, await readParticipantPolicy(this.prisma));
+    await assertReviewAssignmentReadScope(this.prisma, actor, proposal, view);
     if (!isWorkflowVisibleStatus(proposal.status)) throw new ForbiddenException();
-    if ((await this.participation.evaluateConflict(actor.id, proposalId)).conflicted) throw new ForbiddenException({ message: "Không được xem dữ liệu phản biện của hồ sơ mình tham gia." });
+    // D-041: "Xem" bật thì bỏ qua xung đột tham gia khi đọc (ngữ cảnh không xác định vẫn chặn); người được mời vẫn không đọc phiếu người khác (bên dưới).
+    const participationConflict = await this.participation.evaluateConflict(actor.id, proposalId);
+    if (participationConflict.conflicted && !(view && participationConflict.reasonCode === "participation")) throw new ForbiddenException({ message: "Không được xem dữ liệu phản biện của hồ sơ mình tham gia." });
     const assignments = await this.findCurrentRoundAssignments(proposal);
     // Người được mời (kể cả chưa chấp nhận) không đọc phiếu của người khác.
     const isInvitee = assignments.some((assignment) => assignment.reviewerUserId === actor.id);
@@ -191,7 +196,7 @@ export class ProposalReviewAssignmentsService {
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
     const config = await assertCanFormCouncil(this.prisma, actor, proposal);
     assertProposalStatus(proposal, REVIEWER_ASSIGNABLE_STATUSES, "Chỉ hồ sơ đã nộp hoặc đang đánh giá mới được phân công người đánh giá.");
-    const actorConflict = await resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId);
+    const actorConflict = await resolveManagerConflict(this.prisma, { participation: this.participation, reviewAccess: this.reviewAccess }, actor, proposalId, "assign-reviewer");
     if (actorConflict.conflicted) {
       throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người đang tham gia hồ sơ không thể phân công người đánh giá." });
     }
@@ -359,7 +364,7 @@ export class ProposalReviewAssignmentsService {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (s, a) => s.revokeAssignment(a, proposalId, assignmentId, input));
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
     await assertCanFormCouncil(this.prisma, actor, proposal);
-    if ((await resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId)).conflicted) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được thay đổi phân công." });
+    if ((await resolveManagerConflict(this.prisma, { participation: this.participation, reviewAccess: this.reviewAccess }, actor, proposalId, "revoke-review-assignment")).conflicted) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia không được thay đổi phân công." });
     assertProposalStatus(proposal, REVIEWER_ASSIGNABLE_STATUSES, "Hồ sơ không ở trạng thái cho phép thay đổi phân công đánh giá.");
     await this.assertCompletenessEvidence(proposal);
     const assignment = await this.findAssignmentById(proposalId, assignmentId);
