@@ -270,6 +270,16 @@ Head/Staff/Leadership decision rights are superseded. Authoritative source:
    đợt không còn lọc theo phạm vi của TP. Tờ trình (`approval-routing`) dùng chung cho hồ sơ và đề
    tài nên tờ trình đề tài cũng không còn giới hạn đơn vị; còn `approved-projects.service`, hồ sơ
    nhà khoa học và đơn vị áp dụng của đợt vẫn kiểm tra phạm vi đơn vị.
+   **Cấu hình người tham gia (D-041, 2026-11-08).** Khóa `participant_policy` trong
+   `system_parameters` (QT ghi, có audit) quyết định TP/TB/CV có được làm PI/thành viên mới
+   (`pi`) và có xem dữ liệu quản lý trên hồ sơ mình tham gia (`view`). Một nguồn sự thật:
+   `apps/api/src/proposals-shared/participant-policy.ts`, đọc lại mỗi request, hỏng → mặc định.
+   `view` chỉ nới nhánh đọc qua `resolveReadConflict`. Phần 2 thêm `manage` ("Phụ trách", kéo
+   theo `view`): kiểm tra xung đột phía người thao tác quản lý dùng `resolveManagerConflict`
+   (`proposal-evaluation-support.ts`), đọc policy trong transaction của mutation, chỉ bỏ xung
+   đột do tham gia và ghi audit `participant-waiver-used`; `actorConflicted` của tờ trình áp
+   `manage` theo vai trò người xử lý (TB/TP có thể xử lý tờ trình hồ sơ/đề tài mình tham gia).
+   Loại trừ ứng viên chấm điểm/hội đồng và quyền của GĐ/PGĐ-KH không đổi.
 2. **Approval routing replaces package submission.** Every BGĐ-bound procedure is an
    `approval_submissions` record with `approval_steps` history (model per
    `tuan/DocManS`, migration `20261018000000_approval_routing`):

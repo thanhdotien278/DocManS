@@ -9,6 +9,8 @@ import { isLeadership, isResearchBoardHead, isScienceDeputyDirector, isResearchM
 import type { ProposalConflictDecision } from "../proposals-shared/proposal-participation.js";
 import { isWorkflowVisibleStatus, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import { proposalContextVersion } from "../proposals-shared/proposal-mutation.js";
+import { participantPolicyFor, readParticipantPolicy } from "../proposals-shared/participant-policy.js";
+import { AuditLogService } from "../auth/audit-log.service.js";
 
 /** The proposal fields every EP-03 evaluation operation needs. */
 export type EvaluationProposalRecord = {
@@ -199,7 +201,11 @@ export async function assertCurrentCompletenessEvidence(
  * Staff authority for EP-03 operations: the current officer check runs on every consolidation and
  * assignment action. Đơn vị chủ trì không giới hạn quyền (2026-11-02).
  */
-export async function assertScientificManagementScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
+/**
+ * `waiveParticipation` (D-041): bỏ qua xung đột do tham gia hồ sơ, vẫn chặn xung đột phản biện. Nhánh đọc truyền `view`,
+ * nhánh ghi (`assertProposalManagementWriteScope`) truyền `manage`; audit ngoại lệ do kiểm tra xung đột của từng thao tác ghi.
+ */
+export async function assertScientificManagementScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord, waiveParticipation = false) {
   if (!actor || !isResearchManagementStaff(actor)) {
     throw new ForbiddenException({ message: "Chỉ chuyên viên quản lý khoa học được phân công cho hồ sơ mới được thực hiện thao tác này." });
   }
@@ -217,7 +223,7 @@ export async function assertScientificManagementScope(prisma: PrismaService, act
   if (!current) {
     throw new ForbiddenException({ message: "Bạn không còn là chuyên viên phụ trách hồ sơ này." });
   }
-  const conflict = await resolveActorConflict({ participation: new ProposalParticipationService(prisma), reviewAccess: new ProposalReviewAccessService(prisma) }, actor.id, proposal.id);
+  const conflict = await resolveReadConflict({ participation: new ProposalParticipationService(prisma), reviewAccess: new ProposalReviewAccessService(prisma) }, actor.id, proposal.id, waiveParticipation);
   if (conflict.conflicted) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: conflict.viewerMessage });
   return actor;
 }
@@ -243,25 +249,25 @@ export async function assertProposalManagementWriteScope(prisma: PrismaService, 
   if (actor && (isResearchManagementHead(actor) || isResearchBoardHead(actor))) {
     return actor; // xung đột do từng thao tác tổng hợp kiểm tra tiếp bằng resolver đã tiêm
   }
-  if (actor && isResearchManagementStaff(actor)) return assertScientificManagementScope(prisma, actor, proposal);
+  if (actor && isResearchManagementStaff(actor)) return assertScientificManagementScope(prisma, actor, proposal, participantPolicyFor(actor, await readParticipantPolicy(prisma)).manage);
   throw new ForbiddenException({ message: "Chỉ Trưởng phòng, Trưởng ban hoặc Chuyên viên phụ trách hồ sơ mới được tổng hợp và lập tờ trình." });
 }
 
 /** Assignment rosters are operational reads for Head/Board Head and assigned Staff. */
-export async function assertReviewAssignmentReadScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
+export async function assertReviewAssignmentReadScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord, participantView = false) {
   if (isResearchManagementHead(actor)) return assertScientificManagementHeadScope(actor, proposal);
   if (actor && isResearchBoardHead(actor)) return actor;
-  if (isResearchManagementStaff(actor)) return assertScientificManagementScope(prisma, actor, proposal);
+  if (isResearchManagementStaff(actor)) return assertScientificManagementScope(prisma, actor, proposal, participantView);
   throw new ForbiddenException({ message: "Không có quyền xem phân công đánh giá của hồ sơ này." });
 }
 
 /** Shared read gate for evaluation progress. Staff require the active officer relationship;
  * Head, Deputy and Director read without a unit-scope check. */
-export async function assertEvaluationReadScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord) {
+export async function assertEvaluationReadScope(prisma: PrismaService, actor: SafeUserContext | undefined, proposal: EvaluationProposalRecord, participantView = false) {
   if (!actor) throw new ForbiddenException({ message: "Không có quyền xem thông tin đánh giá của hồ sơ này." });
   if (isLeadership(actor) || isResearchManagementHead(actor) || isResearchBoardHead(actor) || isResearchOversightAuthority(actor) || isScienceDeputyDirector(actor) || isResearchManagementDeputyHead(actor)) return actor;
   if (isResearchManagementStaff(actor)) {
-    await assertScientificManagementScope(prisma, actor, proposal);
+    await assertScientificManagementScope(prisma, actor, proposal, participantView);
     return actor;
   }
   throw new ForbiddenException({ message: "Không có quyền xem thông tin đánh giá của hồ sơ này." });
@@ -323,6 +329,77 @@ export async function resolveActorConflict(
     : { isAssignedReviewer: false, hasPersistedReview: false, unresolved: true };
   if (access.unresolved) return UNRESOLVED_CONFLICT;
   return access.isAssignedReviewer || access.hasPersistedReview ? REVIEWER_CONFLICT : participationConflict;
+}
+
+/** Xung đột có thể miễn bằng "Xem"/"Phụ trách": chỉ xung đột do tham gia với vai trò cụ thể (phản biện/không xác định có role "unknown"). */
+export function isWaivableParticipation(decision: ProposalConflictDecision) {
+  return decision.conflicted && decision.reasonCode === "participation" && decision.role !== "unknown";
+}
+
+/**
+ * D-041: bỏ qua xung đột do là PI/thành viên/thư ký khi `waive` bật; xung đột phản biện và ngữ cảnh không xác định vẫn chặn.
+ * `waive` tắt → trả nguyên quyết định của `resolveActorConflict`. `waived` cho biết ngoại lệ thực sự được dùng.
+ */
+async function waiveParticipationConflict(resolvers: ConflictResolvers, actorId: string | undefined, proposalId: string, waive: boolean) {
+  const decision = await resolveActorConflict(resolvers, actorId, proposalId);
+  if (!waive || !isWaivableParticipation(decision)) return { decision, waived: false };
+  const access = resolvers.reviewAccess.resolveConflictForProposal
+    ? await resolvers.reviewAccess.resolveConflictForProposal(actorId, proposalId)
+    : { isAssignedReviewer: false, hasPersistedReview: false, unresolved: true };
+  if (access.unresolved) return { decision: UNRESOLVED_CONFLICT, waived: false };
+  if (access.isAssignedReviewer || access.hasPersistedReview) return { decision: REVIEWER_CONFLICT, waived: false };
+  return { decision: { conflicted: false, role: decision.role, reasonCode: "no-conflict", reason: "", viewerMessage: "" } as ProposalConflictDecision, waived: true };
+}
+
+/**
+ * Biến thể chỉ đọc của `resolveActorConflict` (D-041). Khi `participantView` bật, xung đột do là PI/thành viên/thư ký
+ * được bỏ qua; xung đột phản biện và ngữ cảnh không xác định vẫn chặn. Mutation dùng `resolveManagerConflict`.
+ */
+export async function resolveReadConflict(
+  resolvers: ConflictResolvers,
+  actorId: string | undefined,
+  proposalId: string,
+  participantView: boolean
+): Promise<ProposalConflictDecision> {
+  return (await waiveParticipationConflict(resolvers, actorId, proposalId, participantView)).decision;
+}
+
+export type ParticipantWaiverActor = { id: string; username?: string | null; systemRole?: string | null };
+
+/** D-041 phần 2: audit `participant-waiver-used` khi một mutation dùng ngoại lệ "Phụ trách". Gọi bằng client transaction của mutation. */
+export async function recordParticipantWaiver(
+  prisma: Pick<PrismaService, "auditLog">,
+  actor: ParticipantWaiverActor,
+  target: { entity: "research-proposal" | "approved-project"; id: string },
+  operation: string
+) {
+  await new AuditLogService(prisma as PrismaService).record({
+    action: "participant-waiver-used",
+    result: "success",
+    actorId: actor.id,
+    username: actor.username ?? undefined,
+    targetEntity: target.entity,
+    targetEntityId: target.id,
+    afterFacts: { operation, systemRole: actor.systemRole ?? null }
+  });
+}
+
+/**
+ * D-041 phần 2: xung đột phía người thao tác quản lý. "Phụ trách" (`manage`) bật cho vai trò người thao tác → bỏ qua
+ * xung đột do tham gia; xung đột phản biện/không xác định vẫn chặn. Policy đọc bằng `prisma` được truyền (transaction của mutation).
+ * `operation` có giá trị → ghi audit khi ngoại lệ được dùng; bỏ trống ở nhánh hiển thị/đọc.
+ */
+export async function resolveManagerConflict(
+  prisma: Pick<PrismaService, "systemParameter" | "auditLog">,
+  resolvers: ConflictResolvers,
+  actor: ParticipantWaiverActor | undefined,
+  proposalId: string,
+  operation?: string
+): Promise<ProposalConflictDecision> {
+  const { manage } = participantPolicyFor(actor, await readParticipantPolicy(prisma));
+  const { decision, waived } = await waiveParticipationConflict(resolvers, actor?.id, proposalId, manage);
+  if (waived && operation && actor) await recordParticipantWaiver(prisma, actor, { entity: "research-proposal", id: proposalId }, operation);
+  return decision;
 }
 
 /**

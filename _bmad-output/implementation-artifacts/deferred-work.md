@@ -256,3 +256,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-9-approval-routing-cv-tb-tp-bgd.md`
   summary: Ký LEADERSHIP cho IRB_COUNCIL, IRB_CERTIFICATE (story 10.3/10.4) và ACCEPTANCE_COUNCIL (story 6.8/6.9) chưa áp dụng thay đổi nguồn; các story đó phải nối vào `closeApprovalSubmission`.
   evidence: Người dùng đồng ý đóng 5.9 ngày 2026-11-08; `approval-routing.ts` chỉ xử lý nguồn cho DECISION_PACKAGE, EVALUATION_COUNCIL, PROJECT_ADJUSTMENT/EXTENSION, LIQUIDATION.
+- source_spec: `_bmad-output/implementation-artifacts/spec-participant-self-management-config.md`
+  summary: (ĐÃ LÀM 08/11/2026, spec `spec-participant-self-management-part-2.md`) Phần 2 — cột "Phụ trách" trong cấu hình participant_policy: TP/TB/CV tham gia hồ sơ/đề tài vẫn được mọi thao tác quản lý (phân công, hội đồng, tổng hợp, tờ trình kể cả tự duyệt bước TB/TP, CV phụ trách, nghiệp vụ đề tài), trừ chấm điểm và quyết định GĐ; bật Phụ trách kéo theo Xem; audit ghi participantWaiver.
+  evidence: Tách theo yêu cầu người dùng 08/11/2026 vì spec gộp ~3.000 token, chạm ~40 điểm kiểm tra xung đột (bucket A trong khảo sát); phần 1 làm cấu hình, làm PI và Xem trước.
+- source_spec: `_bmad-output/implementation-artifacts/spec-participant-self-management-config.md`
+  summary: Test mức service cho các nhánh đọc với `view` bật/tắt (`getReviewProgress`, `listAssignments`, `getCouncil`) với CV phụ trách là người tham gia.
+  evidence: Review verification-gap 08/11: hiện chỉ test `resolveReadConflict`, capability và `toProposalResponse`; đảo điều kiện trong ba service này không làm test nào hỏng. Cần harness fake Prisma hoặc DB opt-in.

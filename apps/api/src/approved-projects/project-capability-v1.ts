@@ -47,6 +47,8 @@ export type ProjectCapabilityInput = {
   projectOfficer?: ProjectOfficerFact | null;
   participant?: { isParticipant: boolean; role?: string; effectiveFrom?: string; effectiveUntil?: string | null };
   responsibleMember?: boolean;
+  /** D-041 phần 2: "Phụ trách" của vai trò người xem; bật thì PI/thành viên vẫn được thao tác CV phụ trách/TP. Không đổi quyền ký. */
+  participantManage?: boolean;
   request?: { requestType: string; status: string; requesterId: string };
   report?: { status: string; authorId: string };
 };
@@ -75,8 +77,9 @@ export function projectViewerAuthorizationV1(input: ProjectCapabilityInput): Vie
   const canMonitor = wide || (scoped && (isOversight(input.actor) || hasOfficer || isPi || participant));
   // Chữ ký GĐ/PGĐ-KH trên tờ trình là đường quyết định cuối duy nhất (Story 6.11); người trong đề tài không ký.
   const canSign = isSignerRole(input.actor) && !participant && !isPi;
-  const canOperate = scoped && isStaff(input.actor) && hasOfficer && !participant && !isPi;
-  const canHeadDecide = scoped && isHead(input.actor) && !participant && !isPi;
+  const notInProject = input.participantManage === true || (!participant && !isPi);
+  const canOperate = scoped && isStaff(input.actor) && hasOfficer && notInProject;
+  const canHeadDecide = scoped && isHead(input.actor) && notInProject;
   const canPi = isPi && input.project.status === PROJECT_STATUSES.executing;
   const statusesForExecution = [PROJECT_STATUSES.executing, PROJECT_STATUSES.paused];
   const inExecution = statusesForExecution.includes(input.project.status as typeof PROJECT_STATUSES.executing | typeof PROJECT_STATUSES.paused);
