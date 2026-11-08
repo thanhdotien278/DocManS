@@ -10,7 +10,7 @@ import { CheckCircle2, Download, FileText, Pencil, Save, Send, Trash2, UploadClo
 import { useSession } from "@/components/auth/session-provider";
 import { RoutingStatus } from "@/components/approvals/routing-status";
 import { ProposalCouncilPanel } from "@/components/research-proposals/proposal-council-panel";
-import { CouncilSecretaryPanel } from "@/components/research-proposals/council-secretary-panel";
+import { CouncilSecretaryPanel, EvaluationFileUpload } from "@/components/research-proposals/council-secretary-panel";
 import { ProposalDecisionPanel } from "@/components/research-proposals/proposal-decision-panel";
 import { ProposalEvaluationPanel } from "@/components/research-proposals/proposal-evaluation-panel";
 import { ProposalReviewForm } from "@/components/research-proposals/proposal-review-form";
@@ -53,6 +53,11 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   "budget-form": "Dự toán kinh phí",
   budgetForm: "Dự toán kinh phí",
   DU_TOAN_KINH_PHI: "Dự toán kinh phí"
+};
+/** Story 5.6 — tệp hành chính nộp khi hồ sơ đang đánh giá. */
+const EVALUATION_FILE_LABELS: Record<string, string> = {
+  MEETING_MATERIAL: "Tài liệu họp",
+  COUNCIL_MINUTES: "Biên bản họp hội đồng"
 };
 
 function formatDate(value: string) {
@@ -192,6 +197,8 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   const isParticipantViewer = (capabilityState.capability?.viewerRelationships ?? []).some((relationship) => ["PROPOSAL_PI", "TOPIC_MEMBER", "TOPIC_SECRETARY"].includes(relationship.type));
   // PI/thành viên chỉ xem lịch sử yêu cầu; form gửi yêu cầu chỉ hiện khi được cấp (TB/CV phụ trách là PI theo D-038).
   const showSupplementRequestForm = canRequestSupplement || !isParticipantViewer;
+  const canUploadMeetingMaterial = proposal?.status === "under_review" && (capabilityState.capability?.viewerRelationships ?? []).some((relationship) => relationship.type === "TOPIC_SECRETARY");
+  const evaluationFiles = proposal?.attachments?.filter((attachment) => Object.hasOwn(EVALUATION_FILE_LABELS, attachment.requirementCode || attachment.filePurpose || "")) ?? [];
   const isAssignedReviewer = (capabilityState.capability?.viewerRelationships ?? []).some((relationship) => relationship.type === "REVIEWER_ASSIGNMENT");
   const showReviewForm = isAssignedReviewer && shouldRenderAction("proposal.review.submit");
   const showDecisionPanel = shouldRenderAction("proposal.decision.approve") || shouldRenderAction("proposal.decision.reject");
@@ -733,7 +740,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
           </SectionCard>
         ) : null}
 
-        {isCouncilSecretary ? <CouncilSecretaryPanel proposalId={proposal.id} contextVersion={proposal.viewerAuthorization?.contextVersion} onChanged={() => void refreshWorkflowState()} /> : null}
+        {isCouncilSecretary ? <CouncilSecretaryPanel proposalId={proposal.id} proposalStatus={proposal.status} contextVersion={proposal.viewerAuthorization?.contextVersion} onChanged={() => void refreshWorkflowState()} /> : null}
 
         {showReviewForm && !isCouncilSecretary ? <ProposalReviewForm contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} onReviewSubmitted={() => void refreshWorkflowState()} canSubmitReview={canPerformProposalAction(capabilityState, "proposal.review.submit")} blockedReason={blockedProposalAction(capabilityState, "proposal.review.submit")?.reason ?? capabilityState.reason} /> : null}
 
@@ -745,6 +752,17 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
 
         {/* Panel hội đồng tự ẩn khi backend trả 401/403 (người xem không lập, rà soát hay ký). */}
         {["submitted", "resubmitted", "under_review"].includes(proposal.status) ? <ProposalCouncilPanel proposalId={proposal.id} onChanged={() => void refreshWorkflowState()} /> : null}
+
+        {proposal.publishedDecision ? (
+          <SectionCard title="Kết quả quyết định" subtitle="Thông tin được công bố về quyết định của Giám đốc">
+            <div className="meta-grid">
+              <div className="meta-item"><span className="meta-label">Quyết định</span><span className="meta-value">{proposal.publishedDecision.decisionLabel}</span></div>
+              <div className="meta-item"><span className="meta-label">Ngày quyết định</span><span className="meta-value">{formatDate(proposal.publishedDecision.decidedAt)}</span></div>
+            </div>
+            {proposal.publishedDecision.publicSummary ? <p style={{ whiteSpace: "pre-wrap" }}>{proposal.publishedDecision.publicSummary}</p> : null}
+            {proposal.publishedDecision.requiredFollowUp ? <><div className="section-mini-heading">Yêu cầu tiếp theo</div><p style={{ whiteSpace: "pre-wrap" }}>{proposal.publishedDecision.requiredFollowUp}</p></> : null}
+          </SectionCard>
+        ) : null}
 
         {showDecisionPanel ? <ProposalDecisionPanel contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} onDecision={() => void refreshWorkflowState()} canDecide={canPerformProposalAction(capabilityState, "proposal.decision.approve")} blockedReason={blockedProposalAction(capabilityState, "proposal.decision.approve")?.reason ?? capabilityState.reason} /> : null}
 
@@ -957,6 +975,28 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
             </form>
           ) : null}
         </SectionCard>
+
+        {evaluationFiles.length || canUploadMeetingMaterial ? (
+          <SectionCard title="Tệp hành chính đánh giá" subtitle="Tài liệu họp và biên bản họp hội đồng; tệp đã tải được giữ nguyên">
+            {canUploadMeetingMaterial ? <EvaluationFileUpload proposalId={proposal.id} contextVersion={proposal.viewerAuthorization?.contextVersion} purpose="MEETING_MATERIAL" label="Tài liệu họp" onUploaded={() => void refreshWorkflowState()} /> : null}
+            {evaluationFiles.length ? (
+              <ul className="timeline">
+                {evaluationFiles.map((attachment) => (
+                  <li className="timeline-item" key={attachment.id}>
+                    <span className="timeline-dot" />
+                    <div>
+                      <p className="timeline-title">
+                        <a href={getProposalAttachmentDownloadUrl(attachment.id)} aria-label={`Tải xuống ${attachment.fileName}`}>{attachment.fileName}</a>
+                        {attachment.version ? <span className="muted"> v{attachment.version}</span> : null}
+                      </p>
+                      <p className="timeline-meta">{EVALUATION_FILE_LABELS[attachment.requirementCode || attachment.filePurpose || ""]} · {getAttachmentUploaderName(attachment)} · {formatDate(attachment.createdAt)}{attachment.description ? ` · ${attachment.description}` : ""}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : <EmptyState title="Chưa có tệp hành chính" message="Tài liệu họp sẽ hiện ở đây sau khi tải lên." />}
+          </SectionCard>
+        ) : null}
       </div>
 
       <div className="grid">

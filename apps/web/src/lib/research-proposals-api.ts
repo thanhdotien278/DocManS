@@ -197,6 +197,17 @@ export type ResearchProposal = {
   history?: ProposalHistoryEvent[];
   supplementRequests?: ProposalSupplementRequest[];
   requiredPackage?: RequiredPackageItem[];
+  /** Story 5.8: kết quả quyết định được công bố, không có ghi chú nội bộ; null khi chưa có quyết định. */
+  publishedDecision?: PublishedReviewSummaryV1 | null;
+};
+
+export type PublishedReviewSummaryV1 = {
+  schemaVersion: "PublishedReviewSummaryV1";
+  decision: "approved" | "rejected";
+  decisionLabel: string;
+  decidedAt: string;
+  publicSummary: string;
+  requiredFollowUp: string;
 };
 
 export type ReadinessItem = {

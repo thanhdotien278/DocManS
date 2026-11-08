@@ -1,5 +1,6 @@
 import { filterCurrentRoundAssignments, isWaivableParticipation, recordParticipantWaiver, summarizeReviewProgress } from "../proposal-evaluations/proposal-evaluation-support.js";
 import { pendingApprovalStages } from "../proposals-shared/approval-routing.js";
+import { toPublishedReviewSummaryV1 } from "../proposal-evaluations/proposal-decisions.service.js";
 import { proposalContextVersion, runProposalMutation } from "../proposals-shared/proposal-mutation.js";
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 // @ts-ignore The runtime package is JavaScript; its TypeScript source entry supplies this contract.
@@ -35,6 +36,7 @@ import { MANAGEMENT_OFFICER_STATUS, ProposalManagementOfficerService, replacePro
 import { PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import type { ProposalMemberPersistInput, ProposalMissingItem } from "../proposals-shared/proposal-types.js";
 import { ProposalParticipationService } from "./proposal-participation.service.js";
+import { EVALUATION_FILE_PURPOSES } from "../modules/files/files.dto.js";
 import { notifyUsers } from "../notifications/notification-events.js";
 import { normalizeResearcherKey } from "../researcher-profiles/researcher-profiles.dto.js";
 import { projectProposalViewerAuthorizationV1 } from "../permissions/proposal-capability-v1.js";
@@ -891,7 +893,7 @@ export class ResearchProposalsService {
     const { ownerId, id, title, researchFieldCode, proposalTypeCode, proposalNatureCode, objectives, summary, startDate, endDate, budgetMetadata, hostOrganizationUnitId } = proposal;
     return JSON.parse(JSON.stringify({ id, ownerId, title, researchFieldCode, proposalTypeCode, proposalNatureCode, objectives, summary, startDate, endDate, budgetMetadata, hostOrganizationUnitId,
       members: (await this.findMembers(proposal.id)).filter((m) => isRelationshipActiveAt(m, new Date())).map((m) => this.toMemberResponse(m)),
-      attachments: await this.findAttachments(proposal.id), requiredPackage: await this.getRequiredPackageForProposal(proposal),
+      attachments: await this.findAttachments(proposal.id, { canMutate: false, hidePurposes: EVALUATION_FILE_PURPOSES }), requiredPackage: await this.getRequiredPackageForProposal(proposal),
       authorizationContext: proposalContextVersion(proposal) }));
   }
 
@@ -1230,7 +1232,7 @@ export class ResearchProposalsService {
     })) as ProposalMemberRecord[];
   }
 
-  private async findAttachments(proposalId: string, options: { canMutate: boolean } = { canMutate: false }) {
+  private async findAttachments(proposalId: string, options: { canMutate: boolean; hidePurposes?: string[] } = { canMutate: false }) {
     const records = (await this.prisma.fileRecord.findMany({
       where: { relatedEntityType: "research_proposal", relatedEntityId: proposalId, status: "active", deletedAt: null },
       orderBy: { createdAt: "asc" },
@@ -1242,7 +1244,8 @@ export class ResearchProposalsService {
     })) as ProposalAttachmentRecord[];
     const evidence = await this.prisma.proposalSubmissionEvent.findMany({ where: { proposalId }, select: { snapshot: true } });
     const locked = new Set(evidence.flatMap((e) => ((e.snapshot as { attachments?: Array<{ id: string }> } | null)?.attachments ?? []).map((file) => file.id)));
-    return records.map((attachment) => this.toAttachmentResponse(attachment, { canMutate: options.canMutate && !locked.has(attachment.id) }));
+    return records.filter((attachment) => !options.hidePurposes?.includes(attachment.filePurpose ?? ""))
+      .map((attachment) => this.toAttachmentResponse(attachment, { canMutate: options.canMutate && !locked.has(attachment.id) && !EVALUATION_FILE_PURPOSES.includes(attachment.filePurpose ?? "") }));
   }
 
   private async getRequiredPackageForProposal(proposal: ResearchProposalRecord) {
@@ -1325,12 +1328,20 @@ export class ResearchProposalsService {
     const participation = resolvedParticipation ?? (await this.participation.resolveForProposal(actor?.id, proposal, members));
     const reviewAccess = resolvedReviewAccess ?? (await this.reviewAccess.resolveForProposal(actor?.id, proposal.id));
     const managementOfficer = resolvedManagementOfficer ?? (await this.managementOfficers.resolveForProposal(proposal.id));
-    const attachments = await this.findAttachments(proposal.id, { canMutate: this.canMutateProposalFiles(actor, proposal, participation) });
+    // Story 5.6: biên bản (có thể nêu danh tính người chấm) chỉ mở cho TP, TB, CV phụ trách, GĐ và thư ký hội đồng; luôn ẩn với người tham gia.
+    const canReadMinutes = !participation.isParticipant && (isResearchManagementHead(actor) || isResearchBoardHead(actor) || isLeadership(actor)
+      || reviewAccess.assignmentRole === "council_secretary"
+      || (isResearchManagementStaff(actor) && managementOfficer.officer?.officerUserId === actor?.id));
+    const attachments = await this.findAttachments(proposal.id, { canMutate: this.canMutateProposalFiles(actor, proposal, participation), hidePurposes: canReadMinutes ? [] : ["COUNCIL_MINUTES"] });
     const history = await this.listHistoryForProposal(proposal.id);
     const supplementRequests = await this.listSupplementRequestsForProposal(proposal.id);
     const requiredPackage = await this.getRequiredPackageForProposal(proposal);
     const completenessCheckCompleted = await this.hasCurrentCompletenessCheck(proposal);
     const managementOfficerHistory = await this.managementOfficers.listHistory(proposal.id);
+    // Story 5.8: chỉ quyết định khớp trạng thái hiện tại mới được công bố, qua projection chung.
+    const latestDecision = ["approved", "rejected"].includes(proposal.status)
+      ? await this.prisma.proposalDecision.findFirst({ where: { proposalId: proposal.id, toStatus: proposal.status }, orderBy: { decidedAt: "desc" } })
+      : null;
 
     const response = this.toProposalResponse(proposal, actor, participation, reviewAccess, completenessCheckCompleted, managementOfficer, evaluationSummaryStatus ?? await this.findEvaluationSummaryStatus(proposal.id), await this.findReviewReadiness(proposal), await this.findDecisionApprovalStage(proposal.id), await this.readCouncilFormationConfigForView(), await readParticipantPolicy(this.prisma));
     const versions = await this.prisma.proposalSubmissionEvent.findMany({ where: { proposalId: proposal.id, toStatus: { in: ["submitted", "resubmitted"] } }, orderBy: { submittedAt: "asc" }, select: { id: true, submittedAt: true, snapshot: true } });
@@ -1344,7 +1355,8 @@ export class ResearchProposalsService {
       history: reviewAccess.isAssignedReviewer && !participation.isParticipant ? history.map(({ actorId, actorDisplayName, ...event }) => event) : history,
       supplementRequests: reviewAccess.isAssignedReviewer && !participation.isParticipant ? [] : supplementRequests,
       managementOfficer: this.toManagementOfficerResponse(managementOfficer, managementOfficerHistory),
-      requiredPackage
+      requiredPackage,
+      publishedDecision: latestDecision ? toPublishedReviewSummaryV1(latestDecision as never) : null
     };
   }
 
