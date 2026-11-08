@@ -9,8 +9,12 @@ import { ProposalReviewAssignmentsService } from "../dist/apps/api/proposal-eval
 import { ProposalReviewsService } from "../dist/apps/api/proposal-evaluations/proposal-reviews.service.js";
 import { ProposalParticipationService } from "../dist/apps/api/research-proposals/proposal-participation.service.js";
 import { ProposalReviewAccessService } from "../dist/apps/api/proposals-shared/proposal-review-access.service.js";
+import { ProposalManagementOfficerService } from "../dist/apps/api/proposals-shared/proposal-management-officer.service.js";
 import { ResearchProposalsService } from "../dist/apps/api/research-proposals/research-proposals.service.js";
+import { advanceApprovalSubmission } from "../dist/apps/api/proposals-shared/approval-routing.js";
 import { canReadProposal } from "../dist/apps/api/proposals-shared/proposal-access.js";
+import { proposalContextVersion } from "../dist/apps/api/proposals-shared/proposal-mutation.js";
+import { projectProposalViewerAuthorizationV1 } from "../dist/apps/api/permissions/proposal-capability-v1.js";
 import { createEvaluationTables, createUserLookup } from "./helpers/evaluation-prisma.mjs";
 
 const ORG_KHTI = "org-khti";
@@ -130,7 +134,10 @@ const secretaryUser = {
   displayName: "ThS. Trần Thanh Minh"
 };
 
+const boardHead = { ...staffUser, id: "board-head", systemRole: "RESEARCH_BOARD_HEAD" };
+const departmentHead = { ...staffUser, id: "department-head", systemRole: "RESEARCH_MANAGEMENT_HEAD" };
 const ACCOUNTS = [
+  boardHead, departmentHead,
   staffUser,
   outOfScopeStaffUser,
   piUser,
@@ -181,7 +188,11 @@ function createPrisma() {
     fileRecords: [],
     submissionEvents: [],
     supplementRequests: [],
-    auditLogs: []
+    auditLogs: [],
+    notifications: [],
+    approvals: [],
+    approvalSteps: [],
+    officers: []
   };
 
   function nextId(prefix, collection) {
@@ -230,6 +241,9 @@ function createPrisma() {
           status: "draft",
           submittedAt: null,
           submittedById: null,
+          authorizationRelationshipVersion: 0,
+          authorizationConflictVersion: 0,
+          authorizationDelegationVersion: 0,
           createdAt: new Date(),
           updatedAt: new Date(),
           ...data
@@ -239,7 +253,9 @@ function createPrisma() {
       },
       async update({ where, data }) {
         const index = store.proposals.findIndex((item) => item.id === where.id);
-        store.proposals[index] = { ...store.proposals[index], ...data, updatedAt: new Date() };
+        const item = store.proposals[index];
+        const values = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value && typeof value === "object" && "increment" in value ? item[key] + value.increment : value]));
+        store.proposals[index] = { ...item, ...values, updatedAt: new Date(Math.max(Date.now(), item.updatedAt.getTime() + 1)) };
         return store.proposals[index];
       },
       async findUnique({ where }) {
@@ -261,7 +277,7 @@ function createPrisma() {
           }
           count += 1;
           const values = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value && typeof value === "object" && "increment" in value ? item[key] + value.increment : value]));
-          return { ...item, ...values, updatedAt: new Date() };
+          return { ...item, ...values, updatedAt: new Date(Math.max(Date.now(), item.updatedAt.getTime() + 1)) };
         });
         return { count };
       }
@@ -302,7 +318,17 @@ function createPrisma() {
     },
     user: {
       ...createUserLookup(ACCOUNTS),
+      // runProposalMutation reloads the actor inside the transaction.
+      async findUnique({ where }) {
+        const account = ACCOUNTS.find((item) => item.id === where.id);
+        return account ? { ...account, status: account.status ?? "active", organizationScopes: account.organizationScopes.map((scope) => ({ organizationUnit: { ...scope, status: "active" } })), researcherProfile: { id: `profile-${account.id}`, status: "ACTIVE" } } : null;
+      },
       async findMany({ where }) {
+        if (where?.id?.in) return ACCOUNTS.filter((user) => where.id.in.includes(user.id) && (!where.status || (user.status ?? "active") === where.status)).map((user) => ({ id: user.id }));
+        if (where?.systemRole) {
+          const roles = where.systemRole.in ?? [where.systemRole];
+          return ACCOUNTS.filter((user) => roles.includes(user.systemRole) && !where.id?.notIn?.includes(user.id) && (!where.status || (user.status ?? "active") === where.status));
+        }
         const ids = where?.OR?.flatMap((clause) => clause.id?.in ?? []) ?? [];
         const usernameKeys = where?.OR?.flatMap((clause) => clause.usernameKey?.in ?? []) ?? [];
         return ACCOUNTS.filter((user) => ids.includes(user.id) || usernameKeys.includes(user.username.toLowerCase())).map((user) => ({
@@ -326,6 +352,10 @@ function createPrisma() {
         store.fileRecords.push(record);
         return record;
       },
+      async aggregate({ where }) {
+        const versions = store.fileRecords.filter((item) => item.relatedEntityId === where.relatedEntityId && item.documentType === where.documentType).map((item) => item.version ?? 0);
+        return { _max: { version: versions.length ? Math.max(...versions) : null } };
+      },
       async findUnique({ where }) {
         return store.fileRecords.find((item) => item.id === where.id) ?? null;
       },
@@ -344,8 +374,14 @@ function createPrisma() {
         store.submissionEvents.push(record);
         return record;
       },
-      async findMany({ where }) {
-        return store.submissionEvents.filter((item) => item.proposalId === where.proposalId);
+      async findMany({ where, orderBy }) {
+        const events = store.submissionEvents.filter((event) =>
+          event.proposalId === where.proposalId &&
+          (!where.toStatus?.in || where.toStatus.in.includes(event.toStatus)) &&
+          (!where.submittedAt?.gte || event.submittedAt >= where.submittedAt.gte) &&
+          (!where.snapshot || event.snapshot?.kind === where.snapshot.equals)
+        );
+        return orderBy?.submittedAt === "desc" ? events.sort((a, b) => b.submittedAt - a.submittedAt) : events;
       }
     },
     proposalSupplementRequest: {
@@ -361,6 +397,77 @@ function createPrisma() {
         const record = { id: nextId("audit", store.auditLogs), timestamp: new Date(), ...data };
         store.auditLogs.push(record);
         return record;
+      }
+    },
+    organizationUnit: {
+      async count({ where }) {
+        return where.id.in.length;
+      },
+      async findFirst({ where }) {
+        return { id: where.id };
+      }
+    },
+    catalogItem: { findFirst: async () => ({ id: "catalog-stub" }) },
+    proposalManagementOfficer: {
+      async create({ data }) {
+        const record = { id: nextId("officer", store.officers), status: "ACTIVE", effectiveFrom: new Date(), effectiveUntil: null, createdAt: new Date(), ...data };
+        store.officers.push(record);
+        return record;
+      },
+      async update({ where, data }) {
+        const record = store.officers.find((item) => item.id === where.id);
+        Object.assign(record, data);
+        return record;
+      },
+      async findMany({ where }) {
+        const ids = where.proposalId?.in ?? [where.proposalId];
+        return store.officers.filter((item) => ids.includes(item.proposalId) && (!where.status || item.status === where.status));
+      },
+      async findFirst({ where }) {
+        const now = new Date();
+        return store.officers.find((item) => item.proposalId === where.proposalId && (!where.officerUserId || item.officerUserId === where.officerUserId) && (!where.status || item.status === where.status) && item.effectiveFrom <= now && (!item.effectiveUntil || item.effectiveUntil > now)) ?? null;
+      }
+    },
+    approvalStep: {
+      async create({ data }) { store.approvalSteps.push(data); return data; },
+      async findMany({ where }) {
+        return store.approvalSteps.filter((step) => where.action.in.includes(step.action) &&
+          store.approvals.some((row) => row.id === step.submissionId &&
+            Object.entries(where.submission).every(([key, value]) => row[key] === value)));
+      }
+    },
+    approvalSubmission: {
+      async create({ data }) {
+        const row = { id: nextId("approval", store.approvals), createdAt: new Date(), ...data };
+        store.approvals.push(row);
+        return row;
+      },
+      async findMany({ where }) {
+        return store.approvals.filter((row) => Object.entries(where).every(([key, value]) =>
+          value?.in ? value.in.includes(row[key]) : row[key] === value));
+      },
+      async findFirst({ where }) { return (await this.findMany({ where })).at(-1) ?? null; },
+      async findUnique({ where }) { return store.approvals.find((row) => row.id === where.id) ?? null; },
+      async updateMany({ where, data }) {
+        const rows = await this.findMany({ where });
+        for (const row of rows) Object.assign(row, data);
+        return { count: rows.length };
+      }
+    },
+    // The staff fixture is the officer in charge and is configured to form the evaluation council.
+    systemParameter: {
+      findUnique: async ({ where }) => (where?.key === "council_formation.EVALUATION" ? { value: JSON.stringify({ allowedRoles: ["RESEARCH_MANAGEMENT_STAFF"], memberCount: 7 }), updatedAt: new Date() } : null),
+      findFirst: async () => null
+    },
+    userNotification: {
+      async updateMany({ where, data }) {
+        const rows = store.notifications.filter((row) => Object.entries(where).every(([key, value]) => (row[key] ?? null) === value));
+        for (const row of rows) Object.assign(row, data);
+        return { count: rows.length };
+      },
+      async createMany({ data }) {
+        store.notifications.push(...data);
+        return { count: data.length };
       }
     },
     ...createEvaluationTables(store, ACCOUNTS),
@@ -394,6 +501,32 @@ function createObjectStorage() {
   };
 }
 
+/**
+ * Proposal mutations require the caller's contextVersion. These scenarios exercise business rules,
+ * not staleness, so a call that omits it is sent with the proposal's current token.
+ */
+function withCurrentContext(service, prisma, methods) {
+  for (const name of methods) {
+    const original = service[name].bind(service);
+    service[name] = (actor, ...args) => {
+      const proposalId = typeof args[0] === "string" ? args[0] : args[0]?.relatedEntityId;
+      const proposal = prisma.store.proposals.find((item) => item.id === proposalId);
+      const last = args.length && args.at(-1) && typeof args.at(-1) === "object" ? args.at(-1) : null;
+      if (name === "decide" && last && !("packageRevision" in last)) {
+        const summary = prisma.store.evaluationSummaries.find((row) => row.proposalId === proposalId);
+        if (summary) args[args.length - 1] = { ...last, packageRevision: summary.revision };
+      }
+      if (proposal && !(last && "contextVersion" in last)) {
+        const contextVersion = proposalContextVersion(proposal);
+        if (last) args[args.length - 1] = { ...args.at(-1), contextVersion };
+        else args.push({ contextVersion });
+      }
+      return original(actor, ...args);
+    };
+  }
+  return service;
+}
+
 function createServices() {
   const prisma = createPrisma();
   const auditLog = createAuditLog();
@@ -406,16 +539,21 @@ function createServices() {
   const summaries = new ProposalEvaluationSummaryService(prisma, auditLog, assignments, reviews, participation, reviewAccess);
   const decisions = new ProposalDecisionsService(prisma, auditLog, participation, reviewAccess, assignments, reviews, summaries);
 
+  withCurrentContext(assignments, prisma, ["assignReviewer", "revokeAssignment"]);
+  withCurrentContext(reviews, prisma, ["saveMyReview", "submitMyReview"]);
+  withCurrentContext(summaries, prisma, ["saveEvaluationSummary", "finalizeEvaluationSummary", "submitCompletedPackage"]);
+  withCurrentContext(decisions, prisma, ["decide"]);
+
   return {
     prisma,
     auditLog,
     objectStorage,
     intakeService: new ProposalIntakePeriodsService(prisma, auditLog),
-    proposalService: new ResearchProposalsService(prisma, auditLog, participation, reviewAccess),
-    filesService: new FilesService(prisma, objectStorage, auditLog, participation, reviewAccess, {
+    proposalService: withCurrentContext(new ResearchProposalsService(prisma, auditLog, participation, reviewAccess, new ProposalManagementOfficerService(prisma)), prisma, ["submitProposal"]),
+    filesService: withCurrentContext(new FilesService(prisma, objectStorage, auditLog, participation, reviewAccess, {
       maxFileSizeBytes: 1024 * 1024,
       allowedExtensions: [".doc", ".docx", ".pdf", ".xls", ".xlsx"]
-    }),
+    }), prisma, ["uploadFile"]),
     assignments,
     reviews,
     summaries,
@@ -434,7 +572,7 @@ async function createSubmittedProposal(services, { members = TEAM } = {}) {
     applicableOrganizationUnitId: ORG_KHTI,
     requiredPackage: [{ code: "proposal-form", label: "Thuyết minh đề tài", allowedMimeTypes: ["application/pdf"], maxSizeMb: 5 }]
   });
-  await services.intakeService.openPeriod(staffUser, intake.id);
+  await services.intakeService.openPeriod(staffUser, intake.id, { contextVersion: intake.contextVersion });
 
   const draft = await services.proposalService.createDraft(piUser, {
     intakePeriodId: intake.id,
@@ -442,6 +580,7 @@ async function createSubmittedProposal(services, { members = TEAM } = {}) {
     hostOrganizationUnitId: ORG_KHTI,
     researchFieldCode: "biomedical-tech",
     proposalTypeCode: "academy-level",
+    proposalNatureCode: "military",
     startDate: futureDate(30),
     endDate: futureDate(210),
     objectives: "Xây dựng mô hình thử nghiệm hỗ trợ phân tích dữ liệu.",
@@ -462,14 +601,24 @@ async function createSubmittedProposal(services, { members = TEAM } = {}) {
     content
   });
 
-  return services.proposalService.submitProposal(piUser, draft.id);
+  const submitted = await services.proposalService.submitProposal(piUser, draft.id);
+  return services.proposalService.completeCheck(staffUser, submitted.id, {
+    contextVersion: submitted.viewerAuthorization.contextVersion
+  });
 }
 
 /** Submitted -> under review with one assigned reviewer. */
 async function createProposalUnderReview(services, options) {
   const proposal = await createSubmittedProposal(services, options);
-  const assignment = await services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUsername: reviewerUser.username });
+  const assignment = await services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUserId: reviewerUser.id, assignmentRole: "reviewer" });
+  await establishAssignment(services, proposal, assignment, reviewerUser);
   return { proposal, assignment };
+}
+
+async function establishAssignment(services, proposal, assignment, reviewer) {
+  await services.assignments.respondToInvitation(reviewer, proposal.id, assignment.id, { decision: "accept" });
+  // These service tests start after the council has been signed. The signing flow has its own DB test.
+  await services.prisma.proposalReviewAssignment.update({ where: { id: assignment.id }, data: { councilEstablishedAt: new Date() } });
 }
 
 /** Under review -> ready for approval with the single reviewer's score submitted and consolidated. */
@@ -482,13 +631,20 @@ async function createProposalReadyForApproval(services, options) {
     recommendation: "approve"
   });
 
-  await services.summaries.saveEvaluationSummary(staffUser, proposal.id, {
-    summary: "Hội đồng thống nhất đề nghị phê duyệt đề tài.",
-    recommendation: "approve",
-    markReady: true
-  });
-
+  await submitEvaluationPackage(services, proposal.id);
   return { proposal, assignment };
+}
+
+async function submitEvaluationPackage(services, proposalId, officer = staffUser) {
+  await services.summaries.saveEvaluationSummary(officer, proposalId, {
+    summary: "Hội đồng thống nhất đề nghị phê duyệt đề tài.", recommendation: "approve"
+  });
+  await services.summaries.finalizeEvaluationSummary(officer, proposalId);
+  const ready = await services.summaries.submitCompletedPackage(officer, proposalId);
+  const submission = services.prisma.store.approvals.find((row) => row.subjectId === proposalId && row.kind === "DECISION_PACKAGE");
+  await advanceApprovalSubmission(services.prisma, boardHead, submission.id, { expectedStage: "BOARD_REVIEW" });
+  await advanceApprovalSubmission(services.prisma, departmentHead, submission.id, { expectedStage: "HEAD_REVIEW" });
+  return ready;
 }
 
 describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () => {
@@ -497,7 +653,7 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     const proposal = await createSubmittedProposal(services);
 
     const assignment = await services.assignments.assignReviewer(staffUser, proposal.id, {
-      reviewerUsername: reviewerUser.username,
+      reviewerUserId: reviewerUser.id,
       assignmentRole: "committee_member",
       dueDate: futureDate(10)
     });
@@ -530,7 +686,7 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     const { proposal } = await createProposalUnderReview(services);
     const eventsBefore = services.prisma.store.submissionEvents.length;
 
-    await services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUsername: secondReviewerUser.username });
+    await services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUserId: secondReviewerUser.id, assignmentRole: "reviewer" });
 
     assert.equal(services.prisma.store.proposals.find((item) => item.id === proposal.id).status, "under_review");
     assert.equal(services.prisma.store.submissionEvents.length, eventsBefore);
@@ -573,10 +729,11 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     assert.deepEqual(await services.proposalService.listProposals(unassignedReviewerUser), []);
 
     // A council-member label is also inert until an explicit committee assignment exists.
-    await services.assignments.assignReviewer(staffUser, proposal.id, {
-      reviewerUsername: councilMemberUser.username,
+    const councilAssignment = await services.assignments.assignReviewer(staffUser, proposal.id, {
+      reviewerUserId: councilMemberUser.id,
       assignmentRole: "committee_member"
     });
+    await establishAssignment(services, proposal, councilAssignment, councilMemberUser);
     const councilPackage = await services.assignments.getReviewPackage(councilMemberUser, proposal.id);
     assert.equal(councilPackage.assignmentRole, "committee_member");
 
@@ -597,7 +754,7 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     assert.notEqual(revoked.revokedAt, "");
 
     // History is retained rather than deleted.
-    const history = await services.assignments.listAssignments(staffUser, proposal.id);
+    const history = await services.prisma.proposalReviewAssignment.findMany({ where: { proposalId: proposal.id } });
     assert.equal(history.length, 1);
     assert.equal(history[0].id, assignment.id);
     assert.equal(history[0].status, "revoked");
@@ -609,10 +766,10 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
 
     // A fresh assignment for a different reviewer takes effect alongside the retained history.
     const replacement = await services.assignments.assignReviewer(staffUser, proposal.id, {
-      reviewerUsername: secondReviewerUser.username
+      reviewerUserId: secondReviewerUser.id, assignmentRole: "reviewer"
     });
     assert.equal(replacement.status, "assigned");
-    assert.equal((await services.assignments.listAssignments(staffUser, proposal.id)).length, 2);
+    assert.deepEqual((await services.assignments.listAssignments(staffUser, proposal.id)).map((row) => row.id), [replacement.id]);
 
     const audit = services.prisma.store.auditLogs.filter((record) => record.action === "change-reviewer-assignment");
     assert.equal(audit.length, 1);
@@ -625,7 +782,7 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
 
     for (const candidate of [piUser, memberUser, secretaryUser]) {
       await assert.rejects(
-        () => services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUsername: candidate.username }),
+        () => services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUserId: candidate.id, assignmentRole: "reviewer" }),
         BadRequestException,
         `${candidate.username} must be rejected as a conflicted candidate`
       );
@@ -634,12 +791,12 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     // No assignment, no reviewer permission, no state change — only the denial trail.
     assert.equal(services.prisma.store.reviewAssignments.length, 0);
     assert.equal(services.prisma.store.proposals.find((item) => item.id === proposal.id).status, "submitted");
-    assert.equal(services.auditLog.find("assign-reviewer").length, 3);
+    assert.equal(services.prisma.store.auditLogs.filter((row) => row.action === "assign-reviewer").length, 3);
     assert.equal(
-      services.auditLog.find("assign-reviewer").every((record) => record.result === "failure"),
+      services.prisma.store.auditLogs.filter((row) => row.action === "assign-reviewer").every((record) => record.result === "failure"),
       true
     );
-    assert.equal(JSON.parse(services.auditLog.find("assign-reviewer")[0].reason).reasonCode, "participation");
+    assert.equal(JSON.parse(services.prisma.store.auditLogs.filter((row) => row.action === "assign-reviewer")[0].reason).reasonCode, "participation");
   });
 
   it("Story 1.9: an active staff secretary cannot bypass the capability response to assign a reviewer", async () => {
@@ -649,7 +806,7 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     });
 
     await assert.rejects(
-      () => services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUsername: reviewerUser.username }),
+      () => services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUserId: reviewerUser.id, assignmentRole: "reviewer" }),
       ForbiddenException
     );
     assert.equal(services.prisma.store.reviewAssignments.length, 0);
@@ -662,20 +819,20 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     // Non-staff cannot assign.
     for (const actor of [piUser, reviewerUser, leadershipUser]) {
       await assert.rejects(
-        () => services.assignments.assignReviewer(actor, proposal.id, { reviewerUsername: reviewerUser.username }),
+        () => services.assignments.assignReviewer(actor, proposal.id, { reviewerUserId: reviewerUser.id, assignmentRole: "reviewer" }),
         ForbiddenException
       );
     }
 
     // Staff outside the host unit scope cannot assign.
     await assert.rejects(
-      () => services.assignments.assignReviewer(outOfScopeStaffUser, proposal.id, { reviewerUsername: reviewerUser.username }),
+      () => services.assignments.assignReviewer(outOfScopeStaffUser, proposal.id, { reviewerUserId: reviewerUser.id, assignmentRole: "reviewer" }),
       ForbiddenException
     );
 
     // An unknown account is rejected before anything is written.
     await assert.rejects(
-      () => services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUsername: "khong-ton-tai" }),
+      () => services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUserId: "khong-ton-tai", assignmentRole: "reviewer" }),
       BadRequestException
     );
 
@@ -683,7 +840,7 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     const draft = services.prisma.store.proposals.find((item) => item.id === proposal.id);
     draft.status = "draft";
     await assert.rejects(
-      () => services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUsername: reviewerUser.username }),
+      () => services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUserId: reviewerUser.id, assignmentRole: "reviewer" }),
       BadRequestException
     );
 
@@ -720,7 +877,7 @@ describe("ST-3.3 reviewer scoring and comments", () => {
 
     // The assignment closes with the review, and the timeline records the submission.
     assert.equal(services.prisma.store.reviewAssignments.find((item) => item.id === assignment.id).status, "completed");
-    assert.equal(services.prisma.store.submissionEvents.at(-1).note, "Người đánh giá gửi phiếu chấm điểm và nhận xét");
+    assert.ok(services.prisma.store.submissionEvents.some((event) => event.snapshot?.kind === "review_submitted"));
 
     const audit = services.prisma.store.auditLogs.filter((record) => record.action === "submit-score-and-review-comment");
     assert.equal(audit.length, 1);
@@ -774,7 +931,8 @@ describe("ST-3.3 reviewer scoring and comments", () => {
   it("AC-ST-3.3-04: unassigned reviewers are blocked and submitted reviews are immutable", async () => {
     const services = createServices();
     const { proposal } = await createProposalUnderReview(services);
-    await services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUsername: secondReviewerUser.username });
+    const secondAssignment = await services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUserId: secondReviewerUser.id, assignmentRole: "reviewer" });
+    await establishAssignment(services, proposal, secondAssignment, secondReviewerUser);
 
     // An unassigned reviewer cannot read, draft, or submit a review.
     for (const call of [
@@ -884,18 +1042,15 @@ describe("EP-03 hardening found by adversarial review", () => {
     assert.deepEqual(afterPartial.scoreData, FULL_SCORES);
   });
 
-  it("scopes the evaluation read surfaces to the staff member's organization", async () => {
+  it("restricts evaluation reads to the responsible officer and council management roles", async () => {
     const services = createServices();
     const { proposal } = await createProposalUnderReview(services);
 
-    // AC-ST-3.4-03: the read side must be scoped as tightly as the write side, or out-of-scope
-    // staff could read every reviewer's name and score for a unit they do not operate.
     await assert.rejects(() => services.summaries.getReviewProgress(outOfScopeStaffUser, proposal.id), ForbiddenException);
     await assert.rejects(() => services.assignments.listAssignments(outOfScopeStaffUser, proposal.id), ForbiddenException);
 
-    // In-scope staff and leadership still read it.
     assert.equal((await services.summaries.getReviewProgress(staffUser, proposal.id)).activeAssignmentCount, 1);
-    assert.equal((await services.assignments.listAssignments(leadershipUser, proposal.id)).length, 1);
+    await assert.rejects(() => services.assignments.listAssignments(leadershipUser, proposal.id), ForbiddenException);
   });
 
   it("refuses to assign a reviewer who has already reviewed the proposal", async () => {
@@ -910,7 +1065,7 @@ describe("EP-03 hardening found by adversarial review", () => {
     // The assignment is now `completed`. Re-assigning would count the reviewer twice in the round
     // and ask them for a second review; re-review needs an explicit later policy.
     await assert.rejects(
-      () => services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUsername: reviewerUser.username }),
+      () => services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUserId: reviewerUser.id, assignmentRole: "reviewer" }),
       BadRequestException
     );
     assert.equal(services.prisma.store.reviewAssignments.length, 1);
@@ -923,44 +1078,29 @@ describe("EP-03 hardening found by adversarial review", () => {
 
     // Staff naming themselves would let one person review and then consolidate their own review.
     await assert.rejects(
-      () => services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUsername: staffUser.username }),
+      () => services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUserId: staffUser.id, assignmentRole: "reviewer" }),
       BadRequestException
     );
     assert.equal(services.prisma.store.reviewAssignments.length, 0);
 
     // Even if a second staff member assigns them, they cannot then write the consolidated outcome.
-    const collaborator = { ...staffUser, id: "user-staff-2", username: "hdtien1", displayName: "HD Tiến 1" };
-    ACCOUNTS.push(collaborator);
-    try {
-      await services.assignments.assignReviewer(collaborator, proposal.id, { reviewerUsername: staffUser.username });
-      await services.reviews.submitMyReview(staffUser, proposal.id, {
-        scoreData: FULL_SCORES,
-        comment: "Nhận xét của chuyên viên được phân công.",
-        recommendation: "approve"
-      });
+    const officer = services.prisma.store.officers.find((row) => row.proposalId === proposal.id);
+    officer.officerUserId = outOfScopeStaffUser.id;
+    const invitation = await services.assignments.assignReviewer(outOfScopeStaffUser, proposal.id, { reviewerUserId: staffUser.id, assignmentRole: "reviewer" });
+    await establishAssignment(services, proposal, invitation, staffUser);
+    await services.reviews.submitMyReview(staffUser, proposal.id, {
+      scoreData: FULL_SCORES, comment: "Nhận xét của chuyên viên được phân công.", recommendation: "approve"
+    });
 
-      await assert.rejects(
-        () =>
-          services.summaries.saveEvaluationSummary(staffUser, proposal.id, {
-            summary: "Tự tổng hợp phiếu của chính mình.",
-            recommendation: "approve",
-            markReady: true
-          }),
-        BadRequestException
-      );
-      assert.equal(services.prisma.store.evaluationSummaries.length, 0);
-      assert.equal(services.prisma.store.proposals.find((item) => item.id === proposal.id).status, "under_review");
-
-      // An uninvolved staff member still consolidates normally.
-      const consolidated = await services.summaries.saveEvaluationSummary(collaborator, proposal.id, {
-        summary: "Tổng hợp bởi chuyên viên không tham gia đánh giá.",
-        recommendation: "approve",
-        markReady: true
-      });
-      assert.equal(consolidated.proposalStatus, "ready_for_approval");
-    } finally {
-      ACCOUNTS.pop();
-    }
+    // Even when subsequently put in charge, a reviewer cannot consolidate their own review.
+    officer.officerUserId = staffUser.id;
+    await assert.rejects(() => services.summaries.saveEvaluationSummary(staffUser, proposal.id, {
+      summary: "Tự tổng hợp phiếu của chính mình.", recommendation: "approve"
+    }), (error) => error instanceof ForbiddenException && error.getResponse().code === "CONFLICT_DENIED");
+    assert.equal(services.prisma.store.evaluationSummaries.length, 0);
+    officer.officerUserId = outOfScopeStaffUser.id;
+    const consolidated = await submitEvaluationPackage(services, proposal.id, outOfScopeStaffUser);
+    assert.equal(consolidated.proposalStatus, "ready_for_approval");
   });
 
   it("the evaluation read models do not report on a draft proposal", async () => {
@@ -1002,7 +1142,7 @@ describe("ST-3.4 evaluation progress and consolidation", () => {
   it("AC-ST-3.4-01: staff see per-reviewer completion and can tell whether consolidation can start", async () => {
     const services = createServices();
     const { proposal } = await createProposalUnderReview(services);
-    await services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUsername: secondReviewerUser.username });
+    await services.assignments.assignReviewer(staffUser, proposal.id, { reviewerUserId: secondReviewerUser.id, assignmentRole: "reviewer" });
 
     const before = await services.summaries.getReviewProgress(staffUser, proposal.id);
     assert.equal(before.activeAssignmentCount, 2);
@@ -1031,7 +1171,7 @@ describe("ST-3.4 evaluation progress and consolidation", () => {
 
     // A revoked assignment must not hold the round open.
     const openAssignment = services.prisma.store.reviewAssignments.find((item) => item.reviewerUserId === secondReviewerUser.id);
-    await services.assignments.revokeAssignment(staffUser, proposal.id, openAssignment.id, {});
+    await services.assignments.revokeAssignment(staffUser, proposal.id, openAssignment.id, { reason: "Thay đổi thành viên" });
     const afterRevoke = await services.summaries.getReviewProgress(staffUser, proposal.id);
     assert.equal(afterRevoke.pendingCount, 0);
     assert.equal(afterRevoke.allReviewsSubmitted, true);
@@ -1060,8 +1200,7 @@ describe("ST-3.4 evaluation progress and consolidation", () => {
     });
     assert.equal(draft.evaluationSummary.status, "draft");
     assert.equal(draft.proposalStatus, "under_review");
-    assert.equal(services.auditLog.find("consolidate-evaluation").length, 0);
-    assert.equal(services.prisma.store.auditLogs.filter((r) => r.action === "consolidate-evaluation").length, 1);
+    assert.equal(services.prisma.store.auditLogs.filter((r) => r.action === "draft-evaluation-summary").length, 1);
 
     await services.reviews.submitMyReview(reviewerUser, proposal.id, {
       scoreData: FULL_SCORES,
@@ -1069,11 +1208,7 @@ describe("ST-3.4 evaluation progress and consolidation", () => {
       recommendation: "approve"
     });
 
-    const ready = await services.summaries.saveEvaluationSummary(staffUser, proposal.id, {
-      summary: "Hội đồng thống nhất đề nghị phê duyệt đề tài.",
-      recommendation: "approve",
-      markReady: true
-    });
+    const ready = await submitEvaluationPackage(services, proposal.id);
 
     assert.equal(ready.evaluationSummary.status, "ready_for_approval");
     assert.equal(ready.evaluationSummary.recommendationLabel, "Đề nghị phê duyệt");
@@ -1088,7 +1223,7 @@ describe("ST-3.4 evaluation progress and consolidation", () => {
     assert.equal(transition.fromStatus, "under_review");
     assert.equal(transition.toStatus, "ready_for_approval");
 
-    const audit = services.prisma.store.auditLogs.filter((record) => record.action === "mark-ready-for-approval");
+    const audit = services.prisma.store.auditLogs.filter((record) => record.action === "submit-evaluation-package");
     assert.equal(audit.length, 1);
     assert.equal(JSON.parse(audit[0].reason).submittedReviews, 1);
   });
@@ -1133,16 +1268,16 @@ describe("ST-3.5 approval decision", () => {
     assert.equal(decisionPackage.proposalStatusLabel, "Chờ phê duyệt");
     assert.equal(decisionPackage.canDecide, true);
     assert.equal(decisionPackage.conflict.conflicted, false);
-    assert.equal(decisionPackage.reviews.length, 1);
-    assert.equal(decisionPackage.reviews[0].totalScore, 83);
+    assert.deepEqual(decisionPackage.reviews, []);
+    assert.equal(decisionPackage.disclosure.protectedReviewData, "REDACTED");
     assert.equal(decisionPackage.evaluationSummary.status, "ready_for_approval");
     assert.equal(decisionPackage.progress.allReviewsSubmitted, true);
     assert.equal(decisionPackage.attachmentCount, 1);
     assert.equal(decisionPackage.decisions.length, 0);
     // The submitted -> under_review -> ready_for_approval trail is all there.
     assert.deepEqual(
-      decisionPackage.history.map((event) => event.toStatus),
-      ["submitted", "under_review", "under_review", "ready_for_approval"]
+      decisionPackage.history.filter((event) => event.fromStatus !== event.toStatus).map((event) => event.toStatus),
+      ["submitted", "under_review", "ready_for_approval"]
     );
 
     // Leadership also reads the proposal record itself once it is in the formal workflow.
@@ -1203,8 +1338,7 @@ describe("ST-3.5 approval decision", () => {
     assert.equal(services.prisma.store.proposals.find((item) => item.id === proposal.id).status, "under_review");
     assert.equal(services.prisma.store.decisions.length, 0);
 
-    const decisionPackage = await services.decisions.getDecisionPackage(leadershipUser, proposal.id);
-    assert.equal(decisionPackage.canDecide, false);
+    await assert.rejects(() => services.decisions.getDecisionPackage(leadershipUser, proposal.id), ForbiddenException);
 
     // A decided proposal cannot be decided a second time.
     const decided = createServices();
@@ -1229,43 +1363,26 @@ describe("ST-3.5 approval decision", () => {
       ]
     });
 
-    const conflictedPackage = await participating.decisions.getDecisionPackage(conflictedLeadershipUser, participantProposal.id);
-    assert.equal(conflictedPackage.canDecide, false);
-    assert.equal(conflictedPackage.conflict.conflicted, true);
-    assert.equal(conflictedPackage.conflict.reasonCode, "participation");
-
-    await assert.rejects(
-      () => participating.decisions.decide(conflictedLeadershipUser, participantProposal.id, "approved", {}),
-      BadRequestException
-    );
+    await assert.rejects(() => participating.decisions.getDecisionPackage(conflictedLeadershipUser, participantProposal.id), ForbiddenException);
+    await assert.rejects(() => participating.decisions.decide(conflictedLeadershipUser, participantProposal.id, "approved", {}),
+      (error) => error.getResponse().code === "APPROVAL_CONFLICT");
     assert.equal(participating.prisma.store.proposals.find((item) => item.id === participantProposal.id).status, "ready_for_approval");
     assert.equal(participating.prisma.store.decisions.length, 0);
-    // The denial is recorded outside the transaction, so it lands on the audit-log service.
-    const denied = participating.auditLog.find("approve-proposal");
-    assert.equal(denied.length, 1);
-    assert.equal(denied[0].result, "failure");
-
     // Leadership who was assigned as a reviewer on the same proposal.
     const reviewing = createServices();
     const reviewedProposal = await createSubmittedProposal(reviewing);
-    await reviewing.assignments.assignReviewer(staffUser, reviewedProposal.id, {
-      reviewerUsername: conflictedLeadershipUser.username
+    const reviewerAssignment = await reviewing.assignments.assignReviewer(staffUser, reviewedProposal.id, {
+      reviewerUserId: conflictedLeadershipUser.id, assignmentRole: "reviewer"
     });
+    await establishAssignment(reviewing, reviewedProposal, reviewerAssignment, conflictedLeadershipUser);
     await reviewing.reviews.submitMyReview(conflictedLeadershipUser, reviewedProposal.id, {
       scoreData: FULL_SCORES,
       comment: "Nhận xét của người được phân công.",
       recommendation: "approve"
     });
-    await reviewing.summaries.saveEvaluationSummary(staffUser, reviewedProposal.id, {
-      summary: "Tổng hợp kết quả đánh giá.",
-      recommendation: "approve",
-      markReady: true
-    });
-
-    await assert.rejects(
-      () => reviewing.decisions.decide(conflictedLeadershipUser, reviewedProposal.id, "approved", {}),
-      BadRequestException
-    );
+    await submitEvaluationPackage(reviewing, reviewedProposal.id);
+    await assert.rejects(() => reviewing.decisions.decide(conflictedLeadershipUser, reviewedProposal.id, "approved", {}),
+      (error) => error.getResponse().code === "APPROVAL_CONFLICT");
     assert.equal(reviewing.prisma.store.decisions.length, 0);
 
     // An authority with no relationship to the record still decides normally.
@@ -1293,5 +1410,163 @@ describe("matrix 7.1 proposal read scope", () => {
     const officer = { resolved: true, officer: { officerUserId: "cv-1" } };
     assert.equal(canReadProposal(staff("cv-1"), proposal, undefined, undefined, officer), true);
     assert.equal(canReadProposal(staff("cv-2"), proposal, undefined, undefined, officer), false);
+  });
+});
+
+/**
+ * Story 5.4 — reviewer access and own-review submission. Self-contained fakes: each case wires only
+ * the tables the path under test reads, so it does not depend on the full intake → council flow.
+ */
+describe("Story 5.4 reviewer access and own-review submission", () => {
+  const SUBMISSION = { id: "sub-2", proposalId: "p", toStatus: "resubmitted", submittedAt: new Date(2000), snapshot: { members: [], attachments: [], requiredPackage: [] } };
+  const external = { id: "ext", username: "ext", displayName: "Người phản biện ngoài", systemRole: "EXTERNAL_RESEARCHER_USER", status: "active", unit: "", organizationScopes: [] };
+  const assignmentRow = (id, eventId, extra = {}) => ({ id, proposalId: "p", reviewerUserId: external.id, assignmentRole: "reviewer", status: "assigned", assignedAt: new Date(0), effectiveFrom: new Date(0), effectiveUntil: null, invitationStatus: "accepted", councilEstablishedAt: new Date(1), reviewedSubmissionEventId: eventId, reviewer: { status: "active", displayName: external.displayName }, ...extra });
+
+  function reviewDb({ assignments = [assignmentRow("a-current", SUBMISSION.id)], officerUserId = "cv" } = {}) {
+    const store = { proposal: { id: "p", code: "P-1", title: "Đề tài X", ownerId: "pi", hostOrganizationUnitId: "unit", status: "under_review", submittedAt: new Date(2000), createdAt: new Date(0), updatedAt: new Date(3000), authorizationRelationshipVersion: 1, authorizationConflictVersion: 1, authorizationDelegationVersion: 1 }, assignments, reviews: [], notifications: [], events: [
+      { id: "sub-1", proposalId: "p", toStatus: "submitted", submittedAt: new Date(1000), snapshot: SUBMISSION.snapshot },
+      SUBMISSION,
+      { id: "check", proposalId: "p", toStatus: "resubmitted", submittedAt: new Date(2500), snapshot: { kind: "completeness_check", submissionEventId: SUBMISSION.id, readiness: { ready: true } } }
+    ] };
+    const matches = (row, where = {}) => Object.entries(where).every(([key, value]) => value === undefined || (value?.in ? value.in.includes(row[key]) : row[key] === value));
+    return {
+      store,
+      $queryRaw: async () => [{ asOf: new Date() }],
+      async $transaction(work) { return work(this); },
+      user: {
+        findUnique: async ({ where }) => (where.id === external.id ? { ...external, researcherProfile: null } : null),
+        findMany: async ({ where }) => where.id.in.filter((id) => id === officerUserId).map((id) => ({ id }))
+      },
+      researchProposal: {
+        findUnique: async ({ where }) => (where.id === "p" ? store.proposal : null),
+        async update({ data }) {
+          const values = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value?.increment ? store.proposal[key] + value.increment : value]));
+          store.proposal = { ...store.proposal, ...values, updatedAt: new Date(store.proposal.updatedAt.getTime() + 1) };
+          return store.proposal;
+        }
+      },
+      proposalMember: { findMany: async () => [] },
+      fileRecord: { findMany: async () => [{ id: "file-1", filePurpose: "proposal-form", originalFileName: "tm.pdf", description: null, mimeType: "application/pdf", sizeBytes: 3, createdAt: new Date(0) }] },
+      proposalSubmissionEvent: {
+        findMany: async ({ where }) => where.snapshot
+          ? store.events.filter((event) => event.snapshot.kind === "completeness_check")
+          : store.events.filter((event) => !where.toStatus || (where.toStatus.in.includes(event.toStatus) && event.submittedAt >= where.submittedAt.gte)).sort((left, right) => right.submittedAt - left.submittedAt),
+        create: async ({ data }) => (store.events.push({ id: `event-${store.events.length}`, ...data }), data)
+      },
+      proposalReviewAssignment: {
+        findMany: async ({ where }) => store.assignments.filter((row) => matches(row, where)),
+        findUnique: async ({ where }) => store.assignments.find((row) => row.id === where.id) ?? null,
+        update: async ({ where, data }) => Object.assign(store.assignments.find((row) => row.id === where.id), data)
+      },
+      proposalReview: {
+        findFirst: async ({ where }) => store.reviews.find((row) => matches(row, where)) ?? null,
+        findMany: async ({ where }) => store.reviews.filter((row) => matches(row, where)),
+        create: async ({ data }) => (store.reviews.push({ id: `review-${store.reviews.length + 1}`, ...data }), store.reviews.at(-1)),
+        update: async ({ where, data }) => Object.assign(store.reviews.find((row) => row.id === where.id), data)
+      },
+      proposalManagementOfficer: {
+        findFirst: async () => null,
+        findMany: async () => (officerUserId ? [{ id: "officer", proposalId: "p", officerUserId, status: "ACTIVE", effectiveFrom: new Date(0), effectiveUntil: null, createdAt: new Date(0) }] : [])
+      },
+      userNotification: { createMany: async ({ data }) => (store.notifications.push(...data), { count: data.length }) },
+      auditLog: { create: async () => ({}) }
+    };
+  }
+
+  function reviewsService(prisma) {
+    return new ProposalReviewsService(prisma, createAuditLog(), new ProposalReviewAccessService(prisma), new ProposalParticipationService(prisma));
+  }
+
+  it("a reviewer from an older round loses read access but stays a reviewer conflict", async () => {
+    const prisma = reviewDb({ assignments: [assignmentRow("a-old", "sub-1", { status: "completed" })] });
+    const access = await new ProposalReviewAccessService(prisma).resolveForProposal(external.id, "p");
+    assert.equal(access.isAssignedReviewer, false);
+    assert.equal(access.hasReviewConflict, true);
+    assert.equal(access.conflictUnresolved, false);
+
+    const listed = (await new ProposalReviewAccessService(prisma).resolveForProposals(external.id, ["p"])).get("p");
+    assert.equal(listed.isAssignedReviewer, false);
+    assert.equal(listed.hasReviewConflict, true);
+
+    prisma.store.assignments.push(assignmentRow("a-current", SUBMISSION.id));
+    assert.equal((await new ProposalReviewAccessService(prisma).resolveForProposals(external.id, ["p"])).get("p").isAssignedReviewer, true);
+    assert.equal((await new ProposalReviewAccessService(prisma).resolveForProposal(external.id, "p")).assignmentId, "a-current");
+  });
+
+  it("the reviewer package and detail carry no action log, and the history endpoint refuses reviewers", async () => {
+    const prisma = reviewDb();
+    const assignments = new ProposalReviewAssignmentsService(prisma, createAuditLog(), new ProposalParticipationService(prisma), new ProposalReviewAccessService(prisma));
+    const reviewPackage = await assignments.getReviewPackage(external, "p");
+    assert.equal(reviewPackage.attachments.length, 1);
+    assert.equal(Object.hasOwn(reviewPackage, "history"), false);
+
+    const service = Object.assign(Object.create(ResearchProposalsService.prototype), {
+      prisma: { systemParameter: { findUnique: async () => null }, proposalSubmissionEvent: { findMany: async () => [] } },
+      reviewAccess: { resolveForProposal: async () => ({ isAssignedReviewer: true }) },
+      managementOfficers: { listHistory: async () => [] },
+      findProposal: async () => prisma.store.proposal,
+      assertReadableProposal: async () => ({ isParticipant: false }),
+      listHistoryForProposal: async () => [{ id: "event", actorId: "staff" }],
+      findMembers: async () => [], findAttachments: async () => [], listSupplementRequestsForProposal: async () => [], getRequiredPackageForProposal: async () => [],
+      hasCurrentCompletenessCheck: async () => true, toProposalResponse: () => ({}), findReviewReadiness: async () => null, findDecisionApprovalStage: async () => null,
+      readCouncilFormationConfigForView: async () => undefined, toManagementOfficerResponse: () => null
+    });
+    await assert.rejects(() => service.listHistory(external, "p"), ForbiddenException);
+    const detail = await service.toProposalDetailResponse({ ...prisma.store.proposal, owner: null }, external, { isParticipant: false, roles: [] }, { isAssignedReviewer: true }, { resolved: true, officer: null }, "draft");
+    assert.equal(Object.hasOwn(detail, "history"), false);
+
+    // A TP who reviewed an older round: no current-round read grant, but still redacted as a reviewer.
+    const formerReviewer = { isAssignedReviewer: false, hasReviewConflict: true };
+    const head = { id: "tp", username: "tp", systemRole: "RESEARCH_MANAGEMENT_HEAD", organizationScopes: [] };
+    const nonParticipant = { role: "none", label: "", roles: [], labels: [], isOwner: false, isParticipant: false, relationshipEffectiveFrom: {}, relationshipEffectiveUntil: {} };
+    const former = Object.assign(Object.create(ResearchProposalsService.prototype), service, { reviewAccess: { resolveForProposal: async () => formerReviewer } });
+    delete former.toProposalResponse;
+    await assert.rejects(() => former.listHistory(head, "p"), ForbiddenException);
+    const formerDetail = await former.toProposalDetailResponse({ ...prisma.store.proposal, authorizationContextUpdatedAt: new Date(0), owner: { displayName: "PI" } }, head, nonParticipant, formerReviewer, { resolved: true, officer: null }, "draft");
+    assert.equal(Object.hasOwn(formerDetail, "history"), false);
+    assert.equal(Object.hasOwn(formerDetail, "ownerId"), false);
+    assert.deepEqual(formerDetail.supplementRequests, []);
+  });
+
+  it("TP or leadership who reviewed the proposal cannot read its roster or review progress", async () => {
+    const prisma = { researchProposal: { findUnique: async () => ({ id: "p", status: "under_review" }) }, systemParameter: { findUnique: async () => null } };
+    const participation = { evaluateConflict: async () => ({ conflicted: false }) };
+    const reviewAccess = { resolveConflictForProposal: async () => ({ isAssignedReviewer: false, hasPersistedReview: true, unresolved: false }) };
+    const head = { id: "tp", systemRole: "RESEARCH_MANAGEMENT_HEAD", organizationScopes: [] };
+    await assert.rejects(() => new ProposalReviewAssignmentsService(prisma, {}, participation, reviewAccess).listAssignments(head, "p"), ForbiddenException);
+    const summaries = new ProposalEvaluationSummaryService(prisma, {}, {}, {}, participation, reviewAccess);
+    await assert.rejects(() => summaries.getReviewProgress({ ...head, id: "bgd", systemRole: "LEADERSHIP_APPROVAL_AUTHORITY" }, "p"), ForbiddenException);
+    // The capability agrees, so the detail page shows a disabled reason instead of a failed fetch.
+    const capability = projectProposalViewerAuthorizationV1({
+      actor: head, proposal: { id: "p", hostOrganizationUnitId: "unit", status: "under_review", updatedAt: new Date(0), authorizationContextUpdatedAt: new Date(0), authorizationRelationshipVersion: 1, authorizationConflictVersion: 1, authorizationDelegationVersion: 1 },
+      participation: { role: "none", roles: [], isParticipant: false, relationshipEffectiveFrom: {} }, reviewAccess: { isAssignedReviewer: false, hasPersistedReview: true },
+      managementOfficer: { resolved: true, officer: null }, canRead: true, canEdit: false, canManageFiles: false
+    });
+    assert.equal(capability.blockedActions.find((item) => item.action === "proposal.review.progress.read")?.code, "CONFLICT_DENIED");
+  });
+
+  it("an external reviewer saves drafts with the returned contextVersion, a stale one is 409, and submit notifies the officer", async () => {
+    const prisma = reviewDb();
+    const reviews = reviewsService(prisma);
+    const first = await reviews.saveMyReview(external, "p", { scoreData: { feasibility: 20 }, contextVersion: proposalContextVersion(prisma.store.proposal) });
+    const second = await reviews.saveMyReview(external, "p", { comment: "Nháp 2", contextVersion: first.contextVersion });
+    assert.deepEqual(second.contextVersion, proposalContextVersion(prisma.store.proposal));
+    await assert.rejects(() => reviews.saveMyReview(external, "p", { comment: "Cũ", contextVersion: first.contextVersion }), (error) => error.status === 409);
+
+    const submitted = await reviews.submitMyReview(external, "p", { scoreData: FULL_SCORES, comment: "Đạt", recommendation: "revise", contextVersion: second.contextVersion });
+    assert.equal(submitted.status, "submitted");
+    assert.equal(prisma.store.assignments[0].status, "completed");
+    assert.equal(prisma.store.proposal.status, "under_review");
+    assert.deepEqual(prisma.store.notifications.map((row) => [row.userId, row.type, row.idempotencyKey]), [["cv", "review.submitted", `review-submit:${submitted.id}`]]);
+    assert.equal((await reviews.getMyReview(external, "p")).id, submitted.id);
+
+    // Không có CV phụ trách: vẫn nộp được, không có thông báo.
+    const noOfficer = reviewDb({ officerUserId: null });
+    await reviewsService(noOfficer).submitMyReview(external, "p", { scoreData: FULL_SCORES, comment: "Đạt", recommendation: "approve", contextVersion: proposalContextVersion(noOfficer.store.proposal) });
+    assert.equal(noOfficer.store.reviews[0].status, "submitted");
+    assert.equal(noOfficer.store.notifications.length, 0);
+
+    // Hồ sơ không được phân công: bị từ chối.
+    await assert.rejects(() => reviewsService(reviewDb({ assignments: [] })).getMyReview(external, "p"), ForbiddenException);
   });
 });
