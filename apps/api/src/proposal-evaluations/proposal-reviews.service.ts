@@ -1,4 +1,7 @@
-import { runProposalMutation } from "../proposals-shared/proposal-mutation.js";
+import { proposalContextVersion, runProposalMutation } from "../proposals-shared/proposal-mutation.js";
+import { notifyUsers } from "../notifications/notification-events.js";
+import { ProposalManagementOfficerService } from "../proposals-shared/proposal-management-officer.service.js";
+import { readTransactionClockV1 } from "../permissions/authorization-v1.service.js";
 import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
@@ -51,8 +54,9 @@ export class ProposalReviewsService {
       const service = new ProposalReviewsService(tx, new AuditLogService(tx), new ProposalReviewAccessService(tx), new ProposalParticipationService(tx));
       service.transactional = true;
       const result = await work(service, currentActor);
-      await tx.researchProposal.update({ where: { id }, data: { authorizationContextUpdatedAt: new Date() } });
-      return result;
+      const updated = await tx.researchProposal.update({ where: { id }, data: { authorizationContextUpdatedAt: new Date() } });
+      // Story 5.4: token mới sau lần ghi cuối, để lần lưu/nộp kế tiếp không bị 409.
+      return { ...result, contextVersion: proposalContextVersion(updated) };
     });
   }
 
@@ -246,6 +250,10 @@ export class ProposalReviewsService {
           reason: JSON.stringify({ proposalId, assignmentId, totalScore, recommendation, submissionEventId: evidence.eventId, contextVersion: input.contextVersion })
         }
       });
+
+      // Story 5.4: CV phụ trách hiện hành nhận thông báo; không có CV thì vẫn nộp, không gửi. Không nêu danh tính người đánh giá.
+      const officer = await new ProposalManagementOfficerService(tx as unknown as PrismaService).resolveForProposal(proposalId, await readTransactionClockV1(tx));
+      await notifyUsers(tx, { userIds: [officer.officer?.officerUserId], exclude: [actor.id], type: "review.submitted", title: "Có phiếu đánh giá mới được nộp", body: proposal.title, link: `/proposals/${proposalId}`, sourceType: "proposal", sourceId: proposalId, idempotencyKey: `review-submit:${review.id}` });
 
       const roster = filterCurrentRoundAssignments(await tx.proposalReviewAssignment.findMany({ where: { proposalId }, include: { reviewer: true } }), evidence.eventId);
       const roundReviews = await tx.proposalReview.findMany({ where: { proposalId, submissionEventId: evidence.eventId } });

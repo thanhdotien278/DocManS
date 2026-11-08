@@ -138,6 +138,8 @@ function blockFor(action: PermissionActionV1, input: ProposalCapabilityInput): {
   if (action === "proposal.read" || action === "file.read") return input.canRead ? null : blocked("ACTION_NOT_GRANTED");
   if (action === "proposal.review.progress.read") {
     if (!["submitted", "resubmitted", "supplement_requested", "under_review", "ready_for_approval", "approved", "rejected"].includes(input.proposal.status)) return blocked("WORKFLOW_STATE_DENIED");
+    // Story 5.4: người phản biện (mọi vòng) không đọc tiến độ, kể cả TP/PP/BGĐ — khớp với 403 ở backend.
+    if (input.reviewAccess && (input.reviewAccess.isAssignedReviewer || input.reviewAccess.hasReviewConflict || input.reviewAccess.hasPersistedReview)) return blocked("CONFLICT_DENIED");
     if (isResearchManagementHead(input.actor) || isResearchBoardHead(input.actor) || isResearchOversightAuthority(input.actor) || isScienceDeputyDirector(input.actor) || isResearchManagementDeputyHead(input.actor) || input.actor.systemRole === "LEADERSHIP_APPROVAL_AUTHORITY") return null;
     if (!isResearchManagementStaff(input.actor) || !input.managementOfficer?.resolved || input.managementOfficer.officer?.officerUserId !== input.actor.id) return blocked("ACTION_NOT_GRANTED");
     if (!input.participation || input.participation.role === "unknown" || !input.reviewAccess || input.reviewAccess.conflictUnresolved) return blocked("CONTEXT_UNRESOLVED");
