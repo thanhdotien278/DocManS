@@ -46,7 +46,7 @@ export function createEvaluationTables(store, accounts = []) {
     return {
       ...record,
       ...(include.reviewer
-        ? { reviewer: reviewer ? { displayName: reviewer.displayName, username: reviewer.username, unit: reviewer.unit ?? "" } : null }
+        ? { reviewer: reviewer ? { displayName: reviewer.displayName, status: reviewer.status, username: reviewer.username, unit: reviewer.unit ?? "" } : null }
         : {}),
       ...(include.assignedBy ? { assignedBy: assignedBy ? { displayName: assignedBy.displayName } : null } : {}),
       ...(include.proposal ? { proposal } : {})
@@ -138,6 +138,9 @@ export function createEvaluationTables(store, accounts = []) {
       }
     },
     proposalEvaluationSummary: {
+      async findUnique({ where }) {
+        return store.evaluationSummaries.find((item) => item.id === where.id) ?? null;
+      },
       async create({ data }) {
         const record = {
           id: nextId("summary", store.evaluationSummaries),

@@ -277,3 +277,6 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-6-thu-ky-ho-tro-hanh-chinh-danh-gia.md`
   summary: "Task" và "tracking note" hành chính của thư ký (Story 5.6) chuyển sang Epic 7 (quản lý công việc). Story 5.6 chỉ làm lát cắt tệp hành chính (`MEETING_MATERIAL`, `COUNCIL_MINUTES`).
   evidence: Chưa có mô hình task trong hệ thống; dựng mới ngoài phạm vi 5.6. Quyết định tạm khi người dùng vắng mặt, cần xác nhận.
+- source_spec: `spec-5-4-reviewer-truy-cap-va-nop-danh-gia-cua-minh.md`
+  summary: Chưa có test tự động cho việc `proposal-review-form.tsx` dùng `contextVersion` trả về sau khi lưu nháp.
+  evidence: Repo không có harness test component cho web; hiện chỉ được kiểm chứng thủ công trên localhost.

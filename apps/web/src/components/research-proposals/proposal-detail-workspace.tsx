@@ -1039,8 +1039,10 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
         </SectionCard>
         ) : null}
 
+        {/* Backend bỏ `history` với người đánh giá (ẩn danh hai chiều) — không hiện khối rỗng gây hiểu nhầm. */}
+        {proposal.history ? (
         <SectionCard title="Timeline" subtitle="Lịch sử nộp và thay đổi trạng thái chính">
-          {proposal.history?.length ? (
+          {proposal.history.length ? (
             <div className="table-wrap timeline-table-wrap">
               <table className="data-table timeline-table">
                 <thead>
@@ -1065,6 +1067,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
             <EmptyState title="Chưa có lịch sử nộp" message="Timeline sẽ xuất hiện khi hồ sơ được nộp chính thức." />
           )}
         </SectionCard>
+        ) : null}
       </div>
     </div>
   );
