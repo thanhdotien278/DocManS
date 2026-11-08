@@ -262,3 +262,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-participant-self-management-config.md`
   summary: Test mức service cho các nhánh đọc với `view` bật/tắt (`getReviewProgress`, `listAssignments`, `getCouncil`) với CV phụ trách là người tham gia.
   evidence: Review verification-gap 08/11: hiện chỉ test `resolveReadConflict`, capability và `toProposalResponse`; đảo điều kiện trong ba service này không làm test nào hỏng. Cần harness fake Prisma hoặc DB opt-in.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-2-chinh-sua-theo-yeu-cau-va-nop-lai-de-xuat.md`
+  summary: Hiện cờ "Quá hạn" của yêu cầu bổ sung ở hàng đợi CV và mục "Cần tôi xử lý" của PI, không chỉ trang chi tiết.
+  evidence: `docs/ux-ui-spec.md` dòng 328, 330 yêu cầu theo dõi bổ sung chờ phản hồi/hạn phản hồi ở các danh sách; Story 5.2 chỉ làm trang chi tiết.

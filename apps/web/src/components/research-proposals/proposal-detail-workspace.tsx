@@ -41,6 +41,7 @@ import {
   type ProposalDraftInput,
   type ProposalAttachment,
   type ProposalReadiness,
+  type ProposalSupplementRequest,
   type ResearchProposal
 } from "@/lib/research-proposals-api";
 
@@ -56,6 +57,11 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
 
 function formatDate(value: string) {
   return value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "Chưa có";
+}
+
+/** Hạn bổ sung tính hết ngày Việt Nam; quá hạn chỉ là cờ theo dõi, không chặn nộp lại. */
+function isSupplementOverdue(request: ProposalSupplementRequest) {
+  return request.status === "open" && toIntakeDateInput(request.dueDate) < toIntakeDateInput(new Date().toISOString());
 }
 
 function formatBytes(value: number) {
@@ -170,6 +176,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   const canRequestSupplement = canPerformProposalAction(capabilityState, "proposal.supplement.request");
   const canUpload = canPerformProposalAction(capabilityState, "file.upload");
   const isSupplementFlow = proposal?.status === "supplement_requested";
+  const latestSupplementRequest = proposal?.supplementRequests?.at(-1);
   const shouldRenderAction = (action: Parameters<typeof canPerformProposalAction>[1]) => {
     if (canPerformProposalAction(capabilityState, action)) return true;
     const blocked = blockedProposalAction(capabilityState, action);
@@ -183,6 +190,8 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   // Phiếu đánh giá chỉ hiện cho người được mời làm reviewer, kể cả khi bị chặn do xung đột lợi ích.
   // Người trong nhóm đề tài chỉ thấy mục Yêu cầu bổ sung khi đã có yêu cầu thật.
   const isParticipantViewer = (capabilityState.capability?.viewerRelationships ?? []).some((relationship) => ["PROPOSAL_PI", "TOPIC_MEMBER", "TOPIC_SECRETARY"].includes(relationship.type));
+  // PI/thành viên chỉ xem lịch sử yêu cầu; form gửi yêu cầu chỉ hiện khi được cấp (TB/CV phụ trách là PI theo D-038).
+  const showSupplementRequestForm = canRequestSupplement || !isParticipantViewer;
   const isAssignedReviewer = (capabilityState.capability?.viewerRelationships ?? []).some((relationship) => relationship.type === "REVIEWER_ASSIGNMENT");
   const showReviewForm = isAssignedReviewer && shouldRenderAction("proposal.review.submit");
   const showDecisionPanel = shouldRenderAction("proposal.decision.approve") || shouldRenderAction("proposal.decision.reject");
@@ -514,10 +523,10 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                 <span className="meta-label">Ngày nộp</span>
                 <span className="meta-value">{proposal.submittedAt ? formatDate(proposal.submittedAt) : "Chưa nộp"}</span>
               </div>
-              {proposal.supplementRequests?.at(-1) ? (
+              {latestSupplementRequest ? (
                 <div className="meta-item">
                   <span className="meta-label">Yêu cầu bổ sung</span>
-                  <span className="meta-value">Hạn phản hồi {formatIntakeDate(proposal.supplementRequests.at(-1)?.dueDate ?? "")}</span>
+                  <span className="meta-value">Hạn phản hồi {formatIntakeDate(latestSupplementRequest.dueDate)}{isSupplementOverdue(latestSupplementRequest) ? " · Quá hạn" : ""}</span>
                 </div>
               ) : null}
             </div>
@@ -694,7 +703,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                         Người yêu cầu: {request.actorDisplayName || "Không xác định"} · Hạn phản hồi: {formatIntakeDate(request.dueDate)}
                       </p>
                       <p className="timeline-meta">
-                        Trạng thái: {request.status === "resolved" ? "Đã xử lý" : "Đang chờ bổ sung"}
+                        Trạng thái: {request.status === "resolved" ? "Đã xử lý" : isSupplementOverdue(request) ? "Đang chờ bổ sung · Quá hạn" : "Đang chờ bổ sung"}
                         {request.resolvedAt ? ` · Hoàn tất: ${formatDate(request.resolvedAt)}` : ""}
                       </p>
                     </div>
@@ -705,7 +714,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               <EmptyState title="Chưa có yêu cầu bổ sung" message="Cán bộ phụ trách có thể gửi yêu cầu khi hồ sơ đã nộp cần hoàn thiện thêm." />
             )}
 
-            <form className="admin-form compact-form" onSubmit={(event) => void handleRequestSupplement(event)}>
+            {showSupplementRequestForm ? <form className="admin-form compact-form" onSubmit={(event) => void handleRequestSupplement(event)}>
                 <label className="field">
                   <span>Lý do bổ sung</span>
                   <textarea disabled={!canRequestSupplement} rows={3} maxLength={2000} value={supplementReason} onChange={(event) => setSupplementReason(event.target.value)} />
@@ -720,7 +729,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
                   {isRequestingSupplement ? "Đang gửi" : "Yêu cầu bổ sung"}
                 </button>
                 {!canRequestSupplement ? <p className="record-meta">{blockedProposalAction(capabilityState, "proposal.supplement.request")?.reason ?? capabilityState.reason}</p> : null}
-              </form>
+              </form> : null}
           </SectionCard>
         ) : null}
 
