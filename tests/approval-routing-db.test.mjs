@@ -462,6 +462,20 @@ test("5.10 council: the secretary reads anonymous reviews and drafts the summary
   assert.equal(finalized.evaluationSummary.status, "finalized", "đủ 6 phiếu chấm là chốt được, không chờ thư ký");
 });
 
+test("5.3: revoking a member who already submitted ends their access at once and keeps the submitted review", async () => {
+  const f = await councilFixture("R");
+  const { people, proposal } = f;
+  const member = (await f.establish()).find((item) => item.role === "reviewer");
+  const scores = { scoreData: { "scientific-value": 25, feasibility: 20, "practical-impact": 20, "budget-suitability": 15 }, comment: "Nhận xét", recommendation: "approve" };
+  await f.reviews.submitMyReview(member.user, proposal.id, { ...scores, contextVersion: await f.contextVersion() });
+
+  await f.assignments.revokeAssignment(people.head, proposal.id, member.id, { reason: "Thay người", contextVersion: await f.contextVersion() });
+  await assert.rejects(() => f.assignments.getReviewPackage(member.user, proposal.id));
+  await assert.rejects(() => f.reviews.getMyReview(member.user, proposal.id));
+  assert.equal((await f.assignments.listMyAssignments(member.user)).length, 0);
+  assert.equal((await db.proposalReview.count({ where: { assignmentId: member.id, status: "submitted" } })), 1, "phiếu đã gửi được giữ sau thu hồi");
+});
+
 test("5.10 council: return changes nothing at the source; signer who reviews the file is refused; sign re-checks acceptance", async () => {
   const f = await councilFixture("M");
   const { people, proposal } = f;
