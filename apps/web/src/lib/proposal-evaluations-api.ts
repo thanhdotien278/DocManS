@@ -105,6 +105,8 @@ export type MyProposalReview = {
   criteria: ReviewScoreCriterion[];
   maxTotalScore: number;
   recommendations: ReviewRecommendationOption[];
+  /** Có sau khi lưu/nộp: token hồ sơ mới cho lần ghi kế tiếp. */
+  contextVersion?: ViewerAuthorizationV1["contextVersion"];
 };
 
 export type SubmittedProposalReview = {
@@ -245,14 +247,6 @@ export type ProposalReviewPackage = {
     sizeBytes: number;
     uploaderDisplayName: string;
     createdAt: string;
-  }>;
-  history: Array<{
-    id: string;
-    fromStatus: string;
-    toStatus: string;
-    submittedAt: string;
-    actorDisplayName: string;
-    note: string;
   }>;
 };
 

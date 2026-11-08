@@ -175,8 +175,11 @@ export class ProposalReviewAssignmentsService {
     // D-041: "Xem" bật thì bỏ qua xung đột tham gia khi đọc (ngữ cảnh không xác định vẫn chặn); người được mời vẫn không đọc phiếu người khác (bên dưới).
     const participationConflict = await this.participation.evaluateConflict(actor.id, proposalId);
     if (participationConflict.conflicted && !(view && participationConflict.reasonCode === "participation")) throw new ForbiddenException({ message: "Không được xem dữ liệu phản biện của hồ sơ mình tham gia." });
+    // Story 5.4 (matrix §611): người được mời/đã phản biện ở bất kỳ vòng nào không đọc roster, kể cả TP/TB.
+    const reviewConflict = await this.reviewAccess.resolveConflictForProposal(actor.id, proposalId);
+    if (reviewConflict.unresolved || reviewConflict.isAssignedReviewer || reviewConflict.hasPersistedReview) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người đánh giá hồ sơ không được xem danh sách hội đồng của hồ sơ này." });
     const assignments = await this.findCurrentRoundAssignments(proposal);
-    // Người được mời (kể cả chưa chấp nhận) không đọc phiếu của người khác.
+    // Người được mời đã từ chối/bị thu hồi (không còn xung đột) vẫn không đọc phiếu của người khác.
     const isInvitee = assignments.some((assignment) => assignment.reviewerUserId === actor.id);
     const reviews = isInvitee ? [] : await this.findReviews(proposalId);
     return assignments.map((assignment) => this.toAssignmentResponse(assignment, reviews));
@@ -611,7 +614,7 @@ export class ProposalReviewAssignmentsService {
     }
     assertProposalStatus(proposal, ["submitted", "resubmitted", "under_review", "ready_for_approval", "approved", "rejected"], "Hồ sơ không ở trạng thái cho phép xem gói đánh giá.");
 
-    const [members, attachments, history] = await Promise.all([
+    const [members, attachments] = await Promise.all([
       this.prisma.proposalMember.findMany({
         where: { proposalId },
         orderBy: { createdAt: "asc" }
@@ -625,11 +628,6 @@ export class ProposalReviewAssignmentsService {
         },
         orderBy: { createdAt: "asc" },
         include: { uploadedBy: { select: { displayName: true } } }
-      }),
-      this.prisma.proposalSubmissionEvent.findMany({
-        where: { proposalId },
-        orderBy: { submittedAt: "asc" },
-        include: { actor: { select: { displayName: true } } }
       })
     ]);
 
@@ -708,23 +706,6 @@ export class ProposalReviewAssignmentsService {
         sizeBytes: attachment.sizeBytes,
 
         createdAt: attachment.createdAt.toISOString()
-      })),
-      history: (
-        history as Array<{
-          id: string;
-          fromStatus: string;
-          toStatus: string;
-          submittedAt: Date;
-          note: string | null;
-          actor?: { displayName: string } | null;
-        }>
-      ).map((event) => ({
-        id: event.id,
-        fromStatus: event.fromStatus,
-        toStatus: event.toStatus,
-        submittedAt: event.submittedAt.toISOString(),
-
-        note: event.note ?? ""
       }))
     };
   }
