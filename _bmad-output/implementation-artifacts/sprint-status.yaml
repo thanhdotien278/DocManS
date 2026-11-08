@@ -1,5 +1,5 @@
 # generated: 2026-07-29T17:30:00+07:00
-# last_updated: 2026-11-08T22:17:00+07:00
+# last_updated: 2026-11-08T22:43:00+07:00
 # project: DocManSystem
 # project_key: NOKEY
 # tracking_system: file-system
@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-11-08T22:17:00+07:00
+last_updated: 2026-11-08T22:43:00+07:00
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -79,7 +79,7 @@ development_status:
   5-2-chinh-sua-theo-yeu-cau-va-nop-lai-de-xuat: done
   # 5.3: done 2026-11-08. UI nhánh phê duyệt và không phê duyệt PASS; test opt-in viết lại theo 5.11 PASS trên DB tạm; thêm test thu hồi sau khi gửi phiếu (approval-routing-db). Bằng chứng: epic-05-proposal-review-and-approval/refined-flow-verification.md.
   5-3-phan-cong-reviewer-voi-kiem-tra-xung-dot: done
-  5-4-reviewer-truy-cap-va-nop-danh-gia-cua-minh: review
+  5-4-reviewer-truy-cap-va-nop-danh-gia-cua-minh: done
   5-5-theo-doi-tien-do-va-tong-hop-danh-gia-noi-bo: review
   5-6-thu-ky-khoa-hoc-ho-tro-hanh-chinh-cho-quy-trinh-danh-gia: backlog
   5-7-lanh-dao-xem-ho-so-trinh-quyet-dinh: review
