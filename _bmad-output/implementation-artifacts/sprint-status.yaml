@@ -73,7 +73,8 @@ development_status:
   # Refined Golden Flow assessment and acceptance gate: epic-05-proposal-review-and-approval/sprint-plan.md
   # No Done promotion until both real UI terminal journeys and required denials are verified.
   epic-5: in-progress
-  5-1-kiem-tra-tinh-day-du-va-yeu-cau-bo-sung: backlog
+  # 5.1: review 2026-11-08 (b96d124). TB được kiểm tra đầy đủ/yêu cầu bổ sung; TB/CV là PI/thành viên vẫn làm được (D-038). UI: TB nmtrung xác nhận đầy đủ hồ sơ c2a85efb PASS. Chưa bấm thật luồng yêu cầu bổ sung.
+  5-1-kiem-tra-tinh-day-du-va-yeu-cau-bo-sung: review
   5-2-chinh-sua-theo-yeu-cau-va-nop-lai-de-xuat: backlog
   # 5.3: done 2026-11-08. UI nhánh phê duyệt và không phê duyệt PASS; test opt-in viết lại theo 5.11 PASS trên DB tạm; thêm test thu hồi sau khi gửi phiếu (approval-routing-db). Bằng chứng: epic-05-proposal-review-and-approval/refined-flow-verification.md.
   5-3-phan-cong-reviewer-voi-kiem-tra-xung-dot: done
