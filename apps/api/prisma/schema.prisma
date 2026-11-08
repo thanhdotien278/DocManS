@@ -73,6 +73,7 @@ model User {
   createdResearcherProfileAccountLinks ResearcherProfileAccountLink[] @relation("ProfileAccountLinkCreator")
   credentialDeliveries AccountCredentialDelivery[]
   researcherProfileHistories ResearcherProfileHistory[]
+  notifications UserNotification[]
 
   @@map("users")
 }
@@ -1094,4 +1095,25 @@ model ProjectLiquidation {
 
   @@index([projectId, status])
   @@map("project_liquidations")
+}
+
+// Story 11.1: thông báo trong ứng dụng, ghi cùng transaction nghiệp vụ. Idempotent theo (user_id, idempotency_key).
+model UserNotification {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           String
+  title          String
+  body           String
+  link           String?
+  /// approval | proposal | review_assignment
+  sourceType     String    @map("source_type")
+  sourceId       String    @map("source_id")
+  idempotencyKey String    @map("idempotency_key")
+  readAt         DateTime? @map("read_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, createdAt])
+  @@map("user_notifications")
 }

@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, NotFoundExc
 import type { Prisma } from "@prisma/client";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import type { PrismaService } from "../infrastructure/prisma/prisma.service.js";
+import { notifyUsers } from "../notifications/notification-events.js";
 import { resolveActorConflict } from "../proposal-evaluations/proposal-evaluation-support.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
 import {
@@ -130,7 +131,7 @@ export function canViewApproval(actor: SafeUserContext | undefined, row: Pick<Ap
 }
 
 /** Xung đột lợi ích trên bản ghi nguồn: participant/reviewer của hồ sơ, thành viên đề tài. */
-async function actorConflicted(tx: Prisma.TransactionClient, actorId: string, row: Pick<ApprovalSubmissionRow, "subjectType" | "subjectId">) {
+export async function actorConflicted(tx: Prisma.TransactionClient, actorId: string, row: Pick<ApprovalSubmissionRow, "subjectType" | "subjectId">) {
   if (row.subjectType === "proposal") {
     const prisma = tx as unknown as PrismaService;
     const decision = await resolveActorConflict({ participation: new ProposalParticipationService(prisma), reviewAccess: new ProposalReviewAccessService(prisma) }, actorId, row.subjectId);
@@ -193,6 +194,42 @@ async function recordStep(
       afterFacts: { stage: step.toStage, status: step.toStatus, decision: step.action, kind: row.kind, subjectType: row.subjectType, subjectId: row.subjectId, submittedById: row.submittedById }
     } as never
   });
+  // Bước đã được xử lý: việc "chờ xử lý" cũ của tờ trình này (kể cả của TP còn lại) không còn treo chưa đọc.
+  await tx.userNotification.updateMany({ where: { sourceType: "approval", sourceId: row.id, type: "approval.action-required", readAt: null }, data: { readAt: new Date() } });
+  // CANCEL đi qua đây cả khi lập lại tờ trình (`cancelPendingApprovals`): không thông báo.
+  if (step.action !== "CANCEL") await notifyApprovalStep(tx, actor, row, step);
+}
+
+/** Người xử lý bước kế tiếp theo nơi tờ trình **đến**. PP và PGĐ-TD chỉ theo dõi nên không bao giờ nhận. */
+const STAGE_ROLES: Partial<Record<ApprovalStage, string[]>> = {
+  BOARD_REVIEW: ["RESEARCH_BOARD_HEAD"],
+  HEAD_REVIEW: ["RESEARCH_MANAGEMENT_HEAD"],
+  LEADERSHIP: ["LEADERSHIP_APPROVAL_AUTHORITY"]
+};
+
+const CLOSED_TITLES: Partial<Record<ApprovalStatus, string>> = { RETURNED: "Tờ trình bị trả lại", APPROVED: "Tờ trình đã được ký duyệt", REJECTED: "Tờ trình không được phê duyệt" };
+
+/** Story 11.1: không chép ghi chú/lý do vào thông báo; người nhận mở link, trang đích tự kiểm tra quyền. */
+async function notifyApprovalStep(tx: Prisma.TransactionClient, actor: SafeUserContext, row: ApprovalSubmissionRow, step: { action: string; stage: ApprovalStage; toStage: ApprovalStage; toStatus: ApprovalStatus }) {
+  const base = {
+    sourceType: "approval" as const,
+    sourceId: row.id,
+    idempotencyKey: `approval:${row.id}:${step.action}:${step.stage}`,
+    link: row.subjectType === "project" ? `/projects/${row.subjectId}` : `/proposals/${row.subjectId}`
+  };
+  const kindLabel = APPROVAL_KIND_LABELS[row.kind] ?? row.kind;
+  const closedTitle = CLOSED_TITLES[step.toStatus];
+  if (closedTitle) {
+    await notifyUsers(tx, { ...base, userIds: [row.submittedById], exclude: [actor.id], type: `approval.${step.toStatus.toLowerCase()}`, title: closedTitle, body: `${kindLabel}: ${row.title}` });
+    return;
+  }
+  const roles = [...(STAGE_ROLES[step.toStage] ?? [])];
+  if (step.toStage === "LEADERSHIP" && row.signer === "DIRECTOR_OR_SCIENCE_DEPUTY") roles.push("SCIENCE_DEPUTY_DIRECTOR");
+  if (!roles.length) return;
+  const candidates = await tx.user.findMany({ where: { systemRole: { in: roles }, status: "active", id: { notIn: [actor.id, row.submittedById] } }, select: { id: true } });
+  const recipients: string[] = [];
+  for (const candidate of candidates) if (!(await actorConflicted(tx, candidate.id, row))) recipients.push(candidate.id);
+  await notifyUsers(tx, { ...base, userIds: recipients, exclude: [actor.id, row.submittedById], type: "approval.action-required", title: `Tờ trình chờ xử lý: ${kindLabel}`, body: `${row.title} — ${APPROVAL_STAGE_LABELS[step.toStage]}` });
 }
 
 /** Hủy tờ trình PENDING của (kind, subject, ref): lập lại (D-037) hoặc người nộp rút yêu cầu nguồn. */

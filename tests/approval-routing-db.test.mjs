@@ -15,6 +15,12 @@ import { ProposalEvaluationCouncilService } from "../dist/apps/api/proposal-eval
 import { ProposalDecisionsService } from "../dist/apps/api/proposal-evaluations/proposal-decisions.service.js";
 import { ApprovedProjectsService } from "../dist/apps/api/approved-projects/approved-projects.service.js";
 import { projectContextVersion } from "../dist/apps/api/approved-projects/project-capability-v1.js";
+import { notifyUsers } from "../dist/apps/api/notifications/notification-events.js";
+import { NotificationsService } from "../dist/apps/api/notifications/notifications.service.js";
+import { NotificationsController } from "../dist/apps/api/notifications/notifications.controller.js";
+import { SessionAuthGuard } from "../dist/apps/api/auth/session-auth.guard.js";
+import { ProposalManagementOfficerService } from "../dist/apps/api/proposals-shared/proposal-management-officer.service.js";
+import { ResearchProposalsService } from "../dist/apps/api/research-proposals/research-proposals.service.js";
 import { advanceApprovalSubmission, assertReadyForLeadership, closeApprovalSubmission, openApprovalSubmission, returnApprovalSubmission } from "../dist/apps/api/proposals-shared/approval-routing.js";
 
 // Story 5.9 trên PostgreSQL thật (index duy nhất từng phần, cancel khi lập lại, transaction không ghi một phần).
@@ -237,6 +243,7 @@ test("decision: approve closes the tờ trình with the decision atomically; a f
   await db.$executeRawUnsafe(`CREATE TRIGGER fail_close BEFORE UPDATE ON approval_submissions FOR EACH ROW WHEN (NEW.stage = 'CLOSED') EXECUTE FUNCTION fail_close()`);
   await assert.rejects(() => f.decide(f.people.director, "approved"));
   assert.deepEqual(await f.snapshot(), { proposal: "ready_for_approval", decisions: 0, submission: "PENDING" }, "đóng tờ trình lỗi thì quyết định cũng rollback");
+  assert.equal(await db.userNotification.count({ where: { sourceId: { in: [f.proposal.id, f.submission.id] }, type: { in: ["proposal.decided", "approval.approved", "approval.rejected"] } } }), 0, "rollback không để lại thông báo ma");
   await db.$executeRawUnsafe(`DROP TRIGGER fail_close ON approval_submissions`);
   await db.$executeRawUnsafe(`DROP FUNCTION fail_close()`);
 
@@ -246,6 +253,10 @@ test("decision: approve closes the tờ trình with the decision atomically; a f
   assert.equal(after.decisions, 1);
   assert.deepEqual([after.proposal, after.submission], after.proposal === "approved" ? ["approved", "APPROVED"] : ["rejected", "REJECTED"], "trạng thái hồ sơ khớp tờ trình");
   await assert.rejects(() => f.decide(f.people.director, "approved"), code(400), "không quyết định lần hai");
+  // Story 11.1: PI nhận đúng một thông báo trạng thái chung, không lộ reviewer hay ghi chú quyết định (AD-11).
+  const piRows = await db.userNotification.findMany({ where: { userId: f.people.pi.id } });
+  assert.deepEqual(piRows.map((row) => [row.type, row.sourceId]), [["proposal.decided", f.proposal.id]]);
+  assert.ok(!/RV\d|Không đủ kinh phí/.test(`${piRows[0].title} ${piRows[0].body}`));
 });
 
 // Story 5.11 + 5.10 (EVALUATION_COUNCIL): mời/chấp nhận/từ chối, hội đồng do BGĐ ký, hồ sơ chỉ mở sau khi ký.
@@ -616,6 +627,7 @@ test("6.12: CV submits LIQUIDATION only for an Accepted/Failed project; GĐ alon
   const liquidation = await liquidate();
   const row = await f.pending("LIQUIDATION");
   assert.deepEqual([row.stage, row.signer, row.subjectRef, liquidation.outcome], ["BOARD_REVIEW", "DIRECTOR", liquidation.id, "failed"]);
+  assert.equal((await db.userNotification.findFirst({ where: { userId: people.board.id, sourceId: row.id } })).link, `/projects/${f.project.id}`, "tờ trình đề tài dẫn tới trang đề tài");
   await assert.rejects(liquidate, code(409), "chỉ một biên bản đang trình");
 
   await f.advance(people.board, row);
@@ -637,3 +649,102 @@ test("6.12: CV submits LIQUIDATION only for an Accepted/Failed project; GĐ alon
   const history = await db.projectHistory.findFirst({ where: { projectId: closed.id, action: "project.liquidation.approve" } });
   assert.deepEqual([history.fromStatus, history.toStatus, history.actorId], ["failed", "closed", people.director.id]);
 });
+
+test("11.1: thông báo theo nơi tờ trình đến, không cho PP/PGĐ-TD/người làm/tác giả/người xung đột; idempotent; mất quyền thì biến mất", async () => {
+  const f = await councilFixture("Q");
+  const { people, proposal, org } = f;
+  const participation = new ProposalParticipationService(db);
+  const access = new ProposalReviewAccessService(db);
+  const officers = new ProposalManagementOfficerService(db);
+  const inbox = new NotificationsService(db, participation, access, officers);
+  const got = (user, sourceId) => db.userNotification.count({ where: { userId: user.id, sourceId } });
+  const visible = async (user) => (await inbox.list(user, 200)).notifications;
+  const watchers = [people.deputy, people.oversight, people.admin, people.pi, people.member];
+  // GĐ thứ hai là thành viên đề tài: xung đột, không nhận tờ trình.
+  const conflicted = await db.user.create({ data: { username: "gd-xungdot-Q", usernameKey: "gd-xungdot-q", displayName: "GĐ xung đột", passwordHash: "x", status: "active", systemRole: "LEADERSHIP_APPROVAL_AUTHORITY", unit: org.name } });
+  await db.proposalMember.create({ data: { proposalId: proposal.id, userId: conflicted.id, name: "GĐ xung đột", role: "TOPIC_MEMBER", organization: org.name } });
+
+  // Mời phản biện: reviewer thấy ngay khi còn "invited"; thu hồi thì biến mất. PI không thấy gì về reviewer.
+  const reviewer = await f.candidate("phanbien");
+  const assignmentId = await f.invite(people.head, reviewer);
+  const [invite] = await visible(reviewer);
+  assert.deepEqual([invite.type, invite.link], ["review.invited", "/my-reviews"]);
+  assert.equal((await inbox.list(reviewer, 10)).unreadCount, 1);
+  const piRows = await db.userNotification.findMany({ where: { userId: people.pi.id } });
+  assert.ok(piRows.every((row) => row.sourceType !== "review_assignment" && !`${row.title} ${row.body}`.includes(reviewer.displayName)), "PI không nhận gì lộ reviewer");
+  await f.assignments.revokeAssignment(people.head, proposal.id, assignmentId, { reason: "Đổi người", contextVersion: await f.contextVersion() });
+  assert.deepEqual([(await visible(reviewer)).length, (await inbox.list(reviewer, 10)).unreadCount], [0, 0], "lời mời bị thu hồi không còn trong list/count");
+
+  // TP giao CV: CV được giao nhận; thu hồi phụ trách thì thông báo biến mất.
+  const proposals = new ResearchProposalsService(db, new AuditLogService(db), participation, access, officers);
+  await proposals.assignManagementOfficer(people.head, proposal.id, { officerUserId: people.staff2.id, reason: "Giao lại", contextVersion: await f.contextVersion() });
+  assert.deepEqual((await visible(people.staff2)).map((item) => [item.type, item.link]), [["proposal.officer-assigned", `/proposals/${proposal.id}`]]);
+  await proposals.revokeManagementOfficer(people.head, proposal.id, { reason: "Thu hồi", contextVersion: await f.contextVersion() });
+  assert.equal((await visible(people.staff2)).length, 0, "CV bị thu hồi phụ trách");
+  assert.equal(await got(people.staff2, proposal.id), 1, "bản ghi vẫn còn, chỉ bị lọc khi đọc");
+
+  // CV lập hội đồng (người ký GĐ hoặc PGĐ-KH): TB → hai TP → GĐ + PGĐ-KH; xong thì tác giả.
+  const council = await f.open(people.staff);
+  assert.equal(await got(people.board, council.id), 1);
+  for (const who of [...watchers, people.staff, people.head, people.director]) assert.equal(await got(who, council.id), 0, who.displayName);
+  await f.advance(people.board, council);
+  for (const who of [people.head, people.head2]) assert.equal(await got(who, council.id), 1, who.displayName);
+  assert.equal(await got(people.board, council.id), 1, "người làm không nhận thêm");
+  await f.advance(people.head, council);
+  for (const who of [people.director, people.science]) assert.equal(await got(who, council.id), 1, who.displayName);
+  assert.equal(await got(people.head2, council.id), 1, "TP2 không nhận bước BGĐ");
+  assert.equal(await got(conflicted, council.id), 0, "người ký xung đột bị loại");
+  const stale = await db.userNotification.findFirst({ where: { userId: people.head2.id, sourceId: council.id, type: "approval.action-required" } });
+  assert.ok(stale.readAt, "TP1 đã duyệt thì việc chờ của TP2 không còn chưa đọc");
+  await f.close(people.science, "EVALUATION_COUNCIL", "APPROVED");
+  assert.deepEqual((await db.userNotification.findMany({ where: { userId: people.staff.id, sourceId: council.id } })).map((row) => row.type), ["approval.approved"]);
+  for (const who of watchers) assert.equal(await got(who, council.id), 0, who.displayName);
+
+  // DECISION_PACKAGE chỉ GĐ ký: PGĐ-KH không nhận; từ chối về tác giả, không chép lý do.
+  const pkg = await f.open(people.staff, "DECISION_PACKAGE");
+  await f.advance(people.board, pkg);
+  await f.advance(people.head, pkg);
+  assert.deepEqual([await got(people.director, pkg.id), await got(people.science, pkg.id)], [1, 0]);
+  // Người nhận trở thành người tham gia hồ sơ: thông báo tờ trình bị lọc khi đọc, count giảm theo.
+  const directorBefore = await inbox.list(people.director, 200);
+  assert.ok(directorBefore.notifications.some((item) => item.link === `/proposals/${proposal.id}` && !item.readAt));
+  const membership = await db.proposalMember.create({ data: { proposalId: proposal.id, userId: people.director.id, name: "GĐ", role: "TOPIC_MEMBER", organization: org.name } });
+  const directorAfter = await inbox.list(people.director, 200);
+  assert.equal(directorAfter.notifications.filter((item) => item.link === `/proposals/${proposal.id}`).length, 0);
+  assert.ok(directorAfter.unreadCount < directorBefore.unreadCount);
+  await db.proposalMember.delete({ where: { id: membership.id } });
+  await f.close(people.director, "DECISION_PACKAGE", "REJECTED", "Lý do mật về kinh phí");
+
+  // Trả lại: tác giả nhận, không có lý do trong nội dung. Lập lại (CANCEL) không thông báo bước hủy.
+  const irb = await f.open(people.staff, "IRB_COUNCIL");
+  await f.giveBack(people.board, irb, "Thiếu biên bản nội bộ");
+  assert.equal(await got(people.staff, irb.id), 1);
+  const replaced = await f.open(people.staff, "IRB_CERTIFICATE");
+  await f.open(people.staff, "IRB_CERTIFICATE");
+  assert.equal(await db.userNotification.count({ where: { idempotencyKey: { contains: ":CANCEL:" } } }), 0);
+  assert.equal(await got(people.board, replaced.id), 1, "chỉ bước SUBMIT của tờ trình bị thay");
+  const staffRows = await db.userNotification.findMany({ where: { userId: people.staff.id } });
+  assert.deepEqual(staffRows.map((row) => row.type).sort(), ["approval.approved", "approval.rejected", "approval.returned"]);
+  assert.ok(staffRows.every((row) => !/Lý do mật|Thiếu biên bản/.test(`${row.title} ${row.body}`)), "không chép note/lý do");
+  for (const who of [people.deputy, people.oversight]) assert.equal(await db.userNotification.count({ where: { userId: who.id } }), 0, who.displayName);
+
+  // Ghi lặp cùng khóa: một bản ghi. Tài khoản không active bị bỏ qua.
+  const event = { userIds: [people.head.id, people.member.id], type: "test", title: "t", body: "b", sourceType: "proposal", sourceId: proposal.id, idempotencyKey: `test:${proposal.id}` };
+  await db.user.update({ where: { id: people.member.id }, data: { status: "disabled" } });
+  assert.equal(await notifyUsers(db, event), 1);
+  assert.equal(await notifyUsers(db, event), 0);
+  assert.equal(await db.userNotification.count({ where: { idempotencyKey: event.idempotencyKey } }), 1);
+
+  // Đánh dấu đọc: của người khác → 404; của mình thì count giảm.
+  const mine = (await visible(people.board)).find((item) => !item.readAt);
+  await assert.rejects(() => inbox.markRead(people.head, mine.id), code(404));
+  const before = (await inbox.list(people.board, 10)).unreadCount;
+  await inbox.markRead(people.board, mine.id);
+  assert.equal((await inbox.list(people.board, 10)).unreadCount, before - 1);
+  await inbox.markAllRead(people.board);
+  assert.equal((await inbox.list(people.board, 10)).unreadCount, 0);
+
+  // Chưa đăng nhập → 401: controller gắn SessionAuthGuard.
+  assert.ok((Reflect.getMetadata("__guards__", NotificationsController) ?? []).includes(SessionAuthGuard));
+});
+

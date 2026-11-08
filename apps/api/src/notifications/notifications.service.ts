@@ -1,0 +1,90 @@
+import { Injectable, NotFoundException } from "@nestjs/common";
+import type { SafeUserContext } from "../auth/auth.types.js";
+import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
+import { actorConflicted, canViewApproval, type ApprovalSubmissionRow } from "../proposals-shared/approval-routing.js";
+import { canReadProposal } from "../proposals-shared/proposal-access.js";
+import { ProposalManagementOfficerService } from "../proposals-shared/proposal-management-officer.service.js";
+import { REVIEW_ASSIGNMENT_STATUS } from "../proposals-shared/proposal-review-access.js";
+import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
+import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
+
+// shortcut: lọc quyền trên 200 thông báo mới nhất, không phân trang; thêm cursor khi người dùng tích lũy nhiều hơn.
+const SCAN_LIMIT = 200;
+
+type NotificationRow = { id: string; type: string; title: string; body: string; link: string | null; sourceType: string; sourceId: string; readAt: Date | null; createdAt: Date };
+
+/** Story 11.1: thông báo không phải quyền truy cập. Mỗi lần đọc re-authorize theo quyền hiện hành của người xem. */
+@Injectable()
+export class NotificationsService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly participation: ProposalParticipationService,
+    private readonly reviewAccess: ProposalReviewAccessService,
+    private readonly managementOfficers: ProposalManagementOfficerService
+  ) {}
+
+  async list(actor: SafeUserContext, limit: number) {
+    const rows = (await this.prisma.userNotification.findMany({ where: { userId: actor.id }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: SCAN_LIMIT })) as NotificationRow[];
+    const visible = await this.authorized(actor, rows);
+    return {
+      notifications: visible.slice(0, limit).map((row) => ({ id: row.id, type: row.type, title: row.title, body: row.body, link: row.link, readAt: row.readAt?.toISOString() ?? null, createdAt: row.createdAt.toISOString() })),
+      unreadCount: visible.filter((row) => !row.readAt).length
+    };
+  }
+
+  async markRead(actor: SafeUserContext, id: string) {
+    const updated = await this.prisma.userNotification.updateMany({ where: { id, userId: actor.id }, data: { readAt: new Date() } });
+    if (!updated.count) throw new NotFoundException({ message: "Không tìm thấy thông báo." });
+    return { ok: true };
+  }
+
+  async markAllRead(actor: SafeUserContext) {
+    const updated = await this.prisma.userNotification.updateMany({ where: { userId: actor.id, readAt: null }, data: { readAt: new Date() } });
+    return { updated: updated.count };
+  }
+
+  private async authorized(actor: SafeUserContext, rows: NotificationRow[]) {
+    const idsOf = (type: string) => [...new Set(rows.filter((row) => row.sourceType === type).map((row) => row.sourceId))];
+    const allowed = new Set<string>();
+    const asOf = new Date();
+
+    const approvalIds = idsOf("approval");
+    if (approvalIds.length) {
+      const submissions = (await this.prisma.approvalSubmission.findMany({ where: { id: { in: approvalIds } } })) as unknown as ApprovalSubmissionRow[];
+      // Nhiều tờ trình cùng một hồ sơ/đề tài: kiểm tra xung đột một lần cho mỗi đối tượng.
+      const conflicts = new Map<string, boolean>();
+      for (const submission of submissions) {
+        if (!canViewApproval(actor, submission)) continue;
+        const subject = `${submission.subjectType}:${submission.subjectId}`;
+        if (!conflicts.has(subject)) conflicts.set(subject, await actorConflicted(this.prisma as never, actor.id, submission));
+        if (!conflicts.get(subject)) allowed.add(`approval:${submission.id}`);
+      }
+    }
+
+    const proposalIds = idsOf("proposal");
+    if (proposalIds.length) {
+      const proposals = await this.prisma.researchProposal.findMany({ where: { id: { in: proposalIds } }, select: { id: true, ownerId: true, status: true, hostOrganizationUnitId: true, createdAt: true } });
+      const ids = proposals.map((proposal) => proposal.id);
+      const [participation, reviewAccess, officers] = await Promise.all([
+        this.participation.resolveForProposals(actor.id, proposals, asOf),
+        this.reviewAccess.resolveForProposals(actor.id, ids, asOf),
+        this.managementOfficers.resolveForProposals(ids, asOf)
+      ]);
+      for (const proposal of proposals) {
+        if (canReadProposal(actor, proposal, participation.get(proposal.id), reviewAccess.get(proposal.id), officers.get(proposal.id))) allowed.add(`proposal:${proposal.id}`);
+      }
+    }
+
+    const assignmentIds = idsOf("review_assignment");
+    if (assignmentIds.length) {
+      // Như `listMyAssignments`: lời mời bị thu hồi thì thông báo biến mất.
+      const assignments = await this.prisma.proposalReviewAssignment.findMany({
+        where: { id: { in: assignmentIds }, reviewerUserId: actor.id, status: { in: [REVIEW_ASSIGNMENT_STATUS.assigned, REVIEW_ASSIGNMENT_STATUS.completed] } },
+        select: { id: true }
+      });
+      for (const assignment of assignments) allowed.add(`review_assignment:${assignment.id}`);
+    }
+
+    return rows.filter((row) => allowed.has(`${row.sourceType}:${row.sourceId}`));
+  }
+}
