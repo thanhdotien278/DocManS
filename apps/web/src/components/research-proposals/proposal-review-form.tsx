@@ -25,7 +25,11 @@ function formatDate(value: string) {
  * never present a criterion the server would reject. A submitted review renders read-only rather
  * than disappearing, so the reviewer can still see what they sent.
  */
-export function ProposalReviewForm({ proposalId, onReviewSubmitted, canSubmitReview, blockedReason, contextVersion }: { proposalId: string; onReviewSubmitted: () => void; canSubmitReview: boolean; blockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
+export function ProposalReviewForm({ proposalId, onReviewSubmitted, canSubmitReview, blockedReason, contextVersion: loadedContextVersion }: { proposalId: string; onReviewSubmitted: () => void; canSubmitReview: boolean; blockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
+  // Token trả về sau lần lưu gần nhất; bỏ khi trang chi tiết nạp lại token mới.
+  const [savedContextVersion, setSavedContextVersion] = useState<ViewerAuthorizationV1["contextVersion"]>();
+  useEffect(() => setSavedContextVersion(undefined), [loadedContextVersion]);
+  const contextVersion = savedContextVersion ?? loadedContextVersion;
   const [review, setReview] = useState<MyProposalReview | null>(null);
   const [reviewPackage, setReviewPackage] = useState<Awaited<ReturnType<typeof loadProposalReviewPackage>> | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
@@ -40,6 +44,7 @@ export function ProposalReviewForm({ proposalId, onReviewSubmitted, canSubmitRev
 
   function applyReview(next: MyProposalReview) {
     setReview(next);
+    if (next.contextVersion) setSavedContextVersion(next.contextVersion);
     setScores(Object.fromEntries(next.criteria.map((criterion) => [criterion.code, String(next.scoreData[criterion.code] ?? "")])));
     setComment(next.comment);
     setRecommendation(next.recommendation);

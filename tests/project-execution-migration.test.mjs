@@ -26,7 +26,7 @@ test("GF4 migrations: status checks, immutable revisions/evidence and append-onl
     await client.query(`INSERT INTO proposal_submission_events (id, proposal_id, actor_id, from_status, to_status) VALUES ('sub-1', 'prop-1', 'u-pi', 'draft', 'submitted')`);
     await client.query(`INSERT INTO proposal_decisions (id, proposal_id, decision, decided_by_id, from_status, to_status) VALUES ('dec-1', 'prop-1', 'approved', 'u-pi', 'under_review', 'approved')`);
     await client.query(`INSERT INTO approved_projects (id, proposal_id, source_submission_event_id, source_decision_id, host_organization_unit_id, title, scope_snapshot, created_by_id, updated_at) VALUES ('p1', 'prop-1', 'sub-1', 'dec-1', $1, 'Đề tài', '{}', 'u-pi', now())`, [unit]);
-    await client.query(`INSERT INTO file_records (id, related_entity_type, related_entity_id, file_purpose, original_file_name, mime_type, size_bytes, storage_bucket, storage_object_key, uploaded_by_id, updated_at) VALUES ('f-1', 'approved_project', 'p1', 'PROJECT_EVIDENCE', 'a.pdf', 'application/pdf', 1, 'b', 'k', 'u-pi', now())`);
+    await client.query(`INSERT INTO file_records (id, related_entity_type, related_entity_id, file_purpose, document_type, original_file_name, mime_type, size_bytes, storage_bucket, storage_object_key, uploaded_by_id, updated_at) VALUES ('f-1', 'approved_project', 'p1', 'PROJECT_EVIDENCE', 'PROJECT_EVIDENCE', 'a.pdf', 'application/pdf', 1, 'b', 'k', 'u-pi', now())`);
 
     const rejects = (sql, params, pattern) => assert.rejects(client.query(sql, params), pattern);
 
