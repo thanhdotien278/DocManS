@@ -80,6 +80,15 @@ context: ['{project-root}/docs/permission-matrix.md']
 - `tests/proposals-ep03.test.mjs`: đã bổ sung fake (`user.findUnique`, officer, notification, catalog, aggregate). Suite cũ còn 23 test fail. Nguyên nhân là luồng hội đồng đã đổi (completeness, chấp nhận lời mời, thành lập hội đồng), không phải do thiếu fake. Đối chiếu với baseline `a9f1598` (chạy trên worktree tạm): không phát sinh test fail mới. Block "Story 5.4" PASS 4/4.
 - Kiểm chứng: `npm run typecheck` PASS. Golden-flow 7/7 PASS, cardinality 4/4 PASS.
 
+- Kiểm chứng UI (2026-11-08; API 4001 + web 3001, bản build tại HEAD, DB dev):
+  - Reviewer `test_external01` ở "Đánh giá của tôi" chỉ thấy "Mùa thu 2", không thấy hồ sơ vòng cũ "Hệ thống báo cháy".
+  - Mở "Mùa thu 2": phiếu đã gửi hiển thị chỉ đọc; tệp không hiện người tải lên; không có panel tiến độ; không có request nào bị 403 do Story 5.4.
+  - Mở "Hệ thống báo cháy" (`f9f57beb`, vòng cũ): bị từ chối truy cập.
+  - CV `hdtien1` trên "Mùa thu 2" vẫn thấy Timeline và "Tiến độ phiếu đánh giá".
+- Sửa sau kiểm chứng UI: `proposal-detail-workspace.tsx` ẩn khối Timeline khi backend không trả `history`. Trước đó reviewer thấy dòng "Chưa có lịch sử nộp", gây hiểu nhầm.
+- Chưa kiểm chứng trên UI: lưu nháp hai lần và thông báo cho CV khi nộp. DB dev không có phân công `under_review` nào thuộc vòng hiện hành; muốn có phải chạy lại cả luồng hội đồng. Phần này mới chỉ được test ở service.
+- Dữ liệu cũ: 4 phân công của hồ sơ "Hệ thống báo cháy" (code ngày 16/09) gắn `reviewedSubmissionEventId` vào sự kiện `completeness_check` thay vì lần nộp. Trước story này, các reviewer đó đã bị `assertAssigned` chặn chấm và nộp phiếu; nay bị chặn thêm quyền đọc.
+
 ## Spec Change Log
 
 ## Review Triage Log
