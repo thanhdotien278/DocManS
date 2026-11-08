@@ -239,6 +239,18 @@ test("decision: only GĐ at LEADERSHIP decides; before that, PGĐ-KH, conflicted
 test("decision: approve closes the tờ trình with the decision atomically; a failing close rolls the decision back; concurrent decisions leave one winner", async () => {
   const f = await decisionFixture("I");
   await f.toLeadership();
+  // Story 5.7/5.8: gói có danh sách tệp (metadata), thành viên đang hiệu lực nhận thông báo, PI chỉ thấy projection công bố.
+  await db.proposalMember.create({ data: { proposalId: f.proposal.id, userId: f.people.member.id, name: "Thư ký", role: "TOPIC_SECRETARY", participationRole: "TOPIC_SECRETARY", organization: f.org.name } });
+  await db.proposalMember.create({ data: { proposalId: f.proposal.id, userId: f.people.staff2.id, name: "Đã rời", role: "TOPIC_MEMBER", organization: f.org.name, status: "ENDED", effectiveUntil: new Date(Date.now() - 1000) } });
+  // Trigger DB khóa tệp của hồ sơ đã nộp, nên đưa tạm về nháp để gắn tệp rồi trả lại trạng thái chờ phê duyệt.
+  await db.researchProposal.update({ where: { id: f.proposal.id }, data: { status: "draft" } });
+  const file = await db.fileRecord.create({ data: { relatedEntityType: "research_proposal", relatedEntityId: f.proposal.id, filePurpose: "proposal-form", documentType: "proposal-form", originalFileName: "tm.pdf", mimeType: "application/pdf", sizeBytes: 10, storageBucket: "b", storageObjectKey: "secret/key", uploadedById: f.people.pi.id } });
+  await db.researchProposal.update({ where: { id: f.proposal.id }, data: { status: "ready_for_approval" } });
+  const pack = await f.decisions().getDecisionPackage(f.people.director, f.proposal.id);
+  assert.deepEqual(pack.attachments.map((item) => [item.id, item.fileName, item.version]), [[file.id, "tm.pdf", 1]]);
+  assert.ok(!JSON.stringify(pack.attachments).includes("secret/key"), "không lộ đường dẫn lưu trữ");
+  const proposals = new ResearchProposalsService(db, new AuditLogService(db), new ProposalParticipationService(db), new ProposalReviewAccessService(db), new ProposalManagementOfficerService(db));
+  assert.equal((await proposals.getProposal(f.people.pi, f.proposal.id)).publishedDecision, null, "chưa quyết định thì chưa công bố");
   await db.$executeRawUnsafe(`CREATE FUNCTION fail_close() RETURNS trigger AS $$ BEGIN RAISE EXCEPTION 'close blocked'; END $$ LANGUAGE plpgsql`);
   await db.$executeRawUnsafe(`CREATE TRIGGER fail_close BEFORE UPDATE ON approval_submissions FOR EACH ROW WHEN (NEW.stage = 'CLOSED') EXECUTE FUNCTION fail_close()`);
   await assert.rejects(() => f.decide(f.people.director, "approved"));
@@ -247,7 +259,9 @@ test("decision: approve closes the tờ trình with the decision atomically; a f
   await db.$executeRawUnsafe(`DROP TRIGGER fail_close ON approval_submissions`);
   await db.$executeRawUnsafe(`DROP FUNCTION fail_close()`);
 
-  const results = await Promise.allSettled([f.decide(f.people.director, "approved"), f.decide(f.people.director, "rejected", "Không đủ kinh phí")]);
+  const published = { publicSummary: "Đề tài đủ điều kiện", requiredFollowUp: "Hoàn thiện dự toán" };
+  const decideWith = async (decision, note) => f.decisions().decide(f.people.director, f.proposal.id, decision, { contextVersion: proposalContextVersion(await db.researchProposal.findUnique({ where: { id: f.proposal.id } })), packageRevision: 1, note, ...published });
+  const results = await Promise.allSettled([decideWith("approved", "Ghi chú nội bộ"), decideWith("rejected", "Không đủ kinh phí")]);
   assert.equal(results.filter((r) => r.status === "fulfilled").length, 1, "đúng một quyết định thắng");
   const after = await f.snapshot();
   assert.equal(after.decisions, 1);
@@ -257,6 +271,12 @@ test("decision: approve closes the tờ trình with the decision atomically; a f
   const piRows = await db.userNotification.findMany({ where: { userId: f.people.pi.id } });
   assert.deepEqual(piRows.map((row) => [row.type, row.sourceId]), [["proposal.decided", f.proposal.id]]);
   assert.ok(!/RV\d|Không đủ kinh phí/.test(`${piRows[0].title} ${piRows[0].body}`));
+  assert.equal(await db.userNotification.count({ where: { userId: f.people.member.id, type: "proposal.decided", sourceId: f.proposal.id } }), 1, "thư ký đề tài nhận thông báo");
+  assert.equal(await db.userNotification.count({ where: { userId: f.people.staff2.id, type: "proposal.decided" } }), 0, "thành viên đã kết thúc không nhận");
+  assert.equal(await db.userNotification.count({ where: { userId: f.people.director.id, type: "proposal.decided" } }), 0, "GĐ không tự nhận");
+  const shown = (await proposals.getProposal(f.people.pi, f.proposal.id)).publishedDecision;
+  assert.deepEqual(shown, { schemaVersion: "PublishedReviewSummaryV1", decision: after.proposal, decisionLabel: after.proposal === "approved" ? "Phê duyệt" : "Không phê duyệt", decidedAt: shown.decidedAt, ...published });
+  assert.ok(!/Ghi chú nội bộ|Không đủ kinh phí|giamdoc/.test(JSON.stringify(shown)), "không lộ ghi chú nội bộ hay người quyết định");
 });
 
 // Story 5.11 + 5.10 (EVALUATION_COUNCIL): mời/chấp nhận/từ chối, hội đồng do BGĐ ký, hồ sơ chỉ mở sau khi ký.
@@ -445,6 +465,14 @@ test("5.10 council: the secretary reads anonymous reviews and drafts the summary
   await f.summary.saveEvaluationSummary(secretary, proposal.id, { summary: "Dự thảo biên bản", recommendation: "approve", contextVersion: await f.contextVersion() });
   const audit = await db.auditLog.findFirst({ where: { action: "draft-evaluation-summary", actorId: secretary.id } });
   assert.equal(JSON.parse(audit.reason).actorPosition, "council_secretary");
+  // 5.6: trigger DB chỉ nhận thêm tệp hành chính đánh giá khi under_review; hồ sơ đã nộp vẫn bất biến.
+  const adminFile = (filePurpose) => db.fileRecord.create({ data: { relatedEntityType: "research_proposal", relatedEntityId: proposal.id, filePurpose, documentType: filePurpose, originalFileName: "bb.pdf", mimeType: "application/pdf", sizeBytes: 10, storageBucket: "b", storageObjectKey: `k/${filePurpose}`, uploadedById: secretary.id } });
+  const contextBefore = (await db.researchProposal.findUnique({ where: { id: proposal.id } })).authorizationContextUpdatedAt;
+  const minutes = await adminFile("COUNCIL_MINUTES");
+  await adminFile("MEETING_MATERIAL");
+  assert.deepEqual((await db.researchProposal.findUnique({ where: { id: proposal.id } })).authorizationContextUpdatedAt, contextBefore, "tệp hành chính không làm form đang mở bị lệch context");
+  await assert.rejects(() => adminFile("proposal-form"), /immutable/);
+  await assert.rejects(() => db.fileRecord.update({ where: { id: minutes.id }, data: { description: "sửa" } }), /immutable/);
   for (const method of ["finalizeEvaluationSummary", "submitCompletedPackage"]) {
     await assert.rejects(async () => f.summary[method](secretary, proposal.id, { contextVersion: await f.contextVersion() }), (e) => e.getResponse().code === "SECRETARY_CANNOT_FINALIZE");
   }
