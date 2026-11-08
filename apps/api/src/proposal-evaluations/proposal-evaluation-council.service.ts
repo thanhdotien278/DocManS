@@ -5,6 +5,7 @@ import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { readTransactionClockV1 } from "../permissions/authorization-v1.service.js";
 import { APPROVAL_STAGE_LABELS, APPROVAL_STATUS_LABELS, assertReadyForLeadership, canSignApproval, closeApprovalSubmission, openApprovalSubmission, type ApprovalKey } from "../proposals-shared/approval-routing.js";
 import { EVALUATION_COUNCIL_STRUCTURE, readCouncilFormationConfig } from "../proposals-shared/council-formation.js";
+import { participantPolicyFor, readParticipantPolicy } from "../proposals-shared/participant-policy.js";
 import {
   INVITATION_STATUS_LABELS,
   REVIEW_MAX_TOTAL_SCORE,
@@ -18,18 +19,21 @@ import {
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { proposalContextVersion, runProposalMutation } from "../proposals-shared/proposal-mutation.js";
 import { isWorkflowVisibleStatus } from "../proposals-shared/proposal-workflow.js";
+import { isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
 import {
   assertCurrentCompletenessEvidence,
   assertProposalManagementWriteScope,
   assertProposalStatus,
+  assertScientificManagementScope,
   councilRosterBlockers,
   filterCurrentRoundAssignments,
   findCurrentSubmissionEvidence,
   findEvaluationProposal,
   isCouncilEstablished,
-  resolveActorConflict,
+  resolveManagerConflict,
   resolveCouncilFormationPermission,
+  resolveReadConflict,
   type EvaluationProposalRecord,
   type ProposalReviewRecord,
   type ReviewAssignmentRecord
@@ -77,8 +81,9 @@ export class ProposalEvaluationCouncilService {
     return filterCurrentRoundAssignments(rows, roundId);
   }
 
-  private async actorConflicted(actorId: string, proposalId: string) {
-    return resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actorId, proposalId);
+  /** D-041 phần 2: "Phụ trách" bỏ qua xung đột do tham gia; `operation` (chỉ mutation) ghi audit khi dùng ngoại lệ. */
+  private async actorConflicted(actor: SafeUserContext, proposalId: string, operation?: string) {
+    return resolveManagerConflict(this.prisma, { participation: this.participation, reviewAccess: this.reviewAccess }, actor, proposalId, operation);
   }
 
   private async tryRound(proposal: EvaluationProposalRecord) {
@@ -95,7 +100,10 @@ export class ProposalEvaluationCouncilService {
     const formation = await resolveCouncilFormationPermission(this.prisma, actor, proposal);
     const isManager = await assertProposalManagementWriteScope(this.prisma, actor, proposal).then(() => true, () => false);
     const isSigner = canSignApproval(actor, COUNCIL_SIGNER);
-    if ((!formation.decision.allowed && !isManager && !isSigner) || !isWorkflowVisibleStatus(proposal.status)) throw new ForbiddenException({ message: "Không có quyền xem hội đồng đánh giá của hồ sơ này." });
+    // D-041: "Xem" bật thì CV phụ trách là người tham gia vẫn đọc được hội đồng; cờ thao tác theo `conflict` (chỉ "Phụ trách" mới bỏ xung đột tham gia).
+    const { view } = participantPolicyFor(actor, await readParticipantPolicy(this.prisma));
+    const isParticipantReader = view && !isManager && isResearchManagementStaff(actor) && await assertScientificManagementScope(this.prisma, actor, proposal, true).then(() => true, () => false);
+    if ((!formation.decision.allowed && !isManager && !isSigner && !isParticipantReader) || !isWorkflowVisibleStatus(proposal.status)) throw new ForbiddenException({ message: "Không có quyền xem hội đồng đánh giá của hồ sơ này." });
 
     const { config } = formation;
     const structure = EVALUATION_COUNCIL_STRUCTURE(config.memberCount);
@@ -103,7 +111,8 @@ export class ProposalEvaluationCouncilService {
     const roundId = round?.eventId ?? "";
     const completeness = round ? await assertCurrentCompletenessEvidence(this.prisma, proposal).then(() => true, () => false) : false;
     const applicable = ["submitted", "resubmitted", "under_review"].includes(proposal.status) && completeness;
-    const conflict = await this.actorConflicted(actor.id, proposalId);
+    const conflict = await this.actorConflicted(actor, proposalId);
+    const readConflict = view ? await resolveReadConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId, true) : conflict;
     const roster = applicable ? await this.currentRoster(proposal, roundId) : [];
     const established = isCouncilEstablished(roster);
     const legacyRound = roster.length > 0 && !roster.some((row) => ["council_chair", "council_secretary"].includes(normalizeAssignmentRole(row.assignmentRole) ?? "reviewer"));
@@ -147,7 +156,7 @@ export class ProposalEvaluationCouncilService {
     };
 
     // Người xung đột vẫn nhận 200 nhưng không thấy danh sách, tiến độ hay tờ trình.
-    const visible = conflict.conflicted ? [] : roster;
+    const visible = readConflict.conflicted ? [] : roster;
     const establishedAt = status === "ESTABLISHED" ? roster.map((row) => row.councilEstablishedAt?.getTime() ?? 0).reduce((max, time) => Math.max(max, time), 0) : 0;
     return {
       contextVersion: proposalContextVersion(proposal),
@@ -160,9 +169,9 @@ export class ProposalEvaluationCouncilService {
         const rows = visible.filter((row) => (normalizeAssignmentRole(row.assignmentRole) ?? "reviewer") === position);
         return { position, positionLabel: getAssignmentRoleLabel(position), required: structure[position], filled: rows.length, accepted: rows.filter((row) => (row.invitationStatus ?? "accepted") === "accepted").length };
       }),
-      blockers: conflict.conflicted ? [] : blockers,
+      blockers: readConflict.conflicted ? [] : blockers,
       viewer,
-      approval: conflict.conflicted || !latest ? null : { id: latest.id, stage: latest.stage, stageLabel: APPROVAL_STAGE_LABELS[latest.stage as keyof typeof APPROVAL_STAGE_LABELS] ?? latest.stage, status: latest.status, statusLabel: APPROVAL_STATUS_LABELS[latest.status as keyof typeof APPROVAL_STATUS_LABELS] ?? latest.status, submittedByName: latest.submittedBy?.displayName ?? "", lastNote: latest.lastNote ?? "" },
+      approval: readConflict.conflicted || !latest ? null : { id: latest.id, stage: latest.stage, stageLabel: APPROVAL_STAGE_LABELS[latest.stage as keyof typeof APPROVAL_STAGE_LABELS] ?? latest.stage, status: latest.status, statusLabel: APPROVAL_STATUS_LABELS[latest.status as keyof typeof APPROVAL_STATUS_LABELS] ?? latest.status, submittedByName: latest.submittedBy?.displayName ?? "", lastNote: latest.lastNote ?? "" },
       establishedAt: establishedAt ? new Date(establishedAt).toISOString() : "",
       members: visible.map((row) => {
         const position = normalizeAssignmentRole(row.assignmentRole) ?? "reviewer";
@@ -196,7 +205,7 @@ export class ProposalEvaluationCouncilService {
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
     await assertProposalManagementWriteScope(this.prisma, actor, proposal);
     assertProposalStatus(proposal, ["under_review"], "Chỉ hồ sơ đang đánh giá mới lập tờ trình hội đồng.");
-    const conflict = await this.actorConflicted(actor.id, proposalId);
+    const conflict = await this.actorConflicted(actor, proposalId, "submit-evaluation-council");
     if (conflict.conflicted) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: conflict.viewerMessage });
     const evidence = await assertCurrentCompletenessEvidence(this.prisma, proposal);
     const roster = await this.currentRoster(proposal, evidence.eventId);
