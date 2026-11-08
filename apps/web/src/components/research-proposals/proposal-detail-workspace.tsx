@@ -681,7 +681,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
           />
         ) : null}
 
-        {proposal.supplementRequests?.length || (!isParticipantViewer && shouldRenderAction("proposal.supplement.request")) ? (
+        {proposal.supplementRequests?.length || canRequestSupplement || (!isParticipantViewer && shouldRenderAction("proposal.supplement.request")) ? (
           <SectionCard title="Yêu cầu bổ sung" subtitle="Lý do, hạn phản hồi và trạng thái xử lý của vòng bổ sung">
             {proposal.supplementRequests?.length ? (
               <div className="timeline">

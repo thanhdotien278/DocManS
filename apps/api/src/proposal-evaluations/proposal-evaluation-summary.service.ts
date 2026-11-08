@@ -7,6 +7,7 @@ import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
 import { openApprovalSubmission } from "../proposals-shared/approval-routing.js";
+import { participantPolicyFor, readParticipantPolicy } from "../proposals-shared/participant-policy.js";
 import { isResearchBoardHead, isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";
 import {
   getRecommendationLabel,
@@ -26,7 +27,8 @@ import {
   assertProposalManagementWriteScope,
   findCurrentSubmissionEvidence,
   findEvaluationProposal,
-  resolveActorConflict,
+  resolveManagerConflict,
+  resolveReadConflict,
   type EvaluationSummaryRecord,
   type ProposalReviewRecord,
   type ReviewAssignmentRecord
@@ -79,9 +81,11 @@ export class ProposalEvaluationSummaryService {
   /** Operational progress is for scoped staff without a same-proposal review duty. */
   async getReviewProgress(actor: SafeUserContext, proposalId: string) {
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
-    await assertEvaluationReadScope(this.prisma, actor, proposal);
+    // D-041: "Xem" bật thì người tham gia đọc như khi không tham gia; xung đột phản biện vẫn chặn.
+    const { view } = participantPolicyFor(actor, await readParticipantPolicy(this.prisma));
+    await assertEvaluationReadScope(this.prisma, actor, proposal, view);
     if (!isWorkflowVisibleStatus(proposal.status)) throw new ForbiddenException();
-    const conflict = await resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId);
+    const conflict = await resolveReadConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId, view);
     if (isResearchManagementStaff(actor) && conflict.conflicted) throw new ForbiddenException({ message: conflict.viewerMessage });
     const assignmentRecords = await this.assignments.findCurrentRoundAssignments(proposal);
     const reviewRecords = await this.assignments.findCurrentRoundReviews(proposal);
@@ -127,7 +131,7 @@ export class ProposalEvaluationSummaryService {
     }
     assertProposalStatus(proposal, [PROPOSAL_STATUS.underReview], "Chỉ hồ sơ đang đánh giá mới được soạn tổng hợp kết quả.");
     this.assertNoSynthesisBypass(input);
-    if (!isSecretary) await this.assertSynthesisActorIsEligible(actor, proposalId);
+    if (!isSecretary) await this.assertSynthesisActorIsEligible(actor, proposalId, "save-evaluation-summary");
     const summaryText = this.readSummaryText(input.summary);
     const recommendation = this.readRecommendation(input.recommendation);
     const submissionEvidence = await assertCurrentCompletenessEvidence(this.prisma, proposal);
@@ -247,7 +251,7 @@ export class ProposalEvaluationSummaryService {
     await this.assertNotSecretary(actor, proposalId);
     await assertProposalManagementWriteScope(this.prisma, actor, proposal);
     assertProposalStatus(proposal, [PROPOSAL_STATUS.underReview], "Chỉ hồ sơ đang đánh giá mới được chốt bản tổng hợp.");
-    await this.assertSynthesisActorIsEligible(actor, proposalId);
+    await this.assertSynthesisActorIsEligible(actor, proposalId, "finalize-evaluation-summary");
     const existing = await this.findSummary(proposalId);
     if (!existing || existing.status !== EVALUATION_SUMMARY_STATUS.draft) throw new BadRequestException({ message: "Cần lưu bản nháp tổng hợp trước khi chốt." });
     const submissionEvidence = await assertCurrentCompletenessEvidence(this.prisma, proposal);
@@ -301,7 +305,7 @@ export class ProposalEvaluationSummaryService {
     await assertProposalManagementWriteScope(this.prisma, actor, proposal);
     assertProposalStatus(proposal, [PROPOSAL_STATUS.underReview], "Chỉ hồ sơ đang đánh giá mới được trình gói hoàn tất.");
 
-    const conflict = await resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId);
+    const conflict = await resolveManagerConflict(this.prisma, { participation: this.participation, reviewAccess: this.reviewAccess }, actor, proposalId, "submit-evaluation-package");
     if (conflict.conflicted) throw new BadRequestException({ message: conflict.viewerMessage, reasonCode: conflict.reasonCode });
 
     const existing = await this.findSummary(proposalId);
@@ -411,8 +415,8 @@ export class ProposalEvaluationSummaryService {
     }
   }
 
-  private async assertSynthesisActorIsEligible(actor: SafeUserContext, proposalId: string) {
-    const conflict = await resolveActorConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId);
+  private async assertSynthesisActorIsEligible(actor: SafeUserContext, proposalId: string, operation: string) {
+    const conflict = await resolveManagerConflict(this.prisma, { participation: this.participation, reviewAccess: this.reviewAccess }, actor, proposalId, operation);
     if (conflict.conflicted) {
       throw new BadRequestException({ message: conflict.viewerMessage, reasonCode: conflict.reasonCode });
     }
