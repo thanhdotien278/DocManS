@@ -220,3 +220,18 @@
   summary: Ứng viên CV phụ trách đợt đang lọc theo phạm vi của TP, không theo đơn vị áp dụng của đợt; có thể chọn CV không có phạm vi trên hồ sơ của đợt.
   evidence: Chưa xác minh (có thể medium) — cần kiểm tra CV được gán qua `ProposalManagementOfficer` có thao tác được hồ sơ ngoài `organizationScopes` của mình hay không.
   resolution: 2026-11-02 — đã xử lý: bỏ lọc phạm vi ứng viên CV của đợt; luồng hồ sơ bỏ giới hạn theo đơn vị nên CV phụ trách xem/thao tác được hồ sơ ngoài `organizationScopes` (xem `_bmad-output/architecture.md`, mục D-038).
+- source_spec: none
+  summary: Story 11.2 — email cho sự kiện và kết quả quan trọng, dùng chung sự kiện/người nhận/khóa idempotency của 11.1.
+  evidence: Người dùng chọn chỉ làm 11.1 khi tách "hệ thống notifications" (Epic 11) ngày 2026-11-08.
+- source_spec: none
+  summary: Story 11.3 — nhắc hạn và công việc tồn đọng an toàn (job định kỳ phát qua thông báo 11.1).
+  evidence: Người dùng chọn chỉ làm 11.1 khi tách Epic 11 ngày 2026-11-08.
+- source_spec: none
+  summary: Story 11.4–11.6 — backend tổng hợp "Của tôi", giao diện "Của tôi" và hàng đợi công việc theo vai trò.
+  evidence: Người dùng chọn chỉ làm 11.1 khi tách Epic 11 ngày 2026-11-08; các story này độc lập với kênh thông báo.
+- source_spec: `_bmad-output/implementation-artifacts/spec-11-1-thong-bao-trong-ung-dung-theo-su-kien-nghiep-vu.md`
+  summary: Thông báo cho sự kiện đề tài ngoài tờ trình (yêu cầu bổ sung báo cáo, yêu cầu điều chỉnh/gia hạn, kết quả yêu cầu, thanh lý) tới PI/thành viên đề tài.
+  evidence: Review 11.1: `approved-projects.service.ts` chưa gọi `notifyUsers`; khi tờ trình đề tài đóng chỉ tác giả (CV) nhận. Intent 11.1 chỉ liệt kê sự kiện hồ sơ đề xuất và tờ trình.
+- source_spec: `_bmad-output/implementation-artifacts/spec-11-1-thong-bao-trong-ung-dung-theo-su-kien-nghiep-vu.md`
+  summary: Đổi CV phụ trách cả đợt (`transferProposalOfficers` trong `proposal-intake-periods.service.ts`) chưa thông báo cho CV mới của các hồ sơ đã nộp.
+  evidence: Story 11.1 AC1 có sự kiện "assignment"; đường này ngoài Code Map của spec nên chưa phát `notifyUsers`. Giao CV từng hồ sơ (`assignManagementOfficer`) đã có thông báo.
