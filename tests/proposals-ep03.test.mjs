@@ -327,7 +327,7 @@ function createPrisma() {
         if (where?.id?.in) return ACCOUNTS.filter((user) => where.id.in.includes(user.id) && (!where.status || (user.status ?? "active") === where.status)).map((user) => ({ id: user.id }));
         if (where?.systemRole) {
           const roles = where.systemRole.in ?? [where.systemRole];
-          return ACCOUNTS.filter((user) => roles.includes(user.systemRole) && (!where.status || (user.status ?? "active") === where.status));
+          return ACCOUNTS.filter((user) => roles.includes(user.systemRole) && !where.id?.notIn?.includes(user.id) && (!where.status || (user.status ?? "active") === where.status));
         }
         const ids = where?.OR?.flatMap((clause) => clause.id?.in ?? []) ?? [];
         const usernameKeys = where?.OR?.flatMap((clause) => clause.usernameKey?.in ?? []) ?? [];
@@ -589,8 +589,6 @@ async function createSubmittedProposal(services, { members = TEAM } = {}) {
     members
   });
 
-  // The staff fixture acts as the proposal's current responsible officer (CV phụ trách).
-  services.prisma.store.officers.push({ id: `officer-${draft.id}`, proposalId: draft.id, officerUserId: staffUser.id, status: "ACTIVE", effectiveFrom: new Date(Date.now() - 1000), effectiveUntil: null, createdAt: new Date(), officer: { displayName: staffUser.displayName } });
   const content = Buffer.from("thuyet minh de tai");
   await services.filesService.uploadFile(piUser, {
     relatedEntityType: "research_proposal",
@@ -1044,16 +1042,13 @@ describe("EP-03 hardening found by adversarial review", () => {
     assert.deepEqual(afterPartial.scoreData, FULL_SCORES);
   });
 
-  it("scopes the evaluation read surfaces to the staff member's organization", async () => {
+  it("restricts evaluation reads to the responsible officer and council management roles", async () => {
     const services = createServices();
     const { proposal } = await createProposalUnderReview(services);
 
-    // AC-ST-3.4-03: the read side must be scoped as tightly as the write side, or out-of-scope
-    // staff could read every reviewer's name and score for a unit they do not operate.
     await assert.rejects(() => services.summaries.getReviewProgress(outOfScopeStaffUser, proposal.id), ForbiddenException);
     await assert.rejects(() => services.assignments.listAssignments(outOfScopeStaffUser, proposal.id), ForbiddenException);
 
-    // In-scope staff and leadership still read it.
     assert.equal((await services.summaries.getReviewProgress(staffUser, proposal.id)).activeAssignmentCount, 1);
     await assert.rejects(() => services.assignments.listAssignments(leadershipUser, proposal.id), ForbiddenException);
   });
@@ -1101,7 +1096,7 @@ describe("EP-03 hardening found by adversarial review", () => {
     officer.officerUserId = staffUser.id;
     await assert.rejects(() => services.summaries.saveEvaluationSummary(staffUser, proposal.id, {
       summary: "Tự tổng hợp phiếu của chính mình.", recommendation: "approve"
-    }), BadRequestException);
+    }), (error) => error instanceof ForbiddenException && error.getResponse().code === "CONFLICT_DENIED");
     assert.equal(services.prisma.store.evaluationSummaries.length, 0);
     officer.officerUserId = outOfScopeStaffUser.id;
     const consolidated = await submitEvaluationPackage(services, proposal.id, outOfScopeStaffUser);
