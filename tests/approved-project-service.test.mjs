@@ -284,6 +284,17 @@ test("setup needs at least one milestone or checkpoint, bounded by the project p
   assert.equal((await w.service.confirmSetup(actor("staff"), "p1", { contextVersion: await w.ctx() })).status, "executing");
 });
 
+test("D-041 phần 2: a responsible staff who is a project member operates only with CV manage on, and the waiver is audited", async () => {
+  const w = world({ status: "preparing" });
+  w.db.approvedProjectMember.rows.push({ id: "m-staff", projectId: "p1", userId: "staff", name: "Staff", participationRole: "TOPIC_MEMBER", status: "ACTIVE", effectiveFrom: past, effectiveUntil: null, createdAt: past });
+  const policy = (manage) => ({ RESEARCH_MANAGEMENT_HEAD: { pi: true, view: false, manage: false }, RESEARCH_BOARD_HEAD: { pi: true, view: false, manage: false }, RESEARCH_MANAGEMENT_STAFF: { pi: true, view: false, manage } });
+  w.db.systemParameter = { findUnique: async () => ({ value: JSON.stringify(policy(false)) }) };
+  await assert.rejects(w.service.confirmSetup(actor("staff"), "p1", { contextVersion: await w.ctx() }), code("CONFLICT_DENIED"));
+  w.db.systemParameter = { findUnique: async () => ({ value: JSON.stringify(policy(true)) }) };
+  assert.equal((await w.service.confirmSetup(actor("staff"), "p1", { contextVersion: await w.ctx() })).status, "executing");
+  assert.deepEqual(w.db.auditLog.rows.filter((row) => row.action === "participant-waiver-used").map((row) => [row.actorId, row.targetEntityId, row.afterFacts.operation]), [["staff", "p1", "confirm-setup"]]);
+});
+
 test("each request and report carries the viewer's own allowed actions", async () => {
   const w = world();
   const report = await reportUnderReview(w);

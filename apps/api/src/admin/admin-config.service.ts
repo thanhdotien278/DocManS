@@ -14,6 +14,13 @@ import {
   parseCouncilFormationValue,
   type CouncilType
 } from "../proposals-shared/council-formation.js";
+import {
+  defaultParticipantPolicy,
+  PARTICIPANT_POLICY_KEY,
+  PARTICIPANT_POLICY_ROLE_LABELS,
+  PARTICIPANT_POLICY_ROLES,
+  parseParticipantPolicyValue
+} from "../proposals-shared/participant-policy.js";
 import { readCode, readText } from "./admin-access.js";
 
 type SystemParameterInput = {
@@ -59,6 +66,8 @@ export class AdminConfigService {
 
   async listSystemParameters() {
     return this.prisma.systemParameter.findMany({
+      // participant_policy có panel riêng (D-041) và không sửa được qua form tham số chung.
+      where: { key: { not: PARTICIPANT_POLICY_KEY } },
       orderBy: { key: "asc" }
     });
   }
@@ -181,6 +190,36 @@ export class AdminConfigService {
     });
   }
 
+  async getParticipantPolicy() {
+    const row = await this.prisma.systemParameter.findUnique({ where: { key: PARTICIPANT_POLICY_KEY } });
+    return toParticipantPolicyView(row);
+  }
+
+  async updateParticipantPolicy(actor: SafeUserContext, input: { policy?: unknown }) {
+    const parsed = parseParticipantPolicyValue(input?.policy);
+    const row = await this.prisma.$transaction(async (tx) => {
+      const before = await tx.systemParameter.findUnique({ where: { key: PARTICIPANT_POLICY_KEY } });
+      const value = JSON.stringify(parsed);
+      const label = "Cấu hình TP/TB/CV làm PI/thành viên, xem và phụ trách hồ sơ mình tham gia";
+      const saved = await tx.systemParameter.upsert({ where: { key: PARTICIPANT_POLICY_KEY }, update: { value, label }, create: { key: PARTICIPANT_POLICY_KEY, value, label } });
+      await this.auditLog.record(
+        {
+          action: "update-participant-policy-config",
+          result: "success",
+          actorId: actor.id,
+          targetEntity: "system-parameter",
+          targetEntityId: saved.id,
+          username: actor.username,
+          beforeFacts: { policy: toParticipantPolicyView(before).policy },
+          afterFacts: { policy: parsed }
+        },
+        tx
+      );
+      return saved;
+    });
+    return toParticipantPolicyView(row);
+  }
+
   private validateTemplatePlaceholders(key: string, subject: string, body: string) {
     const rule = NOTIFICATION_TEMPLATE_RULES[key as keyof typeof NOTIFICATION_TEMPLATE_RULES];
     if (!rule) {
@@ -226,6 +265,26 @@ function toCouncilConfigView(type: CouncilType, row?: { value: string; updatedAt
     maxMemberCount: range.max,
     enforced: type === "EVALUATION",
     isDefault: !row,
+    updatedAt: row ? row.updatedAt.toISOString() : null
+  };
+}
+
+/** Giá trị DB hỏng hiển thị như mặc định (đúng cách backend áp dụng: fail closed về mặc định). */
+function toParticipantPolicyView(row?: { value: string; updatedAt: Date } | null) {
+  let policy = defaultParticipantPolicy();
+  let isDefault = true;
+  if (row) {
+    try {
+      policy = parseParticipantPolicyValue(row.value, { legacy: true });
+      isDefault = false;
+    } catch {
+      // giữ mặc định
+    }
+  }
+  return {
+    policy,
+    roles: PARTICIPANT_POLICY_ROLES.map((code) => ({ code, label: PARTICIPANT_POLICY_ROLE_LABELS[code] })),
+    isDefault,
     updatedAt: row ? row.updatedAt.toISOString() : null
   };
 }

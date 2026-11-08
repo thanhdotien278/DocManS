@@ -3,7 +3,8 @@ import type { Prisma } from "@prisma/client";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import type { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { notifyUsers } from "../notifications/notification-events.js";
-import { resolveActorConflict } from "../proposal-evaluations/proposal-evaluation-support.js";
+import { recordParticipantWaiver, resolveManagerConflict, type ParticipantWaiverActor } from "../proposal-evaluations/proposal-evaluation-support.js";
+import { participantPolicyFor, readParticipantPolicy } from "./participant-policy.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
 import {
   isLeadership,
@@ -130,27 +131,34 @@ export function canViewApproval(actor: SafeUserContext | undefined, row: Pick<Ap
   return internal;
 }
 
-/** Xung đột lợi ích trên bản ghi nguồn: participant/reviewer của hồ sơ, thành viên đề tài. */
-export async function actorConflicted(tx: Prisma.TransactionClient, actorId: string, row: Pick<ApprovalSubmissionRow, "subjectType" | "subjectId">) {
+/**
+ * Xung đột lợi ích trên bản ghi nguồn: participant/reviewer của hồ sơ, thành viên đề tài.
+ * D-041 phần 2: "Phụ trách" bật cho vai trò của `actor` bỏ qua xung đột do tham gia (xung đột phản biện vẫn chặn);
+ * `operation` (chỉ mutation) ghi audit `participant-waiver-used` khi dùng ngoại lệ.
+ */
+export async function actorConflicted(tx: Prisma.TransactionClient, actor: ParticipantWaiverActor, row: Pick<ApprovalSubmissionRow, "subjectType" | "subjectId">, operation?: string) {
+  const prisma = tx as unknown as PrismaService;
   if (row.subjectType === "proposal") {
-    const prisma = tx as unknown as PrismaService;
-    const decision = await resolveActorConflict({ participation: new ProposalParticipationService(prisma), reviewAccess: new ProposalReviewAccessService(prisma) }, actorId, row.subjectId);
+    const decision = await resolveManagerConflict(prisma, { participation: new ProposalParticipationService(prisma), reviewAccess: new ProposalReviewAccessService(prisma) }, actor, row.subjectId, operation);
     return decision.conflicted;
   }
   const now = new Date();
   const member = await tx.approvedProjectMember.findFirst({
-    where: { projectId: row.subjectId, userId: actorId, status: "ACTIVE", effectiveFrom: { lte: now }, OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: now } }] },
+    where: { projectId: row.subjectId, userId: actor.id, status: "ACTIVE", effectiveFrom: { lte: now }, OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: now } }] },
     select: { id: true }
   });
-  return Boolean(member);
+  if (!member) return false;
+  if (!participantPolicyFor(actor, await readParticipantPolicy(prisma)).manage) return true;
+  if (operation) await recordParticipantWaiver(prisma, actor, { entity: "approved-project", id: row.subjectId }, operation);
+  return false;
 }
 
-/** Đúng người, đúng bước, không phải tác giả, không xung đột. Ném lỗi nếu không được xử lý. */
-async function assertStageActor(tx: Prisma.TransactionClient, actor: SafeUserContext, row: ApprovalSubmissionRow) {
+/** Đúng người, đúng bước, không phải tác giả, không xung đột. Ném lỗi nếu không được xử lý. `operation` chỉ truyền khi thực sự chuyển bước. */
+async function assertStageActor(tx: Prisma.TransactionClient, actor: SafeUserContext, row: ApprovalSubmissionRow, operation?: string) {
   const allowed = row.stage === "BOARD_REVIEW" ? isResearchBoardHead(actor) : row.stage === "HEAD_REVIEW" ? isResearchManagementHead(actor) : false;
   if (!allowed) throw new ForbiddenException({ code: "APPROVAL_STAGE_DENIED", message: `Tờ trình đang ở bước "${APPROVAL_STAGE_LABELS[row.stage]}"; bạn không xử lý bước này.` });
   if (row.submittedById === actor.id) throw new ForbiddenException({ code: "APPROVAL_SELF_REVIEW", message: "Không tự rà soát tờ trình do chính mình lập." });
-  if (await actorConflicted(tx, actor.id, row)) throw new ForbiddenException({ code: "APPROVAL_CONFLICT", message: "Bạn có xung đột lợi ích với hồ sơ này." });
+  if (await actorConflicted(tx, actor, row, operation)) throw new ForbiddenException({ code: "APPROVAL_CONFLICT", message: "Bạn có xung đột lợi ích với hồ sơ này." });
 }
 
 /** Hành động backend cho phép trên tờ trình này (UI chỉ hiển thị, không suy diễn quyền). */
@@ -226,9 +234,9 @@ async function notifyApprovalStep(tx: Prisma.TransactionClient, actor: SafeUserC
   const roles = [...(STAGE_ROLES[step.toStage] ?? [])];
   if (step.toStage === "LEADERSHIP" && row.signer === "DIRECTOR_OR_SCIENCE_DEPUTY") roles.push("SCIENCE_DEPUTY_DIRECTOR");
   if (!roles.length) return;
-  const candidates = await tx.user.findMany({ where: { systemRole: { in: roles }, status: "active", id: { notIn: [actor.id, row.submittedById] } }, select: { id: true } });
+  const candidates = await tx.user.findMany({ where: { systemRole: { in: roles }, status: "active", id: { notIn: [actor.id, row.submittedById] } }, select: { id: true, systemRole: true } });
   const recipients: string[] = [];
-  for (const candidate of candidates) if (!(await actorConflicted(tx, candidate.id, row))) recipients.push(candidate.id);
+  for (const candidate of candidates) if (!(await actorConflicted(tx, candidate, row))) recipients.push(candidate.id);
   await notifyUsers(tx, { ...base, userIds: recipients, exclude: [actor.id, row.submittedById], type: "approval.action-required", title: `Tờ trình chờ xử lý: ${kindLabel}`, body: `${row.title} — ${APPROVAL_STAGE_LABELS[step.toStage]}` });
 }
 
@@ -268,7 +276,7 @@ export async function openApprovalSubmission(
 export async function advanceApprovalSubmission(tx: Prisma.TransactionClient, actor: SafeUserContext, id: string, input: { expectedStage: ApprovalStage; note?: string | null }) {
   const note = readApprovalNote(input.note, false);
   const row = await loadPending(tx, id, input.expectedStage);
-  await assertStageActor(tx, actor, row);
+  await assertStageActor(tx, actor, row, "advance-approval-submission");
   // TP lập tờ trình thì việc lập đã là duyệt của TP: TB chuyển thẳng LEADERSHIP (D-037).
   const next: ApprovalStage = row.stage === "BOARD_REVIEW" && row.authorRole !== "RESEARCH_MANAGEMENT_HEAD" ? "HEAD_REVIEW" : "LEADERSHIP";
   await transition(tx, row, { stage: next, lastNote: note ?? row.lastNote });
@@ -280,7 +288,7 @@ export async function advanceApprovalSubmission(tx: Prisma.TransactionClient, ac
 export async function returnApprovalSubmission(tx: Prisma.TransactionClient, actor: SafeUserContext, id: string, input: { expectedStage: ApprovalStage; note: unknown }) {
   const note = readApprovalNote(input.note, true)!;
   const row = await loadPending(tx, id, input.expectedStage);
-  await assertStageActor(tx, actor, row);
+  await assertStageActor(tx, actor, row, "return-approval-submission");
   await closeRow(tx, actor, row, "RETURNED", note, row.stage);
   return { ...row, status: "RETURNED" as const, stage: "CLOSED" as const };
 }
@@ -334,7 +342,7 @@ export async function assertReadyForLeadership(tx: Prisma.TransactionClient, act
   if (!canSignApproval(actor, pending.signer)) {
     throw new ForbiddenException({ code: "APPROVAL_SIGNER_DENIED", message: pending.signer === "DIRECTOR" ? "Thủ tục này do Giám đốc ký." : "Thủ tục này do Giám đốc hoặc Phó GĐ phụ trách Khoa học ký." });
   }
-  if (await actorConflicted(tx, actor.id, pending)) throw new ForbiddenException({ code: "APPROVAL_CONFLICT", message: "Người ký có xung đột lợi ích với hồ sơ này." });
+  if (await actorConflicted(tx, actor, pending)) throw new ForbiddenException({ code: "APPROVAL_CONFLICT", message: "Người ký có xung đột lợi ích với hồ sơ này." });
   return pending;
 }
 

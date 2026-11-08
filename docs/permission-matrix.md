@@ -297,8 +297,30 @@ never creates a new system role.
   synthesis, decision, funding). Ngoại lệ (D-038): TB hoặc CV phụ trách là PI/thành viên
   của hồ sơ vẫn được kiểm tra đầy đủ và yêu cầu bổ sung trên hồ sơ đó, chỉ cho hai thao tác
   này; TP vẫn không làm; các kiểm tra xung đột khác (phân công phản biện/hội đồng, chấm
-  điểm, tổng hợp, tờ trình) giữ nguyên. TP, PP, TB, CV đều có thể là PI/thành viên đề tài,
+  điểm, tổng hợp, tờ trình) giữ nguyên (trừ khi vai trò bật "Phụ trách" — D-041 phần 2). TP, PP, TB, CV đều có thể là PI/thành viên đề tài,
   kể cả CV của đợt trong đợt mình phụ trách.
+- **Participant configuration (D-041).** QT configures TP, TB and CV separately (key
+  `participant_policy`): "May be PI/member" (default on) and "View management data" (default
+  off). Turning PI off only blocks new drafts and newly added members (proposal or project
+  adjustment); existing proposals/projects continue. With View on, on a proposal the user
+  participates in they see evaluation progress, council roster, reviewer identity, submitted
+  reviews and the synthesis as if not participating, within the role's base read scope (CV must
+  still be the current responsible officer). View is read-only (management actions open only with "Phụ trách" — D-041 phần 2): every management action stays
+  blocked by the conflict rule above (except the existing D-038 exception: TB/responsible CV
+  completeness check and supplement request); participants are still never invited as
+  reviewer/council/IRB member and never score. Not applicable to PP, GĐ, PGĐ.
+- **Phụ trách hồ sơ/đề tài mình tham gia (D-041 phần 2).** Cấu hình `participant_policy` có thêm
+  cột "Phụ trách" (`manage`, mặc định tắt) cho TP, TB, CV. Bật thì vai trò đó được mọi thao tác
+  quản lý trên hồ sơ đề xuất/đề tài mình là PI, thành viên hoặc thư ký: TP giao/thu hồi CV phụ
+  trách, mời/thu hồi hội đồng, lập tờ trình, tổng hợp/chốt/lập tờ trình quyết định, nghiệp vụ
+  CV phụ trách đề tài, ghi kinh phí. **TB/TP được xử lý (chuyển/trả) bước tờ trình của chính hồ
+  sơ/đề tài mình tham gia** và nhận thông báo chờ xử lý. CV là người tham gia được giao làm CV
+  phụ trách (đề xuất hoặc đề tài) khi vai trò CV bật Phụ trách. Bật Phụ trách kéo theo Xem.
+  Không đổi: chỉ bỏ xung đột do tham gia; xung đột phản biện/đã chấm và ngữ cảnh không xác định
+  vẫn chặn; người tham gia vẫn không được mời phản biện/hội đồng/IRB, không chấm điểm; vẫn cấm
+  tự phân công chính mình và tự rà soát tờ trình do mình lập; quyết định của GĐ/PGĐ-KH không
+  đổi. Mỗi mutation dùng ngoại lệ ghi audit `participant-waiver-used` (người thao tác, hồ sơ/đề
+  tài, thao tác) trong cùng transaction.
 - **Two-way anonymity.** PI and reviewers cannot view the record's action log.
 - **Tờ trình flow.** CV drafts → TB reviews → TP approves → BGĐ signs. A TB-authored
   tờ trình goes straight to TP; a TP-authored one still passes the TB step. Return at
@@ -384,7 +406,9 @@ means the signer from §7.4. Missing or denied cells are explicit `None`.
 | Search/filter | Admin data only | Scoped | Scoped | Read own | Read participating | Read assigned | Role and data scope | Any | No for read |
 
 A participant cannot simultaneously be the responsible officer, reviewer, council
-member, tờ trình reviewer/approver or final signer on the same record. Reviewer and
+member, tờ trình reviewer/approver or final signer on the same record (ngoại lệ D-041 phần 2:
+TP/TB/CV có vai trò bật "Phụ trách" được làm CV phụ trách và rà soát/duyệt tờ trình của hồ
+sơ/đề tài mình tham gia; phản biện, hội đồng và người ký cuối không đổi). Reviewer and
 final decision in the same round, and mutually exclusive council positions, are also
 denied. Check on assignment creation/change, participant changes and again on
 protected action execution. Reassignment atomically ends the prior officer, preserves

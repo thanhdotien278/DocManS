@@ -262,3 +262,22 @@ export async function updateCouncilFormationConfig(councilType: string, input: {
     body: JSON.stringify(input)
   });
 }
+
+export type ParticipantPolicyEntry = { pi: boolean; view: boolean; manage: boolean };
+export type ParticipantPolicyConfig = {
+  policy: Record<string, ParticipantPolicyEntry>;
+  roles: Array<{ code: string; label: string }>;
+  isDefault: boolean;
+  updatedAt: string | null;
+};
+
+export async function loadParticipantPolicy() {
+  return requestJson<ParticipantPolicyConfig>("/config/participant-policy");
+}
+
+export async function updateParticipantPolicy(policy: Record<string, ParticipantPolicyEntry>) {
+  return requestJson<ParticipantPolicyConfig>("/config/participant-policy", {
+    method: "PUT",
+    body: JSON.stringify({ policy })
+  });
+}

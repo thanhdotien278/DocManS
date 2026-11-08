@@ -2,6 +2,54 @@
 
 > Role names and decision rights here predate the 10-role model (2026-10-18); see `docs/permission-matrix.md`.
 
+## Kiểm chứng UI 08/11/2026 — mô hình 10 vai trò (5.3, 5.9, 5.10, 5.11, 11.1)
+
+Môi trường: web `localhost:3000`, API `localhost:4000`, DB `docmansystem` (dev). Trình duyệt tích hợp của Claude; đăng nhập từng tài khoản seed qua form `/login`. Hồ sơ `8d3d6476-6fd1-4451-9341-faf96489a0c7` ("Mùa thu 2", PI `int1`). Không ghi DB trực tiếp; SQL chỉ dùng để đối chiếu.
+
+Giới hạn công cụ: trình duyệt chặn `window.confirm()` (luôn trả `false`), nên mỗi trang đã ghi đè `window.confirm = () => true` để mô phỏng bấm OK. Phần lớn ô nhập được điền bằng setter DOM kèm sự kiện `input`/`change`, rồi bấm nút thật; không gọi API nghiệp vụ trực tiếp.
+
+| Bước | Tác nhân | Kết quả |
+| --- | --- | --- |
+| Xác nhận đầy đủ | CV `hdtien1` | "Đã ghi nhận kết quả kiểm tra" |
+| Mời 7 (1/2/3/1) | TP `nmphuong` | 7 dòng "Chờ chấp nhận"; điều kiện trình hiện "7 thành viên chưa chấp nhận lời mời" (chỉ thấy thông báo, chưa thử bấm trình). Lượt này không tra từng ứng viên bị loại; luật loại PI/thành viên/QT/tự mời được phủ bởi `tests/approval-routing-db.test.mjs:310` và QA K4 |
+| Thông báo lời mời (11.1) | `test_internal01` | Chuông "1 chưa đọc", `review.invited` → `/my-reviews` |
+| Từ chối | `test_external02` | Lý do trống: nút "Gửi từ chối" khóa; có lý do → "Đã từ chối"; TP thấy lý do và điều kiện chặn |
+| Thu hồi, mời thay | TP | Hộp thoại bắt buộc lý do; mời `test_external03`; 7/7 nhận lời → "Sẵn sàng trình" |
+| Tờ trình `EVALUATION_COUNCIL` | CV → TB → TP | TB nhận thông báo và mở link đúng hồ sơ; TP trả lại lý do trống bị chặn ("Nhập lý do trả lại."); trả lại có lý do → CV nhận "Tờ trình bị trả lại"; lập lại → TB chuyển → TP trình |
+| Ký hội đồng | PGĐ-KH `vndinh` | PP `dnbinh` không có nút, không có thông báo; `vndinh` ký → "Đã thành lập ngày 08/11/2026"; thông báo chờ ký cũ của GĐ tự đánh dấu đã đọc |
+| Chấm phiếu | 6 thành viên | Mỗi phiếu khóa sau khi gửi; thư ký chỉ có "Soạn biên bản", phiếu hiện ẩn danh "Phiếu N" |
+| Chốt tổng hợp | TP | 5/6 phiếu: "Chốt bản tổng hợp" khóa, lý do "Còn 1 phiếu chưa gửi." (N02 đã sửa); nháp cũ bị chặn chốt cho tới khi lưu lại; chốt thành công |
+| Tờ trình `DECISION_PACKAGE` | TP → TB → GĐ | TP lập → TB chuyển → lên thẳng "Chờ Ban giám đốc ký" (D-037); PGĐ-KH không có nút quyết định, không có thông báo |
+| Quyết định | GĐ `tvtien` | "Không phê duyệt" khi trống lý do bị chặn; Phê duyệt → hồ sơ `approved`; PI nhận "Hồ sơ đã có quyết định — Đã duyệt"; TP (người lập) nhận "Tờ trình đã được ký duyệt"; PI GET roster hội đồng → 403 |
+
+Đối chiếu DB: hồ sơ `approved`, 1 `proposal_decisions`; 3 `approval_submissions` (council RETURNED, council APPROVED, DECISION_PACKAGE APPROVED với chuỗi `SUBMIT > FORWARD > APPROVE@LEADERSHIP`); audit có `establish-evaluation-council`, `return-approval-submission`, `decline-review-invitation`, `finalize-evaluation-summary`, `submit-evaluation-package`, `approve-proposal`.
+
+### Nhánh không phê duyệt (cùng ngày)
+
+Hồ sơ QA mới `83104e2d-b93c-4bbf-8f21-67b48fce7757` ("QA 08/11 — Nhánh không phê duyệt"), PI `test_internal06`. PI tạo nháp, tải 2 tệp PDF bắt buộc và nộp qua UI. CV phụ trách `hdtien1` được gán tự động theo đợt.
+
+| Bước | Tác nhân | Kết quả |
+| --- | --- | --- |
+| Xác nhận đầy đủ, mời 7, 7/7 nhận lời | CV, TP, 7 thành viên | "Sẵn sàng trình" |
+| Tờ trình `EVALUATION_COUNCIL` | CV → TB → TP → GĐ `tvtien` ký | "Đã thành lập ngày 08/11/2026" (lần này GĐ ký; nhánh phê duyệt là PGĐ-KH ký) |
+| 6 phiếu "không phê duyệt" | 6 thành viên | Mỗi phiếu khóa sau khi gửi (30–39/100) |
+| Tổng hợp, `DECISION_PACKAGE` | TP lưu nháp → chốt → lập; TB chuyển | "Chờ Ban giám đốc ký" |
+| Không phê duyệt | GĐ | Nhập lý do → "Không phê duyệt"; nút quyết định khóa sau khi ban hành; hồ sơ `rejected` |
+| Thông báo | — | TB, GĐ nhận "Tờ trình chờ xử lý"; TP (người lập) nhận "Tờ trình không được phê duyệt"; PI nhận "Hồ sơ đã có quyết định — Từ chối" |
+
+Đối chiếu DB: `research_proposals.status = rejected`, `proposal_decisions.decision = rejected`, `DECISION_PACKAGE` REJECTED với chuỗi `SUBMIT > FORWARD > REJECT@LEADERSHIP`.
+
+`tests/reviewer-council-assignment.test.mjs` (opt-in DB) đã viết lại theo luật 5.11 (TP mời, ứng viên có lý lịch) và chạy trên DB tạm `docmans_assignment_test_*`: 3/3 PASS.
+
+Chưa kiểm trong lượt này: người ký là thành viên hội đồng bị khóa (đã PASS ở QA vòng 2, K16, và `approval-routing-db.test.mjs`); IRB/nghiệm thu.
+
+Lỗi nhỏ phát hiện (chưa sửa):
+- Panel "Quyết định phê duyệt" ghi "6/7 phiếu đã gửi", trong khi panel tiến độ ghi 6/6; mẫu số 7 tính cả thư ký.
+- Tờ trình do TP lập: TB vẫn thấy nút "Chuyển Trưởng phòng" và lịch sử ghi "Trưởng ban chuyển Trưởng phòng", dù tờ trình đi thẳng Ban giám đốc.
+- Sau khi tờ trình hội đồng bị trả lại và đã lập lại, dòng lịch sử của tờ trình cũ không còn hiện bước "Trả lại" (DB vẫn có bước `RETURN`).
+- Panel hội đồng không tự cập nhật trạng thái ngay sau thao tác chuyển hoặc trả lại ở panel tờ trình; tải lại trang thì đúng.
+- Nội dung thông báo trả lại bị lặp tiền tố: "Thành lập hội đồng đánh giá: Hội đồng đánh giá: Mùa thu 2".
+
 Updated: 2026-09-22. Implementation and both normal-UI terminal journeys verified.
 Independent review pending. No commit or push requested or performed.
 
