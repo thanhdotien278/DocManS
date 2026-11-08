@@ -266,3 +266,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-2-chinh-sua-theo-yeu-cau-va-nop-lai-de-xuat.md`
   summary: Hiện cờ "Quá hạn" của yêu cầu bổ sung ở hàng đợi CV và mục "Cần tôi xử lý" của PI, không chỉ trang chi tiết.
   evidence: `docs/ux-ui-spec.md` dòng 328, 330 yêu cầu theo dõi bổ sung chờ phản hồi/hạn phản hồi ở các danh sách; Story 5.2 chỉ làm trang chi tiết.
+
+- source_spec: `spec-5-4-reviewer-truy-cap-va-nop-danh-gia-cua-minh.md`
+  summary: Chưa có test tự động cho việc `proposal-review-form.tsx` dùng `contextVersion` trả về sau khi lưu nháp.
+  evidence: Repo không có harness test component cho web; hiện chỉ được kiểm chứng thủ công trên localhost.
