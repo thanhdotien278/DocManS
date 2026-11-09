@@ -305,3 +305,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-6-8-chuan-bi-va-nop-ho-so-nghiem-thu.md`
   summary: Báo cáo tiến độ đang `supplement_requested` không chặn nộp hồ sơ nghiệm thu; sau khi đề tài sang `pending_acceptance` PI không hoàn tất được báo cáo đó.
   evidence: Review 6.8 (triage #1). Cần người dùng xác nhận có chặn thêm trạng thái này không. Phần 2 (giao diện) cũng phải đổi link thông báo về `/projects/{id}/acceptance-dossier`.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-6-8-p2-giao-dien-ho-so-nghiem-thu.md`
+  summary: Chưa có test tự động cho phía web hồ sơ nghiệm thu (`uploadAcceptanceFile` gửi `acceptance_dossier`, phân nhánh người đóng góp/chỉ đọc của workspace).
+  evidence: Review 6.8 p2 (triage #7). Repo không có hạ tầng chạy component hay `lib/*-api.ts`; hiện chỉ kiểm bằng trình duyệt.
