@@ -79,3 +79,16 @@ test("only the requesting PI withdraws an open request while executing or paused
     assert(!has(view, "project.adjustment.withdraw"));
   }
 });
+
+test("serialization failure from SELECT … FOR UPDATE (P2010/40001) returns 409, not 500, on project and project-file mutations", async () => {
+  const { ApprovedProjectsService } = await import("../dist/apps/api/approved-projects/approved-projects.service.js");
+  const { FilesService } = await import("../dist/apps/api/modules/files/files.service.js");
+  const raced = Object.assign(new Error("Raw query failed. Code: `40001`. Message: could not serialize access"), { code: "P2010" });
+  const prisma = { $transaction: async () => { throw raced; } };
+  const audit = { record: async () => {} };
+  const conflict = (error) => error.getStatus?.() === 409 && error.response?.code === "CONTEXT_VERSION_MISMATCH";
+  const pi = actor("pi", "RESEARCHER_INTERNAL_USER");
+  await assert.rejects(() => new ApprovedProjectsService(prisma, audit).mutate(pi, "project-1", {}, async () => null), conflict);
+  const files = new FilesService(prisma, { putObject: async () => {} }, audit, {}, {}, { maxFileSizeBytes: 1024, allowedExtensions: [".pdf"] }, {});
+  await assert.rejects(() => files.uploadFile(pi, { relatedEntityType: "approved_project", relatedEntityId: "project-1", contextVersion: {} }), conflict);
+});
