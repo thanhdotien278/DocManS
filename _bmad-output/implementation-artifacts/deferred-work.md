@@ -298,3 +298,10 @@
 - source_spec: `spec-5-4-reviewer-truy-cap-va-nop-danh-gia-cua-minh.md`
   summary: Chưa có test tự động cho việc `proposal-review-form.tsx` dùng `contextVersion` trả về sau khi lưu nháp.
   evidence: Repo không có harness test component cho web; hiện chỉ được kiểm chứng thủ công trên localhost.
+- source_spec: `_bmad-output/implementation-artifacts/spec-6-8-chuan-bi-va-nop-ho-so-nghiem-thu.md`
+  summary: Story 6.8 phần 2, giao diện web để tạo, soạn, đóng góp tệp và nộp hồ sơ nghiệm thu, theo khuôn `EthicsDossierWorkspace`.
+  evidence: Người dùng chọn tách như Story 10.3, vì spec backend đã vượt ngưỡng token.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-6-8-chuan-bi-va-nop-ho-so-nghiem-thu.md`
+  summary: Báo cáo tiến độ đang `supplement_requested` không chặn nộp hồ sơ nghiệm thu; sau khi đề tài sang `pending_acceptance` PI không hoàn tất được báo cáo đó.
+  evidence: Review 6.8 (triage #1). Cần người dùng xác nhận có chặn thêm trạng thái này không. Phần 2 (giao diện) cũng phải đổi link thông báo về `/projects/{id}/acceptance-dossier`.

@@ -14,7 +14,8 @@ import { isInternalResearcherEligible } from "../../proposals-shared/proposal-ac
 import { ProposalManagementOfficerService } from "../../proposals-shared/proposal-management-officer.service.js";
 import { ProposalReviewAccessService } from "../../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../../research-proposals/proposal-participation.service.js";
-import { APPROVED_PROJECT_ENTITY_TYPE, ETHICS_DOSSIER_ENTITY_TYPE, EVALUATION_FILE_PURPOSES, RESEARCH_PROPOSAL_ENTITY_TYPE } from "./files.dto.js";
+import { ACCEPTANCE_DOSSIER_ENTITY_TYPE, APPROVED_PROJECT_ENTITY_TYPE, ETHICS_DOSSIER_ENTITY_TYPE, EVALUATION_FILE_PURPOSES, RESEARCH_PROPOSAL_ENTITY_TYPE } from "./files.dto.js";
+import { ACCEPTANCE_CONTRIBUTION, ACCEPTANCE_DOSSIER_DRAFT, ACCEPTANCE_FILE_PURPOSES } from "../../approved-projects/acceptance-dossiers.service.js";
 import { bumpEthicsProjectContext, ETHICS_DOSSIER_DRAFT, ETHICS_FILE_PURPOSES, ethicsCapabilityError, isOfficerViewer, isPiViewer, resetEthicsCommitment } from "../../approved-projects/ethics-dossiers.service.js";
 
 type FileRecord = {
@@ -145,6 +146,7 @@ export class FilesService {
   async uploadFile(actor: SafeUserContext, input: FileUploadInput): Promise<any> {
     if (!this.transactional && input.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE) return this.mutateProject(actor, input.relatedEntityId, input.contextVersion, (s, a) => s.uploadFile(a, input));
     if (!this.transactional && input.relatedEntityType === ETHICS_DOSSIER_ENTITY_TYPE) return this.mutateProject(actor, (await this.findEthicsDossier(input.relatedEntityId)).projectId, input.contextVersion, (s, a) => s.uploadFile(a, input));
+    if (!this.transactional && input.relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) return this.mutateProject(actor, (await this.findAcceptanceDossier(input.relatedEntityId)).projectId, input.contextVersion, (s, a) => s.uploadFile(a, input));
     if (!this.transactional) return this.mutate(actor, input.relatedEntityId, input.contextVersion, (s, a) => s.uploadFile(a, input));
     this.assertSupportedEntity(input.relatedEntityType);
     const originalFileName = this.readFileName(input.originalFileName ?? input.fileName);
@@ -157,6 +159,11 @@ export class FilesService {
       if (!isPi && input.filePurpose !== "PROJECT_CONTRIBUTION") throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
     }
     if (input.relatedEntityType === ETHICS_DOSSIER_ENTITY_TYPE && !ETHICS_FILE_PURPOSES.includes(input.filePurpose)) throw new BadRequestException({ code: "FILE_PURPOSE_INVALID", message: "Loại tệp hồ sơ đạo đức không hợp lệ." });
+    if (input.relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) {
+      if (!ACCEPTANCE_FILE_PURPOSES.includes(input.filePurpose)) throw new BadRequestException({ code: "FILE_PURPOSE_INVALID", message: "Loại tệp hồ sơ nghiệm thu không hợp lệ." });
+      // Người không phải PI chỉ đóng góp tệp ACCEPTANCE_CONTRIBUTION.
+      if (input.filePurpose !== ACCEPTANCE_CONTRIBUTION && !isPiViewer((await this.acceptanceCapability(actor, input.relatedEntityId)).capability)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
+    }
 
     const fileId = randomUUID();
     const objectKey = this.createObjectKey({ ...input, fileName: originalFileName }, fileId);
@@ -218,6 +225,7 @@ export class FilesService {
     });
     if (record.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE) await this.prisma.projectHistory.create({ data: { projectId: record.relatedEntityId, actorId: actor.id, action: record.filePurpose === "PROJECT_CONTRIBUTION" ? "project.evidence.contribute" : "project.evidence.upload", reason: record.originalFileName, afterFacts: { fileRecordId: record.id, purpose: record.filePurpose } } });
     await this.afterEthicsFileChange(actor, record);
+    await this.afterAcceptanceFileChange(actor, record, "upload");
 
     return this.toFileResponse(record, { canMutate: !EVALUATION_FILE_PURPOSES.includes(record.filePurpose) });
   }
@@ -231,7 +239,7 @@ export class FilesService {
       const fullAccess = project.viewerAuthorization.viewerRelationships.some((relationship: { type: string }) => relationship.type === "TOPIC_PI") || ["RESEARCH_MANAGEMENT_STAFF", "RESEARCH_MANAGEMENT_HEAD"].includes(actor.systemRole);
       return Promise.all(records.filter((record) => fullAccess || record.uploadedById === actor.id).map(async (record) => this.toFileResponse(record, { canMutate: await this.canMutateFile(actor, record) })));
     }
-    if (input.relatedEntityType === ETHICS_DOSSIER_ENTITY_TYPE) {
+    if (input.relatedEntityType === ETHICS_DOSSIER_ENTITY_TYPE || input.relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) {
       await this.assertCanRead(actor, input.relatedEntityType, input.relatedEntityId);
       const records = await this.prisma.fileRecord.findMany({ where: { relatedEntityType: input.relatedEntityType, relatedEntityId: input.relatedEntityId, status: "active", deletedAt: null }, include: { uploadedBy: { select: { displayName: true } } }, orderBy: { createdAt: "desc" } });
       return Promise.all(records.map(async (record) => this.toFileResponse(record, { canMutate: await this.canMutateFile(actor, record) })));
@@ -270,6 +278,10 @@ export class FilesService {
 
   private async assertUnsubmittedFile(record: FileRecord) {
     if (EVALUATION_FILE_PURPOSES.includes(record.filePurpose)) throw new BadRequestException({ message: "Tệp hành chính đánh giá được giữ nguyên. Hãy tải lên phiên bản mới." });
+    if (record.relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) {
+      if ((await this.findAcceptanceDossier(record.relatedEntityId)).status !== ACCEPTANCE_DOSSIER_DRAFT) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Hồ sơ nghiệm thu đã nộp được giữ nguyên." });
+      return;
+    }
     if (record.relatedEntityType === ETHICS_DOSSIER_ENTITY_TYPE) {
       if ((await this.findEthicsDossier(record.relatedEntityId)).status !== ETHICS_DOSSIER_DRAFT) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Hồ sơ đạo đức đã nộp được giữ nguyên." });
       return;
@@ -318,6 +330,7 @@ export class FilesService {
     });
     if (updated.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE) await this.prisma.projectHistory.create({ data: { projectId: updated.relatedEntityId, actorId: actor.id, action: "project.evidence.metadata", afterFacts: { fileRecordId: updated.id, description: updated.description } } });
     await this.afterEthicsFileChange(actor, updated);
+    await this.afterAcceptanceFileChange(actor, updated, "metadata");
 
     return this.toFileResponse(updated, { canMutate: true });
   }
@@ -352,6 +365,7 @@ export class FilesService {
     });
     if (deleted.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE) await this.prisma.projectHistory.create({ data: { projectId: deleted.relatedEntityId, actorId: actor.id, action: "project.evidence.delete", afterFacts: { fileRecordId: deleted.id } } });
     await this.afterEthicsFileChange(actor, deleted);
+    await this.afterAcceptanceFileChange(actor, deleted, "delete");
 
     return this.toFileResponse(deleted, { canMutate: false });
   }
@@ -374,7 +388,7 @@ export class FilesService {
   }
 
   private assertSupportedEntity(relatedEntityType: string) {
-    if (![RESEARCH_PROPOSAL_ENTITY_TYPE, APPROVED_PROJECT_ENTITY_TYPE, ETHICS_DOSSIER_ENTITY_TYPE].includes(relatedEntityType)) {
+    if (![RESEARCH_PROPOSAL_ENTITY_TYPE, APPROVED_PROJECT_ENTITY_TYPE, ETHICS_DOSSIER_ENTITY_TYPE, ACCEPTANCE_DOSSIER_ENTITY_TYPE].includes(relatedEntityType)) {
       throw new BadRequestException({ message: "Loại thực thể liên kết chưa được hỗ trợ." });
     }
   }
@@ -409,6 +423,11 @@ export class FilesService {
 
   /** Trả quan hệ của actor để ghi audit. Tệp hành chính đánh giá bị chặn sửa/xóa ở `assertUnsubmittedFile`. */
   private async assertCanUpload(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string, filePurpose?: string): Promise<string | undefined> {
+    if (relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) {
+      const denial = ethicsCapabilityError((await this.acceptanceCapability(actor, relatedEntityId)).capability, "acceptance-dossier.contribute");
+      if (denial) throw denial;
+      return;
+    }
     if (relatedEntityType === ETHICS_DOSSIER_ENTITY_TYPE) {
       const { project, capability } = await this.ethicsCapability(actor, relatedEntityId);
       const denial = ethicsCapabilityError(capability, "ethics-dossier.edit");
@@ -463,6 +482,10 @@ export class FilesService {
 
   private async assertCanRead(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {
     this.assertSupportedEntity(relatedEntityType);
+    if (relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) {
+      if (ethicsCapabilityError((await this.acceptanceCapability(actor, relatedEntityId)).capability, "acceptance-dossier.read")) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
+      return;
+    }
     if (relatedEntityType === ETHICS_DOSSIER_ENTITY_TYPE) {
       if (ethicsCapabilityError((await this.ethicsCapability(actor, relatedEntityId)).capability, "ethics-dossier.read")) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
       return;
@@ -490,6 +513,11 @@ export class FilesService {
   }
 
   private async assertProjectFileOwnership(actor: SafeUserContext, record: FileRecord, mutate: boolean) {
+    // Hồ sơ nghiệm thu: người đóng góp chỉ sửa/xóa tệp của mình; xem theo `acceptance-dossier.read`.
+    if (record.relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) {
+      if (mutate && record.uploadedById !== actor.id && !isPiViewer((await this.acceptanceCapability(actor, record.relatedEntityId)).capability)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
+      return;
+    }
     if (record.relatedEntityType !== APPROVED_PROJECT_ENTITY_TYPE) return;
     const project = await new ApprovedProjectsService(this.prisma, this.auditLog).getProject(actor, record.relatedEntityId);
     const isPi = project.viewerAuthorization.viewerRelationships.some((relationship: { type: string }) => relationship.type === "TOPIC_PI");
@@ -517,10 +545,31 @@ export class FilesService {
     await bumpEthicsProjectContext(this.prisma, project.id, new Date());
   }
 
+  private async findAcceptanceDossier(dossierId: string) {
+    const dossier = await this.prisma.acceptanceDossier.findUnique({ where: { id: dossierId }, select: { id: true, projectId: true, status: true } });
+    if (!dossier) throw new NotFoundException({ message: "Không tìm thấy hồ sơ nghiệm thu." });
+    return dossier;
+  }
+
+  /** Quyền trên tệp hồ sơ nghiệm thu đi theo capability `acceptance-dossier.*` của đề tài nguồn. */
+  private async acceptanceCapability(actor: SafeUserContext, dossierId: string) {
+    const dossier = await this.findAcceptanceDossier(dossierId);
+    return new ApprovedProjectsService(this.prisma, this.auditLog).loadAuthorized(this.prisma, actor, dossier.projectId);
+  }
+
+  /** Tệp hồ sơ nghiệm thu đổi: ghi lịch sử đề tài (chỉ id/purpose) và tăng context để client cũ không nộp nhầm. */
+  private async afterAcceptanceFileChange(actor: SafeUserContext, record: FileRecord, change: "upload" | "metadata" | "delete") {
+    if (record.relatedEntityType !== ACCEPTANCE_DOSSIER_ENTITY_TYPE) return;
+    const { projectId } = await this.findAcceptanceDossier(record.relatedEntityId);
+    await this.prisma.projectHistory.create({ data: { projectId, actorId: actor.id, action: `acceptance-dossier.file.${change}`, afterFacts: { dossierId: record.relatedEntityId, fileRecordId: record.id, purpose: record.filePurpose } } });
+    await bumpEthicsProjectContext(this.prisma, projectId, new Date());
+  }
+
   /** Tệp đề tài và hồ sơ đạo đức khóa theo đề tài; tệp đề xuất khóa theo đề xuất. */
   private async mutationProjectId(record: FileRecord) {
     if (record.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE) return record.relatedEntityId;
     if (record.relatedEntityType === ETHICS_DOSSIER_ENTITY_TYPE) return (await this.findEthicsDossier(record.relatedEntityId)).projectId;
+    if (record.relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) return (await this.findAcceptanceDossier(record.relatedEntityId)).projectId;
     return null;
   }
 
