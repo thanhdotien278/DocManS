@@ -76,7 +76,7 @@ async function fixture(code, projectStatus = "executing") {
 
 async function seesNotification(actor, projectId) {
   const service = new NotificationsService(db, new ProposalParticipationService(db), new ProposalReviewAccessService(db), new ProposalManagementOfficerService(db));
-  return (await service.list(actor, 20)).notifications.some((row) => row.link === `/projects/${projectId}`);
+  return (await service.list(actor, 20)).notifications.some((row) => row.link === `/projects/${projectId}/acceptance-dossier`);
 }
 
 const fill = async (f) => {
@@ -125,6 +125,11 @@ test("6.8: PI creates, drafts and submits; contributors only add their own files
   const evidence = await f.upload(people.pi, dossierId, "ACCEPTANCE_PRODUCT_EVIDENCE");
   await assert.rejects(async () => f.files.deleteFile(people.member, evidence.id, await f.ctx()), coded(403, "ACTION_NOT_GRANTED"), "người đóng góp chỉ xóa tệp của mình");
   await fill(f);
+  const deletable = async (who) => Object.fromEntries((await f.acceptance.getDossier(who, f.project.id)).dossier.files.map((file) => [file.id, file.canDelete]));
+  assert.deepEqual(Object.values(await deletable(people.pi)), [true, true, true], "PI xóa được mọi tệp nháp");
+  const memberView = await deletable(people.member);
+  assert.deepEqual([memberView[contribution.id], memberView[evidence.id]], [true, false], "người đóng góp chỉ xóa tệp của mình");
+  assert.ok(Object.values(await deletable(people.staff)).every((value) => value === false), "CV không xóa tệp");
 
   const request = await db.projectRequest.create({ data: { projectId: f.project.id, requestType: "extension", status: "submitted", requesterId: people.pi.id, currentValues: {}, proposedValues: {}, reason: "Gia hạn" } });
   const blocked = await f.submit(people.pi).catch((error) => error);
@@ -144,6 +149,7 @@ test("6.8: PI creates, drafts and submits; contributors only add their own files
   assert.equal(project.status, "pending_acceptance");
   const view = await f.acceptance.getDossier(people.member, f.project.id);
   assert.equal(view.dossier.readOnly, true);
+  assert.ok(view.dossier.files.every((file) => file.canDelete === false), "không xóa tệp sau khi nộp");
   assert.deepEqual(view.dossier.submissions.map((row) => row.version), [1]);
   const snapshot = view.dossier.submissions[0].snapshot;
   assert.equal(snapshot.files.length, 3, "tệp nháp đã xóa không vào snapshot");
