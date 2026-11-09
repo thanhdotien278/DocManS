@@ -72,11 +72,32 @@ context:
 - Dùng lại `ethicsCan`/`ethicsDenial` (nới kiểu tham số) và `uploadEthicsFile` (thêm tham số `relatedEntityType`), `deleteEthicsFile` cho tệp nghiệm thu; không đổi hành vi hồ sơ đạo đức.
 - Người đóng góp = có `contribute` nhưng không có `edit` (PI cũng có `contribute`). Thẻ sản phẩm khóa "Lưu mục" khi còn dòng chưa có tên (backend trả `SECTION_INVALID`).
 - Preview chạy trên DB riêng `docmans_68p2` (migrate + seed + dữ liệu tạo bằng script trong scratchpad), không đụng DB dev chung.
+- Matrix test audit: các dòng ma trận là hành vi giao diện, kiểm bằng preview (PI, `int2`, CV); quyền/`canDelete` do test DB phủ.
 - `npm test`: 289 pass, 2 fail ở `tests/proposals-ep03.test.mjs` (fake Prisma thiếu `proposalDecision.findFirst`), không liên quan diff này.
 
 ## Spec Change Log
 
 ## Review Triage Log
+
+| # | Nguồn | Phát hiện | Verdict | Bằng chứng / hướng xử lý |
+|---|---|---|---|---|
+| 0 | advisor | Lượt render đầu (`drafts` còn null) coi PI là người đóng góp | low | Patch: `contributor`/`uploadable` theo `dossier.readOnly` của server. |
+| 1 | blind+edge | Gõ tiếp trong lúc đang lưu mục thì mất phần gõ thêm | low | Cùng khuôn hồ sơ đạo đức; hiếm khi gặp, sửa cần thêm nhánh. Bỏ qua. |
+| 2 | blind | "Tải lại" giữ bản sửa dở có thể ghi đè bản người khác | false | Hành vi cố ý theo Always (giữ phần sửa dở); người dùng thấy cảnh báo trước khi lưu lại. |
+| 3 | blind | `refresh()` không xóa thông báo/danh sách thiếu cũ | low | Patch: xóa `notice` và `missing` khi tải lại thành công. |
+| 4 | blind | `canDelete` sao luật của `files.service` | low | Test DB khẳng định cho PI, người đóng góp, CV và sau khi nộp. Bỏ qua. |
+| 5 | blind | Helper tên `ethics*` dùng chung | low | Không có tác hại cụ thể; giữ để diff nhỏ. Bỏ qua. |
+| 6 | blind | `permission-matrix.md` thiếu luật hồ sơ nghiệm thu | false | Dòng 269 đã có "nộp nghiệm thu"; luật tệp có từ phần 1, diff này không đổi quyền. |
+| 7 | blind+vgap | Không có test web cho wrapper upload và phân nhánh workspace | medium | Pre-verified (vgap). Repo không có hạ tầng chạy web; kiểm bằng trình duyệt. Defer. |
+| 8 | blind | PI có ô tải "Tệp đóng góp" | false | Backend cho PI mọi purpose (spec phần 1). |
+| 9 | blind | Bảng phiên bản không mở được snapshot | low | Ngoài phạm vi, giống 10.3. Bỏ qua. |
+| 10 | blind | Lịch sử tệp không ghi tên tệp | low | Hành vi backend phần 1. Bỏ qua. |
+| 11 | blind | Dòng sản phẩm dùng index làm key | low | Ảnh hưởng nhỏ khi xóa dòng giữa; sửa cần thêm id. Bỏ qua. |
+| 12 | blind | Test `canDelete` phụ thuộc số tệp, thiếu ca tệp người khác | false | Fixture xác định; `memberView[evidence.id] === false` là tệp của PI. |
+| 13 | edge | Tải lại lỗi thì `setView(null)` mất bản sửa dở | low | Cần lỗi mạng đúng lúc; như hồ sơ đạo đức. Bỏ qua. |
+| 14 | edge | Tải tệp thành công nhưng GET sau đó lỗi → báo lỗi | low | Hiếm; bỏ qua. |
+| 15 | edge | Bấm "Tải lại" liên tục khi đang tải | low | Patch: khóa nút khi `loading`. |
+| 16 | edge | CV vẫn thấy nút "Nộp hồ sơ" (bị khóa), lệch ma trận I/O | medium | Patch: chỉ hiện nút khi có `acceptance-dossier.submit`; người khác thấy lý do. |
 
 ## Verification
 
