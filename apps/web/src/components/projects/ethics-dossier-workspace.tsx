@@ -21,26 +21,40 @@ export function EthicsDossierWorkspace({ projectId }: { projectId: string }) {
   const [view, setView] = useState<EthicsDossierView | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
   const [missing, setMissing] = useState<{ sections: string[]; files: string[] } | null>(null);
-  const [drafts, setDrafts] = useState<EthicsSections | null>(null);
+  const [drafts, setDraftState] = useState<EthicsSections | null>(null);
+  // Cards with unsaved edits; every other card mirrors the latest server view.
+  const [dirty, setDirty] = useState<Set<EthicsSectionKey>>(new Set());
   const dossier = view?.dossier ?? null;
+  const setNoticeText = (text: string, error = true) => setNotice(text ? { text, error } : null);
+  function setDrafts(next: EthicsSections) {
+    if (drafts) setDirty((current) => new Set([...current, ...(Object.keys(next) as EthicsSectionKey[]).filter((key) => next[key] !== drafts[key])]));
+    setDraftState(next);
+  }
 
   async function refresh() {
     setLoading(true);
     try { setView(await getEthicsDossier(projectId)); }
-    catch (error) { setNotice(message(error)); setView(null); }
+    catch (error) { setNoticeText(message(error)); setView(null); }
     finally { setLoading(false); }
   }
   useEffect(() => { void refresh(); }, [projectId]);
-  // Seed card drafts once per dossier so a save or file operation never wipes unsaved edits in other cards.
-  useEffect(() => { setDrafts(dossier ? structuredClone(dossier.sections) : null); }, [dossier?.id]);
-  // Commitment can be reset server-side by any non-PI edit, so always mirror the stored value.
-  useEffect(() => { if (dossier) setDrafts((current) => current && { ...current, commitment: dossier.sections.commitment }); }, [dossier?.sections.commitment]);
+  // Reseed every clean card from each new view so other editors' saves show up; dirty cards keep local edits.
+  // Commitment always mirrors the server because any non-PI edit resets it there.
+  useEffect(() => {
+    if (!dossier) { setDraftState(null); return; }
+    setDraftState((current) => {
+      const next = structuredClone(dossier.sections);
+      if (!current) return next;
+      for (const key of dirty) if (key !== "commitment") (next as Record<string, unknown>)[key] = current[key];
+      return next;
+    });
+  }, [view]);
 
   async function act(task: () => Promise<EthicsDossierView | void>, confirmText?: string) {
     if (confirmText && !window.confirm(confirmText)) return;
-    setBusy(true); setNotice(""); setMissing(null);
+    setBusy(true); setNotice(null); setMissing(null);
     try {
       const next = await task();
       // File operations return no dossier view but bump the project version, so re-read it.
@@ -49,7 +63,7 @@ export function EthicsDossierWorkspace({ projectId }: { projectId: string }) {
     } catch (error) {
       const body = (error as { body?: { code?: string; missingSections?: string[]; missingFiles?: string[] } }).body;
       if (body?.code === "READINESS_INCOMPLETE") setMissing({ sections: body.missingSections ?? [], files: body.missingFiles ?? [] });
-      setNotice(message(error));
+      setNoticeText(body?.code === "CONTEXT_VERSION_MISMATCH" ? "Hồ sơ vừa được người khác cập nhật. Bấm \"Tải lại\" để xem bản mới (phần bạn đang sửa dở vẫn được giữ) rồi thao tác lại." : message(error));
       return false;
     } finally { setBusy(false); }
   }
@@ -59,18 +73,18 @@ export function EthicsDossierWorkspace({ projectId }: { projectId: string }) {
     const value = drafts[section];
     await act(async () => {
       const next = await saveEthicsSection(projectId, section, value, view.contextVersion);
-      // Re-seed only the saved card; other cards keep their unsaved edits.
-      if (next.dossier) setDrafts((current) => current && { ...current, [section]: next.dossier!.sections[section], commitment: next.dossier!.sections.commitment });
-      setNotice(`Đã lưu ${ETHICS_SECTION_LABELS[section]}.`);
+      // The saved card is clean again, so the view effect reseeds it from the server.
+      setDirty((current) => { const left = new Set(current); left.delete(section); return left; });
+      setNoticeText(`Đã lưu ${ETHICS_SECTION_LABELS[section]}.`, false);
       return next;
     });
   }
 
   if (loading && !view) return <p>Đang tải hồ sơ đạo đức…</p>;
-  if (!view) return <div><p role="alert">{notice || "Không có quyền xem hồ sơ đạo đức."}</p><button className="button" onClick={() => void refresh()}>Thử lại</button></div>;
+  if (!view) return <div><p role="alert">{notice?.text || "Không có quyền xem hồ sơ đạo đức."}</p><button className="button" onClick={() => void refresh()}>Thử lại</button></div>;
 
   const back = <div className="button-row"><Link className="button" href={`/projects/${projectId}`}>Quay lại đề tài</Link><button className="button" type="button" disabled={busy} onClick={() => void refresh()}>Tải lại</button></div>;
-  const status = notice ? <p role="status" className="form-error">{notice}</p> : null;
+  const status = notice ? <p role={notice.error ? "alert" : "status"} className={notice.error ? "form-error" : undefined}>{notice.text}</p> : null;
 
   if (!dossier) {
     const canCreate = ethicsCan(view, "ethics-dossier.create");
