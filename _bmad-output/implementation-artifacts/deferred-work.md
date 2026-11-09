@@ -282,3 +282,19 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-10-3-tao-hoan-thien-va-nop-ho-so-dao-duc.md`
   summary: Story 10.4 phải tăng `EthicsDossier.version` trước khi nộp lại, nếu không khóa idempotency thông báo `ethics-dossier:{id}:v{version}` sẽ bỏ thông báo lần nộp thứ hai.
   evidence: Review 10.3 (triage #12): 10.3 chỉ có một lần nộp nên `version` luôn là 1.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-7-5-8-goi-quyet-dinh-va-cong-bo-ket-qua.md`
+  summary: Thêm test cho quyết định chỉ có `requiredFollowUp` (tóm tắt trống), kiểm tra trim và vẫn công bố được.
+  evidence: Test hiện tại luôn gửi đủ hai trường; mỗi fixture chỉ ra được một quyết định.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-7-5-8-goi-quyet-dinh-va-cong-bo-ket-qua.md`
+  summary: Chưa có test runtime cho web client `decideProposal` gửi `publicSummary`/`requiredFollowUp` và cho nhánh tải lại khi lệch gói.
+  evidence: Repo không có hạ tầng test web runtime; hiện chỉ kiểm được thủ công qua UI.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-6-thu-ky-ho-tro-hanh-chinh-danh-gia.md`
+  summary: "Task" và "tracking note" hành chính của thư ký (Story 5.6) chuyển sang Epic 7 (quản lý công việc). Story 5.6 chỉ làm lát cắt tệp hành chính (`MEETING_MATERIAL`, `COUNCIL_MINUTES`).
+  evidence: Chưa có mô hình task trong hệ thống; dựng mới ngoài phạm vi 5.6. Quyết định tạm khi người dùng vắng mặt, cần xác nhận.
+
+- source_spec: `spec-5-4-reviewer-truy-cap-va-nop-danh-gia-cua-minh.md`
+  summary: Chưa có test tự động cho việc `proposal-review-form.tsx` dùng `contextVersion` trả về sau khi lưu nháp.
+  evidence: Repo không có harness test component cho web; hiện chỉ được kiểm chứng thủ công trên localhost.

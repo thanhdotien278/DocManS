@@ -469,8 +469,11 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     const { store } = services.prisma;
     const created = await createProposalWithParticipants(services, LINKED_TEAM);
     store.proposals[0].status = "under_review";
+    // Story 5.4: phân công chỉ cấp quyền đọc khi thuộc vòng nộp hiện hành.
+    store.proposals[0].submittedAt = new Date(0);
+    store.submissionEvents.push({ id: "event-round", proposalId: created.id, toStatus: "submitted", submittedAt: new Date(0), snapshot: { members: [], attachments: [], requiredPackage: [] } });
     // outsiderUser là thư ký hội đồng: đã nhận lời, hội đồng đã thành lập, không tham gia hồ sơ.
-    store.reviewAssignments.push({ id: "assignment-sec", proposalId: created.id, reviewerUserId: outsiderUser.id, assignmentRole: "council_secretary", status: "assigned", invitationStatus: "accepted", councilEstablishedAt: new Date(), assignedAt: new Date(), effectiveFrom: null, effectiveUntil: null, createdAt: new Date() });
+    store.reviewAssignments.push({ id: "assignment-sec", proposalId: created.id, reviewerUserId: outsiderUser.id, assignmentRole: "council_secretary", status: "assigned", invitationStatus: "accepted", councilEstablishedAt: new Date(), reviewedSubmissionEventId: "event-round", assignedAt: new Date(), effectiveFrom: null, effectiveUntil: null, createdAt: new Date() });
     const token = async (user) => (await services.proposalService.getProposal(user, created.id)).viewerAuthorization.contextVersion;
     const upload = async (user, filePurpose) => services.filesService.uploadFile(user, {
       relatedEntityType: "research_proposal", relatedEntityId: created.id, contextVersion: await token(user), filePurpose,
@@ -480,6 +483,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     const material = await upload(secretaryUser, "MEETING_MATERIAL");
     assert.match(services.auditLog.records.at(-1).reason, /purpose=MEETING_MATERIAL relationship=TOPIC_SECRETARY/);
     assert.equal(material.canEdit, false);
+    await assert.rejects(async () => services.filesService.deleteFile(secretaryUser, material.id, await token(secretaryUser)), ForbiddenException);
     await assert.rejects(() => upload(secretaryUser, "proposal-form"), ForbiddenException);
     await assert.rejects(() => upload(secretaryUser, "COUNCIL_MINUTES"), ForbiddenException);
 
