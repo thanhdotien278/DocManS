@@ -266,3 +266,11 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-2-chinh-sua-theo-yeu-cau-va-nop-lai-de-xuat.md`
   summary: Hiện cờ "Quá hạn" của yêu cầu bổ sung ở hàng đợi CV và mục "Cần tôi xử lý" của PI, không chỉ trang chi tiết.
   evidence: `docs/ux-ui-spec.md` dòng 328, 330 yêu cầu theo dõi bổ sung chờ phản hồi/hạn phản hồi ở các danh sách; Story 5.2 chỉ làm trang chi tiết.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-10-3-tao-hoan-thien-va-nop-ho-so-dao-duc.md`
+  summary: Cho PI/CV phụ trách hủy hoặc xóa hồ sơ đạo đức còn ở trạng thái nháp.
+  evidence: Người dùng chốt (D-042, 09/11/2026) không làm hủy nháp trong Story 10.3.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-10-3-tao-hoan-thien-va-nop-ho-so-dao-duc.md`
+  summary: Story 10.3 phần 2 — giao diện hồ sơ đạo đức: mục "Hồ sơ đạo đức" trên `project-detail.tsx`, trang `/projects/[id]/ethics-dossier` (6 thẻ mục, thẻ tệp có danh sách thiếu, nút nộp có xác nhận, chỉ xem sau khi nộp), helper trong `apps/web/src/lib/projects-api.ts`.
+  evidence: Người dùng chọn tách spec 10.3 (09/11/2026) vì ~2.900 token; phần 1 làm backend + test.

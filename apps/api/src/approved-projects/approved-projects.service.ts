@@ -45,14 +45,15 @@ const PROJECT_INCLUDE = {
   reports: { include: { evidence: { include: { fileRecord: true } }, checkpoint: true, author: { select: { displayName: true, username: true } }, reviewedBy: { select: { displayName: true, username: true } } }, orderBy: [{ revision: "desc" }] },
   requests: { include: { revisions: { orderBy: { revision: "desc" } }, evidence: { include: { fileRecord: true } }, requester: { select: { displayName: true, username: true } }, decisionBy: { select: { displayName: true, username: true } }, preparedBy: { select: { displayName: true, username: true } } }, orderBy: { createdAt: "desc" } },
   history: { orderBy: { createdAt: "desc" } },
-  liquidations: { orderBy: { createdAt: "desc" } }
+  liquidations: { orderBy: { createdAt: "desc" } },
+  ethicsDossier: { select: { id: true, status: true, version: true, submittedAt: true } }
 };
 
 @Injectable()
 export class ApprovedProjectsService {
   constructor(private readonly prisma: PrismaService, private readonly auditLog: AuditLogService) {}
 
-  private mutate<T>(actor: SafeUserContext, projectId: string, expected: unknown | typeof SKIP_CONTEXT, work: (tx: any, currentActor: SafeUserContext, project: AnyRecord) => Promise<T>): Promise<T> {
+  mutate<T>(actor: SafeUserContext, projectId: string, expected: unknown | typeof SKIP_CONTEXT, work: (tx: any, currentActor: SafeUserContext, project: AnyRecord) => Promise<T>): Promise<T> {
     return this.prisma.$transaction(async (tx: any) => {
       await tx.$queryRaw`SELECT id FROM users WHERE id = ${actor.id} FOR SHARE`;
       const currentActor = await this.readCurrentActor(tx, actor.id);
@@ -86,14 +87,14 @@ export class ApprovedProjectsService {
     if (!getOrganizationScopeIds(actor).includes(project.hostOrganizationUnitId)) throw new ForbiddenException({ code: "ORG_SCOPE_DENIED", message: "Không có phạm vi tổ chức phù hợp cho đề tài." });
   }
 
-  private async currentOfficer(tx: any, projectId: string, asOf = new Date()): Promise<ProjectOfficerFact | null> {
+  async currentOfficer(tx: any, projectId: string, asOf = new Date()): Promise<ProjectOfficerFact | null> {
     const rows = await tx.projectManagementOfficer.findMany({ where: { projectId, status: "ACTIVE" }, orderBy: [{ effectiveFrom: "desc" }, { createdAt: "desc" }] });
     const active = rows.filter((row: any) => isRelationshipActiveAt(row, asOf));
     if (active.length > 1) throw new ConflictException({ code: "CONTEXT_AMBIGUOUS", message: "Phân công chuyên viên của đề tài không rõ ràng." });
     return active[0] ?? null;
   }
 
-  private async assertOfficer(tx: any, actor: SafeUserContext, project: AnyRecord, operation: string) {
+  async assertOfficer(tx: any, actor: SafeUserContext, project: AnyRecord, operation: string) {
     this.assertScope(actor, project);
     await this.assertNotMemberUnlessManaging(tx, actor, project, operation);
     await this.assertNoEvaluationConflict(tx, actor.id, project.proposalId);
@@ -119,7 +120,7 @@ export class ApprovedProjectsService {
     if (conflict.isAssignedReviewer || conflict.hasPersistedReview) throw new ForbiddenException({ code: "CONFLICT_DENIED" });
   }
 
-  private async loadAuthorized(tx: any, actor: SafeUserContext, projectId: string) {
+  async loadAuthorized(tx: any, actor: SafeUserContext, projectId: string) {
     const project = await tx.approvedProject.findUnique({ where: { id: projectId }, include: PROJECT_INCLUDE });
     if (!project) throw new NotFoundException({ message: "Không tìm thấy đề tài đã được duyệt." });
     const officer = await this.currentOfficer(tx, projectId);
@@ -223,6 +224,7 @@ export class ApprovedProjectsService {
       }) : ({ id: request.id, requestType: request.requestType, status: request.status, createdAt: request.createdAt?.toISOString?.() ?? null, decidedAt: request.decidedAt?.toISOString?.() ?? null, allowedActions: [] })),
       history: (project.history ?? []).map((item: AnyRecord) => ({ id: item.id, action: item.action, fromStatus: item.fromStatus, toStatus: item.toStatus, reason: requestDetail ? item.reason : undefined, createdAt: item.createdAt?.toISOString?.() ?? null, beforeFacts: isOfficer || isHead || isRouter || isSigner ? item.beforeFacts : undefined, afterFacts: isOfficer || isHead || isRouter || isSigner ? item.afterFacts : undefined })),
       liquidation: actor ? this.liquidationView(project, actor) : null,
+      ethicsDossier: project.ethicsDossier && capability.allowedActions?.includes("ethics-dossier.read") ? { id: project.ethicsDossier.id, status: project.ethicsDossier.status, submittedAt: project.ethicsDossier.submittedAt?.toISOString?.() ?? null } : null,
       overdue,
       approaching,
       nearestDeadline: nearest?.toISOString?.() ?? null,
