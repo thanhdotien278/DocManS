@@ -113,3 +113,29 @@ synthesis draft/finalization/submission and decision history plus their correspo
 Existing `20260921010000_proposal_review_golden_flow` migration was applied in the prior
 session. This refinement adds no schema migration. Final local API/web listeners were restored
 on 4000/3000. Unrelated `skills-lock.json` remains untouched.
+
+## Story 5.6 / 5.7 / 5.8 — kiểm chứng UI ngày 08/11/2026 (phiên làm việc đêm)
+
+Cách thao tác: đăng nhập, điền form và bấm nút làm trên UI. File PDF được gắn vào input bằng `DataTransfer`. `window.confirm` bị thay để tự đồng ý. Các kiểm tra ẩn/từ chối dùng `fetch` chạy từ trang. Môi trường: API `4001` (build mới), Web `3001`, DB dev. Migration `20261108230000_evaluation_admin_files` đã áp dụng. Kiểm thử bằng trình duyệt tích hợp, vì `agent-desktop` thiếu quyền Accessibility/Screen Recording của macOS. Hồ sơ: `cc36d963-6b91-4f9f-9c40-c0ccd3c1e8b8` ("Mùa thu 3", PI `int1`).
+
+| Bước | Tác nhân | Kết quả |
+|---|---|---|
+| 5.6: tải biên bản họp hội đồng qua UI (`under_review`) | Thư ký hội đồng `test_internal05` | PASS: tệp `7de36648…` (`COUNCIL_MINUTES`) |
+| 5.6: ẩn biên bản với người tham gia | PI `int1` | PASS: UI và API không liệt kê; tải theo id trả 404 |
+| 5.6: quản lý xem biên bản | TP `nmphuong` | PASS: thấy trên UI, tải trả 200 |
+| Bước chuẩn bị (gọi HTTP thật, không sửa DB) | 5 thành viên chấm phiếu; TP tổng hợp, chốt, trình; TB chuyển tiếp | Tờ trình `DECISION_PACKAGE` tới LEADERSHIP. TP là người lập nên không qua bước `HEAD_REVIEW` (đúng luật 5.9) |
+| 5.7: từ chối PGĐ-KH và PGĐ-TD | `vndinh`, `ndbac` | PASS (gọi API với contextVersion hợp lệ, chạy từ trang): approve 403 "Chỉ lãnh đạo có thẩm quyền…", gói 403, hàng đợi 403; capability `ACTION_NOT_GRANTED`; UI không có nút Phê duyệt/Không phê duyệt |
+| 5.7: hàng đợi và gói của GĐ | `tvtien` | PASS: hồ sơ có trong hàng đợi; gói có 6/7 phiếu, điểm ẩn, danh sách tệp (gồm biên bản, có nhãn tiếng Việt), bản tổng hợp |
+| 5.8: phê duyệt kèm ghi chú nội bộ, tóm tắt công bố, yêu cầu tiếp theo | `tvtien` | PASS: hồ sơ chuyển `approved`, tờ trình đóng |
+| 5.8: quyết định lần hai | `tvtien` | PASS: 400 kèm `currentStatus: approved`; không tạo quyết định thứ hai |
+| 5.8: PI xem kết quả | `int1` | PASS: thẻ "Kết quả quyết định" theo `PublishedReviewSummaryV1`; không có ghi chú nội bộ; có thông báo `proposal.decided` |
+
+Chưa kiểm trên UI:
+- Nhánh không phê duyệt với code mới (đã được test DB và luồng 5.9/5.10 trước đó bao).
+- Thư ký đề tài tải `MEETING_MATERIAL`: không có hồ sơ `under_review` nào có thư ký đề tài, và sau khi nộp thì không thêm thành viên được. Phần này chỉ được service test và test DB trigger bao.
+
+### Bổ sung 09/11/2026 — quyền xem biên bản sau Codex review
+
+Kiểm trên API 4001, hồ sơ `cc36d963`, biên bản `7de36648`, cả chi tiết hồ sơ và tải tệp:
+- Thấy và tải được (200): TP `nmphuong`, GĐ `tvtien`, thư ký hội đồng `test_internal05`.
+- Không thấy, tải trả 404: PGĐ-KH `vndinh`, PGĐ-TD `ndbac`, reviewer `test_internal01`, PI `int1`.
