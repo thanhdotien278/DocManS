@@ -61,12 +61,10 @@ describe("ST-2.3A files route registration source checks", () => {
     assert.equal(/objectKey|bucketName|storagePath|minioKey/.test(apiClientSource), false);
   });
 
-  it("proposal upload UI advertises the ST-2.3A allowed file extensions", () => {
+  it("proposal upload UI uses the MIME types of each required document", () => {
     const componentSource = readFileSync("apps/web/src/components/research-proposals/proposal-detail-workspace.tsx", "utf8");
 
-    assert.match(componentSource, /ST23A_ALLOWED_FILE_TYPES = "\.doc, \.docx, \.pdf, \.xls, \.xlsx"/);
-    assert.match(componentSource, /accept=\{ST23A_FILE_ACCEPT\}/);
-    assert.equal(/selectedRequirement\.allowedMimeTypes\.join/.test(componentSource), false);
+    assert.match(componentSource, /accept=\{group\.allowedMimeTypes\.join\(","\)\}/);
   });
 
   it("proposal file list UI supports description metadata and edit/delete actions", () => {
@@ -97,23 +95,22 @@ describe("ST-2.3A files route registration source checks", () => {
     assert.equal(/người tải \{attachment\.uploadedById\}/.test(componentSource), false);
   });
 
-  it("proposal detail UI formats VND input and translates submission timeline labels", () => {
+  it("proposal detail UI formats VND input", () => {
     const componentSource = readFileSync("apps/web/src/components/research-proposals/proposal-detail-workspace.tsx", "utf8");
 
     assert.match(componentSource, /formatVndNumber/);
     assert.match(componentSource, /parseVndNumber/);
     assert.match(componentSource, /numberToVietnameseWords/);
     assert.match(componentSource, /Bằng chữ:/);
-    assert.match(componentSource, /Người nộp/);
     assert.equal(/actor \{event\.actorId\}/.test(componentSource), false);
   });
 
-  it("proposal submission history renders as a submitter and submission-time table", () => {
+  it("proposal history shows the actor and time for each event", () => {
     const componentSource = readFileSync("apps/web/src/components/research-proposals/proposal-detail-workspace.tsx", "utf8");
 
     assert.match(componentSource, /className="data-table timeline-table"/);
-    assert.match(componentSource, /<th>\s*Người nộp\s*<\/th>/);
-    assert.match(componentSource, /<th>\s*Thời gian nộp\s*<\/th>/);
+    assert.match(componentSource, /<th>\s*Người thực hiện\s*<\/th>/);
+    assert.match(componentSource, /<th>\s*Thời gian\s*<\/th>/);
     assert.match(componentSource, /function getSubmissionActorName/);
     assert.match(componentSource, /event\.actorDisplayName/);
     assert.match(componentSource, /account\?\.id === proposal\.submittedById/);

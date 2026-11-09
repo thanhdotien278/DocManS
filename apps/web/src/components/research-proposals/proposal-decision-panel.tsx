@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { decideProposal, isNotEntitled, loadProposalDecisionPackage, type ProposalDecisionPackage } from "@/lib/proposal-evaluations-api";
+import { getProposalAttachmentDownloadUrl } from "@/lib/research-proposals-api";
 
 function formatDate(value: string) {
   return value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "Chưa có";
@@ -24,6 +25,8 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
   const [loadError, setLoadError] = useState("");
   const [note, setNote] = useState("");
+  const [publicSummary, setPublicSummary] = useState("");
+  const [requiredFollowUp, setRequiredFollowUp] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busyDecision, setBusyDecision] = useState<"" | "approve" | "reject">("");
@@ -85,12 +88,23 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
 
     setBusyDecision(decision);
     try {
-      const result = await decideProposal(proposalId, decision, note.trim(), packageRevision, contextVersion);
+      const result = await decideProposal(proposalId, decision, note.trim(), packageRevision, contextVersion, { publicSummary: publicSummary.trim(), requiredFollowUp: requiredFollowUp.trim() });
       setMessage(`Đã ghi nhận quyết định: ${result.decision.decisionLabel}.`);
       setNote("");
+      setPublicSummary("");
+      setRequiredFollowUp("");
       await refresh();
       onDecision();
     } catch (thrown) {
+      // Gói hoặc phiên bản hồ sơ đổi sau khi tải: báo trước, nhờ trang cha nạp lại contextVersion, tải lại gói;
+      // nội dung đã nhập được giữ để GĐ xem lại rồi quyết định.
+      const code = (thrown as { code?: string }).code;
+      if (code === "PACKAGE_CONTEXT_MISMATCH" || code === "CONTEXT_VERSION_MISMATCH") {
+        setError("Hồ sơ hoặc gói đánh giá vừa thay đổi và đã được tải lại. Vui lòng xem lại trước khi quyết định.");
+        onDecision();
+        await refresh();
+        return;
+      }
       setError(thrown instanceof Error ? thrown.message : "Không thể ghi nhận quyết định.");
     } finally {
       setBusyDecision("");
@@ -134,6 +148,22 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
         <p className="state-message warning" role="status">
           {conflict.viewerMessage}
         </p>
+      ) : null}
+
+      {decisionPackage.attachments.length ? (
+        <div className="form-section-inline">
+          <div className="section-mini-heading">Tệp của hồ sơ</div>
+          <ul className="plain-list">
+            {decisionPackage.attachments.map((file) => (
+              <li key={file.id}>
+                <a href={getProposalAttachmentDownloadUrl(file.id)}>{file.fileName}</a>
+                <span className="record-meta">
+                  {" "}{file.filePurpose === "COUNCIL_MINUTES" ? "· Biên bản họp hội đồng " : file.filePurpose === "MEETING_MATERIAL" ? "· Tài liệu họp " : ""}· v{file.version} · {file.sizeBytes < 1024 ? `${file.sizeBytes} B` : `${Math.round(file.sizeBytes / 1024)} KB`} · {formatDate(file.createdAt)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       {evaluationSummary ? (
@@ -193,12 +223,32 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
 
       <form className="admin-form compact-form" onSubmit={(event) => event.preventDefault()}>
         <label className="field">
-          <span>Ý kiến quyết định (bắt buộc khi không phê duyệt)</span>
+          <span>Ý kiến quyết định nội bộ, không công bố (bắt buộc khi không phê duyệt)</span>
           <textarea
             rows={3}
             maxLength={2000}
             value={note}
             onChange={(event) => setNote(event.target.value)}
+            disabled={!canDecide || !decisionPackage.canDecide}
+          />
+        </label>
+        <label className="field">
+          <span>Tóm tắt công bố cho chủ nhiệm và thành viên (không bắt buộc)</span>
+          <textarea
+            rows={3}
+            maxLength={5000}
+            value={publicSummary}
+            onChange={(event) => setPublicSummary(event.target.value)}
+            disabled={!canDecide || !decisionPackage.canDecide}
+          />
+        </label>
+        <label className="field">
+          <span>Yêu cầu tiếp theo (không bắt buộc)</span>
+          <textarea
+            rows={2}
+            maxLength={5000}
+            value={requiredFollowUp}
+            onChange={(event) => setRequiredFollowUp(event.target.value)}
             disabled={!canDecide || !decisionPackage.canDecide}
           />
         </label>
