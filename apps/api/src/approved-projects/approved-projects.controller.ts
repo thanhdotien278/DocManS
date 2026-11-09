@@ -3,6 +3,7 @@ import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
 import { assignProjectOfficerPipe, createProjectPipe, ethicsSectionPipe, projectDecisionPipe, projectFundingPipe, projectLiquidationPipe, projectMutationPipe, projectReportPipe, projectReportReviewPipe, projectReportSubmissionPipe, projectRequestPipe, projectWithdrawPipe, readRequestType, revokeProjectOfficerPipe } from "./approved-projects.dto.js";
 import { ApprovedProjectsService } from "./approved-projects.service.js";
+import { AcceptanceDossiersService } from "./acceptance-dossiers.service.js";
 import { EthicsDossiersService } from "./ethics-dossiers.service.js";
 
 function filters(value: Record<string, string>) {
@@ -13,7 +14,7 @@ function filters(value: Record<string, string>) {
 @Controller("api/v1/projects")
 @UseGuards(SessionAuthGuard)
 export class ApprovedProjectsController {
-  constructor(private readonly projects: ApprovedProjectsService, private readonly ethics: EthicsDossiersService) {}
+  constructor(private readonly projects: ApprovedProjectsService, private readonly ethics: EthicsDossiersService, private readonly acceptance: AcceptanceDossiersService) {}
 
   @Get()
   async list(@Req() req: RequestWithCurrentUser, @Query() query: Record<string, string>) { return { projects: await this.projects.listProjects(req.currentUser!, filters(query)) }; }
@@ -104,6 +105,18 @@ export class ApprovedProjectsController {
 
   @Post(":id/ethics-dossier/submit")
   async submitEthicsDossier(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectMutationPipe) body: any) { return { ethicsDossier: await this.ethics.submit(req.currentUser!, id, body) }; }
+
+  @Get(":id/acceptance-dossier")
+  async acceptanceDossier(@Req() req: RequestWithCurrentUser, @Param("id") id: string) { return { acceptanceDossier: await this.acceptance.getDossier(req.currentUser!, id) }; }
+
+  @Post(":id/acceptance-dossier")
+  async createAcceptanceDossier(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectMutationPipe) body: any) { return { acceptanceDossier: await this.acceptance.createDossier(req.currentUser!, id, body) }; }
+
+  @Patch(":id/acceptance-dossier")
+  async editAcceptanceDossier(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(ethicsSectionPipe) body: any) { return { acceptanceDossier: await this.acceptance.updateSection(req.currentUser!, id, body) }; }
+
+  @Post(":id/acceptance-dossier/submit")
+  async submitAcceptanceDossier(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectMutationPipe) body: any) { return { acceptanceDossier: await this.acceptance.submit(req.currentUser!, id, body) }; }
 
   @Get(":id/funding")
   async funding(@Req() req: RequestWithCurrentUser, @Param("id") id: string) { return { funding: await this.projects.getFunding(req.currentUser!, id) }; }
