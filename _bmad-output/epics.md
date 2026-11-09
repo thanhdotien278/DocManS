@@ -3118,7 +3118,7 @@ So that tôi có đủ căn cứ trước khi ra quyết định.
 **Then** UI yêu cầu tải lại context
 **And** mutation sau đó không thể dùng dữ liệu cũ.
 
-**Given** GĐ (phạm vi toàn Học viện — D-042), proposal đã được trình qua luồng tờ trình (người lập → TB → TP) và
+**Given** GĐ (phạm vi toàn Học viện — D-043), proposal đã được trình qua luồng tờ trình (người lập → TB → TP) và
 không có participation/reviewer conflict
 **When** mở queue hoặc package
 **Then** server lọc queue/count trước khi trả; package dùng đúng submitted proposal,
@@ -3141,7 +3141,7 @@ So that proposal kết thúc quy trình minh bạch mà không lộ phản biệ
 
 **Given** GĐ attempts approve/reject of topic and funding
 **When** the backend evaluates the action inside the proposal mutation
-**Then** only active `LEADERSHIP_APPROVAL_AUTHORITY` (GĐ, Academy-wide scope — D-042) with no
+**Then** only active `LEADERSHIP_APPROVAL_AUTHORITY` (GĐ, Academy-wide scope — D-043) with no
 participation/reviewer/council conflict may decide, after current completeness, all required
 submitted reviews, finalized synthesis and a `DECISION_PACKAGE` submission that passed TB and TP are rechecked
 **And** TP, PP, TB, CV, `SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH), `RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD), QT and reviewers have no topic decision authority.
