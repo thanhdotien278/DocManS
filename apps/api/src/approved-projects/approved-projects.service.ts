@@ -46,7 +46,8 @@ const PROJECT_INCLUDE = {
   requests: { include: { revisions: { orderBy: { revision: "desc" } }, evidence: { include: { fileRecord: true } }, requester: { select: { displayName: true, username: true } }, decisionBy: { select: { displayName: true, username: true } }, preparedBy: { select: { displayName: true, username: true } } }, orderBy: { createdAt: "desc" } },
   history: { orderBy: { createdAt: "desc" } },
   liquidations: { orderBy: { createdAt: "desc" } },
-  ethicsDossier: { select: { id: true, status: true, version: true, submittedAt: true } }
+  ethicsDossier: { select: { id: true, status: true, version: true, submittedAt: true } },
+  acceptanceDossier: { select: { id: true, status: true, version: true, submittedAt: true } }
 };
 
 @Injectable()
@@ -225,6 +226,7 @@ export class ApprovedProjectsService {
       history: (project.history ?? []).map((item: AnyRecord) => ({ id: item.id, action: item.action, fromStatus: item.fromStatus, toStatus: item.toStatus, reason: requestDetail ? item.reason : undefined, createdAt: item.createdAt?.toISOString?.() ?? null, beforeFacts: isOfficer || isHead || isRouter || isSigner ? item.beforeFacts : undefined, afterFacts: isOfficer || isHead || isRouter || isSigner ? item.afterFacts : undefined })),
       liquidation: actor ? this.liquidationView(project, actor) : null,
       ethicsDossier: project.ethicsDossier && capability.allowedActions?.includes("ethics-dossier.read") ? { id: project.ethicsDossier.id, status: project.ethicsDossier.status, submittedAt: project.ethicsDossier.submittedAt?.toISOString?.() ?? null } : null,
+      acceptanceDossier: project.acceptanceDossier && capability.allowedActions?.includes("acceptance-dossier.read") ? { id: project.acceptanceDossier.id, status: project.acceptanceDossier.status, submittedAt: project.acceptanceDossier.submittedAt?.toISOString?.() ?? null } : null,
       overdue,
       approaching,
       nearestDeadline: nearest?.toISOString?.() ?? null,
