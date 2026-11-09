@@ -14,7 +14,7 @@ import { isInternalResearcherEligible } from "../../proposals-shared/proposal-ac
 import { ProposalManagementOfficerService } from "../../proposals-shared/proposal-management-officer.service.js";
 import { ProposalReviewAccessService } from "../../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../../research-proposals/proposal-participation.service.js";
-import { APPROVED_PROJECT_ENTITY_TYPE, ETHICS_DOSSIER_ENTITY_TYPE, RESEARCH_PROPOSAL_ENTITY_TYPE } from "./files.dto.js";
+import { APPROVED_PROJECT_ENTITY_TYPE, ETHICS_DOSSIER_ENTITY_TYPE, EVALUATION_FILE_PURPOSES, RESEARCH_PROPOSAL_ENTITY_TYPE } from "./files.dto.js";
 import { bumpEthicsProjectContext, ETHICS_DOSSIER_DRAFT, ETHICS_FILE_PURPOSES, ethicsCapabilityError, isOfficerViewer, isPiViewer, resetEthicsCommitment } from "../../approved-projects/ethics-dossiers.service.js";
 
 type FileRecord = {
@@ -268,6 +268,7 @@ export class FilesService {
   }
 
   private async assertUnsubmittedFile(record: FileRecord) {
+    if (EVALUATION_FILE_PURPOSES.includes(record.filePurpose)) throw new BadRequestException({ message: "Tệp hành chính đánh giá được giữ nguyên. Hãy tải lên phiên bản mới." });
     if (record.relatedEntityType === ETHICS_DOSSIER_ENTITY_TYPE) {
       if ((await this.findEthicsDossier(record.relatedEntityId)).status !== ETHICS_DOSSIER_DRAFT) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Hồ sơ đạo đức đã nộp được giữ nguyên." });
       return;
@@ -405,7 +406,8 @@ export class FilesService {
     return trimmed;
   }
 
-  private async assertCanUpload(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {
+  /** Trả quan hệ của actor để ghi audit. Tệp hành chính đánh giá bị chặn sửa/xóa ở `assertUnsubmittedFile`. */
+  private async assertCanUpload(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string, filePurpose?: string): Promise<string | undefined> {
     if (relatedEntityType === ETHICS_DOSSIER_ENTITY_TYPE) {
       const { project, capability } = await this.ethicsCapability(actor, relatedEntityId);
       const denial = ethicsCapabilityError(capability, "ethics-dossier.edit");
