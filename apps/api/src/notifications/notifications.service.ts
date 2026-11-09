@@ -1,4 +1,6 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { ApprovedProjectsService } from "../approved-projects/approved-projects.service.js";
+import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { actorConflicted, canViewApproval, type ApprovalSubmissionRow } from "../proposals-shared/approval-routing.js";
@@ -83,6 +85,17 @@ export class NotificationsService {
         select: { id: true }
       });
       for (const assignment of assignments) allowed.add(`review_assignment:${assignment.id}`);
+    }
+
+    const dossierIds = idsOf("ethics_dossier");
+    if (dossierIds.length) {
+      // Như GET hồ sơ đạo đức: hiện khi người xem còn `ethics-dossier.read` trên đề tài nguồn.
+      const projects = new ApprovedProjectsService(this.prisma, new AuditLogService(this.prisma));
+      const dossiers = await this.prisma.ethicsDossier.findMany({ where: { id: { in: dossierIds } }, select: { id: true, projectId: true } });
+      for (const dossier of dossiers) {
+        const project = await projects.getProject(actor, dossier.projectId).catch((error) => { if (error instanceof ForbiddenException) return null; throw error; });
+        if (project?.viewerAuthorization.allowedActions.includes("ethics-dossier.read")) allowed.add(`ethics_dossier:${dossier.id}`);
+      }
     }
 
     return rows.filter((row) => allowed.has(`${row.sourceType}:${row.sourceId}`));

@@ -11,7 +11,7 @@
 |---|---|---|
 | 10.1 | Lập kế hoạch hội đồng, thành viên và căn cứ liên quan | `review` (hội đồng đánh giá; phần nghiệm thu/IRB còn `backlog`) |
 | 10.2 | Thư ký khoa học hỗ trợ vận hành hội đồng | `review` (hội đồng đánh giá; phần nghiệm thu/IRB còn `backlog`) |
-| 10.3 | Tạo, hoàn thiện và nộp hồ sơ đạo đức | `backlog` |
+| 10.3 | Tạo, hoàn thiện và nộp hồ sơ đạo đức | `in-progress` (phần 1 backend xong 09/11/2026; phần 2 UI còn lại) |
 | 10.4 | Kiểm tra hồ sơ đạo đức và xử lý bổ sung | `backlog` |
 | 10.5 | Phân công hội đồng và reviewer với eligibility/conflict | `review` (hội đồng đánh giá; phần nghiệm thu/IRB còn `backlog`) |
 | 10.6 | Thành viên hội đồng hoặc reviewer nộp đánh giá được phân công | `review` (hội đồng đánh giá; phần nghiệm thu/IRB còn `backlog`) |

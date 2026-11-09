@@ -9,7 +9,8 @@ export const PROJECT_ACTIONS: PermissionActionV1[] = [
   "project.evidence.contribute",
   "project.adjustment.create", "project.adjustment.edit-draft", "project.adjustment.submit", "project.adjustment.review", "project.adjustment.request-supplement", "project.adjustment.approve", "project.adjustment.reject", "project.adjustment.withdraw",
   "project.extension.create", "project.extension.edit-draft", "project.extension.submit", "project.extension.validate", "project.extension.prepare", "project.extension.request-supplement", "project.extension.approve", "project.extension.reject", "project.extension.withdraw",
-  "project.history.read"
+  "project.history.read",
+  "ethics-dossier.read", "ethics-dossier.create", "ethics-dossier.edit", "ethics-dossier.submit"
 ];
 
 export const PROJECT_STATUSES = {
@@ -43,6 +44,7 @@ export type ProjectCapabilityInput = {
     relationshipVersion?: number;
     conflictVersion?: number;
     delegationVersion?: number;
+    ethicsDossier?: { status: string } | null;
   };
   projectOfficer?: ProjectOfficerFact | null;
   participant?: { isParticipant: boolean; role?: string; effectiveFrom?: string; effectiveUntil?: string | null };
@@ -147,7 +149,21 @@ function projectActionDenial(action: PermissionActionV1, input: ProjectCapabilit
     if (action === "project.extension.request-supplement") return input.canOperate && !!input.request && input.request.requestType === "extension" && ["submitted", "under_staff_validation"].includes(input.request.status) ? null : blocked(input.request && input.request.requestType === "extension" ? "WORKFLOW_STATE_DENIED" : "ACTION_NOT_GRANTED");
     if (action === "project.extension.approve" || action === "project.extension.reject") return signDenial("extension", input);
   }
+  if (action.startsWith("ethics-dossier.")) return ethicsDossierDenial(action, input);
   return blocked("ACTION_NOT_GRANTED");
+}
+
+// Story 10.3 (D-042): PI hoặc CV phụ trách tạo/nộp; thư ký đề tài chỉ soạn nháp; PP và PGĐ-TD không xem nội dung.
+const ETHICS_DOSSIER_PROJECT_STATUSES: string[] = [PROJECT_STATUSES.preparing, PROJECT_STATUSES.executing, PROJECT_STATUSES.paused];
+function ethicsDossierDenial(action: PermissionActionV1, input: ProjectCapabilityInput & { scoped: boolean; participantActive: boolean; isPi: boolean; canRead: boolean; canOperate: boolean }) {
+  if (action === "ethics-dossier.read") return input.canRead && !isOversight(input.actor) && input.actor.systemRole !== "RESEARCH_MANAGEMENT_DEPUTY_HEAD" ? null : blocked("ACTION_NOT_GRANTED");
+  const secretary = input.scoped && input.participantActive && input.participant?.role === "TOPIC_SECRETARY";
+  const granted = input.isPi || input.canOperate || (action === "ethics-dossier.edit" && secretary);
+  if (!granted) return blocked("ACTION_NOT_GRANTED");
+  if (!ETHICS_DOSSIER_PROJECT_STATUSES.includes(input.project.status)) return blocked("WORKFLOW_STATE_DENIED");
+  const dossier = input.project.ethicsDossier;
+  if (action === "ethics-dossier.create") return dossier ? blocked("WORKFLOW_STATE_DENIED") : null;
+  return dossier?.status === "draft" ? null : blocked("WORKFLOW_STATE_DENIED");
 }
 
 // Ký: chỉ GĐ/PGĐ-KH, khi yêu cầu đã trình (ready_for_head_decision = có tờ trình đang mở; bước TB/TP do routing quản lý).

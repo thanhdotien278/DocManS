@@ -3,6 +3,7 @@ import { readCode, readText } from "../../proposals-shared/proposal-validation.j
 
 export const RESEARCH_PROPOSAL_ENTITY_TYPE = "research_proposal";
 export const APPROVED_PROJECT_ENTITY_TYPE = "approved_project";
+export const ETHICS_DOSSIER_ENTITY_TYPE = "ethics_dossier";
 
 export class ListFilesDto {
   relatedEntityType!: string;
@@ -30,7 +31,7 @@ function assertRecord(value: unknown) {
 
 function validateRelatedEntity(input: Record<string, unknown>) {
   const relatedEntityType = readCode(input.relatedEntityType, "relatedEntityType");
-  if (![RESEARCH_PROPOSAL_ENTITY_TYPE, APPROVED_PROJECT_ENTITY_TYPE].includes(relatedEntityType)) {
+  if (![RESEARCH_PROPOSAL_ENTITY_TYPE, APPROVED_PROJECT_ENTITY_TYPE, ETHICS_DOSSIER_ENTITY_TYPE].includes(relatedEntityType)) {
     throw new BadRequestException({ message: "Loại thực thể liên kết chưa được hỗ trợ." });
   }
   readText(input.relatedEntityId, "relatedEntityId", 80);
