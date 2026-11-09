@@ -29,6 +29,7 @@ context:
 - Readiness: đủ 6 mục; mục 1 có ít nhất một đối tượng; mục 6 đã tích; có đủ tệp bắt buộc `ETHICS_APPLICATION`, `ETHICS_PROTOCOL`, `ETHICS_DATA_TOOL`, và `ETHICS_CONSENT` (trừ khi mục 4 chọn miễn). `ETHICS_OTHER` không bắt buộc.
 - Nộp xong: `status=submitted`, sửa mục hay tệp bị từ chối `WORKFLOW_STATE_DENIED`. Snapshot lưu các mục, id tệp và context đề tài (`projectContextVersion`, `sourceSubmissionEventId`, `sourceDecisionId`).
 - Thông báo khi nộp gửi CV phụ trách; nếu đề tài chưa có CV phụ trách thì gửi các user `RESEARCH_BOARD_HEAD` đang active.
+- (Người dùng chốt khi review, D-042) CV phụ trách tự nộp thì thông báo gửi PI. Người không phải PI sửa mục 1–5 hoặc tải lên/sửa/xóa tệp thì cam kết (mục 6) tự về chưa tích.
 
 **Never:** giao diện web (phần 2); nộp thay hoặc ủy quyền nộp; hủy hoặc xóa nháp; kiểm tra đầy đủ và yêu cầu bổ sung (Story 10.4); hội đồng IRB và giấy chứng nhận; cờ "cần IRB"; gắn hồ sơ vào đề xuất.
 

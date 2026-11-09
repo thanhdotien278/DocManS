@@ -274,3 +274,11 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-10-3-tao-hoan-thien-va-nop-ho-so-dao-duc.md`
   summary: Story 10.3 phần 2 — giao diện hồ sơ đạo đức: mục "Hồ sơ đạo đức" trên `project-detail.tsx`, trang `/projects/[id]/ethics-dossier` (6 thẻ mục, thẻ tệp có danh sách thiếu, nút nộp có xác nhận, chỉ xem sau khi nộp), helper trong `apps/web/src/lib/projects-api.ts`.
   evidence: Người dùng chọn tách spec 10.3 (09/11/2026) vì ~2.900 token; phần 1 làm backend + test.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-10-3-tao-hoan-thien-va-nop-ho-so-dao-duc.md`
+  summary: Lưu ý cho phần 2 (UI) Story 10.3 — mọi thao tác ghi hồ sơ đạo đức (mục, tệp) tăng `aggregateVersion` của đề tài; sau mỗi lần ghi, UI phải dùng `contextVersion` trong response của API hồ sơ, hoặc gọi lại `GET /api/v1/projects/:id/ethics-dossier` sau thao tác tệp, nếu không lần lưu tiếp theo nhận 409.
+  evidence: Review 10.3 (triage #1) thêm tăng version để chặn ghi đè im lặng; response của module tệp không trả `contextVersion` của đề tài.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-10-3-tao-hoan-thien-va-nop-ho-so-dao-duc.md`
+  summary: Story 10.4 phải tăng `EthicsDossier.version` trước khi nộp lại, nếu không khóa idempotency thông báo `ethics-dossier:{id}:v{version}` sẽ bỏ thông báo lần nộp thứ hai.
+  evidence: Review 10.3 (triage #12): 10.3 chỉ có một lần nộp nên `version` luôn là 1.
