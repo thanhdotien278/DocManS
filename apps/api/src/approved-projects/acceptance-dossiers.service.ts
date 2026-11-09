@@ -137,7 +137,7 @@ export class AcceptanceDossiersService {
       // CV phụ trách chuẩn bị hội đồng nghiệm thu; đề tài chưa có CV phụ trách thì báo TB đang hoạt động.
       const officer = await this.projects.currentOfficer(tx, project.id);
       const recipients = officer ? [officer.officerUserId] : (await tx.user.findMany({ where: { systemRole: "RESEARCH_BOARD_HEAD", status: "active" }, select: { id: true } })).map((user: AnyRecord) => user.id);
-      await notifyUsers(tx, { userIds: recipients, exclude: [currentActor.id], type: "acceptance-dossier.submitted", title: "Hồ sơ nghiệm thu đã được nộp", body: project.title, link: `/projects/${project.id}`, sourceType: "acceptance_dossier", sourceId: dossier.id, idempotencyKey: `acceptance-dossier:${dossier.id}:v${dossier.version}` });
+      await notifyUsers(tx, { userIds: recipients, exclude: [currentActor.id], type: "acceptance-dossier.submitted", title: "Hồ sơ nghiệm thu đã được nộp", body: project.title, link: `/projects/${project.id}/acceptance-dossier`, sourceType: "acceptance_dossier", sourceId: dossier.id, idempotencyKey: `acceptance-dossier:${dossier.id}:v${dossier.version}` });
       return this.view(tx, currentActor, project.id);
     });
   }
@@ -170,6 +170,8 @@ export class AcceptanceDossiersService {
     const files = await this.activeFiles(tx, dossier.id);
     const sections = dossier.sections as AnyRecord;
     const editable = dossier.status === ACCEPTANCE_DOSSIER_DRAFT && base.allowedActions.includes("acceptance-dossier.edit");
+    // Cùng luật xóa của files.service: PI xóa mọi tệp, người đóng góp chỉ tệp của mình, và chỉ khi còn nháp.
+    const contributes = dossier.status === ACCEPTANCE_DOSSIER_DRAFT && base.allowedActions.includes("acceptance-dossier.contribute");
     return {
       ...base,
       dossier: {
@@ -178,7 +180,7 @@ export class AcceptanceDossiersService {
         readOnly: !editable,
         milestones: milestoneReconciliation(project, sections),
         readiness: acceptanceDossierReadiness(project, sections, files),
-        files: files.map((file: AnyRecord) => ({ id: file.id, filePurpose: file.filePurpose, version: file.version, fileName: file.originalFileName, mimeType: file.mimeType, sizeBytes: file.sizeBytes, uploadedById: file.uploadedById, createdAt: file.createdAt.toISOString() })),
+        files: files.map((file: AnyRecord) => ({ id: file.id, filePurpose: file.filePurpose, version: file.version, fileName: file.originalFileName, mimeType: file.mimeType, sizeBytes: file.sizeBytes, uploadedById: file.uploadedById, createdAt: file.createdAt.toISOString(), canDelete: editable || (contributes && file.uploadedById === actor.id) })),
         submissions: dossier.submissions.map((row: AnyRecord) => ({ id: row.id, version: row.version, actorId: row.actorId, submittedAt: row.submittedAt.toISOString(), snapshot: row.snapshot }))
       }
     };

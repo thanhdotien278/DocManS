@@ -12,6 +12,7 @@ export type ProjectRecord = {
   requests: Array<{ id: string; requestType: "adjustment" | "extension"; status: string; revision?: number; requesterId?: string; reason?: string; proposedValues?: Record<string, unknown>; decisionNote?: string; responseDeadline?: string; approval?: { stage: string; stageLabel: string; withdrawNote: string } | null; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }>; allowedActions: PermissionActionV1[] }>;
   history: Array<{ id: string; action: string; reason?: string; createdAt: string }>;
   ethicsDossier?: { id: string; status: string; submittedAt: string | null } | null;
+  acceptanceDossier?: { id: string; status: string; submittedAt: string | null } | null;
   overdue: boolean; approaching: boolean; nearestDeadline: string | null; viewerAuthorization: ViewerAuthorizationV1;
 };
 
@@ -26,7 +27,10 @@ const HISTORY_ACTION_LABELS: Record<string, string> = {
   "project.setup.configure": "Thiết lập mốc", "project.setup.confirm": "Xác nhận bắt đầu thực hiện",
   "project.report.draft": "Tạo bản nháp báo cáo", "project.report.edit-draft": "Cập nhật báo cáo", "project.report.submit": "Nộp báo cáo",
   "project.report.review": "Bắt đầu xem xét báo cáo", "project.report.request-supplement": "Yêu cầu bổ sung báo cáo", "project.report.accept": "Chấp nhận báo cáo",
-  "ethics-dossier.create": "Tạo hồ sơ đạo đức", "ethics-dossier.submit": "Nộp hồ sơ đạo đức"
+  "ethics-dossier.create": "Tạo hồ sơ đạo đức", "ethics-dossier.submit": "Nộp hồ sơ đạo đức",
+  "acceptance-dossier.create": "Tạo hồ sơ nghiệm thu", "acceptance-dossier.submit": "Nộp hồ sơ nghiệm thu",
+  "acceptance-dossier.file.upload": "Tải tệp hồ sơ nghiệm thu", "acceptance-dossier.file.metadata": "Cập nhật tệp hồ sơ nghiệm thu", "acceptance-dossier.file.delete": "Xóa tệp hồ sơ nghiệm thu",
+  "project.acceptance.submit": "Chuyển sang chờ nghiệm thu"
 };
 const REQUEST_ACTION_LABELS: Record<string, string> = { create: "Tạo yêu cầu", "edit-draft": "Cập nhật yêu cầu", submit: "Nộp yêu cầu", review: "Bắt đầu xem xét yêu cầu", validate: "Kiểm tra hành chính", prepare: "Lập tờ trình", "request-supplement": "Yêu cầu bổ sung", approve: "Phê duyệt", reject: "Từ chối", withdraw: "Rút yêu cầu" };
 // Unknown codes fall back to the raw value so new states stay visible instead of blank.
@@ -113,18 +117,20 @@ export const ETHICS_SECTION_LABELS: Record<string, string> = { subjects: "1. Đ�
 export const ETHICS_FILE_LABELS: Record<string, string> = { ETHICS_APPLICATION: "Đơn đề nghị xét duyệt đạo đức", ETHICS_PROTOCOL: "Đề cương nghiên cứu", ETHICS_CONSENT: "Bản cung cấp thông tin và phiếu chấp thuận", ETHICS_DATA_TOOL: "Công cụ thu thập số liệu", ETHICS_OTHER: "Tài liệu khác" };
 export const ETHICS_SUBJECT_LABELS: Record<string, string> = { human: "Người", animal: "Động vật", biospecimen: "Mẫu sinh phẩm", secondary_data: "Dữ liệu thứ cấp" };
 export const ethicsDossierStatusLabel = (value: string) => value === "submitted" ? "Đã nộp" : value === "draft" ? "Nháp" : value;
-export const ethicsCan = (view: EthicsDossierView, action: string) => view.allowedActions.includes(action);
-export const ethicsDenial = (view: EthicsDossierView, action: string) => view.blockedActions.find((item) => item.action === action)?.reason ?? "Quyền thao tác chưa được xác minh. Vui lòng tải lại.";
+// Dùng chung cho mọi view hồ sơ (đạo đức, nghiệm thu) có allowedActions/blockedActions riêng.
+type DossierActions = Pick<EthicsDossierView, "allowedActions" | "blockedActions">;
+export const ethicsCan = (view: DossierActions, action: string) => view.allowedActions.includes(action);
+export const ethicsDenial = (view: DossierActions, action: string) => view.blockedActions.find((item) => item.action === action)?.reason ?? "Quyền thao tác chưa được xác minh. Vui lòng tải lại.";
 
 const ethicsPath = (projectId: string) => `/projects/${projectId}/ethics-dossier`;
 export async function getEthicsDossier(projectId: string) { return (await json<{ ethicsDossier: EthicsDossierView }>(ethicsPath(projectId))).ethicsDossier; }
 export async function createEthicsDossier(projectId: string, contextVersion: unknown) { return (await json<{ ethicsDossier: EthicsDossierView }>(ethicsPath(projectId), { method: "POST", body: JSON.stringify({ contextVersion }) })).ethicsDossier; }
 export async function saveEthicsSection<K extends EthicsSectionKey>(projectId: string, section: K, value: EthicsSections[K], contextVersion: unknown) { return (await json<{ ethicsDossier: EthicsDossierView }>(ethicsPath(projectId), { method: "PATCH", body: JSON.stringify({ section, value, contextVersion }) })).ethicsDossier; }
 export async function submitEthicsDossier(projectId: string, contextVersion: unknown) { return (await json<{ ethicsDossier: EthicsDossierView }>(`${ethicsPath(projectId)}/submit`, { method: "POST", body: JSON.stringify({ contextVersion }) })).ethicsDossier; }
-export async function uploadEthicsFile(dossierId: string, file: File, purpose: string, contextVersion: unknown) {
+export async function uploadEthicsFile(dossierId: string, file: File, purpose: string, contextVersion: unknown, relatedEntityType = "ethics_dossier") {
   const form = new FormData();
   form.set("file", file);
-  form.set("relatedEntityType", "ethics_dossier");
+  form.set("relatedEntityType", relatedEntityType);
   form.set("relatedEntityId", dossierId);
   form.set("filePurpose", purpose);
   form.set("contextVersion", JSON.stringify(contextVersion));
@@ -134,3 +140,31 @@ export async function uploadEthicsFile(dossierId: string, file: File, purpose: s
   return body.file as { id: string; fileName: string };
 }
 export async function deleteEthicsFile(fileId: string, contextVersion: unknown) { await json(`/files/${fileId}`, { method: "DELETE", body: JSON.stringify({ contextVersion }) }); }
+
+// Story 6.8 — hồ sơ nghiệm thu. Capability của view chỉ gồm các action `acceptance-dossier.*`.
+export type AcceptanceProduct = { name: string; type: string; description: string };
+export type AcceptanceSections = { results: string; products: AcceptanceProduct[]; summary: string; milestoneNotes: Record<string, string> };
+export type AcceptanceSectionKey = keyof AcceptanceSections;
+export type AcceptanceMissing = { missingSections: string[]; missingMilestoneNotes: string[]; missingFiles: string[]; openRequests: string[]; pendingReports: string[] };
+export type AcceptanceDossierView = {
+  contextVersion: unknown; projectStatus: string; allowedActions: string[]; blockedActions: Array<{ action: string; code?: string; reason: string }>;
+  dossier: null | {
+    id: string; projectId: string; status: string; version: number; sections: AcceptanceSections; readOnly: boolean;
+    createdAt: string; submittedAt: string | null; submittedBy: { id: string; displayName: string } | null;
+    milestones: Array<{ milestoneId: string; title: string; dueDate: string | null; status: string; note: string | null }>;
+    readiness: AcceptanceMissing & { ready: boolean };
+    files: Array<{ id: string; filePurpose: string; fileName: string; uploadedById: string; createdAt: string; canDelete: boolean }>;
+    submissions: Array<{ id: string; version: number; actorId: string; submittedAt: string; snapshot: { files?: Array<{ id: string; filePurpose: string }> } }>;
+  };
+};
+export const ACCEPTANCE_SECTION_LABELS: Record<string, string> = { results: "1. Kết quả đạt được so với mục tiêu", products: "2. Danh sách sản phẩm", summary: "3. Tóm tắt báo cáo tổng kết", milestoneNotes: "4. Giải trình mốc chưa hoàn thành" };
+export const ACCEPTANCE_FILE_LABELS: Record<string, string> = { ACCEPTANCE_FINAL_REPORT: "Báo cáo tổng kết", ACCEPTANCE_PRODUCT_EVIDENCE: "Minh chứng sản phẩm", ACCEPTANCE_OTHER: "Tài liệu khác", ACCEPTANCE_CONTRIBUTION: "Tệp đóng góp của thành viên" };
+export const acceptanceDossierStatusLabel = ethicsDossierStatusLabel;
+
+const acceptancePath = (projectId: string) => `/projects/${projectId}/acceptance-dossier`;
+type AcceptanceBody = { acceptanceDossier: AcceptanceDossierView };
+export async function getAcceptanceDossier(projectId: string) { return (await json<AcceptanceBody>(acceptancePath(projectId))).acceptanceDossier; }
+export async function createAcceptanceDossier(projectId: string, contextVersion: unknown) { return (await json<AcceptanceBody>(acceptancePath(projectId), { method: "POST", body: JSON.stringify({ contextVersion }) })).acceptanceDossier; }
+export async function saveAcceptanceSection<K extends AcceptanceSectionKey>(projectId: string, section: K, value: AcceptanceSections[K], contextVersion: unknown) { return (await json<AcceptanceBody>(acceptancePath(projectId), { method: "PATCH", body: JSON.stringify({ section, value, contextVersion }) })).acceptanceDossier; }
+export async function submitAcceptanceDossier(projectId: string, contextVersion: unknown) { return (await json<AcceptanceBody>(`${acceptancePath(projectId)}/submit`, { method: "POST", body: JSON.stringify({ contextVersion }) })).acceptanceDossier; }
+export const uploadAcceptanceFile = (dossierId: string, file: File, purpose: string, contextVersion: unknown) => uploadEthicsFile(dossierId, file, purpose, contextVersion, "acceptance_dossier");
