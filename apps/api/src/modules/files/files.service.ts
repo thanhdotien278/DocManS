@@ -149,7 +149,7 @@ export class FilesService {
     const originalFileName = this.readFileName(input.originalFileName ?? input.fileName);
     const description = this.readDescription(input.description);
     this.assertUploadInput({ ...input, fileName: originalFileName });
-    await this.assertCanUpload(actor, input.relatedEntityType, input.relatedEntityId);
+    await this.assertCanUpload(actor, input.relatedEntityType, input.relatedEntityId, input.filePurpose);
     if (input.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE) {
       const project = await new ApprovedProjectsService(this.prisma, this.auditLog).getProject(actor, input.relatedEntityId);
       const isPi = project.viewerAuthorization.viewerRelationships.some((relationship: { type: string }) => relationship.type === "TOPIC_PI");
@@ -168,11 +168,12 @@ export class FilesService {
 
     this.uploadedObjectKey = objectKey;
     let record: FileRecord;
+    let relationship: string | undefined;
     try {
       record = (await this.prisma.$transaction(async (tx) => {
         // Object storage has no transaction with Postgres. Rechecking here ensures a lifecycle
         // change between the initial authorization and metadata write rolls back the usable file.
-        await this.assertCanUpload(actor, input.relatedEntityType, input.relatedEntityId);
+        relationship = await this.assertCanUpload(actor, input.relatedEntityType, input.relatedEntityId, input.filePurpose);
         // Gồm cả bản đã xóa để số version không bị dùng lại.
         const latest = await tx.fileRecord.aggregate({ _max: { version: true }, where: { relatedEntityType: input.relatedEntityType, relatedEntityId: input.relatedEntityId, documentType: input.filePurpose } });
         const version = (latest._max.version ?? 0) + 1;
@@ -212,12 +213,12 @@ export class FilesService {
       targetEntity: "file-record",
       targetEntityId: record.id,
       username: actor.username,
-      reason: `${record.relatedEntityType}:${record.relatedEntityId}`
+      reason: `${record.relatedEntityType}:${record.relatedEntityId} purpose=${record.filePurpose} relationship=${relationship ?? "none"}`
     });
     if (record.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE) await this.prisma.projectHistory.create({ data: { projectId: record.relatedEntityId, actorId: actor.id, action: record.filePurpose === "PROJECT_CONTRIBUTION" ? "project.evidence.contribute" : "project.evidence.upload", reason: record.originalFileName, afterFacts: { fileRecordId: record.id, purpose: record.filePurpose } } });
     await this.afterEthicsFileChange(actor, record);
 
-    return this.toFileResponse(record, { canMutate: true });
+    return this.toFileResponse(record, { canMutate: !EVALUATION_FILE_PURPOSES.includes(record.filePurpose) });
   }
 
   async listFiles(actor: SafeUserContext, input: { relatedEntityType: string; relatedEntityId: string }) {
@@ -418,6 +419,7 @@ export class FilesService {
       if (!project.viewerAuthorization.allowedActions.includes("project.evidence.contribute")) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
       return;
     }
+    if (filePurpose && EVALUATION_FILE_PURPOSES.includes(filePurpose)) return this.assertCanUploadEvaluationFile(actor, relatedEntityType, relatedEntityId, filePurpose);
     if (relatedEntityType === RESEARCH_PROPOSAL_ENTITY_TYPE && !isInternalResearcherEligible(actor)) {
       throw new ForbiddenException({ message: "Chỉ PI hoặc thư ký nội bộ được tải tệp cho hồ sơ đề xuất." });
     }
@@ -425,11 +427,35 @@ export class FilesService {
     if (proposal.status !== "draft" && proposal.status !== "supplement_requested") {
       throw new ForbiddenException({ message: "Hồ sơ không còn cho phép tải tệp." });
     }
-    if (proposal.ownerId === actor.id) return;
+    if (proposal.ownerId === actor.id) return "PROPOSAL_PI";
     const participation = await this.participation.resolveForProposal(actor.id, proposal);
     if (!participation.roles.includes("TOPIC_SECRETARY")) {
       throw new ForbiddenException({ message: "Không có quyền tải tệp cho hồ sơ đề xuất này." });
     }
+    return "TOPIC_SECRETARY";
+  }
+
+  /** Story 5.6: tệp hành chính khi hồ sơ đang đánh giá. Tài liệu họp chỉ thư ký đề tài; biên bản chỉ thư ký hội đồng không xung đột. */
+  private async assertCanUploadEvaluationFile(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string, filePurpose: string) {
+    const proposal = await this.findRelatedProposal(relatedEntityType, relatedEntityId);
+    if (proposal.status !== "under_review") {
+      throw new ForbiddenException({ message: "Chỉ hồ sơ đang đánh giá mới nhận tệp hành chính đánh giá." });
+    }
+    if (filePurpose === "MEETING_MATERIAL") {
+      const participation = await this.participation.resolveForProposal(actor.id, proposal);
+      if (!isInternalResearcherEligible(actor) || !participation.roles.includes("TOPIC_SECRETARY")) {
+        throw new ForbiddenException({ message: "Chỉ thư ký đề tài đang hiệu lực được tải tài liệu họp." });
+      }
+      return "TOPIC_SECRETARY";
+    }
+    const access = await this.reviewAccess.resolveForProposal(actor.id, proposal.id);
+    if (!access.isAssignedReviewer || access.assignmentRole !== "council_secretary") {
+      throw new ForbiddenException({ message: "Chỉ thư ký hội đồng được tải biên bản họp hội đồng." });
+    }
+    if ((await this.participation.evaluateConflict(actor.id, proposal.id)).conflicted) {
+      throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người tham gia hồ sơ không thể nộp biên bản hội đồng." });
+    }
+    return "COUNCIL_SECRETARY";
   }
 
   private async assertCanRead(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {
@@ -443,7 +469,7 @@ export class FilesService {
       await new ApprovedProjectsService(this.prisma, this.auditLog).getProject(actor, relatedEntityId);
       return;
     }
-    await new ResearchProposalsService(this.prisma, this.auditLog, this.participation, this.reviewAccess, this.managementOfficers).getProposal(actor, relatedEntityId);
+    return new ResearchProposalsService(this.prisma, this.auditLog, this.participation, this.reviewAccess, this.managementOfficers).getProposal(actor, relatedEntityId);
   }
 
   private async canMutateEntity(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {
@@ -512,7 +538,9 @@ export class FilesService {
   private async findReadableFile(actor: SafeUserContext, fileId: string) {
     const record = await this.findActiveFile(fileId);
     if (record.relatedEntityType !== RESEARCH_PROPOSAL_ENTITY_TYPE) return record;
-    await this.hideUnreadable("Không tìm thấy tệp.", () => this.assertCanRead(actor, record.relatedEntityType, record.relatedEntityId));
+    // Chỉ tệp có trong danh sách đã lọc theo người xem (vd. biên bản hội đồng ẩn với người tham gia).
+    const proposal = await this.hideUnreadable("Không tìm thấy tệp.", () => this.assertCanRead(actor, record.relatedEntityType, record.relatedEntityId));
+    if (!proposal?.attachments.some((attachment: { id: string }) => attachment.id === record.id)) throw new NotFoundException({ message: "Không tìm thấy tệp." });
     return record;
   }
 

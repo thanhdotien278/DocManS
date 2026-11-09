@@ -105,6 +105,8 @@ export type MyProposalReview = {
   criteria: ReviewScoreCriterion[];
   maxTotalScore: number;
   recommendations: ReviewRecommendationOption[];
+  /** Có sau khi lưu/nộp: token hồ sơ mới cho lần ghi kế tiếp. */
+  contextVersion?: ViewerAuthorizationV1["contextVersion"];
 };
 
 export type SubmittedProposalReview = {
@@ -202,6 +204,7 @@ export type ProposalDecisionPackage = {
   evaluationSummary: ProposalEvaluationSummary | null;
   decisions: ProposalDecisionRecord[];
   attachmentCount: number;
+  attachments: Array<{ id: string; fileName: string; filePurpose: string; version: number; sizeBytes: number; mimeType: string; createdAt: string }>;
   packageRevision: number;
   disclosure?: { protectedReviewData: "REDACTED" | "HIDDEN_CONFLICT" | "FULL" };
   history: Array<{
@@ -245,14 +248,6 @@ export type ProposalReviewPackage = {
     sizeBytes: number;
     uploaderDisplayName: string;
     createdAt: string;
-  }>;
-  history: Array<{
-    id: string;
-    fromStatus: string;
-    toStatus: string;
-    submittedAt: string;
-    actorDisplayName: string;
-    note: string;
   }>;
 };
 
@@ -481,10 +476,10 @@ export async function loadProposalDecisionPackage(proposalId: string) {
   return response.decisionPackage;
 }
 
-export async function decideProposal(proposalId: string, decision: "approve" | "reject", note: string, packageRevision: number, contextVersion: ViewerAuthorizationV1["contextVersion"]) {
+export async function decideProposal(proposalId: string, decision: "approve" | "reject", note: string, packageRevision: number, contextVersion: ViewerAuthorizationV1["contextVersion"], published: { publicSummary: string; requiredFollowUp: string } = { publicSummary: "", requiredFollowUp: "" }) {
   return requestJson<{ decision: ProposalDecisionRecord; proposalStatus: string; proposalStatusLabel: string }>(
     `/research-proposals/${proposalId}/${decision}`,
-    { method: "POST", body: JSON.stringify({ note, packageRevision, contextVersion }) }
+    { method: "POST", body: JSON.stringify({ note, packageRevision, contextVersion, ...published }) }
   );
 }
 

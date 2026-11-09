@@ -73,7 +73,7 @@ test("thành viên chỉ đọc: upload, sửa, xóa bị từ chối, vẫn xem
   delete svc.assertCanUpload;
   svc.prisma.researchProposal = { async findUnique() { return { id: "p1", ownerId: "pi", status: "draft", hostOrganizationUnitId: "u1" }; } };
   svc.participation = { async resolveForProposal() { return { roles: ["TOPIC_MEMBER"] }; } };
-  svc.assertCanRead = async () => {};
+  svc.assertCanRead = async () => ({ attachments: [{ id: file.id }] });
   const member = { id: "member", username: "member", systemRole: "RESEARCHER" };
   await assert.rejects(() => upload2(svc, member), ForbiddenException);
   await assert.rejects(() => svc.updateFile(member, file.id, { description: null }), ForbiddenException);

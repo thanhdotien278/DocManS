@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { resolveProposalReviewAccess, type ProposalReviewAccess, type ReviewAssignmentLike } from "./proposal-review-access.js";
+import { findCurrentSubmissionEvidence, type EvaluationProposalRecord } from "../proposal-evaluations/proposal-evaluation-support.js";
 
-type AssignmentRow = ReviewAssignmentLike & { proposalId: string };
+type AssignmentRow = ReviewAssignmentLike & { proposalId: string; reviewedSubmissionEventId?: string | null };
 
 /**
  * ST-3.2 — the single backend seam for "is this user an assigned reviewer on this proposal".
@@ -58,7 +59,7 @@ export class ProposalReviewAccessService {
       const [assignments, persistedReview] = await Promise.all([
         this.prisma.proposalReviewAssignment.findMany({
           where: { proposalId, reviewerUserId: userId },
-          select: { id: true, status: true, assignmentRole: true, assignedAt: true, effectiveFrom: true, effectiveUntil: true, invitationStatus: true, councilEstablishedAt: true }
+          select: { id: true, status: true, assignmentRole: true, assignedAt: true, effectiveFrom: true, effectiveUntil: true, invitationStatus: true, councilEstablishedAt: true, reviewedSubmissionEventId: true }
         }),
         this.prisma.proposalReview.findFirst({
           where: { proposalId, reviewerUserId: userId, status: { in: ["draft", "submitted"] } },
@@ -66,9 +67,23 @@ export class ProposalReviewAccessService {
         })
       ]);
 
-      return { ...resolveProposalReviewAccess(assignments as ReviewAssignmentLike[], asOf), hasPersistedReview: Boolean(persistedReview), hasReviewConflict: Boolean(persistedReview) || assignments.some((assignment) => (assignment.status === "assigned" || assignment.status === "completed") && (!assignment.effectiveUntil || assignment.effectiveUntil > asOf)), conflictUnresolved: false };
+      // Story 5.4: chỉ phân công của vòng hiện hành cấp quyền đọc; xung đột vẫn tính mọi vòng (bên dưới).
+      const currentEventId = assignments.length ? await this.findCurrentSubmissionEventId(proposalId) : null;
+      const currentRound = assignments.filter((assignment) => currentEventId !== null && assignment.reviewedSubmissionEventId === currentEventId);
+
+      return { ...resolveProposalReviewAccess(currentRound as ReviewAssignmentLike[], asOf), hasPersistedReview: Boolean(persistedReview), hasReviewConflict: Boolean(persistedReview) || assignments.some((assignment) => (assignment.status === "assigned" || assignment.status === "completed") && (!assignment.effectiveUntil || assignment.effectiveUntil > asOf)), conflictUnresolved: false };
     } catch {
       return { ...resolveProposalReviewAccess(null, asOf), hasPersistedReview: false, conflictUnresolved: true };
+    }
+  }
+
+  /** Lỗi hoặc không xác định được lần nộp hiện tại → null, tức không cấp quyền đọc (fail closed). */
+  private async findCurrentSubmissionEventId(proposalId: string) {
+    try {
+      const proposal = await this.prisma.researchProposal.findUnique({ where: { id: proposalId } });
+      return proposal ? (await findCurrentSubmissionEvidence(this.prisma, proposal as unknown as EvaluationProposalRecord)).eventId : null;
+    } catch {
+      return null;
     }
   }
 
@@ -85,7 +100,7 @@ export class ProposalReviewAccessService {
       [assignments, persistedReviews] = await Promise.all([
         this.prisma.proposalReviewAssignment.findMany({
           where: { proposalId: { in: proposalIds }, reviewerUserId: userId },
-          select: { id: true, proposalId: true, status: true, assignmentRole: true, assignedAt: true, effectiveFrom: true, effectiveUntil: true, invitationStatus: true, councilEstablishedAt: true }
+          select: { id: true, proposalId: true, status: true, assignmentRole: true, assignedAt: true, effectiveFrom: true, effectiveUntil: true, invitationStatus: true, councilEstablishedAt: true, reviewedSubmissionEventId: true }
         }) as Promise<AssignmentRow[]>,
         this.prisma.proposalReview.findMany({
           where: { proposalId: { in: proposalIds }, reviewerUserId: userId, status: { in: ["draft", "submitted"] } },
@@ -97,16 +112,24 @@ export class ProposalReviewAccessService {
       return resolved;
     }
 
-    const byProposal = new Map<string, ReviewAssignmentLike[]>();
+    const byProposal = new Map<string, AssignmentRow[]>();
     for (const assignment of assignments) {
       const bucket = byProposal.get(assignment.proposalId) ?? [];
       bucket.push(assignment);
       byProposal.set(assignment.proposalId, bucket);
     }
 
+    // Story 5.4: như `resolveForProposal`, chỉ phân công vòng hiện hành cấp quyền đọc; xung đột tính mọi vòng.
+    const currentEventIds = new Map<string, string | null>();
+    for (const proposalId of byProposal.keys()) currentEventIds.set(proposalId, await this.findCurrentSubmissionEventId(proposalId));
+    const currentRound = (proposalId: string) => (byProposal.get(proposalId) ?? []).filter((assignment) => {
+      const eventId = currentEventIds.get(proposalId);
+      return eventId != null && assignment.reviewedSubmissionEventId === eventId;
+    });
+
     const persisted = new Set(persistedReviews.map((review) => review.proposalId));
     for (const proposalId of proposalIds) {
-      resolved.set(proposalId, { ...resolveProposalReviewAccess(byProposal.get(proposalId) ?? [], asOf), hasPersistedReview: persisted.has(proposalId), hasReviewConflict: persisted.has(proposalId) || (byProposal.get(proposalId) ?? []).some((assignment) => (assignment.status === "assigned" || assignment.status === "completed") && (!assignment.effectiveUntil || assignment.effectiveUntil > asOf)), conflictUnresolved: false });
+      resolved.set(proposalId, { ...resolveProposalReviewAccess(currentRound(proposalId), asOf), hasPersistedReview: persisted.has(proposalId), hasReviewConflict: persisted.has(proposalId) || (byProposal.get(proposalId) ?? []).some((assignment) => (assignment.status === "assigned" || assignment.status === "completed") && (!assignment.effectiveUntil || assignment.effectiveUntil > asOf)), conflictUnresolved: false });
     }
 
     return resolved;
