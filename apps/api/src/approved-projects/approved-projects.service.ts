@@ -11,7 +11,7 @@ import { isRelationshipActiveAt } from "../proposals-shared/proposal-participati
 import { PARTICIPANT_POLICY_ROLE_LABELS, participantPolicyFor, readParticipantPolicy } from "../proposals-shared/participant-policy.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { recordParticipantWaiver } from "../proposal-evaluations/proposal-evaluation-support.js";
-import { assertProposalContext } from "../proposals-shared/proposal-mutation.js";
+import { assertProposalContext, isSerializationFailure } from "../proposals-shared/proposal-mutation.js";
 import { projectContextVersion, projectViewerAuthorizationV1, PROJECT_STATUSES, TERMINAL_REQUEST_STATUSES, type ProjectOfficerFact } from "./project-capability-v1.js";
 
 const PREPARING = PROJECT_STATUSES.preparing;
@@ -63,7 +63,7 @@ export class ApprovedProjectsService {
       if (expected !== SKIP_CONTEXT) assertProjectContext(expected, project);
       return work(tx, currentActor, project);
     }, { isolationLevel: "Serializable", timeout: 15000 }).catch(async (error: AnyRecord) => {
-      const denied = error?.code === "P2034" ? new ConflictException({ code: "CONTEXT_VERSION_MISMATCH" }) : error;
+      const denied = isSerializationFailure(error) ? new ConflictException({ code: "CONTEXT_VERSION_MISMATCH" }) : error;
       const evidence = denied as AnyRecord;
       await this.auditLog.record({ action: "project-mutation-denied", result: "failure", actorId: actor.id, targetEntity: "approved-project", targetEntityId: projectId, username: actor.username, reason: evidence?.response?.code ?? evidence?.code ?? "ACTION_NOT_GRANTED" }).catch(() => undefined);
       throw denied;

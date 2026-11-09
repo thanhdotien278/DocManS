@@ -1,4 +1,4 @@
-import { joinedTransaction, runProposalMutation } from "../../proposals-shared/proposal-mutation.js";
+import { isSerializationFailure, joinedTransaction, runProposalMutation } from "../../proposals-shared/proposal-mutation.js";
 import { ApprovedProjectsService } from "../../approved-projects/approved-projects.service.js";
 import { projectContextVersion } from "../../approved-projects/project-capability-v1.js";
 import { ResearchProposalsService } from "../../research-proposals/research-proposals.service.js";
@@ -137,6 +137,7 @@ export class FilesService {
       }, { isolationLevel: "Serializable", timeout: 15000 });
     } catch (error) {
       if (uploadedKey) await this.objectStorage.deleteObject?.(uploadedKey);
+      if (isSerializationFailure(error)) throw new ConflictException({ code: "CONTEXT_VERSION_MISMATCH", message: "Đề tài đã thay đổi. Vui lòng tải lại và thực hiện lại thao tác." });
       throw error;
     }
   }
