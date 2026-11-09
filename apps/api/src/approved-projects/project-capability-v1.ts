@@ -10,7 +10,8 @@ export const PROJECT_ACTIONS: PermissionActionV1[] = [
   "project.adjustment.create", "project.adjustment.edit-draft", "project.adjustment.submit", "project.adjustment.review", "project.adjustment.request-supplement", "project.adjustment.approve", "project.adjustment.reject", "project.adjustment.withdraw",
   "project.extension.create", "project.extension.edit-draft", "project.extension.submit", "project.extension.validate", "project.extension.prepare", "project.extension.request-supplement", "project.extension.approve", "project.extension.reject", "project.extension.withdraw",
   "project.history.read",
-  "ethics-dossier.read", "ethics-dossier.create", "ethics-dossier.edit", "ethics-dossier.submit"
+  "ethics-dossier.read", "ethics-dossier.create", "ethics-dossier.edit", "ethics-dossier.submit",
+  "acceptance-dossier.read", "acceptance-dossier.create", "acceptance-dossier.edit", "acceptance-dossier.contribute", "acceptance-dossier.submit"
 ];
 
 export const PROJECT_STATUSES = {
@@ -45,6 +46,7 @@ export type ProjectCapabilityInput = {
     conflictVersion?: number;
     delegationVersion?: number;
     ethicsDossier?: { status: string } | null;
+    acceptanceDossier?: { status: string } | null;
   };
   projectOfficer?: ProjectOfficerFact | null;
   participant?: { isParticipant: boolean; role?: string; effectiveFrom?: string; effectiveUntil?: string | null };
@@ -150,6 +152,7 @@ function projectActionDenial(action: PermissionActionV1, input: ProjectCapabilit
     if (action === "project.extension.approve" || action === "project.extension.reject") return signDenial("extension", input);
   }
   if (action.startsWith("ethics-dossier.")) return ethicsDossierDenial(action, input);
+  if (action.startsWith("acceptance-dossier.")) return acceptanceDossierDenial(action, input);
   return blocked("ACTION_NOT_GRANTED");
 }
 
@@ -163,6 +166,17 @@ function ethicsDossierDenial(action: PermissionActionV1, input: ProjectCapabilit
   if (!ETHICS_DOSSIER_PROJECT_STATUSES.includes(input.project.status)) return blocked("WORKFLOW_STATE_DENIED");
   const dossier = input.project.ethicsDossier;
   if (action === "ethics-dossier.create") return dossier ? blocked("WORKFLOW_STATE_DENIED") : null;
+  return dossier?.status === "draft" ? null : blocked("WORKFLOW_STATE_DENIED");
+}
+
+// Story 6.8: chỉ PI soạn và nộp; thành viên/thư ký có trách nhiệm chỉ đóng góp tệp; chỉ khi đề tài đang thực hiện và hồ sơ còn nháp.
+function acceptanceDossierDenial(action: PermissionActionV1, input: ProjectCapabilityInput & { scoped: boolean; participantActive: boolean; isPi: boolean; canRead: boolean }) {
+  if (action === "acceptance-dossier.read") return input.canRead ? null : blocked("ACTION_NOT_GRANTED");
+  const granted = input.isPi || (action === "acceptance-dossier.contribute" && input.scoped && input.participantActive && (input.participant?.role === "TOPIC_SECRETARY" || input.responsibleMember === true));
+  if (!granted) return blocked("ACTION_NOT_GRANTED");
+  if (input.project.status !== PROJECT_STATUSES.executing) return blocked("WORKFLOW_STATE_DENIED");
+  const dossier = input.project.acceptanceDossier;
+  if (action === "acceptance-dossier.create") return dossier ? blocked("WORKFLOW_STATE_DENIED") : null;
   return dossier?.status === "draft" ? null : blocked("WORKFLOW_STATE_DENIED");
 }
 
