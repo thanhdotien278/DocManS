@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-11-08T23:30:00+07:00
+last_updated: 2026-11-09
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -132,7 +132,8 @@ development_status:
   epic-10: in-progress
   10-1-lap-ke-hoach-hoi-dong-thanh-vien-va-can-cu-lien-quan: review
   10-2-thu-ky-khoa-hoc-ho-tro-van-hanh-hoi-dong: review
-  10-3-tao-hoan-thien-va-nop-ho-so-dao-duc: backlog
+  # 10.3: review 2026-11-09. Phần 1 backend (spec-10-3-tao-hoan-thien-va-nop-ho-so-dao-duc.md) và phần 2 giao diện (spec-10-3-p2-giao-dien-ho-so-dao-duc.md) xong, quyết định D-042. Kiểm chứng: test DB 4/4, typecheck, thử tay trên trình duyệt (PI, thư ký).
+  10-3-tao-hoan-thien-va-nop-ho-so-dao-duc: review
   10-4-kiem-tra-ho-so-dao-duc-va-xu-ly-bo-sung: backlog
   10-5-phan-cong-hoi-dong-va-reviewer-voi-eligibility-conflict: review
   10-6-thanh-vien-hoi-dong-hoac-reviewer-nop-danh-gia-duoc-phan-cong: review

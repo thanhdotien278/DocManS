@@ -267,16 +267,18 @@
   summary: Hiện cờ "Quá hạn" của yêu cầu bổ sung ở hàng đợi CV và mục "Cần tôi xử lý" của PI, không chỉ trang chi tiết.
   evidence: `docs/ux-ui-spec.md` dòng 328, 330 yêu cầu theo dõi bổ sung chờ phản hồi/hạn phản hồi ở các danh sách; Story 5.2 chỉ làm trang chi tiết.
 
-- source_spec: `_bmad-output/implementation-artifacts/spec-5-7-5-8-goi-quyet-dinh-va-cong-bo-ket-qua.md`
-  summary: Thêm test cho quyết định chỉ có `requiredFollowUp` (tóm tắt trống), kiểm tra trim và vẫn công bố được.
-  evidence: Test hiện tại luôn gửi đủ hai trường; mỗi fixture chỉ ra được một quyết định.
-- source_spec: `_bmad-output/implementation-artifacts/spec-5-7-5-8-goi-quyet-dinh-va-cong-bo-ket-qua.md`
-  summary: Chưa có test runtime cho web client `decideProposal` gửi `publicSummary`/`requiredFollowUp` và cho nhánh tải lại khi lệch gói.
-  evidence: Repo không có hạ tầng test web runtime; hiện chỉ kiểm được thủ công qua UI.
+- source_spec: `_bmad-output/implementation-artifacts/spec-10-3-tao-hoan-thien-va-nop-ho-so-dao-duc.md`
+  summary: Cho PI/CV phụ trách hủy hoặc xóa hồ sơ đạo đức còn ở trạng thái nháp.
+  evidence: Người dùng chốt (D-042, 09/11/2026) không làm hủy nháp trong Story 10.3.
 
-- source_spec: `_bmad-output/implementation-artifacts/spec-5-6-thu-ky-ho-tro-hanh-chinh-danh-gia.md`
-  summary: "Task" và "tracking note" hành chính của thư ký (Story 5.6) chuyển sang Epic 7 (quản lý công việc). Story 5.6 chỉ làm lát cắt tệp hành chính (`MEETING_MATERIAL`, `COUNCIL_MINUTES`).
-  evidence: Chưa có mô hình task trong hệ thống; dựng mới ngoài phạm vi 5.6. Quyết định tạm khi người dùng vắng mặt, cần xác nhận.
-- source_spec: `spec-5-4-reviewer-truy-cap-va-nop-danh-gia-cua-minh.md`
-  summary: Chưa có test tự động cho việc `proposal-review-form.tsx` dùng `contextVersion` trả về sau khi lưu nháp.
-  evidence: Repo không có harness test component cho web; hiện chỉ được kiểm chứng thủ công trên localhost.
+- source_spec: `_bmad-output/implementation-artifacts/spec-10-3-tao-hoan-thien-va-nop-ho-so-dao-duc.md`
+  summary: Story 10.3 phần 2 — giao diện hồ sơ đạo đức: mục "Hồ sơ đạo đức" trên `project-detail.tsx`, trang `/projects/[id]/ethics-dossier` (6 thẻ mục, thẻ tệp có danh sách thiếu, nút nộp có xác nhận, chỉ xem sau khi nộp), helper trong `apps/web/src/lib/projects-api.ts`.
+  evidence: Người dùng chọn tách spec 10.3 (09/11/2026) vì ~2.900 token; phần 1 làm backend + test.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-10-3-tao-hoan-thien-va-nop-ho-so-dao-duc.md`
+  summary: Lưu ý cho phần 2 (UI) Story 10.3 — mọi thao tác ghi hồ sơ đạo đức (mục, tệp) tăng `aggregateVersion` của đề tài; sau mỗi lần ghi, UI phải dùng `contextVersion` trong response của API hồ sơ, hoặc gọi lại `GET /api/v1/projects/:id/ethics-dossier` sau thao tác tệp, nếu không lần lưu tiếp theo nhận 409.
+  evidence: Review 10.3 (triage #1) thêm tăng version để chặn ghi đè im lặng; response của module tệp không trả `contextVersion` của đề tài.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-10-3-tao-hoan-thien-va-nop-ho-so-dao-duc.md`
+  summary: Story 10.4 phải tăng `EthicsDossier.version` trước khi nộp lại, nếu không khóa idempotency thông báo `ethics-dossier:{id}:v{version}` sẽ bỏ thông báo lần nộp thứ hai.
+  evidence: Review 10.3 (triage #12): 10.3 chỉ có một lần nộp nên `version` luôn là 1.
