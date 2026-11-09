@@ -86,7 +86,7 @@ context: ['{project-root}/_bmad-output/implementation-artifacts/epic-5-context.m
 | 13 | blind | Khi bỏ trống tóm tắt, PI không thấy lý do từ chối | false | Đây là quyết định tạm đã ghi trong spec (tóm tắt không bắt buộc), không phải lỗi |
 | 14 | verif | Trường hợp chỉ có yêu cầu tiếp theo chưa có test | low | defer |
 | 15 | verif | Web client gửi trường công bố chưa có test runtime | medium | Repo không có test web runtime → defer, kiểm thủ công qua UI |
-| 16 | codex (gpt-6-astra) | GĐ không cần `organizationScopes` vẫn xem gói và quyết định; AC đòi "GĐ có scope rõ ràng" | high | Có từ trước (`assertEvaluationReadScope` cố ý cho GĐ đọc toàn Học viện; `docs/permission-matrix.md` coi BGĐ là toàn Học viện). Người dùng chốt 09/11/2026: GĐ toàn Học viện (D-042) → false, đã sửa AC, không đổi code |
+| 16 | codex (gpt-6-astra) | GĐ không cần `organizationScopes` vẫn xem gói và quyết định; AC đòi "GĐ có scope rõ ràng" | high | Có từ trước (`assertEvaluationReadScope` cố ý cho GĐ đọc toàn Học viện; `docs/permission-matrix.md` coi BGĐ là toàn Học viện). Người dùng chốt 09/11/2026: GĐ toàn Học viện (D-043) → false, đã sửa AC, không đổi code |
 | 17 | codex (gpt-6-astra) | Gói dùng tệp active hiện tại, không theo version đã trình | low | Trùng #2 → reject |
 
 ## Verification
