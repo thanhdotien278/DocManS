@@ -74,6 +74,10 @@ model User {
   credentialDeliveries AccountCredentialDelivery[]
   researcherProfileHistories ResearcherProfileHistory[]
   notifications UserNotification[]
+  ethicsDossierApplications EthicsDossier[] @relation("EthicsDossierApplicant")
+  createdEthicsDossiers EthicsDossier[] @relation("EthicsDossierCreator")
+  submittedEthicsDossiers EthicsDossier[] @relation("EthicsDossierSubmitter")
+  ethicsDossierSubmissions EthicsDossierSubmission[] @relation("EthicsDossierSubmissionActor")
 
   @@map("users")
 }
@@ -104,6 +108,7 @@ model OrganizationUnit {
   hostedResearchProposals ResearchProposal[]
   approvedProjects ApprovedProject[]
   researcherProfiles ResearcherProfile[]
+  ethicsDossiers EthicsDossier[]
 
   @@index([parentId])
   @@map("organization_units")
@@ -771,6 +776,7 @@ model ApprovedProject {
   history                   ProjectHistory[]
   fundingRecords            ProjectFundingRecord[]
   liquidations              ProjectLiquidation[]
+  ethicsDossier             EthicsDossier?
 
   @@index([hostOrganizationUnitId, status])
   @@index([status, endDate])
@@ -1116,4 +1122,45 @@ model UserNotification {
   @@unique([userId, idempotencyKey])
   @@index([userId, createdAt])
   @@map("user_notifications")
+}
+
+/// Story 10.3 (D-042): hồ sơ đạo đức (IRB) của một đề tài đã duyệt; tối đa một hồ sơ cho mỗi đề tài.
+model EthicsDossier {
+  id                     String   @id @default(uuid())
+  projectId              String   @unique @map("project_id")
+  project                ApprovedProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  applicantUserId        String   @map("applicant_user_id")
+  applicant              User     @relation("EthicsDossierApplicant", fields: [applicantUserId], references: [id], onDelete: Restrict)
+  hostOrganizationUnitId String   @map("host_organization_unit_id")
+  hostOrganizationUnit   OrganizationUnit @relation(fields: [hostOrganizationUnitId], references: [id], onDelete: Restrict)
+  /// draft | submitted
+  status                 String   @default("draft")
+  sections               Json
+  sourceContext          Json     @map("source_context")
+  version                Int      @default(1)
+  createdById            String   @map("created_by_id")
+  createdBy              User     @relation("EthicsDossierCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  submittedAt            DateTime? @map("submitted_at")
+  submittedById          String?  @map("submitted_by_id")
+  submittedBy            User?    @relation("EthicsDossierSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+  submissions            EthicsDossierSubmission[]
+
+  @@map("ethics_dossiers")
+}
+
+/// Phiên bản đã nộp của hồ sơ đạo đức; bất biến.
+model EthicsDossierSubmission {
+  id          String   @id @default(uuid())
+  dossierId   String   @map("dossier_id")
+  dossier     EthicsDossier @relation(fields: [dossierId], references: [id], onDelete: Restrict)
+  version     Int
+  actorId     String   @map("actor_id")
+  actor       User     @relation("EthicsDossierSubmissionActor", fields: [actorId], references: [id], onDelete: Restrict)
+  snapshot    Json
+  submittedAt DateTime @map("submitted_at")
+
+  @@unique([dossierId, version])
+  @@map("ethics_dossier_submissions")
 }

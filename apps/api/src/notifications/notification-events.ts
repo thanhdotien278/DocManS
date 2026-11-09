@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
-export type NotificationSourceType = "approval" | "proposal" | "review_assignment";
+export type NotificationSourceType = "approval" | "proposal" | "review_assignment" | "ethics_dossier";
 
 export type NotificationEvent = {
   userIds: Array<string | null | undefined>;
