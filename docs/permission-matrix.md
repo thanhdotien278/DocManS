@@ -66,7 +66,7 @@ Directors who monitor; it is no longer the Science Deputy Director.
   establishment, IRB certificate, project extension and adjustment.
 - Sees every project in the Academy and per-project funding; manages funding,
   disbursement and settlement.
-- Academy-wide scope for proposal decisions (D-042): queue, decision package, files and
+- Academy-wide scope for proposal decisions (D-043): queue, decision package, files and
   approve/reject need no organization/unit scope check; role, `HEAD_REVIEW`, state and
   conflict checks still apply.
 
