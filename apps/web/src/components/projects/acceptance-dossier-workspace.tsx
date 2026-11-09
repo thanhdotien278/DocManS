@@ -32,7 +32,7 @@ export function AcceptanceDossierWorkspace({ projectId }: { projectId: string })
 
   async function refresh() {
     setLoading(true);
-    try { setView(await getAcceptanceDossier(projectId)); }
+    try { setView(await getAcceptanceDossier(projectId)); setNotice(null); setMissing(null); }
     catch (error) { setNoticeText(message(error)); setView(null); }
     finally { setLoading(false); }
   }
@@ -77,7 +77,7 @@ export function AcceptanceDossierWorkspace({ projectId }: { projectId: string })
   if (loading && !view) return <p>Đang tải hồ sơ nghiệm thu…</p>;
   if (!view) return <div><p role="alert">{notice?.text || "Không có quyền xem hồ sơ nghiệm thu."}</p><button className="button" onClick={() => void refresh()}>Thử lại</button></div>;
 
-  const back = <div className="button-row"><Link className="button" href={`/projects/${projectId}`}>Quay lại đề tài</Link><button className="button" type="button" disabled={busy} onClick={() => void refresh()}>Tải lại</button></div>;
+  const back = <div className="button-row"><Link className="button" href={`/projects/${projectId}`}>Quay lại đề tài</Link><button className="button" type="button" disabled={busy || loading} onClick={() => void refresh()}>Tải lại</button></div>;
   const status = notice ? <p role={notice.error ? "alert" : "status"} className={notice.error ? "form-error" : undefined}>{notice.text}</p> : null;
 
   if (!dossier) {
@@ -87,8 +87,9 @@ export function AcceptanceDossierWorkspace({ projectId }: { projectId: string })
 
   const draft = dossier.status === "draft";
   const editable = !dossier.readOnly && !!drafts;
-  const contributor = draft && !editable && ethicsCan(view, "acceptance-dossier.contribute");
-  const uploadable = (purpose: string) => editable || (contributor && purpose === "ACCEPTANCE_CONTRIBUTION");
+  // Theo readOnly của server, không theo `drafts` (còn null ở lượt render đầu) để PI không bị coi là người đóng góp.
+  const contributor = draft && dossier.readOnly && ethicsCan(view, "acceptance-dossier.contribute");
+  const uploadable = (purpose: string) => !dossier.readOnly || (contributor && purpose === "ACCEPTANCE_CONTRIBUTION");
   const sections = dossier.sections;
   const milestoneTitle = new Map(dossier.milestones.map((row) => [row.milestoneId, row.title]));
   const canSubmit = ethicsCan(view, "acceptance-dossier.submit");
@@ -157,8 +158,7 @@ export function AcceptanceDossierWorkspace({ projectId }: { projectId: string })
     {draft ? <SectionCard title="Nộp hồ sơ">
       {dossier.readiness.ready ? <p>Hồ sơ đã đủ điều kiện nộp.</p> : <><p>Hồ sơ chưa đủ điều kiện nộp.</p>{missingList(dossier.readiness)}</>}
       {missing ? <div role="alert"><p>Không nộp được vì hồ sơ còn thiếu:</p>{missingList(missing)}</div> : null}
-      <div className="button-row"><button className="button primary" type="button" disabled={busy || !canSubmit} onClick={() => void act(() => submitAcceptanceDossier(projectId, view.contextVersion), "Nộp hồ sơ nghiệm thu? Sau khi nộp, hồ sơ chỉ còn chế độ xem và đề tài chuyển sang chờ nghiệm thu.")}>Nộp hồ sơ</button></div>
-      {!canSubmit ? <p>{ethicsDenial(view, "acceptance-dossier.submit")}</p> : null}
+      {canSubmit ? <div className="button-row"><button className="button primary" type="button" disabled={busy} onClick={() => void act(() => submitAcceptanceDossier(projectId, view.contextVersion), "Nộp hồ sơ nghiệm thu? Sau khi nộp, hồ sơ chỉ còn chế độ xem và đề tài chuyển sang chờ nghiệm thu.")}>Nộp hồ sơ</button></div> : <p>{ethicsDenial(view, "acceptance-dossier.submit")}</p>}
     </SectionCard> : <SectionCard title="Các phiên bản đã nộp">{!dossier.submissions.length ? <p>Chưa có phiên bản đã nộp.</p> : <table><thead><tr><th>Phiên bản</th><th>Ngày nộp</th><th>Số tệp</th></tr></thead><tbody>{dossier.submissions.map((row) => <tr key={row.id}><td>Phiên bản {row.version}</td><td>{date(row.submittedAt)}</td><td>{row.snapshot.files?.length ?? 0}</td></tr>)}</tbody></table>}</SectionCard>}
   </div>;
 }
