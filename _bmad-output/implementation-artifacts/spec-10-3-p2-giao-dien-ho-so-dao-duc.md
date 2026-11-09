@@ -72,3 +72,14 @@ context:
 
 **Manual checks:**
 - Chạy app (web + api), đăng nhập bằng tài khoản seed của PI và thư ký, đi hết các AC trên trình duyệt.
+
+## Implementation Notes
+
+- Sau khi subagent làm xong, advisor rà lại và tìm ra các lỗi sau, đã sửa trực tiếp:
+  - Các thẻ chưa sửa giờ được nạp lại từ mỗi lần GET mới; thẻ đang sửa dở (`dirty`) giữ nguyên nội dung.
+  - Lỗi 409 `CONTEXT_VERSION_MISMATCH` hiện thông báo tiếng Việt, hướng dẫn bấm "Tải lại".
+  - Thông báo thành công không còn dùng class lỗi.
+  - Lịch sử đề tài không lặp `reason` khi nó trùng nhãn.
+  - Nhãn mục và tệp khớp tên trong D-042.
+- Phần 2 không qua 3 lớp review độc lập như phần 1. Spec được triển khai ngay vì các quyết định giao diện đã được duyệt ở Q10 (D-042).
+- Đã thử trên trình duyệt với bản đã sửa: tạo hồ sơ, lưu mục, lưu từ phiên bản cũ, tải lại, lưu lại. Luồng tải tệp và nộp chỉ được subagent thử trên bản trước khi sửa.
