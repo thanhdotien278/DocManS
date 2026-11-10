@@ -2347,3 +2347,143 @@ summary:focus-visible {
   width: 96px;
   text-align: right;
 }
+
+/* Trang công khai: đăng ký, thiết lập mật khẩu (AuthShell) */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+.auth-page {
+  display: grid;
+  min-height: 100vh;
+  align-items: start;
+  justify-items: center;
+  padding: 48px 16px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 520px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 28px;
+}
+
+.auth-card-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 18px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.auth-brand-mark { width: 64px; height: 64px; flex: 0 0 auto; }
+.auth-brand-mark img { width: 48px; height: auto; }
+.auth-card-brand .login-kicker { margin-bottom: 2px; }
+.auth-system-name { margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.4; }
+
+.auth-title { margin: 0; color: var(--text-primary); font-size: 24px; line-height: 1.25; }
+.auth-description { margin: 8px 0 20px; color: var(--text-secondary); font-size: 15px; line-height: 1.5; }
+
+.auth-form { display: grid; gap: 16px; }
+.auth-required-note { margin: 0; color: var(--text-secondary); font-size: 13px; }
+.required-mark { color: var(--danger); font-weight: 800; }
+.auth-form .field input[aria-invalid="true"] { border-color: var(--danger); }
+.auth-form .field-error { margin-top: 0; }
+.auth-form .field-hint { margin-top: 0; }
+.auth-submit { width: 100%; min-height: 46px; justify-content: center; text-align: center; }
+a.auth-submit { display: inline-flex; align-items: center; margin-top: 8px; text-decoration: none; }
+.auth-card-footer { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--text-secondary); font-size: 14px; }
+.auth-card-footer a { color: var(--primary); font-weight: 700; }
+
+.auth-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.auth-notice svg { flex: 0 0 auto; margin-top: 2px; }
+.auth-notice.success { border-color: #b9dfc9; background: var(--success-soft); color: var(--primary-dark); }
+.auth-notice.danger { border-color: #f3c1bd; background: var(--danger-soft); color: var(--danger); font-weight: 600; }
+.auth-form .auth-notice { margin: 0; }
+
+.choice-group { min-width: 0; margin: 0; border: 0; padding: 0; }
+.choice-group legend { padding: 0; margin-bottom: 6px; color: var(--text-primary); font-size: 13px; font-weight: 800; }
+.choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.choice-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px;
+  cursor: pointer;
+}
+.choice-card svg { flex: 0 0 auto; margin-top: 1px; color: var(--text-secondary); }
+.choice-card span { display: grid; gap: 2px; min-width: 0; }
+.choice-card strong { color: var(--text-primary); font-size: 14px; }
+.choice-card small { color: var(--text-secondary); font-size: 12px; line-height: 1.4; }
+.choice-card input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.choice-card:hover { background: var(--surface-muted); }
+.choice-card:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); box-shadow: inset 0 0 0 1px var(--primary); }
+.choice-card:has(input:checked) svg { color: var(--primary); }
+.choice-card:has(input:focus-visible) { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.password-rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; margin: 4px 0 0; padding: 0; list-style: none; }
+.password-rules li { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 13px; }
+.password-rules li.met { color: var(--success); font-weight: 700; }
+
+.auth-steps { display: grid; gap: 10px; margin: 0 0 16px; padding: 0; list-style: none; }
+.auth-steps li { display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px; }
+.auth-steps li.current { color: var(--text-primary); font-weight: 700; }
+.auth-steps li.done { color: var(--success); }
+.auth-step-index { display: inline-grid; place-items: center; width: 24px; height: 24px; flex: 0 0 auto; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); font-size: 12px; font-weight: 800; }
+.auth-steps li.current .auth-step-index { border-color: var(--primary); background: var(--primary); color: #fff; }
+.auth-steps li.done .auth-step-index { border-color: var(--success); background: var(--success-soft); color: var(--success); }
+
+@media (max-width: 560px) {
+  .auth-page { padding: 16px 12px 32px; }
+  .auth-card { padding: 20px 16px; }
+  .choice-grid, .password-rules { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .choice-card { transition: background-color 0.15s ease, border-color 0.15s ease; }
+}
+.auth-form .field > .field-hint { color: var(--text-secondary); font-size: 13px; font-weight: 400; line-height: 1.45; }
+.auth-form .field > .field-error { color: var(--danger); font-size: 13px; font-weight: 700; }
+
+/* Thanh đầu trang xanh của trang công khai (đăng nhập, đăng ký, thiết lập mật khẩu) */
+.public-page { display: flex; min-height: 100vh; flex-direction: column; }
+.public-page > .login-shell, .public-page > .auth-page { flex: 1; min-height: 0; }
+.public-header {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+  background: var(--primary-dark);
+  box-shadow: 0 2px 12px rgba(15, 63, 42, 0.22);
+  padding: 8px 28px;
+  color: #fff;
+}
+.public-header .brand-mark { width: 42px; height: 42px; }
+.public-header .brand-mark img { width: 32px; }
+.public-header > div:last-child { min-width: 0; }
+.public-header strong { display: block; font-size: 15px; line-height: 1.25; }
+.public-header span { display: block; margin-top: 2px; color: rgba(255, 255, 255, 0.82); font-size: 14px; }
+.auth-kicker { margin: 0 0 6px; }
+@media (max-width: 560px) {
+  .public-header { padding: 8px 16px; }
+  .public-header strong { font-size: 13px; }
+  .public-header span { font-size: 12px; }
+}
