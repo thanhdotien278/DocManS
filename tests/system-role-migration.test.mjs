@@ -235,6 +235,7 @@ describe("Story 1.4 system-role migration", () => {
           return callback({
             async $queryRaw() {},
             user: { async findUnique() { return externalUser; } },
+            systemParameter: { async findUnique() { return null; } },
             session: { async create() { return externalSession; } }
           });
         },

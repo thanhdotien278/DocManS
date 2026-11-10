@@ -13,11 +13,11 @@ type LoginAttemptState = {
 export class AuthRateLimitService {
   private readonly attempts = new Map<string, LoginAttemptState>();
 
-  assertCanAttempt(key: string, now = Date.now()) {
+  assertCanAttempt(key: string, now = Date.now(), message = RATE_LIMIT_MESSAGE) {
     const state = this.getState(key, now);
 
     if (state.failedAttempts >= MAX_FAILED_ATTEMPTS) {
-      throw new HttpException({ message: RATE_LIMIT_MESSAGE }, HttpStatus.TOO_MANY_REQUESTS);
+      throw new HttpException({ message }, HttpStatus.TOO_MANY_REQUESTS);
     }
   }
 

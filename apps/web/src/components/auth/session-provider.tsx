@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser, logoutSession } from "@/lib/auth-api";
-import { toShellAccount, type ShellAccount } from "@/lib/session";
+import { PUBLIC_ROUTES, toShellAccount, type ShellAccount } from "@/lib/session";
 
 type SessionContextValue = {
   account: ShellAccount | null;
@@ -25,7 +25,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setAccount(shellAccount);
     setIsLoading(false);
 
-    if (!user && window.location.pathname !== "/login") {
+    if (!user && !PUBLIC_ROUTES.includes(window.location.pathname)) {
       startTransition(() => {
         router.replace("/login");
         router.refresh();

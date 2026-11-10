@@ -10,8 +10,8 @@ export default function SystemSettingsPage() {
       <Breadcrumb items={[{ label: "Quản trị" }, { label: "Cấu hình hệ thống" }]} />
       <PageHeader
         eyebrow="Cấu hình nền"
-        title="Tham số và mẫu thông báo"
-        description="Cập nhật tham số vận hành và skeleton mẫu thông báo dùng cho hệ thống nội bộ."
+        title="Tham số hệ thống"
+        description="Cập nhật cấu hình hội đồng, quyền tham gia hồ sơ và các tham số vận hành hệ thống."
       />
       <AdminCouncilConfigPanel />
       <AdminParticipantPolicyPanel />

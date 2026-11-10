@@ -41,7 +41,9 @@ export async function loginWithPassword(username: string, password: string): Pro
     });
 
     if (!response.ok) {
-      return { ok: false, message: safeAuthError };
+      // Story 13.11: API chỉ trả mã này khi mật khẩu đúng, nên hiển thị nguyên thông báo chờ duyệt.
+      const error = (await response.json().catch(() => ({}))) as { code?: unknown; message?: unknown };
+      return { ok: false, message: error.code === "ACCOUNT_PENDING_APPROVAL" && typeof error.message === "string" ? error.message : safeAuthError };
     }
 
     const body = (await response.json()) as { user?: unknown };
@@ -95,8 +97,9 @@ export async function completeAccountActivation(token: string, password: string,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, password, passwordConfirmation })
   });
-  const body = (await response.json().catch(() => ({}))) as { message?: string };
+  const body = (await response.json().catch(() => ({}))) as { message?: string; status?: string };
   if (!response.ok) throw new Error(body.message ?? "Không thể kích hoạt tài khoản.");
+  return { status: body.status };
 }
 
 export async function getCurrentUser() {

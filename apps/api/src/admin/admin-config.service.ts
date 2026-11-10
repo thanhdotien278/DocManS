@@ -45,6 +45,13 @@ const SYSTEM_PARAMETER_RULES = {
 
       return String(parsed);
     }
+  },
+  // Story 13.11: công tắc tự đăng ký tài khoản nhà nghiên cứu (D-044).
+  self_registration_enabled: {
+    validate(value: string) {
+      if (value !== "true" && value !== "false") throw new BadRequestException({ message: "value phải là true hoặc false." });
+      return value;
+    }
   }
 } as const;
 
@@ -66,8 +73,8 @@ export class AdminConfigService {
 
   async listSystemParameters() {
     return this.prisma.systemParameter.findMany({
-      // participant_policy có panel riêng (D-041) và không sửa được qua form tham số chung.
-      where: { key: { not: PARTICIPANT_POLICY_KEY } },
+      // participant_policy (D-041) và council_formation.* có panel riêng, không hiện trong danh sách tham số chung.
+      where: { key: { not: PARTICIPANT_POLICY_KEY }, NOT: { key: { startsWith: "council_formation." } } },
       orderBy: { key: "asc" }
     });
   }

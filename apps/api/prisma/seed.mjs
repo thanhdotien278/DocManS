@@ -484,6 +484,13 @@ await prisma.systemParameter.upsert({
   create: { key: "session_timeout_minutes", value: "720", label: "Thời gian phiên đăng nhập" }
 });
 
+// Story 13.11: tự đăng ký mặc định tắt; update rỗng để không ghi đè lựa chọn của QT khi seed lại.
+await prisma.systemParameter.upsert({
+  where: { key: "self_registration_enabled" },
+  update: {},
+  create: { key: "self_registration_enabled", value: "false", label: "Cho phép tự đăng ký tài khoản nhà nghiên cứu" }
+});
+
 await prisma.notificationTemplate.upsert({
   where: { key: "user_created" },
   update: {

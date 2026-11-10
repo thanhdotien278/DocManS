@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { ArrowRight, LockKeyhole, UserRound } from "lucide-react";
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/components/auth/session-provider";
 import { loginWithPassword } from "@/lib/auth-api";
+import { isSelfRegistrationEnabled } from "@/lib/registration-api";
 
 export function LoginForm() {
   const router = useRouter();
@@ -13,6 +15,8 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [canRegister, setCanRegister] = useState(false);
+  useEffect(() => { void isSelfRegistrationEnabled().then(setCanRegister); }, []);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -88,6 +92,7 @@ export function LoginForm() {
         {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập hệ thống"}
         <ArrowRight size={17} aria-hidden="true" />
       </button>
+      {canRegister ? <p className="record-meta">Chưa có tài khoản? <Link href="/register">Đăng ký tài khoản</Link></p> : null}
     </form>
   );
 }
