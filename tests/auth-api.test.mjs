@@ -47,6 +47,10 @@ function createAuthStore({ user = activeUser, activeSession = { id: "session-1",
     auditRecords: [],
     resetTokens: [],
     findUserByUsernameCalls: 0,
+    pendingApprovalHash: null,
+    async findPendingApprovalPasswordHash() {
+      return this.pendingApprovalHash;
+    },
     async findUserByUsername(username) {
       this.findUserByUsernameCalls += 1;
       return username === "admin" && user ? user : null;
@@ -78,7 +82,7 @@ function createAuthStore({ user = activeUser, activeSession = { id: "session-1",
       return "user-1";
     },
     async completeAccountActivation() {
-      return "user-1";
+      return { userId: "user-1", status: "active" };
     },
     toSafeUser: safeUser
   };
@@ -262,7 +266,8 @@ describe("auth API behavior", () => {
     const middlewareSource = readFileSync("apps/web/src/middleware.ts", "utf8");
 
     assert.equal(/hasSessionCookie\s*&&\s*pathname\s*===\s*["']\/login["']/.test(middlewareSource), false);
-    assert.match(middlewareSource, /pathname === "\/password-reset"/);
+    assert.match(middlewareSource, /PUBLIC_ROUTES\.includes\(pathname\)/);
+    assert.match(readFileSync("apps/web/src/lib/session.ts", "utf8"), /PUBLIC_ROUTES = \["\/login", "\/password-reset", "\/register"\]/);
     assert.match(middlewareSource, /!hasSessionCookie && !isPublicRoute/);
     assert.match(middlewareSource, /hasValidSession/);
     assert.match(middlewareSource, /\/auth\/me/);
@@ -499,9 +504,30 @@ describe("auth API behavior", () => {
       passwordResetToken: { async updateMany(input) { writes.push(input); } }
     };
     const store = new AuthStore({ $transaction: async (callback) => callback(tx) });
-    assert.equal(await store.completeAccountActivation("digest", "new-hash"), "user-1");
+    assert.deepEqual(await store.completeAccountActivation("digest", "new-hash"), { userId: "user-1", status: "active" });
     assert.equal(await store.completeAccountActivation("digest", "new-hash"), null);
     assert.deepEqual(writes.find((write) => write.data?.status === "active").data, { passwordHash: "new-hash", status: "active", mustChangePassword: false, credentialVersion: { increment: 1 } });
+  });
+
+  it("auth store sizes new sessions from session_timeout_minutes and falls back to 720 when invalid", async () => {
+    let parameter = { value: "30" };
+    const created = [];
+    const tx = {
+      async $queryRaw() {},
+      user: { async findUnique() { return { id: "user-1", status: "active", credentialVersion: 0 }; } },
+      systemParameter: { async findUnique() { return parameter; } },
+      session: { async create({ data }) { created.push(data); return { id: "s", userId: data.userId, createdAt: new Date(), expiresAt: data.expiresAt, revokedAt: null, credentialVersion: 0 }; } }
+    };
+    const store = new AuthStore({ $transaction: async (callback) => callback(tx) });
+    const minutesOf = () => Math.round((created.at(-1).expiresAt.getTime() - Date.now()) / 60000);
+    await store.createSession("user-1", 0);
+    assert.equal(minutesOf(), 30);
+    parameter = { value: "5" };
+    await store.createSession("user-1", 0);
+    assert.equal(minutesOf(), 720);
+    parameter = null;
+    await store.createSession("user-1", 0);
+    assert.equal(minutesOf(), 720);
   });
 
   it("auth store revokes all sessions and outstanding reset tokens when a password changes", async () => {

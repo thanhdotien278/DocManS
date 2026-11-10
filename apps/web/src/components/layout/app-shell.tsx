@@ -11,13 +11,13 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { NavLink } from "@/components/layout/nav-link";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { getNavigationItems } from "@/lib/navigation";
-import { getApiBaseUrl } from "@/lib/session";
+import { getApiBaseUrl, PUBLIC_ROUTES } from "@/lib/session";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { account, isLoading } = useSession();
 
-  if (pathname === "/login" || pathname === "/password-reset") {
+  if (PUBLIC_ROUTES.includes(pathname)) {
     return <>{children}</>;
   }
 

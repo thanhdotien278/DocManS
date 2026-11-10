@@ -158,7 +158,7 @@ development_status:
   12-5-xuat-excel-pdf-co-kiem-soat-va-truy-vet: backlog
   12-6-pp-and-pgd-td-monitoring-dashboards: backlog
   epic-12-retrospective: optional
-  epic-13: done
+  epic-13: in-progress
   13-1-cv-data-contract-storage-api: done
   13-2-cv-shell-and-general-tab: done
   13-3-education-and-work-history: done
@@ -169,4 +169,5 @@ development_status:
   13-8-publications-drawer: done
   13-9-cv-list-sections-drawer: done
   13-10-own-cv-for-science-managers: done
+  13-11-self-registration: review
   epic-13-retrospective: optional

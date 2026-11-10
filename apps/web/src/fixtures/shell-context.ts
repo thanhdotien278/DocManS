@@ -18,6 +18,7 @@ import {
   NotebookPen,
   Settings2,
   ShieldCheck,
+  UserPlus,
   UserRoundSearch,
   Users
 } from "lucide-react";
@@ -222,6 +223,13 @@ export const routeDefinitions: Record<string, RouteDefinition> = {
     summaryTitle: "Lịch điều phối",
     summaryBody: "Kế hoạch họp hội đồng được sắp xếp theo thời gian và điểm họp để phục vụ công tác tham gia đúng lịch."
   },
+  "/registration-requests": {
+    eyebrow: "Tài khoản nhà nghiên cứu",
+    title: "Yêu cầu đăng ký",
+    description: "Duyệt hoặc từ chối tài khoản tự đăng ký đã xác minh email.",
+    summaryTitle: "Duyệt tài khoản",
+    summaryBody: "QT, Trưởng ban và Chuyên viên QLKH chọn đơn vị quản lý khi duyệt; hồ sơ nhà khoa học được tạo cùng lúc."
+  },
   "/users": {
     eyebrow: "Quản trị",
     title: "Người dùng",
@@ -253,7 +261,7 @@ export const routeDefinitions: Record<string, RouteDefinition> = {
   "/system-settings": {
     eyebrow: "Quản trị",
     title: "Cấu hình hệ thống",
-    description: "Theo dõi tham số vận hành, mẫu thông báo và các tùy chỉnh nền phục vụ quản trị hệ thống.",
+    description: "Theo dõi tham số vận hành và các tùy chỉnh nền phục vụ quản trị hệ thống.",
     summaryTitle: "Tình hình cấu hình",
     summaryBody: "Phân hệ này tập trung các tham số quản trị cốt lõi, sử dụng cho nhắc việc, thông báo và vận hành nội bộ."
   },
@@ -291,6 +299,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/my-profile", label: "Lý lịch khoa học", icon: UserRoundSearch },
     { href: "/proposals", label: "Quản lý đề tài", icon: Files },
     { href: "/researcher-profiles", label: "Hồ sơ nhà khoa học", icon: UserRoundSearch },
+    { href: "/registration-requests", label: "Yêu cầu đăng ký", icon: UserPlus },
     { href: "/intakes", label: "Đợt tiếp nhận", icon: CalendarRange },
     { href: "/reviews", label: "Đánh giá hồ sơ", icon: FileSearch },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
@@ -309,6 +318,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
   SYSTEM_ADMIN: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/users", label: "Người dùng", icon: Users },
+    { href: "/registration-requests", label: "Yêu cầu đăng ký", icon: UserPlus },
     { href: "/roles", label: "Vai trò", icon: ShieldCheck },
     { href: "/units", label: "Đơn vị", icon: Building2 },
     { href: "/catalogs", label: "Danh mục", icon: BookCopy },
@@ -324,9 +334,12 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/notifications", label: "Thông báo", icon: Bell }
   ],
   EXTERNAL_RESEARCHER_USER: [],
-  // shortcut: PP, TB, PGĐ-KH chưa có quyền nghiệp vụ, cấp menu khi port phân quyền từ tuan/DocManS.
+  // shortcut: PP, PGĐ-KH chưa có quyền nghiệp vụ; TB mới có duyệt yêu cầu đăng ký (Story 13.11). Cấp thêm menu khi port phân quyền từ tuan/DocManS.
   RESEARCH_MANAGEMENT_DEPUTY_HEAD: [],
-  RESEARCH_BOARD_HEAD: [],
+  RESEARCH_BOARD_HEAD: [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/registration-requests", label: "Yêu cầu đăng ký", icon: UserPlus }
+  ],
   SCIENCE_DEPUTY_DIRECTOR: []
 };
 
