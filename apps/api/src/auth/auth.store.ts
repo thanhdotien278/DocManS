@@ -1,8 +1,10 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
-import { SYSTEM_ROLES, type AuthSession, type InternalUser, type SafeUserContext, type SystemRole } from "./auth.types.js";
+import { notifyUsers } from "../notifications/notification-events.js";
+import { REGISTRATION_APPROVER_ROLES, SYSTEM_ROLES, type AuthSession, type InternalUser, type SafeUserContext, type SystemRole } from "./auth.types.js";
 
-const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
+const DEFAULT_SESSION_TIMEOUT_MINUTES = 720;
 
 export type ProfileDisplayRow = { fullName: string; rankCode: string | null; degreeCode: string | null; organization: string | null };
 
@@ -21,6 +23,13 @@ export class AuthStore {
     });
 
     return user ? this.toInternalUser(user) : null;
+  }
+
+  /** Story 13.11: chỉ để login báo "đang chờ duyệt" sau khi mật khẩu đúng; tài khoản chờ duyệt chưa có scope nên không qua `toInternalUser`. */
+  async findPendingApprovalPasswordHash(username: string) {
+    const identifier = username.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({ where: { status: "pending_approval", OR: [{ usernameKey: identifier }, { credentialEmail: identifier }] }, select: { passwordHash: true } });
+    return user?.passwordHash ?? null;
   }
 
   async findUserById(userId: string) {
@@ -66,7 +75,10 @@ export class AuthStore {
       await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
       const user = await tx.user.findUnique({ where: { id: userId } });
       if (!user || user.status !== "active" || user.credentialVersion !== credentialVersion) throw new UnauthorizedException();
-      const session = await tx.session.create({ data: { userId, credentialVersion, expiresAt: new Date(Date.now() + SESSION_TTL_MS) } });
+      // QT chỉnh `session_timeout_minutes` (15–1440); áp dụng cho phiên tạo sau khi đổi.
+      const timeout = Number((await tx.systemParameter.findUnique({ where: { key: "session_timeout_minutes" } }))?.value);
+      const minutes = Number.isInteger(timeout) && timeout >= 15 && timeout <= 1440 ? timeout : DEFAULT_SESSION_TIMEOUT_MINUTES;
+      const session = await tx.session.create({ data: { userId, credentialVersion, expiresAt: new Date(Date.now() + minutes * 60 * 1000) } });
       return this.toAuthSession(session);
     });
   }
@@ -153,17 +165,20 @@ export class AuthStore {
       if (!token) return null;
       await tx.$queryRaw`SELECT id FROM users WHERE id = ${token.userId} FOR UPDATE`;
       const user = await tx.user.findUnique({ where: { id: token.userId } });
-      if (!user || user.status !== "pending_activation" || user.credentialVersion !== token.credentialVersion) return null;
+      if (!user || !["pending_activation", "pending_email_verification"].includes(user.status) || user.credentialVersion !== token.credentialVersion) return null;
+      // Story 13.11: tự đăng ký xác minh email xong vẫn phải chờ QT/TB/CV duyệt.
+      const status = user.status === "pending_email_verification" ? "pending_approval" : "active";
       const consumed = await tx.accountActivationToken.updateMany({
         where: { id: token.id, usedAt: null, expiresAt: { gt: new Date() } },
         data: { usedAt: new Date() }
       });
       if (consumed.count !== 1) return null;
-      await tx.user.update({ where: { id: token.userId }, data: { passwordHash, status: "active", mustChangePassword: false, credentialVersion: { increment: 1 } } });
+      await tx.user.update({ where: { id: token.userId }, data: { passwordHash, status, mustChangePassword: false, credentialVersion: { increment: 1 } } });
       await tx.session.updateMany({ where: { userId: token.userId, revokedAt: null }, data: { revokedAt: new Date() } });
       await tx.passwordResetToken.updateMany({ where: { userId: token.userId, usedAt: null }, data: { usedAt: new Date() } });
       await tx.accountActivationToken.updateMany({ where: { userId: token.userId, usedAt: null }, data: { usedAt: new Date() } });
-      return token.userId;
+      if (status === "pending_approval") await notifyRegistrationApprovers(tx, { id: user.id, displayName: user.displayName });
+      return { userId: token.userId, status };
     });
   }
 
@@ -255,4 +270,18 @@ export class AuthStore {
       revokedAt: session.revokedAt?.toISOString()
     };
   }
+}
+
+async function notifyRegistrationApprovers(tx: Prisma.TransactionClient, user: { id: string; displayName: string }) {
+  const approvers = await tx.user.findMany({ where: { systemRole: { in: [...REGISTRATION_APPROVER_ROLES] }, status: "active" }, select: { id: true } });
+  await notifyUsers(tx, {
+    userIds: approvers.map((approver) => approver.id),
+    type: "registration_request.submitted",
+    title: "Yêu cầu đăng ký tài khoản mới",
+    body: `${user.displayName} đã xác minh email và đang chờ duyệt tài khoản.`,
+    link: "/registration-requests",
+    sourceType: "registration_request",
+    sourceId: user.id,
+    idempotencyKey: `registration-request:${user.id}`
+  });
 }

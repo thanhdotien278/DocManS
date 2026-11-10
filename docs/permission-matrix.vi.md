@@ -104,6 +104,7 @@ làm nhiệm vụ theo dõi, không còn là Phó GĐ phụ trách Khoa học.
   bổ sung, tổng hợp và lập tờ trình trong phạm vi đơn vị; phân công phản biện/hội đồng và
   hội đồng IRB theo cấu hình QT (mặc định có, ghi chú 8).
 - Xem mọi đề tài trong Học viện; quản lý kinh phí toàn Học viện.
+- Duyệt hoặc từ chối yêu cầu tự đăng ký trên toàn Học viện (D-044), cùng QT và CV.
 
 ### CV — Chuyên viên QLKH
 
@@ -432,6 +433,8 @@ Các bảng phân hệ dùng cùng nhóm cột như §8. Khi một dòng ở đ�
 | Gán phạm vi tổ chức/đơn vị | Quản lý | Không | Không | Không | Không | Không | Nền tảng | Có | FR3, FR6, Story 1.3 |
 | Gán chức danh đơn vị (chỉ hiển thị) | Quản lý | Không | Không | Không | Không | Không | Nền tảng | Có | Role hierarchy GĐ1 |
 | Giao CV phụ trách cho đợt tiếp nhận (TP giao, đổi cả đợt hoặc từng hồ sơ) | Không | TP | Không | Không | Không | Không | Đơn vị | Có | D-038 |
+| Tự đăng ký tài khoản nhà nghiên cứu bằng email (D-044) | Không | Không | Không | Không | Không | Không | Công khai, khi `self_registration_enabled = true` | Có | Story 13.11 |
+| Duyệt/từ chối yêu cầu tự đăng ký; chọn đơn vị quản lý; đổi NCV ↔ NNB (D-044) | Quản lý | TB, CV (không gồm TP/PP) | Không | Không | Không | Không | Toàn Học viện, không kiểm tra phạm vi đơn vị | Có | Story 13.11 |
 | Nạp ngữ cảnh phiên theo vai trò | Xem của mình | Xem của mình | Xem của mình | Xem của mình | Xem của mình | Xem của mình | Người dùng hiện tại | Không | FR4, FR5, FR6 |
 
 ### 9.2 Danh mục và cấu hình
@@ -742,3 +745,18 @@ người phụ trách". Chỉ GĐ có hàng chờ quyết định đề tài/kin
 ký; TB có hàng chờ rà soát tờ trình và TP có hàng chờ duyệt. Kinh phí đề xuất hiện chỉ có
 `budgetMetadata.amount` (kinh phí đề nghị); không suy ra chi tiêu và không thêm sổ cái, thanh
 toán, ngân hàng, hóa đơn hay tích hợp ERP.
+
+## Tự đăng ký tài khoản — D-044 (10/11/2026, Story 13.11)
+
+- Bất kỳ ai, với email bất kỳ, tự đăng ký được khi QT bật `self_registration_enabled = true`
+  (mặc định `false`); người dùng tự chọn tên đăng nhập và "Trong học viện" (NCV) hoặc "Ngoài học viện" (NNB).
+- Luồng: `pending_email_verification` → (liên kết kích hoạt 48 giờ, đặt mật khẩu) → `pending_approval`
+  → duyệt `active` | từ chối `rejected`; chưa xác minh quá 48 giờ thành `expired`.
+- QT, TB, CV duyệt hoặc từ chối trên toàn Học viện, không kiểm tra phạm vi đơn vị; TP, PP và vai trò
+  khác không xem, không quyết định. Người duyệt chọn đơn vị quản lý và có thể đổi NCV ↔ NNB.
+- Hồ sơ nhà khoa học tạo lúc duyệt, không tạo lúc đăng ký, vì đơn vị quản lý là bắt buộc và chỉ
+  người duyệt chọn.
+- Từ chối/hết hạn là giải phóng mềm: giữ dòng user cho audit, xóa `credentialEmail` và `usernameKey`
+  để dùng lại; giá trị gốc lưu trong audit.
+- Đăng nhập tài khoản `pending_approval` chỉ báo trạng thái chờ duyệt khi mật khẩu đúng.
+

@@ -11,7 +11,7 @@ export function getNavigationItems(role: UserRole) {
     const profileItem = getRoleNavigationItems("RESEARCH_MANAGEMENT_STAFF").find((item) => item.href === "/researcher-profiles");
     if (profileItem) items.push(profileItem);
   }
-  if (!items.some((item) => item.href === "/my-reviews")) items.push({ href: "/my-reviews", label: "Đánh giá của tôi", icon: ClipboardCheck });
+  if (role !== "SYSTEM_ADMIN" && !items.some((item) => item.href === "/my-reviews")) items.push({ href: "/my-reviews", label: "Đánh giá của tôi", icon: ClipboardCheck });
   return items;
 }
 

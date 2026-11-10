@@ -2285,3 +2285,65 @@ summary:focus-visible {
 
 /* Header avatar: ~3/4 of the user chip height (chip is ~68px tall with the two-line role text). */
 .topbar-row-main .user-chip .avatar { width: 52px; height: 52px; font-size: 22px; }
+
+/* Story 13.11: nút gạt cho tham số hệ thống kiểu true/false */
+.toggle-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-secondary);
+}
+.toggle-switch-track {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background-color 0.15s;
+}
+.toggle-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s;
+}
+.toggle-switch[aria-checked="true"] .toggle-switch-track {
+  background: var(--primary);
+}
+.toggle-switch[aria-checked="true"] .toggle-switch-track::after {
+  transform: translateX(18px);
+}
+.toggle-switch[aria-checked="true"] .toggle-switch-label {
+  color: var(--primary);
+  font-weight: 600;
+}
+.toggle-switch:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+.toggle-switch:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.setting-inline-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.setting-inline-form input {
+  width: 96px;
+  text-align: right;
+}
