@@ -1,21 +1,20 @@
-import Image from "next/image";
 import { Building2, ShieldCheck } from "lucide-react";
+import { PublicHeader } from "@/components/auth/public-header";
 import { LoginForm } from "@/components/auth/login-form";
 
 export default function LoginPage() {
   return (
+    <div className="public-page">
+    <PublicHeader />
     <div className="login-shell">
       <section className="login-panel" aria-labelledby="login-title">
         <div className="login-brand">
-          <div className="login-brand-mark">
-            <Image src="/logo.png" alt="Học viện Quân y" width={72} height={74} priority />
-          </div>
           <div>
             <p className="login-kicker">Cổng thông tin nghiên cứu</p>
             <h1 className="login-title" id="login-title">
-              Hệ thống quản lý NCKH, CN và đổi mới sáng tạo
+              Đăng nhập hệ thống
             </h1>
-            <p className="login-subtitle">Học viện Quân y</p>
+            <p className="login-subtitle">Dùng tài khoản được cấp hoặc đã đăng ký để truy cập khu vực nghiệp vụ.</p>
           </div>
         </div>
 
@@ -59,6 +58,7 @@ export default function LoginPage() {
           </div>
         </section>
       </aside>
+    </div>
     </div>
   );
 }
