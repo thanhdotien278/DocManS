@@ -46,7 +46,7 @@ Module layout: `auth/`, `admin/`, `modules/files/`, `proposal-intake-periods/`, 
 
 **Authorization lives in two layers.** `packages/permissions` / `permission-policy.ts` is a coarse fail-closed primitive (only system-admin foundation resources and dashboard reads pass today). The rules that actually gate business endpoints are the `assertCanX` helpers in `proposals-shared/proposal-access.ts` (`assertCanReadProposal`, `assertCanEditProposalDraft`, `assertHasOrganizationScope`, …), which throw `ForbiddenException`. `docs/permission-matrix.md` is the declared source of truth for role/scope/state rules and must be updated in the same change set when workflow or roles change.
 
-Sessions are opaque server rows (`Session` table, 12h TTL) behind an `HttpOnly` `rtms_session` cookie — no JWT. Passwords are `scrypt:<salt>:<hex>` verified with `timingSafeEqual`. Mutations and auth events record through `AuditLogService`.
+Sessions are opaque server rows (`Session` table, TTL from system parameter `session_timeout_minutes`, default 720 = 12h) behind an `HttpOnly` `rtms_session` cookie — no JWT. Passwords are `scrypt:<salt>:<hex>` verified with `timingSafeEqual`. Mutations and auth events record through `AuditLogService`.
 
 Prisma 7 with the `@prisma/adapter-pg` driver adapter; `DATABASE_URL` is required and never defaulted. Schema is `camelCase` fields mapped to `snake_case` columns/tables.
 
