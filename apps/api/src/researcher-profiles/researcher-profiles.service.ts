@@ -481,17 +481,10 @@ export class ResearcherProfilesService {
     return { id: user.id, username: user.username, email: user.credentialEmail ?? null, displayName: user.displayName, status: user.status, systemRole: user.systemRole, mustChangePassword: user.mustChangePassword };
   }
 
-  private activationUrl(token: string) {
-    const { loginUrl } = this.mailService.configuration();
-    const url = new URL("/password-reset", loginUrl);
-    url.searchParams.set("mode", "activation");
-    url.searchParams.set("token", token);
-    return url.toString();
-  }
 
   private async deliverActivation(deliveryId: string, email: string, displayName: string, token: string, expiresAt: Date, actor: SafeUserContext, correlationId: string) {
     let status = "ACCEPTED";
-    try { await this.mailService.sendAccountActivation({ to: email, displayName, activationUrl: this.activationUrl(token), expiresAt, templateKey: "researcher_account_activation" }); } catch { status = "UNKNOWN"; }
+    try { await this.mailService.sendAccountActivation({ to: email, displayName, activationUrl: this.mailService.activationUrl(token), expiresAt, templateKey: "researcher_account_activation" }); } catch { status = "UNKNOWN"; }
     await this.prisma.$transaction(async (tx) => {
       await tx.accountCredentialDelivery.update({ where: { id: deliveryId }, data: { status, attempts: { increment: 1 }, lastError: status === "UNKNOWN" ? "MAIL_DELIVERY_UNCONFIRMED" : null } });
       await this.auditLog.record({ action: "deliver-researcher-activation", result: status === "ACCEPTED" ? "success" : "failure", actorId: actor.id, targetEntity: "credential-delivery", targetEntityId: deliveryId, correlationId, reason: status === "UNKNOWN" ? "MAIL_DELIVERY_UNCONFIRMED" : undefined }, tx);

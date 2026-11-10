@@ -4,6 +4,9 @@ export { SYSTEM_ROLES, type SystemRole };
 
 export const AUTH_SESSION_COOKIE = "rtms_session";
 export const AUTH_FAILURE_MESSAGE = "Tên đăng nhập hoặc mật khẩu không hợp lệ.";
+export const AUTH_PENDING_APPROVAL_MESSAGE = "Tài khoản đang chờ cán bộ quản lý khoa học duyệt.";
+/** Story 13.11: QT, TB, CV duyệt yêu cầu tự đăng ký, không phụ thuộc scope đơn vị (D-044). */
+export const REGISTRATION_APPROVER_ROLES = ["SYSTEM_ADMIN", "RESEARCH_BOARD_HEAD", "RESEARCH_MANAGEMENT_STAFF"] as const;
 
 export type InternalUserStatus = "active" | "disabled";
 

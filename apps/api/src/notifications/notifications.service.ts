@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { ApprovedProjectsService } from "../approved-projects/approved-projects.service.js";
 import { AuditLogService } from "../auth/audit-log.service.js";
-import type { SafeUserContext } from "../auth/auth.types.js";
+import { REGISTRATION_APPROVER_ROLES, type SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { actorConflicted, canViewApproval, type ApprovalSubmissionRow } from "../proposals-shared/approval-routing.js";
 import { canReadProposal } from "../proposals-shared/proposal-access.js";
@@ -98,6 +98,9 @@ export class NotificationsService {
         if (project?.viewerAuthorization.allowedActions.includes(readAction)) allowed.add(`${sourceType}:${dossier.id}`);
       }
     }
+
+    // Story 13.11: yêu cầu đăng ký chỉ hiện với người còn quyền duyệt.
+    if ((REGISTRATION_APPROVER_ROLES as readonly string[]).includes(actor.systemRole)) for (const id of idsOf("registration_request")) allowed.add(`registration_request:${id}`);
 
     return rows.filter((row) => allowed.has(`${row.sourceType}:${row.sourceId}`));
   }

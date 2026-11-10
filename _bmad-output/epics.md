@@ -5109,3 +5109,33 @@ So that các tab hiển thị đầy đủ khi demo và tài khoản thật khô
 **Given** tài khoản nghiên cứu viên chưa có hồ sơ
 **When** truy cập `/my-profile` lần đầu
 **Then** hồ sơ nếu được tạo chỉ chứa dữ liệu đã biết từ tài khoản, không có số điện thoại, ngày sinh, số định danh hay chức danh bịa.
+
+### Story 13.11: Tự đăng ký tài khoản nhà nghiên cứu bằng email (D-044)
+
+As a nhà nghiên cứu trong hoặc ngoài Học viện chưa có tài khoản,
+I want tự đăng ký bằng email và tên đăng nhập tự chọn rồi chờ cán bộ duyệt,
+So that tôi đăng nhập được bằng tên đăng nhập hoặc email mà không cần chờ cán bộ tạo hồ sơ trước.
+
+**Acceptance Criteria:**
+
+**Given** QT đã bật tham số `self_registration_enabled = true` (mặc định `false`)
+**When** người dùng mở `/register` và nhập họ tên, email, tên đăng nhập, chọn Trong/Ngoài học viện
+**Then** hệ thống tạo tài khoản `pending_email_verification`, gửi liên kết xác minh hết hạn sau 48 giờ
+**And** email đã tồn tại chỉ nhận thông báo chung, không tiết lộ email đã được dùng; tên đăng nhập trùng báo 409
+**And** mỗi lần thử bị giới hạn theo IP và theo email; khi tắt tham số, trang ẩn liên kết và API trả 404.
+
+**Given** người dùng bấm liên kết xác minh và đặt mật khẩu
+**When** liên kết còn hạn
+**Then** tài khoản chuyển `pending_approval` và mọi QT, TB, CV nhận thông báo trong hệ thống
+**And** đăng nhập đúng mật khẩu khi đang chờ duyệt báo "đang chờ duyệt", không tạo phiên; sai mật khẩu vẫn báo lỗi chung.
+
+**Given** QT, TB hoặc CV (không phụ thuộc phạm vi đơn vị) mở "Yêu cầu đăng ký"
+**When** họ duyệt, chọn đơn vị quản lý và có thể đổi NCV ↔ NNB
+**Then** tài khoản chuyển `active` với phạm vi đơn vị đó, hồ sơ nhà khoa học `ACTIVE` được tạo và liên kết, người đăng ký nhận email
+**And** người thao tác sau trên cùng yêu cầu nhận 409; TP, PP và vai trò khác bị từ chối.
+
+**Given** cán bộ từ chối với lý do bắt buộc, hoặc liên kết xác minh hết hạn
+**When** thao tác hoàn tất hoặc có lần đăng ký mới trùng email/tên đăng nhập
+**Then** tài khoản chuyển `rejected`/`expired`, email và tên đăng nhập được giải phóng, giá trị gốc lưu trong audit
+**And** khi từ chối, người đăng ký nhận email kèm lý do.
+

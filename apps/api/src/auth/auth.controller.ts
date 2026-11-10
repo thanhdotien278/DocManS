@@ -85,8 +85,8 @@ export class AuthController {
       await this.authService.recordAccountActivationFailure(requestContext(request), "request_invalid");
       throw error;
     }
-    await this.authService.completeAccountActivation(input, requestContext(request));
-    return { success: true };
+    const { status } = await this.authService.completeAccountActivation(input, requestContext(request));
+    return { success: true, status };
   }
 
   @Get("protected")
