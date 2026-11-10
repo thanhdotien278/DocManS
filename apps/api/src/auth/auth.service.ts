@@ -3,7 +3,7 @@ import { AuditLogService } from "./audit-log.service.js";
 import { AuthRateLimitService } from "./auth-rate-limit.service.js";
 import { AuthStore, type ProfileDisplayRow } from "./auth.store.js";
 import { PasswordService } from "./password.service.js";
-import { AUTH_FAILURE_MESSAGE, type LoginRequest, type SafeUserContext } from "./auth.types.js";
+import { AUTH_FAILURE_MESSAGE, AUTH_PENDING_APPROVAL_MESSAGE, type LoginRequest, type SafeUserContext } from "./auth.types.js";
 import { validateNewPassword } from "./password-request.pipe.js";
 
 const DUMMY_PASSWORD_HASH =
@@ -51,8 +51,15 @@ export class AuthService {
     this.rateLimit.assertCanAttempt(rateLimitKey);
 
     const user = username ? await this.authStore.findUserByUsername(username) : null;
-    const passwordHash = user?.passwordHash ?? DUMMY_PASSWORD_HASH;
+    const pendingHash = username && !user ? await this.authStore.findPendingApprovalPasswordHash(username) : null;
+    const passwordHash = user?.passwordHash ?? pendingHash ?? DUMMY_PASSWORD_HASH;
     const passwordIsValid = await this.passwordService.verifyPassword(password, passwordHash);
+
+    if (pendingHash && passwordIsValid) {
+      this.rateLimit.recordFailure(rateLimitKey);
+      await this.auditLog.record({ action: "login", result: "failure", targetEntity: "auth-session", targetEntityId: username, username, ip: context.ip, userAgent: context.userAgent, reason: "pending_approval" });
+      throw new UnauthorizedException({ message: AUTH_PENDING_APPROVAL_MESSAGE, code: "ACCOUNT_PENDING_APPROVAL" });
+    }
 
     if (!user || !passwordIsValid || user.status !== "active") {
       this.rateLimit.recordFailure(rateLimitKey);
@@ -192,17 +199,19 @@ export class AuthService {
       await this.recordAccountActivationFailure(context, "new_password_policy_invalid");
       throw error;
     }
-    const userId = await this.authStore.completeAccountActivation(
+    const activated = await this.authStore.completeAccountActivation(
       this.passwordService.hashResetToken(input.token),
       await this.passwordService.hashPassword(input.password)
     );
-    if (!userId) {
+    if (!activated) {
       this.rateLimit.recordFailure(rateLimitKey);
       await this.recordAccountActivationFailure(context, "invalid_or_expired");
       throw new BadRequestException({ message: "Liên kết kích hoạt không hợp lệ hoặc đã hết hạn." });
     }
     this.rateLimit.reset(rateLimitKey);
-    await this.auditLog.record({ action: "complete-account-activation", result: "success", actorId: userId, targetEntity: "user", targetEntityId: userId, ip: context.ip, userAgent: context.userAgent });
+    const { userId, status } = activated;
+    await this.auditLog.record({ action: "complete-account-activation", result: "success", actorId: userId, targetEntity: "user", targetEntityId: userId, ip: context.ip, userAgent: context.userAgent, afterFacts: { status } });
+    return { status };
   }
 
   async recordPasswordChangeFailure(userId: string, context: RequestContext, reason: string) {

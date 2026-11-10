@@ -105,6 +105,7 @@ Directors who monitor; it is no longer the Science Deputy Director.
   supplement, synthesis and tờ trình drafting within unit scope; reviewer/council
   assignment and IRB council per QT configuration (on by default, note 8).
 - Sees every project in the Academy; manages funding Academy-wide.
+- Approves or rejects self-registration requests Academy-wide (D-044), together with QT and CV.
 
 ### CV — Chuyên viên QLKH
 
@@ -438,6 +439,8 @@ Module tables use the same column groups as §8. Where a module row and §7 disa
 | Assign organization/unit scope | Manage | None | None | None | None | None | Platform scope | Yes | FR3, FR6, Story 1.3 |
 | Assign display-only unit title | Manage | None | None | None | None | None | Platform scope | Yes | Role hierarchy GĐ1 |
 | Giao CV phụ trách cho đợt tiếp nhận (TP giao, đổi cả đợt hoặc từng hồ sơ) | None | TP | None | None | None | None | Unit scope | Yes | D-038 |
+| Self-register a researcher account by email (D-044) | None | None | None | None | None | None | Public, when `self_registration_enabled = true` | Yes | Story 13.11 |
+| Approve/reject self-registration request; choose management unit; switch NCV ↔ NNB (D-044) | Manage | TB, CV (not TP/PP) | None | None | None | None | Academy-wide, no unit scope check | Yes | Story 13.11 |
 | Load role-aware session context | Read own | Read own | Read own | Read own | Read own | Read own | Current user | No | FR4, FR5, FR6 |
 
 ### 9.2 Catalogs And Configuration
@@ -752,3 +755,18 @@ and an "unassigned" group. Only GĐ gets topic/funding decision queues; GĐ and 
 get signature queues; TB gets the tờ trình review queue and TP the approval queue.
 Proposal funding currently provides `budgetMetadata.amount` (requested funding); never
 infer expenditure or add ledgers, payments, banking, invoices or ERP integration.
+
+## Self-registration — D-044 (2026-11-10, Story 13.11)
+
+- Anyone may self-register with any email when QT sets `self_registration_enabled = true`
+  (default `false`); they choose a username and "Trong học viện" (NCV) or "Ngoài học viện" (NNB).
+- Flow: `pending_email_verification` → (activation link, 48h, sets password) → `pending_approval`
+  → approved `active` | rejected `rejected`; an unverified request past 48h becomes `expired`.
+- QT, TB and CV approve or reject Academy-wide without a unit scope check; TP, PP and others can
+  neither see nor decide requests. The approver picks the management unit and may switch NCV ↔ NNB.
+- The researcher profile is created at approval, not at registration, because the management unit
+  is mandatory and is only chosen by the approver.
+- Reject/expire is a soft release: the user row stays for audit, `credentialEmail` and
+  `usernameKey` are cleared so they can be reused; original values live in audit facts.
+- Login for a `pending_approval` account reveals the pending state only after the correct password.
+

@@ -24,19 +24,31 @@ export class MailService {
   }
 
   async sendAccountActivation(input: ActivationLinkInput) {
-    const { host, port, from, localHost } = this.configuration();
+    this.configuration();
     const template = await this.prisma.notificationTemplate.findUnique({ where: { key: input.templateKey } });
     const values = { ...input, expiresAt: input.expiresAt.toISOString() };
     const subject = renderActivation(template?.status === "active" ? template.subject : "Kích hoạt tài khoản DocManS của {{displayName}}", values);
     const introduction = template?.status === "active" ? renderActivation(template.body, values) : `Xin chào ${input.displayName},`;
     const text = `${introduction}\n\nThiết lập mật khẩu: ${input.activationUrl}\nLiên kết hết hạn: ${values.expiresAt}\n\nKhông chia sẻ liên kết này.`;
+    await this.sendText({ to: input.to, subject, text });
+  }
+
+  async sendText(input: { to: string; subject: string; text: string }) {
+    const { host, port, from, localHost } = this.configuration();
     const transporter = nodemailer.createTransport({ host, port, secure: process.env.SMTP_SECURE === "true" || port === 465, requireTLS: !localHost,
       auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD ?? "" } : undefined,
       connectionTimeout: 5000, greetingTimeout: 5000, socketTimeout: 10000, disableFileAccess: true, disableUrlAccess: true });
     try {
-      const result = await transporter.sendMail({ from, to: input.to, subject, text });
+      const result = await transporter.sendMail({ from, to: input.to, subject: input.subject, text: input.text });
       if (!result.accepted.length) throw new Error("MAIL_NOT_ACCEPTED");
     } finally { transporter.close(); }
+  }
+
+  activationUrl(token: string) {
+    const url = new URL("/password-reset", this.configuration().loginUrl);
+    url.searchParams.set("mode", "activation");
+    url.searchParams.set("token", token);
+    return url.toString();
   }
 }
 

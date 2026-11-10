@@ -7,6 +7,7 @@ import { createResearcherProfilePipe, updateMyProfilePipe, updateResearcherProfi
 import { normalizeResearcherKey, ResearcherProfilesService } from "../dist/apps/api/researcher-profiles/researcher-profiles.service.js";
 import { linkableAccountRoles, projectResearcherProfileAuthorization } from "../dist/apps/api/researcher-profiles/researcher-profile-access.js";
 import { ResearcherProfilesController } from "../dist/apps/api/researcher-profiles/researcher-profiles.controller.js";
+import { MailService } from "../dist/apps/api/notifications/mail.service.js";
 
 const staff = {
   id: "staff-1",
@@ -252,6 +253,7 @@ function createService(prisma, audit) {
   const sent = [];
   const mail = {
     configuration() { return { loginUrl: "http://localhost:3000/login" }; },
+    activationUrl: MailService.prototype.activationUrl,
     async sendAccountActivation(input) { sent.push(input); }
   };
   const password = {
