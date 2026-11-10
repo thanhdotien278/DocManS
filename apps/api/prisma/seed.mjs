@@ -509,14 +509,14 @@ await prisma.notificationTemplate.upsert({
 await prisma.notificationTemplate.upsert({
   where: { key: "researcher_account_activation" },
   update: {
-    subject: "Kích hoạt tài khoản DocManS",
-    body: "Xin chào {{displayName}}, vui lòng thiết lập mật khẩu để kích hoạt tài khoản DocManS.",
+    subject: "Phòng Khoa học quân sự - Học viện Quân y: Kích hoạt tài khoản",
+    body: "Tài khoản của bạn trên Hệ thống quản lý nghiên cứu khoa học (DocManS) đã được tạo. Vui lòng thiết lập mật khẩu để kích hoạt tài khoản.",
     status: "active"
   },
   create: {
     key: "researcher_account_activation",
-    subject: "Kích hoạt tài khoản DocManS",
-    body: "Xin chào {{displayName}}, vui lòng thiết lập mật khẩu để kích hoạt tài khoản DocManS.",
+    subject: "Phòng Khoa học quân sự - Học viện Quân y: Kích hoạt tài khoản",
+    body: "Tài khoản của bạn trên Hệ thống quản lý nghiên cứu khoa học (DocManS) đã được tạo. Vui lòng thiết lập mật khẩu để kích hoạt tài khoản.",
     status: "active"
   }
 });

@@ -1,6 +1,7 @@
 import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 import nodemailer from "nodemailer";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
+import { ACTIVATION_DEFAULT_PURPOSE, ACTIVATION_SUBJECT, formatExpiry, renderActivationHtml, renderActivationText } from "./activation-email.js";
 
 type ActivationLinkInput = { to: string; displayName: string; activationUrl: string; expiresAt: Date; templateKey: string };
 type ActivationTemplateInput = Omit<ActivationLinkInput, "expiresAt"> & { expiresAt: string };
@@ -26,20 +27,21 @@ export class MailService {
   async sendAccountActivation(input: ActivationLinkInput) {
     this.configuration();
     const template = await this.prisma.notificationTemplate.findUnique({ where: { key: input.templateKey } });
-    const values = { ...input, expiresAt: input.expiresAt.toISOString() };
-    const subject = renderActivation(template?.status === "active" ? template.subject : "Kích hoạt tài khoản DocManS của {{displayName}}", values);
-    const introduction = template?.status === "active" ? renderActivation(template.body, values) : `Xin chào ${input.displayName},`;
-    const text = `${introduction}\n\nThiết lập mật khẩu: ${input.activationUrl}\nLiên kết hết hạn: ${values.expiresAt}\n\nKhông chia sẻ liên kết này.`;
-    await this.sendText({ to: input.to, subject, text });
+    const values = { ...input, expiresAt: formatExpiry(input.expiresAt) };
+    const active = template?.status === "active" ? template : null;
+    const subject = active ? renderActivation(active.subject, values) : ACTIVATION_SUBJECT;
+    const purpose = active ? renderActivation(active.body, values) : ACTIVATION_DEFAULT_PURPOSE;
+    const content = { displayName: input.displayName, activationUrl: input.activationUrl, expiresAt: values.expiresAt, purpose };
+    await this.sendText({ to: input.to, subject, text: renderActivationText(content), html: renderActivationHtml(content) });
   }
 
-  async sendText(input: { to: string; subject: string; text: string }) {
+  async sendText(input: { to: string; subject: string; text: string; html?: string }) {
     const { host, port, from, localHost } = this.configuration();
     const transporter = nodemailer.createTransport({ host, port, secure: process.env.SMTP_SECURE === "true" || port === 465, requireTLS: !localHost,
       auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD ?? "" } : undefined,
       connectionTimeout: 5000, greetingTimeout: 5000, socketTimeout: 10000, disableFileAccess: true, disableUrlAccess: true });
     try {
-      const result = await transporter.sendMail({ from, to: input.to, subject: input.subject, text: input.text });
+      const result = await transporter.sendMail({ from, to: input.to, subject: input.subject, text: input.text, html: input.html });
       if (!result.accepted.length) throw new Error("MAIL_NOT_ACCEPTED");
     } finally { transporter.close(); }
   }
