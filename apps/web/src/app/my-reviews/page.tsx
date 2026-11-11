@@ -1,5 +1,6 @@
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { PageHeader } from "@/components/ui/page-header";
+import { AcceptanceCouncilSeats } from "@/components/projects/acceptance-council-seats";
 import { ReviewerQueuePanel } from "@/components/research-proposals/reviewer-queue-panel";
 
 export default function MyReviewsPage() {
@@ -11,6 +12,7 @@ export default function MyReviewsPage() {
         title="Đánh giá của tôi"
         description="Các hồ sơ bạn được phân công đánh giá, hạn nhận xét và tình trạng phiếu chấm điểm."
       />
+      <AcceptanceCouncilSeats />
       <ReviewerQueuePanel />
     </>
   );
