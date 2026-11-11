@@ -742,6 +742,10 @@ test("6.13.4: thu hồi ≤ giải ngân; GĐ chỉ ký khi quyết toán + thu 
   assert.equal((await f.reload()).status, "closed");
 
   const g = await projectFixture("F4b", "failed");
+  // CV không phụ trách bị 403 khi xem đề tài; chỉ thấy được khi là thành viên, và vẫn không được lập thanh lý.
+  await db.approvedProjectMember.create({ data: { projectId: g.project.id, userId: g.people.staff2.id, name: "chuyenvien2", role: "TOPIC_MEMBER", participationRole: "TOPIC_MEMBER", status: "ACTIVE", effectiveFrom: new Date(Date.now() - 86400000), createdById: g.people.staff.id } });
+  assert.equal((await g.service.getProject(g.people.staff2, g.project.id)).liquidation.canSubmit, false, "CV không phụ trách không lập thanh lý");
+  assert.equal((await g.service.getProject(g.people.staff, g.project.id)).liquidation.canSubmit, true, "CV phụ trách lập thanh lý");
   await g.service.recordFunding(g.people.head, g.project.id, { kind: "GRANT", amount: 10, recordedOn: "2026-03-01" });
   const second = await g.service.submitLiquidation(g.people.staff, g.project.id, { report: "Biên bản 2", recoveredAmount: 0, contextVersion: await g.ctxVersion() });
   await g.toLeadership("LIQUIDATION");
@@ -750,6 +754,14 @@ test("6.13.4: thu hồi ≤ giải ngân; GĐ chỉ ký khi quyết toán + thu 
   assert.equal(n(await db.projectLiquidation.findUnique({ where: { id: second.id } })), n(signed) + 1, "số tăng dần trong năm");
   const view = await g.service.getProject(g.people.director, g.project.id);
   assert.equal(view.liquidation.current.liquidationNumber, (await db.projectLiquidation.findUnique({ where: { id: second.id } })).liquidationNumber);
+
+  const h = await projectFixture("F4c", "accepted");
+  const third = await h.service.submitLiquidation(h.people.staff, h.project.id, { report: "Biên bản 3", recoveredAmount: 0, contextVersion: await h.ctxVersion() });
+  await h.toLeadership("LIQUIDATION");
+  await h.service.decideLiquidation(h.people.director, h.project.id, "reject", { liquidationId: third.id, reason: "Thiếu hồ sơ", contextVersion: await h.ctxVersion() });
+  const rejected = await db.projectLiquidation.findUnique({ where: { id: third.id } });
+  assert.deepEqual([rejected.status, rejected.liquidationNumber, rejected.approvedBudget, rejected.totalDisbursed, rejected.totalSettled], ["REJECTED", null, null, null, null], "từ chối không cấp số, không chốt");
+  assert.equal((await h.reload()).status, "accepted");
 });
 
 test("6.12: CV submits LIQUIDATION only for an Accepted/Failed project; GĐ alone signs and the project closes atomically; PGĐ-KH is refused; return goes back to draft", async () => {
