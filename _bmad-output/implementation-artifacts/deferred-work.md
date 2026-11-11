@@ -313,7 +313,7 @@
   summary: Chưa có test tự động cho phía web hồ sơ nghiệm thu (`uploadAcceptanceFile` gửi `acceptance_dossier`, phân nhánh người đóng góp/chỉ đọc của workspace).
   evidence: Review 6.8 p2 (triage #7). Repo không có hạ tầng chạy component hay `lib/*-api.ts`; hiện chỉ kiểm bằng trình duyệt.
 - source_spec: `_bmad-output/implementation-artifacts/spec-6-9-hoi-dong-va-ket-qua-nghiem-thu.md`
-  summary: Story 6.9 phần 2, giao diện web hội đồng nghiệm thu (mời, nhận lời, trình tờ trình, chủ tịch ghi kết quả kèm biên bản), theo khuôn hội đồng đánh giá đề xuất.
+  summary: (ĐÃ LÀM 12/11/2026, spec `spec-6-9-p2-giao-dien-hoi-dong-nghiem-thu.md`) Story 6.9 phần 2, giao diện web hội đồng nghiệm thu (mời, nhận lời, trình tờ trình, chủ tịch ghi kết quả kèm biên bản), theo khuôn hội đồng đánh giá đề xuất.
   evidence: Người dùng chọn tách UI ngày 2026-11-12 vì spec vượt 1600 token, giống 6.8.
 - source_spec: `_bmad-output/implementation-artifacts/spec-6-9-hoi-dong-va-ket-qua-nghiem-thu.md`
   summary: CV yêu cầu bổ sung hồ sơ nghiệm thu đã nộp (hồ sơ về draft, đề tài về executing, PI nộp lại snapshot v2) theo AC Story 6.9.
