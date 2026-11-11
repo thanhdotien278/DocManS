@@ -245,7 +245,11 @@ test("6.9: CV được tick lập hội đồng; GĐ từ chối giữ danh sác
 
   const roster = await f.formCouncil(people.staff, { committee_member: people.science });
   await f.submit(people.staff);
+  const boardNote = await db.userNotification.findFirst({ where: { userId: people.board.id }, orderBy: { createdAt: "desc" } });
+  assert.equal(boardNote.link, `/projects/${f.project.id}/acceptance-council`, "thông báo tờ trình trỏ trang hội đồng");
   await f.toLeadership();
+  assert.ok((await f.council.getCouncil(people.director, f.project.id)).allowedActions.includes("acceptance-council.sign"), "GĐ ở bước Ban giám đốc được ký");
+  assert.ok(!(await f.council.getCouncil(people.science, f.project.id)).allowedActions.includes("acceptance-council.sign"), "PGĐ-KH có ghế không được ký");
   await assert.rejects(() => f.decide(people.science, "approve"), coded(403, "APPROVAL_CONFLICT"), "người ký là thành viên hội đồng");
   await assert.rejects(() => f.decide(people.director, "reject"), coded(400, "APPROVAL_REASON_REQUIRED"));
   const rowsBefore = await db.acceptanceCouncilMember.findMany({ where: { projectId: f.project.id }, orderBy: { id: "asc" } });
