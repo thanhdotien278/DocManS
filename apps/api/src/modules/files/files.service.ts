@@ -233,11 +233,13 @@ export class FilesService {
   async listFiles(actor: SafeUserContext, input: { relatedEntityType: string; relatedEntityId: string }) {
     this.assertSupportedEntity(input.relatedEntityType);
     if (input.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE) {
-      await this.assertCanRead(actor, input.relatedEntityType, input.relatedEntityId);
+      // Story 6.13: chứng từ kinh phí theo quyền xem kinh phí; tệp khác giữ quy tắc cũ.
+      const voucherRead = await this.canReadFundingVouchers(actor, input.relatedEntityId);
+      const generalRead = await this.assertCanRead(actor, input.relatedEntityType, input.relatedEntityId).then(() => true, (error) => { if (voucherRead) return false; throw error; });
       const records = await this.prisma.fileRecord.findMany({ where: { relatedEntityType: input.relatedEntityType, relatedEntityId: input.relatedEntityId, status: "active", deletedAt: null }, include: { uploadedBy: { select: { displayName: true } } }, orderBy: { createdAt: "desc" } });
-      const project = await new ApprovedProjectsService(this.prisma, this.auditLog).getProject(actor, input.relatedEntityId);
-      const fullAccess = project.viewerAuthorization.viewerRelationships.some((relationship: { type: string }) => relationship.type === "TOPIC_PI") || ["RESEARCH_MANAGEMENT_STAFF", "RESEARCH_MANAGEMENT_HEAD"].includes(actor.systemRole);
-      return Promise.all(records.filter((record) => fullAccess || record.uploadedById === actor.id).map(async (record) => this.toFileResponse(record, { canMutate: await this.canMutateFile(actor, record) })));
+      const project = generalRead ? await new ApprovedProjectsService(this.prisma, this.auditLog).getProject(actor, input.relatedEntityId) : null;
+      const fullAccess = !!project && (project.viewerAuthorization.viewerRelationships.some((relationship: { type: string }) => relationship.type === "TOPIC_PI") || ["RESEARCH_MANAGEMENT_STAFF", "RESEARCH_MANAGEMENT_HEAD"].includes(actor.systemRole));
+      return Promise.all(records.filter((record) => record.filePurpose === FUNDING_VOUCHER_PURPOSE ? voucherRead : generalRead && (fullAccess || record.uploadedById === actor.id)).map(async (record) => this.toFileResponse(record, { canMutate: await this.canMutateFile(actor, record) })));
     }
     if (input.relatedEntityType === ETHICS_DOSSIER_ENTITY_TYPE || input.relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) {
       await this.assertCanRead(actor, input.relatedEntityType, input.relatedEntityId);
@@ -250,8 +252,12 @@ export class FilesService {
 
   async downloadFile(actor: SafeUserContext, fileId: string) {
     const record = await this.findReadableFile(actor, fileId);
-    if (record.relatedEntityType !== RESEARCH_PROPOSAL_ENTITY_TYPE) await this.assertCanRead(actor, record.relatedEntityType, record.relatedEntityId);
-    await this.assertProjectFileOwnership(actor, record, false);
+    if (isFundingVoucher(record)) {
+      if (!await this.canReadFundingVouchers(actor, record.relatedEntityId)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Không có quyền xem chứng từ kinh phí đề tài này." });
+    } else {
+      if (record.relatedEntityType !== RESEARCH_PROPOSAL_ENTITY_TYPE) await this.assertCanRead(actor, record.relatedEntityType, record.relatedEntityId);
+      await this.assertProjectFileOwnership(actor, record, false);
+    }
     const canMutate = await this.canMutateFile(actor, record);
     let content: Awaited<ReturnType<ObjectStorage["getObject"]>>;
     try {
@@ -527,11 +533,16 @@ export class FilesService {
       if (mutate && record.uploadedById !== actor.id && !isPiViewer((await this.acceptanceCapability(actor, record.relatedEntityId)).capability)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
       return;
     }
-    if (record.relatedEntityType !== APPROVED_PROJECT_ENTITY_TYPE) return;
+    // Chứng từ kinh phí: quyền theo kinh phí (đọc: canReadFundingVouchers, sửa/xoá: assertCanUpload → canWrite), không theo người tải.
+    if (record.relatedEntityType !== APPROVED_PROJECT_ENTITY_TYPE || isFundingVoucher(record)) return;
     const project = await new ApprovedProjectsService(this.prisma, this.auditLog).getProject(actor, record.relatedEntityId);
     const isPi = project.viewerAuthorization.viewerRelationships.some((relationship: { type: string }) => relationship.type === "TOPIC_PI");
     const manager = ["RESEARCH_MANAGEMENT_STAFF", "RESEARCH_MANAGEMENT_HEAD"].includes(actor.systemRole);
     if (!isPi && (!manager || mutate) && record.uploadedById !== actor.id) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
+  }
+
+  private async canReadFundingVouchers(actor: SafeUserContext, projectId: string) {
+    return new ApprovedProjectsService(this.prisma, this.auditLog).getFunding(actor, projectId).then((funding) => !funding.restricted, () => false);
   }
 
   private async findEthicsDossier(dossierId: string) {
@@ -659,6 +670,10 @@ export class FilesService {
       canDelete: options.canMutate
     };
   }
+}
+
+function isFundingVoucher(record: FileRecord) {
+  return record.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE && record.filePurpose === FUNDING_VOUCHER_PURPOSE;
 }
 
 export function streamToBuffer(stream: Readable | Buffer) {
