@@ -862,6 +862,7 @@ export class ApprovedProjectsService {
       if (!(FUNDING_KINDS as readonly string[]).includes(input.kind)) throw new BadRequestException({ message: "Loại số liệu kinh phí không hợp lệ." });
       const amount = readFundingAmount(input.amount);
       const files = await this.assertUsableEvidence(tx, project.id, input.fileRecordIds);
+      if (files.some((file: AnyRecord) => file.filePurpose !== "FUNDING_VOUCHER")) throw new BadRequestException({ code: "EVIDENCE_WRONG_RECORD", message: "Chứng từ kinh phí phải là tệp loại chứng từ giải ngân (FUNDING_VOUCHER)." });
       let entryId = randomUUID();
       let version = 1;
       let before: AnyRecord | null = null;
