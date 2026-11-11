@@ -287,11 +287,12 @@ export class FilesService {
       return;
     }
     if (record.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE) {
-      const [report, request] = await Promise.all([
+      const [report, request, funding] = await Promise.all([
         this.prisma.projectReportEvidence.findFirst({ where: { fileRecordId: record.id } }),
-        this.prisma.projectRequestEvidence.findFirst({ where: { fileRecordId: record.id } })
+        this.prisma.projectRequestEvidence.findFirst({ where: { fileRecordId: record.id } }),
+        this.prisma.projectFundingRecord.findFirst({ where: { fileRecordIds: { has: record.id } } })
       ]);
-      if (report || request) throw new BadRequestException({ code: "EVIDENCE_PINNED", message: "Tệp minh chứng đã nộp được giữ nguyên. Hãy tải lên phiên bản mới." });
+      if (report || request || funding) throw new BadRequestException({ code: "EVIDENCE_PINNED", message: "Tệp minh chứng đã nộp được giữ nguyên. Hãy tải lên phiên bản mới." });
       return;
     }
     const events = await this.prisma.proposalSubmissionEvent.findMany({ where: { proposalId: record.relatedEntityId }, select: { snapshot: true } });
@@ -304,7 +305,7 @@ export class FilesService {
   async updateFile(actor: SafeUserContext, fileId: string, input: { description: string | null; contextVersion?: unknown }): Promise<any> {
     if (!this.transactional) { const file = await this.findReadableFile(actor, fileId); const projectId = await this.mutationProjectId(file); return projectId ? this.mutateProject(actor, projectId, input.contextVersion, (s, a) => s.updateFile(a, fileId, input)) : this.mutate(actor, file.relatedEntityId, input.contextVersion, (s, a) => s.updateFile(a, fileId, input)); }
     const record = await this.findReadableFile(actor, fileId);
-    await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId);
+    await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId, record.filePurpose);
     await this.assertProjectFileOwnership(actor, record, true);
     await this.assertUnsubmittedFile(record);
     const updated = (await this.prisma.fileRecord.update({
@@ -338,7 +339,7 @@ export class FilesService {
   async deleteFile(actor: SafeUserContext, fileId: string, contextVersion?: unknown): Promise<any> {
     if (!this.transactional) { const file = await this.findReadableFile(actor, fileId); const projectId = await this.mutationProjectId(file); return projectId ? this.mutateProject(actor, projectId, contextVersion, (s, a) => s.deleteFile(a, fileId, contextVersion)) : this.mutate(actor, file.relatedEntityId, contextVersion, (s, a) => s.deleteFile(a, fileId, contextVersion)); }
     const record = await this.findReadableFile(actor, fileId);
-    await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId);
+    await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId, record.filePurpose);
     await this.assertProjectFileOwnership(actor, record, true);
     await this.assertUnsubmittedFile(record);
     const deleted = (await this.prisma.fileRecord.update({
@@ -440,6 +441,8 @@ export class FilesService {
       const projects = new ApprovedProjectsService(this.prisma, this.auditLog);
       // Story 6.13: chứng từ kinh phí do người được ghi kinh phí tải (GĐ, TP, TB, CV phụ trách), không phải PI/thành viên.
       if (filePurpose === FUNDING_VOUCHER_PURPOSE) {
+        const status = (await this.prisma.approvedProject.findUnique({ where: { id: relatedEntityId }, select: { status: true } }))?.status;
+        if (status === "preparing" || status === "closed") throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Đề tài chưa thực hiện hoặc đã đóng." });
         if (!(await projects.getFunding(actor, relatedEntityId)).canWrite) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Chỉ người quản lý kinh phí đề tài được tải chứng từ." });
         return;
       }
@@ -504,9 +507,9 @@ export class FilesService {
     return new ResearchProposalsService(this.prisma, this.auditLog, this.participation, this.reviewAccess, this.managementOfficers).getProposal(actor, relatedEntityId);
   }
 
-  private async canMutateEntity(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string) {
+  private async canMutateEntity(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string, filePurpose?: string) {
     try {
-      await this.assertCanUpload(actor, relatedEntityType, relatedEntityId);
+      await this.assertCanUpload(actor, relatedEntityType, relatedEntityId, filePurpose);
       return true;
     } catch {
       return false;
@@ -514,7 +517,7 @@ export class FilesService {
   }
 
   private async canMutateFile(actor: SafeUserContext, record: FileRecord) {
-    if (!await this.canMutateEntity(actor, record.relatedEntityType, record.relatedEntityId)) return false;
+    if (!await this.canMutateEntity(actor, record.relatedEntityType, record.relatedEntityId, record.filePurpose)) return false;
     try { await this.assertProjectFileOwnership(actor, record, true); await this.assertUnsubmittedFile(record); return true; } catch { return false; }
   }
 
