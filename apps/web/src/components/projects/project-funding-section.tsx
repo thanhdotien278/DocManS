@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SectionCard } from "@/components/ui/section-card";
-import { FUNDING_KIND_LABELS, LIQUIDATION_STATUS_LABELS, getProjectFunding, projectAction, projectCapability, projectFileUrl, uploadProjectFile, vnd, type FundingView, type ProjectRecord } from "@/lib/projects-api";
+import { FUNDING_KIND_LABELS, LIQUIDATION_STATUS_LABELS, getProjectFunding, listProjectFiles, projectAction, projectCapability, projectFileUrl, uploadProjectFile, vnd, type FundingView, type ProjectRecord } from "@/lib/projects-api";
 
 type Props = { project: ProjectRecord; busy: boolean; setBusy: (value: boolean) => void; setNotice: (value: string) => void; onDone: () => Promise<void> };
 const emptyForm = { kind: "DISBURSEMENT", amount: "", recordedOn: "", note: "", entryId: "" };
@@ -19,7 +19,14 @@ export function ProjectFundingSection({ project, busy, setBusy, setNotice, onDon
   const liquidation = project.liquidation ?? null;
   const contextVersion = projectCapability(project)?.contextVersion;
 
-  async function load() { try { setFunding(await getProjectFunding(project.id)); } catch { setFunding(null); } }
+  async function load() {
+    try {
+      const view = await getProjectFunding(project.id);
+      setFunding(view);
+      // Chứng từ đã tải ở lần trước vẫn chọn được sau khi tải lại trang.
+      if (view.canWrite) { const saved = (await listProjectFiles(project.id).catch(() => [])).filter((file) => file.filePurpose === "FUNDING_VOUCHER"); setVouchers((current) => [...saved, ...current.filter((file) => !saved.some((item) => item.id === file.id))]); }
+    } catch { setFunding(null); }
+  }
   useEffect(() => { void load(); }, [project.id, project.history.length]);
 
   async function call(path: string, body: Record<string, unknown>, confirmText?: string): Promise<boolean> {

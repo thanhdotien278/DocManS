@@ -811,8 +811,10 @@ export class ApprovedProjectsService {
   private liquidationView(project: AnyRecord, actor: SafeUserContext, officer: AnyRecord | null) {
     const latest = (project.liquidations ?? [])[0] ?? null;
     const member = this.activeMember(project, actor.id);
+    // Số tiền thanh lý chỉ hiện với người được xem kinh phí đề tài (không PGĐ-TD, không CV ngoài phụ trách).
+    const money = (value: unknown) => value === null || value === undefined || !this.canViewFunding(actor, project, officer) ? null : String(value);
     return {
-      current: latest ? { id: latest.id, status: latest.status, outcome: latest.outcome, report: latest.report, decisionNote: latest.decisionNote, decidedAt: latest.decidedAt?.toISOString?.() ?? null, recoveredAmount: String(latest.recoveredAmount ?? 0), approvedBudget: latest.approvedBudget === null || latest.approvedBudget === undefined ? null : String(latest.approvedBudget), totalDisbursed: latest.totalDisbursed === null || latest.totalDisbursed === undefined ? null : String(latest.totalDisbursed), totalSettled: latest.totalSettled === null || latest.totalSettled === undefined ? null : String(latest.totalSettled), liquidationNumber: latest.liquidationNumber ?? null, fileRecordIds: latest.fileRecordIds ?? [] } : null,
+      current: latest ? { id: latest.id, status: latest.status, outcome: latest.outcome, report: latest.report, decisionNote: latest.decisionNote, decidedAt: latest.decidedAt?.toISOString?.() ?? null, recoveredAmount: money(latest.recoveredAmount ?? 0), approvedBudget: money(latest.approvedBudget), totalDisbursed: money(latest.totalDisbursed), totalSettled: money(latest.totalSettled), liquidationNumber: latest.liquidationNumber ?? null, fileRecordIds: latest.fileRecordIds ?? [] } : null,
       eligible: LIQUIDATABLE.includes(project.status),
       canSubmit: isResearchManagementStaff(actor) && officer?.officerUserId === actor.id && LIQUIDATABLE.includes(project.status) && (!latest || ["DRAFT", "REJECTED"].includes(latest.status)),
       canSign: isLeadership(actor) && !member && latest?.status === "SUBMITTED" && (project.pendingApprovals ?? []).some((row: AnyRecord) => row.kind === "LIQUIDATION" && row.stage === "LEADERSHIP"),
