@@ -89,6 +89,7 @@ export function AcceptanceCouncilPanel({ projectId }: { projectId: string }) {
   const forming = !!view && view.projectStatus === "pending_acceptance" && !view.establishedAt && view.approval?.status !== "PENDING";
   const canInvite = forming && can("invite");
   const activeRole = openRoles.includes(role as AcceptanceCouncilRole) ? role : "";
+  const inviteBlocked = !activeRole ? "Chọn vị trí còn trống để mời." : !userId ? "Chọn người được mời." : "";
 
   // Tìm ứng viên, debounce 300 ms; bỏ kết quả của request cũ.
   useEffect(() => {
@@ -298,10 +299,11 @@ export function AcceptanceCouncilPanel({ projectId }: { projectId: string }) {
                 {activeRole && candidateState === "error" ? <p className="form-error" role="alert">Không tải được danh sách người được mời.</p> : null}
                 {activeRole && candidateState === "idle" && candidates.length >= 50 ? <p className="record-meta">Chỉ hiện 50 người đầu tiên. Nhập thêm tên hoặc tài khoản để thu hẹp.</p> : null}
                 {activeRole && candidateState === "idle" && !candidates.length ? <p className="record-meta">Không có tài khoản phù hợp. Thành viên đề tài, Quản trị hệ thống, người chưa có lý lịch khoa học và người đã có vị trí không xuất hiện.</p> : null}
-                <button className="button primary" type="submit" disabled={busy || !activeRole || !userId}>
+                <button className="button primary" type="submit" disabled={busy || !activeRole || !userId} title={inviteBlocked || undefined} aria-describedby={inviteBlocked ? "acceptance-invite-blocked" : undefined}>
                   <UserPlus size={16} aria-hidden="true" />
                   {busy ? "Đang gửi" : "Gửi lời mời"}
                 </button>
+                {inviteBlocked ? <p className="record-meta" id="acceptance-invite-blocked">{inviteBlocked}</p> : null}
               </>
             ) : <p className="record-meta">Đã đủ thành viên cho mọi vị trí theo cấu hình ({view.config.memberCount} người).</p>}
           </form>
