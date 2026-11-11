@@ -1342,7 +1342,7 @@ export class ResearchProposalsService {
       || reviewAccess.assignmentRole === "council_secretary"
       || (isResearchManagementStaff(actor) && managementOfficer.officer?.officerUserId === actor?.id));
     const attachments = await this.findAttachments(proposal.id, { canMutate: this.canMutateProposalFiles(actor, proposal, participation), hidePurposes: canReadMinutes ? [] : ["COUNCIL_MINUTES"] });
-    const history = await this.listHistoryForProposal(proposal.id);
+    const history = hidesActionLog(reviewAccess, participation) ? null : await this.listHistoryForProposal(proposal.id);
     const supplementRequests = await this.listSupplementRequestsForProposal(proposal.id);
     const requiredPackage = await this.getRequiredPackageForProposal(proposal);
     const completenessCheckCompleted = await this.hasCurrentCompletenessCheck(proposal);
