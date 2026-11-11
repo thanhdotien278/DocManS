@@ -711,7 +711,13 @@ test("6.13.3: GĐ/TP/TB/CV phụ trách tải chứng từ FUNDING_VOUCHER; PI, 
   const extra = await upload(people.head, "FUNDING_VOUCHER");
   await assert.rejects(async () => files.deleteFile(people.pi, extra.id, await f.ctxVersion()), code(403), "PI không xoá được chứng từ");
   await assert.rejects(async () => files.updateFile(people.pi, extra.id, { description: "x", contextVersion: await f.ctxVersion() }), code(403), "PI không sửa được chứng từ");
-  await files.deleteFile(people.head, extra.id, await f.ctxVersion());
+  // Đọc chứng từ theo quyền xem kinh phí, không theo người tải; sửa/xoá theo quyền ghi kinh phí.
+  const byHead = vouchers[1];
+  for (const who of [people.director, people.board, people.pi]) assert.equal((await files.downloadFile(who, byHead.id)).id, byHead.id, `${who.displayName} tải được chứng từ do TP tải`);
+  for (const who of [people.director, people.pi]) assert.ok((await files.listFiles(who, { relatedEntityType: "approved_project", relatedEntityId: f.project.id })).some((file) => file.id === byHead.id && file.filePurpose === "FUNDING_VOUCHER"), `${who.displayName} thấy chứng từ trong danh sách`);
+  await assert.rejects(() => files.downloadFile(people.oversight, byHead.id), code(403), "PGĐ-TD không tải chứng từ");
+  await assert.rejects(() => files.listFiles(people.oversight, { relatedEntityType: "approved_project", relatedEntityId: f.project.id }), code(403), "PGĐ-TD không xem danh sách tệp");
+  await files.deleteFile(people.board, extra.id, await f.ctxVersion());
   const evidence = await upload(people.pi, "PROJECT_EVIDENCE");
   await service.recordFunding(people.head, f.project.id, { kind: "GRANT", amount: 100, recordedOn: "2026-03-01", fileRecordIds: [vouchers[0].id] });
   await assert.rejects(() => service.recordFunding(people.head, f.project.id, { kind: "GRANT", amount: 100, recordedOn: "2026-03-01", fileRecordIds: [evidence.id] }), (e) => e.response?.code === "EVIDENCE_WRONG_RECORD");
@@ -740,6 +746,10 @@ test("6.13.4: thu hồi ≤ giải ngân; GĐ chỉ ký khi quyết toán + thu 
   assert.deepEqual([signed.status, String(signed.approvedBudget), String(signed.totalDisbursed), String(signed.totalSettled), String(signed.recoveredAmount)], ["SIGNED", "500", "500", "485", "15"]);
   assert.match(signed.liquidationNumber, /^\d+\/BBTL-HVQY\/\d{4}$/);
   assert.equal((await f.reload()).status, "closed");
+  const hidden = (await service.getProject(people.oversight, f.project.id)).liquidation.current;
+  assert.deepEqual([hidden.recoveredAmount, hidden.approvedBudget, hidden.totalDisbursed, hidden.totalSettled, hidden.status], [null, null, null, null, "SIGNED"], "PGĐ-TD không thấy số tiền thanh lý");
+  const shown = (await service.getProject(people.director, f.project.id)).liquidation.current;
+  assert.deepEqual([shown.recoveredAmount, shown.approvedBudget, shown.totalDisbursed, shown.totalSettled], ["15", "500", "500", "485"]);
 
   const g = await projectFixture("F4b", "failed");
   // CV không phụ trách bị 403 khi xem đề tài; chỉ thấy được khi là thành viên, và vẫn không được lập thanh lý.

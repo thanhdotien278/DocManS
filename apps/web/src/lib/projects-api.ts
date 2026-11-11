@@ -19,7 +19,7 @@ export type ProjectRecord = {
 
 export type FundingRecord = { entryId: string; version: number; kind: "GRANT" | "DISBURSEMENT" | "SETTLEMENT"; amount: string; recordedOn: string | null; note: string | null; fileRecordIds: string[]; recordedById: string; createdAt: string };
 export type FundingView = { restricted: boolean; records: FundingRecord[]; totals: { GRANT: number; DISBURSEMENT: number; SETTLEMENT: number } | null; canWrite: boolean };
-export type LiquidationView = { current: null | { id: string; status: string; outcome: string; report: string; decisionNote: string | null; decidedAt: string | null; recoveredAmount: string; approvedBudget: string | null; totalDisbursed: string | null; totalSettled: string | null; liquidationNumber: string | null; fileRecordIds: string[] }; eligible: boolean; canSign: boolean; canSubmit: boolean; note: string | null };
+export type LiquidationView = { current: null | { id: string; status: string; outcome: string; report: string; decisionNote: string | null; decidedAt: string | null; recoveredAmount: string | null; approvedBudget: string | null; totalDisbursed: string | null; totalSettled: string | null; liquidationNumber: string | null; fileRecordIds: string[] }; eligible: boolean; canSign: boolean; canSubmit: boolean; note: string | null };
 export const FUNDING_KIND_LABELS: Record<string, string> = { GRANT: "Kinh phí được cấp", DISBURSEMENT: "Giải ngân", SETTLEMENT: "Quyết toán" };
 export const LIQUIDATION_STATUS_LABELS: Record<string, string> = { DRAFT: "Bản nháp", SUBMITTED: "Đang trình", SIGNED: "Đã ký", REJECTED: "Bị từ chối" };
 export const vnd = (value: number | string) => `${Number(value).toLocaleString("vi-VN")} đ`;
@@ -104,7 +104,7 @@ export async function uploadProjectFile(project: ProjectRecord, file: File, purp
 export async function getProjectFunding(id: string) { return (await json<{ funding: FundingView }>(`/projects/${id}/funding`)).funding; }
 
 export function projectFileUrl(fileId: string) { return `${getApiBaseUrl()}/files/${fileId}/download`; }
-export async function listProjectFiles(id: string) { return (await json<{ files: Array<{ id: string; fileName: string; uploadedById: string }> }>(`/files?relatedEntityType=approved_project&relatedEntityId=${encodeURIComponent(id)}`)).files; }
+export async function listProjectFiles(id: string) { return (await json<{ files: Array<{ id: string; fileName: string; uploadedById: string; filePurpose: string }> }>(`/files?relatedEntityType=approved_project&relatedEntityId=${encodeURIComponent(id)}`)).files; }
 
 // Story 10.3 — hồ sơ đạo đức (IRB). Capability của view chỉ gồm các action `ethics-dossier.*`.
 export type EthicsSections = {
