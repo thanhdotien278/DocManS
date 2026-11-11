@@ -161,7 +161,7 @@ export class AcceptanceDossiersService {
   }
 
   private async view(tx: any, actor: SafeUserContext, projectId: string) {
-    const { project, capability } = await this.projects.loadAuthorized(tx, actor, projectId);
+    const { project, capability } = await this.projects.loadAuthorized(tx, actor, projectId, { dossierReader: true });
     if (capabilityError(capability, "acceptance-dossier.read")) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Không có quyền xem hồ sơ nghiệm thu." });
     const own = (list: Array<AnyRecord | string>) => list.filter((item) => (typeof item === "string" ? item : item.action).startsWith("acceptance-dossier."));
     const base = { contextVersion: projectContextVersion(project), projectStatus: project.status, allowedActions: own(capability.allowedActions), blockedActions: own(capability.blockedActions) };

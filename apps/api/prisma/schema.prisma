@@ -81,6 +81,8 @@ model User {
   createdAcceptanceDossiers AcceptanceDossier[] @relation("AcceptanceDossierCreator")
   submittedAcceptanceDossiers AcceptanceDossier[] @relation("AcceptanceDossierSubmitter")
   acceptanceDossierSubmissions AcceptanceDossierSubmission[] @relation("AcceptanceDossierSubmissionActor")
+  acceptanceCouncilSeats   AcceptanceCouncilMember[] @relation("AcceptanceCouncilMemberUser")
+  acceptanceCouncilInvites AcceptanceCouncilMember[] @relation("AcceptanceCouncilMemberInviter")
 
   @@map("users")
 }
@@ -781,6 +783,7 @@ model ApprovedProject {
   liquidations              ProjectLiquidation[]
   ethicsDossier             EthicsDossier?
   acceptanceDossier         AcceptanceDossier?
+  acceptanceCouncilMembers  AcceptanceCouncilMember[]
 
   @@index([hostOrganizationUnitId, status])
   @@index([status, endDate])
@@ -1210,4 +1213,33 @@ model AcceptanceDossierSubmission {
 
   @@unique([dossierId, version])
   @@map("acceptance_dossier_submissions")
+}
+
+/// Story 6.9 (D-034): thành viên hội đồng nghiệm thu của đề tài; một hội đồng cho mọi cấp nghiệm thu.
+/// Hàng thu hồi được giữ lại làm lịch sử; "một người một vị trí" kiểm trong service dưới khóa đề tài.
+model AcceptanceCouncilMember {
+  id                   String          @id @default(uuid())
+  projectId            String          @map("project_id")
+  project              ApprovedProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  userId               String          @map("user_id")
+  user                 User            @relation("AcceptanceCouncilMemberUser", fields: [userId], references: [id], onDelete: Restrict)
+  /// council_chair | council_secretary | committee_member
+  councilRole          String          @map("council_role")
+  /// invited → accepted | declined; revoked (thu hồi, bắt buộc lý do)
+  invitationStatus     String          @default("invited") @map("invitation_status")
+  declineReason        String?         @map("decline_reason")
+  revokeReason         String?         @map("revoke_reason")
+  invitedById          String          @map("invited_by_id")
+  invitedBy            User            @relation("AcceptanceCouncilMemberInviter", fields: [invitedById], references: [id], onDelete: Restrict)
+  invitedAt            DateTime        @default(now()) @map("invited_at")
+  respondedAt          DateTime?       @map("responded_at")
+  revokedAt            DateTime?       @map("revoked_at")
+  /// Set khi GĐ/PGĐ-KH ký tờ trình ACCEPTANCE_COUNCIL; từ đó thành viên đã nhận lời được đọc hồ sơ nghiệm thu.
+  councilEstablishedAt DateTime?       @map("council_established_at")
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@index([userId])
+  @@map("acceptance_council_members")
 }
