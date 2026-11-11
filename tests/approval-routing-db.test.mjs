@@ -764,6 +764,25 @@ test("6.13.4: thu hồi ≤ giải ngân; GĐ chỉ ký khi quyết toán + thu 
   assert.equal((await h.reload()).status, "accepted");
 });
 
+test("6.13.6: PI được báo khi có giải ngân/quyết toán (không phải GRANT, không gửi người ghi); PI và CV được báo khi GĐ ký/từ chối thanh lý; không trùng", async () => {
+  const f = await projectFixture("F6", "failed");
+  const { people, service } = f;
+  const write = (kind, amount, extra = {}) => service.recordFunding(people.head, f.project.id, { kind, amount, recordedOn: "2026-03-01", ...extra });
+  const count = (userId, type) => db.userNotification.count({ where: { userId, type } });
+  await write("GRANT", 100);
+  assert.equal(await count(people.pi.id, "project.funding.recorded"), 0, "GRANT không báo");
+  const d = await write("DISBURSEMENT", 100);
+  await write("DISBURSEMENT", 100, { entryId: d.entryId });
+  assert.equal(await count(people.pi.id, "project.funding.recorded"), 2, "mỗi phiên bản một thông báo");
+  assert.equal(await count(people.head.id, "project.funding.recorded"), 0, "người ghi không tự nhận");
+  await write("SETTLEMENT", 100);
+  const liquidation = await service.submitLiquidation(people.staff, f.project.id, { report: "BB", recoveredAmount: 0, contextVersion: await f.ctxVersion() });
+  await f.toLeadership("LIQUIDATION");
+  await service.decideLiquidation(people.director, f.project.id, "approve", { liquidationId: liquidation.id, contextVersion: await f.ctxVersion() });
+  for (const who of [people.pi, people.staff]) assert.equal((await db.userNotification.findFirst({ where: { userId: who.id, type: "project.liquidation.decided" } })).link, `/projects/${f.project.id}`, who.displayName);
+  assert.equal(await count(people.director.id, "project.liquidation.decided"), 0);
+});
+
 test("6.12: CV submits LIQUIDATION only for an Accepted/Failed project; GĐ alone signs and the project closes atomically; PGĐ-KH is refused; return goes back to draft", async () => {
   const f = await projectFixture("P4", "executing");
   const { people, service } = f;

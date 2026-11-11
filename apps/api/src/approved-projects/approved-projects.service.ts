@@ -13,6 +13,7 @@ import { ProposalReviewAccessService } from "../proposals-shared/proposal-review
 import { recordParticipantWaiver } from "../proposal-evaluations/proposal-evaluation-support.js";
 import { assertProposalContext, isSerializationFailure } from "../proposals-shared/proposal-mutation.js";
 import { FUNDING_KINDS, assertFundingInvariant, fundingTotals, latestFunding, readApprovedBudget, readFundingAmount } from "./project-funding.js";
+import { notifyUsers } from "../notifications/notification-events.js";
 import { projectContextVersion, projectViewerAuthorizationV1, PROJECT_STATUSES, TERMINAL_REQUEST_STATUSES, type ProjectOfficerFact } from "./project-capability-v1.js";
 
 const PREPARING = PROJECT_STATUSES.preparing;
@@ -879,8 +880,13 @@ export class ApprovedProjectsService {
       const after = { kind: input.kind, amount: String(record.amount), version, entryId, fileRecordIds: record.fileRecordIds };
       await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.funding.record", reason: record.note, beforeFacts: before, afterFacts: after } });
       await new AuditLogService(tx).record({ action: "record-project-funding", result: "success", actorId: currentActor.id, targetEntity: "approved-project", targetEntityId: project.id, username: currentActor.username, beforeFacts: before ?? undefined, afterFacts: after });
+      if (input.kind !== "GRANT") await notifyUsers(tx, { userIds: [this.projectPiUserId(project)], exclude: [currentActor.id], type: "project.funding.recorded", title: input.kind === "DISBURSEMENT" ? "Đề tài có đợt giải ngân mới" : "Đề tài có số liệu quyết toán mới", body: `${project.title}: ${amount.toLocaleString("vi-VN")} đ`, link: `/projects/${project.id}`, sourceType: "project_funding", sourceId: project.id, idempotencyKey: `funding:${entryId}:v${version}` });
       return { entryId, version, kind: record.kind, amount: String(record.amount) };
     });
+  }
+
+  private projectPiUserId(project: AnyRecord): string | null {
+    return (project.members ?? []).find((member: AnyRecord) => member.participationRole === "TOPIC_PI" && member.status === "ACTIVE")?.userId ?? null;
   }
 
   private async currentFundingTotals(tx: any, projectId: string) {
@@ -936,6 +942,8 @@ export class ApprovedProjectsService {
       if (decision === "approve") await tx.approvedProject.update({ where: { id: project.id }, data: { status: PROJECT_STATUSES.closed, aggregateVersion: { increment: 1 }, authorizationContextUpdatedAt: now } });
       await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: `project.liquidation.${decision}`, fromStatus: project.status, toStatus: decision === "approve" ? PROJECT_STATUSES.closed : project.status, reason: input.reason ?? null, beforeFacts: { status: project.status, liquidation: "SUBMITTED" }, afterFacts: { status: decision === "approve" ? PROJECT_STATUSES.closed : project.status, liquidation: status, liquidationId: liquidation.id, liquidationNumber: closing.liquidationNumber ?? null } } });
       await new AuditLogService(tx).record({ action: `${decision}-project-liquidation`, result: "success", actorId: currentActor.id, targetEntity: "project-liquidation", targetEntityId: liquidation.id, username: currentActor.username, reason: input.reason ?? undefined, beforeFacts: { projectStatus: project.status, status: "SUBMITTED" }, afterFacts: { projectStatus: decision === "approve" ? PROJECT_STATUSES.closed : project.status, status, liquidationNumber: closing.liquidationNumber ?? null } });
+      const officer = await this.currentOfficer(tx, project.id);
+      await notifyUsers(tx, { userIds: [this.projectPiUserId(project), officer?.officerUserId], exclude: [currentActor.id], type: "project.liquidation.decided", title: decision === "approve" ? "Biên bản thanh lý đã được ký" : "Biên bản thanh lý bị từ chối", body: `${project.title}${closing.liquidationNumber ? ` — số ${closing.liquidationNumber}` : ""}`, link: `/projects/${project.id}`, sourceType: "project_liquidation", sourceId: liquidation.id, idempotencyKey: `liquidation:${liquidation.id}:${status}` });
       return updated;
     });
   }
