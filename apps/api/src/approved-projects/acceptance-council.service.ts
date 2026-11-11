@@ -107,7 +107,6 @@ export class AcceptanceCouncilService {
       const now = await readTransactionClockV1(tx);
       await tx.acceptanceCouncilMember.update({ where: { id: row.id }, data: { invitationStatus: "revoked", revokeReason: input.reason, revokedAt: now } });
       await this.record(tx, current, project, now, { action: "acceptance-council.revoke", fromStatus: row.invitationStatus, toStatus: "revoked", reason: input.reason, facts: { memberId: row.id, userId: row.userId, councilRole: row.councilRole }, audit: "revoke-acceptance-council-member", targetId: row.id });
-      await notifyUsers(tx, { userIds: [row.userId], exclude: [current.id], type: "acceptance-council.revoked", title: "Lời mời hội đồng nghiệm thu đã bị thu hồi", body: project.title, link: `/projects/${project.id}`, sourceType: "acceptance_council", sourceId: project.id, idempotencyKey: `acceptance-council-revoke:${row.id}` });
       return this.view(tx, current, project.id);
     });
   }
