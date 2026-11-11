@@ -658,6 +658,22 @@ test("6.12: funding metadata is versioned and audited; only GĐ/TP/TB/assigned C
   assert.equal((await service.getProject(people.director, f.project.id)).scope.budgetMetadata.total, 1000);
 });
 
+test("6.13.2: giải ngân không vượt kinh phí cấp, quyết toán không vượt giải ngân, sửa phiên bản cũng bị kiểm tra", async () => {
+  const f = await projectFixture("F2");
+  const { people, service } = f;
+  const write = (kind, amount, extra = {}) => service.recordFunding(people.head, f.project.id, { kind, amount, recordedOn: "2026-03-01", ...extra });
+  const invalid = (error) => error.response?.code === "FUNDING_INVALID";
+  const grant = await write("GRANT", 500);
+  await assert.rejects(() => write("DISBURSEMENT", 501), invalid, "giải ngân vượt cấp");
+  await write("DISBURSEMENT", 300);
+  await assert.rejects(() => write("SETTLEMENT", 301), invalid, "quyết toán vượt giải ngân");
+  await write("SETTLEMENT", 300);
+  await assert.rejects(() => write("GRANT", 200, { entryId: grant.entryId }), invalid, "hạ kinh phí cấp xuống dưới đã giải ngân");
+  await assert.rejects(() => write("GRANT", -1), invalid);
+  await assert.rejects(() => write("GRANT", 10_000_000_000_001), invalid);
+  assert.deepEqual((await service.getFunding(people.head, f.project.id)).totals, { GRANT: 500, DISBURSEMENT: 300, SETTLEMENT: 300 });
+});
+
 test("6.12: CV submits LIQUIDATION only for an Accepted/Failed project; GĐ alone signs and the project closes atomically; PGĐ-KH is refused; return goes back to draft", async () => {
   const f = await projectFixture("P4", "executing");
   const { people, service } = f;
