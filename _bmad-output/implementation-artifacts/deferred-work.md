@@ -318,3 +318,6 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-6-9-hoi-dong-va-ket-qua-nghiem-thu.md`
   summary: CV yêu cầu bổ sung hồ sơ nghiệm thu đã nộp (hồ sơ về draft, đề tài về executing, PI nộp lại snapshot v2) theo AC Story 6.9.
   evidence: Người dùng chọn tách story riêng ngày 2026-11-12; spec 6.8 cũng để ngoài phạm vi.
+- source_spec: `_bmad-output/implementation-artifacts/spec-6-9-hoi-dong-va-ket-qua-nghiem-thu.md`
+  summary: Chưa có test cho `acceptance-council.sign` trong `allowedActions` (GĐ ở bước LEADERSHIP thấy, PGĐ-KH có ghế không thấy).
+  evidence: Review 6.9 (verification-gap) — chưa có người dùng capability này cho tới giao diện phần 2; thêm test khi làm UI.

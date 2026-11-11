@@ -240,6 +240,10 @@ test("6.9: CV được tick lập hội đồng; GĐ từ chối giữ danh sác
 
   // TB trả lại: danh sách giữ nguyên, hội đồng về lại giai đoạn lập (mời/thu hồi được).
   await f.submit(people.staff);
+  // TB có ghế trong hội đồng không chuyển bước tờ trình thành lập chính hội đồng đó.
+  const boardSeat = await db.acceptanceCouncilMember.create({ data: { projectId: f.project.id, userId: people.board.id, councilRole: "committee_member", invitationStatus: "accepted", invitedById: people.staff.id } });
+  await assert.rejects(() => f.advance(people.board), coded(403, "APPROVAL_CONFLICT"), "TB có ghế hội đồng");
+  await db.acceptanceCouncilMember.delete({ where: { id: boardSeat.id } });
   const returned = await f.pending();
   await db.$transaction((tx) => returnApprovalSubmission(tx, people.board, returned.id, { expectedStage: returned.stage, note: "Bổ sung chuyên gia" }));
   assert.deepEqual(await db.acceptanceCouncilMember.findMany({ where: { projectId: f.project.id }, orderBy: { id: "asc" } }), rowsBefore, "trả lại giữ danh sách");
