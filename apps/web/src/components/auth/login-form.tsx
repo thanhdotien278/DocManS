@@ -84,7 +84,7 @@ export function LoginForm() {
 
       {error ? (
         <p className="form-error" role="alert">
-          {error}
+          {error} <Link href="/forgot-password">Quên mật khẩu?</Link>
         </p>
       ) : null}
 
@@ -92,6 +92,7 @@ export function LoginForm() {
         {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập hệ thống"}
         <ArrowRight size={17} aria-hidden="true" />
       </button>
+      <p className="record-meta"><Link href="/forgot-password">Quên mật khẩu?</Link></p>
       {canRegister ? <p className="record-meta">Chưa có tài khoản? <Link href="/register">Đăng ký tài khoản</Link></p> : null}
     </form>
   );
