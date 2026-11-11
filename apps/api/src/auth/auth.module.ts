@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
+import { MailService } from "../notifications/mail.service.js";
 import { AuditLogService } from "./audit-log.service.js";
 import { AuthRateLimitService } from "./auth-rate-limit.service.js";
 import { AuthController } from "./auth.controller.js";
@@ -10,7 +11,7 @@ import { SessionAuthGuard } from "./session-auth.guard.js";
 
 @Module({
   controllers: [AuthController],
-  providers: [AuditLogService, AuthRateLimitService, AuthService, AuthStore, PasswordService, PrismaService, SessionAuthGuard],
+  providers: [AuditLogService, AuthRateLimitService, AuthService, AuthStore, MailService, PasswordService, PrismaService, SessionAuthGuard],
   exports: [AuthService, SessionAuthGuard]
 })
 export class AuthModule {}

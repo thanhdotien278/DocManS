@@ -2,7 +2,7 @@ import type { SystemRole } from "@rtms/permissions";
 
 export const AUTH_SESSION_COOKIE = "rtms_session";
 /** Trang không cần phiên đăng nhập; middleware, app shell và SessionProvider dùng chung. */
-export const PUBLIC_ROUTES = ["/login", "/password-reset", "/register"];
+export const PUBLIC_ROUTES = ["/login", "/password-reset", "/forgot-password", "/register"];
 
 export type CurrentUser = {
   mustChangePassword?: boolean;

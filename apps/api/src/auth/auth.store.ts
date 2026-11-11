@@ -32,6 +32,12 @@ export class AuthStore {
     return user?.passwordHash ?? null;
   }
 
+  /** Quên mật khẩu: chỉ tài khoản đang hoạt động và có email nhận thư. */
+  async findPasswordResetTarget(identifier: string) {
+    const key = identifier.trim().toLowerCase();
+    return this.prisma.user.findFirst({ where: { status: "active", credentialEmail: { not: null }, OR: [{ usernameKey: key }, { credentialEmail: key }] }, select: { id: true, displayName: true, credentialEmail: true } });
+  }
+
   async findUserById(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

@@ -434,6 +434,7 @@ Các bảng phân hệ dùng cùng nhóm cột như §8. Khi một dòng ở đ�
 | Gán chức danh đơn vị (chỉ hiển thị) | Quản lý | Không | Không | Không | Không | Không | Nền tảng | Có | Role hierarchy GĐ1 |
 | Giao CV phụ trách cho đợt tiếp nhận (TP giao, đổi cả đợt hoặc từng hồ sơ) | Không | TP | Không | Không | Không | Không | Đơn vị | Có | D-038 |
 | Tự đăng ký tài khoản nhà nghiên cứu bằng email (D-044) | Không | Không | Không | Không | Không | Không | Công khai, khi `self_registration_enabled = true` | Có | Story 13.11 |
+| Yêu cầu liên kết đặt lại mật khẩu bằng tên đăng nhập/email (quên mật khẩu tự phục vụ) | Không | Không | Không | Không | Không | Không | Công khai; chỉ tài khoản `active` có email mới nhận thư; mọi đầu vào nhận cùng một phản hồi chung; tối đa 5 yêu cầu/15 phút theo IP và theo định danh; liên kết hiệu lực 30 phút, dùng một lần | Có | Quên mật khẩu |
 | Duyệt/từ chối yêu cầu tự đăng ký; chọn đơn vị quản lý; đổi NCV ↔ NNB (D-044) | Quản lý | TB, CV (không gồm TP/PP) | Không | Không | Không | Không | Toàn Học viện, không kiểm tra phạm vi đơn vị | Có | Story 13.11 |
 | Nạp ngữ cảnh phiên theo vai trò | Xem của mình | Xem của mình | Xem của mình | Xem của mình | Xem của mình | Xem của mình | Người dùng hiện tại | Không | FR4, FR5, FR6 |
 

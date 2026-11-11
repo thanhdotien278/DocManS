@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Check, Circle, KeyRound, LockKeyhole, ShieldCheck } from "lucide-react";
+import { Check, Circle, KeyRound, LockKeyhole, MailCheck, ShieldCheck, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { changePassword, completeAccountActivation, completePasswordReset } from "@/lib/auth-api";
+import { changePassword, completeAccountActivation, completePasswordReset, requestPasswordReset } from "@/lib/auth-api";
 
 export function ChangePasswordForm() {
   const router = useRouter(); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
@@ -33,11 +33,20 @@ const PASSWORD_RULES: { label: string; test: (value: string) => boolean }[] = [
 ];
 
 export function ResetPasswordForm() {
-  const router = useRouter(); const [activationToken, setActivationToken] = useState(""); const [ready, setReady] = useState(false); const [error, setError] = useState(""); const [confirmError, setConfirmError] = useState(""); const [busy, setBusy] = useState(false); const [pendingApproval, setPendingApproval] = useState(false); const [newPassword, setNewPassword] = useState("");
-  useEffect(() => { const params = new URLSearchParams(window.location.search); setActivationToken(params.get("mode") === "activation" ? params.get("token") ?? "" : ""); setReady(true); }, []);
+  const router = useRouter(); const [activationToken, setActivationToken] = useState(""); const [linkToken, setLinkToken] = useState(""); const [ready, setReady] = useState(false); const [error, setError] = useState(""); const [confirmError, setConfirmError] = useState(""); const [busy, setBusy] = useState(false); const [pendingApproval, setPendingApproval] = useState(false); const [succeeded, setSucceeded] = useState(false); const [newPassword, setNewPassword] = useState("");
+  useEffect(() => { const params = new URLSearchParams(window.location.search); const token = params.get("token") ?? ""; if (params.get("mode") === "activation") setActivationToken(token); else setLinkToken(token); setReady(true); }, []);
+  useEffect(() => { if (!succeeded) return; const timer = setTimeout(() => router.replace("/login"), 5000); return () => clearTimeout(timer); }, [succeeded, router]);
   const isActivation = Boolean(activationToken);
   const footer = <Link href="/login">Về trang đăng nhập</Link>;
   if (!ready) return <AuthShell kicker="Khôi phục truy cập" title="Thiết lập mật khẩu" description="Đang kiểm tra liên kết..."><p className="record-meta" role="status">Đang tải...</p></AuthShell>;
+  if (succeeded) return (
+    <AuthShell kicker={isActivation ? "Kích hoạt tài khoản" : "Khôi phục truy cập"} title={isActivation ? "Đã kích hoạt tài khoản" : "Đã đặt lại mật khẩu"} description="Bạn có thể đăng nhập bằng mật khẩu mới.">
+      <div role="status">
+        <p className="auth-notice success"><ShieldCheck size={18} aria-hidden="true" /><span>{isActivation ? "Thiết lập mật khẩu thành công." : "Đặt lại mật khẩu thành công."} Hệ thống sẽ tự chuyển về trang đăng nhập sau 5 giây.</span></p>
+        <button className="button primary auth-submit" type="button" onClick={() => router.replace("/login")}>Quay lại trang đăng nhập</button>
+      </div>
+    </AuthShell>
+  );
   if (pendingApproval) return (
     <AuthShell kicker="Kích hoạt tài khoản" title="Đã xác minh email" description="Mật khẩu của bạn đã được thiết lập." footer={footer}>
       <div role="status">
@@ -51,10 +60,10 @@ export function ResetPasswordForm() {
     </AuthShell>
   );
   return (
-    <AuthShell kicker={isActivation ? "Kích hoạt tài khoản" : "Khôi phục truy cập"} title="Thiết lập mật khẩu" description={isActivation ? "Liên kết kích hoạt hợp lệ. Đặt mật khẩu để hoàn tất xác minh email." : "Nhập mã đặt lại do quản trị viên cung cấp và mật khẩu mới."} footer={footer}>
+    <AuthShell kicker={isActivation ? "Kích hoạt tài khoản" : "Khôi phục truy cập"} title="Thiết lập mật khẩu" description={isActivation ? "Liên kết kích hoạt hợp lệ. Đặt mật khẩu để hoàn tất xác minh email." : linkToken ? "Đặt mật khẩu mới cho tài khoản của bạn." : "Nhập mã đặt lại do quản trị viên cung cấp và mật khẩu mới."} footer={footer}>
       <form className="auth-form" noValidate onSubmit={async (event) => {
         event.preventDefault(); const formElement = event.currentTarget; const form = new FormData(formElement); setError("");
-        const token = activationToken || String(form.get("token") ?? "").trim();
+        const token = activationToken || linkToken || String(form.get("token") ?? "").trim();
         const password = String(form.get("newPassword") ?? "");
         const confirmPassword = String(form.get("confirmPassword") ?? "");
         if (!token) return setError("Cần mã đặt lại mật khẩu do quản trị viên cung cấp.");
@@ -64,10 +73,10 @@ export function ResetPasswordForm() {
             // Story 13.11: tài khoản tự đăng ký còn chờ duyệt nên ở lại trang và báo trạng thái.
             if ((await completeAccountActivation(token, password, confirmPassword)).status === "pending_approval") return setPendingApproval(true);
           } else await completePasswordReset(token, password);
-          router.replace("/login");
+          setSucceeded(true);
         } catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể thiết lập mật khẩu."); formElement.reset(); setNewPassword(""); } finally { setBusy(false); }
       }}>
-        {isActivation ? null : <div className="field">
+        {isActivation || linkToken ? null : <div className="field">
           <label htmlFor="reset-token">Mã đặt lại mật khẩu</label>
           <div className="field-input with-icon"><KeyRound size={18} aria-hidden="true" /><input id="reset-token" name="token" autoComplete="one-time-code" /></div>
         </div>}
@@ -85,6 +94,33 @@ export function ResetPasswordForm() {
         </div>
         {error ? <p className="auth-notice danger" role="alert">{error}</p> : null}
         <button className="button primary auth-submit" disabled={busy} type="submit">{busy ? "Đang xử lý..." : isActivation ? "Thiết lập mật khẩu" : "Đặt lại mật khẩu"}</button>
+      </form>
+    </AuthShell>
+  );
+}
+
+export function ForgotPasswordForm() {
+  const [error, setError] = useState(""); const [done, setDone] = useState(""); const [busy, setBusy] = useState(false);
+  const footer = <Link href="/login">Về trang đăng nhập</Link>;
+  if (done) return (
+    <AuthShell kicker="Khôi phục truy cập" title="Kiểm tra hộp thư của bạn" description={done} footer={footer}>
+      <p className="auth-notice success" role="status"><MailCheck size={18} aria-hidden="true" /><span>Nếu không thấy email, hãy kiểm tra thư mục thư rác (spam) hoặc liên hệ quản trị viên hệ thống.</span></p>
+    </AuthShell>
+  );
+  return (
+    <AuthShell kicker="Khôi phục truy cập" title="Quên mật khẩu" description="Nhập tên đăng nhập hoặc email của tài khoản. Hệ thống sẽ gửi liên kết đặt lại mật khẩu tới email đã đăng ký." footer={footer}>
+      <form className="auth-form" noValidate onSubmit={async (event) => {
+        event.preventDefault(); setError("");
+        const identifier = String(new FormData(event.currentTarget).get("identifier") ?? "").trim();
+        if (!identifier) return setError("Vui lòng nhập tên đăng nhập hoặc email.");
+        setBusy(true); try { setDone(await requestPasswordReset(identifier)); } catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể gửi yêu cầu đặt lại mật khẩu."); } finally { setBusy(false); }
+      }}>
+        <div className="field">
+          <label htmlFor="forgot-identifier">Tên đăng nhập hoặc email</label>
+          <div className="field-input with-icon"><UserRound size={18} aria-hidden="true" /><input id="forgot-identifier" name="identifier" autoComplete="username" placeholder="Nhập tên đăng nhập hoặc email" /></div>
+        </div>
+        {error ? <p className="auth-notice danger" role="alert">{error}</p> : null}
+        <button className="button primary auth-submit" disabled={busy} type="submit">{busy ? "Đang gửi..." : "Gửi liên kết đặt lại"}</button>
       </form>
     </AuthShell>
   );

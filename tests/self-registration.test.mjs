@@ -170,9 +170,10 @@ describe("Story 13.11 self registration", () => {
     assert.equal(second.status, "pending_email_verification");
   });
 
-  it("releases the account and returns 503 when the verification mail fails", async () => {
+  it("answers immediately and releases the account in the background when the verification mail fails", async () => {
     const { service, prisma } = createRegistration({ mail: createMail({ fail: true }) });
-    await assert.rejects(() => service.register(input(), {}), { status: 503 });
+    assert.match((await service.register(input(), {})).message, /kiểm tra hộp thư/);
+    await new Promise((resolve) => setImmediate(resolve));
     assert.equal(prisma.db.users.at(-1).status, "expired");
     assert.equal(prisma.db.users.at(-1).credentialEmail, null);
   });

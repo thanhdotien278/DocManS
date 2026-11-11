@@ -3,7 +3,7 @@ import { AuthService } from "./auth.service.js";
 import type { LoginRequest } from "./auth.types.js";
 import { LoginRequestPipe } from "./login-request.pipe.js";
 import { SessionAuthGuard } from "./session-auth.guard.js";
-import { ChangePasswordRequestPipe, CompleteAccountActivationRequestPipe, CompletePasswordResetRequestPipe } from "./password-request.pipe.js";
+import { ChangePasswordRequestPipe, CompleteAccountActivationRequestPipe, CompletePasswordResetRequestPipe, RequestPasswordResetPipe } from "./password-request.pipe.js";
 import {
   createExpiredSessionCookie,
   createSessionCookie,
@@ -61,6 +61,11 @@ export class AuthController {
     await this.authService.changePassword(request.currentUser.id, input, requestContext(request));
     response.setHeader("Set-Cookie", createExpiredSessionCookie(process.env.NODE_ENV === "production"));
     return { success: true };
+  }
+
+  @Post("password-reset/request")
+  async requestPasswordReset(@Body(new RequestPasswordResetPipe()) body: { identifier: string }, @Req() request: any) {
+    return this.authService.requestPasswordReset(body, requestContext(request));
   }
 
   @Post("password-reset/complete")
