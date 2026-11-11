@@ -176,6 +176,7 @@ unit-scope projects but operates only with the exact current project officer
 assignment. Per-project funding: GĐ, PGĐ-KH, TP, TB all; assigned CV; PI/members and
 PP only on projects where they are PI/member; PGĐ-TD aggregate only. Funding
 management, disbursement and settlement: GĐ, TP and TB Academy-wide, assigned CV.
+Funding ledger invariants: ΣDISBURSEMENT ≤ ΣGRANT and ΣSETTLEMENT ≤ ΣDISBURSEMENT (error `FUNDING_INVALID`). GĐ signs liquidation only when ΣSETTLEMENT + recoveredAmount = ΣDISBURSEMENT (`LIQUIDATION_UNBALANCED`); signing freezes the figures and allocates `n/BBTL-HVQY/năm`. See `docs/superpowers/specs/2026-11-11-kinh-phi-de-tai-design.md`.
 Private appraisal material is disclosed only to the assigned CV and the tờ trình
 chain (TB, TP, signer) of that request; monitoring roles do not receive it.
 PI/members receive permitted feedback, not confidential management notes.
