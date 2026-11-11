@@ -13,8 +13,16 @@ export type ProjectRecord = {
   history: Array<{ id: string; action: string; reason?: string; createdAt: string }>;
   ethicsDossier?: { id: string; status: string; submittedAt: string | null } | null;
   acceptanceDossier?: { id: string; status: string; submittedAt: string | null } | null;
+  liquidation?: LiquidationView | null;
   overdue: boolean; approaching: boolean; nearestDeadline: string | null; viewerAuthorization: ViewerAuthorizationV1;
 };
+
+export type FundingRecord = { entryId: string; version: number; kind: "GRANT" | "DISBURSEMENT" | "SETTLEMENT"; amount: string; recordedOn: string | null; note: string | null; fileRecordIds: string[]; recordedById: string; createdAt: string };
+export type FundingView = { restricted: boolean; records: FundingRecord[]; totals: { GRANT: number; DISBURSEMENT: number; SETTLEMENT: number } | null; canWrite: boolean };
+export type LiquidationView = { current: null | { id: string; status: string; outcome: string; report: string; decisionNote: string | null; decidedAt: string | null; recoveredAmount: string; approvedBudget: string | null; totalDisbursed: string | null; totalSettled: string | null; liquidationNumber: string | null; fileRecordIds: string[] }; eligible: boolean; canSign: boolean; canSubmit: boolean; note: string | null };
+export const FUNDING_KIND_LABELS: Record<string, string> = { GRANT: "Kinh phí được cấp", DISBURSEMENT: "Giải ngân", SETTLEMENT: "Quyết toán" };
+export const LIQUIDATION_STATUS_LABELS: Record<string, string> = { DRAFT: "Bản nháp", SUBMITTED: "Đang trình", SIGNED: "Đã ký", REJECTED: "Bị từ chối" };
+export const vnd = (value: number | string) => `${Number(value).toLocaleString("vi-VN")} đ`;
 
 const PROJECT_STATUS_LABELS: Record<string, string> = { preparing: "Chuẩn bị triển khai", executing: "Đang thực hiện", paused: "Tạm dừng", pending_acceptance: "Chờ nghiệm thu", accepted: "Đã nghiệm thu", failed: "Không đạt", closed: "Đóng/lưu trữ" };
 const REPORT_STATUS_LABELS: Record<string, string> = { draft: "Bản nháp", submitted: "Đã nộp", under_review: "Đang xem xét", supplement_requested: "Yêu cầu bổ sung", accepted: "Đã chấp nhận", superseded: "Đã có bản sửa" };
@@ -23,6 +31,7 @@ const MILESTONE_STATUS_LABELS: Record<string, string> = { open: "Đang mở", co
 const ROLE_LABELS: Record<string, string> = { TOPIC_PI: "Chủ nhiệm đề tài", TOPIC_MEMBER: "Thành viên", TOPIC_SECRETARY: "Thư ký" };
 const MEMBER_STATUS_LABELS: Record<string, string> = { ACTIVE: "Đang tham gia", ENDED: "Đã kết thúc" };
 const HISTORY_ACTION_LABELS: Record<string, string> = {
+  "project.funding.record": "Ghi số liệu kinh phí", "project.liquidation.submit": "Trình biên bản thanh lý", "project.liquidation.approve": "Ký biên bản thanh lý", "project.liquidation.reject": "Từ chối biên bản thanh lý",
   "project.created": "Tạo đề tài", "project.officer.assign": "Phân công chuyên viên", "project.officer.revoke": "Thu hồi phân công chuyên viên",
   "project.setup.configure": "Thiết lập mốc", "project.setup.confirm": "Xác nhận bắt đầu thực hiện",
   "project.report.draft": "Tạo bản nháp báo cáo", "project.report.edit-draft": "Cập nhật báo cáo", "project.report.submit": "Nộp báo cáo",
@@ -91,6 +100,8 @@ export async function uploadProjectFile(project: ProjectRecord, file: File, purp
   if (!response.ok || !body.file?.id) throw new Error(typeof body.message === "string" ? body.message : "Không thể tải minh chứng.");
   return body.file as { id: string; fileName: string };
 }
+
+export async function getProjectFunding(id: string) { return (await json<{ funding: FundingView }>(`/projects/${id}/funding`)).funding; }
 
 export function projectFileUrl(fileId: string) { return `${getApiBaseUrl()}/files/${fileId}/download`; }
 export async function listProjectFiles(id: string) { return (await json<{ files: Array<{ id: string; fileName: string; uploadedById: string }> }>(`/files?relatedEntityType=approved_project&relatedEntityId=${encodeURIComponent(id)}`)).files; }
