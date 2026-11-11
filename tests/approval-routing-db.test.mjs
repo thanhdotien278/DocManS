@@ -781,6 +781,21 @@ test("6.13.6: PI được báo khi có giải ngân/quyết toán (không phải
   await service.decideLiquidation(people.director, f.project.id, "approve", { liquidationId: liquidation.id, contextVersion: await f.ctxVersion() });
   for (const who of [people.pi, people.staff]) assert.equal((await db.userNotification.findFirst({ where: { userId: who.id, type: "project.liquidation.decided" } })).link, `/projects/${f.project.id}`, who.displayName);
   assert.equal(await count(people.director.id, "project.liquidation.decided"), 0);
+
+  const notifications = new NotificationsService(db, new ProposalParticipationService(db), new ProposalReviewAccessService(db), new ProposalManagementOfficerService(db));
+  const seen = async (who, type) => (await notifications.list(who, 50)).notifications.filter((row) => row.type === type);
+  assert.equal((await seen(people.pi, "project.funding.recorded")).length, 3, "PI thấy thông báo kinh phí");
+  assert.equal((await seen(people.pi, "project.liquidation.decided")).length, 1, "PI thấy thông báo thanh lý");
+  assert.equal((await seen(people.staff, "project.liquidation.decided")).length, 1, "CV thấy thông báo thanh lý");
+  assert.equal((await seen(people.member, "project.funding.recorded")).length, 0, "thành viên thường không có thông báo kinh phí");
+
+  const g = await projectFixture("F6b", "accepted");
+  const rejectedRow = await g.service.submitLiquidation(g.people.staff, g.project.id, { report: "BB", recoveredAmount: 0, contextVersion: await g.ctxVersion() });
+  await g.toLeadership("LIQUIDATION");
+  await g.service.decideLiquidation(g.people.director, g.project.id, "reject", { liquidationId: rejectedRow.id, reason: "Thiếu hồ sơ", contextVersion: await g.ctxVersion() });
+  const [rejection] = await seen(g.people.pi, "project.liquidation.decided");
+  assert.equal(rejection.title, "Biên bản thanh lý bị từ chối");
+  assert.ok(!rejection.body.includes(" — số"));
 });
 
 test("6.12: CV submits LIQUIDATION only for an Accepted/Failed project; GĐ alone signs and the project closes atomically; PGĐ-KH is refused; return goes back to draft", async () => {

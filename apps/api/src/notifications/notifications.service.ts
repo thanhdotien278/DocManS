@@ -99,6 +99,21 @@ export class NotificationsService {
       }
     }
 
+    // Kinh phí/thanh lý: hiện khi người xem còn xem được đề tài (sourceId kinh phí là đề tài, thanh lý là biên bản).
+    const fundingIds = idsOf("project_funding");
+    const liquidationIds = idsOf("project_liquidation");
+    if (fundingIds.length || liquidationIds.length) {
+      const projects = new ApprovedProjectsService(this.prisma, new AuditLogService(this.prisma));
+      const liquidations: Array<{ id: string; projectId: string }> = liquidationIds.length ? await this.prisma.projectLiquidation.findMany({ where: { id: { in: liquidationIds } }, select: { id: true, projectId: true } }) : [];
+      const visibleProject = new Map<string, boolean>();
+      const canView = async (projectId: string) => {
+        if (!visibleProject.has(projectId)) visibleProject.set(projectId, !!(await projects.getProject(actor, projectId).catch((error) => { if (error instanceof ForbiddenException || error instanceof NotFoundException) return null; throw error; })));
+        return visibleProject.get(projectId)!;
+      };
+      for (const id of fundingIds) if (await canView(id)) allowed.add(`project_funding:${id}`);
+      for (const liquidation of liquidations) if (await canView(liquidation.projectId)) allowed.add(`project_liquidation:${liquidation.id}`);
+    }
+
     // Story 13.11: yêu cầu đăng ký chỉ hiện với người còn quyền duyệt.
     if ((REGISTRATION_APPROVER_ROLES as readonly string[]).includes(actor.systemRole)) for (const id of idsOf("registration_request")) allowed.add(`registration_request:${id}`);
 
