@@ -674,6 +674,30 @@ test("6.13.2: giải ngân không vượt kinh phí cấp, quyết toán không 
   assert.deepEqual((await service.getFunding(people.head, f.project.id)).totals, { GRANT: 500, DISBURSEMENT: 300, SETTLEMENT: 300 });
 });
 
+test("6.13.1: tạo đề tài từ đề xuất có kinh phí duyệt → GRANT v1 tự động; approvedAmount ưu tiên; 0 thì không tạo", async () => {
+  const ctx = await setup("F1");
+  const { people, proposal } = ctx;
+  const service = new ApprovedProjectsService(db, new AuditLogService(db));
+  const makeApproved = async (prop, budgetMetadata) => {
+    await db.researchProposal.update({ where: { id: prop.id }, data: { status: "approved", budgetMetadata } });
+    await db.proposalManagementOfficer.create({ data: { proposalId: prop.id, officerUserId: people.staff.id, assignedById: people.head.id, effectiveFrom: new Date(Date.now() - 1000) } });
+    const event = await db.proposalSubmissionEvent.create({ data: { proposalId: prop.id, actorId: people.pi.id, fromStatus: "draft", toStatus: "submitted", snapshot: { id: prop.id, ownerId: people.pi.id, members: [], title: prop.title, budgetMetadata: { amount: budgetMetadata.amount } } } });
+    await db.proposalDecision.create({ data: { proposalId: prop.id, decision: "approved", decidedById: people.director.id, fromStatus: "under_review", toStatus: "approved", packageSnapshot: { submissionEventId: event.id } } });
+  };
+  const create = async (prop) => service.createFromApprovedProposal(people.staff, prop.id, { contextVersion: proposalContextVersion(await db.researchProposal.findUnique({ where: { id: prop.id } })) });
+  await makeApproved(proposal, { amount: 500, approvedAmount: 450 });
+  const created = await create(proposal);
+  const grants = await db.projectFundingRecord.findMany({ where: { projectId: created.id } });
+  assert.deepEqual(grants.map((r) => [r.kind, String(r.amount), r.version, r.note]), [["GRANT", "450", 1, "Kinh phí được phê duyệt"]]);
+  assert.equal((await db.approvedProject.findUnique({ where: { id: created.id } })).scopeSnapshot.budgetMetadata.approvedAmount, 450, "snapshot phạm vi ghi số đã duyệt");
+
+  const { id: _i, createdAt: _c, updatedAt: _u, ...rest } = await db.researchProposal.findUnique({ where: { id: proposal.id } });
+  const second = await db.researchProposal.create({ data: { ...rest, title: "Đề xuất không kinh phí" } });
+  await makeApproved(second, { amount: 0 });
+  const zero = await create(second);
+  assert.equal(await db.projectFundingRecord.count({ where: { projectId: zero.id } }), 0);
+});
+
 test("6.12: CV submits LIQUIDATION only for an Accepted/Failed project; GĐ alone signs and the project closes atomically; PGĐ-KH is refused; return goes back to draft", async () => {
   const f = await projectFixture("P4", "executing");
   const { people, service } = f;

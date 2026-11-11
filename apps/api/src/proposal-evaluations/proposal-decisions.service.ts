@@ -252,6 +252,13 @@ export class ProposalDecisionsService {
 
       // Conditional on the status and package revision we validated, so two authorities deciding at once cannot both win.
       await updateProposalStatusGuarded(tx, proposalId, proposal.status, toStatus);
+      // Story 6.13: GĐ có thể chốt lại kinh phí khi phê duyệt; ghi vào metadata của đề xuất, có audit before/after.
+      if (decision === PROPOSAL_DECISIONS.approved && typeof input.approvedAmount === "number") {
+        const before = (proposal as { budgetMetadata?: unknown }).budgetMetadata ?? {};
+        const after = { ...(before as Record<string, unknown>), approvedAmount: input.approvedAmount };
+        await tx.researchProposal.update({ where: { id: proposalId }, data: { budgetMetadata: after as never } });
+        await tx.auditLog.create({ data: { action: "approve-proposal-funding", result: "success", actorId: actor.id, targetEntity: "research-proposal", targetEntityId: proposalId, username: actor.username, beforeFacts: before as never, afterFacts: after as never } });
+      }
       // Đóng tờ trình trong cùng transaction: quyết định và tờ trình cùng commit hoặc cùng rollback.
       await closeApprovalSubmission(tx as never, actor, decisionKey(proposalId), decision === PROPOSAL_DECISIONS.approved ? "APPROVED" : "REJECTED", note);
 
