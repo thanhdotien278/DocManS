@@ -440,6 +440,7 @@ Module tables use the same column groups as §8. Where a module row and §7 disa
 | Assign display-only unit title | Manage | None | None | None | None | None | Platform scope | Yes | Role hierarchy GĐ1 |
 | Giao CV phụ trách cho đợt tiếp nhận (TP giao, đổi cả đợt hoặc từng hồ sơ) | None | TP | None | None | None | None | Unit scope | Yes | D-038 |
 | Self-register a researcher account by email (D-044) | None | None | None | None | None | None | Public, when `self_registration_enabled = true` | Yes | Story 13.11 |
+| Request a password-reset link by username/email (self-service forgot password) | None | None | None | None | None | None | Public; only `active` accounts with an email receive mail; same generic response for every input; 5 requests/15 min per IP and per identifier; link valid 30 min, single use | Yes | Forgot password |
 | Approve/reject self-registration request; choose management unit; switch NCV ↔ NNB (D-044) | Manage | TB, CV (not TP/PP) | None | None | None | None | Academy-wide, no unit scope check | Yes | Story 13.11 |
 | Load role-aware session context | Read own | Read own | Read own | Read own | Read own | Read own | Current user | No | FR4, FR5, FR6 |
 

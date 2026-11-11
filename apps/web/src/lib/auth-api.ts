@@ -81,6 +81,17 @@ export async function changePassword(currentPassword: string, newPassword: strin
   if (!response.ok) throw new Error(body.message ?? "Không thể đổi mật khẩu.");
 }
 
+export async function requestPasswordReset(identifier: string) {
+  const response = await fetch(`${getApiBaseUrl()}/auth/password-reset/request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identifier })
+  });
+  const body = (await response.json().catch(() => ({}))) as { message?: string };
+  if (!response.ok) throw new Error(body.message ?? "Không thể gửi yêu cầu đặt lại mật khẩu.");
+  return body.message ?? "";
+}
+
 export async function completePasswordReset(token: string, newPassword: string) {
   const response = await fetch(`${getApiBaseUrl()}/auth/password-reset/complete`, {
     method: "POST",

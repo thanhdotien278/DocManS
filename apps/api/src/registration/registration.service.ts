@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { randomBytes } from "node:crypto";
 import { AuditLogService } from "../auth/audit-log.service.js";
@@ -66,17 +66,16 @@ export class RegistrationService {
       throw error;
     });
 
+    // Gửi nền để email đã dùng hay chưa đều trả lời nhanh như nhau (chống dò tài khoản qua timing).
     if (result) {
-      try {
-        await this.mailService.sendAccountActivation({ to: input.email, displayName: input.fullName, activationUrl: this.mailService.activationUrl(result.token), expiresAt: result.expiresAt, templateKey: "self_registration_verification" });
-      } catch {
-        // Không gửi được link thì người dùng không thể xác minh: giải phóng email/username để đăng ký lại ngay.
-        await this.prisma.$transaction(async (tx) => {
-          await this.release(tx, result.user.id, "expired");
-          await this.auditLog.record({ action: "deliver-registration-verification", result: "failure", actorId: result.user.id, targetEntity: "user", targetEntityId: result.user.id, reason: "MAIL_DELIVERY_FAILED" }, tx);
-        });
-        throw new ServiceUnavailableException({ message: "Không gửi được email xác minh. Vui lòng thử lại sau.", code: "MAIL_DELIVERY_FAILED" });
-      }
+      void this.mailService.sendAccountActivation({ to: input.email, displayName: input.fullName, activationUrl: this.mailService.activationUrl(result.token), expiresAt: result.expiresAt, templateKey: "self_registration_verification" })
+        .catch(() =>
+          // Không gửi được link thì người dùng không thể xác minh: giải phóng email/username để đăng ký lại ngay.
+          this.prisma.$transaction(async (tx) => {
+            await this.release(tx, result.user.id, "expired");
+            await this.auditLog.record({ action: "deliver-registration-verification", result: "failure", actorId: result.user.id, targetEntity: "user", targetEntityId: result.user.id, reason: "MAIL_DELIVERY_FAILED" }, tx);
+          }))
+        .catch(() => undefined);
     }
     return { message: REGISTER_ACCEPTED_MESSAGE };
   }
