@@ -224,7 +224,7 @@ export class ApprovedProjectsService {
         allowedActions: itemActions({ request: { requestType: request.requestType, status: request.status, requesterId: request.requesterId } }, `project.${request.requestType}.`).filter((action: string) => !/\.(approve|reject)$/.test(action) || pending.get(request.id)?.stage === "LEADERSHIP")
       }) : ({ id: request.id, requestType: request.requestType, status: request.status, createdAt: request.createdAt?.toISOString?.() ?? null, decidedAt: request.decidedAt?.toISOString?.() ?? null, allowedActions: [] })),
       history: (project.history ?? []).map((item: AnyRecord) => ({ id: item.id, action: item.action, fromStatus: item.fromStatus, toStatus: item.toStatus, reason: requestDetail ? item.reason : undefined, createdAt: item.createdAt?.toISOString?.() ?? null, beforeFacts: isOfficer || isHead || isRouter || isSigner ? item.beforeFacts : undefined, afterFacts: isOfficer || isHead || isRouter || isSigner ? item.afterFacts : undefined })),
-      liquidation: actor ? this.liquidationView(project, actor) : null,
+      liquidation: actor ? this.liquidationView(project, actor, officer) : null,
       ethicsDossier: project.ethicsDossier && capability.allowedActions?.includes("ethics-dossier.read") ? { id: project.ethicsDossier.id, status: project.ethicsDossier.status, submittedAt: project.ethicsDossier.submittedAt?.toISOString?.() ?? null } : null,
       acceptanceDossier: project.acceptanceDossier && capability.allowedActions?.includes("acceptance-dossier.read") ? { id: project.acceptanceDossier.id, status: project.acceptanceDossier.status, submittedAt: project.acceptanceDossier.submittedAt?.toISOString?.() ?? null } : null,
       overdue,
@@ -807,13 +807,13 @@ export class ApprovedProjectsService {
 
   // ---- Story 6.12: kinh phí dạng metadata và thanh lý ----
 
-  private liquidationView(project: AnyRecord, actor: SafeUserContext) {
+  private liquidationView(project: AnyRecord, actor: SafeUserContext, officer: AnyRecord | null) {
     const latest = (project.liquidations ?? [])[0] ?? null;
     const member = this.activeMember(project, actor.id);
     return {
       current: latest ? { id: latest.id, status: latest.status, outcome: latest.outcome, report: latest.report, decisionNote: latest.decisionNote, decidedAt: latest.decidedAt?.toISOString?.() ?? null, recoveredAmount: String(latest.recoveredAmount ?? 0), approvedBudget: latest.approvedBudget === null || latest.approvedBudget === undefined ? null : String(latest.approvedBudget), totalDisbursed: latest.totalDisbursed === null || latest.totalDisbursed === undefined ? null : String(latest.totalDisbursed), totalSettled: latest.totalSettled === null || latest.totalSettled === undefined ? null : String(latest.totalSettled), liquidationNumber: latest.liquidationNumber ?? null, fileRecordIds: latest.fileRecordIds ?? [] } : null,
       eligible: LIQUIDATABLE.includes(project.status),
-      canSubmit: isResearchManagementStaff(actor) && LIQUIDATABLE.includes(project.status) && (!latest || ["DRAFT", "REJECTED"].includes(latest.status)),
+      canSubmit: isResearchManagementStaff(actor) && officer?.officerUserId === actor.id && LIQUIDATABLE.includes(project.status) && (!latest || ["DRAFT", "REJECTED"].includes(latest.status)),
       canSign: isLeadership(actor) && !member && latest?.status === "SUBMITTED" && (project.pendingApprovals ?? []).some((row: AnyRecord) => row.kind === "LIQUIDATION" && row.stage === "LEADERSHIP"),
       note: LIQUIDATABLE.includes(project.status) ? null : "Chỉ đề tài đã nghiệm thu (Accepted) hoặc không đạt (Failed) mới được thanh lý."
     };
