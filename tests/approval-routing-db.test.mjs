@@ -720,6 +720,38 @@ test("6.13.3: GĐ/TP/TB/CV phụ trách tải chứng từ FUNDING_VOUCHER; PI, 
   await assert.rejects(() => upload(people.head, "FUNDING_VOUCHER"), (e) => e.response?.code === "WORKFLOW_STATE_DENIED");
 });
 
+test("6.13.4: thu hồi ≤ giải ngân; GĐ chỉ ký khi quyết toán + thu hồi = giải ngân; ký thì chốt số liệu và cấp số BBTL không trùng", async () => {
+  const f = await projectFixture("F4", "failed");
+  const { people, service } = f;
+  const write = (kind, amount) => service.recordFunding(people.head, f.project.id, { kind, amount, recordedOn: "2026-03-01" });
+  await write("GRANT", 500); await write("DISBURSEMENT", 500); await write("SETTLEMENT", 480);
+  const submit = async (recoveredAmount) => service.submitLiquidation(people.staff, f.project.id, { report: "Biên bản", recoveredAmount, contextVersion: await f.ctxVersion() });
+  await assert.rejects(() => submit(501), (e) => e.response?.code === "LIQUIDATION_INVALID", "thu hồi vượt giải ngân");
+  const liquidation = await submit(15);
+  await f.toLeadership("LIQUIDATION");
+  const sign = async () => service.decideLiquidation(people.director, f.project.id, "approve", { liquidationId: liquidation.id, contextVersion: await f.ctxVersion() });
+  await assert.rejects(sign, (e) => e.response?.code === "LIQUIDATION_UNBALANCED", "lệch 5");
+  assert.equal((await db.projectLiquidation.findUnique({ where: { id: liquidation.id } })).status, "SUBMITTED");
+  assert.equal((await f.reload()).status, "failed");
+
+  await write("SETTLEMENT", 5);
+  await sign();
+  const signed = await db.projectLiquidation.findUnique({ where: { id: liquidation.id } });
+  assert.deepEqual([signed.status, String(signed.approvedBudget), String(signed.totalDisbursed), String(signed.totalSettled), String(signed.recoveredAmount)], ["SIGNED", "500", "500", "485", "15"]);
+  assert.match(signed.liquidationNumber, /^\d+\/BBTL-HVQY\/\d{4}$/);
+  assert.equal((await f.reload()).status, "closed");
+
+  const g = await projectFixture("F4b", "failed");
+  await g.service.recordFunding(g.people.head, g.project.id, { kind: "GRANT", amount: 10, recordedOn: "2026-03-01" });
+  const second = await g.service.submitLiquidation(g.people.staff, g.project.id, { report: "Biên bản 2", recoveredAmount: 0, contextVersion: await g.ctxVersion() });
+  await g.toLeadership("LIQUIDATION");
+  await g.service.decideLiquidation(g.people.director, g.project.id, "approve", { liquidationId: second.id, contextVersion: await g.ctxVersion() });
+  const n = (row) => Number(row.liquidationNumber.split("/")[0]);
+  assert.equal(n(await db.projectLiquidation.findUnique({ where: { id: second.id } })), n(signed) + 1, "số tăng dần trong năm");
+  const view = await g.service.getProject(g.people.director, g.project.id);
+  assert.equal(view.liquidation.current.liquidationNumber, (await db.projectLiquidation.findUnique({ where: { id: second.id } })).liquidationNumber);
+});
+
 test("6.12: CV submits LIQUIDATION only for an Accepted/Failed project; GĐ alone signs and the project closes atomically; PGĐ-KH is refused; return goes back to draft", async () => {
   const f = await projectFixture("P4", "executing");
   const { people, service } = f;

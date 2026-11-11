@@ -64,7 +64,7 @@ export class ApprovedProjectsService {
       if (expected !== SKIP_CONTEXT) assertProjectContext(expected, project);
       return work(tx, currentActor, project);
     }, { isolationLevel: "Serializable", timeout: 15000 }).catch(async (error: AnyRecord) => {
-      const denied = isSerializationFailure(error) ? new ConflictException({ code: "CONTEXT_VERSION_MISMATCH" }) : error;
+      const denied = isSerializationFailure(error) || error?.code === "P2002" ? new ConflictException({ code: "CONTEXT_VERSION_MISMATCH" }) : error;
       const evidence = denied as AnyRecord;
       await this.auditLog.record({ action: "project-mutation-denied", result: "failure", actorId: actor.id, targetEntity: "approved-project", targetEntityId: projectId, username: actor.username, reason: evidence?.response?.code ?? evidence?.code ?? "ACTION_NOT_GRANTED" }).catch(() => undefined);
       throw denied;
@@ -811,8 +811,9 @@ export class ApprovedProjectsService {
     const latest = (project.liquidations ?? [])[0] ?? null;
     const member = this.activeMember(project, actor.id);
     return {
-      current: latest ? { id: latest.id, status: latest.status, outcome: latest.outcome, report: latest.report, decisionNote: latest.decisionNote, decidedAt: latest.decidedAt?.toISOString?.() ?? null } : null,
+      current: latest ? { id: latest.id, status: latest.status, outcome: latest.outcome, report: latest.report, decisionNote: latest.decisionNote, decidedAt: latest.decidedAt?.toISOString?.() ?? null, recoveredAmount: String(latest.recoveredAmount ?? 0), approvedBudget: latest.approvedBudget === null || latest.approvedBudget === undefined ? null : String(latest.approvedBudget), totalDisbursed: latest.totalDisbursed === null || latest.totalDisbursed === undefined ? null : String(latest.totalDisbursed), totalSettled: latest.totalSettled === null || latest.totalSettled === undefined ? null : String(latest.totalSettled), liquidationNumber: latest.liquidationNumber ?? null, fileRecordIds: latest.fileRecordIds ?? [] } : null,
       eligible: LIQUIDATABLE.includes(project.status),
+      canSubmit: isResearchManagementStaff(actor) && LIQUIDATABLE.includes(project.status) && (!latest || ["DRAFT", "REJECTED"].includes(latest.status)),
       canSign: isLeadership(actor) && !member && latest?.status === "SUBMITTED" && (project.pendingApprovals ?? []).some((row: AnyRecord) => row.kind === "LIQUIDATION" && row.stage === "LEADERSHIP"),
       note: LIQUIDATABLE.includes(project.status) ? null : "Chỉ đề tài đã nghiệm thu (Accepted) hoặc không đạt (Failed) mới được thanh lý."
     };
@@ -882,20 +883,28 @@ export class ApprovedProjectsService {
     });
   }
 
+  private async currentFundingTotals(tx: any, projectId: string) {
+    const rows = await tx.projectFundingRecord.findMany({ where: { projectId } });
+    return fundingTotals(latestFunding<any>(rows));
+  }
+
   /** CV phụ trách lập biên bản thanh lý và trình tờ trình LIQUIDATION (TB → TP → GĐ). Chỉ đề tài Accepted/Failed. */
   async submitLiquidation(actor: SafeUserContext, projectId: string, input: AnyRecord) {
     return this.mutate(actor, projectId, input.contextVersion, async (tx, currentActor, project) => {
       await this.assertOfficer(tx, currentActor, project, "submit-liquidation");
       if (!LIQUIDATABLE.includes(project.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Chỉ đề tài đã nghiệm thu hoặc không đạt mới được thanh lý." });
       const report = requiredText(input.report, "report");
+      const recoveredAmount = readFundingAmount(input.recoveredAmount ?? 0, "Số tiền thu hồi");
+      const totals = await this.currentFundingTotals(tx, project.id);
+      if (recoveredAmount > totals.DISBURSEMENT) throw new BadRequestException({ code: "LIQUIDATION_INVALID", message: `Số tiền thu hồi (${recoveredAmount.toLocaleString("vi-VN")} đ) không được lớn hơn số đã giải ngân (${totals.DISBURSEMENT.toLocaleString("vi-VN")} đ).` });
       const files = await this.assertUsableEvidence(tx, project.id, input.fileRecordIds);
       const live = (project.liquidations ?? []).find((row: AnyRecord) => ["DRAFT", "SUBMITTED", "SIGNED"].includes(row.status));
       if (live && live.status !== "DRAFT") throw new ConflictException({ code: "LIQUIDATION_EXISTS", message: "Đề tài đã có biên bản thanh lý đang trình hoặc đã ký." });
-      const data = { report, fileRecordIds: files.map((file: AnyRecord) => file.id), outcome: project.status, status: "SUBMITTED", authorId: currentActor.id };
+      const data = { report, recoveredAmount, fileRecordIds: files.map((file: AnyRecord) => file.id), outcome: project.status, status: "SUBMITTED", authorId: currentActor.id };
       const liquidation = live ? await tx.projectLiquidation.update({ where: { id: live.id }, data }) : await tx.projectLiquidation.create({ data: { projectId: project.id, ...data } });
       await openApprovalSubmission(tx, currentActor, { kind: "LIQUIDATION", subjectType: "project", subjectId: project.id, subjectRef: liquidation.id }, { title: `Thanh lý đề tài: ${project.title}`, hostOrganizationUnitId: project.hostOrganizationUnitId });
-      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.liquidation.submit", fromStatus: live ? "DRAFT" : null, toStatus: "SUBMITTED", afterFacts: { liquidationId: liquidation.id, outcome: project.status } } });
-      await new AuditLogService(tx).record({ action: "submit-project-liquidation", result: "success", actorId: currentActor.id, targetEntity: "project-liquidation", targetEntityId: liquidation.id, username: currentActor.username, afterFacts: { projectId: project.id, outcome: project.status } });
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.liquidation.submit", fromStatus: live ? "DRAFT" : null, toStatus: "SUBMITTED", afterFacts: { liquidationId: liquidation.id, outcome: project.status, recoveredAmount } } });
+      await new AuditLogService(tx).record({ action: "submit-project-liquidation", result: "success", actorId: currentActor.id, targetEntity: "project-liquidation", targetEntityId: liquidation.id, username: currentActor.username, afterFacts: { projectId: project.id, outcome: project.status, recoveredAmount } });
       return liquidation;
     });
   }
@@ -909,13 +918,24 @@ export class ApprovedProjectsService {
       if (this.activeMember(project, currentActor.id)) throw new ForbiddenException({ code: "CONFLICT_DENIED" });
       await this.assertNoEvaluationConflict(tx, currentActor.id, project.proposalId);
       if (decision === "reject" && !input.reason) throw new BadRequestException({ message: "Cần lý do từ chối." });
+      let closing: AnyRecord = {};
+      if (decision === "approve") {
+        // Số liệu chốt theo sổ ghi tại thời điểm ký; lệch dù 1 đồng cũng không ký được.
+        const totals = await this.currentFundingTotals(tx, project.id);
+        const recovered = Number(liquidation.recoveredAmount);
+        if (totals.SETTLEMENT + recovered !== totals.DISBURSEMENT) throw new BadRequestException({ code: "LIQUIDATION_UNBALANCED", message: `Chưa cân đối kinh phí: đã giải ngân ${totals.DISBURSEMENT.toLocaleString("vi-VN")} đ, đã quyết toán ${totals.SETTLEMENT.toLocaleString("vi-VN")} đ, thu hồi ${recovered.toLocaleString("vi-VN")} đ. Phần chênh lệch phải được quyết toán hoặc thu hồi trước khi ký.` });
+        // Năm UTC cho cả nhãn và khoảng đếm, để hai thứ không lệch nhau quanh giao thừa.
+        const year = (await readTransactionClockV1(tx)).getUTCFullYear();
+        const sequence = (await tx.projectLiquidation.count({ where: { status: "SIGNED", decidedAt: { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) } } })) + 1;
+        closing = { approvedBudget: totals.GRANT, totalDisbursed: totals.DISBURSEMENT, totalSettled: totals.SETTLEMENT, liquidationNumber: `${sequence}/BBTL-HVQY/${year}` };
+      }
       await closeApprovalSubmission(tx, currentActor, { kind: "LIQUIDATION", subjectType: "project", subjectId: project.id, subjectRef: liquidation.id }, decision === "approve" ? "APPROVED" : "REJECTED", input.reason ?? null);
       const now = await readTransactionClockV1(tx);
       const status = decision === "approve" ? "SIGNED" : "REJECTED";
-      const updated = await tx.projectLiquidation.update({ where: { id: liquidation.id }, data: { status, decidedById: currentActor.id, decidedAt: now, decisionNote: input.reason ?? null } });
+      const updated = await tx.projectLiquidation.update({ where: { id: liquidation.id }, data: { status, decidedById: currentActor.id, decidedAt: now, decisionNote: input.reason ?? null, ...closing } });
       if (decision === "approve") await tx.approvedProject.update({ where: { id: project.id }, data: { status: PROJECT_STATUSES.closed, aggregateVersion: { increment: 1 }, authorizationContextUpdatedAt: now } });
-      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: `project.liquidation.${decision}`, fromStatus: project.status, toStatus: decision === "approve" ? PROJECT_STATUSES.closed : project.status, reason: input.reason ?? null, beforeFacts: { status: project.status, liquidation: "SUBMITTED" }, afterFacts: { status: decision === "approve" ? PROJECT_STATUSES.closed : project.status, liquidation: status, liquidationId: liquidation.id } } });
-      await new AuditLogService(tx).record({ action: `${decision}-project-liquidation`, result: "success", actorId: currentActor.id, targetEntity: "project-liquidation", targetEntityId: liquidation.id, username: currentActor.username, reason: input.reason ?? undefined, beforeFacts: { projectStatus: project.status, status: "SUBMITTED" }, afterFacts: { projectStatus: decision === "approve" ? PROJECT_STATUSES.closed : project.status, status } });
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: `project.liquidation.${decision}`, fromStatus: project.status, toStatus: decision === "approve" ? PROJECT_STATUSES.closed : project.status, reason: input.reason ?? null, beforeFacts: { status: project.status, liquidation: "SUBMITTED" }, afterFacts: { status: decision === "approve" ? PROJECT_STATUSES.closed : project.status, liquidation: status, liquidationId: liquidation.id, liquidationNumber: closing.liquidationNumber ?? null } } });
+      await new AuditLogService(tx).record({ action: `${decision}-project-liquidation`, result: "success", actorId: currentActor.id, targetEntity: "project-liquidation", targetEntityId: liquidation.id, username: currentActor.username, reason: input.reason ?? undefined, beforeFacts: { projectStatus: project.status, status: "SUBMITTED" }, afterFacts: { projectStatus: decision === "approve" ? PROJECT_STATUSES.closed : project.status, status, liquidationNumber: closing.liquidationNumber ?? null } });
       return updated;
     });
   }
