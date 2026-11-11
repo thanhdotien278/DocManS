@@ -12,7 +12,7 @@ import { PARTICIPANT_POLICY_ROLE_LABELS, participantPolicyFor, readParticipantPo
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { recordParticipantWaiver } from "../proposal-evaluations/proposal-evaluation-support.js";
 import { assertProposalContext, isSerializationFailure } from "../proposals-shared/proposal-mutation.js";
-import { FUNDING_KINDS, assertFundingInvariant, fundingTotals, latestFunding, readFundingAmount } from "./project-funding.js";
+import { FUNDING_KINDS, assertFundingInvariant, fundingTotals, latestFunding, readApprovedBudget, readFundingAmount } from "./project-funding.js";
 import { projectContextVersion, projectViewerAuthorizationV1, PROJECT_STATUSES, TERMINAL_REQUEST_STATUSES, type ProjectOfficerFact } from "./project-capability-v1.js";
 
 const PREPARING = PROJECT_STATUSES.preparing;
@@ -264,13 +264,16 @@ export class ApprovedProjectsService {
       if (!snapshot || snapshot.id !== proposalId || !snapshot.ownerId || !Array.isArray(snapshot.members)) throw new BadRequestException({ code: "SOURCE_EVIDENCE_MISSING" });
 
       const sourceMembers = [{ id: randomUUID(), projectId: "", userId: snapshot.ownerId, sourceMemberId: null, name: proposal.owner?.displayName ?? "Chủ nhiệm đề tài", role: "TOPIC_PI", participationRole: "TOPIC_PI", status: "ACTIVE", effectiveFrom: new Date(), effectiveUntil: null, createdById: currentActor.id }, ...snapshot.members.filter((member: AnyRecord) => member.userId !== snapshot.ownerId).map((member: AnyRecord) => ({ id: randomUUID(), projectId: "", userId: member.userId || null, sourceMemberId: member.id ?? null, name: member.name, role: member.role, participationRole: member.participationRole ?? member.role ?? "TOPIC_MEMBER", status: "ACTIVE", effectiveFrom: new Date(), effectiveUntil: null, createdById: currentActor.id }))];
+      // Story 6.13: số lãnh đạo chốt khi phê duyệt nằm ở đề xuất hiện tại, không ở snapshot lúc nộp.
+      const budgetMetadata = { ...(snapshot.budgetMetadata ?? {}), ...((proposal.budgetMetadata as AnyRecord | null)?.approvedAmount !== undefined ? { approvedAmount: (proposal.budgetMetadata as AnyRecord).approvedAmount } : {}) };
+      const approvedBudget = readApprovedBudget(budgetMetadata);
       const project = await tx.approvedProject.create({ data: {
         proposalId,
         sourceSubmissionEventId: submission.id,
         sourceDecisionId: decision.id,
         hostOrganizationUnitId: proposal.hostOrganizationUnitId,
         title: snapshot.title,
-        scopeSnapshot: { title: snapshot.title, objectives: snapshot.objectives, summary: snapshot.summary, researchFieldCode: snapshot.researchFieldCode, proposalTypeCode: snapshot.proposalTypeCode, budgetMetadata: snapshot.budgetMetadata },
+        scopeSnapshot: { title: snapshot.title, objectives: snapshot.objectives, summary: snapshot.summary, researchFieldCode: snapshot.researchFieldCode, proposalTypeCode: snapshot.proposalTypeCode, budgetMetadata },
         planSnapshot: { startDate: snapshot.startDate, endDate: snapshot.endDate },
         status: PREPARING,
         startDate: snapshot.startDate ? new Date(snapshot.startDate) : null,
@@ -278,6 +281,7 @@ export class ApprovedProjectsService {
         createdById: currentActor.id
       } });
       if (sourceMembers.length) await tx.approvedProjectMember.createMany({ data: sourceMembers.map((member: AnyRecord) => ({ ...member, projectId: project.id })) });
+      if (approvedBudget > 0) await tx.projectFundingRecord.create({ data: { projectId: project.id, entryId: randomUUID(), version: 1, kind: "GRANT", amount: approvedBudget, recordedOn: new Date(), note: "Kinh phí được phê duyệt", fileRecordIds: [], recordedById: currentActor.id } });
       await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.created", fromStatus: null, toStatus: PREPARING, reason: "Tạo từ phiên bản đề xuất đã được phê duyệt", beforeFacts: null, afterFacts: { proposalId, sourceSubmissionEventId: submission.id, sourceDecisionId: decision.id } } });
       await new AuditLogService(tx).record({ action: "create-approved-project", result: "success", actorId: currentActor.id, targetEntity: "approved-project", targetEntityId: project.id, username: currentActor.username, reason: JSON.stringify({ proposalId, sourceSubmissionEventId: submission.id, sourceDecisionId: decision.id }) });
       return { id: project.id, proposalId, status: project.status };

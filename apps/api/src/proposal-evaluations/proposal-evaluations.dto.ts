@@ -165,6 +165,11 @@ export const proposalDecisionPipe: PipeTransform<unknown, ProposalDecisionDto> =
     }
     assertOptionalText(input.publicSummary, "publicSummary", 5000);
     assertOptionalText(input.requiredFollowUp, "requiredFollowUp", 5000);
+    if (input.approvedAmount !== undefined && input.approvedAmount !== null && input.approvedAmount !== "") {
+      const amount = Number(input.approvedAmount);
+      if (!Number.isFinite(amount) || amount < 0 || amount > 10_000_000_000_000) throw new BadRequestException({ message: "Kinh phí phê duyệt phải là số không âm, tối đa 10.000.000.000.000 đồng." });
+      input.approvedAmount = Math.round(amount);
+    } else delete input.approvedAmount;
     return { ...input, contextVersion: readContextVersion(input), packageRevision: Number(input.packageRevision) } as ProposalDecisionDto;
   }
 };

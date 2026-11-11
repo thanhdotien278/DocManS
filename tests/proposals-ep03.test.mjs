@@ -1291,6 +1291,16 @@ describe("ST-3.5 approval decision", () => {
     }
   });
 
+  it("6.13.1: GĐ chốt approvedAmount khi phê duyệt → ghi vào budgetMetadata và audit approve-proposal-funding", async () => {
+    const approving = createServices();
+    const { proposal } = await createProposalReadyForApproval(approving);
+    await approving.decisions.decide(leadershipUser, proposal.id, "approved", { note: "Đồng ý.", approvedAmount: 450 });
+    assert.equal(approving.prisma.store.proposals.find((item) => item.id === proposal.id).budgetMetadata.approvedAmount, 450);
+    const audit = approving.prisma.store.auditLogs.filter((record) => record.action === "approve-proposal-funding");
+    assert.equal(audit.length, 1);
+    assert.equal(audit[0].afterFacts.approvedAmount, 450);
+  });
+
   it("AC-ST-3.5-02: approve and reject are transactional state transitions with a decision record", async () => {
     const approving = createServices();
     const { proposal: approvedProposal } = await createProposalReadyForApproval(approving);
