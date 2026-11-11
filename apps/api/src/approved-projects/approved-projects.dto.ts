@@ -84,7 +84,7 @@ export const projectFundingPipe: PipeTransform<unknown, ProjectMutationDto> = { 
 
 export const projectLiquidationPipe: PipeTransform<unknown, ProjectMutationDto> = { transform(value) {
   const input = record(value);
-  return { report: readText(input.report, "report", 10000), fileRecordIds: ids(input.fileRecordIds, "fileRecordIds"), contextVersion: context(input) } as ProjectMutationDto;
+  return { report: readText(input.report, "report", 10000), recoveredAmount: input.recoveredAmount ?? 0, fileRecordIds: ids(input.fileRecordIds, "fileRecordIds"), contextVersion: context(input) } as ProjectMutationDto;
 } };
 
 export function readRequestType(value: unknown) {

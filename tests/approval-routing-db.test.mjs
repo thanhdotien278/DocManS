@@ -13,6 +13,7 @@ import { ProposalReviewsService } from "../dist/apps/api/proposal-evaluations/pr
 import { ProposalEvaluationSummaryService } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-summary.service.js";
 import { ProposalEvaluationCouncilService } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-council.service.js";
 import { ProposalDecisionsService } from "../dist/apps/api/proposal-evaluations/proposal-decisions.service.js";
+import { FilesService } from "../dist/apps/api/modules/files/files.service.js";
 import { ApprovedProjectsService } from "../dist/apps/api/approved-projects/approved-projects.service.js";
 import { projectContextVersion } from "../dist/apps/api/approved-projects/project-capability-v1.js";
 import { notifyUsers } from "../dist/apps/api/notifications/notification-events.js";
@@ -656,6 +657,155 @@ test("6.12: funding metadata is versioned and audited; only GĐ/TP/TB/assigned C
   assert.equal(detail.scope.budgetMetadata, undefined, "chi tiết đề tài không lộ kinh phí");
   assert.equal((await service.listProjects(people.oversight)).every((row) => row.scope?.budgetMetadata === undefined), true);
   assert.equal((await service.getProject(people.director, f.project.id)).scope.budgetMetadata.total, 1000);
+});
+
+test("6.13.2: giải ngân không vượt kinh phí cấp, quyết toán không vượt giải ngân, sửa phiên bản cũng bị kiểm tra", async () => {
+  const f = await projectFixture("F2");
+  const { people, service } = f;
+  const write = (kind, amount, extra = {}) => service.recordFunding(people.head, f.project.id, { kind, amount, recordedOn: "2026-03-01", ...extra });
+  const invalid = (error) => error.response?.code === "FUNDING_INVALID";
+  const grant = await write("GRANT", 500);
+  await assert.rejects(() => write("DISBURSEMENT", 501), invalid, "giải ngân vượt cấp");
+  await write("DISBURSEMENT", 300);
+  await assert.rejects(() => write("SETTLEMENT", 301), invalid, "quyết toán vượt giải ngân");
+  await write("SETTLEMENT", 300);
+  await assert.rejects(() => write("GRANT", 200, { entryId: grant.entryId }), invalid, "hạ kinh phí cấp xuống dưới đã giải ngân");
+  await assert.rejects(() => write("GRANT", -1), invalid);
+  await assert.rejects(() => write("GRANT", 10_000_000_000_001), invalid);
+  assert.deepEqual((await service.getFunding(people.head, f.project.id)).totals, { GRANT: 500, DISBURSEMENT: 300, SETTLEMENT: 300 });
+});
+
+test("6.13.1: tạo đề tài từ đề xuất có kinh phí duyệt → GRANT v1 tự động; approvedAmount ưu tiên; 0 thì không tạo", async () => {
+  const ctx = await setup("F1");
+  const { people, proposal } = ctx;
+  const service = new ApprovedProjectsService(db, new AuditLogService(db));
+  const makeApproved = async (prop, budgetMetadata) => {
+    await db.researchProposal.update({ where: { id: prop.id }, data: { status: "approved", budgetMetadata } });
+    await db.proposalManagementOfficer.create({ data: { proposalId: prop.id, officerUserId: people.staff.id, assignedById: people.head.id, effectiveFrom: new Date(Date.now() - 1000) } });
+    const event = await db.proposalSubmissionEvent.create({ data: { proposalId: prop.id, actorId: people.pi.id, fromStatus: "draft", toStatus: "submitted", snapshot: { id: prop.id, ownerId: people.pi.id, members: [], title: prop.title, budgetMetadata: { amount: budgetMetadata.amount } } } });
+    await db.proposalDecision.create({ data: { proposalId: prop.id, decision: "approved", decidedById: people.director.id, fromStatus: "under_review", toStatus: "approved", packageSnapshot: { submissionEventId: event.id } } });
+  };
+  const create = async (prop) => service.createFromApprovedProposal(people.staff, prop.id, { contextVersion: proposalContextVersion(await db.researchProposal.findUnique({ where: { id: prop.id } })) });
+  await makeApproved(proposal, { amount: 500, approvedAmount: 450 });
+  const created = await create(proposal);
+  const grants = await db.projectFundingRecord.findMany({ where: { projectId: created.id } });
+  assert.deepEqual(grants.map((r) => [r.kind, String(r.amount), r.version, r.note]), [["GRANT", "450", 1, "Kinh phí được phê duyệt"]]);
+  assert.equal((await db.approvedProject.findUnique({ where: { id: created.id } })).scopeSnapshot.budgetMetadata.approvedAmount, 450, "snapshot phạm vi ghi số đã duyệt");
+
+  const { id: _i, createdAt: _c, updatedAt: _u, ...rest } = await db.researchProposal.findUnique({ where: { id: proposal.id } });
+  const second = await db.researchProposal.create({ data: { ...rest, title: "Đề xuất không kinh phí" } });
+  await makeApproved(second, { amount: 0 });
+  const zero = await create(second);
+  assert.equal(await db.projectFundingRecord.count({ where: { projectId: zero.id } }), 0);
+});
+
+test("6.13.3: GĐ/TP/TB/CV phụ trách tải chứng từ FUNDING_VOUCHER; PI, thành viên, PGĐ-KH bị từ chối; sổ ghi chỉ nhận tệp chứng từ", async () => {
+  const f = await projectFixture("F3");
+  const { people, service } = f;
+  const storage = { objects: new Map(), async putObject({ objectKey, content }) { this.objects.set(objectKey, Buffer.from(content)); }, async getObject(key) { return this.objects.get(key); }, async deleteObject(key) { this.objects.delete(key); } };
+  const files = new FilesService(db, storage, new AuditLogService(db), new ProposalParticipationService(db), new ProposalReviewAccessService(db), { maxFileSizeBytes: 1024, allowedExtensions: [".pdf"] }, new ProposalManagementOfficerService(db));
+  const upload = async (actor, filePurpose) => files.uploadFile(actor, { relatedEntityType: "approved_project", relatedEntityId: f.project.id, filePurpose, fileName: `${filePurpose}.pdf`, mimeType: "application/pdf", sizeBytes: 4, content: Buffer.from("%PDF"), contextVersion: await f.ctxVersion() });
+  const vouchers = [];
+  for (const who of [people.director, people.head, people.board, people.staff]) vouchers.push(await upload(who, "FUNDING_VOUCHER"));
+  for (const who of [people.pi, people.member, people.science, people.staff2]) await assert.rejects(() => upload(who, "FUNDING_VOUCHER"), code(403), who.displayName);
+  const extra = await upload(people.head, "FUNDING_VOUCHER");
+  await assert.rejects(async () => files.deleteFile(people.pi, extra.id, await f.ctxVersion()), code(403), "PI không xoá được chứng từ");
+  await assert.rejects(async () => files.updateFile(people.pi, extra.id, { description: "x", contextVersion: await f.ctxVersion() }), code(403), "PI không sửa được chứng từ");
+  // Đọc chứng từ theo quyền xem kinh phí, không theo người tải; sửa/xoá theo quyền ghi kinh phí.
+  const byHead = vouchers[1];
+  for (const who of [people.director, people.board, people.pi]) assert.equal((await files.downloadFile(who, byHead.id)).id, byHead.id, `${who.displayName} tải được chứng từ do TP tải`);
+  for (const who of [people.director, people.pi]) assert.ok((await files.listFiles(who, { relatedEntityType: "approved_project", relatedEntityId: f.project.id })).some((file) => file.id === byHead.id && file.filePurpose === "FUNDING_VOUCHER"), `${who.displayName} thấy chứng từ trong danh sách`);
+  await assert.rejects(() => files.downloadFile(people.oversight, byHead.id), code(403), "PGĐ-TD không tải chứng từ");
+  await assert.rejects(() => files.listFiles(people.oversight, { relatedEntityType: "approved_project", relatedEntityId: f.project.id }), code(403), "PGĐ-TD không xem danh sách tệp");
+  await files.deleteFile(people.board, extra.id, await f.ctxVersion());
+  const evidence = await upload(people.pi, "PROJECT_EVIDENCE");
+  await service.recordFunding(people.head, f.project.id, { kind: "GRANT", amount: 100, recordedOn: "2026-03-01", fileRecordIds: [vouchers[0].id] });
+  await assert.rejects(() => service.recordFunding(people.head, f.project.id, { kind: "GRANT", amount: 100, recordedOn: "2026-03-01", fileRecordIds: [evidence.id] }), (e) => e.response?.code === "EVIDENCE_WRONG_RECORD");
+  await assert.rejects(async () => files.deleteFile(people.director, vouchers[0].id, await f.ctxVersion()), (e) => e.response?.code === "EVIDENCE_PINNED", "chứng từ đã gắn sổ được giữ nguyên");
+  await db.approvedProject.update({ where: { id: f.project.id }, data: { status: "closed" } });
+  await assert.rejects(() => upload(people.head, "FUNDING_VOUCHER"), (e) => e.response?.code === "WORKFLOW_STATE_DENIED");
+});
+
+test("6.13.4: thu hồi ≤ giải ngân; GĐ chỉ ký khi quyết toán + thu hồi = giải ngân; ký thì chốt số liệu và cấp số BBTL không trùng", async () => {
+  const f = await projectFixture("F4", "failed");
+  const { people, service } = f;
+  const write = (kind, amount) => service.recordFunding(people.head, f.project.id, { kind, amount, recordedOn: "2026-03-01" });
+  await write("GRANT", 500); await write("DISBURSEMENT", 500); await write("SETTLEMENT", 480);
+  const submit = async (recoveredAmount) => service.submitLiquidation(people.staff, f.project.id, { report: "Biên bản", recoveredAmount, contextVersion: await f.ctxVersion() });
+  await assert.rejects(() => submit(501), (e) => e.response?.code === "LIQUIDATION_INVALID", "thu hồi vượt giải ngân");
+  const liquidation = await submit(15);
+  await f.toLeadership("LIQUIDATION");
+  const sign = async () => service.decideLiquidation(people.director, f.project.id, "approve", { liquidationId: liquidation.id, contextVersion: await f.ctxVersion() });
+  await assert.rejects(sign, (e) => e.response?.code === "LIQUIDATION_UNBALANCED", "lệch 5");
+  assert.equal((await db.projectLiquidation.findUnique({ where: { id: liquidation.id } })).status, "SUBMITTED");
+  assert.equal((await f.reload()).status, "failed");
+
+  await write("SETTLEMENT", 5);
+  await sign();
+  const signed = await db.projectLiquidation.findUnique({ where: { id: liquidation.id } });
+  assert.deepEqual([signed.status, String(signed.approvedBudget), String(signed.totalDisbursed), String(signed.totalSettled), String(signed.recoveredAmount)], ["SIGNED", "500", "500", "485", "15"]);
+  assert.match(signed.liquidationNumber, /^\d+\/BBTL-HVQY\/\d{4}$/);
+  assert.equal((await f.reload()).status, "closed");
+  const hidden = (await service.getProject(people.oversight, f.project.id)).liquidation.current;
+  assert.deepEqual([hidden.recoveredAmount, hidden.approvedBudget, hidden.totalDisbursed, hidden.totalSettled, hidden.status], [null, null, null, null, "SIGNED"], "PGĐ-TD không thấy số tiền thanh lý");
+  const shown = (await service.getProject(people.director, f.project.id)).liquidation.current;
+  assert.deepEqual([shown.recoveredAmount, shown.approvedBudget, shown.totalDisbursed, shown.totalSettled], ["15", "500", "500", "485"]);
+
+  const g = await projectFixture("F4b", "failed");
+  // CV không phụ trách bị 403 khi xem đề tài; chỉ thấy được khi là thành viên, và vẫn không được lập thanh lý.
+  await db.approvedProjectMember.create({ data: { projectId: g.project.id, userId: g.people.staff2.id, name: "chuyenvien2", role: "TOPIC_MEMBER", participationRole: "TOPIC_MEMBER", status: "ACTIVE", effectiveFrom: new Date(Date.now() - 86400000), createdById: g.people.staff.id } });
+  assert.equal((await g.service.getProject(g.people.staff2, g.project.id)).liquidation.canSubmit, false, "CV không phụ trách không lập thanh lý");
+  assert.equal((await g.service.getProject(g.people.staff, g.project.id)).liquidation.canSubmit, true, "CV phụ trách lập thanh lý");
+  await g.service.recordFunding(g.people.head, g.project.id, { kind: "GRANT", amount: 10, recordedOn: "2026-03-01" });
+  const second = await g.service.submitLiquidation(g.people.staff, g.project.id, { report: "Biên bản 2", recoveredAmount: 0, contextVersion: await g.ctxVersion() });
+  await g.toLeadership("LIQUIDATION");
+  await g.service.decideLiquidation(g.people.director, g.project.id, "approve", { liquidationId: second.id, contextVersion: await g.ctxVersion() });
+  const n = (row) => Number(row.liquidationNumber.split("/")[0]);
+  assert.equal(n(await db.projectLiquidation.findUnique({ where: { id: second.id } })), n(signed) + 1, "số tăng dần trong năm");
+  const view = await g.service.getProject(g.people.director, g.project.id);
+  assert.equal(view.liquidation.current.liquidationNumber, (await db.projectLiquidation.findUnique({ where: { id: second.id } })).liquidationNumber);
+
+  const h = await projectFixture("F4c", "accepted");
+  const third = await h.service.submitLiquidation(h.people.staff, h.project.id, { report: "Biên bản 3", recoveredAmount: 0, contextVersion: await h.ctxVersion() });
+  await h.toLeadership("LIQUIDATION");
+  await h.service.decideLiquidation(h.people.director, h.project.id, "reject", { liquidationId: third.id, reason: "Thiếu hồ sơ", contextVersion: await h.ctxVersion() });
+  const rejected = await db.projectLiquidation.findUnique({ where: { id: third.id } });
+  assert.deepEqual([rejected.status, rejected.liquidationNumber, rejected.approvedBudget, rejected.totalDisbursed, rejected.totalSettled], ["REJECTED", null, null, null, null], "từ chối không cấp số, không chốt");
+  assert.equal((await h.reload()).status, "accepted");
+});
+
+test("6.13.6: PI được báo khi có giải ngân/quyết toán (không phải GRANT, không gửi người ghi); PI và CV được báo khi GĐ ký/từ chối thanh lý; không trùng", async () => {
+  const f = await projectFixture("F6", "failed");
+  const { people, service } = f;
+  const write = (kind, amount, extra = {}) => service.recordFunding(people.head, f.project.id, { kind, amount, recordedOn: "2026-03-01", ...extra });
+  const count = (userId, type) => db.userNotification.count({ where: { userId, type } });
+  await write("GRANT", 100);
+  assert.equal(await count(people.pi.id, "project.funding.recorded"), 0, "GRANT không báo");
+  const d = await write("DISBURSEMENT", 100);
+  await write("DISBURSEMENT", 100, { entryId: d.entryId });
+  assert.equal(await count(people.pi.id, "project.funding.recorded"), 2, "mỗi phiên bản một thông báo");
+  assert.equal(await count(people.head.id, "project.funding.recorded"), 0, "người ghi không tự nhận");
+  await write("SETTLEMENT", 100);
+  const liquidation = await service.submitLiquidation(people.staff, f.project.id, { report: "BB", recoveredAmount: 0, contextVersion: await f.ctxVersion() });
+  await f.toLeadership("LIQUIDATION");
+  await service.decideLiquidation(people.director, f.project.id, "approve", { liquidationId: liquidation.id, contextVersion: await f.ctxVersion() });
+  for (const who of [people.pi, people.staff]) assert.equal((await db.userNotification.findFirst({ where: { userId: who.id, type: "project.liquidation.decided" } })).link, `/projects/${f.project.id}`, who.displayName);
+  assert.equal(await count(people.director.id, "project.liquidation.decided"), 0);
+
+  const notifications = new NotificationsService(db, new ProposalParticipationService(db), new ProposalReviewAccessService(db), new ProposalManagementOfficerService(db));
+  const seen = async (who, type) => (await notifications.list(who, 50)).notifications.filter((row) => row.type === type);
+  assert.equal((await seen(people.pi, "project.funding.recorded")).length, 3, "PI thấy thông báo kinh phí");
+  assert.equal((await seen(people.pi, "project.liquidation.decided")).length, 1, "PI thấy thông báo thanh lý");
+  assert.equal((await seen(people.staff, "project.liquidation.decided")).length, 1, "CV thấy thông báo thanh lý");
+  assert.equal((await seen(people.member, "project.funding.recorded")).length, 0, "thành viên thường không có thông báo kinh phí");
+
+  const g = await projectFixture("F6b", "accepted");
+  const rejectedRow = await g.service.submitLiquidation(g.people.staff, g.project.id, { report: "BB", recoveredAmount: 0, contextVersion: await g.ctxVersion() });
+  await g.toLeadership("LIQUIDATION");
+  await g.service.decideLiquidation(g.people.director, g.project.id, "reject", { liquidationId: rejectedRow.id, reason: "Thiếu hồ sơ", contextVersion: await g.ctxVersion() });
+  const [rejection] = await seen(g.people.pi, "project.liquidation.decided");
+  assert.equal(rejection.title, "Biên bản thanh lý bị từ chối");
+  assert.ok(!rejection.body.includes(" — số"));
 });
 
 test("6.12: CV submits LIQUIDATION only for an Accepted/Failed project; GĐ alone signs and the project closes atomically; PGĐ-KH is refused; return goes back to draft", async () => {

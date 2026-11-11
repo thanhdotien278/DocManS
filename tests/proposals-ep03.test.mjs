@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { FilesService } from "../dist/apps/api/modules/files/files.service.js";
 import { ProposalIntakePeriodsService } from "../dist/apps/api/proposal-intake-periods/proposal-intake-periods.service.js";
+import { proposalDecisionPipe } from "../dist/apps/api/proposal-evaluations/proposal-evaluations.dto.js";
 import { ProposalDecisionsService } from "../dist/apps/api/proposal-evaluations/proposal-decisions.service.js";
 import { ProposalEvaluationSummaryService } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-summary.service.js";
 import { ProposalReviewAssignmentsService } from "../dist/apps/api/proposal-evaluations/proposal-review-assignments.service.js";
@@ -1289,6 +1290,37 @@ describe("ST-3.5 approval decision", () => {
     for (const actor of [staffUser, piUser, reviewerUser]) {
       await assert.rejects(() => services.decisions.getDecisionPackage(actor, proposal.id), ForbiddenException);
     }
+  });
+
+  it("6.13.1: GĐ chốt approvedAmount khi phê duyệt → ghi vào budgetMetadata và audit approve-proposal-funding", async () => {
+    const approving = createServices();
+    const { proposal } = await createProposalReadyForApproval(approving);
+    const stored = () => approving.prisma.store.proposals.find((item) => item.id === proposal.id);
+    stored().budgetMetadata = { amount: 500, currency: "VND" };
+    await approving.decisions.decide(leadershipUser, proposal.id, "approved", { note: "Đồng ý.", approvedAmount: 450 });
+    assert.deepEqual(stored().budgetMetadata, { amount: 500, currency: "VND", approvedAmount: 450 });
+    const audit = approving.prisma.store.auditLogs.filter((record) => record.action === "approve-proposal-funding");
+    assert.equal(audit.length, 1);
+    assert.equal(audit[0].afterFacts.approvedAmount, 450);
+  });
+
+  it("6.13.1: từ chối kèm approvedAmount không đổi budgetMetadata và không ghi audit kinh phí", async () => {
+    const rejecting = createServices();
+    const { proposal } = await createProposalReadyForApproval(rejecting);
+    const stored = () => rejecting.prisma.store.proposals.find((item) => item.id === proposal.id);
+    stored().budgetMetadata = { amount: 500, currency: "VND" };
+    await rejecting.decisions.decide(leadershipUser, proposal.id, "rejected", { note: "Không đạt.", approvedAmount: 450 });
+    assert.deepEqual(stored().budgetMetadata, { amount: 500, currency: "VND" });
+    assert.equal(rejecting.prisma.store.auditLogs.filter((record) => record.action === "approve-proposal-funding").length, 0);
+  });
+
+  it("6.13.1: proposalDecisionPipe kiểm tra và làm tròn approvedAmount", () => {
+    const base = { contextVersion: { domain: "proposal", recordId: "p1", aggregateVersion: 2, relationshipVersion: 3, conflictVersion: 4, delegationVersion: 5, policyVersion: "v1" }, packageRevision: 1 };
+    const run = (approvedAmount) => proposalDecisionPipe.transform({ ...base, approvedAmount });
+    assert.equal(run("0").approvedAmount, 0);
+    assert.equal(run("450.4").approvedAmount, 450);
+    for (const bad of [-1, 10_000_000_000_001, "abc"]) assert.throws(() => run(bad), BadRequestException);
+    for (const empty of ["", null, undefined]) assert.equal("approvedAmount" in run(empty), false);
   });
 
   it("AC-ST-3.5-02: approve and reject are transactional state transitions with a decision record", async () => {

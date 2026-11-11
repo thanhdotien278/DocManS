@@ -3,6 +3,7 @@ import { readCode, readText } from "../../proposals-shared/proposal-validation.j
 
 export const RESEARCH_PROPOSAL_ENTITY_TYPE = "research_proposal";
 export const APPROVED_PROJECT_ENTITY_TYPE = "approved_project";
+export const FUNDING_VOUCHER_PURPOSE = "FUNDING_VOUCHER";
 /** Story 5.6: tệp hành chính nộp khi hồ sơ `under_review`; không sửa/xóa, không vào ảnh chụp nộp hồ sơ. */
 export const EVALUATION_FILE_PURPOSES = ["MEETING_MATERIAL", "COUNCIL_MINUTES"];
 export const ETHICS_DOSSIER_ENTITY_TYPE = "ethics_dossier";
