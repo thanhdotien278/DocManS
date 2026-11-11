@@ -1,8 +1,9 @@
 import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
-import { assignProjectOfficerPipe, createProjectPipe, ethicsSectionPipe, projectDecisionPipe, projectFundingPipe, projectLiquidationPipe, projectMutationPipe, projectReportPipe, projectReportReviewPipe, projectReportSubmissionPipe, projectRequestPipe, projectWithdrawPipe, readRequestType, revokeProjectOfficerPipe } from "./approved-projects.dto.js";
+import { acceptanceCouncilInvitePipe, acceptanceCouncilRespondPipe, acceptanceResultPipe, assignProjectOfficerPipe, createProjectPipe, ethicsSectionPipe, projectDecisionPipe, projectFundingPipe, projectLiquidationPipe, projectMutationPipe, projectReportPipe, projectReportReviewPipe, projectReportSubmissionPipe, projectRequestPipe, projectWithdrawPipe, readRequestType, revokeProjectOfficerPipe } from "./approved-projects.dto.js";
 import { ApprovedProjectsService } from "./approved-projects.service.js";
+import { AcceptanceCouncilService } from "./acceptance-council.service.js";
 import { AcceptanceDossiersService } from "./acceptance-dossiers.service.js";
 import { EthicsDossiersService } from "./ethics-dossiers.service.js";
 
@@ -14,7 +15,7 @@ function filters(value: Record<string, string>) {
 @Controller("api/v1/projects")
 @UseGuards(SessionAuthGuard)
 export class ApprovedProjectsController {
-  constructor(private readonly projects: ApprovedProjectsService, private readonly ethics: EthicsDossiersService, private readonly acceptance: AcceptanceDossiersService) {}
+  constructor(private readonly projects: ApprovedProjectsService, private readonly ethics: EthicsDossiersService, private readonly acceptance: AcceptanceDossiersService, private readonly council: AcceptanceCouncilService) {}
 
   @Get()
   async list(@Req() req: RequestWithCurrentUser, @Query() query: Record<string, string>) { return { projects: await this.projects.listProjects(req.currentUser!, filters(query)) }; }
@@ -117,6 +118,33 @@ export class ApprovedProjectsController {
 
   @Post(":id/acceptance-dossier/submit")
   async submitAcceptanceDossier(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectMutationPipe) body: any) { return { acceptanceDossier: await this.acceptance.submit(req.currentUser!, id, body) }; }
+
+  @Get(":id/acceptance-council")
+  async acceptanceCouncil(@Req() req: RequestWithCurrentUser, @Param("id") id: string) { return { acceptanceCouncil: await this.council.getCouncil(req.currentUser!, id) }; }
+
+  @Get(":id/acceptance-council/candidates")
+  async acceptanceCouncilCandidates(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Query("q") q?: string) { return { users: await this.council.candidates(req.currentUser!, id, typeof q === "string" ? q : "") }; }
+
+  @Post(":id/acceptance-council/members")
+  async inviteAcceptanceMember(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(acceptanceCouncilInvitePipe) body: any) { return { acceptanceCouncil: await this.council.invite(req.currentUser!, id, body) }; }
+
+  @Post(":id/acceptance-council/members/:memberId/revoke")
+  async revokeAcceptanceMember(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("memberId") memberId: string, @Body(projectWithdrawPipe) body: any) { return { acceptanceCouncil: await this.council.revoke(req.currentUser!, id, memberId, body) }; }
+
+  @Post(":id/acceptance-council/members/:memberId/respond")
+  async respondAcceptanceInvitation(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("memberId") memberId: string, @Body(acceptanceCouncilRespondPipe) body: any) { return { acceptanceCouncil: await this.council.respond(req.currentUser!, id, memberId, body) }; }
+
+  @Post(":id/acceptance-council/submit")
+  async submitAcceptanceCouncil(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectDecisionPipe) body: any) { return { acceptanceCouncil: await this.council.submit(req.currentUser!, id, body) }; }
+
+  @Post(":id/acceptance-council/approve")
+  async approveAcceptanceCouncil(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectDecisionPipe) body: any) { return { acceptanceCouncil: await this.council.decide(req.currentUser!, id, "approve", body) }; }
+
+  @Post(":id/acceptance-council/reject")
+  async rejectAcceptanceCouncil(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectDecisionPipe) body: any) { return { acceptanceCouncil: await this.council.decide(req.currentUser!, id, "reject", body) }; }
+
+  @Post(":id/acceptance-council/result")
+  async recordAcceptanceResult(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(acceptanceResultPipe) body: any) { return { acceptanceCouncil: await this.council.recordResult(req.currentUser!, id, body) }; }
 
   @Get(":id/funding")
   async funding(@Req() req: RequestWithCurrentUser, @Param("id") id: string) { return { funding: await this.projects.getFunding(req.currentUser!, id) }; }

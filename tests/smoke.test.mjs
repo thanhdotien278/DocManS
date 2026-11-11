@@ -114,7 +114,8 @@ describe("workspace smoke checks", () => {
       "ProposalReviewAssignment",
       "ProposalReview",
       "ProposalEvaluationSummary",
-      "ProposalDecision"
+      "ProposalDecision",
+      "AcceptanceCouncilMember"
     ];
     for (const model of requiredModels) assert.ok(models.includes(model), `Missing model ${model}`);
     assert.match(schemaSource, /@@map\("users"\)/);

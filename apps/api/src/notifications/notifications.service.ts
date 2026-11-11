@@ -99,6 +99,17 @@ export class NotificationsService {
       }
     }
 
+    // Story 6.9: sourceId là đề tài; hiện khi người xem còn ghế hội đồng (đang mời/đã nhận lời) hoặc còn xem được đề tài.
+    const councilProjectIds = idsOf("acceptance_council");
+    if (councilProjectIds.length) {
+      const projects = new ApprovedProjectsService(this.prisma, new AuditLogService(this.prisma));
+      const seats = await this.prisma.acceptanceCouncilMember.findMany({ where: { projectId: { in: councilProjectIds }, userId: actor.id, invitationStatus: { in: ["invited", "accepted"] } }, select: { projectId: true } });
+      const seated = new Set(seats.map((seat) => seat.projectId));
+      for (const id of councilProjectIds) {
+        if (seated.has(id) || await projects.getProject(actor, id).then(() => true, (error) => { if (error instanceof ForbiddenException || error instanceof NotFoundException) return false; throw error; })) allowed.add(`acceptance_council:${id}`);
+      }
+    }
+
     // Kinh phí/thanh lý: hiện khi người xem còn xem được đề tài (sourceId kinh phí là đề tài, thanh lý là biên bản).
     const fundingIds = idsOf("project_funding");
     const liquidationIds = idsOf("project_liquidation");
