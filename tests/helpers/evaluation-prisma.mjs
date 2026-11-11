@@ -183,6 +183,11 @@ export function createEvaluationTables(store, accounts = []) {
         const decidedBy = findAccount(record.decidedById);
         return { ...record, decidedBy: decidedBy ? { displayName: decidedBy.displayName } : null };
       },
+      async findFirst({ where, orderBy } = {}) {
+        const rows = store.decisions.filter((item) => matchesWhere(item, where));
+        if (orderBy?.decidedAt === "desc") rows.sort((a, b) => b.decidedAt - a.decidedAt);
+        return rows[0] ?? null;
+      },
       async findMany({ where, include } = {}) {
         return store.decisions
           .filter((item) => matchesWhere(item, where))

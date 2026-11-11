@@ -311,7 +311,8 @@ export class FilesService {
   async updateFile(actor: SafeUserContext, fileId: string, input: { description: string | null; contextVersion?: unknown }): Promise<any> {
     if (!this.transactional) { const file = await this.findReadableFile(actor, fileId); const projectId = await this.mutationProjectId(file); return projectId ? this.mutateProject(actor, projectId, input.contextVersion, (s, a) => s.updateFile(a, fileId, input)) : this.mutate(actor, file.relatedEntityId, input.contextVersion, (s, a) => s.updateFile(a, fileId, input)); }
     const record = await this.findReadableFile(actor, fileId);
-    await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId, record.filePurpose);
+    // Chỉ chứng từ kinh phí xét quyền theo mục đích; tệp hành chính đánh giá giữ cổng tải tệp hồ sơ (thư ký bị từ chối trước khi xét bất biến).
+    await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId, record.filePurpose === FUNDING_VOUCHER_PURPOSE ? record.filePurpose : undefined);
     await this.assertProjectFileOwnership(actor, record, true);
     await this.assertUnsubmittedFile(record);
     const updated = (await this.prisma.fileRecord.update({
@@ -345,7 +346,8 @@ export class FilesService {
   async deleteFile(actor: SafeUserContext, fileId: string, contextVersion?: unknown): Promise<any> {
     if (!this.transactional) { const file = await this.findReadableFile(actor, fileId); const projectId = await this.mutationProjectId(file); return projectId ? this.mutateProject(actor, projectId, contextVersion, (s, a) => s.deleteFile(a, fileId, contextVersion)) : this.mutate(actor, file.relatedEntityId, contextVersion, (s, a) => s.deleteFile(a, fileId, contextVersion)); }
     const record = await this.findReadableFile(actor, fileId);
-    await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId, record.filePurpose);
+    // Chỉ chứng từ kinh phí xét quyền theo mục đích; tệp hành chính đánh giá giữ cổng tải tệp hồ sơ (thư ký bị từ chối trước khi xét bất biến).
+    await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId, record.filePurpose === FUNDING_VOUCHER_PURPOSE ? record.filePurpose : undefined);
     await this.assertProjectFileOwnership(actor, record, true);
     await this.assertUnsubmittedFile(record);
     const deleted = (await this.prisma.fileRecord.update({
