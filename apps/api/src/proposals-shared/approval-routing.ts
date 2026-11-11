@@ -225,7 +225,7 @@ async function notifyApprovalStep(tx: Prisma.TransactionClient, actor: SafeUserC
     sourceType: "approval" as const,
     sourceId: row.id,
     idempotencyKey: `approval:${row.id}:${step.action}:${step.stage}`,
-    link: row.subjectType === "project" ? `/projects/${row.subjectId}` : `/proposals/${row.subjectId}`
+    link: row.kind === "ACCEPTANCE_COUNCIL" ? `/projects/${row.subjectId}/acceptance-council` : row.subjectType === "project" ? `/projects/${row.subjectId}` : `/proposals/${row.subjectId}`
   };
   const kindLabel = APPROVAL_KIND_LABELS[row.kind] ?? row.kind;
   const closedTitle = CLOSED_TITLES[step.toStatus];

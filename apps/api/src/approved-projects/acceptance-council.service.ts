@@ -59,12 +59,22 @@ export class AcceptanceCouncilService {
     return this.view(this.prisma, actor, projectId);
   }
 
+  /** Ghế còn hiệu lực (đang mời hoặc đã nhận lời) của chính người xem, khi đề tài còn chờ nghiệm thu; cho mục ở /my-reviews. */
+  async mySeats(actor: SafeUserContext) {
+    const rows = await (this.prisma as any).acceptanceCouncilMember.findMany({ where: { userId: actor.id, invitationStatus: { in: ACCEPTANCE_SEAT_STATUSES }, project: { status: PROJECT_STATUSES.pendingAcceptance } }, include: { project: { select: { id: true, title: true, status: true } } }, orderBy: { invitedAt: "desc" } });
+    return rows.map((row: AnyRecord) => ({
+      memberId: row.id, projectId: row.projectId, projectTitle: row.project.title, projectStatus: row.project.status, councilRole: row.councilRole,
+      councilRoleLabel: ROLE_LABELS[row.councilRole as AcceptanceCouncilRole] ?? row.councilRole, invitationStatus: row.invitationStatus,
+      invitedAt: row.invitedAt.toISOString(), establishedAt: row.councilEstablishedAt?.toISOString() ?? null
+    }));
+  }
+
   /** Ứng viên: tài khoản đang hoạt động có lý lịch khoa học, không phải QT, không phải thành viên đề tài, chưa có ghế. */
   async candidates(actor: SafeUserContext, projectId: string, query = "") {
     const { project, capability } = await this.projects.loadAuthorized(this.prisma, actor, projectId);
     const denial = capabilityError(capability, "acceptance-council.invite");
     if (denial) throw denial;
-    const taken = [...(project.members ?? []).filter((member: AnyRecord) => member.userId && isRelationshipActiveAt(member, new Date())).map((member: AnyRecord) => member.userId), ...liveRows(project).map((row) => row.userId)];
+    const taken = [...(project.members ?? []).filter((member: AnyRecord) => member.userId && isRelationshipActiveAt(member, new Date())).map((member: AnyRecord) => member.userId), ...liveRows(project).map((row) => row.userId), actor.id];
     const q = query.trim().slice(0, 100);
     return (this.prisma as any).user.findMany({
       where: { status: "active", systemRole: { not: "SYSTEM_ADMIN" }, researcherProfile: { isNot: null }, id: { notIn: taken }, ...(q ? { OR: [{ displayName: { contains: q, mode: "insensitive" } }, { username: { contains: q, mode: "insensitive" } }] } : {}) },
@@ -92,7 +102,7 @@ export class AcceptanceCouncilService {
       const member = await tx.acceptanceCouncilMember.create({ data: { projectId: project.id, userId: candidate.id, councilRole: role, invitationStatus: "invited", invitedById: current.id, invitedAt: now } });
       const facts = { memberId: member.id, userId: candidate.id, councilRole: role };
       await this.record(tx, current, project, now, { action: "acceptance-council.invite", toStatus: "invited", facts, audit: "invite-acceptance-council-member", targetId: member.id });
-      await notifyUsers(tx, { userIds: [candidate.id], exclude: [current.id], type: "acceptance-council.invited", title: "Lời mời tham gia hội đồng nghiệm thu", body: `${project.title} — ${ROLE_LABELS[role]}`, link: `/projects/${project.id}`, sourceType: "acceptance_council", sourceId: project.id, idempotencyKey: `acceptance-council-invite:${member.id}` });
+      await notifyUsers(tx, { userIds: [candidate.id], exclude: [current.id], type: "acceptance-council.invited", title: "Lời mời tham gia hội đồng nghiệm thu", body: `${project.title} — ${ROLE_LABELS[role]}`, link: `/projects/${project.id}/acceptance-council`, sourceType: "acceptance_council", sourceId: project.id, idempotencyKey: `acceptance-council-invite:${member.id}` });
       return this.view(tx, current, project.id);
     });
   }
@@ -129,7 +139,7 @@ export class AcceptanceCouncilService {
       const moved = await tx.acceptanceCouncilMember.updateMany({ where: { id: row.id, invitationStatus: "invited" }, data: { invitationStatus, respondedAt: now, declineReason: accepting ? null : input.reason } });
       if (moved.count !== 1) throw new BadRequestException({ code: "INVITATION_NOT_PENDING", message: "Lời mời đã được trả lời hoặc không còn hiệu lực." });
       await this.record(tx, current, project, now, { action: `acceptance-council.${accepting ? "accept" : "decline"}`, fromStatus: "invited", toStatus: invitationStatus, reason: accepting ? null : input.reason, facts: { memberId: row.id, councilRole: row.councilRole }, audit: accepting ? "accept-acceptance-council-invitation" : "decline-acceptance-council-invitation", targetId: row.id });
-      await notifyUsers(tx, { userIds: [row.invitedById], exclude: [current.id], type: `acceptance-council.${invitationStatus}`, title: accepting ? "Thành viên đã nhận lời hội đồng nghiệm thu" : "Thành viên từ chối lời mời hội đồng nghiệm thu", body: `${project.title} — ${ROLE_LABELS[row.councilRole as AcceptanceCouncilRole] ?? row.councilRole}`, link: `/projects/${project.id}`, sourceType: "acceptance_council", sourceId: project.id, idempotencyKey: `acceptance-council-${invitationStatus}:${row.id}` });
+      await notifyUsers(tx, { userIds: [row.invitedById], exclude: [current.id], type: `acceptance-council.${invitationStatus}`, title: accepting ? "Thành viên đã nhận lời hội đồng nghiệm thu" : "Thành viên từ chối lời mời hội đồng nghiệm thu", body: `${project.title} — ${ROLE_LABELS[row.councilRole as AcceptanceCouncilRole] ?? row.councilRole}`, link: `/projects/${project.id}/acceptance-council`, sourceType: "acceptance_council", sourceId: project.id, idempotencyKey: `acceptance-council-${invitationStatus}:${row.id}` });
       // Từ chối thì không còn ghế nên không đọc lại được hội đồng.
       return accepting ? this.view(tx, current, project.id) : { memberId: row.id, invitationStatus };
     });
@@ -168,7 +178,7 @@ export class AcceptanceCouncilService {
         await closeApprovalSubmission(tx, current, key, "REJECTED", input.reason);
         await this.record(tx, current, project, await readTransactionClockV1(tx), { action: "acceptance-council.reject", toStatus: "REJECTED", reason: input.reason, facts: { approvalSubmissionId: pending.id }, audit: "reject-acceptance-council", targetId: pending.id });
         const officer = await this.projects.currentOfficer(tx, project.id);
-        await notifyUsers(tx, { userIds: [pending.submittedById, officer?.officerUserId], exclude: [current.id], type: "acceptance-council.rejected", title: "Tờ trình hội đồng nghiệm thu không được phê duyệt", body: project.title, link: `/projects/${project.id}`, sourceType: "acceptance_council", sourceId: project.id, idempotencyKey: `acceptance-council-reject:${pending.id}` });
+        await notifyUsers(tx, { userIds: [pending.submittedById, officer?.officerUserId], exclude: [current.id], type: "acceptance-council.rejected", title: "Tờ trình hội đồng nghiệm thu không được phê duyệt", body: project.title, link: `/projects/${project.id}/acceptance-council`, sourceType: "acceptance_council", sourceId: project.id, idempotencyKey: `acceptance-council-reject:${pending.id}` });
         return this.view(tx, current, project.id);
       }
       const config = await readCouncilFormationConfig(tx, "ACCEPTANCE");
@@ -181,7 +191,7 @@ export class AcceptanceCouncilService {
       const now = await readTransactionClockV1(tx);
       await tx.acceptanceCouncilMember.updateMany({ where: { id: { in: rows.map((row) => row.id) }, councilEstablishedAt: null }, data: { councilEstablishedAt: now } });
       await this.record(tx, current, project, now, { action: "acceptance-council.establish", toStatus: "established", facts: { approvalSubmissionId: pending.id, memberIds: rows.map((row) => row.id), establishedAt: now.toISOString() }, audit: "establish-acceptance-council", targetId: pending.id, relationship: true });
-      await notifyUsers(tx, { userIds: rows.map((row) => row.userId), exclude: [current.id], type: "acceptance-council.established", title: "Hội đồng nghiệm thu đã được thành lập", body: project.title, link: `/projects/${project.id}/acceptance-dossier`, sourceType: "acceptance_council", sourceId: project.id, idempotencyKey: `acceptance-council-established:${pending.id}` });
+      await notifyUsers(tx, { userIds: rows.map((row) => row.userId), exclude: [current.id], type: "acceptance-council.established", title: "Hội đồng nghiệm thu đã được thành lập", body: project.title, link: `/projects/${project.id}/acceptance-council`, sourceType: "acceptance_council", sourceId: project.id, idempotencyKey: `acceptance-council-established:${pending.id}` });
       return this.view(tx, current, project.id);
     });
   }
@@ -206,7 +216,7 @@ export class AcceptanceCouncilService {
       const officer = await this.projects.currentOfficer(tx, project.id);
       const pi = (project.members ?? []).find((member: AnyRecord) => member.participationRole === "TOPIC_PI" && member.status === "ACTIVE")?.userId;
       const council = liveRows(project).filter((row) => row.invitationStatus === "accepted").map((row) => row.userId);
-      await notifyUsers(tx, { userIds: [pi, officer?.officerUserId, ...council], exclude: [current.id], type: "acceptance-council.result", title: outcome === PROJECT_STATUSES.accepted ? "Đề tài đạt nghiệm thu" : "Đề tài không đạt nghiệm thu", body: project.title, link: `/projects/${project.id}`, sourceType: "acceptance_council", sourceId: project.id, idempotencyKey: `acceptance-result:${project.id}` });
+      await notifyUsers(tx, { userIds: [pi, officer?.officerUserId, ...council], exclude: [current.id], type: "acceptance-council.result", title: outcome === PROJECT_STATUSES.accepted ? "Đề tài đạt nghiệm thu" : "Đề tài không đạt nghiệm thu", body: project.title, link: `/projects/${project.id}/acceptance-council`, sourceType: "acceptance_council", sourceId: project.id, idempotencyKey: `acceptance-result:${project.id}` });
       return this.view(tx, current, project.id);
     });
   }
@@ -246,7 +256,9 @@ export class AcceptanceCouncilService {
     const result = await tx.projectHistory.findFirst({ where: { projectId, action: RESULT_ACTION }, orderBy: { createdAt: "desc" } });
     return {
       contextVersion: projectContextVersion(project),
+      projectTitle: project.title,
       projectStatus: project.status,
+      readsProject,
       dossierId: project.acceptanceDossier?.id ?? null,
       config: { memberCount: config.memberCount, structure: ACCEPTANCE_COUNCIL_STRUCTURE(config.memberCount) },
       establishedAt: establishedAt ? new Date(establishedAt).toISOString() : null,

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SectionCard } from "@/components/ui/section-card";
 import {
-  ACCEPTANCE_FILE_LABELS, ACCEPTANCE_SECTION_LABELS, acceptanceDossierStatusLabel, createAcceptanceDossier, deleteEthicsFile, ethicsCan, ethicsDenial,
+  ACCEPTANCE_FILE_LABELS, ACCEPTANCE_MINUTES, ACCEPTANCE_SECTION_LABELS, acceptanceDossierStatusLabel, createAcceptanceDossier, deleteEthicsFile, ethicsCan, ethicsDenial,
   getAcceptanceDossier, milestoneStatusLabel, projectFileUrl, projectStatusLabel, saveAcceptanceSection, submitAcceptanceDossier, uploadAcceptanceFile,
   type AcceptanceDossierView, type AcceptanceMissing, type AcceptanceSectionKey, type AcceptanceSections
 } from "@/lib/projects-api";
@@ -146,6 +146,7 @@ export function AcceptanceDossierWorkspace({ projectId }: { projectId: string })
 
     <SectionCard title="Tệp đính kèm">
       {dossier.readiness.missingFiles.length ? <><p>Tệp bắt buộc còn thiếu:</p><ul>{dossier.readiness.missingFiles.map((code) => <li key={code}>{ACCEPTANCE_FILE_LABELS[code] ?? code}</li>)}</ul></> : <p>Đã đủ tệp bắt buộc.</p>}
+      {dossier.files.some((file) => file.filePurpose === ACCEPTANCE_MINUTES) ? <div><h3>{ACCEPTANCE_FILE_LABELS[ACCEPTANCE_MINUTES]}</h3><ul>{dossier.files.filter((file) => file.filePurpose === ACCEPTANCE_MINUTES).map((file) => <li key={file.id}><a href={projectFileUrl(file.id)}>{file.fileName}</a> · {date(file.createdAt)}</li>)}</ul></div> : null}
       {FILE_PURPOSES.map((purpose) => {
         const files = dossier.files.filter((file) => file.filePurpose === purpose);
         return <div key={purpose}><h3>{ACCEPTANCE_FILE_LABELS[purpose]}</h3>

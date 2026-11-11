@@ -128,6 +128,9 @@ test("6.9: mời, nhận lời, trình TB → TP → PGĐ-KH ký, chủ tịch g
   const committeeId = await f.invite(people.head, committee, "committee_member");
   assert.ok(await db.auditLog.findFirst({ where: { action: "invite-acceptance-council-member", targetEntityId: chairId } }));
   assert.deepEqual(await notificationTypes(chair), ["acceptance-council.invited"], "người được mời ở đơn vị khác vẫn thấy lời mời");
+  assert.equal((await db.userNotification.findFirst({ where: { userId: chair.id, type: "acceptance-council.invited" } })).link, `/projects/${f.project.id}/acceptance-council`, "link mời trỏ trang hội đồng");
+  const chairSeats = await f.council.mySeats(chair);
+  assert.deepEqual(chairSeats.map((row) => [row.memberId, row.projectId, row.projectTitle, row.councilRole, row.invitationStatus]), [[chairId, f.project.id, f.project.title, "council_chair", "invited"]], "mySeats chỉ trả ghế của chính người xem");
   await assert.rejects(async () => f.invite(people.head, await f.candidate("chutich2"), "council_chair"), coded(400, "COUNCIL_POSITION_FULL"));
   await assert.rejects(() => f.invite(people.head, chair, "committee_member"), coded(400, "COUNCIL_MEMBER_INELIGIBLE"), "một người một vị trí");
 
@@ -136,8 +139,10 @@ test("6.9: mời, nhận lời, trình TB → TP → PGĐ-KH ký, chủ tịch g
   assert.ok(notReady.response.blockers.includes("3 thành viên chưa chấp nhận lời mời."));
   assert.equal(notReady.response.notAccepted.length, 3, "trả danh sách thiếu");
 
+  assert.ok(!(await f.council.candidates(people.head, f.project.id)).some((user) => user.id === people.head.id), "ứng viên không gồm người đang lập");
   // Người được mời chỉ thấy ghế của mình, chưa đọc được hồ sơ.
   const invitation = await f.council.getCouncil(chair, f.project.id);
+  assert.deepEqual([invitation.readsProject, (await f.council.getCouncil(people.head, f.project.id)).readsProject], [false, true]);
   assert.deepEqual([invitation.members.length, invitation.allowedActions], [1, ["acceptance-council.respond"]]);
   await assert.rejects(() => f.dossiers.getDossier(chair, f.project.id), coded(403));
   await assert.rejects(() => f.respond(chair, secretaryId, "accept"), coded(404), "không trả lời lời mời của người khác");
@@ -145,11 +150,13 @@ test("6.9: mời, nhận lời, trình TB → TP → PGĐ-KH ký, chủ tịch g
   await f.respond(chair, chairId, "accept");
   await assert.rejects(() => f.respond(secretary, secretaryId, "decline"), coded(400, "DECLINE_REASON_REQUIRED"));
   await f.respond(secretary, secretaryId, "decline", "Bận công tác");
+  assert.deepEqual(await f.council.mySeats(secretary), [], "ghế đã từ chối không còn trong mySeats");
   await f.respond(committee, committeeId, "accept");
   assert.equal((await f.submit(people.staff).catch((error) => error)).response.code, "COUNCIL_NOT_READY", "có người từ chối");
   await f.revoke(people.head, secretaryId, "Đã từ chối");
   assert.deepEqual(await notificationTypes(secretary), [], "người bị thu hồi không còn thấy thông báo hội đồng");
-  assert.ok(await db.userNotification.findFirst({ where: { userId: people.board.id, type: "acceptance-council.declined" } }), "báo người mời khi từ chối");
+  assert.equal((await db.userNotification.findFirst({ where: { userId: people.board.id, type: "acceptance-council.declined" } })).link, `/projects/${f.project.id}/acceptance-council`, "báo người mời khi từ chối");
+  assert.deepEqual(await f.council.mySeats(secretary), [], "ghế đã thu hồi không còn trong mySeats");
   const revoked = await db.acceptanceCouncilMember.findUnique({ where: { id: secretaryId } });
   assert.deepEqual([revoked.invitationStatus, revoked.declineReason, revoked.revokeReason], ["revoked", "Bận công tác", "Đã từ chối"], "thu hồi giữ lịch sử");
   const secretary2 = await f.candidate("thuky2");
@@ -173,6 +180,9 @@ test("6.9: mời, nhận lời, trình TB → TP → PGĐ-KH ký, chủ tịch g
   const seats = await db.acceptanceCouncilMember.findMany({ where: { projectId: f.project.id } });
   assert.deepEqual(seats.map((row) => [row.invitationStatus, row.councilEstablishedAt !== null]).sort(), [["accepted", true], ["accepted", true], ["accepted", true], ["revoked", false]]);
   assert.ok(await db.projectHistory.findFirst({ where: { projectId: f.project.id, action: "acceptance-council.establish" } }));
+  assert.equal((await db.userNotification.findFirst({ where: { userId: chair.id, type: "acceptance-council.established" } })).link, `/projects/${f.project.id}/acceptance-council`);
+  const establishedSeat = (await f.council.mySeats(chair))[0];
+  assert.deepEqual([establishedSeat.invitationStatus, establishedSeat.establishedAt !== null], ["accepted", true]);
 
   // AC2: thành viên đã nhận lời đọc hồ sơ chỉ đọc; người bị thu hồi thì không; không mở được đề tài.
   const read = await f.dossiers.getDossier(committee, f.project.id);
@@ -189,6 +199,8 @@ test("6.9: mời, nhận lời, trình TB → TP → PGĐ-KH ký, chủ tịch g
   for (const who of [people.pi, committee]) await assert.rejects(async () => f.files.deleteFile(who, draftMinutes.id, await f.ctx()), coded(403), who.displayName);
   await f.files.deleteFile(chair, draftMinutes.id, await f.ctx());
   const minutes = await f.upload(chair);
+  const minutesDeletable = async (who) => (await f.dossiers.getDossier(who, f.project.id)).dossier.files.find((file) => file.id === minutes.id).canDelete;
+  assert.deepEqual([await minutesDeletable(chair), await minutesDeletable(committee)], [true, false], "chỉ chủ tịch xóa được biên bản");
   assert.equal((await f.files.downloadFile(secretary2, minutes.id)).content.toString(), "%PDF", "thành viên đọc được tệp hồ sơ");
   for (const who of [committee, secretary2, people.staff, people.head, people.pi, people.member]) await assert.rejects(() => f.result(who, "accepted"), coded(403, "ACTION_NOT_GRANTED"), who.displayName);
   const stale = await f.ctx();
@@ -210,6 +222,9 @@ test("6.9: mời, nhận lời, trình TB → TP → PGĐ-KH ký, chủ tịch g
   assert.equal((await f.council.getCouncil(people.head, f.project.id)).result.outcome, "accepted");
 
   await assert.rejects(() => f.result(chair, "failed"), coded(400, "WORKFLOW_STATE_DENIED"), "ghi kết quả lần hai");
+  assert.equal(await minutesDeletable(chair), false, "sau kết quả biên bản không xóa được");
+  assert.deepEqual(await f.council.mySeats(chair), [], "đề tài rời chờ nghiệm thu thì ghế không còn ở /my-reviews");
+  assert.equal((await db.userNotification.findFirst({ where: { userId: people.pi.id, type: "acceptance-council.result" } })).link, `/projects/${f.project.id}/acceptance-council`);
   await assert.rejects(async () => f.files.deleteFile(chair, pinned.id, await f.ctx()), coded(400, "WORKFLOW_STATE_DENIED"), "biên bản đã ghim");
 
   // AC1: đề tài vừa nghiệm thu đi tiếp qua luồng thanh lý hiện có.
