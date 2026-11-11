@@ -12,6 +12,8 @@ import { PARTICIPANT_POLICY_ROLE_LABELS, participantPolicyFor, readParticipantPo
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { recordParticipantWaiver } from "../proposal-evaluations/proposal-evaluation-support.js";
 import { assertProposalContext, isSerializationFailure } from "../proposals-shared/proposal-mutation.js";
+import { FUNDING_KINDS, assertFundingInvariant, fundingTotals, latestFunding, readApprovedBudget, readFundingAmount } from "./project-funding.js";
+import { notifyUsers } from "../notifications/notification-events.js";
 import { projectContextVersion, projectViewerAuthorizationV1, PROJECT_STATUSES, TERMINAL_REQUEST_STATUSES, type ProjectOfficerFact } from "./project-capability-v1.js";
 
 const PREPARING = PROJECT_STATUSES.preparing;
@@ -30,7 +32,6 @@ const APPRAISAL_STATUS: Record<string, string> = { [ADJUSTMENT]: "under_staff_re
 // Đã trình = có tờ trình PENDING; bước TB/TP/BGĐ đọc từ tờ trình, không đặt tên trạng thái mới.
 const SUBMITTED_FOR_SIGNATURE = "ready_for_head_decision";
 const SKIP_CONTEXT = Symbol("skip-context");
-const FUNDING_KINDS = ["GRANT", "DISBURSEMENT", "SETTLEMENT"];
 const LIQUIDATABLE = [PROJECT_STATUSES.accepted, PROJECT_STATUSES.failed];
 
 type AnyRecord = Record<string, any>;
@@ -64,7 +65,7 @@ export class ApprovedProjectsService {
       if (expected !== SKIP_CONTEXT) assertProjectContext(expected, project);
       return work(tx, currentActor, project);
     }, { isolationLevel: "Serializable", timeout: 15000 }).catch(async (error: AnyRecord) => {
-      const denied = isSerializationFailure(error) ? new ConflictException({ code: "CONTEXT_VERSION_MISMATCH" }) : error;
+      const denied = isSerializationFailure(error) || error?.code === "P2002" ? new ConflictException({ code: "CONTEXT_VERSION_MISMATCH" }) : error;
       const evidence = denied as AnyRecord;
       await this.auditLog.record({ action: "project-mutation-denied", result: "failure", actorId: actor.id, targetEntity: "approved-project", targetEntityId: projectId, username: actor.username, reason: evidence?.response?.code ?? evidence?.code ?? "ACTION_NOT_GRANTED" }).catch(() => undefined);
       throw denied;
@@ -224,7 +225,7 @@ export class ApprovedProjectsService {
         allowedActions: itemActions({ request: { requestType: request.requestType, status: request.status, requesterId: request.requesterId } }, `project.${request.requestType}.`).filter((action: string) => !/\.(approve|reject)$/.test(action) || pending.get(request.id)?.stage === "LEADERSHIP")
       }) : ({ id: request.id, requestType: request.requestType, status: request.status, createdAt: request.createdAt?.toISOString?.() ?? null, decidedAt: request.decidedAt?.toISOString?.() ?? null, allowedActions: [] })),
       history: (project.history ?? []).map((item: AnyRecord) => ({ id: item.id, action: item.action, fromStatus: item.fromStatus, toStatus: item.toStatus, reason: requestDetail ? item.reason : undefined, createdAt: item.createdAt?.toISOString?.() ?? null, beforeFacts: isOfficer || isHead || isRouter || isSigner ? item.beforeFacts : undefined, afterFacts: isOfficer || isHead || isRouter || isSigner ? item.afterFacts : undefined })),
-      liquidation: actor ? this.liquidationView(project, actor) : null,
+      liquidation: actor ? this.liquidationView(project, actor, officer) : null,
       ethicsDossier: project.ethicsDossier && capability.allowedActions?.includes("ethics-dossier.read") ? { id: project.ethicsDossier.id, status: project.ethicsDossier.status, submittedAt: project.ethicsDossier.submittedAt?.toISOString?.() ?? null } : null,
       acceptanceDossier: project.acceptanceDossier && capability.allowedActions?.includes("acceptance-dossier.read") ? { id: project.acceptanceDossier.id, status: project.acceptanceDossier.status, submittedAt: project.acceptanceDossier.submittedAt?.toISOString?.() ?? null } : null,
       overdue,
@@ -264,13 +265,16 @@ export class ApprovedProjectsService {
       if (!snapshot || snapshot.id !== proposalId || !snapshot.ownerId || !Array.isArray(snapshot.members)) throw new BadRequestException({ code: "SOURCE_EVIDENCE_MISSING" });
 
       const sourceMembers = [{ id: randomUUID(), projectId: "", userId: snapshot.ownerId, sourceMemberId: null, name: proposal.owner?.displayName ?? "Chủ nhiệm đề tài", role: "TOPIC_PI", participationRole: "TOPIC_PI", status: "ACTIVE", effectiveFrom: new Date(), effectiveUntil: null, createdById: currentActor.id }, ...snapshot.members.filter((member: AnyRecord) => member.userId !== snapshot.ownerId).map((member: AnyRecord) => ({ id: randomUUID(), projectId: "", userId: member.userId || null, sourceMemberId: member.id ?? null, name: member.name, role: member.role, participationRole: member.participationRole ?? member.role ?? "TOPIC_MEMBER", status: "ACTIVE", effectiveFrom: new Date(), effectiveUntil: null, createdById: currentActor.id }))];
+      // Story 6.13: số lãnh đạo chốt khi phê duyệt nằm ở đề xuất hiện tại, không ở snapshot lúc nộp.
+      const budgetMetadata = { ...(snapshot.budgetMetadata ?? {}), ...((proposal.budgetMetadata as AnyRecord | null)?.approvedAmount !== undefined ? { approvedAmount: (proposal.budgetMetadata as AnyRecord).approvedAmount } : {}) };
+      const approvedBudget = readApprovedBudget(budgetMetadata);
       const project = await tx.approvedProject.create({ data: {
         proposalId,
         sourceSubmissionEventId: submission.id,
         sourceDecisionId: decision.id,
         hostOrganizationUnitId: proposal.hostOrganizationUnitId,
         title: snapshot.title,
-        scopeSnapshot: { title: snapshot.title, objectives: snapshot.objectives, summary: snapshot.summary, researchFieldCode: snapshot.researchFieldCode, proposalTypeCode: snapshot.proposalTypeCode, budgetMetadata: snapshot.budgetMetadata },
+        scopeSnapshot: { title: snapshot.title, objectives: snapshot.objectives, summary: snapshot.summary, researchFieldCode: snapshot.researchFieldCode, proposalTypeCode: snapshot.proposalTypeCode, budgetMetadata },
         planSnapshot: { startDate: snapshot.startDate, endDate: snapshot.endDate },
         status: PREPARING,
         startDate: snapshot.startDate ? new Date(snapshot.startDate) : null,
@@ -278,6 +282,7 @@ export class ApprovedProjectsService {
         createdById: currentActor.id
       } });
       if (sourceMembers.length) await tx.approvedProjectMember.createMany({ data: sourceMembers.map((member: AnyRecord) => ({ ...member, projectId: project.id })) });
+      if (approvedBudget > 0) await tx.projectFundingRecord.create({ data: { projectId: project.id, entryId: randomUUID(), version: 1, kind: "GRANT", amount: approvedBudget, recordedOn: new Date(), note: "Kinh phí được phê duyệt", fileRecordIds: [], recordedById: currentActor.id } });
       await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.created", fromStatus: null, toStatus: PREPARING, reason: "Tạo từ phiên bản đề xuất đã được phê duyệt", beforeFacts: null, afterFacts: { proposalId, sourceSubmissionEventId: submission.id, sourceDecisionId: decision.id } } });
       await new AuditLogService(tx).record({ action: "create-approved-project", result: "success", actorId: currentActor.id, targetEntity: "approved-project", targetEntityId: project.id, username: currentActor.username, reason: JSON.stringify({ proposalId, sourceSubmissionEventId: submission.id, sourceDecisionId: decision.id }) });
       return { id: project.id, proposalId, status: project.status };
@@ -803,12 +808,15 @@ export class ApprovedProjectsService {
 
   // ---- Story 6.12: kinh phí dạng metadata và thanh lý ----
 
-  private liquidationView(project: AnyRecord, actor: SafeUserContext) {
+  private liquidationView(project: AnyRecord, actor: SafeUserContext, officer: AnyRecord | null) {
     const latest = (project.liquidations ?? [])[0] ?? null;
     const member = this.activeMember(project, actor.id);
+    // Số tiền thanh lý chỉ hiện với người được xem kinh phí đề tài (không PGĐ-TD, không CV ngoài phụ trách).
+    const money = (value: unknown) => value === null || value === undefined || !this.canViewFunding(actor, project, officer) ? null : String(value);
     return {
-      current: latest ? { id: latest.id, status: latest.status, outcome: latest.outcome, report: latest.report, decisionNote: latest.decisionNote, decidedAt: latest.decidedAt?.toISOString?.() ?? null } : null,
+      current: latest ? { id: latest.id, status: latest.status, outcome: latest.outcome, report: latest.report, decisionNote: latest.decisionNote, decidedAt: latest.decidedAt?.toISOString?.() ?? null, recoveredAmount: money(latest.recoveredAmount ?? 0), approvedBudget: money(latest.approvedBudget), totalDisbursed: money(latest.totalDisbursed), totalSettled: money(latest.totalSettled), liquidationNumber: latest.liquidationNumber ?? null, fileRecordIds: latest.fileRecordIds ?? [] } : null,
       eligible: LIQUIDATABLE.includes(project.status),
+      canSubmit: isResearchManagementStaff(actor) && officer?.officerUserId === actor.id && LIQUIDATABLE.includes(project.status) && (!latest || ["DRAFT", "REJECTED"].includes(latest.status)),
       canSign: isLeadership(actor) && !member && latest?.status === "SUBMITTED" && (project.pendingApprovals ?? []).some((row: AnyRecord) => row.kind === "LIQUIDATION" && row.stage === "LEADERSHIP"),
       note: LIQUIDATABLE.includes(project.status) ? null : "Chỉ đề tài đã nghiệm thu (Accepted) hoặc không đạt (Failed) mới được thanh lý."
     };
@@ -827,16 +835,6 @@ export class ApprovedProjectsService {
     return allowed && (participantManage || !this.activeMember(project, actor.id));
   }
 
-  private latestFunding(rows: AnyRecord[]) {
-    const latest = new Map<string, AnyRecord>();
-    for (const row of rows) if (!latest.has(row.entryId) || latest.get(row.entryId)!.version < row.version) latest.set(row.entryId, row);
-    return [...latest.values()].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-  }
-
-  private fundingTotals(records: AnyRecord[]) {
-    return Object.fromEntries(FUNDING_KINDS.map((kind) => [kind, records.filter((row) => row.kind === kind).reduce((sum, row) => sum + Number(row.amount), 0)]));
-  }
-
   async getFunding(actor: SafeUserContext, projectId: string) {
     const project = await (this.prisma as any).approvedProject.findUnique({ where: { id: projectId }, include: PROJECT_INCLUDE });
     if (!project) throw new NotFoundException({ message: "Không tìm thấy đề tài đã được duyệt." });
@@ -844,8 +842,8 @@ export class ApprovedProjectsService {
     const officer = await this.currentOfficer(this.prisma, projectId);
     if (!this.canViewFunding(actor, project, officer)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Không có quyền xem kinh phí đề tài này." });
     const rows = await (this.prisma as any).projectFundingRecord.findMany({ where: { projectId }, orderBy: { createdAt: "asc" } });
-    const records = this.latestFunding(rows);
-    return { restricted: false, records: records.map((row) => ({ entryId: row.entryId, version: row.version, kind: row.kind, amount: String(row.amount), recordedOn: row.recordedOn?.toISOString?.().slice(0, 10) ?? null, note: row.note, fileRecordIds: row.fileRecordIds, recordedById: row.recordedById, createdAt: row.createdAt.toISOString() })), totals: this.fundingTotals(records), canWrite: this.canWriteFunding(actor, project, officer, await this.participantManage(this.prisma, actor)) };
+    const records = latestFunding<any>(rows).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    return { restricted: false, records: records.map((row) => ({ entryId: row.entryId, version: row.version, kind: row.kind, amount: String(row.amount), recordedOn: row.recordedOn?.toISOString?.().slice(0, 10) ?? null, note: row.note, fileRecordIds: row.fileRecordIds, recordedById: row.recordedById, createdAt: row.createdAt.toISOString() })), totals: fundingTotals(records), canWrite: this.canWriteFunding(actor, project, officer, await this.participantManage(this.prisma, actor)) };
   }
 
   /** Số liệu tổng hợp toàn Học viện; không có cột kinh phí từng đề tài. Dành cho vai trò theo dõi (gồm PGĐ-TD). */
@@ -854,8 +852,8 @@ export class ApprovedProjectsService {
     const rows = await (this.prisma as any).projectFundingRecord.findMany({ orderBy: { createdAt: "asc" } });
     const byProject = new Map<string, AnyRecord[]>();
     for (const row of rows) byProject.set(row.projectId, [...(byProject.get(row.projectId) ?? []), row]);
-    const records = [...byProject.values()].flatMap((list) => this.latestFunding(list));
-    return { projectCount: byProject.size, totals: this.fundingTotals(records) };
+    const records = [...byProject.values()].flatMap((list) => latestFunding<any>(list).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()));
+    return { projectCount: byProject.size, totals: fundingTotals(records) };
   }
 
   /** Thêm số liệu (entryId mới) hoặc phiên bản sửa của một số liệu (entryId cũ). Chỉ thêm, không ghi đè; mỗi lần có history và audit. */
@@ -865,10 +863,10 @@ export class ApprovedProjectsService {
       if (!this.canWriteFunding(currentActor, project, officer, await this.participantManage(tx, currentActor))) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Bạn không có quyền ghi số liệu kinh phí của đề tài này." });
       if (this.activeMember(project, currentActor.id)) await recordParticipantWaiver(tx, currentActor, { entity: "approved-project", id: project.id }, "record-project-funding");
       if ([PREPARING, PROJECT_STATUSES.closed].includes(project.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Đề tài chưa thực hiện hoặc đã đóng." });
-      if (!FUNDING_KINDS.includes(input.kind)) throw new BadRequestException({ message: "Loại số liệu kinh phí không hợp lệ." });
-      const amount = Number(input.amount);
-      if (!Number.isFinite(amount) || amount < 0 || amount >= 1e16) throw new BadRequestException({ message: "Số tiền không hợp lệ." });
+      if (!(FUNDING_KINDS as readonly string[]).includes(input.kind)) throw new BadRequestException({ message: "Loại số liệu kinh phí không hợp lệ." });
+      const amount = readFundingAmount(input.amount);
       const files = await this.assertUsableEvidence(tx, project.id, input.fileRecordIds);
+      if (files.some((file: AnyRecord) => file.filePurpose !== "FUNDING_VOUCHER")) throw new BadRequestException({ code: "EVIDENCE_WRONG_RECORD", message: "Chứng từ kinh phí phải là tệp loại chứng từ giải ngân (FUNDING_VOUCHER)." });
       let entryId = randomUUID();
       let version = 1;
       let before: AnyRecord | null = null;
@@ -877,12 +875,25 @@ export class ApprovedProjectsService {
         if (!last || last.kind !== input.kind) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Không tìm thấy số liệu cần sửa." });
         entryId = last.entryId; version = last.version + 1; before = { amount: String(last.amount), note: last.note, version: last.version };
       }
+      const rows = await tx.projectFundingRecord.findMany({ where: { projectId: project.id }, orderBy: { createdAt: "asc" } });
+      const next = latestFunding([...rows, { entryId, version, kind: input.kind, amount, createdAt: new Date() }]);
+      assertFundingInvariant(fundingTotals(next));
       const record = await tx.projectFundingRecord.create({ data: { projectId: project.id, entryId, version, kind: input.kind, amount, recordedOn: projectDay(input.recordedOn), note: optionalText(input.note ?? null), fileRecordIds: files.map((file: AnyRecord) => file.id), recordedById: currentActor.id } });
       const after = { kind: input.kind, amount: String(record.amount), version, entryId, fileRecordIds: record.fileRecordIds };
       await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.funding.record", reason: record.note, beforeFacts: before, afterFacts: after } });
       await new AuditLogService(tx).record({ action: "record-project-funding", result: "success", actorId: currentActor.id, targetEntity: "approved-project", targetEntityId: project.id, username: currentActor.username, beforeFacts: before ?? undefined, afterFacts: after });
+      if (input.kind !== "GRANT") await notifyUsers(tx, { userIds: [this.projectPiUserId(project)], exclude: [currentActor.id], type: "project.funding.recorded", title: input.kind === "DISBURSEMENT" ? "Đề tài có đợt giải ngân mới" : "Đề tài có số liệu quyết toán mới", body: `${project.title}: ${amount.toLocaleString("vi-VN")} đ`, link: `/projects/${project.id}`, sourceType: "project_funding", sourceId: project.id, idempotencyKey: `funding:${entryId}:v${version}` });
       return { entryId, version, kind: record.kind, amount: String(record.amount) };
     });
+  }
+
+  private projectPiUserId(project: AnyRecord): string | null {
+    return (project.members ?? []).find((member: AnyRecord) => member.participationRole === "TOPIC_PI" && member.status === "ACTIVE")?.userId ?? null;
+  }
+
+  private async currentFundingTotals(tx: any, projectId: string) {
+    const rows = await tx.projectFundingRecord.findMany({ where: { projectId } });
+    return fundingTotals(latestFunding<any>(rows));
   }
 
   /** CV phụ trách lập biên bản thanh lý và trình tờ trình LIQUIDATION (TB → TP → GĐ). Chỉ đề tài Accepted/Failed. */
@@ -891,14 +902,17 @@ export class ApprovedProjectsService {
       await this.assertOfficer(tx, currentActor, project, "submit-liquidation");
       if (!LIQUIDATABLE.includes(project.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Chỉ đề tài đã nghiệm thu hoặc không đạt mới được thanh lý." });
       const report = requiredText(input.report, "report");
+      const recoveredAmount = readFundingAmount(input.recoveredAmount ?? 0, "Số tiền thu hồi");
+      const totals = await this.currentFundingTotals(tx, project.id);
+      if (recoveredAmount > totals.DISBURSEMENT) throw new BadRequestException({ code: "LIQUIDATION_INVALID", message: `Số tiền thu hồi (${recoveredAmount.toLocaleString("vi-VN")} đ) không được lớn hơn số đã giải ngân (${totals.DISBURSEMENT.toLocaleString("vi-VN")} đ).` });
       const files = await this.assertUsableEvidence(tx, project.id, input.fileRecordIds);
       const live = (project.liquidations ?? []).find((row: AnyRecord) => ["DRAFT", "SUBMITTED", "SIGNED"].includes(row.status));
       if (live && live.status !== "DRAFT") throw new ConflictException({ code: "LIQUIDATION_EXISTS", message: "Đề tài đã có biên bản thanh lý đang trình hoặc đã ký." });
-      const data = { report, fileRecordIds: files.map((file: AnyRecord) => file.id), outcome: project.status, status: "SUBMITTED", authorId: currentActor.id };
+      const data = { report, recoveredAmount, fileRecordIds: files.map((file: AnyRecord) => file.id), outcome: project.status, status: "SUBMITTED", authorId: currentActor.id };
       const liquidation = live ? await tx.projectLiquidation.update({ where: { id: live.id }, data }) : await tx.projectLiquidation.create({ data: { projectId: project.id, ...data } });
       await openApprovalSubmission(tx, currentActor, { kind: "LIQUIDATION", subjectType: "project", subjectId: project.id, subjectRef: liquidation.id }, { title: `Thanh lý đề tài: ${project.title}`, hostOrganizationUnitId: project.hostOrganizationUnitId });
-      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.liquidation.submit", fromStatus: live ? "DRAFT" : null, toStatus: "SUBMITTED", afterFacts: { liquidationId: liquidation.id, outcome: project.status } } });
-      await new AuditLogService(tx).record({ action: "submit-project-liquidation", result: "success", actorId: currentActor.id, targetEntity: "project-liquidation", targetEntityId: liquidation.id, username: currentActor.username, afterFacts: { projectId: project.id, outcome: project.status } });
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.liquidation.submit", fromStatus: live ? "DRAFT" : null, toStatus: "SUBMITTED", afterFacts: { liquidationId: liquidation.id, outcome: project.status, recoveredAmount } } });
+      await new AuditLogService(tx).record({ action: "submit-project-liquidation", result: "success", actorId: currentActor.id, targetEntity: "project-liquidation", targetEntityId: liquidation.id, username: currentActor.username, afterFacts: { projectId: project.id, outcome: project.status, recoveredAmount } });
       return liquidation;
     });
   }
@@ -912,13 +926,26 @@ export class ApprovedProjectsService {
       if (this.activeMember(project, currentActor.id)) throw new ForbiddenException({ code: "CONFLICT_DENIED" });
       await this.assertNoEvaluationConflict(tx, currentActor.id, project.proposalId);
       if (decision === "reject" && !input.reason) throw new BadRequestException({ message: "Cần lý do từ chối." });
+      let closing: AnyRecord = {};
+      if (decision === "approve") {
+        // Số liệu chốt theo sổ ghi tại thời điểm ký; lệch dù 1 đồng cũng không ký được.
+        const totals = await this.currentFundingTotals(tx, project.id);
+        const recovered = Number(liquidation.recoveredAmount);
+        if (totals.SETTLEMENT + recovered !== totals.DISBURSEMENT) throw new BadRequestException({ code: "LIQUIDATION_UNBALANCED", message: `Chưa cân đối kinh phí: đã giải ngân ${totals.DISBURSEMENT.toLocaleString("vi-VN")} đ, đã quyết toán ${totals.SETTLEMENT.toLocaleString("vi-VN")} đ, thu hồi ${recovered.toLocaleString("vi-VN")} đ. Phần chênh lệch phải được quyết toán hoặc thu hồi trước khi ký.` });
+        // Năm UTC cho cả nhãn và khoảng đếm, để hai thứ không lệch nhau quanh giao thừa.
+        const year = (await readTransactionClockV1(tx)).getUTCFullYear();
+        const sequence = (await tx.projectLiquidation.count({ where: { status: "SIGNED", decidedAt: { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) } } })) + 1;
+        closing = { approvedBudget: totals.GRANT, totalDisbursed: totals.DISBURSEMENT, totalSettled: totals.SETTLEMENT, liquidationNumber: `${sequence}/BBTL-HVQY/${year}` };
+      }
       await closeApprovalSubmission(tx, currentActor, { kind: "LIQUIDATION", subjectType: "project", subjectId: project.id, subjectRef: liquidation.id }, decision === "approve" ? "APPROVED" : "REJECTED", input.reason ?? null);
       const now = await readTransactionClockV1(tx);
       const status = decision === "approve" ? "SIGNED" : "REJECTED";
-      const updated = await tx.projectLiquidation.update({ where: { id: liquidation.id }, data: { status, decidedById: currentActor.id, decidedAt: now, decisionNote: input.reason ?? null } });
+      const updated = await tx.projectLiquidation.update({ where: { id: liquidation.id }, data: { status, decidedById: currentActor.id, decidedAt: now, decisionNote: input.reason ?? null, ...closing } });
       if (decision === "approve") await tx.approvedProject.update({ where: { id: project.id }, data: { status: PROJECT_STATUSES.closed, aggregateVersion: { increment: 1 }, authorizationContextUpdatedAt: now } });
-      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: `project.liquidation.${decision}`, fromStatus: project.status, toStatus: decision === "approve" ? PROJECT_STATUSES.closed : project.status, reason: input.reason ?? null, beforeFacts: { status: project.status, liquidation: "SUBMITTED" }, afterFacts: { status: decision === "approve" ? PROJECT_STATUSES.closed : project.status, liquidation: status, liquidationId: liquidation.id } } });
-      await new AuditLogService(tx).record({ action: `${decision}-project-liquidation`, result: "success", actorId: currentActor.id, targetEntity: "project-liquidation", targetEntityId: liquidation.id, username: currentActor.username, reason: input.reason ?? undefined, beforeFacts: { projectStatus: project.status, status: "SUBMITTED" }, afterFacts: { projectStatus: decision === "approve" ? PROJECT_STATUSES.closed : project.status, status } });
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: `project.liquidation.${decision}`, fromStatus: project.status, toStatus: decision === "approve" ? PROJECT_STATUSES.closed : project.status, reason: input.reason ?? null, beforeFacts: { status: project.status, liquidation: "SUBMITTED" }, afterFacts: { status: decision === "approve" ? PROJECT_STATUSES.closed : project.status, liquidation: status, liquidationId: liquidation.id, liquidationNumber: closing.liquidationNumber ?? null } } });
+      await new AuditLogService(tx).record({ action: `${decision}-project-liquidation`, result: "success", actorId: currentActor.id, targetEntity: "project-liquidation", targetEntityId: liquidation.id, username: currentActor.username, reason: input.reason ?? undefined, beforeFacts: { projectStatus: project.status, status: "SUBMITTED" }, afterFacts: { projectStatus: decision === "approve" ? PROJECT_STATUSES.closed : project.status, status, liquidationNumber: closing.liquidationNumber ?? null } });
+      const officer = await this.currentOfficer(tx, project.id);
+      await notifyUsers(tx, { userIds: [this.projectPiUserId(project), officer?.officerUserId], exclude: [currentActor.id], type: "project.liquidation.decided", title: decision === "approve" ? "Biên bản thanh lý đã được ký" : "Biên bản thanh lý bị từ chối", body: `${project.title}${closing.liquidationNumber ? ` — số ${closing.liquidationNumber}` : ""}`, link: `/projects/${project.id}`, sourceType: "project_liquidation", sourceId: liquidation.id, idempotencyKey: `liquidation:${liquidation.id}:${status}` });
       return updated;
     });
   }

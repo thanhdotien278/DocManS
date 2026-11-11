@@ -34,6 +34,5 @@ AC source: `_bmad-output/epics.md` Stories 6.6, 6.7, 6.11, 6.12; D-033, D-034, D
 ## Gaps
 
 - No flow yet produces `accepted`/`failed` (Stories 6.8/6.9 are backlog), so liquidation cannot be reached outside tests; the gate itself is implemented.
-- Funding documents: `fileRecordIds` must reference active files already attached to the project; GĐ/TP/TB/CV cannot upload through `FilesService` (only PI/members can). Upload for funding writers is open.
-- No web UI for funding records or liquidation; no notifications (Epic 11).
+- Đã xử lý ở 6.13.
 - `/approvals` routes for TB/TP do not yet show project-specific context beyond the title.
