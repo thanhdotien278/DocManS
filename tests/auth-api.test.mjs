@@ -8,7 +8,7 @@ import { AuthService } from "../dist/apps/api/auth/auth.service.js";
 import { AuthStore } from "../dist/apps/api/auth/auth.store.js";
 import { LoginRequestPipe } from "../dist/apps/api/auth/login-request.pipe.js";
 import { PasswordService } from "../dist/apps/api/auth/password.service.js";
-import { ChangePasswordRequestPipe, CompleteAccountActivationRequestPipe, CompletePasswordResetRequestPipe } from "../dist/apps/api/auth/password-request.pipe.js";
+import { ChangePasswordRequestPipe, CompleteAccountActivationRequestPipe, CompletePasswordResetRequestPipe, RequestPasswordResetPipe } from "../dist/apps/api/auth/password-request.pipe.js";
 import { SessionAuthGuard } from "../dist/apps/api/auth/session-auth.guard.js";
 import { readSessionCookie } from "../dist/apps/api/auth/session-cookie.js";
 
@@ -75,6 +75,10 @@ function createAuthStore({ user = activeUser, activeSession = { id: "session-1",
       this.auditRecords.push(audit);
       return true;
     },
+    resetTarget: null,
+    async findPasswordResetTarget(identifier) {
+      return identifier === "admin" ? this.resetTarget : null;
+    },
     async createPasswordResetToken(userId, createdById, tokenHash, expiresAt) {
       this.resetTokens.push({ userId, createdById, tokenHash, expiresAt });
     },
@@ -129,11 +133,28 @@ function createResponse() {
   };
 }
 
-function createService({ passwordIsValid = true, store = createAuthStore(), auditLog = createAuditLog() } = {}) {
+function createMailService({ fail = false } = {}) {
+  return {
+    sent: [],
+    configuration() {
+      return { loginUrl: "http://localhost:3000" };
+    },
+    passwordResetUrl(token) {
+      return `http://localhost:3000/password-reset?token=${token}`;
+    },
+    async sendPasswordReset(input) {
+      if (fail) throw new Error("SMTP down");
+      this.sent.push(input);
+    }
+  };
+}
+
+function createService({ passwordIsValid = true, store = createAuthStore(), auditLog = createAuditLog(), mailService = createMailService() } = {}) {
   const passwordService = createPasswordService(passwordIsValid);
 
   return {
-    service: new AuthService(auditLog, new AuthRateLimitService(), store, passwordService),
+    mailService,
+    service: new AuthService(auditLog, new AuthRateLimitService(), store, passwordService, mailService),
     auditLog,
     passwordService,
     store
@@ -267,7 +288,7 @@ describe("auth API behavior", () => {
 
     assert.equal(/hasSessionCookie\s*&&\s*pathname\s*===\s*["']\/login["']/.test(middlewareSource), false);
     assert.match(middlewareSource, /PUBLIC_ROUTES\.includes\(pathname\)/);
-    assert.match(readFileSync("apps/web/src/lib/session.ts", "utf8"), /PUBLIC_ROUTES = \["\/login", "\/password-reset", "\/register"\]/);
+    assert.match(readFileSync("apps/web/src/lib/session.ts", "utf8"), /PUBLIC_ROUTES = \["\/login", "\/password-reset", "\/forgot-password", "\/register"\]/);
     assert.match(middlewareSource, /!hasSessionCookie && !isPublicRoute/);
     assert.match(middlewareSource, /hasValidSession/);
     assert.match(middlewareSource, /\/auth\/me/);
@@ -447,6 +468,40 @@ describe("auth API behavior", () => {
     await service.completeAccountActivation({ token: "raw-activation-token", password: "ActivationPassword1" }, {});
     assert.equal(auditLog.records.at(-1).action, "complete-account-activation");
     assert.equal(JSON.stringify(auditLog.records.at(-1)).includes("raw-activation-token"), false);
+  });
+
+  it("self-service reset request returns one generic message and only mails active users with an email", async () => {
+    const pipe = new RequestPasswordResetPipe();
+    assert.throws(() => pipe.transform({ identifier: "  " }), { name: "BadRequestException" });
+    assert.deepEqual(pipe.transform({ identifier: " Admin " }), { identifier: "admin" });
+
+    const unknown = createService();
+    const unknownResult = await unknown.service.requestPasswordReset({ identifier: "nobody" }, { ip: "1.1.1.1" });
+    assert.equal(unknown.mailService.sent.length, 0);
+    assert.equal(unknown.store.resetTokens.length, 0);
+
+    const known = createService();
+    known.store.resetTarget = { id: "user-1", displayName: "Admin", credentialEmail: "admin@example.vn" };
+    const knownResult = await known.service.requestPasswordReset({ identifier: "admin" }, { ip: "1.1.1.1" });
+    assert.deepEqual(knownResult, unknownResult);
+    assert.deepEqual(known.store.resetTokens.map(({ userId, createdById, tokenHash }) => ({ userId, createdById, tokenHash })), [{ userId: "user-1", createdById: "user-1", tokenHash: "hashed-reset-token" }]);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(known.auditLog.records.at(-1).result, "success");
+    assert.equal(known.mailService.sent[0].to, "admin@example.vn");
+    assert.equal(known.mailService.sent[0].resetUrl, "http://localhost:3000/password-reset?token=raw-reset-token");
+    assert.equal(JSON.stringify(known.auditLog.records).includes("raw-reset-token"), false);
+
+    const failing = createService({ mailService: createMailService({ fail: true }) });
+    failing.store.resetTarget = known.store.resetTarget;
+    assert.deepEqual(await failing.service.requestPasswordReset({ identifier: "admin" }, {}), unknownResult);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(failing.auditLog.records.at(-1).reason, "MAIL_DELIVERY_FAILED");
+  });
+
+  it("self-service reset request is rate limited per identifier", async () => {
+    const { service } = createService();
+    for (let i = 0; i < 5; i += 1) await service.requestPasswordReset({ identifier: "admin" }, { ip: `10.0.0.${i}` });
+    await assert.rejects(() => service.requestPasswordReset({ identifier: "admin" }, { ip: "10.0.0.99" }), (error) => error instanceof HttpException && error.getStatus() === 429);
   });
 
   it("admin reset initiation stores only a digest with a 30-minute expiry and does not audit secrets", async () => {
