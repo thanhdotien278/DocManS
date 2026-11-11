@@ -397,7 +397,7 @@ means the signer from §7.4. Missing or denied cells are explicit `None`.
 | Progress report submission | None | Read | Read | Submit own | Contribution only | None | Own topic scope | Waiting report, active project | Yes |
 | Progress report review/follow-up | None | CV³: Review/Accept/Request supplement | Read/Monitor | Read/respond | Read assigned | None | Assigned officer scope | Submitted report, delayed project | Yes |
 | Project Adjustment / Extension request | None | CV³: Appraise and draft tờ trình; TB → TP route | GĐ or PGĐ-KH: Sign | Create/Submit/Withdraw own | None | None | Own topic scope; assigned officer scope | Active project | Yes |
-| Acceptance/final review | None | CV³: Prepare; route tờ trình | GĐ or PGĐ-KH: Sign council establishment | Submit acceptance dossier | Read assigned | Review if assigned | Unit scope, reviewer assignment scope, conflict policy | Waiting decision, completed/accepted | Yes |
+| Acceptance/final review | None | Roles configured by QT⁸ for `ACCEPTANCE` (default TP¹/TB¹): invite/revoke council members (revoke needs a reason, rows kept); TP¹, TB¹ or CV³: submit tờ trình `ACCEPTANCE_COUNCIL` (TB → TP → BGĐ) only when the structure (1 chair, 1 secretary and exactly `memberCount` − 2 committee members; `memberCount` 3–15) is complete and every member accepted | GĐ or PGĐ-KH: Sign council establishment (not a project member, not a council member; structure rechecked at signing; return/reject keeps the roster) | Submit acceptance dossier; no result action | Read assigned | Any role except QT with a scientific CV, not an active project member, one seat per person: accept/decline (decline needs a reason). After signing, accepted members read the acceptance dossier and its files (read-only). Only the chair records the result (`accepted`/`failed`) with a mandatory comment and an `ACCEPTANCE_MINUTES` file; the chair alone uploads/deletes minutes while no result exists; no "Phụ trách" waiver | Unit scope, council seat scope, conflict policy | Pending acceptance → accepted/failed | Yes |
 | Funding view (per project) | None | TP, TB: all; CV³; PP⁴ | GĐ, PGĐ-KH: all; PGĐ-TD: aggregate only | Read own⁴ | Read⁴ | None | Academy-wide / assigned / own | Any | No for read |
 | Funding management, disbursement, settlement | None | TP, TB: Academy-wide; CV³ | GĐ: Manage | None | None | None | Academy-wide / assigned | Active project. `FUNDING_VOUCHER` files: upload, edit and delete only by funding managers (GĐ, TP, TB, assigned CV³); blocked while the project is preparing or closed; a voucher attached to a funding record is pinned and cannot be deleted; funding records accept only `FUNDING_VOUCHER` files. Ledger: ΣDisbursement ≤ ΣGrant; ΣSettlement ≤ ΣDisbursement. | Yes |
 | Liquidation | None | CV³: Draft; route | GĐ only: Sign | Read | Read | None | Assigned officer scope | Completed. CV enters thu hồi (recovered) ≤ ΣDisbursement; GĐ signs only when quyết toán + thu hồi = ΣDisbursement; signing freezes the figures and allocates the number `n/BBTL-HVQY/năm`. | Yes |
@@ -692,6 +692,13 @@ follows these rules.
 
 Council members who accepted can read the dossier only after BGĐ signs the council
 establishment decision.
+
+The acceptance council (Story 6.9) follows the same contract on `AcceptanceCouncilMember`:
+formation roles come from QT config `ACCEPTANCE`; candidates are active accounts with a
+scientific CV, never QT, never an active member of the project; invitation and listing are
+allowed only while the project is `pending_acceptance` with a submitted dossier, no tờ trình
+pending and the council not yet established. Accepted members read the acceptance dossier
+only after GĐ or PGĐ-KH signs `ACCEPTANCE_COUNCIL`.
 
 ## Researcher Profile completion — 2026-09-15
 

@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-11-09
+last_updated: 2026-11-12
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -103,7 +103,8 @@ development_status:
   6-7-quyet-dinh-dieu-chinh-hoac-gia-han: review
   # 6.8: phần 1 (backend) xong 2026-11-09; phần 2 (giao diện) còn trong deferred-work.md.
   6-8-chuan-bi-va-nop-ho-so-nghiem-thu-hoac-danh-gia-cuoi: review
-  6-9-ra-soat-va-quyet-dinh-nghiem-thu-hoac-danh-gia-cuoi: backlog
+  # 6.9: phần 1 (backend) xong 2026-11-12; phần 2 (giao diện) và yêu cầu bổ sung hồ sơ còn trong deferred-work.md.
+  6-9-ra-soat-va-quyet-dinh-nghiem-thu-hoac-danh-gia-cuoi: review
   6-10-trang-thai-lich-su-va-truy-van-duoc-phan-quyen-cua-de-tai: in-progress
   6-11-adjustment-extension-via-approval-routing: review
   6-12-funding-metadata-and-liquidation: review

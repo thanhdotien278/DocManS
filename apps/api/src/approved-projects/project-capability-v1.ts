@@ -11,7 +11,8 @@ export const PROJECT_ACTIONS: PermissionActionV1[] = [
   "project.extension.create", "project.extension.edit-draft", "project.extension.submit", "project.extension.validate", "project.extension.prepare", "project.extension.request-supplement", "project.extension.approve", "project.extension.reject", "project.extension.withdraw",
   "project.history.read",
   "ethics-dossier.read", "ethics-dossier.create", "ethics-dossier.edit", "ethics-dossier.submit",
-  "acceptance-dossier.read", "acceptance-dossier.create", "acceptance-dossier.edit", "acceptance-dossier.contribute", "acceptance-dossier.submit"
+  "acceptance-dossier.read", "acceptance-dossier.create", "acceptance-dossier.edit", "acceptance-dossier.contribute", "acceptance-dossier.submit",
+  "acceptance-council.invite", "acceptance-council.revoke", "acceptance-council.respond", "acceptance-council.submit", "acceptance-council.sign", "acceptance-council.record-result"
 ];
 
 export const PROJECT_STATUSES = {
@@ -55,6 +56,8 @@ export type ProjectCapabilityInput = {
   participantManage?: boolean;
   request?: { requestType: string; status: string; requesterId: string };
   report?: { status: string; authorId: string };
+  /** Story 6.9: dữ kiện hội đồng nghiệm thu do loader tính; `seat` là hàng chưa thu hồi của người xem. */
+  acceptanceCouncil?: { canForm: boolean; seat: { councilRole: string; invitationStatus: string } | null; established: boolean; pendingStage: string | null; projectMember: boolean };
 };
 
 function isHead(actor: SafeUserContext) { return actor.systemRole === "RESEARCH_MANAGEMENT_HEAD"; }
@@ -91,7 +94,7 @@ export function projectViewerAuthorizationV1(input: ProjectCapabilityInput): Vie
   const blockedActions: Array<{ action: PermissionActionV1; code: AuthorizationDecisionCodeV1; reason: string }> = [];
   const allowedActions: PermissionActionV1[] = [];
   for (const action of PROJECT_ACTIONS) {
-    const denial = projectActionDenial(action, { ...input, scoped, officer: hasOfficer, participantActive: participant, isPi, canRead, canMonitor, canOperate, canHeadDecide, canSign, canPi, inExecution });
+    const denial = projectActionDenial(action, { ...input, scoped, officer: hasOfficer, participantActive: participant, isPi, canRead, canMonitor, canOperate, canHeadDecide, canSign, canPi, inExecution, notInProject });
     if (denial) blockedActions.push({ action, ...denial });
     else allowedActions.push(action);
   }
@@ -123,7 +126,7 @@ export function projectViewerAuthorizationV1(input: ProjectCapabilityInput): Vie
   };
 }
 
-function projectActionDenial(action: PermissionActionV1, input: ProjectCapabilityInput & { scoped: boolean; officer: boolean; participantActive: boolean; isPi: boolean; canRead: boolean; canMonitor: boolean; canOperate: boolean; canHeadDecide: boolean; canSign: boolean; canPi: boolean; inExecution: boolean }): { code: AuthorizationDecisionCodeV1; reason: string } | null {
+function projectActionDenial(action: PermissionActionV1, input: ProjectCapabilityInput & { scoped: boolean; officer: boolean; participantActive: boolean; isPi: boolean; canRead: boolean; canMonitor: boolean; canOperate: boolean; canHeadDecide: boolean; canSign: boolean; canPi: boolean; inExecution: boolean; notInProject: boolean }): { code: AuthorizationDecisionCodeV1; reason: string } | null {
   if (action === "project.read" || action === "project.history.read") return input.canRead ? null : blocked("ACTION_NOT_GRANTED");
   if (action === "project.monitor") return input.canMonitor ? null : blocked("ACTION_NOT_GRANTED");
   if (action === "project.setup.configure" || action === "project.setup.confirm") return input.canOperate && input.project.status === PROJECT_STATUSES.preparing ? null : blocked(input.project.status === PROJECT_STATUSES.preparing ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");
@@ -153,6 +156,7 @@ function projectActionDenial(action: PermissionActionV1, input: ProjectCapabilit
   }
   if (action.startsWith("ethics-dossier.")) return ethicsDossierDenial(action, input);
   if (action.startsWith("acceptance-dossier.")) return acceptanceDossierDenial(action, input);
+  if (action.startsWith("acceptance-council.")) return acceptanceCouncilDenial(action, input);
   return blocked("ACTION_NOT_GRANTED");
 }
 
@@ -171,13 +175,44 @@ function ethicsDossierDenial(action: PermissionActionV1, input: ProjectCapabilit
 
 // Story 6.8: chỉ PI soạn và nộp; thành viên/thư ký có trách nhiệm chỉ đóng góp tệp; chỉ khi đề tài đang thực hiện và hồ sơ còn nháp.
 function acceptanceDossierDenial(action: PermissionActionV1, input: ProjectCapabilityInput & { scoped: boolean; participantActive: boolean; isPi: boolean; canRead: boolean }) {
-  if (action === "acceptance-dossier.read") return input.canRead ? null : blocked("ACTION_NOT_GRANTED");
+  // Story 6.9: thành viên đã nhận lời của hội đồng đã thành lập chỉ đọc hồ sơ (không có project.read).
+  const councilReader = input.acceptanceCouncil?.established === true && input.acceptanceCouncil.seat?.invitationStatus === "accepted";
+  if (action === "acceptance-dossier.read") return input.canRead || councilReader ? null : blocked("ACTION_NOT_GRANTED");
   const granted = input.isPi || (action === "acceptance-dossier.contribute" && input.scoped && input.participantActive && (input.participant?.role === "TOPIC_SECRETARY" || input.responsibleMember === true));
   if (!granted) return blocked("ACTION_NOT_GRANTED");
   if (input.project.status !== PROJECT_STATUSES.executing) return blocked("WORKFLOW_STATE_DENIED");
   const dossier = input.project.acceptanceDossier;
   if (action === "acceptance-dossier.create") return dossier ? blocked("WORKFLOW_STATE_DENIED") : null;
   return dossier?.status === "draft" ? null : blocked("WORKFLOW_STATE_DENIED");
+}
+
+// Story 6.9: người được cấu hình lập hội đồng mời/thu hồi; TP, TB hoặc CV phụ trách trình tờ trình; GĐ/PGĐ-KH ký;
+// chủ tịch hội đồng đã thành lập ghi kết quả (không áp "Phụ trách"). Mã lỗi chi tiết (COUNCIL_*, APPROVAL_*) do service ném.
+function acceptanceCouncilDenial(action: PermissionActionV1, input: ProjectCapabilityInput & { officer: boolean; canSign: boolean; notInProject: boolean }) {
+  const council = input.acceptanceCouncil;
+  const open = input.project.status === PROJECT_STATUSES.pendingAcceptance && input.project.acceptanceDossier?.status === "submitted";
+  const forming = open && !council?.established && !council?.pendingStage;
+  const seat = council?.seat ?? null;
+  if (action === "acceptance-council.invite" || action === "acceptance-council.revoke") {
+    if (!council?.canForm || !input.notInProject) return blocked("ACTION_NOT_GRANTED");
+    return forming ? null : blocked("WORKFLOW_STATE_DENIED");
+  }
+  if (action === "acceptance-council.submit") {
+    const manager = isHead(input.actor) || input.actor.systemRole === "RESEARCH_BOARD_HEAD" || (isStaff(input.actor) && input.officer);
+    if (!manager || !input.notInProject) return blocked("ACTION_NOT_GRANTED");
+    return forming ? null : blocked("WORKFLOW_STATE_DENIED");
+  }
+  if (action === "acceptance-council.respond") {
+    if (!seat) return blocked("ACTION_NOT_GRANTED");
+    return open && seat.invitationStatus === "invited" ? null : blocked("WORKFLOW_STATE_DENIED");
+  }
+  if (action === "acceptance-council.sign") {
+    if (!input.canSign || seat || council?.projectMember) return blocked("ACTION_NOT_GRANTED");
+    return open && council?.pendingStage === "LEADERSHIP" ? null : blocked("WORKFLOW_STATE_DENIED");
+  }
+  // record-result: quyền theo ghế chủ tịch đã nhận lời; trạng thái (đã ký, chưa có kết quả) xét sau.
+  if (seat?.councilRole !== "council_chair" || seat.invitationStatus !== "accepted" || council?.projectMember) return blocked("ACTION_NOT_GRANTED");
+  return council?.established && input.project.status === PROJECT_STATUSES.pendingAcceptance ? null : blocked("WORKFLOW_STATE_DENIED");
 }
 
 // Ký: chỉ GĐ/PGĐ-KH, khi yêu cầu đã trình (ready_for_head_decision = có tờ trình đang mở; bước TB/TP do routing quản lý).
