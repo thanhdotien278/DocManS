@@ -1100,6 +1100,12 @@ model ProjectLiquidation {
   decidedById String?  @map("decided_by_id")
   decidedAt   DateTime? @map("decided_at")
   decisionNote String? @map("decision_note")
+  /// Story 6.13: số thu hồi do CV nhập; 3 số chốt và số biên bản chỉ ghi khi GĐ ký.
+  recoveredAmount   Decimal  @default(0) @db.Decimal(18, 2) @map("recovered_amount")
+  approvedBudget    Decimal? @db.Decimal(18, 2) @map("approved_budget")
+  totalDisbursed    Decimal? @db.Decimal(18, 2) @map("total_disbursed")
+  totalSettled      Decimal? @db.Decimal(18, 2) @map("total_settled")
+  liquidationNumber String?  @unique @map("liquidation_number")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
