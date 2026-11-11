@@ -1,7 +1,7 @@
 import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 import nodemailer from "nodemailer";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
-import { ACTIVATION_DEFAULT_PURPOSE, ACTIVATION_SUBJECT, formatExpiry, renderActivationHtml, renderActivationText } from "./activation-email.js";
+import { ACTIVATION_DEFAULT_PURPOSE, ACTIVATION_SENDER_NAME, ACTIVATION_SUBJECT, formatExpiry, renderActivationHtml, renderActivationText } from "./activation-email.js";
 
 type ActivationLinkInput = { to: string; displayName: string; activationUrl: string; expiresAt: Date; templateKey: string };
 type ActivationTemplateInput = Omit<ActivationLinkInput, "expiresAt"> & { expiresAt: string };
@@ -35,6 +35,15 @@ export class MailService {
     await this.sendText({ to: input.to, subject, text: renderActivationText(content), html: renderActivationHtml(content) });
   }
 
+  async sendPasswordReset(input: { to: string; displayName: string; resetUrl: string; expiresAt: Date }) {
+    const content = {
+      displayName: input.displayName, activationUrl: input.resetUrl, expiresAt: formatExpiry(input.expiresAt),
+      purpose: "Hệ thống nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn trên Hệ thống quản lý nghiên cứu khoa học (DocManS).",
+      actionLabel: "Đặt lại mật khẩu", ignoreNote: "Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này; mật khẩu hiện tại vẫn giữ nguyên."
+    };
+    await this.sendText({ to: input.to, subject: `${ACTIVATION_SENDER_NAME}: Đặt lại mật khẩu`, text: renderActivationText(content), html: renderActivationHtml(content) });
+  }
+
   async sendText(input: { to: string; subject: string; text: string; html?: string }) {
     const { host, port, from, localHost } = this.configuration();
     const transporter = nodemailer.createTransport({ host, port, secure: process.env.SMTP_SECURE === "true" || port === 465, requireTLS: !localHost,
@@ -44,6 +53,12 @@ export class MailService {
       const result = await transporter.sendMail({ from, to: input.to, subject: input.subject, text: input.text, html: input.html });
       if (!result.accepted.length) throw new Error("MAIL_NOT_ACCEPTED");
     } finally { transporter.close(); }
+  }
+
+  passwordResetUrl(token: string) {
+    const url = new URL("/password-reset", this.configuration().loginUrl);
+    url.searchParams.set("token", token);
+    return url.toString();
   }
 
   activationUrl(token: string) {

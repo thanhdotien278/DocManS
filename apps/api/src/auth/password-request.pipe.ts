@@ -36,6 +36,16 @@ export class ChangePasswordRequestPipe implements PipeTransform {
 }
 
 @Injectable()
+export class RequestPasswordResetPipe implements PipeTransform {
+  transform(value: unknown) {
+    const input = objectInput(value);
+    const identifier = typeof input.identifier === "string" ? input.identifier.trim().toLowerCase() : "";
+    if (!identifier || identifier.length > 254) throw new BadRequestException({ message: "Vui lòng nhập tên đăng nhập hoặc email." });
+    return { identifier };
+  }
+}
+
+@Injectable()
 export class CompletePasswordResetRequestPipe implements PipeTransform {
   transform(value: unknown) {
     const input = objectInput(value);
