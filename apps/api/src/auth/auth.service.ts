@@ -1,10 +1,15 @@
 import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { MailService } from "../notifications/mail.service.js";
 import { AuditLogService } from "./audit-log.service.js";
 import { AuthRateLimitService } from "./auth-rate-limit.service.js";
 import { AuthStore, type ProfileDisplayRow } from "./auth.store.js";
 import { PasswordService } from "./password.service.js";
 import { AUTH_FAILURE_MESSAGE, AUTH_PENDING_APPROVAL_MESSAGE, type LoginRequest, type SafeUserContext } from "./auth.types.js";
 import { validateNewPassword } from "./password-request.pipe.js";
+
+const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
+const PASSWORD_RESET_REQUEST_MESSAGE = "Nếu tài khoản tồn tại và có email, hệ thống đã gửi liên kết đặt lại mật khẩu. Liên kết có hiệu lực trong 30 phút.";
+const PASSWORD_RESET_RATE_LIMIT_MESSAGE = "Yêu cầu đặt lại mật khẩu tạm thời bị giới hạn. Vui lòng thử lại sau.";
 
 const DUMMY_PASSWORD_HASH =
   "scrypt:rtms-dummy-user:96634051871e68281b278b3fd4750c99b588a7de2d52473164898e8c8bef8317235443d642c5ecb4b92a434ad6fad6909a16e0642697c58222e82b92e3437589";
@@ -41,7 +46,8 @@ export class AuthService {
     private readonly auditLog: AuditLogService,
     private readonly rateLimit: AuthRateLimitService,
     private readonly authStore: AuthStore,
-    private readonly passwordService: PasswordService
+    private readonly passwordService: PasswordService,
+    private readonly mailService: MailService
   ) {}
 
   async login(input: LoginRequest, context: RequestContext) {
@@ -166,6 +172,29 @@ export class AuthService {
     await this.authStore.createPasswordResetToken(user.id, actor.id, reset.tokenHash, expiresAt);
     await this.auditLog.record({ action: "initiate-password-reset", result: "success", actorId: actor.id, targetEntity: "user", targetEntityId: user.id, username: actor.username, ip: context.ip, userAgent: context.userAgent });
     return { token: reset.token, expiresAt: expiresAt.toISOString() };
+  }
+
+  /** Quên mật khẩu tự phục vụ: luôn trả cùng một thông điệp để không lộ tài khoản nào tồn tại. */
+  async requestPasswordReset(input: { identifier: string }, context: RequestContext) {
+    const keys = [`password-reset-request-ip:${context.ip ?? "unknown"}`, `password-reset-request:${input.identifier}`];
+    for (const key of keys) this.rateLimit.assertCanAttempt(key, Date.now(), PASSWORD_RESET_RATE_LIMIT_MESSAGE);
+    for (const key of keys) this.rateLimit.recordFailure(key);
+    this.mailService.configuration();
+
+    const user = await this.authStore.findPasswordResetTarget(input.identifier);
+    if (!user?.credentialEmail) {
+      await this.auditLog.record({ action: "request-password-reset", result: "failure", targetEntity: "password-reset", targetEntityId: "unknown", username: input.identifier, ip: context.ip, userAgent: context.userAgent, reason: "target_not_found_or_unavailable" });
+      return { message: PASSWORD_RESET_REQUEST_MESSAGE };
+    }
+    const reset = this.passwordService.createResetToken();
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+    await this.authStore.createPasswordResetToken(user.id, user.id, reset.tokenHash, expiresAt);
+    // Gửi nền để thời gian phản hồi như nhau dù tài khoản có tồn tại hay không (chống dò tài khoản qua timing).
+    void this.mailService.sendPasswordReset({ to: user.credentialEmail, displayName: user.displayName, resetUrl: this.mailService.passwordResetUrl(reset.token), expiresAt })
+      .then(() => this.auditLog.record({ action: "request-password-reset", result: "success", actorId: user.id, targetEntity: "user", targetEntityId: user.id, ip: context.ip, userAgent: context.userAgent, afterFacts: { expiresAt: expiresAt.toISOString() } }),
+        () => this.auditLog.record({ action: "request-password-reset", result: "failure", actorId: user.id, targetEntity: "user", targetEntityId: user.id, ip: context.ip, userAgent: context.userAgent, reason: "MAIL_DELIVERY_FAILED" }))
+      .catch(() => undefined);
+    return { message: PASSWORD_RESET_REQUEST_MESSAGE };
   }
 
   async completePasswordReset(input: { token: string; newPassword: string }, context: RequestContext) {
