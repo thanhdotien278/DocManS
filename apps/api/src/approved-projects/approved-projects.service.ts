@@ -12,6 +12,7 @@ import { PARTICIPANT_POLICY_ROLE_LABELS, participantPolicyFor, readParticipantPo
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { recordParticipantWaiver } from "../proposal-evaluations/proposal-evaluation-support.js";
 import { assertProposalContext, isSerializationFailure } from "../proposals-shared/proposal-mutation.js";
+import { FUNDING_KINDS, assertFundingInvariant, fundingTotals, latestFunding, readFundingAmount } from "./project-funding.js";
 import { projectContextVersion, projectViewerAuthorizationV1, PROJECT_STATUSES, TERMINAL_REQUEST_STATUSES, type ProjectOfficerFact } from "./project-capability-v1.js";
 
 const PREPARING = PROJECT_STATUSES.preparing;
@@ -30,7 +31,6 @@ const APPRAISAL_STATUS: Record<string, string> = { [ADJUSTMENT]: "under_staff_re
 // Đã trình = có tờ trình PENDING; bước TB/TP/BGĐ đọc từ tờ trình, không đặt tên trạng thái mới.
 const SUBMITTED_FOR_SIGNATURE = "ready_for_head_decision";
 const SKIP_CONTEXT = Symbol("skip-context");
-const FUNDING_KINDS = ["GRANT", "DISBURSEMENT", "SETTLEMENT"];
 const LIQUIDATABLE = [PROJECT_STATUSES.accepted, PROJECT_STATUSES.failed];
 
 type AnyRecord = Record<string, any>;
@@ -827,16 +827,6 @@ export class ApprovedProjectsService {
     return allowed && (participantManage || !this.activeMember(project, actor.id));
   }
 
-  private latestFunding(rows: AnyRecord[]) {
-    const latest = new Map<string, AnyRecord>();
-    for (const row of rows) if (!latest.has(row.entryId) || latest.get(row.entryId)!.version < row.version) latest.set(row.entryId, row);
-    return [...latest.values()].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-  }
-
-  private fundingTotals(records: AnyRecord[]) {
-    return Object.fromEntries(FUNDING_KINDS.map((kind) => [kind, records.filter((row) => row.kind === kind).reduce((sum, row) => sum + Number(row.amount), 0)]));
-  }
-
   async getFunding(actor: SafeUserContext, projectId: string) {
     const project = await (this.prisma as any).approvedProject.findUnique({ where: { id: projectId }, include: PROJECT_INCLUDE });
     if (!project) throw new NotFoundException({ message: "Không tìm thấy đề tài đã được duyệt." });
@@ -844,8 +834,8 @@ export class ApprovedProjectsService {
     const officer = await this.currentOfficer(this.prisma, projectId);
     if (!this.canViewFunding(actor, project, officer)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Không có quyền xem kinh phí đề tài này." });
     const rows = await (this.prisma as any).projectFundingRecord.findMany({ where: { projectId }, orderBy: { createdAt: "asc" } });
-    const records = this.latestFunding(rows);
-    return { restricted: false, records: records.map((row) => ({ entryId: row.entryId, version: row.version, kind: row.kind, amount: String(row.amount), recordedOn: row.recordedOn?.toISOString?.().slice(0, 10) ?? null, note: row.note, fileRecordIds: row.fileRecordIds, recordedById: row.recordedById, createdAt: row.createdAt.toISOString() })), totals: this.fundingTotals(records), canWrite: this.canWriteFunding(actor, project, officer, await this.participantManage(this.prisma, actor)) };
+    const records = latestFunding<any>(rows).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    return { restricted: false, records: records.map((row) => ({ entryId: row.entryId, version: row.version, kind: row.kind, amount: String(row.amount), recordedOn: row.recordedOn?.toISOString?.().slice(0, 10) ?? null, note: row.note, fileRecordIds: row.fileRecordIds, recordedById: row.recordedById, createdAt: row.createdAt.toISOString() })), totals: fundingTotals(records), canWrite: this.canWriteFunding(actor, project, officer, await this.participantManage(this.prisma, actor)) };
   }
 
   /** Số liệu tổng hợp toàn Học viện; không có cột kinh phí từng đề tài. Dành cho vai trò theo dõi (gồm PGĐ-TD). */
@@ -854,8 +844,8 @@ export class ApprovedProjectsService {
     const rows = await (this.prisma as any).projectFundingRecord.findMany({ orderBy: { createdAt: "asc" } });
     const byProject = new Map<string, AnyRecord[]>();
     for (const row of rows) byProject.set(row.projectId, [...(byProject.get(row.projectId) ?? []), row]);
-    const records = [...byProject.values()].flatMap((list) => this.latestFunding(list));
-    return { projectCount: byProject.size, totals: this.fundingTotals(records) };
+    const records = [...byProject.values()].flatMap((list) => latestFunding<any>(list).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()));
+    return { projectCount: byProject.size, totals: fundingTotals(records) };
   }
 
   /** Thêm số liệu (entryId mới) hoặc phiên bản sửa của một số liệu (entryId cũ). Chỉ thêm, không ghi đè; mỗi lần có history và audit. */
@@ -865,9 +855,8 @@ export class ApprovedProjectsService {
       if (!this.canWriteFunding(currentActor, project, officer, await this.participantManage(tx, currentActor))) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Bạn không có quyền ghi số liệu kinh phí của đề tài này." });
       if (this.activeMember(project, currentActor.id)) await recordParticipantWaiver(tx, currentActor, { entity: "approved-project", id: project.id }, "record-project-funding");
       if ([PREPARING, PROJECT_STATUSES.closed].includes(project.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Đề tài chưa thực hiện hoặc đã đóng." });
-      if (!FUNDING_KINDS.includes(input.kind)) throw new BadRequestException({ message: "Loại số liệu kinh phí không hợp lệ." });
-      const amount = Number(input.amount);
-      if (!Number.isFinite(amount) || amount < 0 || amount >= 1e16) throw new BadRequestException({ message: "Số tiền không hợp lệ." });
+      if (!(FUNDING_KINDS as readonly string[]).includes(input.kind)) throw new BadRequestException({ message: "Loại số liệu kinh phí không hợp lệ." });
+      const amount = readFundingAmount(input.amount);
       const files = await this.assertUsableEvidence(tx, project.id, input.fileRecordIds);
       let entryId = randomUUID();
       let version = 1;
@@ -877,6 +866,9 @@ export class ApprovedProjectsService {
         if (!last || last.kind !== input.kind) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Không tìm thấy số liệu cần sửa." });
         entryId = last.entryId; version = last.version + 1; before = { amount: String(last.amount), note: last.note, version: last.version };
       }
+      const rows = await tx.projectFundingRecord.findMany({ where: { projectId: project.id }, orderBy: { createdAt: "asc" } });
+      const next = latestFunding([...rows, { entryId, version, kind: input.kind, amount, createdAt: new Date() }]);
+      assertFundingInvariant(fundingTotals(next));
       const record = await tx.projectFundingRecord.create({ data: { projectId: project.id, entryId, version, kind: input.kind, amount, recordedOn: projectDay(input.recordedOn), note: optionalText(input.note ?? null), fileRecordIds: files.map((file: AnyRecord) => file.id), recordedById: currentActor.id } });
       const after = { kind: input.kind, amount: String(record.amount), version, entryId, fileRecordIds: record.fileRecordIds };
       await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.funding.record", reason: record.note, beforeFacts: before, afterFacts: after } });
