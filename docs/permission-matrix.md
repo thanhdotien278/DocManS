@@ -399,8 +399,8 @@ means the signer from §7.4. Missing or denied cells are explicit `None`.
 | Project Adjustment / Extension request | None | CV³: Appraise and draft tờ trình; TB → TP route | GĐ or PGĐ-KH: Sign | Create/Submit/Withdraw own | None | None | Own topic scope; assigned officer scope | Active project | Yes |
 | Acceptance/final review | None | CV³: Prepare; route tờ trình | GĐ or PGĐ-KH: Sign council establishment | Submit acceptance dossier | Read assigned | Review if assigned | Unit scope, reviewer assignment scope, conflict policy | Waiting decision, completed/accepted | Yes |
 | Funding view (per project) | None | TP, TB: all; CV³; PP⁴ | GĐ, PGĐ-KH: all; PGĐ-TD: aggregate only | Read own⁴ | Read⁴ | None | Academy-wide / assigned / own | Any | No for read |
-| Funding management, disbursement, settlement | None | TP, TB: Academy-wide; CV³ | GĐ: Manage | None | None | None | Academy-wide / assigned | Active project | Yes |
-| Liquidation | None | CV³: Draft; route | GĐ only: Sign | Read | Read | None | Assigned officer scope | Completed | Yes |
+| Funding management, disbursement, settlement | None | TP, TB: Academy-wide; CV³ | GĐ: Manage | None | None | None | Academy-wide / assigned | Active project. Chứng từ kinh phí (`FUNDING_VOUCHER`) do người được ghi kinh phí tải; ΣDisbursement ≤ ΣGrant; ΣSettlement ≤ ΣDisbursement. | Yes |
+| Liquidation | None | CV³: Draft; route | GĐ only: Sign | Read | Read | None | Assigned officer scope | Completed. CV nhập thu hồi ≤ đã giải ngân; GĐ ký chỉ khi quyết toán + thu hồi = đã giải ngân; ký thì chốt số liệu và cấp số `n/BBTL-HVQY/năm`. | Yes |
 | Task creation and assignment | None | Create/Assign within scope | None | Create in own topic scope | None unless explicitly assigned | None | Task / linked record scope, conflict policy | Task states | Yes |
 | Task status/progress update | None | Update scoped | Read | Update own/assigned | Update assigned | None | Task assignee/collaborator scope | Task states | Yes |
 | Workflow history/timeline view | Audit/View History | Scoped | Scoped | None (two-way anonymity) | Read participating | None (two-way anonymity) | Same as source record | Any | No for read |
@@ -649,7 +649,7 @@ reconciled with the tờ trình routing implemented on `tuan/DocManS`.
 | submit progress report | Yes | actor, project id, report id, reporting period, timestamp |
 | create/withdraw adjustment/extension request | Yes | actor, project id, request id, request type, reason, timestamp |
 | sign adjustment/extension | Yes | actor, project id, request id, decision, timestamp |
-| funding disbursement/settlement, liquidation | Yes | actor, project id, amount/document, decision, timestamp |
+| funding disbursement/settlement, liquidation, `approve-proposal-funding` | Yes | actor, project id, amount/document, decision, `liquidationNumber`, timestamp |
 | create/assign task, update task status | Yes | actor, task id, assignees, linked record, from/to status, timestamp |
 | export report | Yes | actor, report type, filters, scope, export format, timestamp |
 

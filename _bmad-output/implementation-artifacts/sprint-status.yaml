@@ -108,12 +108,12 @@ development_status:
   6-11-adjustment-extension-via-approval-routing: review
   6-12-funding-metadata-and-liquidation: review
   # 6.13: theo dõi kinh phí đề tài, spec docs/superpowers/specs/2026-11-11-kinh-phi-de-tai-design.md
-  6-13-1-chot-kinh-phi-duyet-va-grant-tu-dong: backlog
-  6-13-2-rang-buoc-tong-so-ghi-kinh-phi: backlog
-  6-13-3-chung-tu-kinh-phi: backlog
-  6-13-4-thanh-ly-can-doi-chot-so-cap-so-bbtl: backlog
-  6-13-5-giao-dien-kinh-phi-va-thanh-ly: backlog
-  6-13-6-thong-bao-kinh-phi-va-thanh-ly: backlog
+  6-13-1-chot-kinh-phi-duyet-va-grant-tu-dong: review
+  6-13-2-rang-buoc-tong-so-ghi-kinh-phi: review
+  6-13-3-chung-tu-kinh-phi: review
+  6-13-4-thanh-ly-can-doi-chot-so-cap-so-bbtl: review
+  6-13-5-giao-dien-kinh-phi-va-thanh-ly: review
+  6-13-6-thong-bao-kinh-phi-va-thanh-ly: review
   epic-6-retrospective: optional
   epic-7: backlog
   7-1-tao-cong-viec-doc-lap-hoac-lien-ket-ho-so: backlog
