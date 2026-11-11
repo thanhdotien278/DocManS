@@ -14,7 +14,7 @@ import { isInternalResearcherEligible } from "../../proposals-shared/proposal-ac
 import { ProposalManagementOfficerService } from "../../proposals-shared/proposal-management-officer.service.js";
 import { ProposalReviewAccessService } from "../../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../../research-proposals/proposal-participation.service.js";
-import { ACCEPTANCE_DOSSIER_ENTITY_TYPE, APPROVED_PROJECT_ENTITY_TYPE, ETHICS_DOSSIER_ENTITY_TYPE, EVALUATION_FILE_PURPOSES, RESEARCH_PROPOSAL_ENTITY_TYPE } from "./files.dto.js";
+import { ACCEPTANCE_DOSSIER_ENTITY_TYPE, APPROVED_PROJECT_ENTITY_TYPE, ETHICS_DOSSIER_ENTITY_TYPE, EVALUATION_FILE_PURPOSES, FUNDING_VOUCHER_PURPOSE, RESEARCH_PROPOSAL_ENTITY_TYPE } from "./files.dto.js";
 import { ACCEPTANCE_CONTRIBUTION, ACCEPTANCE_DOSSIER_DRAFT, ACCEPTANCE_FILE_PURPOSES } from "../../approved-projects/acceptance-dossiers.service.js";
 import { bumpEthicsProjectContext, ETHICS_DOSSIER_DRAFT, ETHICS_FILE_PURPOSES, ethicsCapabilityError, isOfficerViewer, isPiViewer, resetEthicsCommitment } from "../../approved-projects/ethics-dossiers.service.js";
 
@@ -156,7 +156,7 @@ export class FilesService {
     if (input.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE) {
       const project = await new ApprovedProjectsService(this.prisma, this.auditLog).getProject(actor, input.relatedEntityId);
       const isPi = project.viewerAuthorization.viewerRelationships.some((relationship: { type: string }) => relationship.type === "TOPIC_PI");
-      if (!isPi && input.filePurpose !== "PROJECT_CONTRIBUTION") throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
+      if (!isPi && input.filePurpose !== "PROJECT_CONTRIBUTION" && input.filePurpose !== FUNDING_VOUCHER_PURPOSE) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
     }
     if (input.relatedEntityType === ETHICS_DOSSIER_ENTITY_TYPE && !ETHICS_FILE_PURPOSES.includes(input.filePurpose)) throw new BadRequestException({ code: "FILE_PURPOSE_INVALID", message: "Loại tệp hồ sơ đạo đức không hợp lệ." });
     if (input.relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) {
@@ -437,7 +437,13 @@ export class FilesService {
       return;
     }
     if (relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE) {
-      const project = await new ApprovedProjectsService(this.prisma, this.auditLog).getProject(actor, relatedEntityId);
+      const projects = new ApprovedProjectsService(this.prisma, this.auditLog);
+      // Story 6.13: chứng từ kinh phí do người được ghi kinh phí tải (GĐ, TP, TB, CV phụ trách), không phải PI/thành viên.
+      if (filePurpose === FUNDING_VOUCHER_PURPOSE) {
+        if (!(await projects.getFunding(actor, relatedEntityId)).canWrite) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Chỉ người quản lý kinh phí đề tài được tải chứng từ." });
+        return;
+      }
+      const project = await projects.getProject(actor, relatedEntityId);
       if (!project.viewerAuthorization.allowedActions.includes("project.evidence.contribute")) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
       return;
     }

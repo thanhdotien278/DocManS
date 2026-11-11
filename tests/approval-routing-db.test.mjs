@@ -13,6 +13,7 @@ import { ProposalReviewsService } from "../dist/apps/api/proposal-evaluations/pr
 import { ProposalEvaluationSummaryService } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-summary.service.js";
 import { ProposalEvaluationCouncilService } from "../dist/apps/api/proposal-evaluations/proposal-evaluation-council.service.js";
 import { ProposalDecisionsService } from "../dist/apps/api/proposal-evaluations/proposal-decisions.service.js";
+import { FilesService } from "../dist/apps/api/modules/files/files.service.js";
 import { ApprovedProjectsService } from "../dist/apps/api/approved-projects/approved-projects.service.js";
 import { projectContextVersion } from "../dist/apps/api/approved-projects/project-capability-v1.js";
 import { notifyUsers } from "../dist/apps/api/notifications/notification-events.js";
@@ -696,6 +697,20 @@ test("6.13.1: tạo đề tài từ đề xuất có kinh phí duyệt → GRANT
   await makeApproved(second, { amount: 0 });
   const zero = await create(second);
   assert.equal(await db.projectFundingRecord.count({ where: { projectId: zero.id } }), 0);
+});
+
+test("6.13.3: GĐ/TP/TB/CV phụ trách tải chứng từ FUNDING_VOUCHER; PI, thành viên, PGĐ-KH bị từ chối; sổ ghi chỉ nhận tệp chứng từ", async () => {
+  const f = await projectFixture("F3");
+  const { people, service } = f;
+  const storage = { objects: new Map(), async putObject({ objectKey, content }) { this.objects.set(objectKey, Buffer.from(content)); }, async getObject(key) { return this.objects.get(key); }, async deleteObject(key) { this.objects.delete(key); } };
+  const files = new FilesService(db, storage, new AuditLogService(db), new ProposalParticipationService(db), new ProposalReviewAccessService(db), { maxFileSizeBytes: 1024, allowedExtensions: [".pdf"] }, new ProposalManagementOfficerService(db));
+  const upload = async (actor, filePurpose) => files.uploadFile(actor, { relatedEntityType: "approved_project", relatedEntityId: f.project.id, filePurpose, fileName: `${filePurpose}.pdf`, mimeType: "application/pdf", sizeBytes: 4, content: Buffer.from("%PDF"), contextVersion: await f.ctxVersion() });
+  const vouchers = [];
+  for (const who of [people.director, people.head, people.board, people.staff]) vouchers.push(await upload(who, "FUNDING_VOUCHER"));
+  for (const who of [people.pi, people.member, people.science, people.staff2]) await assert.rejects(() => upload(who, "FUNDING_VOUCHER"), code(403), who.displayName);
+  const evidence = await upload(people.pi, "PROJECT_EVIDENCE");
+  await service.recordFunding(people.head, f.project.id, { kind: "GRANT", amount: 100, recordedOn: "2026-03-01", fileRecordIds: [vouchers[0].id] });
+  await assert.rejects(() => service.recordFunding(people.head, f.project.id, { kind: "GRANT", amount: 100, recordedOn: "2026-03-01", fileRecordIds: [evidence.id] }), (e) => e.response?.code === "EVIDENCE_WRONG_RECORD");
 });
 
 test("6.12: CV submits LIQUIDATION only for an Accepted/Failed project; GĐ alone signs and the project closes atomically; PGĐ-KH is refused; return goes back to draft", async () => {
