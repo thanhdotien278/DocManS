@@ -23,6 +23,9 @@ export class ApprovedProjectsController {
   @Get("funding/summary")
   async fundingSummary(@Req() req: RequestWithCurrentUser) { return { summary: await this.projects.fundingSummary(req.currentUser!) }; }
 
+  @Get("acceptance-council/my-seats")
+  async myAcceptanceSeats(@Req() req: RequestWithCurrentUser) { return { seats: await this.council.mySeats(req.currentUser!) }; }
+
   @Get("monitor")
   async monitor(@Req() req: RequestWithCurrentUser, @Query() query: Record<string, string>) { return { projects: await this.projects.listMonitoring(req.currentUser!, filters(query)) }; }
 

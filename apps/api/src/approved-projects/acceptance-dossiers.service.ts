@@ -5,6 +5,7 @@ import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { notifyUsers } from "../notifications/notification-events.js";
 import { readTransactionClockV1 } from "../permissions/authorization-v1.service.js";
 import { ACCEPTANCE_DOSSIER_ENTITY_TYPE } from "../modules/files/files.dto.js";
+import { ACCEPTANCE_MINUTES } from "./acceptance-council.service.js";
 import { ApprovedProjectsService } from "./approved-projects.service.js";
 import { ethicsCapabilityError as capabilityError } from "./ethics-dossiers.service.js";
 import { PROJECT_STATUSES, projectContextVersion, TERMINAL_REQUEST_STATUSES } from "./project-capability-v1.js";
@@ -180,7 +181,7 @@ export class AcceptanceDossiersService {
         readOnly: !editable,
         milestones: milestoneReconciliation(project, sections),
         readiness: acceptanceDossierReadiness(project, sections, files),
-        files: files.map((file: AnyRecord) => ({ id: file.id, filePurpose: file.filePurpose, version: file.version, fileName: file.originalFileName, mimeType: file.mimeType, sizeBytes: file.sizeBytes, uploadedById: file.uploadedById, createdAt: file.createdAt.toISOString(), canDelete: editable || (contributes && file.uploadedById === actor.id) })),
+        files: files.map((file: AnyRecord) => ({ id: file.id, filePurpose: file.filePurpose, version: file.version, fileName: file.originalFileName, mimeType: file.mimeType, sizeBytes: file.sizeBytes, uploadedById: file.uploadedById, createdAt: file.createdAt.toISOString(), canDelete: file.filePurpose === ACCEPTANCE_MINUTES ? capability.allowedActions.includes("acceptance-council.record-result") : editable || (contributes && file.uploadedById === actor.id) })),
         submissions: dossier.submissions.map((row: AnyRecord) => ({ id: row.id, version: row.version, actorId: row.actorId, submittedAt: row.submittedAt.toISOString(), snapshot: row.snapshot }))
       }
     };
