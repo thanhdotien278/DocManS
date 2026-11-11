@@ -708,9 +708,16 @@ test("6.13.3: GĐ/TP/TB/CV phụ trách tải chứng từ FUNDING_VOUCHER; PI, 
   const vouchers = [];
   for (const who of [people.director, people.head, people.board, people.staff]) vouchers.push(await upload(who, "FUNDING_VOUCHER"));
   for (const who of [people.pi, people.member, people.science, people.staff2]) await assert.rejects(() => upload(who, "FUNDING_VOUCHER"), code(403), who.displayName);
+  const extra = await upload(people.head, "FUNDING_VOUCHER");
+  await assert.rejects(async () => files.deleteFile(people.pi, extra.id, await f.ctxVersion()), code(403), "PI không xoá được chứng từ");
+  await assert.rejects(async () => files.updateFile(people.pi, extra.id, { description: "x", contextVersion: await f.ctxVersion() }), code(403), "PI không sửa được chứng từ");
+  await files.deleteFile(people.head, extra.id, await f.ctxVersion());
   const evidence = await upload(people.pi, "PROJECT_EVIDENCE");
   await service.recordFunding(people.head, f.project.id, { kind: "GRANT", amount: 100, recordedOn: "2026-03-01", fileRecordIds: [vouchers[0].id] });
   await assert.rejects(() => service.recordFunding(people.head, f.project.id, { kind: "GRANT", amount: 100, recordedOn: "2026-03-01", fileRecordIds: [evidence.id] }), (e) => e.response?.code === "EVIDENCE_WRONG_RECORD");
+  await assert.rejects(async () => files.deleteFile(people.director, vouchers[0].id, await f.ctxVersion()), (e) => e.response?.code === "EVIDENCE_PINNED", "chứng từ đã gắn sổ được giữ nguyên");
+  await db.approvedProject.update({ where: { id: f.project.id }, data: { status: "closed" } });
+  await assert.rejects(() => upload(people.head, "FUNDING_VOUCHER"), (e) => e.response?.code === "WORKFLOW_STATE_DENIED");
 });
 
 test("6.12: CV submits LIQUIDATION only for an Accepted/Failed project; GĐ alone signs and the project closes atomically; PGĐ-KH is refused; return goes back to draft", async () => {
