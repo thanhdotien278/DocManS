@@ -104,6 +104,8 @@ context:
 - Thông báo `acceptance_council` có `sourceId` là đề tài; hiện khi người xem còn ghế chưa thu hồi hoặc xem được đề tài (`notifications.service.ts`, ngoài Code Map).
 - `permission-policy.ts` không chứa danh sách action ID nên không sửa.
 
+- Sau review: `respond` khi từ chối trả `{ memberId, invitationStatus: "declined" }` thay cho view hội đồng (người từ chối mất ghế nên không đọc được view). UI phần 2 cần xử lý.
+
 ## Spec Change Log
 
 ## Review Triage Log
@@ -116,7 +118,7 @@ context:
 | 4 | blind | Hội đồng đã thành lập không thay được chủ tịch → đề tài kẹt `pending_acceptance` | low | Hiếm (chủ tịch mất/vào đề tài sau khi ký); cần luồng mới. Bỏ qua, báo người dùng. |
 | 5 | blind | QT đổi `memberCount` khi tờ trình đang chờ → ký luôn lỗi | low | Hiếm; TB/TP trả lại là đường thoát. Bỏ qua. |
 | 6 | blind | Link thông báo mời trỏ `/projects/{id}` người được mời không mở được | low | Chưa có trang đích; thuộc UI phần 2 (deferred). Bỏ qua. |
-| 7 | blind+edge | revoke/respond/reject không gửi thông báo, lệch Approach | medium | Patch: thông báo người bị thu hồi, người mời, người trình. |
+| 7 | blind+edge | revoke/respond/reject không gửi thông báo, lệch Approach | medium | Patch: thông báo người mời (nhận lời/từ chối) và người trình (GĐ từ chối). Bỏ thông báo thu hồi vì bộ lọc ghế ẩn nó với chính người nhận. |
 | 8 | blind | `loadAuthorized` thêm truy vấn; `.catch` trong transaction | low | Catch chỉ nuốt lỗi parse cấu hình (503), không phải lỗi DB. Bỏ qua. |
 | 9 | blind | Ma trận quyền ghi "up to memberCount" | low | Sửa chữ trực tiếp. Patch. |
 | 10 | blind+edge | Người đã từ chối vẫn giữ quyền ghế và thấy thông báo | low | Sửa điều kiện seat. Patch. |
@@ -127,7 +129,7 @@ context:
 | 15 | vgap | Lọc thông báo người bị thu hồi chưa test | medium | Pre-verified. Patch test. |
 | 16 | vgap | Submit bởi PI chưa test; `sign` allowedActions chưa test | medium | Patch test submit; `sign` chưa có người dùng tới UI phần 2. |
 | 17 | edge | Ký không kiểm lại thành viên đã nhận lời nay vào đề tài/bị khóa | medium | Lệch Always "Ký kiểm tra lại". Patch. |
-| 18 | edge | Người lập tự mời mình; người có ghế tự trình tờ trình | medium | Patch: chặn tự mời và chặn trình bởi người có ghế. |
+| 18 | edge | Người lập tự mời mình; người có ghế tự trình tờ trình | medium | Patch: chặn tự mời, chặn trình bởi người có ghế, và `actorConflicted` coi người có ghế là xung đột với tờ trình `ACCEPTANCE_COUNCIL` (TB/TP không chuyển bước). |
 | 19 | edge | `view()` 503 khi cấu hình hỏng | false | Fail-closed đúng thiết kế `readCouncilFormationConfig`. |
 | 20 | edge | Đề tài rời `pending_acceptance` khi tờ trình đang chờ | false | Chỉ `recordResult` đổi trạng thái và cần hội đồng đã ký; không xảy ra. |
 
