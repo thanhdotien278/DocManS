@@ -188,9 +188,14 @@ test("6.8: a report awaiting CV review blocks submit; without a CV the TB is not
   await fill(f);
   const report = await db.projectReportRevision.create({ data: { projectId: f.project.id, revision: 1, status: "under_review", progressResults: "x", authorId: f.people.pi.id } });
   const submittedReport = await db.projectReportRevision.create({ data: { projectId: f.project.id, revision: 2, status: "submitted", progressResults: "y", authorId: f.people.pi.id } });
+  // Báo cáo còn nháp hoặc cần bổ sung cũng chặn: PI phải xử lý xong rồi mới nộp nghiệm thu.
+  const draftReport = await db.projectReportRevision.create({ data: { projectId: f.project.id, revision: 3, status: "draft", progressResults: "z", authorId: f.people.pi.id } });
+  const supplementReport = await db.projectReportRevision.create({ data: { projectId: f.project.id, revision: 4, status: "supplement_requested", progressResults: "w", authorId: f.people.pi.id } });
+  await db.projectReportRevision.create({ data: { projectId: f.project.id, revision: 5, status: "superseded", progressResults: "v", authorId: f.people.pi.id } });
+  const pending = [report.id, submittedReport.id, draftReport.id, supplementReport.id];
   const blocked = await f.submit(f.people.pi).catch((error) => error);
-  assert.deepEqual([...blocked.response.pendingReports].sort(), [report.id, submittedReport.id].sort());
-  await db.projectReportRevision.updateMany({ where: { id: { in: [report.id, submittedReport.id] } }, data: { status: "accepted" } });
+  assert.deepEqual([...blocked.response.pendingReports].sort(), [...pending].sort());
+  await db.projectReportRevision.updateMany({ where: { id: { in: pending } }, data: { status: "accepted" } });
 
   await db.projectManagementOfficer.update({ where: { id: f.officer.id }, data: { status: "REVOKED", effectiveUntil: new Date() } });
   await f.submit(f.people.pi);
