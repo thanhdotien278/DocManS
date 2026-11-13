@@ -193,7 +193,7 @@ export type AcceptanceCouncilMember = {
   invitedAt: string; respondedAt: string | null; revokedAt: string | null; councilEstablishedAt: string | null;
 };
 export type AcceptanceCouncilView = {
-  contextVersion: unknown; projectTitle: string; projectStatus: string; readsProject: boolean; dossierId: string | null;
+  contextVersion: unknown; projectTitle: string; projectStatus: string; readsProject: boolean; readsApproval: boolean; dossierId: string | null;
   config: { memberCount: number; structure: Record<AcceptanceCouncilRole, number> };
   establishedAt: string | null; blockers: string[]; members: AcceptanceCouncilMember[];
   approval: null | { id: string; stage: string; stageLabel: string; status: string; statusLabel: string; lastNote: string | null };
