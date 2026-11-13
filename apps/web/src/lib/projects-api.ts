@@ -37,9 +37,9 @@ const HISTORY_ACTION_LABELS: Record<string, string> = {
   "project.report.draft": "Tạo bản nháp báo cáo", "project.report.edit-draft": "Cập nhật báo cáo", "project.report.submit": "Nộp báo cáo",
   "project.report.review": "Bắt đầu xem xét báo cáo", "project.report.request-supplement": "Yêu cầu bổ sung báo cáo", "project.report.accept": "Chấp nhận báo cáo",
   "ethics-dossier.create": "Tạo hồ sơ đạo đức", "ethics-dossier.submit": "Nộp hồ sơ đạo đức",
-  "acceptance-dossier.create": "Tạo hồ sơ nghiệm thu", "acceptance-dossier.submit": "Nộp hồ sơ nghiệm thu",
+  "acceptance-dossier.create": "Tạo hồ sơ nghiệm thu", "acceptance-dossier.submit": "Nộp hồ sơ nghiệm thu", "acceptance-dossier.request-supplement": "Yêu cầu bổ sung hồ sơ nghiệm thu",
   "acceptance-dossier.file.upload": "Tải tệp hồ sơ nghiệm thu", "acceptance-dossier.file.metadata": "Cập nhật tệp hồ sơ nghiệm thu", "acceptance-dossier.file.delete": "Xóa tệp hồ sơ nghiệm thu",
-  "project.acceptance.submit": "Chuyển sang chờ nghiệm thu",
+  "project.acceptance.submit": "Chuyển sang chờ nghiệm thu", "project.acceptance.request-supplement": "Trả về thực hiện để bổ sung hồ sơ nghiệm thu",
   "acceptance-council.invite": "Mời thành viên hội đồng nghiệm thu", "acceptance-council.revoke": "Thu hồi lời mời hội đồng nghiệm thu",
   "acceptance-council.accept": "Nhận lời hội đồng nghiệm thu", "acceptance-council.decline": "Từ chối lời mời hội đồng nghiệm thu",
   "acceptance-council.submit": "Trình thành lập hội đồng nghiệm thu", "acceptance-council.reject": "Không phê duyệt hội đồng nghiệm thu",
@@ -175,7 +175,7 @@ export type AcceptanceDossierView = {
 export const ACCEPTANCE_SECTION_LABELS: Record<string, string> = { results: "1. Kết quả đạt được so với mục tiêu", products: "2. Danh sách sản phẩm", summary: "3. Tóm tắt báo cáo tổng kết", milestoneNotes: "4. Giải trình mốc chưa hoàn thành" };
 export const ACCEPTANCE_MINUTES = "ACCEPTANCE_MINUTES";
 export const ACCEPTANCE_FILE_LABELS: Record<string, string> = { ACCEPTANCE_FINAL_REPORT: "Báo cáo tổng kết", ACCEPTANCE_PRODUCT_EVIDENCE: "Minh chứng sản phẩm", ACCEPTANCE_OTHER: "Tài liệu khác", ACCEPTANCE_CONTRIBUTION: "Tệp đóng góp của thành viên", [ACCEPTANCE_MINUTES]: "Biên bản họp hội đồng" };
-export const acceptanceDossierStatusLabel = ethicsDossierStatusLabel;
+export const acceptanceDossierStatusLabel = (value: string) => value === "supplement_requested" ? "Cần bổ sung" : ethicsDossierStatusLabel(value);
 
 const acceptancePath = (projectId: string) => `/projects/${projectId}/acceptance-dossier`;
 type AcceptanceBody = { acceptanceDossier: AcceptanceDossierView };

@@ -6,6 +6,8 @@ import { PrismaService } from "../dist/apps/api/infrastructure/prisma/prisma.ser
 import { AuditLogService } from "../dist/apps/api/auth/audit-log.service.js";
 import { ApprovedProjectsService } from "../dist/apps/api/approved-projects/approved-projects.service.js";
 import { AcceptanceDossiersService } from "../dist/apps/api/approved-projects/acceptance-dossiers.service.js";
+import { AcceptanceCouncilService } from "../dist/apps/api/approved-projects/acceptance-council.service.js";
+import { projectReportReviewPipe } from "../dist/apps/api/approved-projects/approved-projects.dto.js";
 import { projectContextVersion } from "../dist/apps/api/approved-projects/project-capability-v1.js";
 import { FilesService } from "../dist/apps/api/modules/files/files.service.js";
 import { ProposalParticipationService } from "../dist/apps/api/research-proposals/proposal-participation.service.js";
@@ -71,7 +73,7 @@ async function fixture(code, projectStatus = "executing") {
   const edit = async (actor, section, value) => acceptance.updateSection(actor, project.id, { section, value, contextVersion: await ctx() });
   const submit = async (actor) => acceptance.submit(actor, project.id, { contextVersion: await ctx() });
   const upload = async (actor, dossierId, filePurpose) => files.uploadFile(actor, { relatedEntityType: "acceptance_dossier", relatedEntityId: dossierId, filePurpose, fileName: `${filePurpose}.pdf`, mimeType: "application/pdf", sizeBytes: 4, content: Buffer.from("%PDF"), contextVersion: await ctx() });
-  return { org, people, proposal, project, officer, openMilestone, projects, acceptance, files, ctx, create, edit, submit, upload };
+  return { org, people, proposal, project, officer, openMilestone, projects, acceptance, files, ctx, create, edit, submit, upload, make };
 }
 
 async function seesNotification(actor, projectId) {
@@ -213,4 +215,91 @@ test("6.8: a paused project refuses create, edit and submit", async () => {
   await db.approvedProject.update({ where: { id: g.project.id }, data: { status: "paused" } });
   await assert.rejects(() => g.edit(g.people.pi, "results", "x"), coded(400, "WORKFLOW_STATE_DENIED"));
   await assert.rejects(() => g.submit(g.people.pi), coded(400, "WORKFLOW_STATE_DENIED"));
+});
+
+test("6.9 p3: TP/TB/CV phụ trách yêu cầu bổ sung hồ sơ đã nộp; PI sửa và nộp lại thành v2, đề tài về chờ nghiệm thu", async () => {
+  const f = await fixture("A5");
+  const { people } = f;
+  const { dossier } = await f.create(people.pi);
+  const report = await f.upload(people.pi, dossier.id, "ACCEPTANCE_FINAL_REPORT");
+  await f.upload(people.pi, dossier.id, "ACCEPTANCE_PRODUCT_EVIDENCE");
+  await fill(f);
+  await f.submit(people.pi);
+
+  const deadline = new Date(Date.now() + 7 * 86400000);
+  const ask = async (actor, input = {}) => f.acceptance.requestSupplement(actor, f.project.id, { reason: "Thiếu minh chứng sản phẩm", responseDeadline: deadline, contextVersion: await f.ctx(), ...input });
+  const director = await f.make("giamdoc", "LEADERSHIP_APPROVAL_AUTHORITY");
+  const otherStaff = await f.make("cvkhac", "RESEARCH_MANAGEMENT_STAFF");
+  for (const who of [people.pi, director, otherStaff]) await assert.rejects(() => ask(who), coded(403, "ACTION_NOT_GRANTED"), who.username);
+  // Chỉ có một TB đang hoạt động: tạm cho TB làm thành viên đề tài.
+  const boardSeat = await db.approvedProjectMember.create({ data: { projectId: f.project.id, userId: people.board.id, name: "tb", role: "TOPIC_MEMBER", participationRole: "TOPIC_MEMBER", status: "ACTIVE", effectiveFrom: new Date(Date.now() - 86400000), createdById: people.staff.id } });
+  await assert.rejects(() => ask(people.board), coded(403, "ACTION_NOT_GRANTED"), "TB là thành viên đề tài");
+  await db.approvedProjectMember.delete({ where: { id: boardSeat.id } });
+  await assert.rejects(() => ask(people.staff, { reason: undefined }), status(400));
+  await assert.rejects(() => ask(people.staff, { responseDeadline: undefined }), status(400));
+  await assert.rejects(() => ask(people.staff, { responseDeadline: new Date(Date.now() - 86400000) }), coded(400, "DEADLINE_INVALID"));
+  await assert.rejects(() => ask(people.staff, { responseDeadline: "khong-phai-ngay" }), coded(400, "DEADLINE_INVALID"));
+
+  // Tờ trình đang chờ hoặc hội đồng đã thành lập thì không trả hồ sơ.
+  const outsider = await f.make("ngoai", "RESEARCHER_INTERNAL_USER");
+  const sheet = await db.approvalSubmission.create({ data: { kind: "ACCEPTANCE_COUNCIL", subjectType: "project", subjectId: f.project.id, title: "Tờ trình", hostOrganizationUnitId: f.org.id, stage: "BOARD_REVIEW", signer: "DIRECTOR_OR_SCIENCE_DEPUTY", submittedById: people.staff.id, authorRole: "RESEARCH_MANAGEMENT_STAFF" } });
+  await assert.rejects(() => ask(people.staff), coded(400, "WORKFLOW_STATE_DENIED"));
+  await db.approvalSubmission.delete({ where: { id: sheet.id } });
+  const established = await db.acceptanceCouncilMember.create({ data: { projectId: f.project.id, userId: outsider.id, councilRole: "council_chair", invitationStatus: "accepted", invitedById: people.head.id, councilEstablishedAt: new Date() } });
+  await assert.rejects(() => ask(people.staff), coded(400, "WORKFLOW_STATE_DENIED"));
+  await db.acceptanceCouncilMember.update({ where: { id: established.id }, data: { invitationStatus: "invited", councilEstablishedAt: null } });
+
+  const stale = await f.ctx();
+  await db.approvedProject.update({ where: { id: f.project.id }, data: { aggregateVersion: { increment: 1 } } });
+  await assert.rejects(() => f.acceptance.requestSupplement(people.staff, f.project.id, { reason: "x", responseDeadline: deadline, contextVersion: stale }), coded(409, "CONTEXT_VERSION_MISMATCH"));
+
+  const returned = await ask(people.staff);
+  assert.deepEqual([returned.dossier.status, returned.dossier.version, returned.dossier.readOnly, returned.projectStatus], ["supplement_requested", 2, true, "executing"]);
+  assert.deepEqual(returned.dossier.supplementRequest, { reason: "Thiếu minh chứng sản phẩm", responseDeadline: deadline.toISOString(), requestedBy: { id: people.staff.id, displayName: people.staff.displayName }, requestedAt: returned.dossier.supplementRequest.requestedAt });
+  const history = await db.projectHistory.findMany({ where: { projectId: f.project.id, action: { in: ["acceptance-dossier.request-supplement", "project.acceptance.request-supplement"] } }, orderBy: { action: "asc" } });
+  assert.deepEqual(history.map((row) => [row.action, row.fromStatus, row.toStatus]), [["acceptance-dossier.request-supplement", "submitted", "supplement_requested"], ["project.acceptance.request-supplement", "pending_acceptance", "executing"]]);
+  assert.ok(await db.auditLog.findFirst({ where: { action: "request-acceptance-dossier-supplement", targetEntityId: dossier.id } }));
+  const piNotes = await db.userNotification.findMany({ where: { sourceId: dossier.id, type: "acceptance-dossier.supplement-requested" } });
+  assert.deepEqual(piNotes.map((row) => row.userId), [people.pi.id]);
+  assert.ok(!piNotes[0].body.includes("Thiếu minh chứng"), "thông báo không chép lý do");
+  assert.equal(await seesNotification(people.pi, f.project.id), true);
+  const requesterView = await f.acceptance.getDossier(people.staff, f.project.id);
+  assert.deepEqual([requesterView.dossier.readOnly, requesterView.dossier.supplementRequest.reason, requesterView.dossier.submittedAt, requesterView.dossier.submittedBy], [true, "Thiếu minh chứng sản phẩm", null, null]);
+  await assert.rejects(() => ask(people.staff), coded(400, "WORKFLOW_STATE_DENIED"), "không yêu cầu lần hai");
+
+  // Lời mời hội đồng giữ nguyên nhưng không phản hồi được khi đề tài về executing.
+  const council = new AcceptanceCouncilService(db, f.projects);
+  await assert.rejects(() => council.respond(outsider, f.project.id, established.id, { decision: "accept" }), coded(400, "WORKFLOW_STATE_DENIED"));
+
+  const piView = await f.acceptance.getDossier(people.pi, f.project.id);
+  assert.equal(piView.dossier.readOnly, false);
+  for (const action of ["acceptance-dossier.edit", "acceptance-dossier.submit"]) assert.ok(piView.allowedActions.includes(action), action);
+  await f.edit(people.pi, "results", "Đạt toàn bộ mục tiêu, bổ sung minh chứng");
+  await f.upload(people.member, dossier.id, "ACCEPTANCE_CONTRIBUTION");
+  await f.files.deleteFile(people.pi, report.id, await f.ctx());
+  const replacement = await f.upload(people.pi, dossier.id, "ACCEPTANCE_FINAL_REPORT");
+
+  const resubmitted = await f.submit(people.pi);
+  assert.deepEqual([resubmitted.dossier.status, resubmitted.projectStatus, resubmitted.dossier.supplementRequest], ["submitted", "pending_acceptance", null]);
+  const [v2, v1] = (await f.acceptance.getDossier(people.staff, f.project.id)).dossier.submissions;
+  assert.deepEqual([v2.version, v1.version], [2, 1]);
+  assert.equal(v1.snapshot.sections.results, "Đạt toàn bộ mục tiêu", "snapshot cũ giữ nguyên");
+  assert.equal(v2.snapshot.sections.results, "Đạt toàn bộ mục tiêu, bổ sung minh chứng");
+  assert.ok(v1.snapshot.files.some((file) => file.id === report.id) && !v2.snapshot.files.some((file) => file.id === report.id) && v2.snapshot.files.some((file) => file.id === replacement.id));
+  const submitHistory = await db.projectHistory.findFirst({ where: { projectId: f.project.id, action: "acceptance-dossier.submit" }, orderBy: { createdAt: "desc" } });
+  assert.deepEqual([submitHistory.fromStatus, submitHistory.afterFacts.version], ["supplement_requested", 2]);
+  assert.deepEqual((await db.userNotification.findMany({ where: { sourceId: dossier.id, idempotencyKey: `acceptance-dossier:${dossier.id}:v2` } })).map((row) => row.userId), [people.staff.id]);
+
+  // TP và TB (không là thành viên) cũng yêu cầu được.
+  const again = await ask(people.head);
+  assert.deepEqual([again.dossier.status, again.dossier.version, again.dossier.supplementRequest.requestedBy.id], ["supplement_requested", 3, people.head.id]);
+  await f.submit(people.pi);
+  assert.equal((await ask(people.board)).dossier.version, 4);
+});
+
+test("6.9 p3: pipe yêu cầu bổ sung chặn lý do quá 2000 ký tự và hạn không hợp lệ", () => {
+  const bad = (error) => error.getStatus?.() === 400;
+  assert.throws(() => projectReportReviewPipe.transform({ reason: "x".repeat(2001), responseDeadline: "2030-01-01" }), bad);
+  assert.throws(() => projectReportReviewPipe.transform({ reason: "Thiếu", responseDeadline: "khong-phai-ngay" }), bad);
+  assert.equal(projectReportReviewPipe.transform({ reason: "x".repeat(2000), responseDeadline: "2030-01-01" }).reason.length, 2000);
 });
