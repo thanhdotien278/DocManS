@@ -389,7 +389,7 @@ export function AcceptanceCouncilPanel({ projectId }: { projectId: string }) {
         </SectionCard>
       ) : null}
 
-      {approval && view.readsProject ? <RoutingStatus subjectType="project" subjectId={projectId} refreshKey={`${approval.id}:${approval.stage}:${approval.status}`} onChanged={() => void refresh()} /> : null}
+      {approval && view.readsApproval ? <RoutingStatus subjectType="project" subjectId={projectId} refreshKey={`${approval.id}:${approval.stage}:${approval.status}`} onChanged={() => void refresh()} /> : null}
 
       {dialog?.type === "revoke" ? <ReasonDialog title={`Thu hồi lời mời của ${dialog.name}`} description="Lịch sử lời mời vẫn được giữ lại." reasonLabel="Lý do thu hồi" confirmLabel="Thu hồi" onConfirm={dialogAction} onClose={() => setDialog(null)} /> : null}
       {dialog?.type === "decline" ? <ReasonDialog title="Từ chối lời mời hội đồng nghiệm thu" description="Sau khi từ chối, bạn không còn xem được hội đồng này." reasonLabel="Lý do từ chối" confirmLabel="Từ chối lời mời" onConfirm={dialogAction} onClose={() => setDialog(null)} /> : null}
