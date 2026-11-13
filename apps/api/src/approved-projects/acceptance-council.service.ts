@@ -6,7 +6,7 @@ import { ACCEPTANCE_DOSSIER_ENTITY_TYPE } from "../modules/files/files.dto.js";
 import { notifyUsers } from "../notifications/notification-events.js";
 import { readTransactionClockV1 } from "../permissions/authorization-v1.service.js";
 import { recordParticipantWaiver } from "../proposal-evaluations/proposal-evaluation-support.js";
-import { APPROVAL_STAGE_LABELS, APPROVAL_STATUS_LABELS, assertReadyForLeadership, closeApprovalSubmission, openApprovalSubmission, type ApprovalKey } from "../proposals-shared/approval-routing.js";
+import { APPROVAL_STAGE_LABELS, APPROVAL_STATUS_LABELS, assertReadyForLeadership, canViewApproval, closeApprovalSubmission, openApprovalSubmission, type ApprovalKey } from "../proposals-shared/approval-routing.js";
 import { canFormCouncil, readCouncilFormationConfig } from "../proposals-shared/council-formation.js";
 import { isRelationshipActiveAt } from "../proposals-shared/proposal-participation.js";
 import { ApprovedProjectsService, SKIP_CONTEXT } from "./approved-projects.service.js";
@@ -259,6 +259,8 @@ export class AcceptanceCouncilService {
       projectTitle: project.title,
       projectStatus: project.status,
       readsProject,
+      // Cùng luật với GET /approval-submissions/subject, để PI không gọi rồi nhận 403.
+      readsApproval: !!latest && canViewApproval(actor, latest),
       dossierId: project.acceptanceDossier?.id ?? null,
       config: { memberCount: config.memberCount, structure: ACCEPTANCE_COUNCIL_STRUCTURE(config.memberCount) },
       establishedAt: establishedAt ? new Date(establishedAt).toISOString() : null,
