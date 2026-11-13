@@ -136,12 +136,14 @@ export function canViewApproval(actor: SafeUserContext | undefined, row: Pick<Ap
  * D-041 phần 2: "Phụ trách" bật cho vai trò của `actor` bỏ qua xung đột do tham gia (xung đột phản biện vẫn chặn);
  * `operation` (chỉ mutation) ghi audit `participant-waiver-used` khi dùng ngoại lệ.
  */
-export async function actorConflicted(tx: Prisma.TransactionClient, actor: ParticipantWaiverActor, row: Pick<ApprovalSubmissionRow, "subjectType" | "subjectId">, operation?: string) {
+export async function actorConflicted(tx: Prisma.TransactionClient, actor: ParticipantWaiverActor, row: Pick<ApprovalSubmissionRow, "subjectType" | "subjectId"> & { kind?: string }, operation?: string) {
   const prisma = tx as unknown as PrismaService;
   if (row.subjectType === "proposal") {
     const decision = await resolveManagerConflict(prisma, { participation: new ProposalParticipationService(prisma), reviewAccess: new ProposalReviewAccessService(prisma) }, actor, row.subjectId, operation);
     return decision.conflicted;
   }
+  // Story 6.9: người có ghế hội đồng nghiệm thu không xử lý tờ trình thành lập chính hội đồng đó (không áp "Phụ trách").
+  if (row.kind === "ACCEPTANCE_COUNCIL" && await tx.acceptanceCouncilMember.findFirst({ where: { projectId: row.subjectId, userId: actor.id, invitationStatus: { in: ["invited", "accepted"] } }, select: { id: true } })) return true;
   const now = new Date();
   const member = await tx.approvedProjectMember.findFirst({
     where: { projectId: row.subjectId, userId: actor.id, status: "ACTIVE", effectiveFrom: { lte: now }, OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: now } }] },
@@ -223,7 +225,7 @@ async function notifyApprovalStep(tx: Prisma.TransactionClient, actor: SafeUserC
     sourceType: "approval" as const,
     sourceId: row.id,
     idempotencyKey: `approval:${row.id}:${step.action}:${step.stage}`,
-    link: row.subjectType === "project" ? `/projects/${row.subjectId}` : `/proposals/${row.subjectId}`
+    link: row.kind === "ACCEPTANCE_COUNCIL" ? `/projects/${row.subjectId}/acceptance-council` : row.subjectType === "project" ? `/projects/${row.subjectId}` : `/proposals/${row.subjectId}`
   };
   const kindLabel = APPROVAL_KIND_LABELS[row.kind] ?? row.kind;
   const closedTitle = CLOSED_TITLES[step.toStatus];

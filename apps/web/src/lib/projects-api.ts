@@ -39,7 +39,11 @@ const HISTORY_ACTION_LABELS: Record<string, string> = {
   "ethics-dossier.create": "Tạo hồ sơ đạo đức", "ethics-dossier.submit": "Nộp hồ sơ đạo đức",
   "acceptance-dossier.create": "Tạo hồ sơ nghiệm thu", "acceptance-dossier.submit": "Nộp hồ sơ nghiệm thu",
   "acceptance-dossier.file.upload": "Tải tệp hồ sơ nghiệm thu", "acceptance-dossier.file.metadata": "Cập nhật tệp hồ sơ nghiệm thu", "acceptance-dossier.file.delete": "Xóa tệp hồ sơ nghiệm thu",
-  "project.acceptance.submit": "Chuyển sang chờ nghiệm thu"
+  "project.acceptance.submit": "Chuyển sang chờ nghiệm thu",
+  "acceptance-council.invite": "Mời thành viên hội đồng nghiệm thu", "acceptance-council.revoke": "Thu hồi lời mời hội đồng nghiệm thu",
+  "acceptance-council.accept": "Nhận lời hội đồng nghiệm thu", "acceptance-council.decline": "Từ chối lời mời hội đồng nghiệm thu",
+  "acceptance-council.submit": "Trình thành lập hội đồng nghiệm thu", "acceptance-council.reject": "Không phê duyệt hội đồng nghiệm thu",
+  "acceptance-council.establish": "Thành lập hội đồng nghiệm thu", "project.acceptance.result": "Ghi kết quả nghiệm thu"
 };
 const REQUEST_ACTION_LABELS: Record<string, string> = { create: "Tạo yêu cầu", "edit-draft": "Cập nhật yêu cầu", submit: "Nộp yêu cầu", review: "Bắt đầu xem xét yêu cầu", validate: "Kiểm tra hành chính", prepare: "Lập tờ trình", "request-supplement": "Yêu cầu bổ sung", approve: "Phê duyệt", reject: "Từ chối", withdraw: "Rút yêu cầu" };
 // Unknown codes fall back to the raw value so new states stay visible instead of blank.
@@ -69,7 +73,7 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${getApiBaseUrl()}${path}`, { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...init?.headers } });
   const body = await response.json().catch(() => ({}));
   // Keep the full error body so callers can read extra fields (e.g. READINESS_INCOMPLETE missing lists).
-  if (!response.ok) throw Object.assign(new Error(typeof body.message === "string" ? body.message : "Không thể xử lý thao tác đề tài."), { code: body.code as string | undefined, body });
+  if (!response.ok) throw Object.assign(new Error(typeof body.message === "string" ? body.message : "Không thể xử lý thao tác đề tài."), { code: body.code as string | undefined, status: response.status, body });
   return body as T;
 }
 
@@ -147,7 +151,7 @@ export async function uploadEthicsFile(dossierId: string, file: File, purpose: s
   form.set("contextVersion", JSON.stringify(contextVersion));
   const response = await fetch(`${getApiBaseUrl()}/files`, { method: "POST", credentials: "include", body: form });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok || !body.file?.id) throw new Error(typeof body.message === "string" ? body.message : "Không thể tải tệp hồ sơ.");
+  if (!response.ok || !body.file?.id) throw Object.assign(new Error(typeof body.message === "string" ? body.message : "Không thể tải tệp hồ sơ."), { code: body.code as string | undefined, status: response.status, body });
   return body.file as { id: string; fileName: string };
 }
 export async function deleteEthicsFile(fileId: string, contextVersion: unknown) { await json(`/files/${fileId}`, { method: "DELETE", body: JSON.stringify({ contextVersion }) }); }
@@ -169,7 +173,8 @@ export type AcceptanceDossierView = {
   };
 };
 export const ACCEPTANCE_SECTION_LABELS: Record<string, string> = { results: "1. Kết quả đạt được so với mục tiêu", products: "2. Danh sách sản phẩm", summary: "3. Tóm tắt báo cáo tổng kết", milestoneNotes: "4. Giải trình mốc chưa hoàn thành" };
-export const ACCEPTANCE_FILE_LABELS: Record<string, string> = { ACCEPTANCE_FINAL_REPORT: "Báo cáo tổng kết", ACCEPTANCE_PRODUCT_EVIDENCE: "Minh chứng sản phẩm", ACCEPTANCE_OTHER: "Tài liệu khác", ACCEPTANCE_CONTRIBUTION: "Tệp đóng góp của thành viên" };
+export const ACCEPTANCE_MINUTES = "ACCEPTANCE_MINUTES";
+export const ACCEPTANCE_FILE_LABELS: Record<string, string> = { ACCEPTANCE_FINAL_REPORT: "Báo cáo tổng kết", ACCEPTANCE_PRODUCT_EVIDENCE: "Minh chứng sản phẩm", ACCEPTANCE_OTHER: "Tài liệu khác", ACCEPTANCE_CONTRIBUTION: "Tệp đóng góp của thành viên", [ACCEPTANCE_MINUTES]: "Biên bản họp hội đồng" };
 export const acceptanceDossierStatusLabel = ethicsDossierStatusLabel;
 
 const acceptancePath = (projectId: string) => `/projects/${projectId}/acceptance-dossier`;
@@ -179,3 +184,38 @@ export async function createAcceptanceDossier(projectId: string, contextVersion:
 export async function saveAcceptanceSection<K extends AcceptanceSectionKey>(projectId: string, section: K, value: AcceptanceSections[K], contextVersion: unknown) { return (await json<AcceptanceBody>(acceptancePath(projectId), { method: "PATCH", body: JSON.stringify({ section, value, contextVersion }) })).acceptanceDossier; }
 export async function submitAcceptanceDossier(projectId: string, contextVersion: unknown) { return (await json<AcceptanceBody>(`${acceptancePath(projectId)}/submit`, { method: "POST", body: JSON.stringify({ contextVersion }) })).acceptanceDossier; }
 export const uploadAcceptanceFile = (dossierId: string, file: File, purpose: string, contextVersion: unknown) => uploadEthicsFile(dossierId, file, purpose, contextVersion, "acceptance_dossier");
+
+// Story 6.9 — hội đồng nghiệm thu. Capability của view chỉ gồm các action `acceptance-council.*`.
+export type AcceptanceCouncilRole = "council_chair" | "council_secretary" | "committee_member";
+export type AcceptanceCouncilMember = {
+  id: string; userId: string; displayName: string; username: string; unit: string; councilRole: AcceptanceCouncilRole; councilRoleLabel: string;
+  invitationStatus: "invited" | "accepted" | "declined" | "revoked"; declineReason: string | null; revokeReason: string | null;
+  invitedAt: string; respondedAt: string | null; revokedAt: string | null; councilEstablishedAt: string | null;
+};
+export type AcceptanceCouncilView = {
+  contextVersion: unknown; projectTitle: string; projectStatus: string; readsProject: boolean; dossierId: string | null;
+  config: { memberCount: number; structure: Record<AcceptanceCouncilRole, number> };
+  establishedAt: string | null; blockers: string[]; members: AcceptanceCouncilMember[];
+  approval: null | { id: string; stage: string; stageLabel: string; status: string; statusLabel: string; lastNote: string | null };
+  result: null | { outcome: string; comment: string | null; minutesFileId: string | null; recordedAt: string };
+  allowedActions: string[]; blockedActions: Array<{ action: string; code?: string; reason: string }>;
+};
+export type AcceptanceCouncilSeat = { memberId: string; projectId: string; projectTitle: string; projectStatus: string; councilRole: AcceptanceCouncilRole; councilRoleLabel: string; invitationStatus: "invited" | "accepted"; invitedAt: string; establishedAt: string | null };
+export const ACCEPTANCE_COUNCIL_ROLES: AcceptanceCouncilRole[] = ["council_chair", "council_secretary", "committee_member"];
+export const ACCEPTANCE_COUNCIL_ROLE_LABELS: Record<AcceptanceCouncilRole, string> = { council_chair: "Chủ tịch", council_secretary: "Thư ký", committee_member: "Ủy viên" };
+export const INVITATION_STATUS_LABELS: Record<string, string> = { invited: "Chờ phản hồi", accepted: "Đã nhận lời", declined: "Đã từ chối", revoked: "Đã thu hồi" };
+export const ACCEPTANCE_RESULT_LABELS: Record<string, string> = { accepted: "Đạt", failed: "Không đạt" };
+
+const councilPath = (projectId: string) => `/projects/${projectId}/acceptance-council`;
+type CouncilBody = { acceptanceCouncil: AcceptanceCouncilView };
+const post = (path: string, body: Record<string, unknown>) => json<CouncilBody>(path, { method: "POST", body: JSON.stringify(body) });
+export async function getAcceptanceCouncil(projectId: string) { return (await json<CouncilBody>(councilPath(projectId))).acceptanceCouncil; }
+export async function listMyAcceptanceSeats() { return (await json<{ seats: AcceptanceCouncilSeat[] }>("/projects/acceptance-council/my-seats")).seats; }
+export async function acceptanceCouncilCandidates(projectId: string, query: string) { return (await json<{ users: Array<{ id: string; displayName: string; username: string; unit: string | null }> }>(`${councilPath(projectId)}/candidates?q=${encodeURIComponent(query)}`)).users; }
+export async function inviteAcceptanceMember(projectId: string, userId: string, councilRole: AcceptanceCouncilRole, contextVersion: unknown) { return (await post(`${councilPath(projectId)}/members`, { userId, councilRole, contextVersion })).acceptanceCouncil; }
+export async function revokeAcceptanceMember(projectId: string, memberId: string, reason: string, contextVersion: unknown) { return (await post(`${councilPath(projectId)}/members/${memberId}/revoke`, { reason, contextVersion })).acceptanceCouncil; }
+// Từ chối trả `{ memberId, invitationStatus: "declined" }`: người từ chối mất ghế nên không còn view.
+export async function respondAcceptanceInvitation(projectId: string, memberId: string, decision: "accept" | "decline", reason?: string) { return (await post(`${councilPath(projectId)}/members/${memberId}/respond`, { decision, reason })).acceptanceCouncil; }
+export async function submitAcceptanceCouncil(projectId: string, note: string, contextVersion: unknown) { return (await post(`${councilPath(projectId)}/submit`, { note: note || undefined, contextVersion })).acceptanceCouncil; }
+export async function decideAcceptanceCouncil(projectId: string, decision: "approve" | "reject", reason: string, contextVersion: unknown) { return (await post(`${councilPath(projectId)}/${decision}`, { reason: reason || undefined, contextVersion })).acceptanceCouncil; }
+export async function recordAcceptanceResult(projectId: string, outcome: "accepted" | "failed", comment: string, contextVersion: unknown) { return (await post(`${councilPath(projectId)}/result`, { outcome, comment, contextVersion })).acceptanceCouncil; }

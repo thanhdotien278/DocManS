@@ -254,8 +254,11 @@
   summary: Mời lại người đã gửi phiếu sau khi bị thu hồi trong cùng vòng không bị chặn; cần chốt có cấm hay không (AC 5.3 chỉ yêu cầu giữ xung đột ở bước tổng hợp/quyết định).
   evidence: Thông báo "đã gửi phiếu đánh giá" của test cũ không còn trong code API (08/11).
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-9-approval-routing-cv-tb-tp-bgd.md`
-  summary: Ký LEADERSHIP cho IRB_COUNCIL, IRB_CERTIFICATE (story 10.3/10.4) và ACCEPTANCE_COUNCIL (story 6.8/6.9) chưa áp dụng thay đổi nguồn; các story đó phải nối vào `closeApprovalSubmission`.
+  summary: Ký LEADERSHIP cho IRB_COUNCIL và IRB_CERTIFICATE (story 10.3/10.4) chưa áp dụng thay đổi nguồn; các story đó phải nối vào `closeApprovalSubmission`.
   evidence: Người dùng đồng ý đóng 5.9 ngày 2026-11-08; `approval-routing.ts` chỉ xử lý nguồn cho DECISION_PACKAGE, EVALUATION_COUNCIL, PROJECT_ADJUSTMENT/EXTENSION, LIQUIDATION.
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-9-approval-routing-cv-tb-tp-bgd.md`
+  summary: (ĐÃ LÀM 12/11/2026, Story 6.9, spec `spec-6-9-hoi-dong-va-ket-qua-nghiem-thu.md`) Ký LEADERSHIP cho ACCEPTANCE_COUNCIL: hội đồng được thành lập trong `AcceptanceCouncilService.decide` qua `closeApprovalSubmission`.
+  evidence: `apps/api/src/approved-projects/acceptance-council.service.ts`; `tests/acceptance-council-db.test.mjs`.
 - source_spec: `_bmad-output/implementation-artifacts/spec-participant-self-management-config.md`
   summary: (ĐÃ LÀM 08/11/2026, spec `spec-participant-self-management-part-2.md`) Phần 2 — cột "Phụ trách" trong cấu hình participant_policy: TP/TB/CV tham gia hồ sơ/đề tài vẫn được mọi thao tác quản lý (phân công, hội đồng, tổng hợp, tờ trình kể cả tự duyệt bước TB/TP, CV phụ trách, nghiệp vụ đề tài), trừ chấm điểm và quyết định GĐ; bật Phụ trách kéo theo Xem; audit ghi participantWaiver.
   evidence: Tách theo yêu cầu người dùng 08/11/2026 vì spec gộp ~3.000 token, chạm ~40 điểm kiểm tra xung đột (bucket A trong khảo sát); phần 1 làm cấu hình, làm PI và Xem trước.
@@ -309,3 +312,12 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-6-8-p2-giao-dien-ho-so-nghiem-thu.md`
   summary: Chưa có test tự động cho phía web hồ sơ nghiệm thu (`uploadAcceptanceFile` gửi `acceptance_dossier`, phân nhánh người đóng góp/chỉ đọc của workspace).
   evidence: Review 6.8 p2 (triage #7). Repo không có hạ tầng chạy component hay `lib/*-api.ts`; hiện chỉ kiểm bằng trình duyệt.
+- source_spec: `_bmad-output/implementation-artifacts/spec-6-9-hoi-dong-va-ket-qua-nghiem-thu.md`
+  summary: (ĐÃ LÀM 12/11/2026, spec `spec-6-9-p2-giao-dien-hoi-dong-nghiem-thu.md`) Story 6.9 phần 2, giao diện web hội đồng nghiệm thu (mời, nhận lời, trình tờ trình, chủ tịch ghi kết quả kèm biên bản), theo khuôn hội đồng đánh giá đề xuất.
+  evidence: Người dùng chọn tách UI ngày 2026-11-12 vì spec vượt 1600 token, giống 6.8.
+- source_spec: `_bmad-output/implementation-artifacts/spec-6-9-hoi-dong-va-ket-qua-nghiem-thu.md`
+  summary: CV yêu cầu bổ sung hồ sơ nghiệm thu đã nộp (hồ sơ về draft, đề tài về executing, PI nộp lại snapshot v2) theo AC Story 6.9.
+  evidence: Người dùng chọn tách story riêng ngày 2026-11-12; spec 6.8 cũng để ngoài phạm vi.
+- source_spec: `_bmad-output/implementation-artifacts/spec-6-9-hoi-dong-va-ket-qua-nghiem-thu.md`
+  summary: (ĐÃ LÀM 12/11/2026) Chưa có test cho `acceptance-council.sign` trong `allowedActions` (GĐ ở bước LEADERSHIP thấy, PGĐ-KH có ghế không thấy).
+  evidence: Review 6.9 (verification-gap) — chưa có người dùng capability này cho tới giao diện phần 2; thêm test khi làm UI.
