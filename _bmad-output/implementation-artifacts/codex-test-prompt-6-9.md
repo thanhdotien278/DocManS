@@ -38,7 +38,7 @@ DATABASE_URL="$DB69" npm run prisma:seed
 npm run build:api
 ```
 
-Tạo dữ liệu: lưu đoạn sau thành `/tmp/codex69-fixture.mjs` rồi chạy `DATABASE_URL="$DB69" node /tmp/codex69-fixture.mjs`. Script tạo **2 đề tài** `pending_acceptance` có hồ sơ đã nộp (PI `patuan`, thành viên `int1`, CV phụ trách `hdtien1`) và đặt cấu hình hội đồng 3 người, cho phép TP/TB/CV.
+Tạo dữ liệu: lưu đoạn sau thành `/tmp/codex69-fixture.mjs` rồi chạy `DATABASE_URL="$DB69" node /tmp/codex69-fixture.mjs`. Đơn vị chủ trì là `org-khti`, nằm trong phạm vi của PI `patuan` và CV `hdtien1` như dữ liệu mẫu trong seed. Nếu dùng đơn vị ngoài phạm vi của PI, PI sẽ không đọc được đề tài: đó là luật phạm vi đã có từ trước, không phải lỗi của 6.9. Script tạo **2 đề tài** `pending_acceptance` có hồ sơ đã nộp (PI `patuan`, thành viên `int1`, CV phụ trách `hdtien1`) và đặt cấu hình hội đồng 3 người, cho phép TP/TB/CV.
 
 ```js
 import { PrismaService } from "/Users/Super/DocManS/dist/apps/api/infrastructure/prisma/prisma.service.js";
@@ -48,10 +48,10 @@ const [pi, member, staff, head] = await Promise.all(["patuan", "int1", "hdtien1"
 await db.systemParameter.upsert({ where: { key: "council_formation.ACCEPTANCE" }, create: { key: "council_formation.ACCEPTANCE", value: JSON.stringify({ allowedRoles: ["RESEARCH_MANAGEMENT_HEAD", "RESEARCH_BOARD_HEAD", "RESEARCH_MANAGEMENT_STAFF"], memberCount: 3 }), label: "Hội đồng nghiệm thu" }, update: {} });
 const intake = await db.proposalIntakePeriod.create({ data: { code: "DOT-CODEX-69", title: "Đợt kiểm thử", startsAt: new Date("2026-01-01"), endsAt: new Date("2027-01-01"), requiredPackage: [] } });
 for (const title of ["Đề tài A — nghiệm thu đạt", "Đề tài B — nghiệm thu không đạt / trả lại"]) {
-  const proposal = await db.researchProposal.create({ data: { intakePeriodId: intake.id, ownerId: pi.id, hostOrganizationUnitId: "org-k30", title, status: "approved", submittedAt: new Date() } });
+  const proposal = await db.researchProposal.create({ data: { intakePeriodId: intake.id, ownerId: pi.id, hostOrganizationUnitId: "org-khti", title, status: "approved", submittedAt: new Date() } });
   const event = await db.proposalSubmissionEvent.create({ data: { proposalId: proposal.id, actorId: pi.id, fromStatus: "draft", toStatus: "submitted", snapshot: {} } });
   const decision = await db.proposalDecision.create({ data: { proposalId: proposal.id, decision: "approved", decidedById: head.id, fromStatus: "under_review", toStatus: "approved" } });
-  const project = await db.approvedProject.create({ data: { proposalId: proposal.id, sourceSubmissionEventId: event.id, sourceDecisionId: decision.id, hostOrganizationUnitId: "org-k30", title, scopeSnapshot: { title }, status: "pending_acceptance", startDate: new Date("2025-01-01"), endDate: new Date("2026-12-31"), createdById: staff.id } });
+  const project = await db.approvedProject.create({ data: { proposalId: proposal.id, sourceSubmissionEventId: event.id, sourceDecisionId: decision.id, hostOrganizationUnitId: "org-khti", title, scopeSnapshot: { title }, status: "pending_acceptance", startDate: new Date("2025-01-01"), endDate: new Date("2026-12-31"), createdById: staff.id } });
   const since = new Date(Date.now() - 86400000);
   for (const [user, role] of [[pi, "TOPIC_PI"], [member, "TOPIC_MEMBER"]]) await db.approvedProjectMember.create({ data: { projectId: project.id, userId: user.id, name: user.displayName, role, participationRole: role, status: "ACTIVE", effectiveFrom: since, createdById: staff.id } });
   await db.projectManagementOfficer.create({ data: { projectId: project.id, officerUserId: staff.id, assignedById: head.id, status: "ACTIVE", effectiveFrom: since, assignmentContextVersion: {} } });
