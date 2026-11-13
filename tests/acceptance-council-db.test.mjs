@@ -167,6 +167,8 @@ test("6.9: mời, nhận lời, trình TB → TP → PGĐ-KH ký, chủ tịch g
   await f.submit(people.staff);
   const submission = await f.pending();
   assert.equal(submission.stage, "BOARD_REVIEW");
+  const [piView, headView] = [await f.council.getCouncil(people.pi, f.project.id), await f.council.getCouncil(people.head, f.project.id)];
+  assert.deepEqual([piView.readsProject, piView.readsApproval, headView.readsApproval], [true, false, true], "PI đọc đề tài nhưng không xem tờ trình nội bộ");
   await assert.rejects(async () => f.invite(people.head, await f.candidate("muon"), "committee_member"), coded(400, "WORKFLOW_STATE_DENIED"), "danh sách khóa khi đang trình");
   await assert.rejects(() => f.decide(people.director, "approve"), coded(400, "APPROVAL_NOT_READY"));
   await assert.rejects(() => f.result(chair, "accepted"), coded(400, "WORKFLOW_STATE_DENIED"), "chủ tịch ghi khi hội đồng chưa ký");
