@@ -55,7 +55,7 @@ Quy tắc giữ nguyên: không sửa code, không commit, không dùng DB dev c
 | F7 | B2 | Thêm một ghế `accepted` cho `nmtrung` bằng DB khi tờ trình đang ở bước TB | `nmtrung` chuyển bước → `403 APPROVAL_CONFLICT`, UI hiện lỗi tiếng Việt; xóa ghế đó sau khi kiểm |
 | F8 | B2 | Sau khi ký, thêm Chủ tịch vào `approved_project_members` (ACTIVE) bằng DB | Chủ tịch ghi kết quả bị chặn (`403`); trả DB về như cũ sau khi kiểm |
 | F9 | B2 | Trước khi ký: cho một thành viên đã nhận lời trở thành thành viên đề tài (DB) | GĐ ký → `400 COUNCIL_MEMBER_INELIGIBLE`, UI hiện thông báo; trả DB về như cũ |
-| F10 | B2 | Các vai trò không có quyền mở trang hội đồng B2: `hdtien2`, `dnbinh`, `ndbac`, `int1`, `admin`, và `int2` khi không có ghế | Hoặc chỉ đọc (người đọc được đề tài, không có nút) hoặc thông báo "không có quyền" (người không đọc được); không ai có nút thao tác ngoài quyền |
+| F10 | B2 | Các vai trò không có quyền mở trang hội đồng B2: `hdtien2`, `dnbinh`, `ndbac`, `int1`, `admin`, và một nhà nghiên cứu không có ghế ở B2 (vd. `ex3`) | Hoặc chỉ đọc (người đọc được đề tài, không có nút) hoặc thông báo "không có quyền" (người không đọc được); không ai có nút thao tác ngoài quyền |
 | F11 | B2 | Đổi cấu hình `council_formation.ACCEPTANCE` về mặc định (xóa dòng `system_parameters`) | `hdtien1` không còn form mời (nút ẩn hoặc lý do); API → `403 COUNCIL_FORMATION_DENIED`; TP/TB vẫn mời được |
 | F12 | bất kỳ | Mở trang hội đồng ở 2 tab; thao tác ở tab 1 rồi thao tác ở tab 2 | Tab 2 báo lỗi kèm nút "Tải lại", nội dung đang nhập (nhận xét, ghi chú trình) không mất |
 | F13 | bất kỳ | Hai người cùng bấm nhận lời / hai lần bấm ký thật nhanh (gửi song song qua API) | Không có trạng thái lệch: không trùng lịch sử, tờ trình đóng một lần |
