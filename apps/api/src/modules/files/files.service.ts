@@ -15,7 +15,7 @@ import { ProposalManagementOfficerService } from "../../proposals-shared/proposa
 import { ProposalReviewAccessService } from "../../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../../research-proposals/proposal-participation.service.js";
 import { ACCEPTANCE_DOSSIER_ENTITY_TYPE, APPROVED_PROJECT_ENTITY_TYPE, ETHICS_DOSSIER_ENTITY_TYPE, EVALUATION_FILE_PURPOSES, FUNDING_VOUCHER_PURPOSE, RESEARCH_PROPOSAL_ENTITY_TYPE } from "./files.dto.js";
-import { ACCEPTANCE_CONTRIBUTION, ACCEPTANCE_DOSSIER_DRAFT, ACCEPTANCE_FILE_PURPOSES } from "../../approved-projects/acceptance-dossiers.service.js";
+import { ACCEPTANCE_CONTRIBUTION, ACCEPTANCE_DOSSIER_DRAFT, ACCEPTANCE_DOSSIER_SUPPLEMENT, ACCEPTANCE_FILE_PURPOSES } from "../../approved-projects/acceptance-dossiers.service.js";
 import { ACCEPTANCE_MINUTES } from "../../approved-projects/acceptance-council.service.js";
 import { bumpEthicsProjectContext, ETHICS_DOSSIER_DRAFT, ETHICS_FILE_PURPOSES, ethicsCapabilityError, isOfficerViewer, isPiViewer, resetEthicsCommitment } from "../../approved-projects/ethics-dossiers.service.js";
 
@@ -289,7 +289,7 @@ export class FilesService {
     if (record.relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) {
       // Biên bản hội đồng: quyền chủ tịch đã gồm trạng thái; có kết quả thì đề tài rời `pending_acceptance` và biên bản bị ghim.
       if (record.filePurpose === ACCEPTANCE_MINUTES) return;
-      if ((await this.findAcceptanceDossier(record.relatedEntityId)).status !== ACCEPTANCE_DOSSIER_DRAFT) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Hồ sơ nghiệm thu đã nộp được giữ nguyên." });
+      if (![ACCEPTANCE_DOSSIER_DRAFT, ACCEPTANCE_DOSSIER_SUPPLEMENT].includes((await this.findAcceptanceDossier(record.relatedEntityId)).status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Hồ sơ nghiệm thu đã nộp được giữ nguyên." });
       return;
     }
     if (record.relatedEntityType === ETHICS_DOSSIER_ENTITY_TYPE) {

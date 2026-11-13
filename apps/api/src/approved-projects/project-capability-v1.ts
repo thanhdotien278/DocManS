@@ -11,7 +11,7 @@ export const PROJECT_ACTIONS: PermissionActionV1[] = [
   "project.extension.create", "project.extension.edit-draft", "project.extension.submit", "project.extension.validate", "project.extension.prepare", "project.extension.request-supplement", "project.extension.approve", "project.extension.reject", "project.extension.withdraw",
   "project.history.read",
   "ethics-dossier.read", "ethics-dossier.create", "ethics-dossier.edit", "ethics-dossier.submit",
-  "acceptance-dossier.read", "acceptance-dossier.create", "acceptance-dossier.edit", "acceptance-dossier.contribute", "acceptance-dossier.submit",
+  "acceptance-dossier.read", "acceptance-dossier.create", "acceptance-dossier.edit", "acceptance-dossier.contribute", "acceptance-dossier.submit", "acceptance-dossier.request-supplement",
   "acceptance-council.invite", "acceptance-council.revoke", "acceptance-council.respond", "acceptance-council.submit", "acceptance-council.sign", "acceptance-council.record-result"
 ];
 
@@ -173,17 +173,32 @@ function ethicsDossierDenial(action: PermissionActionV1, input: ProjectCapabilit
   return dossier?.status === "draft" ? null : blocked("WORKFLOW_STATE_DENIED");
 }
 
-// Story 6.8: chỉ PI soạn và nộp; thành viên/thư ký có trách nhiệm chỉ đóng góp tệp; chỉ khi đề tài đang thực hiện và hồ sơ còn nháp.
-function acceptanceDossierDenial(action: PermissionActionV1, input: ProjectCapabilityInput & { scoped: boolean; participantActive: boolean; isPi: boolean; canRead: boolean }) {
+// Story 6.9: TP, TB hoặc CV phụ trách quản lý bước nghiệm thu (trình tờ trình, yêu cầu bổ sung hồ sơ).
+function acceptanceManager(input: ProjectCapabilityInput & { officer: boolean; notInProject: boolean }) {
+  return (isHead(input.actor) || input.actor.systemRole === "RESEARCH_BOARD_HEAD" || (isStaff(input.actor) && input.officer)) && input.notInProject;
+}
+// Hồ sơ đã nộp, chưa có tờ trình ACCEPTANCE_COUNCIL đang chờ và hội đồng chưa thành lập.
+function acceptanceForming(input: ProjectCapabilityInput) {
+  const council = input.acceptanceCouncil;
+  return input.project.status === PROJECT_STATUSES.pendingAcceptance && input.project.acceptanceDossier?.status === "submitted" && !council?.established && !council?.pendingStage;
+}
+
+// Story 6.8: chỉ PI soạn và nộp; thành viên/thư ký có trách nhiệm chỉ đóng góp tệp; chỉ khi đề tài đang thực hiện và hồ sơ còn nháp
+// hoặc cần bổ sung (6.9 phần 3).
+function acceptanceDossierDenial(action: PermissionActionV1, input: ProjectCapabilityInput & { scoped: boolean; participantActive: boolean; isPi: boolean; canRead: boolean; officer: boolean; notInProject: boolean }) {
   // Story 6.9: thành viên đã nhận lời của hội đồng đã thành lập chỉ đọc hồ sơ (không có project.read).
   const councilReader = input.acceptanceCouncil?.established === true && input.acceptanceCouncil.seat?.invitationStatus === "accepted";
   if (action === "acceptance-dossier.read") return input.canRead || councilReader ? null : blocked("ACTION_NOT_GRANTED");
+  if (action === "acceptance-dossier.request-supplement") {
+    if (!acceptanceManager(input)) return blocked("ACTION_NOT_GRANTED");
+    return acceptanceForming(input) ? null : blocked("WORKFLOW_STATE_DENIED");
+  }
   const granted = input.isPi || (action === "acceptance-dossier.contribute" && input.scoped && input.participantActive && (input.participant?.role === "TOPIC_SECRETARY" || input.responsibleMember === true));
   if (!granted) return blocked("ACTION_NOT_GRANTED");
   if (input.project.status !== PROJECT_STATUSES.executing) return blocked("WORKFLOW_STATE_DENIED");
   const dossier = input.project.acceptanceDossier;
   if (action === "acceptance-dossier.create") return dossier ? blocked("WORKFLOW_STATE_DENIED") : null;
-  return dossier?.status === "draft" ? null : blocked("WORKFLOW_STATE_DENIED");
+  return ["draft", "supplement_requested"].includes(dossier?.status ?? "") ? null : blocked("WORKFLOW_STATE_DENIED");
 }
 
 // Story 6.9: người được cấu hình lập hội đồng mời/thu hồi; TP, TB hoặc CV phụ trách trình tờ trình; GĐ/PGĐ-KH ký;
@@ -191,15 +206,14 @@ function acceptanceDossierDenial(action: PermissionActionV1, input: ProjectCapab
 function acceptanceCouncilDenial(action: PermissionActionV1, input: ProjectCapabilityInput & { officer: boolean; canSign: boolean; notInProject: boolean }) {
   const council = input.acceptanceCouncil;
   const open = input.project.status === PROJECT_STATUSES.pendingAcceptance && input.project.acceptanceDossier?.status === "submitted";
-  const forming = open && !council?.established && !council?.pendingStage;
+  const forming = acceptanceForming(input);
   const seat = council?.seat ?? null;
   if (action === "acceptance-council.invite" || action === "acceptance-council.revoke") {
     if (!council?.canForm || !input.notInProject) return blocked("ACTION_NOT_GRANTED");
     return forming ? null : blocked("WORKFLOW_STATE_DENIED");
   }
   if (action === "acceptance-council.submit") {
-    const manager = isHead(input.actor) || input.actor.systemRole === "RESEARCH_BOARD_HEAD" || (isStaff(input.actor) && input.officer);
-    if (!manager || !input.notInProject) return blocked("ACTION_NOT_GRANTED");
+    if (!acceptanceManager(input)) return blocked("ACTION_NOT_GRANTED");
     return forming ? null : blocked("WORKFLOW_STATE_DENIED");
   }
   if (action === "acceptance-council.respond") {

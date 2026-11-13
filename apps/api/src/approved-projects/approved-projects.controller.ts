@@ -122,6 +122,9 @@ export class ApprovedProjectsController {
   @Post(":id/acceptance-dossier/submit")
   async submitAcceptanceDossier(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectMutationPipe) body: any) { return { acceptanceDossier: await this.acceptance.submit(req.currentUser!, id, body) }; }
 
+  @Post(":id/acceptance-dossier/supplement")
+  async requestAcceptanceDossierSupplement(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectReportReviewPipe) body: any) { return { acceptanceDossier: await this.acceptance.requestSupplement(req.currentUser!, id, body) }; }
+
   @Get(":id/acceptance-council")
   async acceptanceCouncil(@Req() req: RequestWithCurrentUser, @Param("id") id: string) { return { acceptanceCouncil: await this.council.getCouncil(req.currentUser!, id) }; }
 
