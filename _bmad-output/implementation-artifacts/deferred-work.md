@@ -296,7 +296,7 @@
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-6-thu-ky-ho-tro-hanh-chinh-danh-gia.md`
   summary: "Task" và "tracking note" hành chính của thư ký (Story 5.6) chuyển sang Epic 7 (quản lý công việc). Story 5.6 chỉ làm lát cắt tệp hành chính (`MEETING_MATERIAL`, `COUNCIL_MINUTES`).
-  evidence: Chưa có mô hình task trong hệ thống; dựng mới ngoài phạm vi 5.6. Quyết định tạm khi người dùng vắng mặt, cần xác nhận.
+  evidence: Chưa có mô hình task trong hệ thống; dựng mới ngoài phạm vi 5.6. Người dùng xác nhận hoãn sang Epic 7 ngày 13/11/2026.
 
 - source_spec: `spec-5-4-reviewer-truy-cap-va-nop-danh-gia-cua-minh.md`
   summary: Chưa có test tự động cho việc `proposal-review-form.tsx` dùng `contextVersion` trả về sau khi lưu nháp.
@@ -306,7 +306,7 @@
   evidence: Người dùng chọn tách như Story 10.3, vì spec backend đã vượt ngưỡng token.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-6-8-chuan-bi-va-nop-ho-so-nghiem-thu.md`
-  summary: Báo cáo tiến độ đang `supplement_requested` không chặn nộp hồ sơ nghiệm thu; sau khi đề tài sang `pending_acceptance` PI không hoàn tất được báo cáo đó.
+  summary: (ĐÃ LÀM 13/11/2026: readiness chặn thêm `draft` và `supplement_requested`) Báo cáo tiến độ đang `supplement_requested` không chặn nộp hồ sơ nghiệm thu; sau khi đề tài sang `pending_acceptance` PI không hoàn tất được báo cáo đó.
   evidence: Review 6.8 (triage #1). Cần người dùng xác nhận có chặn thêm trạng thái này không. Phần 2 (giao diện) cũng phải đổi link thông báo về `/projects/{id}/acceptance-dossier`.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-6-8-p2-giao-dien-ho-so-nghiem-thu.md`

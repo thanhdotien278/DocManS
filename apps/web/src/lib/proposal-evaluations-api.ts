@@ -476,7 +476,7 @@ export async function loadProposalDecisionPackage(proposalId: string) {
   return response.decisionPackage;
 }
 
-export async function decideProposal(proposalId: string, decision: "approve" | "reject", note: string, packageRevision: number, contextVersion: ViewerAuthorizationV1["contextVersion"], published: { publicSummary: string; requiredFollowUp: string } = { publicSummary: "", requiredFollowUp: "" }) {
+export async function decideProposal(proposalId: string, decision: "approve" | "reject", note: string, packageRevision: number, contextVersion: ViewerAuthorizationV1["contextVersion"], published: { publicSummary: string; requiredFollowUp: string; approvedAmount?: number } = { publicSummary: "", requiredFollowUp: "" }) {
   return requestJson<{ decision: ProposalDecisionRecord; proposalStatus: string; proposalStatusLabel: string }>(
     `/research-proposals/${proposalId}/${decision}`,
     { method: "POST", body: JSON.stringify({ note, packageRevision, contextVersion, ...published }) }

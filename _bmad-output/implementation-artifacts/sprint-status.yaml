@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -61,13 +61,18 @@ development_status:
   epic-3-retrospective: optional
   epic-4: in-progress
   4-1-tao-va-quan-ly-dot-tiep-nhan-de-xuat: done
-  4-2-tao-de-xuat-nhap-va-thiet-lap-quan-he-tham-gia: review
+  # Rà vòng đời 2026-11-13: đủ AC, test PASS.
+  4-2-tao-de-xuat-nhap-va-thiet-lap-quan-he-tham-gia: done
   4-3-nhap-va-cong-tac-tren-thong-tin-de-xuat-co-cau-truc: done
-  4-4-dinh-kem-va-quan-ly-tep-de-xuat: review
-  4-5-kiem-tra-muc-do-san-sang-truoc-khi-nop: review
-  4-6-nop-chinh-thuc-va-xem-lich-su-nop-de-xuat: review
+  # Rà vòng đời 2026-11-13: đủ AC; chấp nhận lệch AC1 (metadata tệp không lưu context version, theo mục Never của spec 4.4).
+  4-4-dinh-kem-va-quan-ly-tep-de-xuat: done
+  # Rà vòng đời 2026-11-13: readiness chưa kiểm danh sách thành viên (getMissingFields bỏ qua members).
+  4-5-kiem-tra-muc-do-san-sang-truoc-khi-nop: in-progress
+  # Rà vòng đời 2026-11-13: đủ AC, test proposal-submit-4-6-db PASS.
+  4-6-nop-chinh-thuc-va-xem-lich-su-nop-de-xuat: done
   # D-038: đổi từ tự giao CV theo mảng sang giao CV phụ trách cho từng đợt tiếp nhận (TP giao/đổi; chặn mở đợt khi chưa có CV).
-  4-7-assign-responsible-cv-per-intake-period: review
+  # Rà vòng đời 2026-11-13: thiếu AC9 (TB giao/thu hồi CV từng hồ sơ, code chỉ cho TP); AC5 hồ sơ nộp được khi CV đợt ngừng hoạt động; AC11 chốt theo D-041 (người dùng 13/11/2026): giao CV từng hồ sơ đã theo D-041, còn luồng nộp tự gán CV của đợt chưa kiểm "Phụ trách" (việc còn lại của 4.7).
+  4-7-assign-responsible-cv-per-intake-period: in-progress
   4-8-post-submission-withdraw-edit-reopen-by-cv: backlog
   epic-4-retrospective: optional
   # Refined Golden Flow assessment and acceptance gate: epic-05-proposal-review-and-approval/sprint-plan.md
@@ -80,11 +85,14 @@ development_status:
   # 5.3: done 2026-11-08. UI nhánh phê duyệt và không phê duyệt PASS; test opt-in viết lại theo 5.11 PASS trên DB tạm; thêm test thu hồi sau khi gửi phiếu (approval-routing-db). Bằng chứng: epic-05-proposal-review-and-approval/refined-flow-verification.md.
   5-3-phan-cong-reviewer-voi-kiem-tra-xung-dot: done
   5-4-reviewer-truy-cap-va-nop-danh-gia-cua-minh: done
-  5-5-theo-doi-tien-do-va-tong-hop-danh-gia-noi-bo: review
+  # Rà vòng đời 2026-11-13: đủ AC, UI hai nhánh PASS 2026-11-08.
+  5-5-theo-doi-tien-do-va-tong-hop-danh-gia-noi-bo: done
   # 5.6: review 2026-11-08 (chưa commit). Tệp hành chính MEETING_MATERIAL (thư ký đề tài) và COUNCIL_MINUTES (thư ký hội đồng) khi under_review; migration trigger 20261108230000. UI: thư ký hội đồng tải biên bản PASS, PI bị ẩn/404, TP thấy. Task/tracking note hoãn sang Epic 7. Bằng chứng: refined-flow-verification.md.
+  # Rà vòng đời 2026-11-13: người dùng xác nhận hoãn task/tracking sang Epic 7; còn thiếu kiểm UI tệp MEETING_MATERIAL.
   5-6-thu-ky-khoa-hoc-ho-tro-hanh-chinh-cho-quy-trinh-danh-gia: review
   # 5.7/5.8: review 2026-11-08 (chưa commit). Gói GĐ có danh sách tệp; PublishedReviewSummaryV1 cho PI/thành viên; thông báo gửi thành viên đang hiệu lực. UI: PGĐ-KH bị chặn, GĐ phê duyệt cc36d963 kèm tóm tắt công bố, PI thấy kết quả không có ghi chú nội bộ. Chưa chạy nhánh từ chối trên UI.
-  5-7-lanh-dao-xem-ho-so-trinh-quyet-dinh: review
+  # Rà vòng đời 2026-11-13: đủ AC, UI PASS 2026-11-08; AC6 (cờ xung đột từng dòng hàng chờ) còn trong deferred-work.
+  5-7-lanh-dao-xem-ho-so-trinh-quyet-dinh: done
   5-8-phe-duyet-tu-choi-va-cong-bo-ket-qua-de-xuat: review
   # 5.9: done 2026-11-08. Lõi routing, thông báo (11.1) và UI hai nhánh (phê duyệt, không phê duyệt, trả lại) PASS. Người dùng đồng ý đóng: ký LEADERSHIP áp dụng nguồn cho IRB_COUNCIL, IRB_CERTIFICATE, ACCEPTANCE_COUNCIL chuyển sang story 10.x và 6.8/6.9. Bằng chứng: epic-05-proposal-review-and-approval/refined-flow-verification.md.
   5-9-approval-routing-cv-tb-tp-bgd: done
@@ -94,27 +102,38 @@ development_status:
   5-11-reviewer-assignment-tp-tb-cv-delta: done
   epic-5-retrospective: optional
   epic-6: in-progress
-  6-1-khoi-tao-de-tai-tu-proposal-duoc-phe-duyet: in-progress
+  # Rà vòng đời 2026-11-13: đủ AC cả API và UI.
+  6-1-khoi-tao-de-tai-tu-proposal-duoc-phe-duyet: review
   6-2-quan-ly-thanh-vien-trach-nhiem-milestone-va-checkpoint: in-progress
-  6-3-chu-nhiem-nop-bao-cao-tien-do-va-bang-chung: in-progress
-  6-4-thanh-vien-dong-gop-tep-va-minh-chung-trong-pham-vi-duoc-giao: in-progress
+  # Rà vòng đời 2026-11-13: đủ AC; thông báo hoãn sang 11.x, UI chưa có ô trạng thái mốc.
+  6-3-chu-nhiem-nop-bao-cao-tien-do-va-bang-chung: review
+  # Rà vòng đời 2026-11-13: đủ AC; tệp chưa gắn với trách nhiệm cụ thể.
+  6-4-thanh-vien-dong-gop-tep-va-minh-chung-trong-pham-vi-duoc-giao: review
   6-5-ra-soat-bao-cao-va-theo-doi-cham-tien-do: in-progress
   6-6-gui-yeu-cau-dieu-chinh-hoac-gia-han: review
   6-7-quyet-dinh-dieu-chinh-hoac-gia-han: review
-  # 6.8: phần 1 (backend) xong 2026-11-09; phần 2 (giao diện) còn trong deferred-work.md.
-  6-8-chuan-bi-va-nop-ho-so-nghiem-thu-hoac-danh-gia-cuoi: review
+  # 6.8: phần 1 (backend) xong 2026-11-09; phần 2 (giao diện) xong.
+  # Rà vòng đời 2026-11-13: backend và giao diện đã merge; readiness chặn thêm báo cáo draft/supplement_requested (người dùng chốt 13/11/2026), test acceptance-dossier-db PASS.
+  6-8-chuan-bi-va-nop-ho-so-nghiem-thu-hoac-danh-gia-cuoi: done
   # 6.9: phần 1 (backend) xong 2026-11-12; phần 2 (giao diện, spec-6-9-p2) xong 2026-11-12, đã preview luồng nhiều vai trò; yêu cầu bổ sung hồ sơ còn trong deferred-work.md.
   6-9-ra-soat-va-quyet-dinh-nghiem-thu-hoac-danh-gia-cuoi: review
   6-10-trang-thai-lich-su-va-truy-van-duoc-phan-quyen-cua-de-tai: in-progress
   6-11-adjustment-extension-via-approval-routing: review
-  6-12-funding-metadata-and-liquidation: review
+  # Rà vòng đời 2026-11-13: test PASS; người dùng đã kiểm thử thanh lý (bước 9).
+  6-12-funding-metadata-and-liquidation: done
   # 6.13: theo dõi kinh phí đề tài, spec docs/superpowers/specs/2026-11-11-kinh-phi-de-tai-design.md
+  # Rà vòng đời 2026-11-13: thêm ô "Kinh phí phê duyệt" vào form quyết định của GĐ (proposal-decision-panel.tsx); typecheck PASS, chưa thử trên trình duyệt.
   6-13-1-chot-kinh-phi-duyet-va-grant-tu-dong: review
-  6-13-2-rang-buoc-tong-so-ghi-kinh-phi: review
-  6-13-3-chung-tu-kinh-phi: review
-  6-13-4-thanh-ly-can-doi-chot-so-cap-so-bbtl: review
-  6-13-5-giao-dien-kinh-phi-va-thanh-ly: review
-  6-13-6-thong-bao-kinh-phi-va-thanh-ly: review
+  # Rà vòng đời 2026-11-13: test PASS.
+  6-13-2-rang-buoc-tong-so-ghi-kinh-phi: done
+  # Rà vòng đời 2026-11-13: test PASS.
+  6-13-3-chung-tu-kinh-phi: done
+  # Rà vòng đời 2026-11-13: test PASS.
+  6-13-4-thanh-ly-can-doi-chot-so-cap-so-bbtl: done
+  # Rà vòng đời 2026-11-13: người dùng đã kiểm thử thanh lý (bước 9).
+  6-13-5-giao-dien-kinh-phi-va-thanh-ly: done
+  # Rà vòng đời 2026-11-13: test PASS.
+  6-13-6-thong-bao-kinh-phi-va-thanh-ly: done
   epic-6-retrospective: optional
   epic-7: backlog
   7-1-tao-cong-viec-doc-lap-hoac-lien-ket-ho-so: backlog

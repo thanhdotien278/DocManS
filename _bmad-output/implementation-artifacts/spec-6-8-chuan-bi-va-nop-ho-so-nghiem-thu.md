@@ -31,7 +31,7 @@ context:
   - đủ `results`, `summary`, và có ít nhất một sản phẩm;
   - mọi mốc chưa `completed` đều có giải trình;
   - có đủ tệp bắt buộc `ACCEPTANCE_FINAL_REPORT` và `ACCEPTANCE_PRODUCT_EVIDENCE` (`ACCEPTANCE_OTHER` và `ACCEPTANCE_CONTRIBUTION` không bắt buộc);
-  - đề tài không có yêu cầu điều chỉnh hoặc gia hạn chưa kết thúc, và không có báo cáo tiến độ đang ở `submitted`/`under_review`.
+  - đề tài không có yêu cầu điều chỉnh hoặc gia hạn chưa kết thúc, và không có báo cáo tiến độ đang ở `draft`/`submitted`/`under_review`/`supplement_requested` (người dùng chốt 13/11/2026: PI xử lý xong yêu cầu bổ sung mới được nộp nghiệm thu).
 - Readiness không đạt thì trả 400 `READINESS_INCOMPLETE` kèm danh sách thiếu theo mục, và không đổi trạng thái của hồ sơ hay đề tài.
 - Nộp thành công: hồ sơ thành `submitted`, đề tài thành `pending_acceptance`. Ghi `AcceptanceDossierSubmission` (snapshot gồm các mục, đối chiếu mốc, id tệp và context đề tài), `projectHistory`, audit, và tăng `aggregateVersion`. Sau đó mọi thao tác sửa mục hay tệp bị từ chối với `WORKFLOW_STATE_DENIED`.
 - Thông báo khi nộp gửi CV phụ trách. Nếu đề tài chưa có CV phụ trách thì gửi các user `RESEARCH_BOARD_HEAD` đang active.

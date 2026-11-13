@@ -100,7 +100,7 @@ export function AcceptanceDossierWorkspace({ projectId }: { projectId: string })
     {lists.missingMilestoneNotes.length ? <><p>Mốc chưa hoàn thành cần giải trình:</p><ul>{lists.missingMilestoneNotes.map((id) => <li key={id}>{milestoneTitle.get(id) ?? id}</li>)}</ul></> : null}
     {lists.missingFiles.length ? <><p>Tệp bắt buộc còn thiếu:</p><ul>{lists.missingFiles.map((code) => <li key={code}>{ACCEPTANCE_FILE_LABELS[code] ?? code}</li>)}</ul></> : null}
     {lists.openRequests.length ? <p>Còn {lists.openRequests.length} yêu cầu điều chỉnh/gia hạn chưa kết thúc. Xử lý hoặc rút yêu cầu tại <Link href={`/projects/${projectId}`}>trang đề tài</Link>.</p> : null}
-    {lists.pendingReports.length ? <p>Còn {lists.pendingReports.length} báo cáo tiến độ đang chờ chuyên viên xem xét.</p> : null}
+    {lists.pendingReports.length ? <p>Còn {lists.pendingReports.length} báo cáo tiến độ chưa được chấp nhận (còn nháp, chờ chuyên viên xem xét hoặc cần bổ sung).</p> : null}
   </>;
   const textCard = (key: "results" | "summary") => <SectionCard title={ACCEPTANCE_SECTION_LABELS[key]}>{editable ? <><label className="field"><span>Nội dung</span><textarea value={drafts[key]} onChange={(event) => setDrafts({ ...drafts, [key]: event.target.value })} /></label>{saveButton(key)}</> : readText(sections[key])}</SectionCard>;
   const products = drafts?.products ?? [];
