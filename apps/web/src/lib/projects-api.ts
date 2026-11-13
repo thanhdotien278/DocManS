@@ -166,6 +166,7 @@ export type AcceptanceDossierView = {
   dossier: null | {
     id: string; projectId: string; status: string; version: number; sections: AcceptanceSections; readOnly: boolean;
     createdAt: string; submittedAt: string | null; submittedBy: { id: string; displayName: string } | null;
+    supplementRequest: null | { reason: string; responseDeadline: string | null; requestedBy: { id: string; displayName: string } | null; requestedAt: string };
     milestones: Array<{ milestoneId: string; title: string; dueDate: string | null; status: string; note: string | null }>;
     readiness: AcceptanceMissing & { ready: boolean };
     files: Array<{ id: string; filePurpose: string; fileName: string; uploadedById: string; createdAt: string; canDelete: boolean }>;
@@ -183,7 +184,8 @@ export async function getAcceptanceDossier(projectId: string) { return (await js
 export async function createAcceptanceDossier(projectId: string, contextVersion: unknown) { return (await json<AcceptanceBody>(acceptancePath(projectId), { method: "POST", body: JSON.stringify({ contextVersion }) })).acceptanceDossier; }
 export async function saveAcceptanceSection<K extends AcceptanceSectionKey>(projectId: string, section: K, value: AcceptanceSections[K], contextVersion: unknown) { return (await json<AcceptanceBody>(acceptancePath(projectId), { method: "PATCH", body: JSON.stringify({ section, value, contextVersion }) })).acceptanceDossier; }
 export async function submitAcceptanceDossier(projectId: string, contextVersion: unknown) { return (await json<AcceptanceBody>(`${acceptancePath(projectId)}/submit`, { method: "POST", body: JSON.stringify({ contextVersion }) })).acceptanceDossier; }
-export const uploadAcceptanceFile = (dossierId: string, file: File, purpose: string, contextVersion: unknown) => uploadEthicsFile(dossierId, file, purpose, contextVersion, "acceptance_dossier");
+export async function requestAcceptanceSupplement(projectId: string, reason: string, responseDeadline: string, contextVersion: unknown) { return (await json<AcceptanceBody>(`${acceptancePath(projectId)}/supplement`, { method: "POST", body: JSON.stringify({ reason, responseDeadline, contextVersion }) })).acceptanceDossier; }
+export const uploadAcceptanceFile =(dossierId: string, file: File, purpose: string, contextVersion: unknown) => uploadEthicsFile(dossierId, file, purpose, contextVersion, "acceptance_dossier");
 
 // Story 6.9 — hội đồng nghiệm thu. Capability của view chỉ gồm các action `acceptance-council.*`.
 export type AcceptanceCouncilRole = "council_chair" | "council_secretary" | "committee_member";
