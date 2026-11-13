@@ -120,4 +120,4 @@ context:
 
 - `acceptance-dossier-workspace.tsx`: `supplement_requested` sửa/đóng góp/nộp lại như nháp; thẻ "Yêu cầu bổ sung hồ sơ" hiện lý do, người yêu cầu, hạn; form lý do + hạn cho người có `acceptance-dossier.request-supplement`; bảng phiên bản đã nộp vẫn hiện khi đang bổ sung.
 - `projects-api.ts`: kiểu `supplementRequest`, wrapper `requestAcceptanceSupplement`.
-- Kiểm chứng: typecheck PASS, `tests/acceptance-dossier-workspace-source.test.mjs` PASS. Chưa thử trên trình duyệt: DB dev chưa áp migration `20261112000000_acceptance_council` và chưa có hồ sơ nghiệm thu.
+- Kiểm chứng: typecheck PASS, `tests/acceptance-dossier-workspace-source.test.mjs` PASS. Trình duyệt 13/11/2026 (DB dev, sau khi áp migration `20261112000000_acceptance_council`; đề tài `ui-review-10-3-20261109`): CV hdtien2 gửi yêu cầu bổ sung → hồ sơ "Cần bổ sung" v2, đề tài "Đang thực hiện", CV chỉ xem; PI patuan thấy lý do/hạn, sửa mục 1, nộp lại → "Đã nộp" v2, đề tài "Chờ nghiệm thu", bảng có v1 và v2; thông báo CV → PI → CV đúng người. Chưa kiểm màn hình hẹp.
