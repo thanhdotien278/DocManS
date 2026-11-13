@@ -115,7 +115,7 @@ development_status:
   # 6.8: phần 1 (backend) xong 2026-11-09; phần 2 (giao diện) xong.
   # Rà vòng đời 2026-11-13: backend và giao diện đã merge; readiness chặn thêm báo cáo draft/supplement_requested (người dùng chốt 13/11/2026), test acceptance-dossier-db PASS.
   6-8-chuan-bi-va-nop-ho-so-nghiem-thu-hoac-danh-gia-cuoi: done
-  # 6.9: phần 1 (backend) xong 2026-11-12; phần 2 (giao diện, spec-6-9-p2) xong 2026-11-12, đã preview luồng nhiều vai trò; phần 3 (yêu cầu bổ sung hồ sơ, backend, spec-6-9-p3) xong 2026-11-13; giao diện yêu cầu bổ sung còn trong deferred-work.md.
+  # 6.9: phần 1 (backend) xong 2026-11-12; phần 2 (giao diện, spec-6-9-p2) xong 2026-11-12, đã preview luồng nhiều vai trò; phần 3 (yêu cầu bổ sung hồ sơ, backend, spec-6-9-p3) xong 2026-11-13; giao diện yêu cầu bổ sung xong 2026-11-13 (typecheck, test nguồn PASS; chưa thử trên trình duyệt).
   6-9-ra-soat-va-quyet-dinh-nghiem-thu-hoac-danh-gia-cuoi: review
   6-10-trang-thai-lich-su-va-truy-van-duoc-phan-quyen-cua-de-tai: in-progress
   6-11-adjustment-extension-via-approval-routing: review

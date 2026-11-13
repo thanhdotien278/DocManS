@@ -115,3 +115,9 @@ context:
 **Commands:**
 - `npm run typecheck` -- expected: không lỗi.
 - `npm run build:api && DATABASE_URL=… node --test tests/acceptance-dossier-db.test.mjs tests/acceptance-council-db.test.mjs tests/smoke.test.mjs` -- expected: PASS.
+
+## Phần giao diện (người dùng yêu cầu làm tiếp 2026-11-13)
+
+- `acceptance-dossier-workspace.tsx`: `supplement_requested` sửa/đóng góp/nộp lại như nháp; thẻ "Yêu cầu bổ sung hồ sơ" hiện lý do, người yêu cầu, hạn; form lý do + hạn cho người có `acceptance-dossier.request-supplement`; bảng phiên bản đã nộp vẫn hiện khi đang bổ sung.
+- `projects-api.ts`: kiểu `supplementRequest`, wrapper `requestAcceptanceSupplement`.
+- Kiểm chứng: typecheck PASS, `tests/acceptance-dossier-workspace-source.test.mjs` PASS. Chưa thử trên trình duyệt: DB dev chưa áp migration `20261112000000_acceptance_council` và chưa có hồ sơ nghiệm thu.

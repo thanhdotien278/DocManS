@@ -322,5 +322,5 @@
   summary: (ĐÃ LÀM 12/11/2026) Chưa có test cho `acceptance-council.sign` trong `allowedActions` (GĐ ở bước LEADERSHIP thấy, PGĐ-KH có ghế không thấy).
   evidence: Review 6.9 (verification-gap) — chưa có người dùng capability này cho tới giao diện phần 2; thêm test khi làm UI.
 - source_spec: `_bmad-output/implementation-artifacts/spec-6-9-p3-yeu-cau-bo-sung-ho-so-nghiem-thu.md`
-  summary: Giao diện yêu cầu bổ sung hồ sơ nghiệm thu: form lý do + hạn cho TP/TB/CV phụ trách, hộp lý do/hạn cho PI và sửa/nộp lại ở trạng thái `supplement_requested` trong `acceptance-dossier-workspace.tsx`.
+  summary: (ĐÃ LÀM 13/11/2026; chưa thử trên trình duyệt vì DB dev chưa có migration 6.9 và hồ sơ nghiệm thu) Giao diện yêu cầu bổ sung hồ sơ nghiệm thu: form lý do + hạn cho TP/TB/CV phụ trách, hộp lý do/hạn cho PI và sửa/nộp lại ở trạng thái `supplement_requested` trong `acceptance-dossier-workspace.tsx`.
   evidence: Người dùng chọn tách UI ngày 2026-11-13 vì spec vượt 1600 token, giống 6.8/6.9.
