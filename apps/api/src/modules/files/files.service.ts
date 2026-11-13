@@ -16,6 +16,7 @@ import { ProposalReviewAccessService } from "../../proposals-shared/proposal-rev
 import { ProposalParticipationService } from "../../research-proposals/proposal-participation.service.js";
 import { ACCEPTANCE_DOSSIER_ENTITY_TYPE, APPROVED_PROJECT_ENTITY_TYPE, ETHICS_DOSSIER_ENTITY_TYPE, EVALUATION_FILE_PURPOSES, FUNDING_VOUCHER_PURPOSE, RESEARCH_PROPOSAL_ENTITY_TYPE } from "./files.dto.js";
 import { ACCEPTANCE_CONTRIBUTION, ACCEPTANCE_DOSSIER_DRAFT, ACCEPTANCE_FILE_PURPOSES } from "../../approved-projects/acceptance-dossiers.service.js";
+import { ACCEPTANCE_MINUTES } from "../../approved-projects/acceptance-council.service.js";
 import { bumpEthicsProjectContext, ETHICS_DOSSIER_DRAFT, ETHICS_FILE_PURPOSES, ethicsCapabilityError, isOfficerViewer, isPiViewer, resetEthicsCommitment } from "../../approved-projects/ethics-dossiers.service.js";
 
 type FileRecord = {
@@ -159,7 +160,8 @@ export class FilesService {
       if (!isPi && input.filePurpose !== "PROJECT_CONTRIBUTION" && input.filePurpose !== FUNDING_VOUCHER_PURPOSE) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
     }
     if (input.relatedEntityType === ETHICS_DOSSIER_ENTITY_TYPE && !ETHICS_FILE_PURPOSES.includes(input.filePurpose)) throw new BadRequestException({ code: "FILE_PURPOSE_INVALID", message: "Loại tệp hồ sơ đạo đức không hợp lệ." });
-    if (input.relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) {
+    // Biên bản hội đồng (Story 6.9) xét quyền ở `assertCanUpload` (chủ tịch), không theo luật tệp nháp của PI.
+    if (input.relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE && input.filePurpose !== ACCEPTANCE_MINUTES) {
       if (!ACCEPTANCE_FILE_PURPOSES.includes(input.filePurpose)) throw new BadRequestException({ code: "FILE_PURPOSE_INVALID", message: "Loại tệp hồ sơ nghiệm thu không hợp lệ." });
       // Người không phải PI chỉ đóng góp tệp ACCEPTANCE_CONTRIBUTION.
       if (input.filePurpose !== ACCEPTANCE_CONTRIBUTION && !isPiViewer((await this.acceptanceCapability(actor, input.relatedEntityId)).capability)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
@@ -285,6 +287,8 @@ export class FilesService {
   private async assertUnsubmittedFile(record: FileRecord) {
     if (EVALUATION_FILE_PURPOSES.includes(record.filePurpose)) throw new BadRequestException({ message: "Tệp hành chính đánh giá được giữ nguyên. Hãy tải lên phiên bản mới." });
     if (record.relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) {
+      // Biên bản hội đồng: quyền chủ tịch đã gồm trạng thái; có kết quả thì đề tài rời `pending_acceptance` và biên bản bị ghim.
+      if (record.filePurpose === ACCEPTANCE_MINUTES) return;
       if ((await this.findAcceptanceDossier(record.relatedEntityId)).status !== ACCEPTANCE_DOSSIER_DRAFT) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Hồ sơ nghiệm thu đã nộp được giữ nguyên." });
       return;
     }
@@ -312,7 +316,7 @@ export class FilesService {
     if (!this.transactional) { const file = await this.findReadableFile(actor, fileId); const projectId = await this.mutationProjectId(file); return projectId ? this.mutateProject(actor, projectId, input.contextVersion, (s, a) => s.updateFile(a, fileId, input)) : this.mutate(actor, file.relatedEntityId, input.contextVersion, (s, a) => s.updateFile(a, fileId, input)); }
     const record = await this.findReadableFile(actor, fileId);
     // Chỉ chứng từ kinh phí xét quyền theo mục đích; tệp hành chính đánh giá giữ cổng tải tệp hồ sơ (thư ký bị từ chối trước khi xét bất biến).
-    await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId, record.filePurpose === FUNDING_VOUCHER_PURPOSE ? record.filePurpose : undefined);
+    await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId, [FUNDING_VOUCHER_PURPOSE, ACCEPTANCE_MINUTES].includes(record.filePurpose) ? record.filePurpose : undefined);
     await this.assertProjectFileOwnership(actor, record, true);
     await this.assertUnsubmittedFile(record);
     const updated = (await this.prisma.fileRecord.update({
@@ -347,7 +351,7 @@ export class FilesService {
     if (!this.transactional) { const file = await this.findReadableFile(actor, fileId); const projectId = await this.mutationProjectId(file); return projectId ? this.mutateProject(actor, projectId, contextVersion, (s, a) => s.deleteFile(a, fileId, contextVersion)) : this.mutate(actor, file.relatedEntityId, contextVersion, (s, a) => s.deleteFile(a, fileId, contextVersion)); }
     const record = await this.findReadableFile(actor, fileId);
     // Chỉ chứng từ kinh phí xét quyền theo mục đích; tệp hành chính đánh giá giữ cổng tải tệp hồ sơ (thư ký bị từ chối trước khi xét bất biến).
-    await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId, record.filePurpose === FUNDING_VOUCHER_PURPOSE ? record.filePurpose : undefined);
+    await this.assertCanUpload(actor, record.relatedEntityType, record.relatedEntityId, [FUNDING_VOUCHER_PURPOSE, ACCEPTANCE_MINUTES].includes(record.filePurpose) ? record.filePurpose : undefined);
     await this.assertProjectFileOwnership(actor, record, true);
     await this.assertUnsubmittedFile(record);
     const deleted = (await this.prisma.fileRecord.update({
@@ -433,7 +437,8 @@ export class FilesService {
   /** Trả quan hệ của actor để ghi audit. Tệp hành chính đánh giá bị chặn sửa/xóa ở `assertUnsubmittedFile`. */
   private async assertCanUpload(actor: SafeUserContext, relatedEntityType: string, relatedEntityId: string, filePurpose?: string): Promise<string | undefined> {
     if (relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) {
-      const denial = ethicsCapabilityError((await this.acceptanceCapability(actor, relatedEntityId)).capability, "acceptance-dossier.contribute");
+      // Story 6.9: biên bản họp hội đồng chỉ chủ tịch hội đồng đã thành lập, khi đề tài chưa có kết quả (cùng quyền ghi kết quả).
+      const denial = ethicsCapabilityError((await this.acceptanceCapability(actor, relatedEntityId)).capability, filePurpose === ACCEPTANCE_MINUTES ? "acceptance-council.record-result" : "acceptance-dossier.contribute");
       if (denial) throw denial;
       return;
     }
@@ -532,7 +537,7 @@ export class FilesService {
   private async assertProjectFileOwnership(actor: SafeUserContext, record: FileRecord, mutate: boolean) {
     // Hồ sơ nghiệm thu: người đóng góp chỉ sửa/xóa tệp của mình; xem theo `acceptance-dossier.read`.
     if (record.relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) {
-      if (mutate && record.uploadedById !== actor.id && !isPiViewer((await this.acceptanceCapability(actor, record.relatedEntityId)).capability)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
+      if (mutate && record.filePurpose !== ACCEPTANCE_MINUTES && record.uploadedById !== actor.id && !isPiViewer((await this.acceptanceCapability(actor, record.relatedEntityId)).capability)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
       return;
     }
     // Chứng từ kinh phí: quyền theo kinh phí (đọc: canReadFundingVouchers, sửa/xoá: assertCanUpload → canWrite), không theo người tải.
@@ -576,7 +581,7 @@ export class FilesService {
   /** Quyền trên tệp hồ sơ nghiệm thu đi theo capability `acceptance-dossier.*` của đề tài nguồn. */
   private async acceptanceCapability(actor: SafeUserContext, dossierId: string) {
     const dossier = await this.findAcceptanceDossier(dossierId);
-    return new ApprovedProjectsService(this.prisma, this.auditLog).loadAuthorized(this.prisma, actor, dossier.projectId);
+    return new ApprovedProjectsService(this.prisma, this.auditLog).loadAuthorized(this.prisma, actor, dossier.projectId, { dossierReader: true });
   }
 
   /** Tệp hồ sơ nghiệm thu đổi: ghi lịch sử đề tài (chỉ id/purpose) và tăng context để client cũ không nộp nhầm. */

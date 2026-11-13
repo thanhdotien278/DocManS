@@ -22,3 +22,5 @@ _bmad-output/qa-evidence/
 
 # Archify: sơ đồ sinh ra
 .archify/
+
+.playwright-mcp/

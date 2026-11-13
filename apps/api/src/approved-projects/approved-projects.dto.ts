@@ -1,4 +1,5 @@
 import { BadRequestException, type PipeTransform } from "@nestjs/common";
+import { ACCEPTANCE_COUNCIL_ROLES } from "./acceptance-council.service.js";
 import { readCode, readDate, readOptionalDate, readOptionalText, readText } from "../proposals-shared/proposal-validation.js";
 
 export class ProjectMutationDto { contextVersion?: unknown; }
@@ -85,6 +86,27 @@ export const projectFundingPipe: PipeTransform<unknown, ProjectMutationDto> = { 
 export const projectLiquidationPipe: PipeTransform<unknown, ProjectMutationDto> = { transform(value) {
   const input = record(value);
   return { report: readText(input.report, "report", 10000), recoveredAmount: input.recoveredAmount ?? 0, fileRecordIds: ids(input.fileRecordIds, "fileRecordIds"), contextVersion: context(input) } as ProjectMutationDto;
+} };
+
+// Story 6.9: hội đồng nghiệm thu. Nhận xét/biên bản của kết quả kiểm trong service (READINESS_INCOMPLETE).
+export const acceptanceCouncilInvitePipe: PipeTransform<unknown, ProjectMutationDto> = { transform(value) {
+  const input = record(value);
+  const councilRole = readCode(input.councilRole, "councilRole");
+  if (!(ACCEPTANCE_COUNCIL_ROLES as readonly string[]).includes(councilRole)) throw new BadRequestException({ message: "Chọn vị trí trong hội đồng." });
+  return { userId: readText(input.userId, "userId", 80), councilRole, contextVersion: context(input) } as ProjectMutationDto;
+} };
+export const acceptanceCouncilRespondPipe: PipeTransform<unknown, ProjectMutationDto> = { transform(value) {
+  const input = record(value);
+  if (input.decision !== "accept" && input.decision !== "decline") throw new BadRequestException({ message: "Chọn chấp nhận hoặc từ chối lời mời." });
+  const reason = readOptionalText(input.reason, "reason", 2000);
+  if (input.decision === "decline" && !reason) throw new BadRequestException({ code: "DECLINE_REASON_REQUIRED", message: "Nhập lý do từ chối lời mời." });
+  return { decision: input.decision, reason } as ProjectMutationDto;
+} };
+export const acceptanceResultPipe: PipeTransform<unknown, ProjectMutationDto> = { transform(value) {
+  const input = record(value);
+  if (input.outcome !== "accepted" && input.outcome !== "failed") throw new BadRequestException({ message: "Kết quả nghiệm thu chỉ là đạt (accepted) hoặc không đạt (failed)." });
+  if (input.comment !== undefined && input.comment !== null && (typeof input.comment !== "string" || input.comment.length > 10000)) throw new BadRequestException({ message: "Nhận xét không hợp lệ." });
+  return { outcome: input.outcome, comment: input.comment ?? "", contextVersion: context(input) } as ProjectMutationDto;
 } };
 
 export function readRequestType(value: unknown) {

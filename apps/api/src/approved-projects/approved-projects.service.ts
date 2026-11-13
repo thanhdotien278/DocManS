@@ -14,6 +14,7 @@ import { recordParticipantWaiver } from "../proposal-evaluations/proposal-evalua
 import { assertProposalContext, isSerializationFailure } from "../proposals-shared/proposal-mutation.js";
 import { FUNDING_KINDS, assertFundingInvariant, fundingTotals, latestFunding, readApprovedBudget, readFundingAmount } from "./project-funding.js";
 import { notifyUsers } from "../notifications/notification-events.js";
+import { canFormCouncil, readCouncilFormationConfig } from "../proposals-shared/council-formation.js";
 import { projectContextVersion, projectViewerAuthorizationV1, PROJECT_STATUSES, TERMINAL_REQUEST_STATUSES, type ProjectOfficerFact } from "./project-capability-v1.js";
 
 const PREPARING = PROJECT_STATUSES.preparing;
@@ -31,7 +32,7 @@ const REQUEST_KIND: Record<string, ApprovalKind> = { [ADJUSTMENT]: "PROJECT_ADJU
 const APPRAISAL_STATUS: Record<string, string> = { [ADJUSTMENT]: "under_staff_review", [EXTENSION]: "under_staff_validation" };
 // Đã trình = có tờ trình PENDING; bước TB/TP/BGĐ đọc từ tờ trình, không đặt tên trạng thái mới.
 const SUBMITTED_FOR_SIGNATURE = "ready_for_head_decision";
-const SKIP_CONTEXT = Symbol("skip-context");
+export const SKIP_CONTEXT = Symbol("skip-context");
 const LIQUIDATABLE = [PROJECT_STATUSES.accepted, PROJECT_STATUSES.failed];
 
 type AnyRecord = Record<string, any>;
@@ -48,7 +49,8 @@ const PROJECT_INCLUDE = {
   history: { orderBy: { createdAt: "desc" } },
   liquidations: { orderBy: { createdAt: "desc" } },
   ethicsDossier: { select: { id: true, status: true, version: true, submittedAt: true } },
-  acceptanceDossier: { select: { id: true, status: true, version: true, submittedAt: true } }
+  acceptanceDossier: { select: { id: true, status: true, version: true, submittedAt: true } },
+  acceptanceCouncilMembers: { include: { user: { select: { id: true, displayName: true, username: true, unit: true, status: true } } }, orderBy: { invitedAt: "asc" } }
 };
 
 @Injectable()
@@ -116,13 +118,17 @@ export class ApprovedProjectsService {
     return participantPolicyFor(actor, await readParticipantPolicy(tx)).manage;
   }
 
-  private async assertNoEvaluationConflict(tx: any, userId: string, proposalId: string) {
+  async assertNoEvaluationConflict(tx: any, userId: string, proposalId: string) {
     const conflict = await new ProposalReviewAccessService(tx).resolveConflictForProposal(userId, proposalId);
     if (conflict.unresolved) throw new ConflictException({ code: "CONTEXT_UNRESOLVED" });
     if (conflict.isAssignedReviewer || conflict.hasPersistedReview) throw new ForbiddenException({ code: "CONFLICT_DENIED" });
   }
 
-  async loadAuthorized(tx: any, actor: SafeUserContext, projectId: string) {
+  /**
+   * Story 6.9, chỉ cho đường hội đồng nghiệm thu (người không có `project.read`): `dossierReader` mở khi có `acceptance-dossier.read`
+   * (thành viên đã nhận lời của hội đồng đã thành lập); `councilSeat` mở khi người xem có ghế hội đồng chưa thu hồi.
+   */
+  async loadAuthorized(tx: any, actor: SafeUserContext, projectId: string, options: { dossierReader?: boolean; councilSeat?: boolean } = {}) {
     const project = await tx.approvedProject.findUnique({ where: { id: projectId }, include: PROJECT_INCLUDE });
     if (!project) throw new NotFoundException({ message: "Không tìm thấy đề tài đã được duyệt." });
     const officer = await this.currentOfficer(tx, projectId);
@@ -131,11 +137,29 @@ export class ApprovedProjectsService {
     const participant = !!actorMember && actorMember.participationRole !== "TOPIC_PI";
     const participantManage = await this.participantManage(tx, actor);
     const responsibleMember = !!actorMember && project.milestones.some((milestone: AnyRecord) => milestone.responsibleMemberId === actorMember.id && milestone.status !== "completed");
-    const authorize = (item: AnyRecord = {}) => projectViewerAuthorizationV1({ actor, project: { ...project, ownerId: projectPi?.userId ?? "" }, projectOfficer: officer, participant: { isParticipant: participant, role: actorMember?.participationRole, effectiveFrom: actorMember?.effectiveFrom?.toISOString?.(), effectiveUntil: actorMember?.effectiveUntil?.toISOString?.() }, responsibleMember, participantManage, ...item });
-    const capability = authorize();
-    if (!capability.allowedActions.includes("project.read")) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Không có quyền xem đề tài này." });
     project.pendingApprovals = await tx.approvalSubmission.findMany({ where: { subjectType: "project", subjectId: projectId, status: "PENDING" } });
+    const acceptanceCouncil = await this.acceptanceCouncilFacts(tx, actor, project, officer, !!actorMember);
+    const authorize = (item: AnyRecord = {}) => projectViewerAuthorizationV1({ actor, project: { ...project, ownerId: projectPi?.userId ?? "" }, projectOfficer: officer, participant: { isParticipant: participant, role: actorMember?.participationRole, effectiveFrom: actorMember?.effectiveFrom?.toISOString?.(), effectiveUntil: actorMember?.effectiveUntil?.toISOString?.() }, responsibleMember, participantManage, acceptanceCouncil, ...item });
+    const capability = authorize();
+    const readable = capability.allowedActions.includes("project.read") || (options.dossierReader === true && capability.allowedActions.includes("acceptance-dossier.read")) || (options.councilSeat === true && acceptanceCouncil.seat !== null);
+    if (!readable) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Không có quyền xem đề tài này." });
     return { project, officer, capability, authorize };
+  }
+
+  /** Story 6.9: hàng hội đồng nghiệm thu chưa thu hồi. Cấu hình hỏng thì không ai lập được (đọc đề tài không bị 503). */
+  private async acceptanceCouncilFacts(tx: any, actor: SafeUserContext, project: AnyRecord, officer: ProjectOfficerFact | null, projectMember: boolean) {
+    const rows = (project.acceptanceCouncilMembers ?? []).filter((row: AnyRecord) => row.invitationStatus !== "revoked");
+    // Hàng đã từ chối không còn là ghế (không mở quyền xem, chỉ chờ thu hồi).
+    const seat = rows.find((row: AnyRecord) => row.userId === actor.id && ["invited", "accepted"].includes(row.invitationStatus));
+    const config = await readCouncilFormationConfig(tx, "ACCEPTANCE").catch(() => null);
+    const canForm = !!config && canFormCouncil(actor, config, project as { hostOrganizationUnitId: string }, officer?.officerUserId === actor.id).allowed;
+    return {
+      canForm,
+      seat: seat ? { councilRole: seat.councilRole, invitationStatus: seat.invitationStatus } : null,
+      established: rows.some((row: AnyRecord) => row.councilEstablishedAt),
+      pendingStage: (project.pendingApprovals ?? []).find((row: AnyRecord) => row.kind === "ACCEPTANCE_COUNCIL")?.stage ?? null,
+      projectMember
+    };
   }
 
   async listProjects(actor: SafeUserContext, options: { overdue?: boolean; approaching?: boolean } = {}) {
