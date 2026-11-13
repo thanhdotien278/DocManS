@@ -74,7 +74,7 @@ export function acceptanceDossierReadiness(project: AnyRecord, sections: AnyReco
   const present = new Set(files.map((file) => file.filePurpose));
   const missingFiles = ACCEPTANCE_REQUIRED_FILES.filter((code) => !present.has(code));
   const openRequests = (project.requests ?? []).filter((request: AnyRecord) => !TERMINAL_REQUEST_STATUSES.includes(request.status)).map((request: AnyRecord) => request.id);
-  const pendingReports = (project.reports ?? []).filter((report: AnyRecord) => ["submitted", "under_review"].includes(report.status)).map((report: AnyRecord) => report.id);
+  const pendingReports = (project.reports ?? []).filter((report: AnyRecord) => ["draft", "submitted", "under_review", "supplement_requested"].includes(report.status)).map((report: AnyRecord) => report.id);
   const ready = ![missingSections, missingMilestoneNotes, missingFiles, openRequests, pendingReports].some((list) => list.length);
   return { ready, missingSections, missingMilestoneNotes, missingFiles, openRequests, pendingReports };
 }

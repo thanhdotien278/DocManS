@@ -8,6 +8,7 @@ import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { decideProposal, isNotEntitled, loadProposalDecisionPackage, type ProposalDecisionPackage } from "@/lib/proposal-evaluations-api";
 import { getProposalAttachmentDownloadUrl } from "@/lib/research-proposals-api";
+import { formatVndNumber, parseVndNumber } from "@/lib/vietnamese-currency";
 
 function formatDate(value: string) {
   return value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "Chưa có";
@@ -27,6 +28,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
   const [note, setNote] = useState("");
   const [publicSummary, setPublicSummary] = useState("");
   const [requiredFollowUp, setRequiredFollowUp] = useState("");
+  const [approvedAmount, setApprovedAmount] = useState<number | undefined>(undefined);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busyDecision, setBusyDecision] = useState<"" | "approve" | "reject">("");
@@ -88,11 +90,12 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
 
     setBusyDecision(decision);
     try {
-      const result = await decideProposal(proposalId, decision, note.trim(), packageRevision, contextVersion, { publicSummary: publicSummary.trim(), requiredFollowUp: requiredFollowUp.trim() });
+      const result = await decideProposal(proposalId, decision, note.trim(), packageRevision, contextVersion, { publicSummary: publicSummary.trim(), requiredFollowUp: requiredFollowUp.trim(), ...(decision === "approve" && approvedAmount !== undefined ? { approvedAmount } : {}) });
       setMessage(`Đã ghi nhận quyết định: ${result.decision.decisionLabel}.`);
       setNote("");
       setPublicSummary("");
       setRequiredFollowUp("");
+      setApprovedAmount(undefined);
       await refresh();
       onDecision();
     } catch (thrown) {
@@ -249,6 +252,15 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
             maxLength={5000}
             value={requiredFollowUp}
             onChange={(event) => setRequiredFollowUp(event.target.value)}
+            disabled={!canDecide || !decisionPackage.canDecide}
+          />
+        </label>
+        <label className="field">
+          <span>Kinh phí phê duyệt (đồng; để trống thì giữ kinh phí dự kiến của hồ sơ)</span>
+          <input
+            inputMode="numeric"
+            value={formatVndNumber(approvedAmount)}
+            onChange={(event) => setApprovedAmount(parseVndNumber(event.target.value))}
             disabled={!canDecide || !decisionPackage.canDecide}
           />
         </label>
