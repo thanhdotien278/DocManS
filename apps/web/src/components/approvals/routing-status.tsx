@@ -46,6 +46,26 @@ export function RoutingStatus({ subjectType, subjectId, refreshKey, onChanged }:
 
   if (!submissions?.length) return null;
 
+  const status = (item: ApprovalSubmission, idPrefix: string) => (
+    <>
+      <span className="record-title">{item.status === "PENDING" ? item.stageLabel : item.statusLabel}</span>
+      {item.status !== "PENDING" && item.status !== "APPROVED" && item.lastNote ? <span className="record-meta">Lý do: {item.lastNote}</span> : null}
+      {item.actions.advance || item.actions.return ? (
+        <div>
+          <label className="record-meta" htmlFor={`${idPrefix}-${item.id}`}>Ghi chú / lý do trả lại</label>
+          <textarea id={`${idPrefix}-${item.id}`} value={notes[item.id] ?? ""} maxLength={2000} disabled={busy} onChange={(event) => setNotes({ ...notes, [item.id]: event.target.value })} />
+          {item.actions.advance ? <button type="button" className="button" disabled={busy} onClick={() => void act(item, "advance")}>{item.stage === "BOARD_REVIEW" ? "Chuyển Trưởng phòng" : "Trình Ban giám đốc"}</button> : null}
+          {item.actions.return ? <button type="button" className="button secondary" disabled={busy} onClick={() => void act(item, "return")}>Trả lại người lập</button> : null}
+        </div>
+      ) : null}
+    </>
+  );
+  const steps = (item: ApprovalSubmission) => item.steps.map((step, index) => (
+    <span key={index} className="record-meta" style={{ display: "block" }}>
+      {new Date(step.createdAt).toLocaleString("vi-VN")} · {ACTION_LABELS[step.action] ?? step.action} · {step.actorName}{step.note ? ` — ${step.note}` : ""}
+    </span>
+  ));
+
   return (
     <SectionCard title="Tờ trình qua Phòng KHQS" subtitle="Người lập → Trưởng ban QLKH → Trưởng phòng KHQS → Ban giám đốc">
       {error ? <p role="alert" className="field-error">{error}</p> : null}
@@ -61,29 +81,22 @@ export function RoutingStatus({ subjectType, subjectId, refreshKey, onChanged }:
                   <span className="record-title">{item.kindLabel}</span>
                   <span className="record-meta">Người ký: {item.signerLabel} · Người lập: {item.submittedByName}</span>
                 </td>
-                <td>
-                  <span className="record-title">{item.status === "PENDING" ? item.stageLabel : item.statusLabel}</span>
-                  {item.status !== "PENDING" && item.status !== "APPROVED" && item.lastNote ? <span className="record-meta">Lý do: {item.lastNote}</span> : null}
-                  {item.actions.advance || item.actions.return ? (
-                    <div>
-                      <label className="record-meta" htmlFor={`approval-note-${item.id}`}>Ghi chú / lý do trả lại</label>
-                      <textarea id={`approval-note-${item.id}`} value={notes[item.id] ?? ""} maxLength={2000} disabled={busy} onChange={(event) => setNotes({ ...notes, [item.id]: event.target.value })} />
-                      {item.actions.advance ? <button type="button" className="button" disabled={busy} onClick={() => void act(item, "advance")}>{item.stage === "BOARD_REVIEW" ? "Chuyển Trưởng phòng" : "Trình Ban giám đốc"}</button> : null}
-                      {item.actions.return ? <button type="button" className="button secondary" disabled={busy} onClick={() => void act(item, "return")}>Trả lại người lập</button> : null}
-                    </div>
-                  ) : null}
-                </td>
-                <td>
-                  {item.steps.map((step, index) => (
-                    <span key={index} className="record-meta" style={{ display: "block" }}>
-                      {new Date(step.createdAt).toLocaleString("vi-VN")} · {ACTION_LABELS[step.action] ?? step.action} · {step.actorName}{step.note ? ` — ${step.note}` : ""}
-                    </span>
-                  ))}
-                </td>
+                <td>{status(item, "approval-note")}</td>
+                <td>{steps(item)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="mobile-list">
+        {submissions.map((item) => (
+          <article className="list-card" key={item.id}>
+            <span className="record-title">{item.kindLabel}</span>
+            <span className="record-meta">Người ký: {item.signerLabel} · Người lập: {item.submittedByName}</span>
+            {status(item, "approval-note-mobile")}
+            <div>{steps(item)}</div>
+          </article>
+        ))}
       </div>
     </SectionCard>
   );
