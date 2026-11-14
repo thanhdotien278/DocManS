@@ -13,4 +13,9 @@ describe("routing status responsive layout", () => {
     const ids = [...source.matchAll(/id=\{`([^`]+)`\}/g)].map((match) => match[1]);
     assert.equal(ids.length, new Set(ids).size);
   });
+
+  it("moves focus to the success message when the clicked action disappears", () => {
+    assert.match(source, /document\.activeElement === document\.body\) statusRef\.current\?\.focus\(\)/);
+    assert.match(source, /role="status" ref=\{statusRef\} tabIndex=\{-1\}/);
+  });
 });

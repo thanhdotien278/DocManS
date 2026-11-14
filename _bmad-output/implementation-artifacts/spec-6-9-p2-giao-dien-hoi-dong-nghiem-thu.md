@@ -111,6 +111,9 @@ context:
 | 20 | vgap | Web và route `my-seats` không có test tự động | low | Không có harness web; đã chạy preview nhiều vai trò (CV, int2, TB/TP qua API, GĐ, chủ tịch), route `my-seats` chạy thật. |
 | 21 | vgap | `/my-reviews` nuốt lỗi tải ghế | low | Patch: hiện lỗi. |
 | 22 | preview | Breadcrumb "Chi tiết đề tài" với người chỉ có ghế dẫn tới trang 403 | low | Trang server không biết quyền; bỏ qua. |
+| 23 | codex vòng 3 (G6) | PI mở trang hội đồng gọi `approval-submissions/subject` bị 403 | medium | Đã sửa ở `65b3591` (cờ `readsApproval`). Kiểm lại 14/11/2026: tải trang của PI không còn gọi request này. |
+| 24 | codex vòng 3 (G2) | Tab trong hộp ký đi Hủy → Ký → `BODY` → Hủy | false | Hành vi gốc của `showModal()`: focus qua thanh trình duyệt, trang phía sau vẫn inert; guideline không đòi bẫy focus. Không sửa `ui/dialog.tsx`. |
+| 25 | kiểm 14/11 (G3) | Chuyển bước/trả lại ở "Tờ trình qua Phòng KHQS" làm focus rơi về `BODY`, không có thông báo thành công | medium | Patch `routing-status.tsx`: thêm thông báo `role="status"` và đưa focus về đó, cùng khuôn với panel hội đồng; test nguồn. |
 
 ## Verification
 
@@ -120,3 +123,4 @@ context:
 
 **Manual checks:**
 - Preview trên DB riêng: chạy hết luồng bằng các tài khoản CV phụ trách, người được mời, TB, TP, GĐ, chủ tịch; chụp màn hình mỗi vai trò.
+- Kiểm 14/11/2026 trên DB tạm `docmans_qa69` (đã xoá): G3 chỉ bàn phím TB chuyển, TP trình, GĐ ký (Esc đóng hộp, focus về nút mở), chủ tịch ghi kết quả — PASS sau patch #25; ô `<select>` kết quả đặt bằng `form_input` vì popup gốc macOS không nhận phím giả lập. G4: không có 4xx ngoài 401 sau logout cố ý; `ERR_BLOCKED_BY_ORB` của avatar là lỗi có sẵn ngoài 6.9. G1: 375px không tràn, không cắt chữ ở trạng thái đã có kết quả. G7 chưa rà từng dòng guideline.
