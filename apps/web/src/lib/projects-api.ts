@@ -18,7 +18,9 @@ export type ProjectRecord = {
 };
 
 export type FundingRecord = { entryId: string; version: number; kind: "GRANT" | "DISBURSEMENT" | "SETTLEMENT"; amount: string; recordedOn: string | null; note: string | null; fileRecordIds: string[]; recordedById: string; createdAt: string };
-export type FundingView = { restricted: boolean; records: FundingRecord[]; totals: { GRANT: number; DISBURSEMENT: number; SETTLEMENT: number } | null; canWrite: boolean };
+export type FundingView = { restricted: boolean; records: FundingRecord[]; totals: { GRANT: number; DISBURSEMENT: number; SETTLEMENT: number } | null; canWrite: boolean; increases?: FundingIncreaseView };
+export type FundingIncreaseView = { items: Array<{ id: string; amount: string; reason: string; status: string; decisionNote: string | null; authorName: string; fileRecordIds: string[]; createdAt: string; decidedAt: string | null }>; canPropose: boolean; signableId: string | null };
+export const FUNDING_INCREASE_STATUS_LABELS: Record<string, string> = { SUBMITTED: "Đang trình", RETURNED: "Bị trả lại", REJECTED: "Bị từ chối", SIGNED: "Giám đốc đã ký" };
 export type LiquidationView = { current: null | { id: string; status: string; outcome: string; report: string; decisionNote: string | null; decidedAt: string | null; recoveredAmount: string | null; approvedBudget: string | null; totalDisbursed: string | null; totalSettled: string | null; liquidationNumber: string | null; fileRecordIds: string[] }; eligible: boolean; canSign: boolean; canSubmit: boolean; note: string | null };
 export const FUNDING_KIND_LABELS: Record<string, string> = { GRANT: "Kinh phí được cấp", DISBURSEMENT: "Giải ngân", SETTLEMENT: "Quyết toán" };
 export const LIQUIDATION_STATUS_LABELS: Record<string, string> = { DRAFT: "Bản nháp", SUBMITTED: "Đang trình", SIGNED: "Đã ký", REJECTED: "Bị từ chối" };
@@ -31,15 +33,15 @@ const MILESTONE_STATUS_LABELS: Record<string, string> = { open: "Đang mở", co
 const ROLE_LABELS: Record<string, string> = { TOPIC_PI: "Chủ nhiệm đề tài", TOPIC_MEMBER: "Thành viên", TOPIC_SECRETARY: "Thư ký" };
 const MEMBER_STATUS_LABELS: Record<string, string> = { ACTIVE: "Đang tham gia", ENDED: "Đã kết thúc" };
 const HISTORY_ACTION_LABELS: Record<string, string> = {
-  "project.funding.record": "Ghi số liệu kinh phí", "project.liquidation.submit": "Trình biên bản thanh lý", "project.liquidation.approve": "Ký biên bản thanh lý", "project.liquidation.reject": "Từ chối biên bản thanh lý",
+  "project.funding.record": "Ghi số liệu kinh phí", "project.funding-increase.submit": "Lập đề nghị nâng kinh phí", "project.funding-increase.return": "Trả lại đề nghị nâng kinh phí", "project.funding-increase.approve": "Ký đề nghị nâng kinh phí", "project.funding-increase.reject": "Từ chối đề nghị nâng kinh phí", "project.liquidation.submit": "Trình biên bản thanh lý", "project.liquidation.approve": "Ký biên bản thanh lý", "project.liquidation.reject": "Từ chối biên bản thanh lý",
   "project.created": "Tạo đề tài", "project.officer.assign": "Phân công chuyên viên", "project.officer.revoke": "Thu hồi phân công chuyên viên",
   "project.setup.configure": "Thiết lập mốc", "project.setup.confirm": "Xác nhận bắt đầu thực hiện",
   "project.report.draft": "Tạo bản nháp báo cáo", "project.report.edit-draft": "Cập nhật báo cáo", "project.report.submit": "Nộp báo cáo",
   "project.report.review": "Bắt đầu xem xét báo cáo", "project.report.request-supplement": "Yêu cầu bổ sung báo cáo", "project.report.accept": "Chấp nhận báo cáo",
   "ethics-dossier.create": "Tạo hồ sơ đạo đức", "ethics-dossier.submit": "Nộp hồ sơ đạo đức",
-  "acceptance-dossier.create": "Tạo hồ sơ nghiệm thu", "acceptance-dossier.submit": "Nộp hồ sơ nghiệm thu",
+  "acceptance-dossier.create": "Tạo hồ sơ nghiệm thu", "acceptance-dossier.submit": "Nộp hồ sơ nghiệm thu", "acceptance-dossier.request-supplement": "Yêu cầu bổ sung hồ sơ nghiệm thu",
   "acceptance-dossier.file.upload": "Tải tệp hồ sơ nghiệm thu", "acceptance-dossier.file.metadata": "Cập nhật tệp hồ sơ nghiệm thu", "acceptance-dossier.file.delete": "Xóa tệp hồ sơ nghiệm thu",
-  "project.acceptance.submit": "Chuyển sang chờ nghiệm thu",
+  "project.acceptance.submit": "Chuyển sang chờ nghiệm thu", "project.acceptance.request-supplement": "Trả về thực hiện để bổ sung hồ sơ nghiệm thu",
   "acceptance-council.invite": "Mời thành viên hội đồng nghiệm thu", "acceptance-council.revoke": "Thu hồi lời mời hội đồng nghiệm thu",
   "acceptance-council.accept": "Nhận lời hội đồng nghiệm thu", "acceptance-council.decline": "Từ chối lời mời hội đồng nghiệm thu",
   "acceptance-council.submit": "Trình thành lập hội đồng nghiệm thu", "acceptance-council.reject": "Không phê duyệt hội đồng nghiệm thu",
@@ -166,6 +168,7 @@ export type AcceptanceDossierView = {
   dossier: null | {
     id: string; projectId: string; status: string; version: number; sections: AcceptanceSections; readOnly: boolean;
     createdAt: string; submittedAt: string | null; submittedBy: { id: string; displayName: string } | null;
+    supplementRequest: null | { reason: string; responseDeadline: string | null; requestedBy: { id: string; displayName: string } | null; requestedAt: string };
     milestones: Array<{ milestoneId: string; title: string; dueDate: string | null; status: string; note: string | null }>;
     readiness: AcceptanceMissing & { ready: boolean };
     files: Array<{ id: string; filePurpose: string; fileName: string; uploadedById: string; createdAt: string; canDelete: boolean }>;
@@ -175,7 +178,7 @@ export type AcceptanceDossierView = {
 export const ACCEPTANCE_SECTION_LABELS: Record<string, string> = { results: "1. Kết quả đạt được so với mục tiêu", products: "2. Danh sách sản phẩm", summary: "3. Tóm tắt báo cáo tổng kết", milestoneNotes: "4. Giải trình mốc chưa hoàn thành" };
 export const ACCEPTANCE_MINUTES = "ACCEPTANCE_MINUTES";
 export const ACCEPTANCE_FILE_LABELS: Record<string, string> = { ACCEPTANCE_FINAL_REPORT: "Báo cáo tổng kết", ACCEPTANCE_PRODUCT_EVIDENCE: "Minh chứng sản phẩm", ACCEPTANCE_OTHER: "Tài liệu khác", ACCEPTANCE_CONTRIBUTION: "Tệp đóng góp của thành viên", [ACCEPTANCE_MINUTES]: "Biên bản họp hội đồng" };
-export const acceptanceDossierStatusLabel = ethicsDossierStatusLabel;
+export const acceptanceDossierStatusLabel = (value: string) => value === "supplement_requested" ? "Cần bổ sung" : ethicsDossierStatusLabel(value);
 
 const acceptancePath = (projectId: string) => `/projects/${projectId}/acceptance-dossier`;
 type AcceptanceBody = { acceptanceDossier: AcceptanceDossierView };
@@ -183,7 +186,8 @@ export async function getAcceptanceDossier(projectId: string) { return (await js
 export async function createAcceptanceDossier(projectId: string, contextVersion: unknown) { return (await json<AcceptanceBody>(acceptancePath(projectId), { method: "POST", body: JSON.stringify({ contextVersion }) })).acceptanceDossier; }
 export async function saveAcceptanceSection<K extends AcceptanceSectionKey>(projectId: string, section: K, value: AcceptanceSections[K], contextVersion: unknown) { return (await json<AcceptanceBody>(acceptancePath(projectId), { method: "PATCH", body: JSON.stringify({ section, value, contextVersion }) })).acceptanceDossier; }
 export async function submitAcceptanceDossier(projectId: string, contextVersion: unknown) { return (await json<AcceptanceBody>(`${acceptancePath(projectId)}/submit`, { method: "POST", body: JSON.stringify({ contextVersion }) })).acceptanceDossier; }
-export const uploadAcceptanceFile = (dossierId: string, file: File, purpose: string, contextVersion: unknown) => uploadEthicsFile(dossierId, file, purpose, contextVersion, "acceptance_dossier");
+export async function requestAcceptanceSupplement(projectId: string, reason: string, responseDeadline: string, contextVersion: unknown) { return (await json<AcceptanceBody>(`${acceptancePath(projectId)}/supplement`, { method: "POST", body: JSON.stringify({ reason, responseDeadline, contextVersion }) })).acceptanceDossier; }
+export const uploadAcceptanceFile =(dossierId: string, file: File, purpose: string, contextVersion: unknown) => uploadEthicsFile(dossierId, file, purpose, contextVersion, "acceptance_dossier");
 
 // Story 6.9 — hội đồng nghiệm thu. Capability của view chỉ gồm các action `acceptance-council.*`.
 export type AcceptanceCouncilRole = "council_chair" | "council_secretary" | "committee_member";

@@ -316,8 +316,11 @@
   summary: (ĐÃ LÀM 12/11/2026, spec `spec-6-9-p2-giao-dien-hoi-dong-nghiem-thu.md`) Story 6.9 phần 2, giao diện web hội đồng nghiệm thu (mời, nhận lời, trình tờ trình, chủ tịch ghi kết quả kèm biên bản), theo khuôn hội đồng đánh giá đề xuất.
   evidence: Người dùng chọn tách UI ngày 2026-11-12 vì spec vượt 1600 token, giống 6.8.
 - source_spec: `_bmad-output/implementation-artifacts/spec-6-9-hoi-dong-va-ket-qua-nghiem-thu.md`
-  summary: CV yêu cầu bổ sung hồ sơ nghiệm thu đã nộp (hồ sơ về draft, đề tài về executing, PI nộp lại snapshot v2) theo AC Story 6.9.
+  summary: (ĐÃ LÀM phần backend 13/11/2026, spec `spec-6-9-p3-yeu-cau-bo-sung-ho-so-nghiem-thu.md`; giao diện ở mục p3 bên dưới) CV yêu cầu bổ sung hồ sơ nghiệm thu đã nộp (hồ sơ về supplement_requested, đề tài về executing, PI nộp lại snapshot v2) theo AC Story 6.9.
   evidence: Người dùng chọn tách story riêng ngày 2026-11-12; spec 6.8 cũng để ngoài phạm vi.
 - source_spec: `_bmad-output/implementation-artifacts/spec-6-9-hoi-dong-va-ket-qua-nghiem-thu.md`
   summary: (ĐÃ LÀM 12/11/2026) Chưa có test cho `acceptance-council.sign` trong `allowedActions` (GĐ ở bước LEADERSHIP thấy, PGĐ-KH có ghế không thấy).
   evidence: Review 6.9 (verification-gap) — chưa có người dùng capability này cho tới giao diện phần 2; thêm test khi làm UI.
+- source_spec: `_bmad-output/implementation-artifacts/spec-6-9-p3-yeu-cau-bo-sung-ho-so-nghiem-thu.md`
+  summary: (ĐÃ LÀM 13/11/2026; đã thử trên trình duyệt luồng CV yêu cầu → PI nộp lại v2) Giao diện yêu cầu bổ sung hồ sơ nghiệm thu: form lý do + hạn cho TP/TB/CV phụ trách, hộp lý do/hạn cho PI và sửa/nộp lại ở trạng thái `supplement_requested` trong `acceptance-dossier-workspace.tsx`.
+  evidence: Người dùng chọn tách UI ngày 2026-11-13 vì spec vượt 1600 token, giống 6.8/6.9.

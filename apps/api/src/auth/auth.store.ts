@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
@@ -5,6 +6,9 @@ import { notifyUsers } from "../notifications/notification-events.js";
 import { REGISTRATION_APPROVER_ROLES, SYSTEM_ROLES, type AuthSession, type InternalUser, type SafeUserContext, type SystemRole } from "./auth.types.js";
 
 const DEFAULT_SESSION_TIMEOUT_MINUTES = 720;
+
+// The session row id is the hash of the cookie token, so a leaked id (audit log, backup) cannot be replayed as a cookie.
+const sessionIdOf = (token: string) => createHash("sha256").update(token).digest("hex");
 
 export type ProfileDisplayRow = { fullName: string; rankCode: string | null; degreeCode: string | null; organization: string | null };
 
@@ -84,12 +88,14 @@ export class AuthStore {
       // QT chỉnh `session_timeout_minutes` (15–1440); áp dụng cho phiên tạo sau khi đổi.
       const timeout = Number((await tx.systemParameter.findUnique({ where: { key: "session_timeout_minutes" } }))?.value);
       const minutes = Number.isInteger(timeout) && timeout >= 15 && timeout <= 1440 ? timeout : DEFAULT_SESSION_TIMEOUT_MINUTES;
-      const session = await tx.session.create({ data: { userId, credentialVersion, expiresAt: new Date(Date.now() + minutes * 60 * 1000) } });
-      return this.toAuthSession(session);
+      const token = randomBytes(32).toString("base64url");
+      const session = await tx.session.create({ data: { id: sessionIdOf(token), userId, credentialVersion, expiresAt: new Date(Date.now() + minutes * 60 * 1000) } });
+      return { ...this.toAuthSession(session), token };
     });
   }
 
-  async revokeSession(sessionId: string) {
+  async revokeSession(sessionToken: string) {
+    const sessionId = sessionIdOf(sessionToken);
     const session = await this.prisma.session.findUnique({
       where: { id: sessionId }
     });
@@ -120,11 +126,11 @@ export class AuthStore {
     });
   }
 
-  async createPasswordResetToken(userId: string, createdById: string, tokenHash: string, expiresAt: Date) {
+  async createPasswordResetToken(userId: string, createdById: string, tokenHash: string, expiresAt: Date, invalidateExisting = true) {
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
       const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
-      await tx.passwordResetToken.updateMany({ where: { userId, usedAt: null }, data: { usedAt: new Date() } });
+      if (invalidateExisting) await tx.passwordResetToken.updateMany({ where: { userId, usedAt: null }, data: { usedAt: new Date() } });
       return tx.passwordResetToken.create({ data: { userId, createdById, tokenHash, expiresAt, credentialVersion: user.credentialVersion } });
     });
   }
@@ -136,6 +142,14 @@ export class AuthStore {
       await tx.accountActivationToken.updateMany({ where: { userId, usedAt: null }, data: { usedAt: new Date() } });
       return tx.accountActivationToken.create({ data: { userId, createdById, tokenHash, expiresAt, credentialVersion: user.credentialVersion } });
     });
+  }
+
+  async isPasswordResetTokenLive(tokenHash: string) {
+    return Boolean(await this.prisma.passwordResetToken.findFirst({ where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } }, select: { id: true } }));
+  }
+
+  async isAccountActivationTokenLive(tokenHash: string) {
+    return Boolean(await this.prisma.accountActivationToken.findFirst({ where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } }, select: { id: true } }));
   }
 
   async completePasswordReset(tokenHash: string, passwordHash: string) {
@@ -188,10 +202,10 @@ export class AuthStore {
     });
   }
 
-  async getActiveSession(sessionId: string) {
+  async getActiveSession(sessionToken: string) {
     const session = await this.prisma.session.findFirst({
       where: {
-        id: sessionId,
+        id: sessionIdOf(sessionToken),
         revokedAt: null,
         expiresAt: {
           gt: new Date()

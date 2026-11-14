@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
-import { acceptanceCouncilInvitePipe, acceptanceCouncilRespondPipe, acceptanceResultPipe, assignProjectOfficerPipe, createProjectPipe, ethicsSectionPipe, projectDecisionPipe, projectFundingPipe, projectLiquidationPipe, projectMutationPipe, projectReportPipe, projectReportReviewPipe, projectReportSubmissionPipe, projectRequestPipe, projectWithdrawPipe, readRequestType, revokeProjectOfficerPipe } from "./approved-projects.dto.js";
+import { acceptanceCouncilInvitePipe, acceptanceCouncilRespondPipe, acceptanceResultPipe, assignProjectOfficerPipe, createProjectPipe, ethicsSectionPipe, projectDecisionPipe, projectFundingIncreasePipe, projectFundingPipe, projectLiquidationPipe, projectMutationPipe, projectReportPipe, projectReportReviewPipe, projectReportSubmissionPipe, projectRequestPipe, projectWithdrawPipe, readRequestType, revokeProjectOfficerPipe } from "./approved-projects.dto.js";
 import { ApprovedProjectsService } from "./approved-projects.service.js";
 import { AcceptanceCouncilService } from "./acceptance-council.service.js";
 import { AcceptanceDossiersService } from "./acceptance-dossiers.service.js";
@@ -122,6 +122,9 @@ export class ApprovedProjectsController {
   @Post(":id/acceptance-dossier/submit")
   async submitAcceptanceDossier(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectMutationPipe) body: any) { return { acceptanceDossier: await this.acceptance.submit(req.currentUser!, id, body) }; }
 
+  @Post(":id/acceptance-dossier/supplement")
+  async requestAcceptanceDossierSupplement(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectReportReviewPipe) body: any) { return { acceptanceDossier: await this.acceptance.requestSupplement(req.currentUser!, id, body) }; }
+
   @Get(":id/acceptance-council")
   async acceptanceCouncil(@Req() req: RequestWithCurrentUser, @Param("id") id: string) { return { acceptanceCouncil: await this.council.getCouncil(req.currentUser!, id) }; }
 
@@ -154,6 +157,15 @@ export class ApprovedProjectsController {
 
   @Post(":id/funding")
   async recordFunding(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectFundingPipe) body: any) { return { funding: await this.projects.recordFunding(req.currentUser!, id, body) }; }
+
+  @Post(":id/funding-increases")
+  async submitFundingIncrease(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectFundingIncreasePipe) body: any) { return { increase: await this.projects.submitFundingIncrease(req.currentUser!, id, body) }; }
+
+  @Post(":id/funding-increases/:increaseId/approve")
+  async approveFundingIncrease(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("increaseId") increaseId: string, @Body(projectDecisionPipe) body: any) { return { increase: await this.projects.decideFundingIncrease(req.currentUser!, id, "approve", { ...body, increaseId }) }; }
+
+  @Post(":id/funding-increases/:increaseId/reject")
+  async rejectFundingIncrease(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("increaseId") increaseId: string, @Body(projectDecisionPipe) body: any) { return { increase: await this.projects.decideFundingIncrease(req.currentUser!, id, "reject", { ...body, increaseId }) }; }
 
   @Post(":id/liquidation")
   async submitLiquidation(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectLiquidationPipe) body: any) { return { liquidation: await this.projects.submitLiquidation(req.currentUser!, id, body) }; }

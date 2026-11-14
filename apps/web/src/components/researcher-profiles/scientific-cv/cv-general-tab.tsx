@@ -54,7 +54,7 @@ type CvGeneralTabProps = {
 };
 
 // Only same-origin paths and inline images: an external URL would let its host see every viewer's IP.
-export const PORTRAIT_PREVIEW = /^(\/(?!\/)|data:image\/(jpeg|png|webp);base64,)/;
+export const PORTRAIT_PREVIEW = /^data:image\/(jpeg|png|webp);base64,/;
 const PORTRAIT_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 // Same comparison key as the API's normalizeResearcherKey (unique per profile), so near-duplicates never reach the server.

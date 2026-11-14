@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { SectionCard } from "@/components/ui/section-card";
 import {
   ACCEPTANCE_FILE_LABELS, ACCEPTANCE_MINUTES, ACCEPTANCE_SECTION_LABELS, acceptanceDossierStatusLabel, createAcceptanceDossier, deleteEthicsFile, ethicsCan, ethicsDenial,
-  getAcceptanceDossier, milestoneStatusLabel, projectFileUrl, projectStatusLabel, saveAcceptanceSection, submitAcceptanceDossier, uploadAcceptanceFile,
+  getAcceptanceDossier, milestoneStatusLabel, projectFileUrl, projectStatusLabel, requestAcceptanceSupplement, saveAcceptanceSection, submitAcceptanceDossier, uploadAcceptanceFile,
   type AcceptanceDossierView, type AcceptanceMissing, type AcceptanceSectionKey, type AcceptanceSections
 } from "@/lib/projects-api";
 
@@ -23,6 +23,7 @@ export function AcceptanceDossierWorkspace({ projectId }: { projectId: string })
   const [drafts, setDraftState] = useState<AcceptanceSections | null>(null);
   // Cards with unsaved edits; every other card mirrors the latest server view.
   const [dirty, setDirty] = useState<Set<AcceptanceSectionKey>>(new Set());
+  const [supplement, setSupplement] = useState({ reason: "", responseDeadline: "" });
   const dossier = view?.dossier ?? null;
   const setNoticeText = (text: string, error = true) => setNotice(text ? { text, error } : null);
   function setDrafts(next: AcceptanceSections) {
@@ -85,7 +86,10 @@ export function AcceptanceDossierWorkspace({ projectId }: { projectId: string })
     return <div className="form-section-inline">{status}{back}<SectionCard title="Hồ sơ nghiệm thu" subtitle={`Đề tài: ${projectStatusLabel(view.projectStatus)}`}><p>Đề tài chưa có hồ sơ nghiệm thu.</p><button className="button primary" disabled={busy || !canCreate} onClick={() => void act(() => createAcceptanceDossier(projectId, view.contextVersion), "Tạo hồ sơ nghiệm thu cho đề tài này?")}>Tạo hồ sơ nghiệm thu</button>{!canCreate ? <p>{ethicsDenial(view, "acceptance-dossier.create")}</p> : null}</SectionCard></div>;
   }
 
-  const draft = dossier.status === "draft";
+  // Hồ sơ cần bổ sung (6.9 phần 3) sửa và nộp lại như bản nháp.
+  const draft = dossier.status === "draft" || dossier.status === "supplement_requested";
+  const request = dossier.supplementRequest;
+  const canRequestSupplement = ethicsCan(view, "acceptance-dossier.request-supplement");
   const editable = !dossier.readOnly && !!drafts;
   // Theo readOnly của server, không theo `drafts` (còn null ở lượt render đầu) để PI không bị coi là người đóng góp.
   const contributor = draft && dossier.readOnly && ethicsCan(view, "acceptance-dossier.contribute");
@@ -116,6 +120,17 @@ export function AcceptanceDossierWorkspace({ projectId }: { projectId: string })
       {contributor ? <p>Bạn chỉ được đóng góp tệp vào mục &quot;{ACCEPTANCE_FILE_LABELS.ACCEPTANCE_CONTRIBUTION}&quot;. Chủ nhiệm soạn các mục và nộp hồ sơ.</p> : null}
       {draft && dossier.readOnly && !contributor ? <p>Bạn chỉ được xem hồ sơ này. {ethicsDenial(view, "acceptance-dossier.edit")}</p> : null}
     </SectionCard>
+
+    {request ? <SectionCard title="Yêu cầu bổ sung hồ sơ" subtitle={`${request.requestedBy?.displayName ?? "Phòng KHQS"} · ${date(request.requestedAt)} · hạn bổ sung ${date(request.responseDeadline)}`}>
+      <p>{request.reason}</p>
+      <p>Chủ nhiệm sửa hồ sơ theo yêu cầu rồi nộp lại; đề tài trở về chờ nghiệm thu sau khi nộp lại.</p>
+    </SectionCard> : null}
+
+    {canRequestSupplement ? <SectionCard title="Yêu cầu bổ sung" subtitle="Trả hồ sơ đã nộp cho chủ nhiệm bổ sung trước khi trình hội đồng nghiệm thu.">
+      <label className="field"><span>Lý do / nội dung cần bổ sung</span><textarea maxLength={2000} value={supplement.reason} onChange={(event) => setSupplement({ ...supplement, reason: event.target.value })} /></label>
+      <label className="field"><span>Hạn bổ sung</span><input type="date" value={supplement.responseDeadline} onChange={(event) => setSupplement({ ...supplement, responseDeadline: event.target.value })} /></label>
+      <div className="button-row"><button className="button" type="button" disabled={busy || !supplement.reason.trim() || !supplement.responseDeadline} onClick={() => void act(async () => { const next = await requestAcceptanceSupplement(projectId, supplement.reason.trim(), supplement.responseDeadline, view.contextVersion); setSupplement({ reason: "", responseDeadline: "" }); setNoticeText("Đã gửi yêu cầu bổ sung cho chủ nhiệm.", false); return next; }, "Yêu cầu chủ nhiệm bổ sung hồ sơ? Đề tài sẽ trở về đang thực hiện cho tới khi chủ nhiệm nộp lại.")}>Yêu cầu bổ sung</button></div>
+    </SectionCard> : null}
 
     {textCard("results")}
 
@@ -160,6 +175,7 @@ export function AcceptanceDossierWorkspace({ projectId }: { projectId: string })
       {dossier.readiness.ready ? <p>Hồ sơ đã đủ điều kiện nộp.</p> : <><p>Hồ sơ chưa đủ điều kiện nộp.</p>{missingList(dossier.readiness)}</>}
       {missing ? <div role="alert"><p>Không nộp được vì hồ sơ còn thiếu:</p>{missingList(missing)}</div> : null}
       {canSubmit ? <div className="button-row"><button className="button primary" type="button" disabled={busy} onClick={() => void act(() => submitAcceptanceDossier(projectId, view.contextVersion), "Nộp hồ sơ nghiệm thu? Sau khi nộp, hồ sơ chỉ còn chế độ xem và đề tài chuyển sang chờ nghiệm thu.")}>Nộp hồ sơ</button></div> : <p>{ethicsDenial(view, "acceptance-dossier.submit")}</p>}
-    </SectionCard> : <SectionCard title="Các phiên bản đã nộp">{!dossier.submissions.length ? <p>Chưa có phiên bản đã nộp.</p> : <table><thead><tr><th>Phiên bản</th><th>Ngày nộp</th><th>Số tệp</th></tr></thead><tbody>{dossier.submissions.map((row) => <tr key={row.id}><td>Phiên bản {row.version}</td><td>{date(row.submittedAt)}</td><td>{row.snapshot.files?.length ?? 0}</td></tr>)}</tbody></table>}</SectionCard>}
+    </SectionCard> : null}
+    {!draft || dossier.submissions.length ? <SectionCard title="Các phiên bản đã nộp">{!dossier.submissions.length ? <p>Chưa có phiên bản đã nộp.</p> : <table><thead><tr><th>Phiên bản</th><th>Ngày nộp</th><th>Số tệp</th></tr></thead><tbody>{dossier.submissions.map((row) => <tr key={row.id}><td>Phiên bản {row.version}</td><td>{date(row.submittedAt)}</td><td>{row.snapshot.files?.length ?? 0}</td></tr>)}</tbody></table>}</SectionCard> : null}
   </div>;
 }

@@ -6,6 +6,8 @@ export type ApproveRegistrationDto = { organizationUnitId: string; accountType: 
 export type RejectRegistrationDto = { reason: string };
 
 const USERNAME_PATTERN = /^[a-z0-9._-]{3,32}$/;
+// Họ tên đi vào email và hồ sơ: một dòng, chỉ chữ cái, khoảng trắng và . ' -
+const FULL_NAME_PATTERN = /^[\p{L}\p{M} .'-]+$/u;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function objectInput(value: unknown) {
@@ -32,7 +34,9 @@ export const registerPipe: PipeTransform<unknown, RegisterDto> = {
     const username = text(input, "username", 32, "Tên đăng nhập phải có 3–32 ký tự gồm chữ thường, số, dấu chấm, gạch dưới hoặc gạch ngang.").toLowerCase();
     // Không cho username dạng email: login tra cứu cả username và email bằng cùng một ô nhập.
     if (!USERNAME_PATTERN.test(username)) throw new BadRequestException({ message: "Tên đăng nhập phải có 3–32 ký tự gồm chữ thường, số, dấu chấm, gạch dưới hoặc gạch ngang." });
-    return { email, username, fullName: text(input, "fullName", 160, "Họ tên là bắt buộc, tối đa 160 ký tự."), accountType: accountType(input.accountType) };
+    const fullName = text(input, "fullName", 160, "Họ tên là bắt buộc, tối đa 160 ký tự.");
+    if (!FULL_NAME_PATTERN.test(fullName)) throw new BadRequestException({ message: "Họ tên chỉ gồm chữ cái, khoảng trắng và các dấu . ' -" });
+    return { email, username, fullName, accountType: accountType(input.accountType) };
   }
 };
 

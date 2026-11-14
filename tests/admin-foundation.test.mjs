@@ -350,15 +350,23 @@ describe("admin foundation API behavior", () => {
       const result = await service.createUser(adminUser, {
         username: `new.user.${index}`,
         displayName: `New User ${index}`,
-        password: "ChangeMe123",
+        password: "ChangeMe1234",
         systemRole,
         organizationUnitId: "org-root"
       });
 
       assert.equal(result.username, `new.user.${index}`);
-      assert.equal(prisma.store.users[index].passwordHash, "hashed:ChangeMe123");
+      assert.equal(prisma.store.users[index].passwordHash, "hashed:ChangeMe1234");
       assert.equal(prisma.store.users[index].systemRole, systemRole);
+      // The administrator knows this password: the owner must replace it at first login.
+      assert.equal(prisma.store.users[index].mustChangePassword, true);
     }
+
+    // Admin-created accounts follow the same password policy as every other password.
+    await assert.rejects(
+      () => service.createUser(adminUser, { username: "weak.user", displayName: "Weak", password: "1234", systemRole: "RESEARCHER_INTERNAL_USER", organizationUnitId: "org-root" }),
+      { name: "BadRequestException" }
+    );
 
     assert.equal(prisma.store.organizationScopes.length, 5);
     assert.deepEqual(auditLog.records.map((record) => record.action), ["AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01", "AUD-ST-1.3-01"]);
@@ -367,7 +375,7 @@ describe("admin foundation API behavior", () => {
   it("Story 1.11: only one active account may hold RESEARCH_BOARD_HEAD", async () => {
     const prisma = createAdminPrisma();
     const service = new AdminUsersService(prisma, createAuditLog(), createPasswordService());
-    const input = { password: "ChangeMe123", systemRole: "RESEARCH_BOARD_HEAD", organizationUnitId: "org-root" };
+    const input = { password: "ChangeMe1234", systemRole: "RESEARCH_BOARD_HEAD", organizationUnitId: "org-root" };
 
     await service.createUser(adminUser, { ...input, username: "tb.one", displayName: "TB One" });
     await assert.rejects(() => service.createUser(adminUser, { ...input, username: "tb.two", displayName: "TB Two" }), { name: "ConflictException" });
@@ -375,6 +383,25 @@ describe("admin foundation API behavior", () => {
     prisma.store.users.push({ id: "other", username: "other", usernameKey: "other", displayName: "Other", status: "active", systemRole: "RESEARCHER_INTERNAL_USER", unit: "Học viện Quân y" });
     await assert.rejects(() => service.updateUser(adminUser, "other", { systemRole: "RESEARCH_BOARD_HEAD" }), { name: "ConflictException" });
     assert.equal(prisma.store.users.find((user) => user.id === "other").systemRole, "RESEARCHER_INTERNAL_USER");
+  });
+
+  it("keeps the last active SYSTEM_ADMIN and leaves pending registrations to the approval flow", async () => {
+    const prisma = createAdminPrisma();
+    const service = new AdminUsersService(prisma, createAuditLog(), createPasswordService());
+    const base = { displayName: "U", unit: "Học viện Quân y" };
+    prisma.store.users.push(
+      { ...base, id: "admin-1", username: "admin-1", usernameKey: "admin-1", status: "active", systemRole: "SYSTEM_ADMIN" },
+      { ...base, id: "pending", username: "pending", usernameKey: "pending", status: "pending_approval", systemRole: "RESEARCHER_INTERNAL_USER" }
+    );
+
+    await assert.rejects(() => service.updateUser(adminUser, "admin-1", { systemRole: "RESEARCHER_INTERNAL_USER" }), { name: "ConflictException" });
+    await assert.rejects(() => service.setUserStatus(adminUser, "admin-1", "disabled"), { name: "ConflictException" });
+    await assert.rejects(() => service.setUserStatus(adminUser, "pending", "active"), { name: "ConflictException" });
+    assert.deepEqual(prisma.store.users.map((user) => [user.systemRole, user.status]), [["SYSTEM_ADMIN", "active"], ["RESEARCHER_INTERNAL_USER", "pending_approval"]]);
+
+    prisma.store.users.push({ ...base, id: "admin-2", username: "admin-2", usernameKey: "admin-2", status: "active", systemRole: "SYSTEM_ADMIN" });
+    await service.setUserStatus(adminUser, "admin-1", "disabled");
+    assert.equal(prisma.store.users[0].status, "disabled");
   });
 
   it("Story 1.4: rolls back user creation when the initial organization scope cannot be written", async () => {
@@ -386,7 +413,7 @@ describe("admin foundation API behavior", () => {
       () => service.createUser(adminUser, {
         username: "scope.failure",
         displayName: "Scope Failure",
-        password: "ChangeMe123",
+        password: "ChangeMe1234",
         systemRole: "RESEARCHER_INTERNAL_USER",
         organizationUnitId: "org-root"
       }),
@@ -405,7 +432,7 @@ describe("admin foundation API behavior", () => {
       () => service.createUser(adminUser, {
         username: "invalid.role",
         displayName: "Invalid Role",
-        password: "ChangeMe123",
+        password: "ChangeMe1234",
         systemRole: "reviewer",
         organizationUnitId: "org-root"
       }),
@@ -543,7 +570,7 @@ describe("admin foundation API behavior", () => {
       systemRole: "SYSTEM_ADMIN",
       unit: "Học viện Quân y",
       passwordHash: "secret"
-    });
+    }, { id: "other-admin", username: "other-admin", displayName: "Other Admin", status: "active", systemRole: "SYSTEM_ADMIN", unit: "Học viện Quân y" });
 
     await service.updateUser(adminUser, "target-user", {
       displayName: "Updated Target",
@@ -581,7 +608,7 @@ describe("admin foundation API behavior", () => {
       systemRole: "SYSTEM_ADMIN",
       unit: "Học viện Quân y",
       passwordHash: "secret"
-    });
+    }, { id: "other-admin", username: "other-admin", displayName: "Other Admin", status: "active", systemRole: "SYSTEM_ADMIN", unit: "Học viện Quân y" });
     prisma.store.organizationScopes.push({ userId: "target-user", organizationUnitId: "org-root", isPrimary: true });
     prisma.store.failNextScopeCreate = true;
 
@@ -759,6 +786,13 @@ describe("admin foundation API behavior", () => {
       () => configController.updateSystemParameter({ currentUser: adminUser }, { key: "session_timeout_minutes", value: "0", label: "Thời gian phiên" }),
       { name: "BadRequestException" }
     );
+    // Dung lượng tải lên: QT đặt theo MB, không vượt trần triển khai (mặc định 10 MB).
+    for (const value of ["0", "11", "2.5"]) {
+      await assert.rejects(
+        () => configController.updateSystemParameter({ currentUser: adminUser }, { key: "file_max_upload_mb", value, label: "Dung lượng tệp tải lên tối đa (MB)" }),
+        { name: "BadRequestException" }
+      );
+    }
     await assert.rejects(
       () => configController.updateSystemParameter({ currentUser: adminUser }, { key: "unknown_parameter", value: "1", label: "Không hỗ trợ" }),
       { name: "BadRequestException" }

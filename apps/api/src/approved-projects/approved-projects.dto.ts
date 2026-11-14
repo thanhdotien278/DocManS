@@ -83,6 +83,11 @@ export const projectFundingPipe: PipeTransform<unknown, ProjectMutationDto> = { 
   return { kind: readCode(input.kind, "kind"), amount: input.amount, recordedOn: readText(input.recordedOn, "recordedOn", 10), note: readOptionalText(input.note, "note", 2000), entryId: input.entryId === undefined ? undefined : readText(input.entryId, "entryId", 80), fileRecordIds: ids(input.fileRecordIds, "fileRecordIds") } as ProjectMutationDto;
 } };
 
+export const projectFundingIncreasePipe: PipeTransform<unknown, ProjectMutationDto> = { transform(value) {
+  const input = record(value);
+  return { amount: input.amount, reason: readText(input.reason, "reason", 1000), fileRecordIds: ids(input.fileRecordIds, "fileRecordIds"), contextVersion: context(input) } as ProjectMutationDto;
+} };
+
 export const projectLiquidationPipe: PipeTransform<unknown, ProjectMutationDto> = { transform(value) {
   const input = record(value);
   return { report: readText(input.report, "report", 10000), recoveredAmount: input.recoveredAmount ?? 0, fileRecordIds: ids(input.fileRecordIds, "fileRecordIds"), contextVersion: context(input) } as ProjectMutationDto;
