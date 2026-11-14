@@ -19,8 +19,9 @@ graphify-out/
 
 # Bằng chứng QA cục bộ (ảnh, JSON), không commit
 _bmad-output/qa-evidence/
-
 # Archify: sơ đồ sinh ra
 .archify/
-
 .playwright-mcp/
+outputs/
+.stitch/
+.superpowers/
