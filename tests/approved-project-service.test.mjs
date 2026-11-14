@@ -325,3 +325,69 @@ test("revoking the officer keeps the assignment reason on the officer row", asyn
   assert.equal(row.reason, "Phân công ban đầu");
   assert.ok(w.db.projectHistory.rows.some((item) => item.action === "project.officer.revoke" && item.reason === "Thu hồi"));
 });
+
+test("6.2: setup rejects a milestone before the project start date", async () => {
+  const w = world({ status: "preparing", milestones: [], checkpoints: [] });
+  await assert.rejects(w.service.configureSetup(actor("staff"), "p1", { milestones: [{ title: "Sớm", dueDate: "2025-12-01" }], checkpoints: [], contextVersion: await w.ctx() }), /thời gian đề tài/);
+});
+
+test("6.2: assigned CV edits ordinary milestones and checkpoints after activation; important or completed ones need an adjustment", async () => {
+  const w = world({
+    milestones: [
+      { id: "ms-1", projectId: "p1", title: "Quan trọng", description: null, dueDate: new Date("2029-01-01T00:00:00Z"), isImportant: true, position: 0, responsibleMemberId: "m-1", status: "open" },
+      { id: "ms-2", projectId: "p1", title: "Thường", description: null, dueDate: new Date("2028-06-01T00:00:00Z"), isImportant: false, position: 1, responsibleMemberId: null, status: "open" },
+      { id: "ms-3", projectId: "p1", title: "Xong", description: null, dueDate: new Date("2027-06-01T00:00:00Z"), isImportant: false, position: 2, responsibleMemberId: null, status: "completed" }],
+    checkpoints: [
+      { id: "cp-1", projectId: "p1", milestoneId: "ms-1", title: "Kỳ 1", dueDate: new Date("2028-01-01T00:00:00Z"), status: "open" },
+      { id: "cp-2", projectId: "p1", milestoneId: "ms-2", title: "Kỳ 2", dueDate: new Date("2028-06-01T00:00:00Z"), status: "open" }] });
+  const edit = async (who, kind, id, changes) => w.service.editPlanItem(actor(who), "p1", kind, id, { changes, contextVersion: await w.ctx() });
+  const before = { ...w.project() };
+
+  await edit("staff", "milestone", "ms-2", { title: "Thường mới", dueDate: "2028-07-01", responsibleMemberId: "m-1" });
+  const ms2 = w.db.projectMilestone.rows.find((row) => row.id === "ms-2");
+  assert.equal(ms2.title, "Thường mới");
+  assert.equal(ms2.dueDate.toISOString().slice(0, 10), "2028-07-01");
+  assert.equal(ms2.responsibleMemberId, "m-1");
+  assert.equal(w.project().aggregateVersion, before.aggregateVersion + 1);
+  assert.equal(w.project().relationshipVersion, before.relationshipVersion + 1);
+  assert.ok(w.db.projectHistory.rows.some((row) => row.action === "project.plan.maintain" && row.beforeFacts.title === "Thường" && row.afterFacts.title === "Thường mới"));
+
+  await edit("staff", "milestone", "ms-2", { responsibleMemberId: null });
+  assert.equal(w.db.projectMilestone.rows.find((row) => row.id === "ms-2").responsibleMemberId, null);
+  await edit("staff", "checkpoint", "cp-2", { dueDate: "2028-05-15" });
+  assert.equal(w.db.projectCheckpoint.rows.find((row) => row.id === "cp-2").dueDate.toISOString().slice(0, 10), "2028-05-15");
+  const relationship = w.project().relationshipVersion;
+  await edit("staff", "milestone", "ms-2", { description: "Ghi chú" });
+  assert.equal(w.project().relationshipVersion, relationship);
+
+  await assert.rejects(edit("staff", "milestone", "ms-1", { title: "X" }), code("ADJUSTMENT_SCOPE_DENIED"));
+  await assert.rejects(edit("staff", "milestone", "ms-3", { title: "X" }), code("ADJUSTMENT_SCOPE_DENIED"));
+  await assert.rejects(edit("staff", "checkpoint", "cp-1", { title: "X" }), code("ADJUSTMENT_SCOPE_DENIED"));
+  await assert.rejects(edit("staff", "milestone", "ms-2", { isImportant: true }), code("ADJUSTMENT_SCOPE_DENIED"));
+  await assert.rejects(edit("staff", "checkpoint", "cp-2", { responsibleMemberId: "m-1" }), code("ADJUSTMENT_SCOPE_DENIED"));
+  await assert.rejects(edit("staff", "milestone", "ms-2", { dueDate: "2030-02-01" }), code("EXTENSION_REQUIRED"));
+  await assert.rejects(edit("staff", "milestone", "ms-2", { dueDate: "2025-12-01" }), /thời gian đề tài/);
+  await assert.rejects(edit("staff", "milestone", "ms-2", { responsibleMemberId: "nobody" }), code("MEMBER_INELIGIBLE"));
+  for (const who of ["staff2", "head", "pi", "member"]) await assert.rejects(edit(who, "milestone", "ms-2", { title: "X" }), (error) => error?.getStatus?.() === 403);
+
+  w.project().status = "paused";
+  await edit("staff", "milestone", "ms-2", { title: "Khi tạm dừng" });
+  w.project().status = "pending_acceptance";
+  await assert.rejects(edit("staff", "milestone", "ms-2", { title: "X" }), code("WORKFLOW_STATE_DENIED"));
+});
+
+test("6.2: a checkpoint with a report keeps its due date; an ordinary-milestone edit does not stale a pending important-milestone adjustment", async () => {
+  const w = world({
+    milestones: [
+      { id: "ms-1", projectId: "p1", title: "Quan trọng", description: null, dueDate: new Date("2029-01-01T00:00:00Z"), isImportant: true, position: 0, responsibleMemberId: "m-1", status: "open" },
+      { id: "ms-2", projectId: "p1", title: "Thường", description: null, dueDate: new Date("2028-06-01T00:00:00Z"), isImportant: false, position: 1, responsibleMemberId: null, status: "open" }],
+    checkpoints: [{ id: "cp-free", projectId: "p1", milestoneId: null, title: "Tự do", dueDate: new Date("2028-01-01T00:00:00Z"), status: "open" }] });
+  await reportDraft(w, "cp-free");
+  await assert.rejects(w.service.editPlanItem(actor("staff"), "p1", "checkpoint", "cp-free", { changes: { dueDate: "2028-02-01" }, contextVersion: await w.ctx() }), code("WORKFLOW_STATE_DENIED"));
+  await w.service.editPlanItem(actor("staff"), "p1", "checkpoint", "cp-free", { changes: { title: "Tự do (đổi tên)" }, contextVersion: await w.ctx() });
+
+  const requestId = await adjustmentReady(w, { milestoneChanges: [{ id: "ms-1", dueDate: "2029-02-01" }] });
+  await w.service.editPlanItem(actor("staff"), "p1", "milestone", "ms-2", { changes: { dueDate: "2028-07-01" }, contextVersion: await w.ctx() });
+  await w.service.decideRequest(actor("director"), "p1", "adjustment", "approve", { requestId, contextVersion: await w.ctx() });
+  assert.equal(w.db.projectMilestone.rows.find((row) => row.id === "ms-1").dueDate.toISOString().slice(0, 10), "2029-02-01");
+});

@@ -343,6 +343,7 @@ export class ApprovedProjectsService {
         const responsibleMember = item?.responsibleMemberId ? project.members.find((member: AnyRecord) => member.id === item.responsibleMemberId && isRelationshipActiveAt(member, new Date())) : null;
         if (item?.responsibleMemberId && !responsibleMember) throw new BadRequestException({ message: "Thành viên phụ trách mốc không hợp lệ." });
         const dueDate = projectDay(item?.dueDate);
+        if (project.startDate && dueDate < project.startDate) throw new BadRequestException({ message: "Hạn mốc phải nằm trong thời gian đề tài." });
         if (project.endDate && dueDate > project.endDate) throw new BadRequestException({ code: "EXTENSION_REQUIRED" });
         const milestone = await tx.projectMilestone.create({ data: { projectId: project.id, title: requiredText(item?.title, "title"), description: optionalText(item?.description ?? null), dueDate, isImportant: item?.isImportant === true, position, responsibleMemberId: responsibleMember?.id ?? null, createdById: currentActor.id } });
         milestones.push(milestone);
@@ -360,6 +361,45 @@ export class ApprovedProjectsService {
       await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.setup.configure", reason: "Thiết lập mốc thực hiện", afterFacts: { milestones: input.milestones, checkpoints: input.checkpoints } } });
       await new AuditLogService(tx).record({ action: "configure-approved-project", result: "success", actorId: currentActor.id, targetEntity: "approved-project", targetEntityId: project.id, username: currentActor.username, afterFacts: { milestones: input.milestones, checkpoints: input.checkpoints } });
       return { milestones, checkpoints: await tx.projectCheckpoint.findMany({ where: { projectId: project.id } }) };
+    });
+  }
+
+  /** Story 6.2: CV phụ trách sửa mốc thường (không quan trọng, chưa hoàn thành) và điểm báo cáo mở không gắn mốc quan trọng khi đề tài đang thực hiện/tạm dừng. Mốc quan trọng vẫn đi qua điều chỉnh. */
+  async editPlanItem(actor: SafeUserContext, projectId: string, kind: "milestone" | "checkpoint", itemId: string, input: AnyRecord) {
+    return this.mutate(actor, projectId, input.contextVersion, async (tx, currentActor, project) => {
+      if (![EXECUTING, PROJECT_STATUSES.paused].includes(project.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Chỉ sửa mốc khi đề tài đang thực hiện hoặc tạm dừng." });
+      await this.assertOfficer(tx, currentActor, project, "maintain-project-plan");
+      const allowed = kind === "milestone" ? ["title", "description", "dueDate", "responsibleMemberId"] : ["title", "dueDate"];
+      const changes = input.changes;
+      if (!changes || typeof changes !== "object" || Array.isArray(changes) || !Object.keys(changes).length || Object.keys(changes).some((key) => !allowed.includes(key))) throw new BadRequestException({ code: "ADJUSTMENT_SCOPE_DENIED", message: "Nội dung sửa mốc không hợp lệ." });
+      const item = kind === "milestone" ? project.milestones.find((row: AnyRecord) => row.id === itemId) : project.checkpoints.find((row: AnyRecord) => row.id === itemId);
+      if (!item) throw new NotFoundException({ message: "Không tìm thấy mốc của đề tài." });
+      const linkedImportant = kind === "checkpoint" && project.milestones.some((row: AnyRecord) => row.id === item.milestoneId && row.isImportant);
+      if (item.status === "completed" || (kind === "milestone" && item.isImportant) || linkedImportant) throw new BadRequestException({ code: "ADJUSTMENT_SCOPE_DENIED", message: "Mốc quan trọng hoặc đã hoàn thành chỉ thay đổi qua yêu cầu điều chỉnh." });
+      // Báo cáo chốt hạn của điểm báo cáo khi lập; đổi hạn sau đó làm hai bên lệch nhau.
+      if (kind === "checkpoint" && changes.dueDate !== undefined && (project.reports ?? []).some((report: AnyRecord) => report.checkpointId === item.id && report.status !== REPORT_SUPERSEDED)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Điểm báo cáo đã có báo cáo; không đổi hạn được." });
+      const now = await readTransactionClockV1(tx);
+      const data: AnyRecord = {};
+      if (changes.title !== undefined) data.title = requiredText(changes.title, "title");
+      if (changes.description !== undefined) data.description = optionalText(changes.description);
+      if (changes.dueDate !== undefined) {
+        data.dueDate = projectDay(changes.dueDate);
+        if (project.startDate && data.dueDate < project.startDate) throw new BadRequestException({ message: "Hạn mốc phải nằm trong thời gian đề tài." });
+        if (project.endDate && data.dueDate > project.endDate) throw new BadRequestException({ code: "EXTENSION_REQUIRED", message: "Mốc vượt ngày kết thúc đề tài; cần gia hạn trước." });
+      }
+      if (changes.responsibleMemberId !== undefined) {
+        const member = changes.responsibleMemberId === null ? null : project.members.find((row: AnyRecord) => row.id === changes.responsibleMemberId && isRelationshipActiveAt(row, now));
+        if (changes.responsibleMemberId !== null && !member) throw new BadRequestException({ code: "MEMBER_INELIGIBLE", message: "Thành viên phụ trách mốc không hợp lệ." });
+        data.responsibleMemberId = member?.id ?? null;
+      }
+      const beforeFacts = Object.fromEntries(Object.keys(data).map((key) => [key, item[key] ?? null]));
+      const responsibilityChanged = "responsibleMemberId" in data && data.responsibleMemberId !== (item.responsibleMemberId ?? null);
+      const updated = kind === "milestone" ? await tx.projectMilestone.update({ where: { id: item.id }, data }) : await tx.projectCheckpoint.update({ where: { id: item.id }, data });
+      await tx.approvedProject.update({ where: { id: project.id }, data: { aggregateVersion: { increment: 1 }, ...(responsibilityChanged ? { relationshipVersion: { increment: 1 } } : {}), authorizationContextUpdatedAt: now } });
+      const facts = { before: { kind, id: item.id, ...beforeFacts }, after: { kind, id: item.id, ...data } };
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.plan.maintain", reason: optionalText(input.reason ?? null) ?? "Cập nhật mốc thực hiện", beforeFacts: facts.before, afterFacts: facts.after } });
+      await new AuditLogService(tx).record({ action: "maintain-approved-project-plan", result: "success", actorId: currentActor.id, targetEntity: "approved-project", targetEntityId: project.id, username: currentActor.username, beforeFacts: facts.before, afterFacts: facts.after });
+      return updated;
     });
   }
 

@@ -544,6 +544,7 @@ details remain in their governing stories.
 | Record disbursement, settlement (no direct `GRANT` write) | None | Assigned³ | Academy-wide | None | GĐ only | None | Audited |
 | Funding increase request | Read⁴ | Create | TB: create / review; TP: approve | None | GĐ only signs | None | `GRANT` total rises only on GĐ signature, atomically; audited |
 | Plan milestones/members during setup | Read | `project.setup.configure` for initial milestones/checkpoints/responsibilities; confirm | Read | Read | Read | Read | Confirm setup before execution |
+| Edit ordinary milestone/checkpoint after activation | Read | Assigned³: `project.plan.maintain` (title, description, due date, responsible member) while executing/paused | Read | Read | Read | Read | Not important, not completed, not linked to an important milestone; dates within the project period; history + audit (Story 6.2) |
 | Update own milestone progress | Own | Read | Read | Read | Read | Read | Members (NCV/NNB) on milestones they own⁴ |
 | Upload evidence | Own exact file grant | No PI-content overwrite | No PI-content overwrite | Metadata only | Metadata only | Metadata only | `project.evidence.contribute` for active member/secretary responsible for an open milestone; own unsubmitted file only; submitted links immutable |
 | Create/edit/submit/resubmit progress report | Own | Read submitted | Read | Read | Read | Read | Submitted revisions/evidence locked; return permits a new revision |
