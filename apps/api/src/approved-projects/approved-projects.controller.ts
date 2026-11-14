@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
-import { acceptanceCouncilInvitePipe, acceptanceCouncilRespondPipe, acceptanceResultPipe, assignProjectOfficerPipe, createProjectPipe, ethicsSectionPipe, projectDecisionPipe, projectFundingIncreasePipe, projectFundingPipe, projectLiquidationPipe, projectMutationPipe, projectReportPipe, projectReportReviewPipe, projectReportSubmissionPipe, projectRequestPipe, projectWithdrawPipe, readRequestType, revokeProjectOfficerPipe } from "./approved-projects.dto.js";
+import { acceptanceCouncilInvitePipe, acceptanceCouncilRespondPipe, acceptanceResultPipe, assignProjectOfficerPipe, createProjectPipe, ethicsSectionPipe, projectDecisionPipe, projectFundingIncreasePipe, projectFundingPipe, projectLiquidationPipe, projectMutationPipe, projectPlanItemPipe, projectReportPipe, projectReportReviewPipe, projectReportSubmissionPipe, projectRequestPipe, projectWithdrawPipe, readRequestType, revokeProjectOfficerPipe } from "./approved-projects.dto.js";
 import { ApprovedProjectsService } from "./approved-projects.service.js";
 import { AcceptanceCouncilService } from "./acceptance-council.service.js";
 import { AcceptanceDossiersService } from "./acceptance-dossiers.service.js";
@@ -49,6 +49,12 @@ export class ApprovedProjectsController {
 
   @Post(":id/setup/confirm")
   async confirm(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectMutationPipe) body: any) { return { project: await this.projects.confirmSetup(req.currentUser!, id, body) }; }
+
+  @Patch(":id/milestones/:itemId")
+  async editMilestone(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("itemId") itemId: string, @Body(projectPlanItemPipe) body: any) { return { milestone: await this.projects.editPlanItem(req.currentUser!, id, "milestone", itemId, body) }; }
+
+  @Patch(":id/checkpoints/:itemId")
+  async editCheckpoint(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("itemId") itemId: string, @Body(projectPlanItemPipe) body: any) { return { checkpoint: await this.projects.editPlanItem(req.currentUser!, id, "checkpoint", itemId, body) }; }
 
   @Post(":id/reports")
   async draftReport(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Body(projectReportPipe) body: any) { return { report: await this.projects.createReportDraft(req.currentUser!, id, body) }; }

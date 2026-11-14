@@ -46,6 +46,7 @@ export const PERMISSION_ACTION_IDS_V1 = [
   "project.monitor",
   "project.setup.confirm",
   "project.setup.configure",
+  "project.plan.maintain",
   "project.officer.assign",
   "project.officer.revoke",
   "project.report.draft",

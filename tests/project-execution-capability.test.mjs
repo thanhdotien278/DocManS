@@ -92,3 +92,12 @@ test("serialization failure from SELECT … FOR UPDATE (P2010/40001) returns 409
   const files = new FilesService(prisma, { putObject: async () => {} }, audit, {}, {}, { maxFileSizeBytes: 1024, allowedExtensions: [".pdf"] }, {});
   await assert.rejects(() => files.uploadFile(pi, { relatedEntityType: "approved_project", relatedEntityId: "project-1", contextVersion: {} }), conflict);
 });
+
+test("6.2: only the assigned CV maintains ordinary milestones, and only while executing or paused", () => {
+  const staff = actor("staff", "RESEARCH_MANAGEMENT_STAFF");
+  for (const status of ["executing", "paused"]) assert(has(projectViewerAuthorizationV1({ actor: staff, project: { ...project, status }, projectOfficer: officer }), "project.plan.maintain"), status);
+  for (const status of ["preparing", "pending_acceptance", "closed"]) assert(!has(projectViewerAuthorizationV1({ actor: staff, project: { ...project, status }, projectOfficer: officer }), "project.plan.maintain"), status);
+  assert(!has(projectViewerAuthorizationV1({ actor: actor("pi", "RESEARCHER_INTERNAL_USER"), project }), "project.plan.maintain"));
+  assert(!has(projectViewerAuthorizationV1({ actor: actor("head", "RESEARCH_MANAGEMENT_HEAD"), project }), "project.plan.maintain"));
+  assert(!has(projectViewerAuthorizationV1({ actor: staff, project }), "project.plan.maintain"), "unassigned CV");
+});

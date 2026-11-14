@@ -56,7 +56,16 @@ Members/secretaries receive only exact relationship/responsibility grants,
 including permitted evidence contributions, never formal PI submission or approval.
 Members (NCV/NNB) update progress only on milestones they are responsible for.
 The assigned CV configures initial milestones/checkpoints and their responsible
-project member before confirming setup. A member's contribution upload requires
+project member before confirming setup. During execution or pause the assigned
+CV may directly edit an ordinary (non-important, not completed) milestone's
+title, description, due date and responsible member (null allowed), and an open
+checkpoint not linked to an important milestone (title, due date); due dates
+stay within [startDate, endDate], each edit writes history and audit, and a
+responsibility change bumps `relationshipVersion` (Story 6.2). A pending
+request is not staled by such an edit, because its baseline covers only the
+important milestones, scope and members it touches. A checkpoint that already
+has a non-superseded report keeps its due date (the report pinned it).
+A member's contribution upload requires
 an active responsibility for an open milestone; members can change only their
 own unsubmitted contribution files.
 Enforce both directions of participant/management/evaluation incompatibility,
@@ -198,6 +207,7 @@ and request-specific actions:
 | `project.read`, `project.monitor`, `project.history.read` | Active PI/participant; assigned CV; GĐ, PGĐ-KH, TP, TB Academy-wide; PP, PGĐ-TD and unassigned CV in unit scope; the granted subset follows each role's disclosure |
 | `project.officer.assign`, `project.officer.revoke` | Scoped, conflict-free TP or TB |
 | `project.setup.configure`, `project.setup.confirm` | Assigned scoped CV; preparing project |
+| `project.plan.maintain` | Assigned scoped CV; executing or paused; ordinary milestones and open checkpoints not linked to an important milestone |
 | `project.evidence.contribute` | Active PI, or active member/secretary responsible for an open milestone during execution |
 | `project.report.draft`, `project.report.submit` | Active PI; own draft revision during execution |
 | `project.report.review`, `project.report.request-supplement` | Assigned scoped CV; submitted/under_review |
