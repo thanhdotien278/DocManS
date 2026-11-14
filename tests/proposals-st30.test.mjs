@@ -1,5 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { fileBytes } from "./helpers/file-bytes.mjs";
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { FilesService } from "../dist/apps/api/modules/files/files.service.js";
 import { ProposalIntakePeriodsService } from "../dist/apps/api/proposal-intake-periods/proposal-intake-periods.service.js";
@@ -477,7 +478,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     const token = async (user) => (await services.proposalService.getProposal(user, created.id)).viewerAuthorization.contextVersion;
     const upload = async (user, filePurpose) => services.filesService.uploadFile(user, {
       relatedEntityType: "research_proposal", relatedEntityId: created.id, contextVersion: await token(user), filePurpose,
-      fileName: "tep.pdf", originalFileName: "tep.pdf", mimeType: "application/pdf", sizeBytes: 512, content: Buffer.alloc(512, "m")
+      fileName: "tep.pdf", originalFileName: "tep.pdf", mimeType: "application/pdf", sizeBytes: 512, content: fileBytes(512)
     });
 
     const material = await upload(secretaryUser, "MEETING_MATERIAL");
@@ -632,7 +633,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
       description: "Thuyết minh đề tài",
       mimeType: "application/pdf",
       sizeBytes: 2048,
-      content: Buffer.alloc(2048, "p")
+      content: fileBytes(2048)
     });
 
     // The proposal detail already lists this attachment for the participant...
@@ -669,7 +670,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
           originalFileName: "gia-mao.pdf",
           mimeType: "application/pdf",
           sizeBytes: 1024,
-          content: Buffer.alloc(1024, "x")
+          content: fileBytes(1024)
         }),
       ForbiddenException
     );

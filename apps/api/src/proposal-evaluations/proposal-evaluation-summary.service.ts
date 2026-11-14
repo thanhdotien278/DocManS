@@ -86,7 +86,7 @@ export class ProposalEvaluationSummaryService {
     await assertEvaluationReadScope(this.prisma, actor, proposal, view);
     if (!isWorkflowVisibleStatus(proposal.status)) throw new ForbiddenException();
     const conflict = await resolveReadConflict({ participation: this.participation, reviewAccess: this.reviewAccess }, actor.id, proposalId, view);
-    if (isResearchManagementStaff(actor) && conflict.conflicted) throw new ForbiddenException({ message: conflict.viewerMessage });
+    if (conflict.conflicted) throw new ForbiddenException({ message: conflict.viewerMessage });
     // Story 5.4 (matrix §611): người được mời/đã phản biện ở bất kỳ vòng nào không đọc tiến độ, mọi vai trò; không xác định → chặn.
     const reviewConflict = await this.reviewAccess.resolveConflictForProposal(actor.id, proposalId);
     if (reviewConflict.unresolved || reviewConflict.isAssignedReviewer || reviewConflict.hasPersistedReview) throw new ForbiddenException({ code: "CONFLICT_DENIED", message: "Người đánh giá hồ sơ không được xem tiến độ đánh giá của hồ sơ này." });

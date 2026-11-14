@@ -15,6 +15,11 @@ import {
 } from "./proposal-intake-periods.dto.js";
 import { ProposalIntakePeriodsService } from "./proposal-intake-periods.service.js";
 
+// Enforced while the body streams in, so an oversized or over-numerous upload is never buffered in memory.
+// File mẫu của đợt tiếp nhận không theo giới hạn tải lên chung (có mẫu trên 10 MB) nên dùng trần riêng.
+const MAX_TEMPLATE_FILES = 30;
+const TEMPLATE_UPLOAD_OPTIONS = { limits: { fileSize: 50 * 1024 * 1024 } };
+
 @Controller("api/v1/proposal-intake-periods")
 @UseGuards(SessionAuthGuard)
 export class ProposalIntakePeriodsController {
@@ -32,13 +37,13 @@ export class ProposalIntakePeriodsController {
   }
 
   @Post()
-  @UseInterceptors(FilesInterceptor("files"))
+  @UseInterceptors(FilesInterceptor("files", MAX_TEMPLATE_FILES, TEMPLATE_UPLOAD_OPTIONS))
   async createPeriod(@Req() request: RequestWithCurrentUser, @Body(createProposalIntakePeriodPipe) body: CreateProposalIntakePeriodDto, @UploadedFiles() files: IntakeTemplateUpload[] = []) {
     return { intakePeriod: await this.intakePeriodsService.createPeriod(request.currentUser!, body, files) };
   }
 
   @Patch(":id")
-  @UseInterceptors(FilesInterceptor("files"))
+  @UseInterceptors(FilesInterceptor("files", MAX_TEMPLATE_FILES, TEMPLATE_UPLOAD_OPTIONS))
   async updatePeriod(
     @Req() request: RequestWithCurrentUser,
     @Param("id") id: string,

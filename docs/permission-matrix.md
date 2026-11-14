@@ -264,7 +264,10 @@ never creates a new system role.
 | **Đề tài đang thực hiện** | | | | | | | | | | |
 | Xem và theo dõi đề tài | — | ✓ | ✓ | Xem¹ | Xem | Xem¹ | Xem | Xem¹ | ◐4 | ◐4 |
 | Xem chi tiết kinh phí từng đề tài | — | ✓ | ✓ | — | ✓ | ◐4 | ✓ | ◐3 | ◐4 | ◐4 |
-| Quản lý kinh phí, giải ngân, quyết toán | — | ✓ | — | — | ✓ | — | ✓ | ◐3 | — | — |
+| Ghi số liệu giải ngân, quyết toán (không ghi trực tiếp kinh phí được cấp) | — | ✓ | — | — | ✓ | — | ✓ | ◐3 | — | — |
+| Lập đề nghị nâng kinh phí đề tài | — | — | — | — | — | — | ✓ | ◐3 | — | — |
+| Duyệt (chuyển/trả lại) đề nghị nâng kinh phí | — | — | — | — | ✓ | — | ✓ (rà soát đề nghị do CV lập) | — | — | — |
+| Ký đề nghị nâng kinh phí (kinh phí được cấp chỉ tăng khi ký) | — | ✓ | — | — | — | — | — | — | — | — |
 | Giao hoặc thu hồi chuyên viên phụ trách đề tài | — | — | — | — | ✓¹ | — | ✓¹ | — | — | — |
 | Nghiệp vụ hằng ngày: thiết lập mốc, xét báo cáo, thẩm định điều chỉnh, gia hạn, nghiệm thu, sản phẩm, lập thanh lý, đóng đề tài | — | — | — | — | — | — | — | ◐3 | — | — |
 | Việc của chủ nhiệm: báo cáo, xin điều chỉnh hoặc gia hạn, nộp nghiệm thu, nộp sản phẩm | — | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | — |
@@ -325,12 +328,20 @@ never creates a new system role.
   tự phân công chính mình và tự rà soát tờ trình do mình lập; quyết định của GĐ/PGĐ-KH không
   đổi. Mỗi mutation dùng ngoại lệ ghi audit `participant-waiver-used` (người thao tác, hồ sơ/đề
   tài, thao tác) trong cùng transaction.
-- **Two-way anonymity.** PI and reviewers cannot view the record's action log.
+- **Two-way anonymity.** Reviewers cannot view the record's action log. The PI may view both the submission history and the action log of their own record (decision 2026-11-13); reviewer and secretary names stay hidden in it.
 - **Tờ trình flow.** CV drafts → TB reviews → TP approves → BGĐ signs. A TB-authored
   tờ trình goes straight to TP; a TP-authored one still passes the TB step. Return at
   any step goes back to the author (mandatory reason). TB/TP never review a tờ trình
   they authored and handle only tờ trình within their unit scope.
-- **Signatures.** Only GĐ signs topic approval, funding and liquidation. GĐ or PGĐ-KH
+- **Xem tờ trình theo hồ sơ nguồn (2026-11-13).** `GET /approval-submissions/subject` chỉ trả tờ trình cho người
+  vừa thuộc vai trò Phòng KHQS/BGĐ, vừa đọc được chính hồ sơ/đề tài đó (hoặc là người lập tờ trình), và không xung
+  đột lợi ích với hồ sơ. Không đủ điều kiện thì nhận danh sách rỗng, không phải 403.
+- **Phân công CV phụ trách hồ sơ (2026-11-13).** TP chỉ phân công khi hồ sơ đã nộp (trạng thái trong quy trình);
+  bản nháp chưa nộp không có CV phụ trách.
+- **Tài khoản (2026-11-13).** Không hạ quyền hoặc vô hiệu `SYSTEM_ADMIN` đang hoạt động cuối cùng. Tài khoản
+  `pending_approval`/`pending_email_verification` chỉ đổi trạng thái qua luồng duyệt đăng ký.
+- **Tệp (2026-11-13).** Tải/sửa/xóa một tệp ngoài quyền đọc trả 404 như tệp không tồn tại, cho mọi loại hồ sơ.
+- **Signatures.** Only GĐ signs topic approval, funding, funding increase and liquidation. GĐ or PGĐ-KH
   signs evaluation/acceptance/IRB council establishment, IRB certificate, extension
   and adjustment (including an adjustment that changes funding).
 - **Proposal withdrawal, post-submission edit, reopen.** After submission the PI files a
@@ -366,6 +377,7 @@ never creates a new system role.
 | Project extension | CV appraisal of the extension request | GĐ or PGĐ-KH |
 | Project adjustment (with or without funding change) | CV appraisal of the adjustment request | GĐ or PGĐ-KH |
 | Contract liquidation | Draft liquidation minutes | GĐ only |
+| Project funding increase | Funding-increase request by assigned CV or TB | GĐ only |
 
 Small tasks the CV completes without routing: completeness confirmation, supplement
 request, reviewer assignment, invitation follow-up, progress report review.
@@ -381,7 +393,7 @@ means the signer from §7.4. Missing or denied cells are explicit `None`.
 | User, role, organization administration | Manage | None | None | None | None | None | Platform scope | Any | Yes |
 | Shared catalogs and configuration | Manage | Read | Read | Read where needed | Read where needed | Read where needed | Platform scope | Any | Yes for changes |
 | Proposal intake period management | None | TP, CV: Manage; TB, PP: Read | Read open periods | Read applicable | None | None | Unit scope | Draft, open intake, closed intake | Yes |
-| Proposal draft creation and editing | None | None from management role | None from management role | Create/Update own (any role except QT/NNB) | None | None | Own proposal scope | Draft | Yes |
+| Proposal draft creation and editing | None | No create/edit from management role; TP reads drafts Academy-wide (decision 2026-11-13) | None from management role | Create/Update own (any role except QT/NNB) | None | None | Own proposal scope | Draft | Yes |
 | Proposal attachment upload/view/download | None | Read (TP/TB/PP¹, CV³) | Read (GĐ/PGĐ-KH², PGĐ-TD¹) | Create/Read own | Secretary: Create/Read; Member: Read | Read assigned | Record-level scope | Draft, needs supplement, under review | Yes for important file actions |
 | Proposal formal submission | None | None | None | Submit own | None | None | Own proposal scope | Draft, open intake | Yes |
 | Proposal completeness review | None | TB¹, CV³: Review | None | Read own | Read if participating | None | Unit / assigned officer scope | Submitted, resubmitted | Yes |
@@ -399,7 +411,8 @@ means the signer from §7.4. Missing or denied cells are explicit `None`.
 | Project Adjustment / Extension request | None | CV³: Appraise and draft tờ trình; TB → TP route | GĐ or PGĐ-KH: Sign | Create/Submit/Withdraw own | None | None | Own topic scope; assigned officer scope | Active project | Yes |
 | Acceptance/final review | None | Roles configured by QT⁸ for `ACCEPTANCE` (default TP¹/TB¹): invite/revoke council members (revoke needs a reason, rows kept); TP¹, TB¹ or CV³: submit tờ trình `ACCEPTANCE_COUNCIL` (TB → TP → BGĐ) only when the structure (1 chair, 1 secretary and exactly `memberCount` − 2 committee members; `memberCount` 3–15) is complete and every member accepted; TP¹, TB¹ or CV³ (not a project member): request supplement of the submitted dossier (`acceptance-dossier.request-supplement`, mandatory reason ≤ 2000 chars and future deadline) only before any tờ trình or council establishment — dossier `submitted → supplement_requested` (version +1), project `pending_acceptance → executing` | GĐ or PGĐ-KH: Sign council establishment (not a project member, not a council member; structure rechecked at signing; return/reject keeps the roster) | Submit acceptance dossier; edit and resubmit it after a supplement request (new snapshot version); no result action | Read assigned | Any role except QT with a scientific CV, not an active project member, one seat per person: accept/decline (decline needs a reason). After signing, accepted members read the acceptance dossier and its files (read-only). Only the chair records the result (`accepted`/`failed`) with a mandatory comment and an `ACCEPTANCE_MINUTES` file; the chair alone uploads/deletes minutes while no result exists; no "Phụ trách" waiver | Unit scope, council seat scope, conflict policy | Pending acceptance → accepted/failed; supplement request: `pending_acceptance → executing`, back to `pending_acceptance` on resubmit | Yes |
 | Funding view (per project) | None | TP, TB: all; CV³; PP⁴ | GĐ, PGĐ-KH: all; PGĐ-TD: aggregate only | Read own⁴ | Read⁴ | None | Academy-wide / assigned / own | Any | No for read |
-| Funding management, disbursement, settlement | None | TP, TB: Academy-wide; CV³ | GĐ: Manage | None | None | None | Academy-wide / assigned | Active project. `FUNDING_VOUCHER` files: upload, edit and delete only by funding managers (GĐ, TP, TB, assigned CV³); blocked while the project is preparing or closed; a voucher attached to a funding record is pinned and cannot be deleted; funding records accept only `FUNDING_VOUCHER` files. Ledger: ΣDisbursement ≤ ΣGrant; ΣSettlement ≤ ΣDisbursement. | Yes |
+| Funding management, disbursement, settlement | None | TP, TB: Academy-wide; CV³ | GĐ: Manage | None | None | None | Academy-wide / assigned | Active project. Direct ledger writes accept only `DISBURSEMENT` and `SETTLEMENT`; `GRANT` is never written directly (neither a new entry nor a revision by `entryId`): the approved amount changes only through a signed funding-increase request (next row). `FUNDING_VOUCHER` files: upload, edit and delete only by funding managers (GĐ, TP, TB, assigned CV³); blocked while the project is preparing or closed; a voucher attached to a funding record is pinned and cannot be deleted; funding records accept only `FUNDING_VOUCHER` files. Ledger: ΣDisbursement ≤ ΣGrant; ΣSettlement ≤ ΣDisbursement. | Yes |
+| Funding increase request (quy tắc 2026-11-13) | None | TB (Academy-wide) or CV³: Create; TB reviews a CV-authored request; TP approves (forward/return with reason) | GĐ only: Sign/Reject (PGĐ-KH does not sign) | Read⁴ | Read⁴ | None | Academy-wide / assigned; participants of the project cannot author, review or sign ("Phụ trách" exception D-041 applies to authoring/review only) | Active project (not preparing, not closed). Tờ trình `FUNDING_INCREASE`: author → TB → TP → GĐ; TB-authored starts at TP. Increase only (amount > 0), one pending request per project. Signing atomically closes the tờ trình, marks the request `SIGNED` and appends one `GRANT` entry; return or rejection leaves the ledger unchanged. `GRANT` rows written directly before 2026-11-13 are kept as-is. | Yes |
 | Liquidation | None | CV³: Draft; route | GĐ only: Sign | Read | Read | None | Assigned officer scope | Completed. CV enters thu hồi (recovered) ≤ ΣDisbursement; GĐ signs only when quyết toán + thu hồi = ΣDisbursement; signing freezes the figures and allocates the number `n/BBTL-HVQY/năm`. | Yes |
 | Task creation and assignment | None | Create/Assign within scope | None | Create in own topic scope | None unless explicitly assigned | None | Task / linked record scope, conflict policy | Task states | Yes |
 | Task status/progress update | None | Update scoped | Read | Update own/assigned | Update assigned | None | Task assignee/collaborator scope | Task states | Yes |
@@ -528,7 +541,8 @@ details remain in their governing stories.
 | View project/milestones/history | Own | Read in unit scope¹; operate only if assigned³ | All in Academy | Unit scope¹ | All in Academy | Unit scope¹ | Same filters for list/detail/count/files |
 | Monitor deadlines | Own | Assigned³ | Scope | Scope¹ | Scope | Scope¹ | Overdue/report-due are derived flags, never workflow states |
 | View per-project funding | Own⁴ | Assigned³ | All | Own participation only⁴ | All | Aggregate only | — |
-| Manage funding, disbursement, settlement | None | Assigned³ | Academy-wide | None | GĐ only | None | Audited |
+| Record disbursement, settlement (no direct `GRANT` write) | None | Assigned³ | Academy-wide | None | GĐ only | None | Audited |
+| Funding increase request | Read⁴ | Create | TB: create / review; TP: approve | None | GĐ only signs | None | `GRANT` total rises only on GĐ signature, atomically; audited |
 | Plan milestones/members during setup | Read | `project.setup.configure` for initial milestones/checkpoints/responsibilities; confirm | Read | Read | Read | Read | Confirm setup before execution |
 | Update own milestone progress | Own | Read | Read | Read | Read | Read | Members (NCV/NNB) on milestones they own⁴ |
 | Upload evidence | Own exact file grant | No PI-content overwrite | No PI-content overwrite | Metadata only | Metadata only | Metadata only | `project.evidence.contribute` for active member/secretary responsible for an open milestone; own unsubmitted file only; submitted links immutable |
@@ -576,7 +590,7 @@ reconciled with the tờ trình routing implemented on `tuan/DocManS`.
 
 | Action | QT | Phòng KHQS | BGĐ | PI | Topic Team | Reviewer / Council | Scope Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| View record action log / workflow history | Audit/View History | Scoped | Scoped | None (two-way anonymity) | Read participating | None (two-way anonymity) | Same as source record | No | FR38, FR40 |
+| View record action log / workflow history | Audit/View History | Scoped | Scoped | Read own, reviewer names hidden (decision 2026-11-13) | Read participating | None (two-way anonymity) | Same as source record | No | FR38, FR40 |
 | View tờ trình step history | None | Scoped | Scoped | Read own record | Read participating | None | Same as source record | No | Role hierarchy GĐ2–GĐ3 |
 | Search/export audit logs | Audit/Export | If authorized | If authorized | None | None | None | Platform / unit scope | Yes or operational trace | FR39, FR40 |
 | Create audit record from domain action | System generated | System generated | System generated | System generated | System generated | System generated | Same as source action | Yes | Audit-Log Requirements |
@@ -609,7 +623,7 @@ reconciled with the tờ trình routing implemented on `tuan/DocManS`.
 - TP never performs completeness checks or supplement requests.
 - CV never operates on proposals/projects assigned to another CV.
 - No tờ trình skips a step; TB/TP never review a tờ trình they authored.
-- PI and reviewers never see the record's action log.
+- Reviewers never see the record's action log. The PI sees the action log of their own record with reviewer identities hidden.
 - Users must not see cross-unit proposal data unless explicitly permitted.
 - Reviewers, council and IRB members must not access unassigned records.
 - Officer, reviewer, council or IRB assignment is denied when the candidate is PI,
@@ -649,7 +663,7 @@ reconciled with the tờ trình routing implemented on `tuan/DocManS`.
 | submit progress report | Yes | actor, project id, report id, reporting period, timestamp |
 | create/withdraw adjustment/extension request | Yes | actor, project id, request id, request type, reason, timestamp |
 | sign adjustment/extension | Yes | actor, project id, request id, decision, timestamp |
-| funding disbursement/settlement, liquidation, `approve-proposal-funding` | Yes | actor, project id, amount/document, decision, `liquidationNumber`, timestamp |
+| funding disbursement/settlement, funding increase (`submit-`/`approve-`/`reject-project-funding-increase`), liquidation, `approve-proposal-funding` | Yes | actor, project id, amount/document, decision, `liquidationNumber`, timestamp |
 | create/assign task, update task status | Yes | actor, task id, assignees, linked record, from/to status, timestamp |
 | export report | Yes | actor, report type, filters, scope, export format, timestamp |
 

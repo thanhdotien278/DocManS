@@ -169,12 +169,12 @@ describe("D-041 participant policy", () => {
 
   it("assignManagementOfficer by a participating TP: denied with manage off, allowed and audited with manage on, denied after reviewing", async () => {
     const policy = (manage) => ({ ...configured, RESEARCH_MANAGEMENT_HEAD: { ...configured.RESEARCH_MANAGEMENT_HEAD, manage } });
-    const setup = (manage, review = {}) => {
+    const setup = (manage, review = {}, status = "submitted") => {
       const audits = [];
       const prisma = {
         systemParameter: { findUnique: async () => ({ value: JSON.stringify(policy(manage)) }) },
         auditLog: { create: async ({ data }) => { audits.push(data); return { ...data, id: `a-${audits.length}`, timestamp: new Date(0) }; } },
-        researchProposal: { findUnique: async () => ({ id: "p-1", ownerId: "pi-1", title: "Đề xuất", status: "submitted" }), update: async () => ({}) },
+        researchProposal: { findUnique: async () => ({ id: "p-1", ownerId: "pi-1", title: "Đề xuất", status }), update: async () => ({}) },
         $queryRaw: async () => [{ asOf: new Date("2026-11-08T00:00:00Z") }],
         user: { findUnique: async () => ({ id: "cv-1", status: "active", systemRole: "RESEARCH_MANAGEMENT_STAFF" }), findMany: async () => [] },
         proposalReviewAssignment: { findFirst: async () => null },
@@ -194,6 +194,8 @@ describe("D-041 participant policy", () => {
     await assert.rejects(setup(false).service.assignManagementOfficer(tp, "p-1", input), (error) => error.response?.code === "CONFLICT_DENIED");
     const on = setup(true);
     await on.service.assignManagementOfficer(tp, "p-1", input);
+    // An unsubmitted draft is not in the workflow yet, so no officer (and no officer read access) is assigned to it.
+    await assert.rejects(setup(true, {}, "draft").service.assignManagementOfficer(tp, "p-1", input), (error) => error.response?.code === "WORKFLOW_STATE_DENIED");
     assert.deepEqual(on.audits.filter((row) => row.action === "participant-waiver-used").map((row) => row.afterFacts.operation), ["assign-proposal-management-officer"]);
     await assert.rejects(setup(true, { hasPersistedReview: true }).service.assignManagementOfficer(tp, "p-1", input), (error) => error.response?.code === "CONFLICT_DENIED");
   });

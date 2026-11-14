@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { randomBytes, scryptSync } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -181,6 +182,23 @@ const users = [
   }
 ];
 
+// Production: the accounts above share a public password, so they are created disabled. Only the admin
+// stays usable, with a password from SEED_ADMIN_PASSWORD and a forced change at first login.
+const isProduction = process.env.NODE_ENV === "production";
+if (isProduction) {
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "";
+  if (adminPassword.length < 12) throw new Error("SEED_ADMIN_PASSWORD (at least 12 characters) is required when NODE_ENV=production.");
+  for (const user of users) {
+    if (user.id === "user-admin") {
+      const salt = randomBytes(16).toString("hex");
+      user.passwordHash = `scrypt:${salt}:${scryptSync(adminPassword, salt, 64).toString("hex")}`;
+      user.mustChangePassword = true;
+    } else {
+      user.status = "inactive";
+    }
+  }
+}
+
 const organizationUnits = [
   ["org-hvqy", "HVQY", "Học viện Quân y"],
   ["org-bgq", "BGD", "Ban Giám Đốc"],
@@ -229,8 +247,7 @@ for (const user of users) {
       username: user.username,
       usernameKey: user.username.toLowerCase(),
       // displayName chỉ đặt khi tạo: sau đó đồng bộ theo họ tên trong lý lịch khoa học, seed chạy lại không ghi đè.
-      passwordHash: user.passwordHash,
-      status: user.status,
+      // passwordHash và status cũng chỉ đặt khi tạo: seed chạy lại không đưa mật khẩu mặc định hay tài khoản đã khóa trở lại.
       systemRole: user.systemRole,
       unit: user.unit
     },
@@ -484,6 +501,12 @@ await prisma.systemParameter.upsert({
   create: { key: "session_timeout_minutes", value: "720", label: "Thời gian phiên đăng nhập" }
 });
 
+await prisma.systemParameter.upsert({
+  where: { key: "file_max_upload_mb" },
+  update: {},
+  create: { key: "file_max_upload_mb", value: "10", label: "Dung lượng tệp tải lên tối đa (MB)" }
+});
+
 // Story 13.11: tự đăng ký mặc định tắt; update rỗng để không ghi đè lựa chọn của QT khi seed lại.
 await prisma.systemParameter.upsert({
   where: { key: "self_registration_enabled" },
@@ -523,6 +546,12 @@ await prisma.notificationTemplate.upsert({
 
 // Golden Flow 4 local demonstration. Stable IDs and create-only guards preserve changes
 // made while exercising the workflow, including decisions and report revisions.
+// Sample proposals and projects below are for local use only.
+if (isProduction) {
+  await prisma.$disconnect();
+  process.exit(0);
+}
+
 const demoDay = (offset) => {
   const value = new Date();
   value.setUTCHours(0, 0, 0, 0);

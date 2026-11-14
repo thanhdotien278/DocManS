@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SectionCard } from "@/components/ui/section-card";
-import { FUNDING_KIND_LABELS, LIQUIDATION_STATUS_LABELS, getProjectFunding, listProjectFiles, projectAction, projectCapability, projectFileUrl, uploadProjectFile, vnd, type FundingView, type ProjectRecord } from "@/lib/projects-api";
+import { FUNDING_INCREASE_STATUS_LABELS, FUNDING_KIND_LABELS, LIQUIDATION_STATUS_LABELS, getProjectFunding, listProjectFiles, projectAction, projectCapability, projectFileUrl, uploadProjectFile, vnd, type FundingView, type ProjectRecord } from "@/lib/projects-api";
 
 type Props = { project: ProjectRecord; busy: boolean; setBusy: (value: boolean) => void; setNotice: (value: string) => void; onDone: () => Promise<void> };
 const emptyForm = { kind: "DISBURSEMENT", amount: "", recordedOn: "", note: "", entryId: "" };
@@ -16,6 +16,8 @@ export function ProjectFundingSection({ project, busy, setBusy, setNotice, onDon
   const [report, setReport] = useState("");
   const [recovered, setRecovered] = useState("0");
   const [reason, setReason] = useState("");
+  const [increase, setIncrease] = useState({ amount: "", reason: "", note: "" });
+  const [incPicked, setIncPicked] = useState<string[]>([]);
   const liquidation = project.liquidation ?? null;
   const contextVersion = projectCapability(project)?.contextVersion;
 
@@ -50,14 +52,15 @@ export function ProjectFundingSection({ project, busy, setBusy, setNotice, onDon
   const current = liquidation?.current ?? null;
   const recoveredNow = current && current.status !== "REJECTED" ? Number(current.recoveredAmount) : Number(recovered || 0);
   const gap = totals.DISBURSEMENT - totals.SETTLEMENT - recoveredNow;
+  const increases = funding.increases ?? { items: [], canPropose: false, signableId: null };
 
   return <>
     <SectionCard title="Kinh phí" subtitle={`Được cấp ${vnd(totals.GRANT)} · Đã giải ngân ${vnd(totals.DISBURSEMENT)} · Đã quyết toán ${vnd(totals.SETTLEMENT)} · Còn lại ${vnd(totals.GRANT - totals.DISBURSEMENT)}`}>
       {!funding.records.length ? <p>Chưa có số liệu kinh phí.</p> : <div className="table-wrap"><table className="data-table"><thead><tr><th>Loại</th><th>Số tiền</th><th>Ngày</th><th>Ghi chú</th><th>Chứng từ</th><th></th></tr></thead><tbody>
-        {funding.records.map((row) => <tr key={row.entryId}><td>{FUNDING_KIND_LABELS[row.kind]}</td><td>{vnd(row.amount)}</td><td>{row.recordedOn ?? ""}</td><td>{row.note ?? ""}{row.version > 1 ? ` (phiên bản ${row.version})` : ""}</td><td>{row.fileRecordIds.map((fileId) => <a key={fileId} href={projectFileUrl(fileId)}>Tệp</a>)}</td><td>{funding.canWrite ? <button className="button" type="button" disabled={busy} onClick={() => { setForm({ kind: row.kind, amount: row.amount, recordedOn: row.recordedOn ?? "", note: row.note ?? "", entryId: row.entryId }); setPicked(row.fileRecordIds); }}>Sửa</button> : null}</td></tr>)}
+        {funding.records.map((row) => <tr key={row.entryId}><td>{FUNDING_KIND_LABELS[row.kind]}</td><td>{vnd(row.amount)}</td><td>{row.recordedOn ?? ""}</td><td>{row.note ?? ""}{row.version > 1 ? ` (phiên bản ${row.version})` : ""}</td><td>{row.fileRecordIds.map((fileId) => <a key={fileId} href={projectFileUrl(fileId)}>Tệp</a>)}</td><td>{funding.canWrite && row.kind !== "GRANT" ? <button className="button" type="button" disabled={busy} onClick={() => { setForm({ kind: row.kind, amount: row.amount, recordedOn: row.recordedOn ?? "", note: row.note ?? "", entryId: row.entryId }); setPicked(row.fileRecordIds); }}>Sửa</button> : null}</td></tr>)}
       </tbody></table></div>}
       {funding.canWrite ? <div className="form-grid two">
-        <label className="field"><span>Loại số liệu</span><select value={form.kind} disabled={!!form.entryId} onChange={(event) => setForm({ ...form, kind: event.target.value })}>{Object.entries(FUNDING_KIND_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label className="field"><span>Loại số liệu</span><select value={form.kind} disabled={!!form.entryId} onChange={(event) => setForm({ ...form, kind: event.target.value })}>{Object.entries(FUNDING_KIND_LABELS).filter(([value]) => value !== "GRANT").map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label className="field"><span>Số tiền (đồng)</span><input type="number" min={0} step={1} value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} /></label>
         <label className="field"><span>Ngày</span><input type="date" value={form.recordedOn} onChange={(event) => setForm({ ...form, recordedOn: event.target.value })} /></label>
         <label className="field"><span>Ghi chú</span><input value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} /></label>
@@ -69,6 +72,25 @@ export function ProjectFundingSection({ project, busy, setBusy, setNotice, onDon
         </div>
       </div> : null}
     </SectionCard>
+
+    {increases.items.length || increases.canPropose ? <SectionCard title="Đề nghị nâng kinh phí" subtitle="Kinh phí được cấp chỉ tăng khi Giám đốc ký đề nghị (Chuyên viên/Trưởng ban lập → Trưởng phòng duyệt → Giám đốc ký).">
+      {increases.items.length ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Số tiền tăng</th><th>Lý do</th><th>Người lập</th><th>Ngày lập</th><th>Trạng thái</th><th>Chứng từ</th></tr></thead><tbody>
+        {increases.items.map((row) => <tr key={row.id}><td>{vnd(row.amount)}</td><td>{row.reason}</td><td>{row.authorName}</td><td>{row.createdAt.slice(0, 10)}</td><td>{FUNDING_INCREASE_STATUS_LABELS[row.status] ?? row.status}{row.decisionNote ? ` — ${row.decisionNote}` : ""}</td><td>{row.fileRecordIds.map((fileId) => <a key={fileId} href={projectFileUrl(fileId)}>Tệp</a>)}</td></tr>)}
+      </tbody></table></div> : <p>Chưa có đề nghị nâng kinh phí.</p>}
+      {increases.canPropose ? <div className="form-grid two">
+        <label className="field"><span>Số tiền đề nghị tăng (đồng)</span><input type="number" min={1} step={1} value={increase.amount} onChange={(event) => setIncrease({ ...increase, amount: event.target.value })} /></label>
+        <label className="field"><span>Lý do</span><textarea maxLength={1000} value={increase.reason} onChange={(event) => setIncrease({ ...increase, reason: event.target.value })} /></label>
+        {vouchers.map((file) => <label className="field" key={file.id}><span><input type="checkbox" checked={incPicked.includes(file.id)} onChange={(event) => setIncPicked(event.target.checked ? [...incPicked, file.id] : incPicked.filter((id) => id !== file.id))} /> {file.fileName}</span></label>)}
+        <div className="button-row"><button className="button primary" type="button" disabled={busy || !(Number(increase.amount) > 0) || !increase.reason.trim()} onClick={() => void call("funding-increases", { amount: Number(increase.amount), reason: increase.reason.trim(), fileRecordIds: incPicked }, "Trình đề nghị nâng kinh phí để Trưởng phòng duyệt và Giám đốc ký?").then((ok) => { if (ok) { setIncrease({ amount: "", reason: "", note: "" }); setIncPicked([]); } })}>Lập đề nghị nâng kinh phí</button></div>
+      </div> : null}
+      {increases.signableId ? <div className="form-grid two">
+        <label className="field"><span>Lý do (bắt buộc khi từ chối)</span><input value={increase.note} onChange={(event) => setIncrease({ ...increase, note: event.target.value })} /></label>
+        <div className="button-row">
+          <button className="button primary" type="button" disabled={busy} onClick={() => void call(`funding-increases/${increases.signableId}/approve`, { reason: increase.note || undefined }, "Ký đề nghị và tăng kinh phí được cấp của đề tài?")}>Ký đề nghị</button>
+          <button className="button danger" type="button" disabled={busy || !increase.note.trim()} onClick={() => void call(`funding-increases/${increases.signableId}/reject`, { reason: increase.note }, "Từ chối đề nghị nâng kinh phí?")}>Từ chối</button>
+        </div>
+      </div> : null}
+    </SectionCard> : null}
 
     {liquidation ? <SectionCard title="Thanh lý đề tài" subtitle={liquidation.current ? `Biên bản: ${LIQUIDATION_STATUS_LABELS[liquidation.current.status] ?? liquidation.current.status}${liquidation.current.liquidationNumber ? ` · Số ${liquidation.current.liquidationNumber}` : ""}` : liquidation.note ?? "Chưa có biên bản thanh lý"}>
       <div className="table-wrap"><table className="data-table"><tbody>

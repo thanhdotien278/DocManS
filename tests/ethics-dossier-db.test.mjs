@@ -163,7 +163,7 @@ test("10.3: PI creates, secretary drafts, only PI/CV submit once ready; submitte
 
   for (const who of [people.deputy, people.oversight]) {
     await assert.rejects(() => f.ethics.getDossier(who, f.project.id), status(403));
-    await assert.rejects(() => f.files.downloadFile(who, consentFile.id), status(403));
+    await assert.rejects(() => f.files.downloadFile(who, consentFile.id), status(404));
   }
   assert.equal((await f.files.downloadFile(people.member, consentFile.id)).content.toString(), "%PDF");
 

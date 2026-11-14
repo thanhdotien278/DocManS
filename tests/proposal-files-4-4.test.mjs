@@ -23,7 +23,7 @@ function createService() {
   return { svc, rows };
 }
 
-const upload = (svc, purpose) => svc.uploadFile({ id: "pi", username: "pi" }, { relatedEntityType: "research_proposal", relatedEntityId: "p1", filePurpose: purpose, fileName: "a.pdf", mimeType: "application/pdf", sizeBytes: 1, content: Buffer.from("x") });
+const upload = (svc, purpose) => svc.uploadFile({ id: "pi", username: "pi" }, { relatedEntityType: "research_proposal", relatedEntityId: "p1", filePurpose: purpose, fileName: "a.pdf", mimeType: "application/pdf", sizeBytes: 4, content: Buffer.from("%PDF") });
 
 test("version tăng theo từng loại tài liệu và không dùng lại số của bản đã xóa", async () => {
   const { svc, rows } = createService();
@@ -34,6 +34,13 @@ test("version tăng theo từng loại tài liệu và không dùng lại số c
   rows.find((r) => r.id === second.id).deletedAt = new Date();
   assert.equal((await upload(svc, "form")).version, 3);
   assert.equal((await upload(svc, "budget")).version, 1);
+});
+
+test("nội dung không mang chữ ký của định dạng khai báo bị từ chối", async () => {
+  const { svc, rows } = createService();
+  const disguised = { relatedEntityType: "research_proposal", relatedEntityId: "p1", filePurpose: "form", fileName: "a.pdf", mimeType: "application/pdf", sizeBytes: 4, content: Buffer.from("MZ\x90\x00", "latin1") };
+  await assert.rejects(() => svc.uploadFile({ id: "pi", username: "pi" }, disguised), { name: "BadRequestException" });
+  assert.equal(rows.length, 0);
 });
 
 test("tệp đề xuất ngoài quyền đọc trả cùng 404 như tệp không tồn tại", async () => {
@@ -81,4 +88,4 @@ test("thành viên chỉ đọc: upload, sửa, xóa bị từ chối, vẫn xem
   assert.equal((await svc.downloadFile(member, file.id)).id, file.id);
 });
 
-const upload2 = (svc, actor) => svc.uploadFile(actor, { relatedEntityType: "research_proposal", relatedEntityId: "p1", filePurpose: "form", fileName: "a.pdf", mimeType: "application/pdf", sizeBytes: 1, content: Buffer.from("x") });
+const upload2 = (svc, actor) => svc.uploadFile(actor, { relatedEntityType: "research_proposal", relatedEntityId: "p1", filePurpose: "form", fileName: "a.pdf", mimeType: "application/pdf", sizeBytes: 4, content: Buffer.from("%PDF") });

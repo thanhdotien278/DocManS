@@ -9,6 +9,7 @@ import { validateNewPassword } from "./password-request.pipe.js";
 
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
 const PASSWORD_RESET_REQUEST_MESSAGE = "Nếu tài khoản tồn tại và có email, hệ thống đã gửi liên kết đặt lại mật khẩu. Liên kết có hiệu lực trong 30 phút.";
+const CHANGE_PASSWORD_RATE_LIMIT_MESSAGE = "Bạn đã nhập sai mật khẩu hiện tại quá nhiều lần. Vui lòng thử lại sau.";
 const PASSWORD_RESET_RATE_LIMIT_MESSAGE = "Yêu cầu đặt lại mật khẩu tạm thời bị giới hạn. Vui lòng thử lại sau.";
 
 const DUMMY_PASSWORD_HASH =
@@ -40,6 +41,8 @@ type RequestContext = {
   userAgent?: string;
 };
 
+const MAX_FAILED_LOGINS_PER_ACCOUNT = 20;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -54,7 +57,12 @@ export class AuthService {
     const username = input.username?.trim() ?? "";
     const password = input.password ?? "";
     const rateLimitKey = this.createRateLimitKey(username, context.ip);
+    // Per-account cap, independent of the address: rotating addresses must not give unlimited guesses on one account.
+    const accountRateLimitKey = `login-account:${username.toLowerCase()}`;
     this.rateLimit.assertCanAttempt(rateLimitKey);
+    // An address this account has already logged in from keeps only its own 5-attempt limit, so guesses
+    // from elsewhere cannot lock the real user out of their usual machine.
+    if (!this.rateLimit.isTrusted(rateLimitKey)) this.rateLimit.assertCanAttempt(accountRateLimitKey, Date.now(), undefined, MAX_FAILED_LOGINS_PER_ACCOUNT);
 
     const user = username ? await this.authStore.findUserByUsername(username) : null;
     const pendingHash = username && !user ? await this.authStore.findPendingApprovalPasswordHash(username) : null;
@@ -63,12 +71,14 @@ export class AuthService {
 
     if (pendingHash && passwordIsValid) {
       this.rateLimit.recordFailure(rateLimitKey);
+      this.rateLimit.recordFailure(accountRateLimitKey);
       await this.auditLog.record({ action: "login", result: "failure", targetEntity: "auth-session", targetEntityId: username, username, ip: context.ip, userAgent: context.userAgent, reason: "pending_approval" });
       throw new UnauthorizedException({ message: AUTH_PENDING_APPROVAL_MESSAGE, code: "ACCOUNT_PENDING_APPROVAL" });
     }
 
     if (!user || !passwordIsValid || user.status !== "active") {
       this.rateLimit.recordFailure(rateLimitKey);
+      this.rateLimit.recordFailure(accountRateLimitKey);
       await this.auditLog.record({
         action: "login",
         result: "failure",
@@ -84,6 +94,7 @@ export class AuthService {
     }
 
     this.rateLimit.reset(rateLimitKey);
+    this.rateLimit.markTrusted(rateLimitKey);
     const session = await this.authStore.createSession(user.id, user.credentialVersion);
     const safeUser = this.authStore.toSafeUser(user);
 
@@ -103,18 +114,19 @@ export class AuthService {
 
   async logout(sessionId: string | null, context: RequestContext) {
     const session = sessionId ? await this.authStore.revokeSession(sessionId) : null;
-    const user = session ? await this.authStore.findUserById(session.userId) : null;
+    // Không có phiên hợp lệ thì không ghi nhật ký: endpoint này không cần đăng nhập nên ai cũng có thể gọi liên tục.
+    if (!session) return { success: true };
+    const user = await this.authStore.findUserById(session.userId);
 
     await this.auditLog.record({
       action: "logout",
-      result: session ? "success" : "failure",
+      result: "success",
       actorId: user?.id,
       targetEntity: "auth-session",
-      targetEntityId: sessionId ?? "unknown",
+      targetEntityId: session.id,
       username: user?.username,
       ip: context.ip,
-      userAgent: context.userAgent,
-      reason: session ? undefined : "missing_or_invalid_session"
+      userAgent: context.userAgent
     });
 
     return { success: true };
@@ -137,13 +149,17 @@ export class AuthService {
     return profile ? { ...user, ...composeProfileDisplay(profile, user.unit) } : user;
   }
 
-  async listAuditLogs() {
-    return this.auditLog.list();
+  async listAuditLogs(offset?: number) {
+    return this.auditLog.list(offset);
   }
 
   async changePassword(userId: string, input: { currentPassword: string; newPassword: string }, context: RequestContext) {
+    // Phiên bị chiếm không được đoán mật khẩu hiện tại vô hạn lần.
+    const rateLimitKey = `change-password:${userId}`;
+    this.rateLimit.assertCanAttempt(rateLimitKey, Date.now(), CHANGE_PASSWORD_RATE_LIMIT_MESSAGE);
     const user = await this.authStore.findUserById(userId);
     if (!user || user.status !== "active" || !(await this.passwordService.verifyPassword(input.currentPassword, user.passwordHash))) {
+      this.rateLimit.recordFailure(rateLimitKey);
       await this.auditLog.record({ action: "change-password", result: "failure", actorId: userId, targetEntity: "user", targetEntityId: userId, ip: context.ip, userAgent: context.userAgent, reason: "current_password_invalid" });
       throw new BadRequestException({ message: "Mật khẩu hiện tại không chính xác." });
     }
@@ -159,6 +175,7 @@ export class AuthService {
       await this.recordPasswordChangeFailure(user.id, context, "credential_version_mismatch");
       throw new ConflictException({ message: "Thông tin xác thực đã thay đổi. Vui lòng đăng nhập lại." });
     }
+    this.rateLimit.reset(rateLimitKey);
   }
 
   async initiatePasswordReset(actor: { id: string; username: string }, userId: string, context: RequestContext) {
@@ -188,7 +205,8 @@ export class AuthService {
     }
     const reset = this.passwordService.createResetToken();
     const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
-    await this.authStore.createPasswordResetToken(user.id, user.id, reset.tokenHash, expiresAt);
+    // Giữ các liên kết cũ: nếu không, ai biết tên đăng nhập cũng có thể liên tục hủy liên kết của chủ tài khoản.
+    await this.authStore.createPasswordResetToken(user.id, user.id, reset.tokenHash, expiresAt, false);
     // Gửi nền để thời gian phản hồi như nhau dù tài khoản có tồn tại hay không (chống dò tài khoản qua timing).
     void this.mailService.sendPasswordReset({ to: user.credentialEmail, displayName: user.displayName, resetUrl: this.mailService.passwordResetUrl(reset.token), expiresAt })
       .then(() => this.auditLog.record({ action: "request-password-reset", result: "success", actorId: user.id, targetEntity: "user", targetEntityId: user.id, ip: context.ip, userAgent: context.userAgent, afterFacts: { expiresAt: expiresAt.toISOString() } }),
@@ -206,10 +224,11 @@ export class AuthService {
       await this.recordPasswordResetFailure(context, "new_password_policy_invalid");
       throw error;
     }
-    const userId = await this.authStore.completePasswordReset(
-      this.passwordService.hashResetToken(input.token),
-      await this.passwordService.hashPassword(input.newPassword)
-    );
+    // Tra token trước: request rác không được tốn một lần scrypt.
+    const tokenHash = this.passwordService.hashResetToken(input.token);
+    const userId = (await this.authStore.isPasswordResetTokenLive(tokenHash))
+      ? await this.authStore.completePasswordReset(tokenHash, await this.passwordService.hashPassword(input.newPassword))
+      : null;
     if (!userId) {
       this.rateLimit.recordFailure(rateLimitKey);
       await this.recordPasswordResetFailure(context, "invalid_or_expired");
@@ -228,10 +247,10 @@ export class AuthService {
       await this.recordAccountActivationFailure(context, "new_password_policy_invalid");
       throw error;
     }
-    const activated = await this.authStore.completeAccountActivation(
-      this.passwordService.hashResetToken(input.token),
-      await this.passwordService.hashPassword(input.password)
-    );
+    const tokenHash = this.passwordService.hashResetToken(input.token);
+    const activated = (await this.authStore.isAccountActivationTokenLive(tokenHash))
+      ? await this.authStore.completeAccountActivation(tokenHash, await this.passwordService.hashPassword(input.password))
+      : null;
     if (!activated) {
       this.rateLimit.recordFailure(rateLimitKey);
       await this.recordAccountActivationFailure(context, "invalid_or_expired");
