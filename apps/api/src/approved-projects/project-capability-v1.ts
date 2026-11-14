@@ -4,7 +4,7 @@ import type { SafeUserContext } from "../auth/auth.types.js";
 import { publicAuthorizationReasonV1 } from "../permissions/authorization-v1.service.js";
 
 export const PROJECT_ACTIONS: PermissionActionV1[] = [
-  "project.read", "project.monitor", "project.setup.configure", "project.setup.confirm", "project.officer.assign", "project.officer.revoke",
+  "project.read", "project.monitor", "project.setup.configure", "project.setup.confirm", "project.plan.maintain", "project.officer.assign", "project.officer.revoke",
   "project.report.draft", "project.report.submit", "project.report.review", "project.report.request-supplement", "project.report.accept",
   "project.evidence.contribute",
   "project.adjustment.create", "project.adjustment.edit-draft", "project.adjustment.submit", "project.adjustment.review", "project.adjustment.request-supplement", "project.adjustment.approve", "project.adjustment.reject", "project.adjustment.withdraw",
@@ -130,6 +130,7 @@ function projectActionDenial(action: PermissionActionV1, input: ProjectCapabilit
   if (action === "project.read" || action === "project.history.read") return input.canRead ? null : blocked("ACTION_NOT_GRANTED");
   if (action === "project.monitor") return input.canMonitor ? null : blocked("ACTION_NOT_GRANTED");
   if (action === "project.setup.configure" || action === "project.setup.confirm") return input.canOperate && input.project.status === PROJECT_STATUSES.preparing ? null : blocked(input.project.status === PROJECT_STATUSES.preparing ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");
+  if (action === "project.plan.maintain") return input.canOperate && input.inExecution ? null : blocked(input.inExecution ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");
   if (action === "project.officer.assign" || action === "project.officer.revoke") return input.canHeadDecide ? null : blocked("ACTION_NOT_GRANTED");
   if (action === "project.report.draft" || action === "project.report.submit") {
     if (!(input.canPi && input.isPi)) return blocked(input.inExecution ? "ACTION_NOT_GRANTED" : "WORKFLOW_STATE_DENIED");

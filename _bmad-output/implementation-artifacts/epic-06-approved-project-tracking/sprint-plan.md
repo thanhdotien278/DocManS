@@ -12,7 +12,7 @@
 | Order | Story | Initial status |
 |---|---|---|
 | 6.1 | Khởi tạo đề tài từ proposal được phê duyệt | `in-progress` |
-| 6.2 | Quản lý thành viên, trách nhiệm, milestone và checkpoint | `in-progress` |
+| 6.2 | Quản lý thành viên, trách nhiệm, milestone và checkpoint | `review` |
 | 6.3 | Chủ nhiệm nộp báo cáo tiến độ và bằng chứng | `in-progress` |
 | 6.4 | Thành viên đóng góp tệp và minh chứng trong phạm vi được giao | `in-progress` |
 | 6.5 | Rà soát báo cáo và theo dõi chậm tiến độ | `in-progress` |
