@@ -48,6 +48,8 @@ export type AuthSession = {
   expiresAt: string;
   revokedAt?: string;
   credentialVersion: number;
+  /** Cookie value. Only present on a freshly created session; the database keeps its SHA-256 as `id`. */
+  token?: string;
 };
 
 export type AuditAction = string;

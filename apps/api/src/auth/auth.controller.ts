@@ -1,4 +1,4 @@
-import { Body, Controller, ForbiddenException, Get, Post, Req, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, ForbiddenException, Get, Post, Query, Req, Res, UseGuards } from "@nestjs/common";
 import { AuthService } from "./auth.service.js";
 import type { LoginRequest } from "./auth.types.js";
 import { LoginRequestPipe } from "./login-request.pipe.js";
@@ -28,7 +28,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: any
   ) {
     const result = await this.authService.login(body, requestContext(request));
-    response.setHeader("Set-Cookie", createSessionCookie(result.session.id, process.env.NODE_ENV === "production"));
+    response.setHeader("Set-Cookie", createSessionCookie(result.session.token!, process.env.NODE_ENV === "production"));
 
     return { user: result.user };
   }
@@ -105,11 +105,11 @@ export class AuthController {
 
   @Get("audit-logs")
   @UseGuards(SessionAuthGuard)
-  async auditLogs(@Req() request: any) {
+  async auditLogs(@Req() request: any, @Query("offset") offset?: string) {
     if (request.currentUser?.systemRole !== "SYSTEM_ADMIN") {
       throw new ForbiddenException({ message: "Không có quyền truy cập nhật ký kiểm toán." });
     }
 
-    return { records: await this.authService.listAuditLogs() };
+    return { records: await this.authService.listAuditLogs(Number(offset)) };
   }
 }

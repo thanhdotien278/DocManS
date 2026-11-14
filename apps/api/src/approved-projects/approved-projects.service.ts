@@ -825,7 +825,8 @@ export class ApprovedProjectsService {
           await recordParticipantWaiver(tx, actor, { entity: "approved-project", id: project.id }, "add-officer-as-project-member");
         }
         await this.assertNoEvaluationConflict(tx, user.id, project.proposalId);
-        await tx.approvedProjectMember.create({ data: { projectId: project.id, userId: user.id, name: requiredText(change.name, "name"), role: change.participationRole, participationRole: change.participationRole, status: "ACTIVE", effectiveFrom: now, createdById: actor.id } });
+        // Tên lấy từ tài khoản được thêm, không lấy `change.name` do người lập yêu cầu gửi.
+        await tx.approvedProjectMember.create({ data: { projectId: project.id, userId: user.id, name: user.displayName, role: change.participationRole, participationRole: change.participationRole, status: "ACTIVE", effectiveFrom: now, createdById: actor.id } });
       } else throw new BadRequestException({ code: "ADJUSTMENT_SCOPE_DENIED" });
     }
   }
@@ -867,7 +868,16 @@ export class ApprovedProjectsService {
     if (!this.canViewFunding(actor, project, officer)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Không có quyền xem kinh phí đề tài này." });
     const rows = await (this.prisma as any).projectFundingRecord.findMany({ where: { projectId }, orderBy: { createdAt: "asc" } });
     const records = latestFunding<any>(rows).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-    return { restricted: false, records: records.map((row) => ({ entryId: row.entryId, version: row.version, kind: row.kind, amount: String(row.amount), recordedOn: row.recordedOn?.toISOString?.().slice(0, 10) ?? null, note: row.note, fileRecordIds: row.fileRecordIds, recordedById: row.recordedById, createdAt: row.createdAt.toISOString() })), totals: fundingTotals(records), canWrite: this.canWriteFunding(actor, project, officer, await this.participantManage(this.prisma, actor)) };
+    const manage = await this.participantManage(this.prisma, actor);
+    const increases = await (this.prisma as any).projectFundingIncrease.findMany({ where: { projectId }, include: { author: { select: { displayName: true } } }, orderBy: { createdAt: "desc" }, take: 20 });
+    const pending = increases.find((row: AnyRecord) => row.status === "SUBMITTED");
+    const atLeadership = !!pending && !!(await (this.prisma as any).approvalSubmission.findFirst({ where: { kind: "FUNDING_INCREASE", subjectType: "project", subjectId: projectId, subjectRef: pending.id, status: "PENDING", stage: "LEADERSHIP" }, select: { id: true } }));
+    const increaseView = {
+      items: increases.map((row: AnyRecord) => ({ id: row.id, amount: String(row.amount), reason: row.reason, status: row.status, decisionNote: row.decisionNote, authorName: row.author?.displayName ?? "", fileRecordIds: row.fileRecordIds ?? [], createdAt: row.createdAt.toISOString(), decidedAt: row.decidedAt?.toISOString?.() ?? null })),
+      canPropose: !pending && this.fundingOpen(project) && this.canProposeFundingIncrease(actor, project, officer, manage),
+      signableId: pending && atLeadership && isLeadership(actor) && !this.activeMember(project, actor.id) ? pending.id : null
+    };
+    return { restricted: false, increases: increaseView, records: records.map((row) => ({ entryId: row.entryId, version: row.version, kind: row.kind, amount: String(row.amount), recordedOn: row.recordedOn?.toISOString?.().slice(0, 10) ?? null, note: row.note, fileRecordIds: row.fileRecordIds, recordedById: row.recordedById, createdAt: row.createdAt.toISOString() })), totals: fundingTotals(records), canWrite: this.canWriteFunding(actor, project, officer, manage) };
   }
 
   /** Số liệu tổng hợp toàn Học viện; không có cột kinh phí từng đề tài. Dành cho vai trò theo dõi (gồm PGĐ-TD). */
@@ -880,7 +890,7 @@ export class ApprovedProjectsService {
     return { projectCount: byProject.size, totals: fundingTotals(records) };
   }
 
-  /** Thêm số liệu (entryId mới) hoặc phiên bản sửa của một số liệu (entryId cũ). Chỉ thêm, không ghi đè; mỗi lần có history và audit. */
+  /** Thêm số liệu giải ngân/quyết toán (entryId mới) hoặc phiên bản sửa (entryId cũ). Chỉ thêm, không ghi đè; mỗi lần có history và audit. Không nhận GRANT. */
   async recordFunding(actor: SafeUserContext, projectId: string, input: AnyRecord) {
     return this.mutate(actor, projectId, SKIP_CONTEXT, async (tx, currentActor, project) => {
       const officer = await this.currentOfficer(tx, project.id);
@@ -888,6 +898,8 @@ export class ApprovedProjectsService {
       if (this.activeMember(project, currentActor.id)) await recordParticipantWaiver(tx, currentActor, { entity: "approved-project", id: project.id }, "record-project-funding");
       if ([PREPARING, PROJECT_STATUSES.closed].includes(project.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Đề tài chưa thực hiện hoặc đã đóng." });
       if (!(FUNDING_KINDS as readonly string[]).includes(input.kind)) throw new BadRequestException({ message: "Loại số liệu kinh phí không hợp lệ." });
+      // Quy tắc 2026-11-13: kinh phí được cấp chỉ đổi qua đề nghị nâng kinh phí do GĐ ký (kể cả sửa phiên bản qua entryId, vì entryId phải cùng loại).
+      if (input.kind === "GRANT") throw new BadRequestException({ code: "FUNDING_GRANT_REQUIRES_SIGNATURE", message: "Kinh phí được cấp không ghi trực tiếp. Lập đề nghị nâng kinh phí để Giám đốc ký." });
       const amount = readFundingAmount(input.amount);
       const files = await this.assertUsableEvidence(tx, project.id, input.fileRecordIds);
       if (files.some((file: AnyRecord) => file.filePurpose !== "FUNDING_VOUCHER")) throw new BadRequestException({ code: "EVIDENCE_WRONG_RECORD", message: "Chứng từ kinh phí phải là tệp loại chứng từ giải ngân (FUNDING_VOUCHER)." });
@@ -906,8 +918,70 @@ export class ApprovedProjectsService {
       const after = { kind: input.kind, amount: String(record.amount), version, entryId, fileRecordIds: record.fileRecordIds };
       await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.funding.record", reason: record.note, beforeFacts: before, afterFacts: after } });
       await new AuditLogService(tx).record({ action: "record-project-funding", result: "success", actorId: currentActor.id, targetEntity: "approved-project", targetEntityId: project.id, username: currentActor.username, beforeFacts: before ?? undefined, afterFacts: after });
-      if (input.kind !== "GRANT") await notifyUsers(tx, { userIds: [this.projectPiUserId(project)], exclude: [currentActor.id], type: "project.funding.recorded", title: input.kind === "DISBURSEMENT" ? "Đề tài có đợt giải ngân mới" : "Đề tài có số liệu quyết toán mới", body: `${project.title}: ${amount.toLocaleString("vi-VN")} đ`, link: `/projects/${project.id}`, sourceType: "project_funding", sourceId: project.id, idempotencyKey: `funding:${entryId}:v${version}` });
+      await notifyUsers(tx, { userIds: [this.projectPiUserId(project)], exclude: [currentActor.id], type: "project.funding.recorded", title: input.kind === "DISBURSEMENT" ? "Đề tài có đợt giải ngân mới" : "Đề tài có số liệu quyết toán mới", body: `${project.title}: ${amount.toLocaleString("vi-VN")} đ`, link: `/projects/${project.id}`, sourceType: "project_funding", sourceId: project.id, idempotencyKey: `funding:${entryId}:v${version}` });
       return { entryId, version, kind: record.kind, amount: String(record.amount) };
+    });
+  }
+
+  private fundingOpen(project: AnyRecord) {
+    return ![PREPARING, PROJECT_STATUSES.closed].includes(project.status);
+  }
+
+  /** Lập đề nghị nâng kinh phí: CV phụ trách hoặc TB (toàn Học viện). Người trong đề tài không tự lập, trừ khi vai trò bật "Phụ trách". */
+  private canProposeFundingIncrease(actor: SafeUserContext, project: AnyRecord, officer: AnyRecord | null, participantManage: boolean) {
+    const allowed = isResearchBoardHead(actor) || (isResearchManagementStaff(actor) && officer?.officerUserId === actor.id);
+    return allowed && (participantManage || !this.activeMember(project, actor.id));
+  }
+
+  /** CV phụ trách hoặc TB lập đề nghị và mở tờ trình FUNDING_INCREASE (TB → TP → GĐ; TB lập thì vào thẳng TP). Chưa đổi sổ kinh phí. */
+  async submitFundingIncrease(actor: SafeUserContext, projectId: string, input: AnyRecord) {
+    return this.mutate(actor, projectId, input.contextVersion, async (tx, currentActor, project) => {
+      const officer = await this.currentOfficer(tx, project.id);
+      if (!this.canProposeFundingIncrease(currentActor, project, officer, await this.participantManage(tx, currentActor))) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Chỉ Chuyên viên phụ trách hoặc Trưởng ban QLKH được lập đề nghị nâng kinh phí." });
+      if (this.activeMember(project, currentActor.id)) await recordParticipantWaiver(tx, currentActor, { entity: "approved-project", id: project.id }, "submit-funding-increase");
+      await this.assertNoEvaluationConflict(tx, currentActor.id, project.proposalId);
+      if (!this.fundingOpen(project)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Đề tài chưa thực hiện hoặc đã đóng." });
+      const amount = readFundingAmount(input.amount, "Số tiền đề nghị tăng");
+      if (amount <= 0) throw new BadRequestException({ code: "FUNDING_INVALID", message: "Số tiền đề nghị tăng phải lớn hơn 0." });
+      const reason = requiredText(input.reason, "Lý do");
+      const files = await this.assertUsableEvidence(tx, project.id, input.fileRecordIds);
+      if (files.some((file: AnyRecord) => file.filePurpose !== "FUNDING_VOUCHER")) throw new BadRequestException({ code: "EVIDENCE_WRONG_RECORD", message: "Chứng từ kinh phí phải là tệp loại chứng từ giải ngân (FUNDING_VOUCHER)." });
+      if (await tx.projectFundingIncrease.findFirst({ where: { projectId: project.id, status: "SUBMITTED" }, select: { id: true } })) throw new ConflictException({ code: "FUNDING_INCREASE_EXISTS", message: "Đề tài đang có một đề nghị nâng kinh phí chờ xử lý." });
+      const increase = await tx.projectFundingIncrease.create({ data: { projectId: project.id, authorId: currentActor.id, amount, reason, fileRecordIds: files.map((file: AnyRecord) => file.id), status: "SUBMITTED" } });
+      await openApprovalSubmission(tx, currentActor, { kind: "FUNDING_INCREASE", subjectType: "project", subjectId: project.id, subjectRef: increase.id }, { title: `Nâng kinh phí đề tài: ${project.title}`, hostOrganizationUnitId: project.hostOrganizationUnitId, note: reason });
+      const facts = { increaseId: increase.id, amount: String(increase.amount) };
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.funding-increase.submit", toStatus: "SUBMITTED", reason, afterFacts: facts } });
+      await new AuditLogService(tx).record({ action: "submit-project-funding-increase", result: "success", actorId: currentActor.id, targetEntity: "project-funding-increase", targetEntityId: increase.id, username: currentActor.username, reason, afterFacts: { projectId: project.id, ...facts } });
+      return { id: increase.id, status: increase.status, amount: String(increase.amount) };
+    });
+  }
+
+  /** Chỉ GĐ ký (PGĐ-KH không). Ký thì tờ trình đóng, đề nghị SIGNED và một dòng GRANT mới được thêm trong cùng transaction; từ chối không đổi sổ. */
+  async decideFundingIncrease(actor: SafeUserContext, projectId: string, decision: "approve" | "reject", input: AnyRecord) {
+    return this.mutate(actor, projectId, input.contextVersion, async (tx, currentActor, project) => {
+      if (!isLeadership(currentActor)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Đề nghị nâng kinh phí do Giám đốc ký." });
+      const increase = await tx.projectFundingIncrease.findFirst({ where: { id: input.increaseId, projectId: project.id } });
+      if (!increase || increase.status !== "SUBMITTED" || !this.fundingOpen(project)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Đề nghị không còn chờ ký hoặc đề tài đã đóng." });
+      if (this.activeMember(project, currentActor.id)) throw new ForbiddenException({ code: "CONFLICT_DENIED" });
+      await this.assertNoEvaluationConflict(tx, currentActor.id, project.proposalId);
+      // Cổng chữ ký: không có tờ trình đang ở bước Ban giám đốc thì ném lỗi trước mọi thay đổi sổ.
+      await closeApprovalSubmission(tx, currentActor, { kind: "FUNDING_INCREASE", subjectType: "project", subjectId: project.id, subjectRef: increase.id }, decision === "approve" ? "APPROVED" : "REJECTED", input.reason ?? null);
+      const now = await readTransactionClockV1(tx);
+      const status = decision === "approve" ? "SIGNED" : "REJECTED";
+      const before = await this.currentFundingTotals(tx, project.id);
+      let fundingEntryId: string | null = null;
+      if (decision === "approve") {
+        const files = await this.assertUsableEvidence(tx, project.id, increase.fileRecordIds ?? []);
+        fundingEntryId = randomUUID();
+        await tx.projectFundingRecord.create({ data: { projectId: project.id, entryId: fundingEntryId, version: 1, kind: "GRANT", amount: increase.amount, recordedOn: projectDay(now.toISOString().slice(0, 10)), note: `Nâng kinh phí (GĐ ký): ${increase.reason}`, fileRecordIds: files.map((file: AnyRecord) => file.id), recordedById: currentActor.id } });
+      }
+      await tx.projectFundingIncrease.update({ where: { id: increase.id }, data: { status, decidedById: currentActor.id, decidedAt: now, decisionNote: input.reason ?? null, fundingEntryId } });
+      const after = { increaseId: increase.id, status, amount: String(increase.amount), fundingEntryId, grantTotal: before.GRANT + (decision === "approve" ? Number(increase.amount) : 0) };
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: `project.funding-increase.${decision}`, fromStatus: "SUBMITTED", toStatus: status, reason: input.reason ?? null, beforeFacts: { grantTotal: before.GRANT }, afterFacts: after } });
+      await new AuditLogService(tx).record({ action: `${decision}-project-funding-increase`, result: "success", actorId: currentActor.id, targetEntity: "project-funding-increase", targetEntityId: increase.id, username: currentActor.username, reason: input.reason ?? undefined, beforeFacts: { projectId: project.id, status: "SUBMITTED", grantTotal: before.GRANT }, afterFacts: after });
+      const officer = await this.currentOfficer(tx, project.id);
+      await notifyUsers(tx, { userIds: [this.projectPiUserId(project), officer?.officerUserId, increase.authorId], exclude: [currentActor.id], type: "project.funding-increase.decided", title: decision === "approve" ? "Đề nghị nâng kinh phí đã được ký" : "Đề nghị nâng kinh phí bị từ chối", body: project.title, link: `/projects/${project.id}`, sourceType: "project_funding", sourceId: project.id, idempotencyKey: `funding-increase:${increase.id}:${status}` });
+      return { id: increase.id, status, fundingEntryId };
     });
   }
 
