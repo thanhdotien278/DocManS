@@ -18,7 +18,9 @@ export type ProjectRecord = {
 };
 
 export type FundingRecord = { entryId: string; version: number; kind: "GRANT" | "DISBURSEMENT" | "SETTLEMENT"; amount: string; recordedOn: string | null; note: string | null; fileRecordIds: string[]; recordedById: string; createdAt: string };
-export type FundingView = { restricted: boolean; records: FundingRecord[]; totals: { GRANT: number; DISBURSEMENT: number; SETTLEMENT: number } | null; canWrite: boolean };
+export type FundingView = { restricted: boolean; records: FundingRecord[]; totals: { GRANT: number; DISBURSEMENT: number; SETTLEMENT: number } | null; canWrite: boolean; increases?: FundingIncreaseView };
+export type FundingIncreaseView = { items: Array<{ id: string; amount: string; reason: string; status: string; decisionNote: string | null; authorName: string; fileRecordIds: string[]; createdAt: string; decidedAt: string | null }>; canPropose: boolean; signableId: string | null };
+export const FUNDING_INCREASE_STATUS_LABELS: Record<string, string> = { SUBMITTED: "Đang trình", RETURNED: "Bị trả lại", REJECTED: "Bị từ chối", SIGNED: "Giám đốc đã ký" };
 export type LiquidationView = { current: null | { id: string; status: string; outcome: string; report: string; decisionNote: string | null; decidedAt: string | null; recoveredAmount: string | null; approvedBudget: string | null; totalDisbursed: string | null; totalSettled: string | null; liquidationNumber: string | null; fileRecordIds: string[] }; eligible: boolean; canSign: boolean; canSubmit: boolean; note: string | null };
 export const FUNDING_KIND_LABELS: Record<string, string> = { GRANT: "Kinh phí được cấp", DISBURSEMENT: "Giải ngân", SETTLEMENT: "Quyết toán" };
 export const LIQUIDATION_STATUS_LABELS: Record<string, string> = { DRAFT: "Bản nháp", SUBMITTED: "Đang trình", SIGNED: "Đã ký", REJECTED: "Bị từ chối" };
@@ -31,7 +33,7 @@ const MILESTONE_STATUS_LABELS: Record<string, string> = { open: "Đang mở", co
 const ROLE_LABELS: Record<string, string> = { TOPIC_PI: "Chủ nhiệm đề tài", TOPIC_MEMBER: "Thành viên", TOPIC_SECRETARY: "Thư ký" };
 const MEMBER_STATUS_LABELS: Record<string, string> = { ACTIVE: "Đang tham gia", ENDED: "Đã kết thúc" };
 const HISTORY_ACTION_LABELS: Record<string, string> = {
-  "project.funding.record": "Ghi số liệu kinh phí", "project.liquidation.submit": "Trình biên bản thanh lý", "project.liquidation.approve": "Ký biên bản thanh lý", "project.liquidation.reject": "Từ chối biên bản thanh lý",
+  "project.funding.record": "Ghi số liệu kinh phí", "project.funding-increase.submit": "Lập đề nghị nâng kinh phí", "project.funding-increase.return": "Trả lại đề nghị nâng kinh phí", "project.funding-increase.approve": "Ký đề nghị nâng kinh phí", "project.funding-increase.reject": "Từ chối đề nghị nâng kinh phí", "project.liquidation.submit": "Trình biên bản thanh lý", "project.liquidation.approve": "Ký biên bản thanh lý", "project.liquidation.reject": "Từ chối biên bản thanh lý",
   "project.created": "Tạo đề tài", "project.officer.assign": "Phân công chuyên viên", "project.officer.revoke": "Thu hồi phân công chuyên viên",
   "project.setup.configure": "Thiết lập mốc", "project.setup.confirm": "Xác nhận bắt đầu thực hiện",
   "project.report.draft": "Tạo bản nháp báo cáo", "project.report.edit-draft": "Cập nhật báo cáo", "project.report.submit": "Nộp báo cáo",

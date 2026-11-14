@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -59,7 +60,7 @@ function createAuthStore({ user = activeUser, activeSession = { id: "session-1",
       return userId === activeUser.id && user ? user : null;
     },
     async createSession(userId) {
-      const session = { id: "session-1", userId };
+      const session = { id: "session-1", token: "token-1", userId };
       this.createdSessions.push(session);
       return session;
     },
@@ -79,8 +80,15 @@ function createAuthStore({ user = activeUser, activeSession = { id: "session-1",
     async findPasswordResetTarget(identifier) {
       return identifier === "admin" ? this.resetTarget : null;
     },
-    async createPasswordResetToken(userId, createdById, tokenHash, expiresAt) {
-      this.resetTokens.push({ userId, createdById, tokenHash, expiresAt });
+    async createPasswordResetToken(userId, createdById, tokenHash, expiresAt, invalidateExisting = true) {
+      this.resetTokens.push({ userId, createdById, tokenHash, expiresAt, invalidateExisting });
+    },
+    liveToken: true,
+    async isPasswordResetTokenLive() {
+      return this.liveToken;
+    },
+    async isAccountActivationTokenLive() {
+      return this.liveToken;
     },
     async completePasswordReset() {
       return "user-1";
@@ -112,7 +120,9 @@ function createPasswordService(isValid = true) {
       this.verifyPasswordCalls += 1;
       return isValid && password !== "ValidPassword1" && password !== "ActivationPassword1";
     },
+    hashPasswordCalls: 0,
     async hashPassword(password) {
+      this.hashPasswordCalls += 1;
       return `hash:${password}`;
     },
     createResetToken() {
@@ -174,8 +184,8 @@ describe("auth API behavior", () => {
     );
 
     assert.deepEqual(body.user, safeUser());
-    assert.deepEqual(store.createdSessions, [{ id: "session-1", userId: "user-1" }]);
-    assert.match(response.headers["Set-Cookie"], /rtms_session=session-1/);
+    assert.deepEqual(store.createdSessions, [{ id: "session-1", token: "token-1", userId: "user-1" }]);
+    assert.match(response.headers["Set-Cookie"], /rtms_session=token-1/);
     assert.match(response.headers["Set-Cookie"], /HttpOnly/);
   });
 
@@ -195,6 +205,28 @@ describe("auth API behavior", () => {
     assert.equal(auditLog.records[0].targetEntity, "auth-session");
     assert.equal(auditLog.records[0].targetEntityId, "admin");
     assert.equal("password" in auditLog.records[0], false);
+  });
+
+  it("login is capped per account even when every attempt comes from a new address", async () => {
+    const { service } = createService({ passwordIsValid: false });
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      await assert.rejects(() => service.login({ username: "admin", password: "wrong" }, { ip: `203.0.113.${attempt}` }), UnauthorizedException);
+    }
+    await assert.rejects(
+      () => service.login({ username: "admin", password: "wrong" }, { ip: "198.51.100.1" }),
+      (error) => error instanceof HttpException && error.getStatus() === 429
+    );
+  });
+
+  it("an address the account already logged in from is not locked out by guesses from elsewhere", async () => {
+    const { service } = createService();
+    await service.login({ username: "admin", password: "correct" }, { ip: "10.0.0.5" });
+    // The test password service rejects exactly this value.
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      await assert.rejects(() => service.login({ username: "admin", password: "ValidPassword1" }, { ip: `203.0.113.${attempt}` }), UnauthorizedException);
+    }
+    await assert.rejects(() => service.login({ username: "admin", password: "correct" }, { ip: "198.51.100.1" }), (error) => error instanceof HttpException && error.getStatus() === 429);
+    assert.equal((await service.login({ username: "admin", password: "correct" }, { ip: "10.0.0.5" })).user.username, "admin");
   });
 
   it("logout revokes the session, expires the cookie, and creates an audit row", async () => {
@@ -425,6 +457,25 @@ describe("auth API behavior", () => {
     await assert.rejects(() => service.changePassword("user-1", { currentPassword: "wrong", newPassword: "ValidPassword1" }, {}), HttpException);
     assert.deepEqual(store.passwordChanges, []);
     assert.equal(auditLog.records.at(-1).action, "change-password");
+
+    // A hijacked session gets five guesses at the current password per window, counted per user.
+    for (let i = 0; i < 4; i += 1) await assert.rejects(() => service.changePassword("user-1", { currentPassword: "wrong", newPassword: "ValidPassword1" }, {}), { name: "BadRequestException" });
+    await assert.rejects(() => service.changePassword("user-1", { currentPassword: "wrong", newPassword: "ValidPassword1" }, {}), (error) => error instanceof HttpException && error.getStatus() === 429);
+  });
+
+  it("logout without a valid session writes no audit row", async () => {
+    const { service, auditLog } = createService();
+    assert.deepEqual(await service.logout(null, {}), { success: true });
+    assert.deepEqual(await service.logout("unknown-session", {}), { success: true });
+    assert.deepEqual(auditLog.records, []);
+  });
+
+  it("reset and activation with an unknown token fail before any password hashing", async () => {
+    const { service, store, passwordService } = createService();
+    store.liveToken = false;
+    await assert.rejects(() => service.completePasswordReset({ token: "junk", newPassword: "ValidPassword1" }, {}), { name: "BadRequestException" });
+    await assert.rejects(() => service.completeAccountActivation({ token: "junk", password: "ActivationPassword1" }, {}), { name: "BadRequestException" });
+    assert.equal(passwordService.hashPasswordCalls, 0);
   });
 
   it("successful password change invalidates server-side credentials and audits without secrets", async () => {
@@ -484,7 +535,8 @@ describe("auth API behavior", () => {
     known.store.resetTarget = { id: "user-1", displayName: "Admin", credentialEmail: "admin@example.vn" };
     const knownResult = await known.service.requestPasswordReset({ identifier: "admin" }, { ip: "1.1.1.1" });
     assert.deepEqual(knownResult, unknownResult);
-    assert.deepEqual(known.store.resetTokens.map(({ userId, createdById, tokenHash }) => ({ userId, createdById, tokenHash })), [{ userId: "user-1", createdById: "user-1", tokenHash: "hashed-reset-token" }]);
+    // A self-service request keeps earlier links alive, so a stranger cannot keep cancelling the owner's link.
+    assert.deepEqual(known.store.resetTokens.map(({ userId, createdById, tokenHash, invalidateExisting }) => ({ userId, createdById, tokenHash, invalidateExisting })), [{ userId: "user-1", createdById: "user-1", tokenHash: "hashed-reset-token", invalidateExisting: false }]);
     await new Promise((resolve) => setImmediate(resolve));
     assert.equal(known.auditLog.records.at(-1).result, "success");
     assert.equal(known.mailService.sent[0].to, "admin@example.vn");
@@ -575,8 +627,10 @@ describe("auth API behavior", () => {
     };
     const store = new AuthStore({ $transaction: async (callback) => callback(tx) });
     const minutesOf = () => Math.round((created.at(-1).expiresAt.getTime() - Date.now()) / 60000);
-    await store.createSession("user-1", 0);
+    const { token } = await store.createSession("user-1", 0);
     assert.equal(minutesOf(), 30);
+    // The cookie token is never stored: the row id is its SHA-256.
+    assert.equal(created.at(-1).id, createHash("sha256").update(token).digest("hex"));
     parameter = { value: "5" };
     await store.createSession("user-1", 0);
     assert.equal(minutesOf(), 720);

@@ -197,10 +197,11 @@ function safeUrl(value: string | null | undefined, path: string) {
   return value;
 }
 
-// Portrait: a URL/path or an inline 3x4 JPEG/PNG/WebP data URL produced by the client cropper.
+// Portrait: only an inline 3x4 JPEG/PNG/WebP data URL produced by the client cropper. A stored URL or path
+// would make every viewer's browser fetch an address chosen by the profile owner.
 export const AVATAR_DATA_URL = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/;
 function avatarUrl(value: string | null | undefined, path: string) {
-  if (value != null && !AVATAR_DATA_URL.test(value) && (value.length > 2048 || !/^(https?:\/\/|\/(?!\/))/i.test(value))) invalid([path]);
+  if (value != null && !AVATAR_DATA_URL.test(value)) invalid([path]);
   return value;
 }
 

@@ -3,7 +3,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { SessionAuthGuard } from "../../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../../proposals-shared/proposal-types.js";
 import { listFilesPipe, type ListFilesDto, updateFilePipe, type UpdateFileDto, uploadFilePipe, type UploadFileDto } from "./files.dto.js";
-import { FilesService, streamToBuffer } from "./files.service.js";
+import { defaultFileConfig, FilesService, streamToBuffer } from "./files.service.js";
 
 type UploadedMultipartFile = {
   originalname: string;
@@ -43,7 +43,8 @@ export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
   @Post()
-  @UseInterceptors(FileInterceptor("file"))
+  // Enforced while the body streams in, so an oversized upload is never buffered in memory.
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: defaultFileConfig().maxFileSizeBytes, files: 1 } }))
   async uploadFile(
     @Req() request: RequestWithCurrentUser,
     @Body(uploadFilePipe) body: UploadFileDto,

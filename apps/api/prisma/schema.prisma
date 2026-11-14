@@ -64,6 +64,7 @@ model User {
   projectHistory ProjectHistory[] @relation("ProjectHistoryActor")
   projectFundingRecords ProjectFundingRecord[] @relation("ProjectFundingRecorder")
   projectLiquidations ProjectLiquidation[] @relation("ProjectLiquidationAuthor")
+  projectFundingIncreases ProjectFundingIncrease[] @relation("ProjectFundingIncreaseAuthor")
   projectRequestHistory ProjectRequestHistory[] @relation("ProjectRequestHistoryActor")
   createdProjectRequestRevisions ProjectRequestRevision[] @relation("ProjectRequestRevisionCreator")
   createdProjectMilestones ProjectMilestone[] @relation("ProjectMilestoneCreator")
@@ -781,6 +782,7 @@ model ApprovedProject {
   history                   ProjectHistory[]
   fundingRecords            ProjectFundingRecord[]
   liquidations              ProjectLiquidation[]
+  fundingIncreases          ProjectFundingIncrease[]
   ethicsDossier             EthicsDossier?
   acceptanceDossier         AcceptanceDossier?
   acceptanceCouncilMembers  AcceptanceCouncilMember[]
@@ -1114,6 +1116,28 @@ model ProjectLiquidation {
 
   @@index([projectId, status])
   @@map("project_liquidations")
+}
+
+// Đề nghị nâng kinh phí (quy tắc 2026-11-13): CV phụ trách/TB lập → TB → TP → GĐ ký; chỉ khi ký mới thêm dòng GRANT (`fundingEntryId`).
+model ProjectFundingIncrease {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  project     ApprovedProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  authorId    String   @map("author_id")
+  author      User     @relation("ProjectFundingIncreaseAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  amount      Decimal  @db.Decimal(18, 2)
+  reason      String
+  fileRecordIds String[] @map("file_record_ids")
+  status      String   @default("SUBMITTED")
+  decidedById String?  @map("decided_by_id")
+  decidedAt   DateTime? @map("decided_at")
+  decisionNote String? @map("decision_note")
+  fundingEntryId String? @map("funding_entry_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([projectId, status])
+  @@map("project_funding_increases")
 }
 
 // Story 11.1: thông báo trong ứng dụng, ghi cùng transaction nghiệp vụ. Idempotent theo (user_id, idempotency_key).

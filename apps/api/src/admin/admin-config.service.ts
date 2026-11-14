@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
+import { defaultFileConfig, FILE_MAX_UPLOAD_PARAMETER_KEY } from "../modules/files/files.service.js";
 import {
   COUNCIL_FORMATION_SELECTABLE_ROLES,
   COUNCIL_MEMBER_COUNT_RANGE,
@@ -41,6 +42,18 @@ const SYSTEM_PARAMETER_RULES = {
       const parsed = Number(value);
       if (!Number.isInteger(parsed) || parsed < 15 || parsed > 1440) {
         throw new BadRequestException({ message: "value phải là số phút từ 15 đến 1440." });
+      }
+
+      return String(parsed);
+    }
+  },
+  // Dung lượng tệp tải lên tối đa (MB); trần là FILE_MAX_UPLOAD_BYTES của bản triển khai.
+  [FILE_MAX_UPLOAD_PARAMETER_KEY]: {
+    validate(value: string) {
+      const parsed = Number(value);
+      const ceiling = Math.floor(defaultFileConfig().maxFileSizeBytes / (1024 * 1024));
+      if (!Number.isInteger(parsed) || parsed < 1 || parsed > ceiling) {
+        throw new BadRequestException({ message: `value phải là số MB từ 1 đến ${ceiling}.` });
       }
 
       return String(parsed);
