@@ -6,8 +6,8 @@ export type ProjectRecord = {
   scope: Record<string, unknown>; plan: Record<string, unknown> | null;
   hostOrganizationUnit?: { name: string }; officer?: { officerUserId: string; displayName?: string | null } | null;
   members: Array<{ id: string; name: string; participationRole: string; status: string; userId?: string }>;
-  milestones: Array<{ id: string; title: string; dueDate: string; isImportant: boolean; status: string; responsibleMemberId?: string | null }>;
-  checkpoints: Array<{ id: string; title: string; dueDate: string; status: string }>;
+  milestones: Array<{ id: string; title: string; description?: string | null; dueDate: string; isImportant: boolean; status: string; responsibleMemberId?: string | null }>;
+  checkpoints: Array<{ id: string; title: string; dueDate: string; status: string; milestoneId?: string | null }>;
   reports: Array<{ id: string; revision: number; status: string; checkpointId?: string; reportingPeriodStart?: string; reportingPeriodEnd?: string; progressResults?: string; issuesRecommendations?: string; reviewReason?: string; responseDeadline?: string; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }>; allowedActions: PermissionActionV1[] }>;
   requests: Array<{ id: string; requestType: "adjustment" | "extension"; status: string; revision?: number; requesterId?: string; reason?: string; proposedValues?: Record<string, unknown>; decisionNote?: string; responseDeadline?: string; approval?: { stage: string; stageLabel: string; withdrawNote: string } | null; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }>; allowedActions: PermissionActionV1[] }>;
   history: Array<{ id: string; action: string; reason?: string; createdAt: string }>;
@@ -35,7 +35,7 @@ const MEMBER_STATUS_LABELS: Record<string, string> = { ACTIVE: "Đang tham gia",
 const HISTORY_ACTION_LABELS: Record<string, string> = {
   "project.funding.record": "Ghi số liệu kinh phí", "project.funding-increase.submit": "Lập đề nghị nâng kinh phí", "project.funding-increase.return": "Trả lại đề nghị nâng kinh phí", "project.funding-increase.approve": "Ký đề nghị nâng kinh phí", "project.funding-increase.reject": "Từ chối đề nghị nâng kinh phí", "project.liquidation.submit": "Trình biên bản thanh lý", "project.liquidation.approve": "Ký biên bản thanh lý", "project.liquidation.reject": "Từ chối biên bản thanh lý",
   "project.created": "Tạo đề tài", "project.officer.assign": "Phân công chuyên viên", "project.officer.revoke": "Thu hồi phân công chuyên viên",
-  "project.setup.configure": "Thiết lập mốc", "project.setup.confirm": "Xác nhận bắt đầu thực hiện",
+  "project.setup.configure": "Thiết lập mốc", "project.setup.confirm": "Xác nhận bắt đầu thực hiện", "project.plan.maintain": "Cập nhật mốc thường",
   "project.report.draft": "Tạo bản nháp báo cáo", "project.report.edit-draft": "Cập nhật báo cáo", "project.report.submit": "Nộp báo cáo",
   "project.report.review": "Bắt đầu xem xét báo cáo", "project.report.request-supplement": "Yêu cầu bổ sung báo cáo", "project.report.accept": "Chấp nhận báo cáo",
   "ethics-dossier.create": "Tạo hồ sơ đạo đức", "ethics-dossier.submit": "Nộp hồ sơ đạo đức",

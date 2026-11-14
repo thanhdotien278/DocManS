@@ -104,7 +104,8 @@ development_status:
   epic-6: in-progress
   # Rà vòng đời 2026-11-13: đủ AC cả API và UI.
   6-1-khoi-tao-de-tai-tu-proposal-duoc-phe-duyet: review
-  6-2-quan-ly-thanh-vien-trach-nhiem-milestone-va-checkpoint: in-progress
+  # 6.2 (2026-11-14, nhánh ST-6.2-milestone-maintenance): CV phụ trách sửa mốc thường/điểm báo cáo mở khi executing/paused (project.plan.maintain); form lập nhiều mốc và điểm báo cáo; hiện người phụ trách mốc; chặn mốc trước startDate. npm test 347/348 PASS (1 skip), trình duyệt PASS (vai CV) trên DB tạm. Còn chờ chốt: AC thư ký (tracking/biên bản/task) có hoãn sang Epic 7 không.
+  6-2-quan-ly-thanh-vien-trach-nhiem-milestone-va-checkpoint: review
   # Rà vòng đời 2026-11-13: đủ AC; thông báo hoãn sang 11.x, UI chưa có ô trạng thái mốc.
   6-3-chu-nhiem-nop-bao-cao-tien-do-va-bang-chung: review
   # Rà vòng đời 2026-11-13: đủ AC; tệp chưa gắn với trách nhiệm cụ thể.
