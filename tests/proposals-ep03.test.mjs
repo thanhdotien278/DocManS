@@ -590,7 +590,7 @@ async function createSubmittedProposal(services, { members = TEAM } = {}) {
     members
   });
 
-  const content = Buffer.from("thuyet minh de tai");
+  const content = Buffer.from("%PDF thuyet minh de tai");
   await services.filesService.uploadFile(piUser, {
     relatedEntityType: "research_proposal",
     relatedEntityId: draft.id,
@@ -721,7 +721,7 @@ describe("ST-3.2 reviewer assignment and assignment-scoped proposal access", () 
     });
     assert.equal(files.length, 1);
     const downloaded = await services.filesService.downloadFile(reviewerUser, files[0].id);
-    assert.equal(downloaded.content.toString(), "thuyet minh de tai");
+    assert.equal(downloaded.content.toString(), "%PDF thuyet minh de tai");
 
     // AC-ST-3.2-02: the same account role with no assignment gets nothing, and leaks no metadata.
     await assert.rejects(() => services.proposalService.getProposal(unassignedReviewerUser, proposal.id), ForbiddenException);

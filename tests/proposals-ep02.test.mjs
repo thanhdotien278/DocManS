@@ -1,5 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { fileBytes } from "./helpers/file-bytes.mjs";
 import { BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import {
   createProposalIntakePeriodPipe,
@@ -723,7 +724,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
       description: "  Bản chỉ số xét nghiệm  ",
       mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       sizeBytes: 256000,
-      content: Buffer.alloc(256000, "p")
+      content: fileBytes(256000, ".docx")
     });
 
     assert.equal(attachment.fileName, "Chỉ số Glucose.docx");
@@ -761,12 +762,12 @@ describe("EP-02 proposal intake and submission behavior", () => {
     const download = await filesService.downloadFile(piUser, attachment.id);
     assert.equal(download.fileName, "Chỉ số Glucose.docx");
     assert.equal(download.uploaderDisplayName, piUser.displayName);
-    assert.deepEqual(download.content, Buffer.alloc(256000, "p"));
+    assert.deepEqual(download.content, fileBytes(256000, ".docx"));
     assertNoRawStorageFields(download);
 
     objectStorage.objects.delete(storedObjectKey);
     await assert.rejects(() => filesService.downloadFile(piUser, attachment.id), NotFoundException);
-    objectStorage.objects.set(storedObjectKey, Buffer.alloc(256000, "p"));
+    objectStorage.objects.set(storedObjectKey, fileBytes(256000, ".docx"));
 
     for (const fileName of ["Đơn đề nghị hoàn thiện.docx", "Báo cáo tổng hợp.pdf"]) {
       const mimeType = fileName.endsWith(".pdf") ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -779,7 +780,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
         originalFileName: fileName,
         mimeType,
         sizeBytes: 1000,
-        content: Buffer.alloc(1000, "v")
+        content: fileBytes(1000, fileName)
       });
       assert.equal(accepted.fileName, fileName);
       assertNoRawStorageFields(accepted);
@@ -800,7 +801,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
         fileName,
         mimeType,
         sizeBytes: 1000,
-        content: Buffer.alloc(1000, "a")
+        content: fileBytes(1000, fileName)
       });
       assert.equal(accepted.fileName, fileName);
       assertNoRawStorageFields(accepted);
@@ -830,7 +831,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
           fileName: "du-toan.pdf",
           mimeType: "application/x-msdownload",
           sizeBytes: 1000,
-          content: Buffer.alloc(1000, "b")
+          content: fileBytes(1000)
         }),
       BadRequestException
     );
@@ -860,7 +861,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
           fileName: "du-toan.pdf",
           mimeType: "application/pdf",
           sizeBytes: 1000,
-          content: Buffer.alloc(1000, "b")
+          content: fileBytes(1000)
         }),
       ForbiddenException
     );
@@ -874,7 +875,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
           fileName: "du-toan.pdf",
           mimeType: "application/pdf",
           sizeBytes: 1000,
-          content: Buffer.alloc(1000, "b")
+          content: fileBytes(1000)
         }),
       ForbiddenException
     );
@@ -888,7 +889,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
           fileName: "du-toan.pdf",
           mimeType: "application/pdf",
           sizeBytes: 1000,
-          content: Buffer.alloc(1000, "b")
+          content: fileBytes(1000)
         }),
       NotFoundException
     );
@@ -908,7 +909,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
           fileName: "du-toan.pdf",
           mimeType: "application/pdf",
           sizeBytes: 1000,
-          content: Buffer.alloc(1000, "b")
+          content: fileBytes(1000)
         }),
       ForbiddenException
     );
@@ -939,7 +940,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
       description: "",
       mimeType: "application/pdf",
       sizeBytes: 1000,
-      content: Buffer.alloc(1000, "p")
+      content: fileBytes(1000)
     });
 
     const updated = await filesService.updateFile(piUser, attachment.id, {
@@ -993,7 +994,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
           fileName: "thuyet-minh.pdf",
           mimeType: "application/pdf",
           sizeBytes: 1000,
-          content: Buffer.alloc(1000, "p")
+          content: fileBytes(1000)
         }),
       /object storage unavailable/
     );
@@ -1012,7 +1013,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
           fileName: "thuyet-minh.pdf",
           mimeType: "application/pdf",
           sizeBytes: 1000,
-          content: Buffer.alloc(1000, "p")
+          content: fileBytes(1000)
         }),
       /file metadata create failed/
     );
@@ -1042,7 +1043,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
       fileName: "thuyet-minh.pdf",
       mimeType: "application/pdf",
       sizeBytes: 256000,
-      content: Buffer.alloc(256000, "p")
+      content: fileBytes(256000)
     });
     await filesService.uploadFile(piUser, {
       relatedEntityType: "research_proposal",
@@ -1052,7 +1053,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
       fileName: "du-toan.pdf",
       mimeType: "application/pdf",
       sizeBytes: 128000,
-      content: Buffer.alloc(128000, "b")
+      content: fileBytes(128000)
     });
 
     await assert.rejects(() => proposalService.submitProposal(otherPiUser, draft.id, { contextVersion: currentVersion(prisma, draft.id) }), ForbiddenException);
@@ -1099,7 +1100,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
           fileName: "bo-sung.pdf",
           mimeType: "application/pdf",
           sizeBytes: 1000,
-          content: Buffer.alloc(1000, "s")
+          content: fileBytes(1000)
         }),
       ForbiddenException
     );
@@ -1137,7 +1138,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
         fileName: `${filePurpose}.pdf`,
         mimeType: "application/pdf",
         sizeBytes: 1000,
-        content: Buffer.alloc(1000, "p")
+        content: fileBytes(1000)
       });
     }
 
@@ -1166,7 +1167,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
         fileName: `${filePurpose}.pdf`,
         mimeType: "application/pdf",
         sizeBytes: 1000,
-        content: Buffer.alloc(1000, "p")
+        content: fileBytes(1000)
       });
     }
     const submitted = await proposalService.submitProposal(piUser, draft.id, { contextVersion: currentVersion(prisma, draft.id) });
@@ -1225,7 +1226,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
       fileName: "du-toan-bo-sung.pdf",
       mimeType: "application/pdf",
       sizeBytes: 1000,
-      content: Buffer.alloc(1000, "b")
+      content: fileBytes(1000)
     });
     assert.equal(extraFile.canEdit, true);
     await assert.rejects(
@@ -1238,7 +1239,7 @@ describe("EP-02 proposal intake and submission behavior", () => {
           fileName: "staff-upload.pdf",
           mimeType: "application/pdf",
           sizeBytes: 1000,
-          content: Buffer.alloc(1000, "s")
+          content: fileBytes(1000)
         }),
       ForbiddenException
     );

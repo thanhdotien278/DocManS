@@ -33,7 +33,7 @@ import {
 import { getAssignmentRoleLabel, type ProposalReviewAccess } from "../proposals-shared/proposal-review-access.js";
 import { ProposalReviewAccessService } from "../proposals-shared/proposal-review-access.service.js";
 import { MANAGEMENT_OFFICER_STATUS, ProposalManagementOfficerService, replaceProposalManagementOfficer, type ProposalManagementOfficer, type ProposalManagementOfficerResolution } from "../proposals-shared/proposal-management-officer.service.js";
-import { PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
+import { isWorkflowVisibleStatus, PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import type { ProposalMemberPersistInput, ProposalMissingItem } from "../proposals-shared/proposal-types.js";
 import { ProposalParticipationService } from "./proposal-participation.service.js";
 import { EVALUATION_FILE_PURPOSES } from "../modules/files/files.dto.js";
@@ -194,7 +194,10 @@ export class ResearchProposalsService {
   }
 
   async listProposals(actor: SafeUserContext) {
+    // Chỉ thu hẹp số dòng tải về cho vai trò đọc theo quan hệ; `canReadProposal` bên dưới vẫn quyết định quyền.
+    const byRelationship = ["RESEARCHER_INTERNAL_USER", "EXTERNAL_RESEARCHER_USER", "RESEARCH_MANAGEMENT_STAFF", "SYSTEM_ADMIN"].includes(actor.systemRole);
     const records = (await this.prisma.researchProposal.findMany({
+      where: byRelationship ? { OR: [{ ownerId: actor.id }, { members: { some: { userId: actor.id } } }, { reviewAssignments: { some: { reviewerUserId: actor.id } } }, { managementOfficers: { some: { officerUserId: actor.id } } }] } : {},
       orderBy: { createdAt: "desc" },
       include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } }, intakePeriod: { select: { title: true } } }
     })) as ResearchProposalRecord[];
@@ -721,6 +724,8 @@ export class ResearchProposalsService {
 
     const proposal = await this.findProposal(proposalId);
     this.assertManagementOfficerAuthority(actor, proposal);
+    // Phân công mở quyền đọc cho chuyên viên: bản nháp chưa nộp chưa thuộc quy trình nên chưa phân công.
+    if (!isWorkflowVisibleStatus(proposal.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Chỉ phân công chuyên viên cho hồ sơ đã nộp." });
     await this.assertNoProposalReviewConflict(actor, proposalId, "Người tham gia hoặc người đã phản biện không được phân công cán bộ quản lý cho hồ sơ.", "assign-proposal-management-officer");
 
     const officerUserId = readText(input.officerUserId, "officerUserId", 120);

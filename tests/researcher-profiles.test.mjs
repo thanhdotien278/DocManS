@@ -284,7 +284,7 @@ function validCv(overrides = {}) {
     workHistory: { summary: "Nghiên cứu", items: [{ period: "2001-2020", organization: "Đơn vị 1" }] },
     researchExperience: { intellectualProperty: [{ title: "Sáng chế" }], awards: [{ name: "Giải thưởng" }], projects: [{ projectTitle: "Đề tài", role: "Chủ nhiệm" }] },
     ...overrides,
-    personalInfo: { gender: "Nam", idNumber: "ID-001", organization: "Đơn vị 1", shareDataAgreement: true, bankAccount: "123456", avatarUrl: "/avatar.jpg", ...overrides.personalInfo }
+    personalInfo: { gender: "Nam", idNumber: "ID-001", organization: "Đơn vị 1", shareDataAgreement: true, bankAccount: "123456", avatarUrl: "data:image/png;base64,iVBORw0KGgo=", ...overrides.personalInfo }
   };
 }
 
@@ -408,7 +408,8 @@ describe("Story 2.1 researcher profile contracts", () => {
       ["invalid date", { ...validCv(), personalInfo: { ...validCv().personalInfo, birthDate: "2020-02-30" } }, "curriculumVitae.personalInfo.birthDate"],
       ["unsafe avatar URL", validCv({ personalInfo: { avatarUrl: "javascript:alert(1)" } }), "curriculumVitae.personalInfo.avatarUrl"],
       ["protocol-relative avatar URL", validCv({ personalInfo: { avatarUrl: "//evil.test/a.jpg" } }), "curriculumVitae.personalInfo.avatarUrl"],
-      ["long plain avatar URL", validCv({ personalInfo: { avatarUrl: `https://example.test/${"a".repeat(2048)}` } }), "curriculumVitae.personalInfo.avatarUrl"],
+      ["remote avatar URL", validCv({ personalInfo: { avatarUrl: "https://example.test/a.jpg" } }), "curriculumVitae.personalInfo.avatarUrl"],
+      ["internal avatar path", validCv({ personalInfo: { avatarUrl: "/avatar.jpg" } }), "curriculumVitae.personalInfo.avatarUrl"],
       ["svg avatar data URL", validCv({ personalInfo: { avatarUrl: "data:image/svg+xml;base64,PHN2Zz4=" } }), "curriculumVitae.personalInfo.avatarUrl"],
       ["oversized avatar data URL", validCv({ personalInfo: { avatarUrl: `data:image/jpeg;base64,${"A".repeat(1_000_000)}` } }), "curriculumVitae.personalInfo.avatarUrl"],
       ["unsafe intellectual property proof URL", validCv({ researchExperience: { intellectualProperty: [{ title: "Sáng chế", proofUrl: "data:text/html,unsafe" }] } }), "curriculumVitae.researchExperience.intellectualProperty.0.proofUrl"],
