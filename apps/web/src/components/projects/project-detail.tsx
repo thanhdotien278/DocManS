@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { RoutingStatus } from "@/components/approvals/routing-status";
 import { ProjectFundingSection } from "@/components/projects/project-funding-section";
+import { ProjectPlanSection } from "@/components/projects/project-plan-section";
 import { SectionCard } from "@/components/ui/section-card";
-import { acceptanceDossierStatusLabel, canItem, canProject, ethicsDossierStatusLabel, getProject, historyActionLabel, memberStatusLabel, milestoneStatusLabel, participationRoleLabel, projectStatusLabel, reportStatusLabel, requestStatusLabel, listProjectFiles, projectAction, projectCapability, projectDenial, projectFileUrl, projectOfficerCandidates, uploadProjectFile, type ProjectRecord } from "@/lib/projects-api";
+import { acceptanceDossierStatusLabel, canItem, canProject, ethicsDossierStatusLabel, getProject, historyActionLabel, memberStatusLabel, participationRoleLabel, projectStatusLabel, reportStatusLabel, requestStatusLabel, listProjectFiles, projectAction, projectCapability, projectDenial, projectFileUrl, projectOfficerCandidates, uploadProjectFile, type ProjectRecord } from "@/lib/projects-api";
 
 function day(value?: string | null) { return value?.slice(0, 10) ?? ""; }
 function date(value?: string | null) { return value ? new Intl.DateTimeFormat("vi-VN", { timeZone: "UTC" }).format(new Date(value)) : "Chưa có"; }
@@ -19,9 +20,6 @@ export function ProjectDetail({ id }: { id: string }) {
   const [candidates, setCandidates] = useState<Array<{ id: string; displayName: string; username: string }>>([]);
   const [files, setFiles] = useState<Array<{ id: string; fileName: string; uploadedById: string }>>([]);
   const [officerUserId, setOfficerUserId] = useState("");
-  const [setupTitle, setSetupTitle] = useState("");
-  const [setupDate, setSetupDate] = useState("");
-  const [setupResponsibleId, setSetupResponsibleId] = useState("");
   const emptyReport = { checkpointId: "", progressResults: "", issuesRecommendations: "", reportingPeriodStart: "", reportingPeriodEnd: "" };
   const [report, setReport] = useState(emptyReport);
   // Evidence picked per report/request id, so a file chosen for one item is never submitted with another.
@@ -59,10 +57,10 @@ export function ProjectDetail({ id }: { id: string }) {
   }, [project?.id, project?.officer?.officerUserId]);
 
   async function run(path: string, body: Record<string, unknown> = {}, confirmText?: string, method = "POST") {
-    if (!project) return;
-    if (confirmText && !window.confirm(confirmText)) return;
+    if (!project) return false;
+    if (confirmText && !window.confirm(confirmText)) return false;
     const contextVersion = projectCapability(project)?.contextVersion;
-    if (!contextVersion) { setNotice("Ngữ cảnh quyền không hợp lệ. Vui lòng tải lại."); return; }
+    if (!contextVersion) { setNotice("Ngữ cảnh quyền không hợp lệ. Vui lòng tải lại."); return false; }
     setBusy(true); setNotice("");
     try {
       await projectAction(id, path, { ...body, contextVersion }, method);
@@ -70,8 +68,9 @@ export function ProjectDetail({ id }: { id: string }) {
       if (path.startsWith("requests/adjustment")) setAdjustmentDirty(false);
       if (path === "officer/revoke") setRevokeReason("");
       await refresh();
+      return true;
     }
-    catch (error) { setNotice(message(error)); }
+    catch (error) { setNotice(message(error)); return false; }
     finally { setBusy(false); }
   }
 
@@ -121,9 +120,9 @@ export function ProjectDetail({ id }: { id: string }) {
 
     {(allowed("project.officer.assign") || allowed("project.officer.revoke")) ? <SectionCard title="Phân công chuyên viên đề tài"><div className="form-grid two"><label className="field"><span>Chuyên viên thuộc phạm vi</span><select value={officerUserId} onChange={(event) => setOfficerUserId(event.target.value)}><option value="">Chọn chuyên viên</option>{candidates.map((item) => <option key={item.id} value={item.id}>{item.displayName} ({item.username})</option>)}</select></label></div><div className="button-row"><button className="button primary" disabled={disabled("project.officer.assign") || !officerUserId} title={title("project.officer.assign")} onClick={() => void run("officer", { officerUserId }, "Phân công chuyên viên này cho đề tài?")}>Phân công / thay thế</button></div>{allowed("project.officer.revoke") && project.officer ? <div className="form-grid two"><label className="field"><span>Lý do thu hồi</span><input value={revokeReason} onChange={(event) => setRevokeReason(event.target.value)} /></label><button className="button" disabled={disabled("project.officer.revoke") || !revokeReason.trim()} title={title("project.officer.revoke")} onClick={() => void run("officer/revoke", { reason: revokeReason.trim() }, "Thu hồi phân công hiện hành?")}>Thu hồi</button></div> : null}</SectionCard> : null}
 
-    {project.status === "preparing" ? <SectionCard title="Thiết lập và kích hoạt"><p>Mốc và điểm báo cáo được ghi nhận trước khi bắt đầu thực hiện.</p>{allowed("project.setup.configure") && !project.milestones.length && !project.checkpoints.length ? <div className="form-grid two"><label className="field"><span>Tên mốc quan trọng</span><input value={setupTitle} onChange={(event) => setSetupTitle(event.target.value)} /></label><label className="field"><span>Ngày đến hạn</span><input type="date" value={setupDate} onChange={(event) => setSetupDate(event.target.value)} /></label><label className="field"><span>Thành viên phụ trách</span><select value={setupResponsibleId} onChange={(event) => setSetupResponsibleId(event.target.value)}><option value="">Chưa phân công</option>{project.members.filter((item) => item.status === "ACTIVE").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><button className="button" disabled={busy || !setupTitle.trim() || !setupDate} onClick={() => void run("setup", { milestones: [{ title: setupTitle, dueDate: setupDate, isImportant: true, ...(setupResponsibleId ? { responsibleMemberId: setupResponsibleId } : {}) }], checkpoints: [{ title: `Báo cáo ${setupTitle}`, dueDate: setupDate, milestonePosition: 0 }] }, "Lưu mốc và điểm báo cáo này cho đề tài?")}>Lưu mốc triển khai</button></div> : null}<button className="button primary" disabled={disabled("project.setup.confirm")} title={title("project.setup.confirm")} onClick={() => void run("setup/confirm", {}, "Xác nhận thiết lập và bắt đầu thực hiện đề tài?")}>Xác nhận bắt đầu thực hiện</button></SectionCard> : null}
+    <ProjectPlanSection project={project} busy={busy} canSetup={project.status === "preparing" && allowed("project.setup.configure")} canMaintain={allowed("project.plan.maintain")} run={run} />
+    {project.status === "preparing" ? <SectionCard title="Thiết lập và kích hoạt"><p>Mốc và điểm báo cáo được ghi nhận trước khi bắt đầu thực hiện.</p><button className="button primary" disabled={disabled("project.setup.confirm")} title={title("project.setup.confirm")} onClick={() => void run("setup/confirm", {}, "Xác nhận thiết lập và bắt đầu thực hiện đề tài?")}>Xác nhận bắt đầu thực hiện</button></SectionCard> : null}
 
-    <SectionCard title="Mốc và lịch báo cáo"><ul>{project.milestones.map((item) => <li key={item.id}>{item.title} · {date(item.dueDate)} · {milestoneStatusLabel(item.status)}{item.isImportant ? " · Mốc quan trọng" : ""}</li>)}{project.checkpoints.map((item) => <li key={item.id}>{item.title} · {date(item.dueDate)} · {milestoneStatusLabel(item.status)}</li>)}</ul>{!project.milestones.length && !project.checkpoints.length ? <p>Chưa thiết lập mốc.</p> : null}</SectionCard>
 
     {allowed("project.evidence.contribute") && !allowed("project.report.draft") ? <SectionCard title="Đóng góp minh chứng"><p>Chỉ tệp của thành viên phụ trách mốc được hiển thị tại đây. PI quyết định tệp nào được nộp cùng báo cáo.</p><label className="field"><span>Tải tệp đóng góp</span><input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx" disabled={busy} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void upload(file, "PROJECT_CONTRIBUTION"); }} /></label><ul>{files.map((file) => <li key={file.id}><a href={projectFileUrl(file.id)}>{file.fileName}</a></li>)}</ul></SectionCard> : null}
     {allowed("project.report.draft") ? <SectionCard title="Báo cáo tiến độ"><label className="field"><span>Điểm báo cáo</span><select value={report.checkpointId} onChange={(event) => setReport({ ...report, checkpointId: event.target.value })}><option value="">Báo cáo chung</option>{project.checkpoints.map((item) => <option key={item.id} value={item.id}>{item.title} · {date(item.dueDate)}</option>)}</select></label><div className="form-grid two"><label className="field"><span>Đầu kỳ</span><input type="date" value={report.reportingPeriodStart} onChange={(event) => setReport({ ...report, reportingPeriodStart: event.target.value })} /></label><label className="field"><span>Cuối kỳ</span><input type="date" value={report.reportingPeriodEnd} onChange={(event) => setReport({ ...report, reportingPeriodEnd: event.target.value })} /></label></div><label className="field"><span>Kết quả và tiến độ</span><textarea value={report.progressResults} onChange={(event) => setReport({ ...report, progressResults: event.target.value })} /></label><label className="field"><span>Khó khăn / kiến nghị</span><textarea value={report.issuesRecommendations} onChange={(event) => setReport({ ...report, issuesRecommendations: event.target.value })} /></label><button className="button primary" disabled={busy || !report.progressResults.trim() || !report.reportingPeriodStart || !report.reportingPeriodEnd} onClick={() => void (openDraft ? run(`reports/${openDraft.id}`, { ...report, checkpointId: report.checkpointId || null }, undefined, "PATCH") : run("reports", { ...report, checkpointId: report.checkpointId || undefined }))}>{openDraft ? `Cập nhật bản nháp (phiên bản ${openDraft.revision})` : "Lưu bản nháp báo cáo"}</button>{openDraft ? <button className="button" disabled={busy || !report.progressResults.trim() || !report.reportingPeriodStart || !report.reportingPeriodEnd} onClick={() => void run("reports", { ...report, checkpointId: report.checkpointId || undefined })}>Lưu thành báo cáo mới</button> : null}</SectionCard> : null}

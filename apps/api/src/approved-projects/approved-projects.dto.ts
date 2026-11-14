@@ -32,6 +32,8 @@ function ids(value: unknown, field: string) {
 export const createProjectPipe: PipeTransform<unknown, CreateProjectDto> = { transform(value) { const input = record(value); return { proposalId: readText(input.proposalId, "proposalId", 80), contextVersion: context(input) }; } };
 export const ethicsSectionPipe: PipeTransform<unknown, ProjectMutationDto & { section: unknown; value: unknown }> = { transform(value) { const input = record(value); return { contextVersion: context(input), section: input.section, value: input.value }; } };
 export const projectMutationPipe: PipeTransform<unknown, ProjectMutationDto> = { transform(value) { const input = record(value ?? {}); return { contextVersion: context(input) }; } };
+// Nội dung `changes` được service kiểm theo loại mốc (Story 6.2).
+export const projectPlanItemPipe: PipeTransform<unknown, { changes: Record<string, unknown>; reason?: string; contextVersion: ProjectMutationDto["contextVersion"] }> = { transform(value) { const input = record(value); return { changes: record(input.changes), reason: readOptionalText(input.reason, "reason", 1000), contextVersion: context(input) }; } };
 export const assignProjectOfficerPipe: PipeTransform<unknown, AssignProjectOfficerDto> = { transform(value) { const input = record(value); return { officerUserId: readText(input.officerUserId, "officerUserId", 80), reason: readOptionalText(input.reason, "reason", 1000), contextVersion: context(input) }; } };
 export const revokeProjectOfficerPipe: PipeTransform<unknown, RevokeProjectOfficerDto> = { transform(value) { const input = record(value); return { reason: readText(input.reason, "reason", 1000), contextVersion: context(input) }; } };
 
