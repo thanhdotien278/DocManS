@@ -2,8 +2,20 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import filesControllerModule from "../dist/apps/api/modules/files/files.controller.js";
+import filesServiceModule from "../dist/apps/api/modules/files/files.service.js";
 
 const { buildContentDisposition } = filesControllerModule;
+const { readMaxUploadBytes } = filesServiceModule;
+
+describe("upload size limit", () => {
+  it("uses the administrator's value in MB and never exceeds the deployment ceiling", async () => {
+    const MB = 1024 * 1024;
+    const withValue = (value) => ({ systemParameter: { findUnique: async () => (value === null ? null : { value }) } });
+    assert.equal(await readMaxUploadBytes(withValue("5"), 10 * MB), 5 * MB);
+    assert.equal(await readMaxUploadBytes(withValue("50"), 10 * MB), 10 * MB);
+    for (const value of [null, "0", "abc", "2.5"]) assert.equal(await readMaxUploadBytes(withValue(value), 10 * MB), 10 * MB);
+  });
+});
 
 describe("ST-2.3A files route registration source checks", () => {
   it("registers POST /api/v1/files through FilesModule without relying on a missing global prefix", () => {

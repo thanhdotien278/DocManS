@@ -8,12 +8,16 @@ import { ACCEPTANCE_DOSSIER_ENTITY_TYPE } from "../modules/files/files.dto.js";
 import { ACCEPTANCE_MINUTES } from "./acceptance-council.service.js";
 import { ApprovedProjectsService } from "./approved-projects.service.js";
 import { ethicsCapabilityError as capabilityError } from "./ethics-dossiers.service.js";
+import { isRelationshipActiveAt } from "../proposals-shared/proposal-participation.js";
 import { PROJECT_STATUSES, projectContextVersion, TERMINAL_REQUEST_STATUSES } from "./project-capability-v1.js";
 
 type AnyRecord = Record<string, any>;
 
 export const ACCEPTANCE_DOSSIER_DRAFT = "draft";
 export const ACCEPTANCE_DOSSIER_SUBMITTED = "submitted";
+export const ACCEPTANCE_DOSSIER_SUPPLEMENT = "supplement_requested";
+const EDITABLE_STATUSES = [ACCEPTANCE_DOSSIER_DRAFT, ACCEPTANCE_DOSSIER_SUPPLEMENT];
+const REQUEST_SUPPLEMENT = "acceptance-dossier.request-supplement";
 export const ACCEPTANCE_REQUIRED_FILES = ["ACCEPTANCE_FINAL_REPORT", "ACCEPTANCE_PRODUCT_EVIDENCE"];
 export const ACCEPTANCE_CONTRIBUTION = "ACCEPTANCE_CONTRIBUTION";
 export const ACCEPTANCE_FILE_PURPOSES = [...ACCEPTANCE_REQUIRED_FILES, "ACCEPTANCE_OTHER", ACCEPTANCE_CONTRIBUTION];
@@ -132,13 +136,36 @@ export class AcceptanceDossiersService {
       await tx.approvedProject.update({ where: { id: project.id }, data: { status: PROJECT_STATUSES.pendingAcceptance, aggregateVersion: { increment: 1 }, authorizationContextUpdatedAt: now } });
       await tx.acceptanceDossierSubmission.create({ data: { dossierId: dossier.id, version: dossier.version, actorId: currentActor.id, snapshot, submittedAt: now } });
       const facts = { dossierId: dossier.id, status: ACCEPTANCE_DOSSIER_SUBMITTED, version: dossier.version };
-      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "acceptance-dossier.submit", fromStatus: ACCEPTANCE_DOSSIER_DRAFT, toStatus: ACCEPTANCE_DOSSIER_SUBMITTED, reason: "Nộp hồ sơ nghiệm thu", afterFacts: facts } });
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "acceptance-dossier.submit", fromStatus: dossier.status, toStatus: ACCEPTANCE_DOSSIER_SUBMITTED, reason: "Nộp hồ sơ nghiệm thu", afterFacts: facts } });
       await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.acceptance.submit", fromStatus: PROJECT_STATUSES.executing, toStatus: PROJECT_STATUSES.pendingAcceptance, reason: "Nộp hồ sơ nghiệm thu", beforeFacts: { status: PROJECT_STATUSES.executing }, afterFacts: { status: PROJECT_STATUSES.pendingAcceptance, dossierId: dossier.id } } });
-      await new AuditLogService(tx).record({ action: "submit-acceptance-dossier", result: "success", actorId: currentActor.id, targetEntity: "acceptance-dossier", targetEntityId: dossier.id, username: currentActor.username, beforeFacts: { status: ACCEPTANCE_DOSSIER_DRAFT, projectStatus: PROJECT_STATUSES.executing }, afterFacts: { ...facts, projectStatus: PROJECT_STATUSES.pendingAcceptance } });
+      await new AuditLogService(tx).record({ action: "submit-acceptance-dossier", result: "success", actorId: currentActor.id, targetEntity: "acceptance-dossier", targetEntityId: dossier.id, username: currentActor.username, beforeFacts: { status: dossier.status, projectStatus: PROJECT_STATUSES.executing }, afterFacts: { ...facts, projectStatus: PROJECT_STATUSES.pendingAcceptance } });
       // CV phụ trách chuẩn bị hội đồng nghiệm thu; đề tài chưa có CV phụ trách thì báo TB đang hoạt động.
       const officer = await this.projects.currentOfficer(tx, project.id);
       const recipients = officer ? [officer.officerUserId] : (await tx.user.findMany({ where: { systemRole: "RESEARCH_BOARD_HEAD", status: "active" }, select: { id: true } })).map((user: AnyRecord) => user.id);
       await notifyUsers(tx, { userIds: recipients, exclude: [currentActor.id], type: "acceptance-dossier.submitted", title: "Hồ sơ nghiệm thu đã được nộp", body: project.title, link: `/projects/${project.id}/acceptance-dossier`, sourceType: "acceptance_dossier", sourceId: dossier.id, idempotencyKey: `acceptance-dossier:${dossier.id}:v${dossier.version}` });
+      return this.view(tx, currentActor, project.id);
+    });
+  }
+
+  /** Story 6.9 phần 3: TP, TB hoặc CV phụ trách trả hồ sơ đã nộp cho PI bổ sung; đề tài về `executing` tới khi PI nộp lại. */
+  async requestSupplement(actor: SafeUserContext, projectId: string, input: AnyRecord) {
+    return this.projects.mutate(actor, projectId, input.contextVersion, async (tx, currentActor, project) => {
+      await this.authorizeMutation(tx, currentActor, project, REQUEST_SUPPLEMENT);
+      const reason = typeof input.reason === "string" ? input.reason.trim() : "";
+      if (!reason || !input.responseDeadline) throw new BadRequestException({ message: "Cần lý do và hạn bổ sung." });
+      const now = await readTransactionClockV1(tx);
+      const deadline = new Date(input.responseDeadline);
+      if (Number.isNaN(deadline.getTime()) || deadline.getTime() <= now.getTime()) throw new BadRequestException({ code: "DEADLINE_INVALID", message: "Hạn bổ sung phải ở tương lai." });
+      const dossier = await tx.acceptanceDossier.findUnique({ where: { projectId: project.id } });
+      const updated = await tx.acceptanceDossier.update({ where: { id: dossier.id }, data: { status: ACCEPTANCE_DOSSIER_SUPPLEMENT, version: { increment: 1 }, submittedAt: null, submittedById: null } });
+      await tx.approvedProject.update({ where: { id: project.id }, data: { status: PROJECT_STATUSES.executing, aggregateVersion: { increment: 1 }, authorizationContextUpdatedAt: now } });
+      const facts = { dossierId: dossier.id, status: ACCEPTANCE_DOSSIER_SUPPLEMENT, version: updated.version, responseDeadline: deadline.toISOString() };
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: REQUEST_SUPPLEMENT, fromStatus: ACCEPTANCE_DOSSIER_SUBMITTED, toStatus: ACCEPTANCE_DOSSIER_SUPPLEMENT, reason, afterFacts: facts } });
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.acceptance.request-supplement", fromStatus: PROJECT_STATUSES.pendingAcceptance, toStatus: PROJECT_STATUSES.executing, reason, beforeFacts: { status: PROJECT_STATUSES.pendingAcceptance }, afterFacts: { status: PROJECT_STATUSES.executing, dossierId: dossier.id } } });
+      await new AuditLogService(tx).record({ action: "request-acceptance-dossier-supplement", result: "success", actorId: currentActor.id, targetEntity: "acceptance-dossier", targetEntityId: dossier.id, username: currentActor.username, reason, beforeFacts: { status: ACCEPTANCE_DOSSIER_SUBMITTED, version: dossier.version, projectStatus: PROJECT_STATUSES.pendingAcceptance }, afterFacts: { ...facts, projectStatus: PROJECT_STATUSES.executing } });
+      const pi = (project.members ?? []).find((member: AnyRecord) => member.participationRole === "TOPIC_PI" && member.userId && isRelationshipActiveAt(member, now));
+      // Không chép lý do vào thông báo; PI đọc lý do trong hồ sơ.
+      await notifyUsers(tx, { userIds: [pi?.userId], exclude: [currentActor.id], type: "acceptance-dossier.supplement-requested", title: "Hồ sơ nghiệm thu cần bổ sung", body: project.title, link: `/projects/${project.id}/acceptance-dossier`, sourceType: "acceptance_dossier", sourceId: dossier.id, idempotencyKey: `acceptance-dossier:${dossier.id}:supplement:v${updated.version}` });
       return this.view(tx, currentActor, project.id);
     });
   }
@@ -170,15 +197,17 @@ export class AcceptanceDossiersService {
     if (!dossier) return { ...base, dossier: null };
     const files = await this.activeFiles(tx, dossier.id);
     const sections = dossier.sections as AnyRecord;
-    const editable = dossier.status === ACCEPTANCE_DOSSIER_DRAFT && base.allowedActions.includes("acceptance-dossier.edit");
-    // Cùng luật xóa của files.service: PI xóa mọi tệp, người đóng góp chỉ tệp của mình, và chỉ khi còn nháp.
-    const contributes = dossier.status === ACCEPTANCE_DOSSIER_DRAFT && base.allowedActions.includes("acceptance-dossier.contribute");
+    const request = dossier.status === ACCEPTANCE_DOSSIER_SUPPLEMENT ? await tx.projectHistory.findFirst({ where: { projectId, action: REQUEST_SUPPLEMENT }, orderBy: { createdAt: "desc" }, include: { actor: { select: { id: true, displayName: true } } } }) : null;
+    const editable = EDITABLE_STATUSES.includes(dossier.status) && base.allowedActions.includes("acceptance-dossier.edit");
+    // Cùng luật xóa của files.service: PI xóa mọi tệp, người đóng góp chỉ tệp của mình, và chỉ khi còn nháp hoặc cần bổ sung.
+    const contributes = EDITABLE_STATUSES.includes(dossier.status) && base.allowedActions.includes("acceptance-dossier.contribute");
     return {
       ...base,
       dossier: {
         id: dossier.id, projectId: dossier.projectId, status: dossier.status, version: dossier.version, sections, sourceContext: dossier.sourceContext,
         createdAt: dossier.createdAt.toISOString(), submittedAt: dossier.submittedAt?.toISOString() ?? null, submittedBy: dossier.submittedBy ?? null,
         readOnly: !editable,
+        supplementRequest: request ? { reason: request.reason, responseDeadline: (request.afterFacts as AnyRecord)?.responseDeadline ?? null, requestedBy: request.actor, requestedAt: request.createdAt.toISOString() } : null,
         milestones: milestoneReconciliation(project, sections),
         readiness: acceptanceDossierReadiness(project, sections, files),
         files: files.map((file: AnyRecord) => ({ id: file.id, filePurpose: file.filePurpose, version: file.version, fileName: file.originalFileName, mimeType: file.mimeType, sizeBytes: file.sizeBytes, uploadedById: file.uploadedById, createdAt: file.createdAt.toISOString(), canDelete: file.filePurpose === ACCEPTANCE_MINUTES ? capability.allowedActions.includes("acceptance-council.record-result") : editable || (contributes && file.uploadedById === actor.id) })),

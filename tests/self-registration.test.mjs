@@ -118,6 +118,9 @@ async function registerAndVerify(registration, overrides) {
 describe("Story 13.11 self registration", () => {
   it("pipe normalizes email/username and rejects email-shaped usernames", () => {
     assert.deepEqual(input(), { email: "new.user@example.com", username: "new.user", fullName: "Nguyễn Văn A", accountType: "INTERNAL" });
+    // The name is echoed into mail and the profile: one line of letters, spaces and . ' - only.
+    for (const fullName of ["A\nBcc: x@evil.test", "<b>A</b>", "A https://evil.test"]) assert.throws(() => input({ fullName }), { name: "BadRequestException" });
+    assert.equal(input({ fullName: "Trần Thị Mai-Anh Jr." }).fullName, "Trần Thị Mai-Anh Jr.");
     assert.throws(() => input({ username: "a@b.vn" }), { name: "BadRequestException" });
     assert.throws(() => input({ username: "ab" }), { name: "BadRequestException" });
     assert.throws(() => input({ accountType: "STAFF" }), { name: "BadRequestException" });

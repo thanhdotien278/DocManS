@@ -32,7 +32,8 @@ export const APPROVAL_KINDS = [
   "ACCEPTANCE_COUNCIL",
   "PROJECT_EXTENSION",
   "PROJECT_ADJUSTMENT",
-  "LIQUIDATION"
+  "LIQUIDATION",
+  "FUNDING_INCREASE"
 ] as const;
 export type ApprovalKind = (typeof APPROVAL_KINDS)[number];
 export type ApprovalSigner = "DIRECTOR" | "DIRECTOR_OR_SCIENCE_DEPUTY";
@@ -47,7 +48,8 @@ export const APPROVAL_KIND_LABELS: Record<ApprovalKind, string> = {
   ACCEPTANCE_COUNCIL: "Thành lập hội đồng nghiệm thu",
   PROJECT_EXTENSION: "Gia hạn đề tài",
   PROJECT_ADJUSTMENT: "Điều chỉnh đề tài",
-  LIQUIDATION: "Thanh lý hợp đồng"
+  LIQUIDATION: "Thanh lý hợp đồng",
+  FUNDING_INCREASE: "Nâng kinh phí đề tài"
 };
 
 export const APPROVAL_SIGNERS: Record<ApprovalKind, ApprovalSigner> = {
@@ -58,7 +60,8 @@ export const APPROVAL_SIGNERS: Record<ApprovalKind, ApprovalSigner> = {
   ACCEPTANCE_COUNCIL: "DIRECTOR_OR_SCIENCE_DEPUTY",
   PROJECT_EXTENSION: "DIRECTOR_OR_SCIENCE_DEPUTY",
   PROJECT_ADJUSTMENT: "DIRECTOR_OR_SCIENCE_DEPUTY",
-  LIQUIDATION: "DIRECTOR"
+  LIQUIDATION: "DIRECTOR",
+  FUNDING_INCREASE: "DIRECTOR"
 };
 
 export const APPROVAL_SIGNER_LABELS: Record<ApprovalSigner, string> = {
@@ -304,7 +307,7 @@ async function closeRow(tx: Prisma.TransactionClient, actor: SafeUserContext, ro
 
 /**
  * Trả lại thì nguồn về trạng thái sửa được: `DECISION_PACKAGE` (gói đánh giá → "đã chốt", hồ sơ → `under_review`);
- * `PROJECT_ADJUSTMENT`/`PROJECT_EXTENSION` (Story 6.11, yêu cầu về bước CV thẩm định); `LIQUIDATION` (Story 6.12, biên bản về nháp).
+ * `PROJECT_ADJUSTMENT`/`PROJECT_EXTENSION` (Story 6.11, yêu cầu về bước CV thẩm định); `LIQUIDATION` (Story 6.12, biên bản về nháp); `FUNDING_INCREASE` (đề nghị nâng kinh phí thành RETURNED).
  * Các loại khác do story lập tờ trình tương ứng xử lý (5.5 hội đồng, 10.7–10.8 IRB/nghiệm thu).
  */
 async function revertSourceOnReturn(tx: Prisma.TransactionClient, actor: SafeUserContext, row: ApprovalSubmissionRow, note: string) {
@@ -313,6 +316,12 @@ async function revertSourceOnReturn(tx: Prisma.TransactionClient, actor: SafeUse
     // Cập nhật có điều kiện: đường trả lại của TB/TP không giữ khóa đề tài.
     const moved = await tx.projectLiquidation.updateMany({ where: { id: row.subjectRef, status: "SUBMITTED" }, data: { status: "DRAFT" } });
     if (moved.count) await tx.projectHistory.create({ data: { projectId: row.subjectId, actorId: actor.id, action: "project.liquidation.return", fromStatus: "SUBMITTED", toStatus: "DRAFT", reason: note, afterFacts: { liquidationId: row.subjectRef } } });
+    return;
+  }
+  if (row.kind === "FUNDING_INCREASE") {
+    // Đề nghị bị trả lại là kết thúc; người lập sửa thì lập đề nghị mới.
+    const moved = await tx.projectFundingIncrease.updateMany({ where: { id: row.subjectRef, status: "SUBMITTED" }, data: { status: "RETURNED", decisionNote: note } });
+    if (moved.count) await tx.projectHistory.create({ data: { projectId: row.subjectId, actorId: actor.id, action: "project.funding-increase.return", fromStatus: "SUBMITTED", toStatus: "RETURNED", reason: note, afterFacts: { increaseId: row.subjectRef } } });
     return;
   }
   if (row.kind !== "DECISION_PACKAGE") return;

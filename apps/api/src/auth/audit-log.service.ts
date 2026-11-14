@@ -59,9 +59,11 @@ export class AuditLogService {
     };
   }
 
-  async list(): Promise<AuditLogRecord[]> {
+  /** Trang 100 dòng mới nhất; `offset` để xem các dòng cũ hơn. */
+  async list(offset = 0): Promise<AuditLogRecord[]> {
     const records = await this.prisma.auditLog.findMany({
       orderBy: { timestamp: "desc" },
+      skip: Number.isInteger(offset) && offset > 0 ? offset : 0,
       take: 100
     });
 

@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditLogService } from "../auth/audit-log.service.js";
+import { validateNewPassword } from "../auth/password-request.pipe.js";
 import { PasswordService } from "../auth/password.service.js";
 import { AuthService } from "../auth/auth.service.js";
 import { SYSTEM_ROLES, type SafeUserContext, type SystemRole } from "../auth/auth.types.js";
@@ -169,7 +170,7 @@ export class AdminUsersService {
   async createUser(actor: SafeUserContext, input: CreateUserInput) {
     const username = readCode(input.username, "username").toLowerCase();
     const displayName = readText(input.displayName, "displayName");
-    const password = readText(input.password, "password", 256);
+    const password = validateNewPassword(input.password);
     const systemRole = this.readSystemRole(input.systemRole);
     const organizationUnitId = readText(input.organizationUnitId, "organizationUnitId");
 
@@ -189,6 +190,8 @@ export class AdminUsersService {
           usernameKey: username,
           displayName,
           passwordHash,
+          // The administrator knows this password, so the owner must replace it at first login.
+          mustChangePassword: true,
           status: "active",
           systemRole,
           unit: organizationUnit.name
@@ -248,6 +251,10 @@ export class AdminUsersService {
     let newRole: SystemRole | undefined;
 
     if (input.status !== undefined) {
+      // Tài khoản tự đăng ký chỉ được kích hoạt hoặc từ chối qua luồng duyệt đăng ký (tạo hồ sơ, gán đơn vị).
+      if (existing.status === "pending_approval" || existing.status === "pending_email_verification") {
+        throw new ConflictException({ message: "Tài khoản đang chờ duyệt đăng ký; hãy xử lý tại mục Yêu cầu đăng ký." });
+      }
       const status = this.readUserStatus(input.status);
       data.status = status;
       auditEvents.push({
@@ -279,6 +286,10 @@ export class AdminUsersService {
     const resultingStatus = data.status ?? existing.status;
     if (resultingRole === "RESEARCH_BOARD_HEAD" && resultingStatus === "active") {
       await this.assertNoOtherActiveBoardHead(userId);
+    }
+    if (existing.systemRole === "SYSTEM_ADMIN" && existing.status === "active" && (resultingRole !== "SYSTEM_ADMIN" || resultingStatus !== "active")) {
+      const otherAdmin = await this.prisma.user.findFirst({ where: { systemRole: "SYSTEM_ADMIN", status: "active", id: { not: userId } }, select: { id: true } });
+      if (!otherAdmin) throw new ConflictException({ message: "Không thể hạ quyền hoặc vô hiệu quản trị viên hệ thống đang hoạt động cuối cùng." });
     }
 
     if (organizationUnit) {

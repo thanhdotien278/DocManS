@@ -43,6 +43,8 @@ export class RegistrationService {
     for (const key of keys) this.rateLimit.assertCanAttempt(key, Date.now(), REGISTER_RATE_LIMIT_MESSAGE);
     for (const key of keys) this.rateLimit.recordFailure(key);
     this.mailService.configuration();
+    // Băm trước khi kiểm tra trùng để mọi nhánh (email/tên đã dùng hay chưa) tốn thời gian như nhau.
+    const passwordHash = await this.passwordService.hashPassword(randomBytes(32).toString("base64url"));
 
     const result = await this.prisma.$transaction(async (tx) => {
       await this.releaseExpiredHolders(tx, input);
@@ -53,7 +55,7 @@ export class RegistrationService {
       }
       const user = await tx.user.create({ data: {
         username: input.username, usernameKey: input.username, displayName: input.fullName, credentialEmail: input.email,
-        passwordHash: await this.passwordService.hashPassword(randomBytes(32).toString("base64url")),
+        passwordHash,
         mustChangePassword: false, status: "pending_email_verification", systemRole: systemRoleOf(input.accountType), unit: ""
       } });
       const activation = this.passwordService.createResetToken();

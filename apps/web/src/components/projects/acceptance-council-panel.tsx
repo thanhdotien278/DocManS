@@ -51,6 +51,7 @@ export function AcceptanceCouncilPanel({ projectId }: { projectId: string }) {
   const [candidateState, setCandidateState] = useState<"idle" | "loading" | "error">("idle");
   const [userId, setUserId] = useState("");
   const requestSeq = useRef(0);
+  const statusRef = useRef<HTMLParagraphElement>(null);
 
   const can = (action: string) => !!view?.allowedActions.includes(`acceptance-council.${action}`);
   // Nút bị khóa chỉ hiện khi người xem có quyền nhưng sai trạng thái; ACTION_NOT_GRANTED thì ẩn hẳn.
@@ -104,11 +105,16 @@ export function AcceptanceCouncilPanel({ projectId }: { projectId: string }) {
     return () => window.clearTimeout(timer);
   }, [projectId, canInvite, activeRole, query, live.length]);
 
+  // Nút vừa bấm thường biến mất sau khi tải lại view; đưa focus về thông báo để người dùng bàn phím không bị đẩy về đầu trang.
+  useEffect(() => {
+    if ((message || state === "declined") && document.activeElement === document.body) statusRef.current?.focus();
+  }, [message, state, view]);
+
   if (state === "loading") return <p className="state-message">Đang tải hội đồng nghiệm thu...</p>;
   if (state === "hidden") return <p className="state-message error" role="alert">Bạn không có quyền xem hội đồng nghiệm thu của đề tài này.</p>;
   if (state === "declined") return (
     <SectionCard title="Hội đồng nghiệm thu">
-      <p className="state-message success" role="status">Bạn đã từ chối lời mời tham gia hội đồng nghiệm thu. Người mời đã được thông báo.</p>
+      <p className="state-message success" role="status" ref={statusRef} tabIndex={-1}>Bạn đã từ chối lời mời tham gia hội đồng nghiệm thu. Người mời đã được thông báo.</p>
       <div className="button-row"><Link className="button" href="/my-reviews">Về trang đánh giá của tôi</Link></div>
     </SectionCard>
   );
@@ -216,7 +222,7 @@ export function AcceptanceCouncilPanel({ projectId }: { projectId: string }) {
 
         <p className="form-error" role="alert" aria-live="polite">{error}{stale ? <> <button className="button" type="button" disabled={busy} onClick={() => { setError(""); setStale(false); void refresh(); }}>Tải lại</button></> : null}</p>
         {details.length ? <ul className="plain-list form-error">{details.map((item) => <li key={item}>{item}</li>)}</ul> : null}
-        {message ? <p className="state-message success" role="status">{message}</p> : null}
+        {message ? <p className="state-message success" role="status" ref={statusRef} tabIndex={-1}>{message}</p> : null}
 
         {ownInvitation ? (
           <div className="form-section-inline">

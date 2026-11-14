@@ -15,7 +15,7 @@ import { ProposalManagementOfficerService } from "../../proposals-shared/proposa
 import { ProposalReviewAccessService } from "../../proposals-shared/proposal-review-access.service.js";
 import { ProposalParticipationService } from "../../research-proposals/proposal-participation.service.js";
 import { ACCEPTANCE_DOSSIER_ENTITY_TYPE, APPROVED_PROJECT_ENTITY_TYPE, ETHICS_DOSSIER_ENTITY_TYPE, EVALUATION_FILE_PURPOSES, FUNDING_VOUCHER_PURPOSE, RESEARCH_PROPOSAL_ENTITY_TYPE } from "./files.dto.js";
-import { ACCEPTANCE_CONTRIBUTION, ACCEPTANCE_DOSSIER_DRAFT, ACCEPTANCE_FILE_PURPOSES } from "../../approved-projects/acceptance-dossiers.service.js";
+import { ACCEPTANCE_CONTRIBUTION, ACCEPTANCE_DOSSIER_DRAFT, ACCEPTANCE_DOSSIER_SUPPLEMENT, ACCEPTANCE_FILE_PURPOSES } from "../../approved-projects/acceptance-dossiers.service.js";
 import { ACCEPTANCE_MINUTES } from "../../approved-projects/acceptance-council.service.js";
 import { bumpEthicsProjectContext, ETHICS_DOSSIER_DRAFT, ETHICS_FILE_PURPOSES, ethicsCapabilityError, isOfficerViewer, isPiViewer, resetEthicsCommitment } from "../../approved-projects/ethics-dossiers.service.js";
 
@@ -59,6 +59,17 @@ const MIME_TYPES_BY_EXTENSION: Record<string, string[]> = {
   ".xlsx": ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
 };
 
+// Chữ ký đầu tệp: MIME và đuôi tệp đều do trình duyệt khai, chỉ nội dung mới cho biết tệp thật là gì.
+const ZIP_SIGNATURE = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
+const OLE_SIGNATURE = Buffer.from([0xd0, 0xcf, 0x11, 0xe0]);
+const SIGNATURES_BY_EXTENSION: Record<string, Buffer> = {
+  ".doc": OLE_SIGNATURE,
+  ".docx": ZIP_SIGNATURE,
+  ".pdf": Buffer.from("%PDF"),
+  ".xls": OLE_SIGNATURE,
+  ".xlsx": ZIP_SIGNATURE
+};
+
 export type FileModuleConfig = {
   allowedExtensions: string[];
   maxFileSizeBytes: number;
@@ -78,7 +89,15 @@ export type FileUploadInput = {
   content: Buffer;
 };
 
-function defaultFileConfig(): FileModuleConfig {
+export const FILE_MAX_UPLOAD_PARAMETER_KEY = "file_max_upload_mb";
+
+/** Giới hạn QT đặt trong tham số hệ thống (MB); không bao giờ vượt trần triển khai `FILE_MAX_UPLOAD_BYTES`. */
+export async function readMaxUploadBytes(prisma: { systemParameter?: { findUnique(args: { where: { key: string } }): Promise<{ value: string } | null> } }, ceilingBytes: number) {
+  const megabytes = Number((await prisma.systemParameter?.findUnique({ where: { key: FILE_MAX_UPLOAD_PARAMETER_KEY } }))?.value);
+  return Number.isInteger(megabytes) && megabytes >= 1 ? Math.min(megabytes * 1024 * 1024, ceilingBytes) : ceilingBytes;
+}
+
+export function defaultFileConfig(): FileModuleConfig {
   const allowedExtensions = (process.env.FILE_ALLOWED_EXTENSIONS ?? ".doc,.docx,.pdf,.xls,.xlsx")
     .split(",")
     .map((item) => item.trim().toLowerCase())
@@ -153,6 +172,7 @@ export class FilesService {
     const originalFileName = this.readFileName(input.originalFileName ?? input.fileName);
     const description = this.readDescription(input.description);
     this.assertUploadInput({ ...input, fileName: originalFileName });
+    if (input.sizeBytes > await readMaxUploadBytes(this.prisma, this.config.maxFileSizeBytes)) throw new BadRequestException({ message: "Dung lượng tệp vượt quá giới hạn cho phép." });
     await this.assertCanUpload(actor, input.relatedEntityType, input.relatedEntityId, input.filePurpose);
     if (input.relatedEntityType === APPROVED_PROJECT_ENTITY_TYPE) {
       const project = await new ApprovedProjectsService(this.prisma, this.auditLog).getProject(actor, input.relatedEntityId);
@@ -254,12 +274,6 @@ export class FilesService {
 
   async downloadFile(actor: SafeUserContext, fileId: string) {
     const record = await this.findReadableFile(actor, fileId);
-    if (isFundingVoucher(record)) {
-      if (!await this.canReadFundingVouchers(actor, record.relatedEntityId)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Không có quyền xem chứng từ kinh phí đề tài này." });
-    } else {
-      if (record.relatedEntityType !== RESEARCH_PROPOSAL_ENTITY_TYPE) await this.assertCanRead(actor, record.relatedEntityType, record.relatedEntityId);
-      await this.assertProjectFileOwnership(actor, record, false);
-    }
     const canMutate = await this.canMutateFile(actor, record);
     let content: Awaited<ReturnType<ObjectStorage["getObject"]>>;
     try {
@@ -289,7 +303,7 @@ export class FilesService {
     if (record.relatedEntityType === ACCEPTANCE_DOSSIER_ENTITY_TYPE) {
       // Biên bản hội đồng: quyền chủ tịch đã gồm trạng thái; có kết quả thì đề tài rời `pending_acceptance` và biên bản bị ghim.
       if (record.filePurpose === ACCEPTANCE_MINUTES) return;
-      if ((await this.findAcceptanceDossier(record.relatedEntityId)).status !== ACCEPTANCE_DOSSIER_DRAFT) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Hồ sơ nghiệm thu đã nộp được giữ nguyên." });
+      if (![ACCEPTANCE_DOSSIER_DRAFT, ACCEPTANCE_DOSSIER_SUPPLEMENT].includes((await this.findAcceptanceDossier(record.relatedEntityId)).status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Hồ sơ nghiệm thu đã nộp được giữ nguyên." });
       return;
     }
     if (record.relatedEntityType === ETHICS_DOSSIER_ENTITY_TYPE) {
@@ -389,7 +403,8 @@ export class FilesService {
       throw new BadRequestException({ message: "Định dạng tệp không được hỗ trợ." });
     }
     const allowedMimeTypes = MIME_TYPES_BY_EXTENSION[extension];
-    if (allowedMimeTypes && !allowedMimeTypes.includes(input.mimeType)) {
+    // Đuôi tệp được cấu hình cho phép nhưng chưa có MIME/chữ ký đối chiếu thì từ chối, không bỏ qua kiểm tra.
+    if (!allowedMimeTypes?.includes(input.mimeType)) {
       throw new BadRequestException({ message: "MIME type của tệp không khớp định dạng cho phép." });
     }
     if (!Number.isInteger(input.sizeBytes) || input.sizeBytes <= 0 || input.sizeBytes > this.config.maxFileSizeBytes) {
@@ -397,6 +412,10 @@ export class FilesService {
     }
     if (input.content.length !== input.sizeBytes) {
       throw new BadRequestException({ message: "Dung lượng tệp không khớp nội dung tải lên." });
+    }
+    const signature = SIGNATURES_BY_EXTENSION[extension];
+    if (!signature || !input.content.subarray(0, signature.length).equals(signature)) {
+      throw new BadRequestException({ message: "Nội dung tệp không khớp định dạng cho phép." });
     }
   }
 
@@ -613,10 +632,20 @@ export class FilesService {
     return proposal;
   }
 
-  /** Tệp đề xuất ngoài quyền đọc trả cùng 404 như tệp không tồn tại, để không lộ sự tồn tại của tệp. */
+  /** Tệp ngoài quyền đọc trả cùng 404 như tệp không tồn tại, để không lộ sự tồn tại của tệp. */
   private async findReadableFile(actor: SafeUserContext, fileId: string) {
     const record = await this.findActiveFile(fileId);
-    if (record.relatedEntityType !== RESEARCH_PROPOSAL_ENTITY_TYPE) return record;
+    if (record.relatedEntityType !== RESEARCH_PROPOSAL_ENTITY_TYPE) {
+      await this.hideUnreadable("Không tìm thấy tệp.", async () => {
+        if (isFundingVoucher(record)) {
+          if (!await this.canReadFundingVouchers(actor, record.relatedEntityId)) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED" });
+          return;
+        }
+        await this.assertCanRead(actor, record.relatedEntityType, record.relatedEntityId);
+        await this.assertProjectFileOwnership(actor, record, false);
+      });
+      return record;
+    }
     // Chỉ tệp có trong danh sách đã lọc theo người xem (vd. biên bản hội đồng ẩn với người tham gia).
     const proposal = await this.hideUnreadable("Không tìm thấy tệp.", () => this.assertCanRead(actor, record.relatedEntityType, record.relatedEntityId));
     if (!proposal?.attachments.some((attachment: { id: string }) => attachment.id === record.id)) throw new NotFoundException({ message: "Không tìm thấy tệp." });

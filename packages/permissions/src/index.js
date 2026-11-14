@@ -78,6 +78,7 @@ export const PERMISSION_ACTION_IDS_V1 = [
     "acceptance-dossier.edit",
     "acceptance-dossier.contribute",
     "acceptance-dossier.submit",
+    "acceptance-dossier.request-supplement",
     "acceptance-council.invite",
     "acceptance-council.revoke",
     "acceptance-council.respond",
