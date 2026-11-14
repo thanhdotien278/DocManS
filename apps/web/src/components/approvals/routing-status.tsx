@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SectionCard } from "@/components/ui/section-card";
 import { advanceSubmission, loadSubjectSubmissions, returnSubmission, type ApprovalSubmission } from "@/lib/approval-routing-api";
 
@@ -15,6 +15,13 @@ export function RoutingStatus({ subjectType, subjectId, refreshKey, onChanged }:
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const statusRef = useRef<HTMLParagraphElement>(null);
+
+  // Nút vừa bấm biến mất sau khi chuyển bước; đưa focus về thông báo để người dùng bàn phím không bị đẩy về đầu trang.
+  useEffect(() => {
+    if (message && document.activeElement === document.body) statusRef.current?.focus();
+  }, [message, submissions]);
 
   const reload = useCallback(async () => {
     try {
@@ -31,10 +38,12 @@ export function RoutingStatus({ subjectType, subjectId, refreshKey, onChanged }:
     if (kind === "return" && !note) { setError("Nhập lý do trả lại."); return; }
     setBusy(true);
     setError("");
+    setMessage("");
     try {
       await (kind === "advance" ? advanceSubmission(item, note) : returnSubmission(item, note));
       setNotes((current) => ({ ...current, [item.id]: "" }));
       await reload();
+      setMessage(kind === "advance" ? "Đã chuyển tờ trình sang bước tiếp theo." : "Đã trả lại tờ trình cho người lập.");
       onChanged?.();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Không xử lý được tờ trình.");
@@ -69,6 +78,7 @@ export function RoutingStatus({ subjectType, subjectId, refreshKey, onChanged }:
   return (
     <SectionCard title="Tờ trình qua Phòng KHQS" subtitle="Người lập → Trưởng ban QLKH → Trưởng phòng KHQS → Ban giám đốc">
       {error ? <p role="alert" className="field-error">{error}</p> : null}
+      {message ? <p className="state-message success" role="status" ref={statusRef} tabIndex={-1}>{message}</p> : null}
       <div className="table-wrap">
         <table className="data-table">
           <thead>
