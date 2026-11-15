@@ -39,8 +39,8 @@ export function ProjectList({ mine = false }: { mine?: boolean }) {
       const proposal = await loadResearchProposal(proposalId);
       const contextVersion = proposal.viewerAuthorization?.contextVersion;
       if (!contextVersion) { setMessage("Ngữ cảnh quyền không hợp lệ. Vui lòng tải lại."); return; }
-      const result = await createProject(proposalId, contextVersion);
-      setMessage(`Đã tạo đề tài ${result.project.id}. Trưởng phòng cần phân công chuyên viên đề tài.`);
+      await createProject(proposalId, contextVersion);
+      setMessage(`Đã tạo đề tài. Trưởng phòng cần phân công chuyên viên đề tài.`);
       await refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : "Không thể tạo đề tài."); }
     finally { setBusy(false); }

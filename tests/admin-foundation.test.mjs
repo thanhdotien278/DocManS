@@ -793,6 +793,18 @@ describe("admin foundation API behavior", () => {
         { name: "BadRequestException" }
       );
     }
+    // Theme giao diện: chỉ QT đổi, chỉ nhận classic/workspace/guided/academy, thiếu hoặc sai thì về classic.
+    const themeService = new AdminConfigService(prisma, auditLog);
+    assert.equal(await themeService.getUiTheme(), "classic");
+    await assert.rejects(
+      () => configController.updateSystemParameter({ currentUser: staffUser }, { key: "ui_theme", value: "workspace", label: "Giao diện hệ thống" }),
+      ForbiddenException
+    );
+    await assert.rejects(
+      () => configController.updateSystemParameter({ currentUser: adminUser }, { key: "ui_theme", value: "neon", label: "Giao diện hệ thống" }),
+      { name: "BadRequestException" }
+    );
+    assert.equal(await themeService.getUiTheme(), "classic");
     await assert.rejects(
       () => configController.updateSystemParameter({ currentUser: adminUser }, { key: "unknown_parameter", value: "1", label: "Không hỗ trợ" }),
       { name: "BadRequestException" }
@@ -801,6 +813,14 @@ describe("admin foundation API behavior", () => {
       prisma.store.systemParameters.map((record) => `${record.key}:${record.value}`),
       ["session_timeout_minutes:720"]
     );
+    await configController.updateSystemParameter({ currentUser: adminUser }, { key: "ui_theme", value: "workspace", label: "Giao diện hệ thống" });
+    assert.equal(await themeService.getUiTheme(), "workspace");
+    await configController.updateSystemParameter({ currentUser: adminUser }, { key: "ui_theme", value: "guided", label: "Giao diện hệ thống" });
+    assert.equal(await themeService.getUiTheme(), "guided");
+    await configController.updateSystemParameter({ currentUser: adminUser }, { key: "ui_theme", value: "academy", label: "Giao diện hệ thống" });
+    assert.equal(await themeService.getUiTheme(), "academy");
+    prisma.store.systemParameters.find((record) => record.key === "ui_theme").value = "hỏng";
+    assert.equal(await themeService.getUiTheme(), "classic");
 
     await configController.updateNotificationTemplate(
       { currentUser: adminUser },
@@ -848,7 +868,7 @@ describe("admin foundation API behavior", () => {
 
     assert.deepEqual(
       auditLog.records.map((record) => record.action),
-      ["update-system-parameter", "update-notification-template", "update-notification-template"]
+      ["update-system-parameter", "update-system-parameter", "update-system-parameter", "update-system-parameter", "update-notification-template", "update-notification-template"]
     );
     assert.deepEqual(
       prisma.store.notificationTemplates.map((record) => `${record.key}:${record.subject}`),

@@ -6,6 +6,14 @@ import { loadAdminConfig, updateSystemParameter, type SystemParameter } from "@/
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
 
+const UI_THEME_KEY = "ui_theme";
+const UI_THEMES = [
+  { value: "classic", title: "Giao diện hiện tại", note: "Thanh điều hướng ngang phía trên." },
+  { value: "workspace", title: "Không gian làm việc", note: "Menu bên trái theo nhóm việc của từng vai trò, trang đầu là việc cần xử lý, trang chi tiết có mục lục các phần." },
+  { value: "guided", title: "Theo nhóm công việc", note: "Menu bên trái gom theo nhóm việc của từng vai trò, hiện rõ vai trò đang đăng nhập, chữ và nút lớn hơn." },
+  { value: "academy", title: "Học viện", note: "Khung điều hướng xanh đậm liền khối với menu theo nhóm việc, điểm nhấn vàng tiết chế, tiêu đề và bảng theo kiểu văn bản chính thống." }
+];
+
 export function AdminConfigPanel() {
   const [parameters, setParameters] = useState<SystemParameter[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
@@ -28,13 +36,18 @@ export function AdminConfigPanel() {
     void refresh();
   }, []);
 
-  async function saveParameter(parameter: SystemParameter, value: string, success: string) {
+  async function saveParameter(parameter: Pick<SystemParameter, "key" | "label">, value: string, success: string) {
     setMessage("");
     setFormError("");
     setIsSubmitting(true);
     try {
       await updateSystemParameter({ key: parameter.key, label: parameter.label, value });
       setMessage(success);
+      // Áp dụng ngay cho phiên này; người dùng khác nhận theme khi tải lại trang.
+      if (parameter.key === UI_THEME_KEY) {
+        if (value !== "classic") document.documentElement.dataset.theme = value;
+        else delete document.documentElement.dataset.theme;
+      }
       await refresh();
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Không thể cập nhật tham số.");
@@ -43,19 +56,48 @@ export function AdminConfigPanel() {
     }
   }
 
+  const savedTheme = parameters.find((parameter) => parameter.key === UI_THEME_KEY)?.value;
+  const uiTheme = UI_THEMES.some((theme) => theme.value === savedTheme) ? savedTheme : "classic";
+  const listedParameters = parameters.filter((parameter) => parameter.key !== UI_THEME_KEY);
+
   return (
     <div>
-      <SectionCard title="Tham số hệ thống" subtitle="Các tham số nền dùng cho vận hành EP-01">
+      {message ? <p className="state-message success" role="status">{message}</p> : null}
+      {formError ? <p className="form-error" role="alert">{formError}</p> : null}
+      {isSubmitting ? <p className="state-message" role="status">Đang lưu...</p> : null}
+      {state === "ready" ? (
+        <SectionCard title="Giao diện hệ thống" subtitle="Áp dụng cho toàn bộ hệ thống. Bạn thấy thay đổi ngay sau khi lưu; người dùng khác nhận giao diện mới khi tải lại trang.">
+          <fieldset className="choice-group" disabled={isSubmitting}>
+            <legend>Chọn giao diện</legend>
+            <div className="choice-grid">
+              {UI_THEMES.map((theme) => (
+                <label className="choice-card" key={theme.value}>
+                  <input
+                    checked={uiTheme === theme.value}
+                    name="ui-theme"
+                    onChange={() => void saveParameter({ key: UI_THEME_KEY, label: "Giao diện hệ thống" }, theme.value, `Đã chuyển sang giao diện "${theme.title}".`)}
+                    type="radio"
+                    value={theme.value}
+                  />
+                  <span>
+                    <strong>{theme.title}{uiTheme === theme.value ? " (đang dùng)" : ""}</strong>
+                    <small>{theme.note}</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        </SectionCard>
+      ) : null}
+      <SectionCard title="Tham số hệ thống" subtitle="Các tham số nền dùng cho vận hành hệ thống">
         {state === "loading" ? <p className="state-message">Đang tải cấu hình...</p> : null}
         {state === "error" ? <p className="state-message error">Không thể tải cấu hình hệ thống.</p> : null}
-        {state === "ready" && parameters.length === 0 ? (
+        {state === "ready" && listedParameters.length === 0 ? (
           <EmptyState title="Chưa có tham số" message="Thêm tham số nền để điều chỉnh vận hành hệ thống." />
         ) : null}
-        {state === "ready" && parameters.length > 0 ? (
+        {state === "ready" && listedParameters.length > 0 ? (
           <div className="settings-list">
-            {message ? <p className="state-message success">{message}</p> : null}
-            {formError ? <p className="form-error" role="alert">{formError}</p> : null}
-            {parameters.map((parameter) => (
+            {listedParameters.map((parameter) => (
               <article className="setting-row" key={parameter.id}>
                 <div>
                   <span className="record-title">{parameter.label}</span>

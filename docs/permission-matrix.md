@@ -548,7 +548,7 @@ details remain in their governing stories.
 | Update own milestone progress | Own | Read | Read | Read | Read | Read | Members (NCV/NNB) on milestones they own⁴ |
 | Upload evidence | Own exact file grant | No PI-content overwrite | No PI-content overwrite | Metadata only | Metadata only | Metadata only | `project.evidence.contribute` for active member/secretary responsible for an open milestone; own unsubmitted file only; submitted links immutable |
 | Create/edit/submit/resubmit progress report | Own | Read submitted | Read | Read | Read | Read | Submitted revisions/evidence locked; return permits a new revision |
-| Review report / accept / request supplement | Read/respond | Review; accept or request supplement | Read | Read | Read | Read | No tờ trình needed; an accepted report does not accept the project or change the plan |
+| Review report / accept / request supplement | Read/respond | Review; accept or request supplement | Read | Read | Read | Read | No tờ trình needed; an accepted report does not accept the project or change the plan. Accept may record unresolved issues (visible to PI and active members). The internal management note is visible only to the assigned CV and TP who are not project participants |
 | Draft/submit Project Adjustment or Extension | Own | None | None | None | None | None | Extension end date must be later |
 | Appraise adjustment/extension, draft tờ trình | None | Assigned³ | Read | Read | Read | Read | Applies no change by itself |
 | Review tờ trình (TB step) / approve to BGĐ (TP step) | None | None | TB then TP¹; return to author with reason | None | None | None | No step skipping; no self-review |
@@ -609,6 +609,7 @@ reconciled with the tờ trình routing implemented on `tuan/DocManS`.
 | Action | QT | Phòng KHQS | BGĐ | PI | Topic Team | Reviewer / Council | Scope Rule | Audit Required | Source Requirement |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | View business dashboard | None | Scoped; nature (Quân sự/Dân sự) and responsible-CV breakdown | GĐ/PGĐ-KH: scoped; PGĐ-TD: aggregate only⁷ | Own | Own | Own | Role and data scope | No | FR45, Story 7.2 |
+| View system-admin dashboard (`GET /api/v1/admin/dashboard`: account status/role/unit counts, pending accounts, active sessions, login success/failure, admin/config change log; no business records; failed-login usernames shown only when they match an existing account) | Yes | None | None | None | None | None | `SYSTEM_ADMIN` only (`assertSystemAdmin`) | No | Admin dashboard |
 | Drill down / search / filter | Admin data only | Scoped | Scoped | Own | Participating | Assigned | Same as target record scope | No | FR46, FR47 |
 | View report | None | Scoped | Scoped (PGĐ-TD: aggregate funding only) | Own if report supports it | Own if report supports it | Assigned if report supports it | Role and data scope | No | FR49, Story 7.3 |
 | Export Excel/PDF | None | Scoped | Scoped (PGĐ-TD: no per-record funding) | Own if allowed | Own if allowed | Assigned if allowed | Role and data scope | Yes | FR48, Story 7.3 |
@@ -798,3 +799,6 @@ infer expenditure or add ledgers, payments, banking, invoices or ERP integration
   `usernameKey` are cleared so they can be reused; original values live in audit facts.
 - Login for a `pending_approval` account reveals the pending state only after the correct password.
 
+- **Giao diện hệ thống (`ui_theme`).** Chỉ QT (`SYSTEM_ADMIN`) đổi qua `PUT /api/v1/config/system-parameters`
+  (giá trị `classic` | `workspace` | `guided` | `academy`, có audit `update-system-parameter`). `GET /api/v1/ui-theme` đọc công khai,
+  không cần phiên; thiếu hoặc sai giá trị thì trả `classic`.

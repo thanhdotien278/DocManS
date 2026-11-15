@@ -895,6 +895,8 @@ model ProjectReportRevision {
   reviewedById            String?  @map("reviewed_by_id")
   reviewedBy              User?    @relation("ProjectReportReviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
   reviewReason            String?  @map("review_reason")
+  internalNote            String?  @map("internal_note")
+  unresolvedIssues        String?  @map("unresolved_issues")
   responseDeadline        DateTime? @db.Date @map("response_deadline")
   submittedAt             DateTime? @map("submitted_at")
   submittedContextVersion Json?    @map("submitted_context_version")

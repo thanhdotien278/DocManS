@@ -36,7 +36,17 @@ type NotificationTemplateInput = {
   body?: unknown;
 };
 
+// Giao diện toàn hệ thống: "classic" (hiện tại, mặc định) hoặc "workspace" (Không gian làm việc).
+export const UI_THEME_PARAMETER_KEY = "ui_theme";
+export const UI_THEMES = ["classic", "workspace", "guided", "academy"] as const;
+
 const SYSTEM_PARAMETER_RULES = {
+  [UI_THEME_PARAMETER_KEY]: {
+    validate(value: string) {
+      if (!(UI_THEMES as readonly string[]).includes(value)) throw new BadRequestException({ message: "value phải là classic, workspace, guided hoặc academy." });
+      return value;
+    }
+  },
   session_timeout_minutes: {
     validate(value: string) {
       const parsed = Number(value);
@@ -90,6 +100,12 @@ export class AdminConfigService {
       where: { key: { not: PARTICIPANT_POLICY_KEY }, NOT: { key: { startsWith: "council_formation." } } },
       orderBy: { key: "asc" }
     });
+  }
+
+  // Đọc công khai (áp dụng cả trang đăng nhập); giá trị thiếu/không hợp lệ thì về theme hiện tại.
+  async getUiTheme() {
+    const value = (await this.prisma.systemParameter.findUnique({ where: { key: UI_THEME_PARAMETER_KEY } }))?.value;
+    return (UI_THEMES as readonly string[]).includes(value ?? "") ? value! : "classic";
   }
 
   async updateSystemParameter(actor: SafeUserContext, input: SystemParameterInput) {

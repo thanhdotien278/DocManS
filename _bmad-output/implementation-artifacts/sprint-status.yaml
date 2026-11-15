@@ -110,7 +110,8 @@ development_status:
   6-3-chu-nhiem-nop-bao-cao-tien-do-va-bang-chung: review
   # Rà vòng đời 2026-11-13: đủ AC; tệp chưa gắn với trách nhiệm cụ thể.
   6-4-thanh-vien-dong-gop-tep-va-minh-chung-trong-pham-vi-duoc-giao: review
-  6-5-ra-soat-bao-cao-va-theo-doi-cham-tien-do: in-progress
+  # 2026-11-14: thêm ghi chú nội bộ, vấn đề tồn đọng khi chấp nhận, phản hồi cho thành viên, cờ theo mốc/điểm báo cáo/báo cáo (trackingVersion 1). Nhắc hạn chờ Epic 11.
+  6-5-ra-soat-bao-cao-va-theo-doi-cham-tien-do: review
   6-6-gui-yeu-cau-dieu-chinh-hoac-gia-han: review
   6-7-quyet-dinh-dieu-chinh-hoac-gia-han: review
   # 6.8: phần 1 (backend) xong 2026-11-09; phần 2 (giao diện) xong.
