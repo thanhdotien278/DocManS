@@ -43,4 +43,24 @@ describe("activation email", () => {
   it("ignores inactive templates", async () => {
     assert.equal((await send({ status: "inactive", subject: "old", body: "old" })).subject, SUBJECT);
   });
+
+  it("approval email: required subject, login button, escaped username, no expiry or secrets", async () => {
+    Object.assign(process.env, { SMTP_HOST: "localhost", SMTP_FROM: "x@example.vn", ACCOUNT_LOGIN_URL: "https://rtms.example.vn/login" });
+    const service = new MailService({});
+    const sent = [];
+    service.sendText = async (input) => { sent.push(input); };
+    await service.sendAccountApproved({ to: "a@b.vn", displayName: "<i>Gang</i>", username: "g&g", loginUrl: "https://rtms.example.vn/login?a=1&b=2" });
+    const mail = sent[0];
+    assert.equal(mail.subject, "Phòng Khoa học quân sự - Học viện Quân y: Tài khoản đã được duyệt");
+    assert.match(mail.html, />Đăng nhập<\/a>/);
+    assert.equal(mail.html.split("a=1&amp;b=2").length - 1, 3);
+    assert.match(mail.html, /Tên đăng nhập: <strong>g&amp;g<\/strong>/);
+    assert.doesNotMatch(mail.html, /<i>Gang/);
+    for (const part of [mail.html, mail.text]) {
+      assert.doesNotMatch(part, /hiệu lực|chia sẻ|quản trị viên|mật khẩu:/i);
+      assert.match(part, /Trân trọng,/);
+    }
+    assert.match(mail.text, /Tên đăng nhập: g&g/);
+    assert.match(mail.text, /Đăng nhập: https:\/\/rtms\.example\.vn\/login\?a=1&b=2/);
+  });
 });

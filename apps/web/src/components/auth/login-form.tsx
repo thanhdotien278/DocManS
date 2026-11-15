@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, LockKeyhole, UserRound } from "lucide-react";
 import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PasswordInput } from "@/components/auth/password-input";
 import { useSession } from "@/components/auth/session-provider";
 import { loginWithPassword } from "@/lib/auth-api";
 import { isSelfRegistrationEnabled } from "@/lib/registration-api";
@@ -71,12 +72,11 @@ export function LoginForm() {
         <label htmlFor="password">Mật khẩu</label>
         <div className="field-input with-icon">
           <LockKeyhole size={18} aria-hidden="true" />
-          <input
+          <PasswordInput
             autoComplete="current-password"
             id="password"
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Nhập mật khẩu"
-            type="password"
             value={password}
           />
         </div>

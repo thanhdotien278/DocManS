@@ -334,11 +334,16 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/notifications", label: "Thông báo", icon: Bell }
   ],
   EXTERNAL_RESEARCHER_USER: [],
-  // shortcut: PP, PGĐ-KH chưa có quyền nghiệp vụ; TB mới có duyệt yêu cầu đăng ký (Story 13.11). Cấp thêm menu khi port phân quyền từ tuan/DocManS.
+  // shortcut: PP, PGĐ-KH chưa có menu nghiệp vụ. Cấp thêm khi port phân quyền từ tuan/DocManS.
   RESEARCH_MANAGEMENT_DEPUTY_HEAD: [],
+  // TB đọc hồ sơ/đề tài toàn học viện; không quản lý đợt tiếp nhận hay hồ sơ nhà khoa học (khớp menu theme workspace).
   RESEARCH_BOARD_HEAD: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/registration-requests", label: "Yêu cầu đăng ký", icon: UserPlus }
+    { href: "/my-profile", label: "Lý lịch khoa học", icon: UserRoundSearch },
+    { href: "/proposals", label: "Quản lý đề tài", icon: Files },
+    { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
+    { href: "/registration-requests", label: "Yêu cầu đăng ký", icon: UserPlus },
+    { href: "/notifications", label: "Thông báo", icon: Bell }
   ],
   SCIENCE_DEPUTY_DIRECTOR: []
 };
