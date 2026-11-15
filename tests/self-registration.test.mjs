@@ -93,6 +93,7 @@ function createMail({ fail = false } = {}) {
     configuration() { return { loginUrl: "http://localhost:3000/login" }; },
     activationUrl: MailService.prototype.activationUrl,
     async sendAccountActivation(input) { if (fail) throw new Error("smtp down"); sent.push(input); },
+    sendAccountApproved: MailService.prototype.sendAccountApproved,
     async sendText(input) { sent.push(input); }
   };
 }
