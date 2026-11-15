@@ -110,6 +110,15 @@ export function canPerformProposalAction(state: ProposalCapabilityState, action:
   return !state.reloadRequired && Boolean(state.capability?.allowedActions.includes(action));
 }
 
+const RELATIONSHIP_LABELS: Record<string, string> = {
+  PROPOSAL_PI: "Chủ nhiệm", TOPIC_PI: "Chủ nhiệm đề tài", TOPIC_SECRETARY: "Thư ký", TOPIC_MEMBER: "Thành viên",
+  REVIEWER_ASSIGNMENT: "Người phản biện", COUNCIL_MEMBER: "Thành viên hội đồng", COUNCIL_SCIENTIFIC_SECRETARY: "Thư ký khoa học hội đồng",
+  ETHICS_REVIEWER_ASSIGNMENT: "Thành viên hội đồng đạo đức", TASK_ASSIGNEE: "Người được giao việc",
+  PROPOSAL_MANAGEMENT_OFFICER: "Chuyên viên phụ trách hồ sơ", PROJECT_MANAGEMENT_OFFICER: "Chuyên viên phụ trách đề tài"
+};
+/** Nhãn nghiệp vụ cho quan hệ của người xem với hồ sơ; không bao giờ hiện mã quan hệ thô. */
+export const relationshipLabel = (type: string) => RELATIONSHIP_LABELS[type] ?? "Quan hệ khác";
+
 export type ProposalAttachment = {
   id: string;
   relatedEntityType: string;

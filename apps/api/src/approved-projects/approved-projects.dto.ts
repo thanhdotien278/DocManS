@@ -7,7 +7,7 @@ export class CreateProjectDto extends ProjectMutationDto { proposalId!: string; 
 export class AssignProjectOfficerDto extends ProjectMutationDto { officerUserId!: string; reason?: string; }
 export class RevokeProjectOfficerDto extends ProjectMutationDto { reason!: string; }
 export class ProjectReportDto extends ProjectMutationDto { reportId?: string; checkpointId?: string | null; reportingPeriodStart?: Date; reportingPeriodEnd?: Date; deadline?: Date; progressResults!: string; issuesRecommendations?: string; milestoneContext?: unknown; evidenceFileIds?: string[]; }
-export class ProjectReportReviewDto extends ProjectMutationDto { reportId?: string; reason?: string; responseDeadline?: Date; }
+export class ProjectReportReviewDto extends ProjectMutationDto { reportId?: string; reason?: string; responseDeadline?: Date; internalNote?: string; unresolvedIssues?: string; }
 export class ProjectReportSubmissionDto extends ProjectMutationDto { evidenceFileIds?: string[]; }
 export class ProjectRequestDto extends ProjectMutationDto { requestId?: string; currentValues?: unknown; proposedValues!: unknown; reason!: string; evidenceFileIds?: string[]; }
 export class ProjectDecisionDto extends ProjectMutationDto { reason?: string; note?: string; responseDeadline?: Date; }
@@ -56,7 +56,7 @@ export const projectReportPipe: PipeTransform<unknown, ProjectReportDto> = { tra
   return result;
 } };
 
-export const projectReportReviewPipe: PipeTransform<unknown, ProjectReportReviewDto> = { transform(value) { const input = record(value); return { reason: readOptionalText(input.reason, "reason", 2000), responseDeadline: readOptionalDate(input.responseDeadline, "responseDeadline"), contextVersion: context(input) }; } };
+export const projectReportReviewPipe: PipeTransform<unknown, ProjectReportReviewDto> = { transform(value) { const input = record(value); return { reason: readOptionalText(input.reason, "reason", 2000), responseDeadline: readOptionalDate(input.responseDeadline, "responseDeadline"), internalNote: readOptionalText(input.internalNote, "internalNote", 2000), unresolvedIssues: readOptionalText(input.unresolvedIssues, "unresolvedIssues", 2000), contextVersion: context(input) }; } };
 export const projectReportSubmissionPipe: PipeTransform<unknown, ProjectReportSubmissionDto> = { transform(value) { const input = record(value); return { evidenceFileIds: ids(input.evidenceFileIds, "evidenceFileIds"), contextVersion: context(input) }; } };
 
 function readJsonObject(value: unknown, field: string) {

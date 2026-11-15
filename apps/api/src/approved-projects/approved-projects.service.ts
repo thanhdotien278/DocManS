@@ -25,6 +25,24 @@ const REPORT_UNDER_REVIEW = "under_review";
 const REPORT_SUPPLEMENT = "supplement_requested";
 const REPORT_ACCEPTED = "accepted";
 const REPORT_SUPERSEDED = "superseded";
+const DAY_MS = 86400000;
+
+// One rule for project and item flags so filters, counts and detail agree: a UTC due day is overdue once it has ended; approaching within 14 days.
+function deadlineFlags(due: Date | string | null | undefined, open: boolean, now: Date) {
+  const time = due ? new Date(due).getTime() : NaN;
+  if (!open || Number.isNaN(time)) return { overdue: false, approaching: false };
+  const overdue = time + DAY_MS <= now.getTime();
+  return { overdue, approaching: !overdue && time - now.getTime() <= 14 * DAY_MS };
+}
+
+// Who must act next on a report: the assigned CV on a submitted/under-review report, the PI on a supplement request
+// or on the unsubmitted correction draft that superseded it (which keeps the source report's response deadline).
+function reportTracking(report: AnyRecord, reports: AnyRecord[], now: Date) {
+  const source = report.status === REPORT_DRAFT && report.supersedesReportId ? reports.find((item) => item.id === report.supersedesReportId) : null;
+  const owedByPi = report.status === REPORT_SUPPLEMENT || !!source;
+  const awaitingAction = [REPORT_SUBMITTED, REPORT_UNDER_REVIEW].includes(report.status) ? "officer" : owedByPi ? "pi" : null;
+  return { awaitingAction, responseOverdue: deadlineFlags(source ? source.responseDeadline : report.responseDeadline, owedByPi, now).overdue };
+}
 const ADJUSTMENT = "adjustment";
 const EXTENSION = "extension";
 const REQUEST_KIND: Record<string, ApprovalKind> = { [ADJUSTMENT]: "PROJECT_ADJUSTMENT", [EXTENSION]: "PROJECT_EXTENSION" };
@@ -209,9 +227,9 @@ export class ApprovedProjectsService {
     const deadlines = [project.endDate, ...(project.checkpoints ?? []).filter((item: any) => item.status !== "completed" && !reported.has(item.id)).map((item: any) => item.dueDate), ...(project.milestones ?? []).filter((item: any) => item.status !== "completed").map((item: any) => item.dueDate)].filter((value): value is Date => value instanceof Date);
     const nearest = deadlines.sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
     const active = [PREPARING, EXECUTING, PROJECT_STATUSES.paused].includes(project.status);
-    // Deadlines are UTC calendar days: overdue only once the whole due day has ended.
-    const overdue = active && !!nearest && nearest.getTime() + 86400000 <= now.getTime();
-    const approaching = active && !!nearest && !overdue && nearest.getTime() - now.getTime() <= 14 * 86400000;
+    const { overdue, approaching } = deadlineFlags(nearest, active, now);
+    // Internal management notes stay with the assigned CV and TP; never a project participant (PI/member), even one holding those roles.
+    const internalView = (isOfficer || isHead) && !member;
     const itemActions = (item: AnyRecord, prefix: string) => authorize ? authorize(item).allowedActions.filter((action: string) => action.startsWith(prefix) && !action.endsWith(".create")) : [];
     return {
       id: project.id,
@@ -229,17 +247,20 @@ export class ApprovedProjectsService {
       plan: project.planSnapshot,
       members: (project.members ?? []).map((member: any) => ({ ...member, effectiveFrom: member.effectiveFrom?.toISOString?.() ?? null, effectiveUntil: member.effectiveUntil?.toISOString?.() ?? null })),
       officer: officer ? { id: officer.id, officerUserId: officer.officerUserId, displayName: (project.managementOfficers ?? []).find((row: AnyRecord) => row.id === officer.id)?.officer?.displayName ?? null, status: officer.status, effectiveFrom: officer.effectiveFrom?.toISOString?.() ?? null, effectiveUntil: officer.effectiveUntil?.toISOString?.() ?? null } : null,
-      milestones: project.milestones ?? [],
-      checkpoints: project.checkpoints ?? [],
+      milestones: (project.milestones ?? []).map((item: AnyRecord) => ({ ...item, ...deadlineFlags(item.dueDate, active && item.status !== "completed", now) })),
+      checkpoints: (project.checkpoints ?? []).map((item: AnyRecord) => ({ ...item, ...deadlineFlags(item.dueDate, active && item.status !== "completed" && !reported.has(item.id), now) })),
       reports: (project.reports ?? []).map((report: AnyRecord) => detailedCases ? ({
         id: report.id, projectId: report.projectId, checkpointId: report.checkpointId, revision: report.revision, status: report.status,
         reportingPeriodStart: report.reportingPeriodStart?.toISOString?.() ?? null, reportingPeriodEnd: report.reportingPeriodEnd?.toISOString?.() ?? null, deadline: report.deadline?.toISOString?.() ?? null,
         progressResults: report.progressResults, issuesRecommendations: report.issuesRecommendations, milestoneContext: report.milestoneContext, author: report.author,
-        reviewedBy: report.reviewedBy, reviewReason: report.reviewReason, supersedesReportId: report.supersedesReportId ?? null,
+        reviewedBy: report.reviewedBy, reviewReason: report.reviewReason, unresolvedIssues: report.unresolvedIssues ?? null, internalNote: internalView ? report.internalNote ?? null : undefined, supersedesReportId: report.supersedesReportId ?? null,
+        ...reportTracking(report, project.reports ?? [], now),
         responseDeadline: report.responseDeadline?.toISOString?.() ?? null, submittedAt: report.submittedAt?.toISOString?.() ?? null,
         evidence: (report.evidence ?? []).map((item: AnyRecord) => ({ id: item.id, fileRecordId: item.fileRecordId, file: item.fileRecord ? { id: item.fileRecord.id, originalFileName: item.fileRecord.originalFileName, mimeType: item.fileRecord.mimeType, sizeBytes: item.fileRecord.sizeBytes, status: item.fileRecord.status } : null })),
         allowedActions: itemActions({ report: { status: report.status, authorId: report.authorId } }, "project.report.")
-      }) : ({ id: report.id, checkpointId: report.checkpointId, status: report.status, revision: report.revision, deadline: report.deadline?.toISOString?.() ?? null, submittedAt: report.submittedAt?.toISOString?.() ?? null, allowedActions: [] })),
+      }) : ({ id: report.id, checkpointId: report.checkpointId, status: report.status, revision: report.revision, deadline: report.deadline?.toISOString?.() ?? null, submittedAt: report.submittedAt?.toISOString?.() ?? null, ...reportTracking(report, project.reports ?? [], now),
+        // Active members see the feedback given to the PI, never the internal note.
+        ...(member ? { reviewReason: report.reviewReason ?? null, unresolvedIssues: report.unresolvedIssues ?? null, responseDeadline: report.responseDeadline?.toISOString?.() ?? null } : {}), allowedActions: [] })),
       requests: (project.requests ?? []).map((request: AnyRecord) => requestDetail ? ({
         id: request.id, projectId: request.projectId, requestType: request.requestType, status: request.status, revision: request.revision, requesterId: request.requesterId, requester: request.requester,
         currentValues: request.currentValues, proposedValues: request.proposedValues, reason: request.reason, decisionNote: request.decisionNote, responseDeadline: request.responseDeadline?.toISOString?.() ?? null, decidedAt: request.decidedAt?.toISOString?.() ?? null,
@@ -255,6 +276,7 @@ export class ApprovedProjectsService {
       overdue,
       approaching,
       nearestDeadline: nearest?.toISOString?.() ?? null,
+      trackingVersion: 1,
       viewerAuthorization: capability
     };
   }
@@ -574,9 +596,9 @@ export class ApprovedProjectsService {
       if (!input.reason || !input.responseDeadline) throw new BadRequestException({ message: "Cần lý do và hạn bổ sung." });
       const now = await readTransactionClockV1(tx);
       if (new Date(input.responseDeadline).getTime() <= now.getTime()) throw new BadRequestException({ code: "DEADLINE_INVALID", message: "Hạn bổ sung phải ở tương lai." });
-      const updated = await tx.projectReportRevision.update({ where: { id: report.id }, data: { status: REPORT_SUPPLEMENT, reviewedById: currentActor.id, reviewReason: input.reason, responseDeadline: input.responseDeadline ?? null } });
+      const updated = await tx.projectReportRevision.update({ where: { id: report.id }, data: { status: REPORT_SUPPLEMENT, reviewedById: currentActor.id, reviewReason: input.reason, responseDeadline: input.responseDeadline ?? null, internalNote: input.internalNote ?? null } });
       await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.report.request-supplement", fromStatus: report.status, toStatus: REPORT_SUPPLEMENT, reason: input.reason, afterFacts: { reportId: report.id, responseDeadline: input.responseDeadline ?? null } } });
-      await new AuditLogService(tx).record({ action: "request-project-report-supplement", result: "success", actorId: currentActor.id, targetEntity: "project-report-revision", targetEntityId: report.id, username: currentActor.username, reason: input.reason, afterFacts: { status: REPORT_SUPPLEMENT, responseDeadline: input.responseDeadline ?? null } });
+      await new AuditLogService(tx).record({ action: "request-project-report-supplement", result: "success", actorId: currentActor.id, targetEntity: "project-report-revision", targetEntityId: report.id, username: currentActor.username, reason: input.reason, afterFacts: { status: REPORT_SUPPLEMENT, responseDeadline: input.responseDeadline ?? null, internalNote: input.internalNote ?? null } });
       return updated;
     });
   }
@@ -586,7 +608,7 @@ export class ApprovedProjectsService {
       await this.assertOfficer(tx, currentActor, project, "accept-report");
       const report = await this.findReport(tx, project, input.reportId);
       if (report.status !== REPORT_UNDER_REVIEW) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Báo cáo phải được xem xét trước khi chấp nhận." });
-      const updated = await tx.projectReportRevision.update({ where: { id: report.id }, data: { status: REPORT_ACCEPTED, reviewedById: currentActor.id, reviewReason: input.reason ?? null } });
+      const updated = await tx.projectReportRevision.update({ where: { id: report.id }, data: { status: REPORT_ACCEPTED, reviewedById: currentActor.id, reviewReason: input.reason ?? null, internalNote: input.internalNote ?? null, unresolvedIssues: input.unresolvedIssues ?? null } });
       if (report.checkpointId) {
         await tx.projectCheckpoint.update({ where: { id: report.checkpointId }, data: { status: "completed" } });
         const checkpoint = await tx.projectCheckpoint.findUnique({ where: { id: report.checkpointId } });
@@ -596,8 +618,8 @@ export class ApprovedProjectsService {
         }
         await tx.approvedProject.update({ where: { id: project.id }, data: { aggregateVersion: { increment: 1 }, authorizationContextUpdatedAt: await readTransactionClockV1(tx) } });
       }
-      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.report.accept", fromStatus: REPORT_UNDER_REVIEW, toStatus: REPORT_ACCEPTED, reason: input.reason ?? "Chấp nhận báo cáo hành chính", afterFacts: { reportId: report.id } } });
-      await new AuditLogService(tx).record({ action: "accept-project-report", result: "success", actorId: currentActor.id, targetEntity: "project-report-revision", targetEntityId: report.id, username: currentActor.username, reason: input.reason ?? undefined, afterFacts: { status: REPORT_ACCEPTED } });
+      await tx.projectHistory.create({ data: { projectId: project.id, actorId: currentActor.id, action: "project.report.accept", fromStatus: REPORT_UNDER_REVIEW, toStatus: REPORT_ACCEPTED, reason: input.reason ?? "Chấp nhận báo cáo hành chính", afterFacts: { reportId: report.id, unresolvedIssues: input.unresolvedIssues ?? null } } });
+      await new AuditLogService(tx).record({ action: "accept-project-report", result: "success", actorId: currentActor.id, targetEntity: "project-report-revision", targetEntityId: report.id, username: currentActor.username, reason: input.reason ?? undefined, afterFacts: { status: REPORT_ACCEPTED, unresolvedIssues: input.unresolvedIssues ?? null, internalNote: input.internalNote ?? null } });
       return updated;
     });
   }

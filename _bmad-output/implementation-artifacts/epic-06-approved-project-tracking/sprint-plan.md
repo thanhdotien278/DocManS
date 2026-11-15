@@ -15,7 +15,7 @@
 | 6.2 | Quản lý thành viên, trách nhiệm, milestone và checkpoint | `review` |
 | 6.3 | Chủ nhiệm nộp báo cáo tiến độ và bằng chứng | `in-progress` |
 | 6.4 | Thành viên đóng góp tệp và minh chứng trong phạm vi được giao | `in-progress` |
-| 6.5 | Rà soát báo cáo và theo dõi chậm tiến độ | `in-progress` |
+| 6.5 | Rà soát báo cáo và theo dõi chậm tiến độ | `review` |
 | 6.6 | Gửi yêu cầu điều chỉnh hoặc gia hạn | `in-progress` |
 | 6.7 | Quyết định điều chỉnh hoặc gia hạn | `in-progress` |
 | 6.8 | Chuẩn bị và nộp hồ sơ nghiệm thu hoặc đánh giá cuối | `backlog` |
