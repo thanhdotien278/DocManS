@@ -44,3 +44,8 @@ export function advanceSubmission(submission: ApprovalSubmission, note: string) 
 export function returnSubmission(submission: ApprovalSubmission, note: string) {
   return requestJson<{ submission: ApprovalSubmission }>(`/approval-submissions/${submission.id}/return`, { method: "POST", body: JSON.stringify({ expectedStage: submission.stage, note }) });
 }
+
+/** Tờ trình đang chờ chính người xem xử lý, và số tờ trình đang chờ theo bước trong phạm vi vai trò được xem. */
+export function loadApprovalQueue() {
+  return requestJson<{ submissions: ApprovalSubmission[]; pendingByStage: Partial<Record<ApprovalSubmission["stage"], number>> }>("/approval-submissions/queue");
+}

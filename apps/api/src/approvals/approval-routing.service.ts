@@ -53,6 +53,23 @@ export class ApprovalRoutingService {
     return { submissions: await Promise.all(visible.map(async (row) => this.toResponse(row, await resolveApprovalActions(this.prisma, actor, row)))) };
   }
 
+  /**
+   * Hàng chờ tờ trình của người xem: chỉ tờ trình đang chờ mà chính họ được chuyển bước/trả lại (cùng điều kiện với nút xử lý,
+   * gồm bước, tự lập và xung đột lợi ích). Kèm số tờ trình đang chờ theo từng bước cho người có quyền xem tờ trình theo vai trò.
+   */
+  async queue(actor: SafeUserContext) {
+    // shortcut: quét tối đa 200 tờ trình đang chờ gần nhất; thêm phân trang khi hàng chờ thực tế vượt mức này.
+    const rows = (await this.prisma.approvalSubmission.findMany({ where: { status: "PENDING" }, include: INCLUDE, orderBy: { createdAt: "asc" }, take: 200 })) as unknown as SubmissionWithRelations[];
+    const mine = [];
+    for (const row of rows) {
+      const actions = await resolveApprovalActions(this.prisma, actor, row);
+      if (actions.advance || actions.return) mine.push(this.toResponse(row, actions));
+    }
+    const pendingByStage: Record<string, number> = {};
+    for (const row of rows) if (canViewApproval(actor, row)) pendingByStage[row.stage] = (pendingByStage[row.stage] ?? 0) + 1;
+    return { submissions: mine, pendingByStage };
+  }
+
   private async canReadSubject(actor: SafeUserContext, subjectType: string, subjectId: string) {
     if (subjectType === "project") {
       return new ApprovedProjectsService(this.prisma, this.auditLog).loadAuthorized(this.prisma, actor, subjectId).then(() => true, (error) => {

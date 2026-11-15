@@ -56,7 +56,7 @@ export function RegistrationRequestsPanel() {
         <label className="field"><span>Đối tượng</span><select name="accountType" defaultValue={selected.accountType}>
           <option value="INTERNAL">Trong học viện (NCV)</option><option value="EXTERNAL">Ngoài học viện (NNB)</option>
         </select></label>
-        <label className="field"><span>Đơn vị quản lý</span><select name="organizationUnitId" defaultValue="">
+        <label className="field"><span>Đơn vị quản lý</span><select name="organizationUnitId" defaultValue={selected.requestedOrganizationUnitId ?? ""}>
           <option value="" disabled>Chọn đơn vị</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
         </select></label>
         <label className="field"><span>Đơn vị công tác bên ngoài (chỉ với NNB)</span><input name="externalAffiliation" maxLength={240} /></label>

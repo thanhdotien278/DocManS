@@ -603,6 +603,7 @@ reconciled with the tờ trình routing implemented on `tuan/DocManS`.
 | Receive in-app/email notification | Read own | Read own (incl. next tờ trình step) | Read own (tờ trình awaiting signature) | Read own | Read own | Read own (invitations) | Recipient permission scope | FR41, FR42 |
 | Configure templates / reminder jobs | Manage | None | None | None | None | None | Platform scope | FR41-FR43 |
 | View work queue | None | TB: review queue; TP: approval queue; CV: assigned records | Awaiting approval/signature | Own | Own/assigned | Assigned review queue | Role, scope, assignment | FR44 |
+| View tờ trình queue (`GET /api/v1/approval-submissions/queue`) | None | Lists only PENDING tờ trình the viewer may advance/return now (same check as the action: stage role, not self-authored, no conflict of interest); per-stage pending counts for CV/TB/TP/PP | Per-stage counts only (no actionable rows at TB/TP stages) | None | None | None | `resolveApprovalActions` + `canViewApproval` | No | FR71, FR78 (partial, Story 11.6) |
 
 ### 9.11 Dashboard, Search, Reports And Export
 

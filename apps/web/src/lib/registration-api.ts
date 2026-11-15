@@ -1,7 +1,7 @@
 import { getApiBaseUrl } from "@/lib/session";
 
 export type AccountType = "INTERNAL" | "EXTERNAL";
-export type RegistrationRequest = { id: string; username: string; fullName: string; email: string; accountType: AccountType; createdAt: string };
+export type RegistrationRequest = { id: string; username: string; fullName: string; email: string; accountType: AccountType; requestedOrganizationUnitId: string | null; createdAt: string };
 export type RegistrationUnit = { id: string; code: string; name: string };
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
@@ -15,7 +15,11 @@ export async function isSelfRegistrationEnabled() {
   try { return (await requestJson<{ enabled: boolean }>("/registration/status")).enabled === true; } catch { return false; }
 }
 
-export function registerAccount(input: { email: string; username: string; fullName: string; accountType: AccountType }) {
+export function listRegistrationUnits() {
+  return requestJson<{ organizationUnits: RegistrationUnit[] }>("/registration/units").then((body) => body.organizationUnits);
+}
+
+export function registerAccount(input: { email: string; username: string; fullName: string; accountType: AccountType; organizationUnitId?: string }) {
   return requestJson<{ message: string }>("/registration", { method: "POST", body: JSON.stringify(input) });
 }
 
