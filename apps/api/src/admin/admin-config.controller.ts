@@ -72,3 +72,14 @@ export class AdminConfigController {
     return { template: await this.configService.updateNotificationTemplate(actor, body as Record<string, unknown>) };
   }
 }
+
+// Không gắn SessionAuthGuard: tên theme không nhạy cảm và trang đăng nhập cũng cần đọc.
+@Controller("api/v1/ui-theme")
+export class UiThemeController {
+  constructor(private readonly configService: AdminConfigService) {}
+
+  @Get()
+  async getUiTheme() {
+    return { theme: await this.configService.getUiTheme() };
+  }
+}

@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CatalogItem } from "@/lib/admin-api";
-import { loadProposalCatalogs } from "@/lib/research-proposals-api";
+import { loadProposalCatalogs,
+  relationshipLabel
+} from "@/lib/research-proposals-api";
 import { getResearcherProfile, loadResearcherProfileCatalogs } from "@/lib/researcher-profiles-api";
 import { ProposalMembersEditor } from "@/components/research-proposals/proposal-members-editor";
 import { useEffect, useMemo, useState } from "react";
@@ -31,10 +33,6 @@ function todayInput(offsetDays = 0) {
   const date = new Date();
   date.setDate(date.getDate() + offsetDays);
   return date.toISOString().slice(0, 10);
-}
-
-function relationshipLabel(type: string) {
-  return { PROPOSAL_PI: "Chủ nhiệm", TOPIC_MEMBER: "Thành viên", TOPIC_SECRETARY: "Thư ký", REVIEWER_ASSIGNMENT: "Người phản biện" }[type] ?? type;
 }
 
 function defaultForm(hostOrganizationUnitId = ""): ProposalDraftInput {
@@ -251,7 +249,7 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
               <option value="assign">Đủ điều kiện phân công</option>
               <option value="pending">Đang chờ phiếu đánh giá</option>
               <option value="overdue">Có phiếu quá hạn</option>
-              <option value="synthesis">Đủ phiếu — chờ Head tổng hợp</option>
+              <option value="synthesis">Đủ phiếu — chờ Trưởng phòng tổng hợp</option>
             </select>
           </label> : null}
           {showManagementOfficerFilter ? (

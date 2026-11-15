@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import { assertSystemAdmin, type RequestWithCurrentUser } from "./admin-access.js";
+import { AdminDashboardService } from "./admin-dashboard.service.js";
 import { adminRequestPipe } from "./admin-request.pipe.js";
 import { AdminUsersService } from "./admin-users.service.js";
 
@@ -112,5 +113,17 @@ export class AdminOrganizationUnitsController {
   ) {
     const actor = assertSystemAdmin(request.currentUser);
     return { organizationUnit: await this.usersService.updateOrganizationUnit(actor, id, body as Record<string, unknown>) };
+  }
+}
+
+@Controller("api/v1/admin/dashboard")
+@UseGuards(SessionAuthGuard)
+export class AdminDashboardController {
+  constructor(private readonly dashboardService: AdminDashboardService) {}
+
+  @Get()
+  async getOverview(@Req() request: RequestWithCurrentUser) {
+    assertSystemAdmin(request.currentUser);
+    return this.dashboardService.getOverview();
   }
 }

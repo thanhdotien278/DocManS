@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import type { CatalogItem } from "@/lib/admin-api";
-import { loadProposalCatalogs } from "@/lib/research-proposals-api";
+import { loadProposalCatalogs,
+  relationshipLabel
+} from "@/lib/research-proposals-api";
 import { loadResearcherProfileCatalogs } from "@/lib/researcher-profiles-api";
 import { ProposalMembersEditor } from "@/components/research-proposals/proposal-members-editor";
 import { useEffect, useMemo, useState } from "react";
@@ -19,6 +21,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ParticipationBadge } from "@/components/ui/participation-badge";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { proposalNextStep } from "@/lib/proposal-next-step";
 import { formatIntakeDate, intakeDateToIso, toIntakeDateInput } from "@/lib/intake-dates";
 import { loadMyReviewAssignments } from "@/lib/proposal-evaluations-api";
 import { formatVndNumber, numberToVietnameseWords, parseVndNumber } from "@/lib/vietnamese-currency";
@@ -78,10 +81,6 @@ function formatBytes(value: number) {
 
 function getDocumentTypeLabel(code: string, fallback?: string) {
   return DOCUMENT_TYPE_LABELS[code] ?? fallback ?? code;
-}
-
-function relationshipLabel(type: string) {
-  return { PROPOSAL_PI: "Chủ nhiệm", TOPIC_MEMBER: "Thành viên", TOPIC_SECRETARY: "Thư ký", REVIEWER_ASSIGNMENT: "Người phản biện" }[type] ?? type;
 }
 
 function toDraftInput(proposal: ResearchProposal): ProposalDraftInput {
@@ -484,6 +483,18 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   return (
     <div className="grid detail-grid">
       <div className="grid">
+        {/* Chỉ hiện ở theme "Không gian làm việc" (CSS): tên hồ sơ, trạng thái, quan hệ của người xem và việc đang chờ. */}
+        <header className="record-summary">
+          <h2>{proposal.title}</h2>
+          <p className="record-summary-meta">
+            <span>Hồ sơ đề xuất {proposal.code}</span>
+            <StatusBadge status={proposal.status} />
+            {(capabilityState.capability?.viewerRelationships ?? []).map((relationship) => (
+              <span className="status-badge info" key={relationship.type}>{relationshipLabel(relationship.type)}</span>
+            ))}
+          </p>
+          <p><span className="work-item-label">Việc của bạn ở bước này</span> <strong>{proposalNextStep(proposal)?.waiting ?? "Không có việc đang chờ bạn"}</strong></p>
+        </header>
         <button className="button" type="button" disabled={isSaving || isUploading || isSubmitting || isResubmitting} onClick={() => { if (!unsaved || window.confirm("Bỏ thay đổi chưa lưu và tải lại hồ sơ?")) void refresh(); }}>Tải lại hồ sơ</button>
         {unsaved ? <p role="status" className="state-message">Có thay đổi chưa lưu. Lưu bản nháp trước khi nộp.</p> : null}
         {message ? <p className="state-message success" role="status">{message}</p> : null}
@@ -1041,7 +1052,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
 
         {/* Backend bỏ `history` với người đánh giá (ẩn danh hai chiều) — không hiện khối rỗng gây hiểu nhầm. */}
         {proposal.history ? (
-        <SectionCard title="Timeline" subtitle="Lịch sử nộp và thay đổi trạng thái chính">
+        <SectionCard title="Lịch sử hồ sơ" subtitle="Lịch sử nộp và thay đổi trạng thái chính">
           {proposal.history.length ? (
             <div className="table-wrap timeline-table-wrap">
               <table className="data-table timeline-table">
@@ -1064,7 +1075,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               </table>
             </div>
           ) : (
-            <EmptyState title="Chưa có lịch sử nộp" message="Timeline sẽ xuất hiện khi hồ sơ được nộp chính thức." />
+            <EmptyState title="Chưa có lịch sử nộp" message="Lịch sử sẽ xuất hiện khi hồ sơ được nộp chính thức." />
           )}
         </SectionCard>
         ) : null}
