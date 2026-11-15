@@ -13,7 +13,7 @@ const profileFields: Record<string, string> = { ...names, managementOrganization
 // Labels for the redacted {section, field, changed} markers the API writes; values are never in the facts, so none are shown.
 const personalInfoLabels: Record<string, string> = { gender: "Giới tính", birthDate: "Ngày sinh", birthPlace: "Nơi sinh", nationality: "Quốc gia/Quốc tịch", englishAcademicTitle: "Học hàm, học vị (Tiếng Anh)", contactAddress: "Địa chỉ liên hệ", organization: "Đơn vị quản lý / Đơn vị công tác", languages: "Ngoại ngữ", otherResearchFields: "Lĩnh vực nghiên cứu khác" };
 const sensitiveLabels: Record<string, string> = { avatarUrl: "Ảnh chân dung", idNumber: "Số CCCD / Hộ chiếu", idIssueDate: "Ngày cấp CCCD / Hộ chiếu", idIssuePlace: "Nơi cấp CCCD / Hộ chiếu", bankAccount: "Số tài khoản", bankName: "Tên ngân hàng", bankBranch: "Chi nhánh ngân hàng", smartCaSerial: "Tài khoản SmartCA / Serial chứng thư số", shareDataAgreement: "Đồng ý chia sẻ dữ liệu" };
-const sectionLabels: Record<string, string> = { educationHistory: "2. Quá trình đào tạo", workHistory: "3. Quá trình công tác & Kinh nghiệm chuyên môn", researchExperience: "4. Kinh nghiệm & Thành tích nghiên cứu — sở hữu trí tuệ, giải thưởng, đề tài/dự án" };
+const sectionLabels: Record<string, string> = { educationHistory: "2.1. Quá trình đào tạo", workHistory: "2.2. Quá trình công tác & Kinh nghiệm chuyên môn", researchExperience: "3. Kinh nghiệm & Thành tích nghiên cứu — sở hữu trí tuệ, giải thưởng, đề tài/dự án" };
 
 function cvChangeLabel({ section, field }: { section: string; field: string }) {
   if (section === "personalInfo" && sensitiveLabels[field]) return `1. Thông tin chung — ${sensitiveLabels[field]}: đã thay đổi, giá trị được ẩn`;
@@ -32,7 +32,7 @@ function historyChangeSummary(before?: Record<string, unknown>, after?: Record<s
   const changes = Array.isArray(after.cvChanges) ? after.cvChanges.filter((item): item is { section: string; field: string; changed: true } => !!item && typeof item === "object" && typeof (item as { section?: unknown }).section === "string" && typeof (item as { field?: unknown }).field === "string" && (item as { changed?: unknown }).changed === true) : [];
   for (const label of changes.map(cvChangeLabel)) if (!summary.includes(label)) summary.push(label);
   // Publications live in their own table, so the API writes no cvChanges marker for them.
-  if (differs("publications")) summary.push("4. Kinh nghiệm & Thành tích nghiên cứu — Công bố khoa học");
+  if (differs("publications")) summary.push("3. Kinh nghiệm & Thành tích nghiên cứu — Công bố khoa học");
   if (differs("participations")) summary.push("Quá trình tham gia nghiên cứu");
   return summary;
 }

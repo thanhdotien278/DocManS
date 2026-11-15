@@ -13,6 +13,11 @@ export class RegistrationController {
     return { enabled: await this.registration.isEnabled() };
   }
 
+  @Get("units")
+  async units() {
+    return this.registration.listUnits();
+  }
+
   @Post()
   async register(@Body(registerPipe) body: RegisterDto, @Req() request: { ip?: string; socket?: { remoteAddress?: string }; headers?: Record<string, string | undefined> }) {
     return this.registration.register(body, { ip: request.ip ?? request.socket?.remoteAddress, userAgent: request.headers?.["user-agent"] });

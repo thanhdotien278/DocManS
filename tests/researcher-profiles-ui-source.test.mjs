@@ -63,7 +63,7 @@ describe("Story 2.1 researcher profile UI source", () => {
       readFile("apps/web/src/fixtures/shell-context.ts", "utf8")
     ]);
     const source = `${workspace}\n${general}\n${rowTable}`;
-    for (const label of ["1. Thông tin chung", "2. Quá trình đào tạo", "3. Quá trình công tác & Kinh nghiệm chuyên môn", "4. Kinh nghiệm & Thành tích nghiên cứu", "5. Xem & In Lý lịch khoa học"]) assert.match(source, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    for (const label of ["1. Thông tin chung", "2. Quá trình đào tạo và công tác", "3. Kinh nghiệm & Thành tích nghiên cứu", "4. Xem & In Lý lịch khoa học"]) assert.match(source, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(source, /Lưu lý lịch khoa học/);
     for (const field of ["fullName", "gender", "idNumber", "contactEmail", "organization", "researchFieldIds"]) assert.match(source, new RegExp(field));
     for (const field of ["fullName", "gender", "idNumber", "contactEmail", "organization", "researchFieldIds"]) assert.match(workspace, new RegExp(`errors\\.${field}\\s*=`));
@@ -122,8 +122,8 @@ describe("Story 2.1 researcher profile UI source", () => {
     }));
     assert.match(historyMarkup, /<li>1\. Thông tin chung — Số tài khoản: đã thay đổi, giá trị được ẩn<\/li>/);
     assert.match(historyMarkup, /<li>1\. Thông tin chung — Giới tính<\/li>/);
-    assert.match(historyMarkup, /<li>3\. Quá trình công tác &amp; Kinh nghiệm chuyên môn<\/li>/);
-    assert.match(historyMarkup, /<li>4\. Kinh nghiệm &amp; Thành tích nghiên cứu — Công bố khoa học<\/li>/);
+    assert.match(historyMarkup, /<li>2\.2\. Quá trình công tác &amp; Kinh nghiệm chuyên môn<\/li>/);
+    assert.match(historyMarkup, /<li>3\. Kinh nghiệm &amp; Thành tích nghiên cứu — Công bố khoa học<\/li>/);
     assert.match(historyMarkup, /<li>future\.x<\/li>/);
     assert.doesNotMatch(historyMarkup, /Họ tên|personalInfo\./);
   });
@@ -241,7 +241,7 @@ describe("Story 2.1 researcher profile UI source", () => {
     assert.deepEqual(plain(sent[1].publications), [cvProfile.publications[1]], "removing A keeps the hidden INACTIVE row");
     assert.deepEqual(plain(sent[1].curriculumVitae.researchExperience), { awards: [{ name: "Giải", awardYear: 2020, endYear: 2021 }] });
     const goTo = (tree) => find(tree, (node) => node.type === "button" && String([].concat(node.props.children).join("")).startsWith("Đi tới"));
-    assert.equal([].concat(goTo(render()).props.children).join(""), "Đi tới 4. Kinh nghiệm & Thành tích nghiên cứu", "a stale publication id routes to Tab 4");
+    assert.equal([].concat(goTo(render()).props.children).join(""), "Đi tới 3. Kinh nghiệm & Thành tích nghiên cứu", "a stale publication id routes to Tab 3");
     reply = async () => { throw new ProfileRequestError("Dữ liệu hồ sơ nhà khoa học không hợp lệ.", 400, undefined, [{ field: "curriculumVitae.researchExperience.awards.0.proofUrl", message: "Liên kết không hợp lệ." }]); };
     await submit();
     goTo(render()).props.onClick();

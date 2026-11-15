@@ -108,6 +108,23 @@ test("CV submission walks TB → TP → BGĐ in order; steps cannot be skipped o
   assert.deepEqual([audit.actorId, audit.beforeFacts.stage, audit.afterFacts.stage, audit.afterFacts.kind], [people.board.id, "BOARD_REVIEW", "HEAD_REVIEW", "EVALUATION_COUNCIL"]);
 });
 
+test("queue lists only the tờ trình the viewer can act on now; stage counts follow role visibility", async () => {
+  const { people, open, advance, routing } = await setup("QUEUE");
+  const submission = await open(people.staff);
+  const ids = async (actor) => (await routing.queue(actor)).submissions.map((item) => item.id).filter((id) => id === submission.id);
+
+  assert.deepEqual(await ids(people.board), [submission.id], "TB thấy tờ trình ở bước của mình");
+  assert.deepEqual(await ids(people.head), [], "TP chưa tới bước");
+  assert.deepEqual(await ids(people.staff), [], "người lập không tự xử lý");
+  assert.ok((await routing.queue(people.head)).pendingByStage.BOARD_REVIEW >= 1, "TP thấy số tờ trình đang chờ ở bước TB");
+  assert.deepEqual((await routing.queue(people.pi)).pendingByStage, {}, "chủ nhiệm không thấy số đếm");
+
+  await advance(people.board, submission);
+  assert.deepEqual(await ids(people.board), []);
+  const [queued] = (await routing.queue(people.head)).submissions.filter((item) => item.id === submission.id);
+  assert.deepEqual([queued.stage, queued.actions], ["HEAD_REVIEW", { advance: true, return: true }]);
+});
+
 test("TB-authored goes to TP; TP-authored still goes through TB; nobody reviews their own", async () => {
   const { people, open, advance, routing, proposal } = await setup("B");
   const byBoard = await open(people.board, "IRB_COUNCIL");

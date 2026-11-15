@@ -4,9 +4,9 @@ import Link from "next/link";
 import { AtSign, Building2, Landmark, Mail, MailCheck, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { isSelfRegistrationEnabled, registerAccount, type AccountType } from "@/lib/registration-api";
+import { isSelfRegistrationEnabled, listRegistrationUnits, registerAccount, type AccountType, type RegistrationUnit } from "@/lib/registration-api";
 
-type FieldName = "fullName" | "email" | "username" | "accountType";
+type FieldName = "fullName" | "email" | "username" | "accountType" | "organizationUnitId";
 type FieldErrors = Partial<Record<FieldName, string>>;
 
 const ACCOUNT_TYPES: { value: AccountType; label: string; hint: string; Icon: typeof Building2 }[] = [
@@ -24,7 +24,12 @@ export function RegisterForm() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [done, setDone] = useState("");
   const [busy, setBusy] = useState(false);
+  const [accountType, setAccountType] = useState<AccountType | "">("");
+  const [units, setUnits] = useState<RegistrationUnit[] | null>(null);
   useEffect(() => { void isSelfRegistrationEnabled().then(setEnabled); }, []);
+  useEffect(() => {
+    if (enabled && units === null) void listRegistrationUnits().then(setUnits, () => setUnits([]));
+  }, [enabled, units]);
 
   const head = { kicker: "Đăng ký tài khoản", title: "Đăng ký tài khoản nhà nghiên cứu" };
 
@@ -54,12 +59,13 @@ export function RegisterForm() {
       <form className="auth-form" noValidate onSubmit={async (event) => {
         event.preventDefault(); setError("");
         const form = new FormData(event.currentTarget);
-        const input = { email: String(form.get("email") ?? "").trim(), username: String(form.get("username") ?? "").trim(), fullName: String(form.get("fullName") ?? "").trim(), accountType: String(form.get("accountType") ?? "") as AccountType };
+        const input = { email: String(form.get("email") ?? "").trim(), username: String(form.get("username") ?? "").trim(), fullName: String(form.get("fullName") ?? "").trim(), accountType: String(form.get("accountType") ?? "") as AccountType, organizationUnitId: String(form.get("organizationUnitId") ?? "") || undefined };
         const missing: FieldErrors = {};
         if (!input.fullName) missing.fullName = "Nhập họ và tên.";
         if (!input.email) missing.email = "Nhập địa chỉ email.";
         if (!input.username) missing.username = "Nhập tên đăng nhập.";
         if (!input.accountType) missing.accountType = "Chọn đối tượng đăng ký.";
+        else if (input.accountType === "INTERNAL" && !input.organizationUnitId) missing.organizationUnitId = "Chọn đơn vị quản lý.";
         setFieldErrors(missing);
         if (Object.keys(missing).length) return;
         setBusy(true);
@@ -90,7 +96,7 @@ export function RegisterForm() {
           <div className="choice-grid">
             {ACCOUNT_TYPES.map(({ value, label, hint, Icon }) => (
               <label className="choice-card" key={value}>
-                <input type="radio" name="accountType" value={value} required onChange={() => clearField("accountType")} />
+                <input type="radio" name="accountType" value={value} required onChange={() => { clearField("accountType"); setAccountType(value); }} />
                 <Icon size={20} aria-hidden="true" />
                 <span><strong>{label}</strong><small>{hint}</small></span>
               </label>
@@ -98,6 +104,15 @@ export function RegisterForm() {
           </div>
           {fieldErrors.accountType ? <span className="field-error" id="register-accountType-error">{fieldErrors.accountType}</span> : null}
         </fieldset>
+
+        {accountType === "INTERNAL" ? <div className="field">
+          <label htmlFor="register-organizationUnitId">Đơn vị quản lý <span className="required-mark" aria-hidden="true">*</span></label>
+          <div className="field-input with-icon"><Building2 size={18} aria-hidden="true" /><select id="register-organizationUnitId" name="organizationUnitId" defaultValue="" required disabled={units === null} aria-invalid={Boolean(fieldErrors.organizationUnitId)} aria-describedby={fieldErrors.organizationUnitId ? "register-organizationUnitId-error" : "register-organizationUnitId-hint"} onChange={() => clearField("organizationUnitId")}>
+            <option value="" disabled>{units === null ? "Đang tải danh sách đơn vị..." : "Chọn đơn vị"}</option>
+            {units?.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
+          </select></div>
+          {fieldErrors.organizationUnitId ? <span className="field-error" id="register-organizationUnitId-error">{fieldErrors.organizationUnitId}</span> : <span className="field-hint" id="register-organizationUnitId-hint">Cán bộ quản lý khoa học sẽ xác nhận đơn vị khi duyệt tài khoản.</span>}
+        </div> : null}
 
         {error ? <p className="auth-notice danger" role="alert">{error}</p> : null}
         <button className="button primary auth-submit" disabled={busy} type="submit">{busy ? "Đang gửi..." : "Đăng ký tài khoản"}</button>
