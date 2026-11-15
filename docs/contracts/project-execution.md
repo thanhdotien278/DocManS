@@ -188,7 +188,11 @@ management, disbursement and settlement: GĐ, TP and TB Academy-wide, assigned C
 Funding ledger invariants: ΣDISBURSEMENT ≤ ΣGRANT and ΣSETTLEMENT ≤ ΣDISBURSEMENT (error `FUNDING_INVALID`). GĐ signs liquidation only when ΣSETTLEMENT + recoveredAmount = ΣDISBURSEMENT (`LIQUIDATION_UNBALANCED`); signing freezes the figures and allocates `n/BBTL-HVQY/năm`. See `docs/superpowers/specs/2026-11-11-kinh-phi-de-tai-design.md`.
 Private appraisal material is disclosed only to the assigned CV and the tờ trình
 chain (TB, TP, signer) of that request; monitoring roles do not receive it.
-PI/members receive permitted feedback, not confidential management notes.
+PI/members receive permitted feedback (review reason, supplement deadline, unresolved issues on
+accept), not confidential management notes: a report's `internalNote` is returned only to the
+assigned CV and TP who are not project participants, and never enters project history.
+Per-milestone/checkpoint `overdue`/`approaching` and per-report `awaitingAction`/`responseOverdue`
+use the same deadline rule as the project flags; the result carries `trackingVersion: 1`.
 Apply these rules equally to files, history, lists, filters, counts and queues.
 
 No working workflow-notification backend exists; current mail handles account

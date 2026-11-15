@@ -72,7 +72,7 @@ export class ApprovedProjectsController {
   async supplementReport(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("reportId") reportId: string, @Body(projectReportReviewPipe) body: any) { return { report: await this.projects.requestReportSupplement(req.currentUser!, id, { ...body, reportId }) }; }
 
   @Post(":id/reports/:reportId/accept")
-  async acceptReport(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("reportId") reportId: string, @Body(projectDecisionPipe) body: any) { return { report: await this.projects.acceptReport(req.currentUser!, id, { ...body, reportId }) }; }
+  async acceptReport(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("reportId") reportId: string, @Body(projectReportReviewPipe) body: any) { return { report: await this.projects.acceptReport(req.currentUser!, id, { ...body, reportId }) }; }
 
   @Post(":id/requests/:type")
   async draftRequest(@Req() req: RequestWithCurrentUser, @Param("id") id: string, @Param("type") type: string, @Body(projectRequestPipe) body: any) { const kind = readRequestType(type); return { request: kind === "adjustment" ? await this.projects.createAdjustment(req.currentUser!, id, body) : await this.projects.createExtension(req.currentUser!, id, body) }; }

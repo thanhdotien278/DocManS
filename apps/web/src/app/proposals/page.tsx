@@ -7,7 +7,7 @@ export default function ProposalsPage() {
     <>
       <Breadcrumb items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Quản lý đề tài" }]} />
       <PageHeader
-        eyebrow="OMS"
+        eyebrow="Hồ sơ đề xuất"
         title="Danh sách hồ sơ đề tài"
         description="Theo dõi hồ sơ theo đợt tiếp nhận, trạng thái, thời gian thực hiện và lịch sử nộp."
       />

@@ -182,7 +182,7 @@ export function AdminCatalogsPanel() {
 
   return (
     <div className="grid">
-      <SectionCard action={<button className="button primary" type="button" onClick={() => { setFormError(""); setMessage(""); setEditingItem(null); setShowCreate(true); }}>Thêm danh mục</button>} title="Danh mục dùng chung" subtitle="Quản lý các giá trị nền cho nghiệp vụ EP-01">
+      <SectionCard action={<button className="button primary" type="button" onClick={() => { setFormError(""); setMessage(""); setEditingItem(null); setShowCreate(true); }}>Thêm danh mục</button>} title="Danh mục dùng chung" subtitle="Quản lý các giá trị nền dùng chung cho nghiệp vụ">
         <div className="filter-bar compact">
           <label className="filter-field">
             <span>Loại danh mục</span>

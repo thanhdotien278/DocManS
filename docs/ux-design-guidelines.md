@@ -381,3 +381,23 @@ empty, error and stale-context states; confirm submission/escalation/decisions i
 accessible dialogs. Separate project-state badges from overdue/report/request flags.
 Never offer generic status edits or direct changes to approved controlled fields.
 No TP/TB/CV approval control for adjustments or extensions exists; only the BGĐ signature applies the change.
+
+## Bốn theme giao diện
+
+QT chọn tại Cấu hình hệ thống (tham số `ui_theme`); mặc định là theme hiện tại (`classic`, điều hướng ngang).
+Theme "Không gian làm việc" (`workspace`) dùng cùng bảng màu §3, đưa điều hướng sang sidebar trái theo §5, bỏ bóng
+đổ panel và giảm radius còn `6px`. Riêng theme này: menu theo nhóm việc của từng vai trò (`getWorkspaceNavigation` trong
+`apps/web/src/lib/navigation.ts`, đủ 10 vai trò, không liệt kê Giao việc/Báo cáo vì chưa có nguồn dữ liệu thật); trang đầu
+là "Việc cần xử lý" lấy từ API nghiệp vụ, việc tiếp theo suy ra từ `allowedActions` (`components/layout/workspace-home.tsx`,
+`lib/proposal-next-step.ts`); trang có từ 4 panel trở lên có mục lục phần (`components/layout/section-nav.tsx`); chi tiết hồ sơ
+đề xuất có khối tóm tắt đầu trang (tên, trạng thái, quan hệ của người xem, việc đang chờ); trường bị khóa hiện như văn bản,
+nút bị khóa kém nổi bật; mobile có header một hàng và drawer theo nhóm. Theme không đổi quyền, workflow hay dữ liệu công bố.
+Theme "Theo nhóm công việc" (`guided`) kế thừa sidebar đó, gom menu thành nhóm có tiêu đề
+(Tổng quan, Việc của tôi, Đề xuất và đề tài, Nhà khoa học và tài khoản, Hệ thống — khai báo tại
+`apps/web/src/lib/navigation.ts`), hiện vai trò cạnh tên người dùng, chữ nền `16px`, mục menu cao `44px`.
+Dưới `901px` mọi theme dùng chung menu thu gọn. Quy tắc theme nằm cuối `apps/web/src/app/globals.css`
+dưới `:root[data-theme]` (chung cho theme có sidebar) và `:root[data-theme="guided"]`; không thêm màu ngoài bảng màu.
+Theme "Học viện" (`academy`) kế thừa sidebar và menu theo nhóm của `guided`; masthead và sidebar cùng nền `--primary-dark`
+tạo khung chữ L, chữ menu trắng, radius `4px`, panel có viền đỉnh `3px` màu `--primary`, tiêu đề panel chữ hoa `14px`,
+tiêu đề bảng nền `--primary-soft` gạch chân `--primary`. Vàng `--accent-gold` chỉ xuất hiện ở ba chỗ: vạch `3px` trên đỉnh
+masthead, viền trái mục menu đang mở và vạch dưới tiêu đề trang. Quy tắc nằm dưới `:root[data-theme="academy"]`.

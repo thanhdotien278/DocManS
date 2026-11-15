@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useSession } from "@/components/auth/session-provider";
+import { AdminDashboardPanel } from "@/components/admin/admin-dashboard-panel";
+import { WorkspaceHome } from "@/components/layout/workspace-home";
+import { ManagementDashboardPanel } from "@/components/research-proposals/management-dashboard-panel";
 import { AlertList } from "@/components/ui/alert-list";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { KpiCard } from "@/components/ui/kpi-card";
@@ -9,6 +12,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getDashboardSnapshot, type DashboardPanel } from "@/fixtures/showcase-data";
+import { useUiTheme } from "@/lib/ui-theme";
 
 function renderPanel(panel: DashboardPanel) {
   if (panel.variant === "chart") {
@@ -115,7 +119,15 @@ function renderPanel(panel: DashboardPanel) {
 
 export default function DashboardPage() {
   const { account } = useSession();
-  const snapshot = getDashboardSnapshot(account?.systemRole ?? "RESEARCH_MANAGEMENT_STAFF");
+  const theme = useUiTheme();
+  // Chờ biết vai trò rồi mới chọn nhánh, tránh nhoáng số liệu minh họa trước.
+  if (!account) return null;
+  // Dashboard đã có số liệu thật theo vai trò được ưu tiên ở mọi theme.
+  if (account.systemRole === "SYSTEM_ADMIN") return <AdminDashboardPanel />;
+  if (account.systemRole === "RESEARCH_MANAGEMENT_STAFF") return <ManagementDashboardPanel />;
+  // Theme "Không gian làm việc" thay số liệu minh họa của các vai trò còn lại bằng hàng đợi việc lấy từ API nghiệp vụ.
+  if (theme === "workspace") return <WorkspaceHome />;
+  const snapshot = getDashboardSnapshot(account.systemRole);
 
   return (
     <>

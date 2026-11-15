@@ -6,9 +6,9 @@ export type ProjectRecord = {
   scope: Record<string, unknown>; plan: Record<string, unknown> | null;
   hostOrganizationUnit?: { name: string }; officer?: { officerUserId: string; displayName?: string | null } | null;
   members: Array<{ id: string; name: string; participationRole: string; status: string; userId?: string }>;
-  milestones: Array<{ id: string; title: string; description?: string | null; dueDate: string; isImportant: boolean; status: string; responsibleMemberId?: string | null }>;
-  checkpoints: Array<{ id: string; title: string; dueDate: string; status: string; milestoneId?: string | null }>;
-  reports: Array<{ id: string; revision: number; status: string; checkpointId?: string; reportingPeriodStart?: string; reportingPeriodEnd?: string; progressResults?: string; issuesRecommendations?: string; reviewReason?: string; responseDeadline?: string; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }>; allowedActions: PermissionActionV1[] }>;
+  milestones: Array<{ id: string; title: string; description?: string | null; dueDate: string; isImportant: boolean; status: string; responsibleMemberId?: string | null; overdue?: boolean; approaching?: boolean }>;
+  checkpoints: Array<{ id: string; title: string; dueDate: string; status: string; milestoneId?: string | null; overdue?: boolean; approaching?: boolean }>;
+  reports: Array<{ id: string; revision: number; status: string; checkpointId?: string; reportingPeriodStart?: string; reportingPeriodEnd?: string; progressResults?: string; issuesRecommendations?: string; reviewReason?: string; unresolvedIssues?: string | null; internalNote?: string | null; awaitingAction?: "officer" | "pi" | null; responseOverdue?: boolean; responseDeadline?: string; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }>; allowedActions: PermissionActionV1[] }>;
   requests: Array<{ id: string; requestType: "adjustment" | "extension"; status: string; revision?: number; requesterId?: string; reason?: string; proposedValues?: Record<string, unknown>; decisionNote?: string; responseDeadline?: string; approval?: { stage: string; stageLabel: string; withdrawNote: string } | null; evidence?: Array<{ id: string; fileRecordId: string; file?: { originalFileName: string } }>; allowedActions: PermissionActionV1[] }>;
   history: Array<{ id: string; action: string; reason?: string; createdAt: string }>;
   ethicsDossier?: { id: string; status: string; submittedAt: string | null } | null;

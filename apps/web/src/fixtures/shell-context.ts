@@ -147,7 +147,7 @@ export const routeDefinitions: Record<string, RouteDefinition> = {
     summaryBody: "Báo cáo được cấu hình theo phạm vi dữ liệu hiện hành và sẵn sàng cho xuất biểu mẫu văn phòng."
   },
   "/proposals": {
-    eyebrow: "OMS",
+    eyebrow: "Hồ sơ đề xuất",
     title: "Quản lý đề tài",
     description: "Tra cứu, lọc và xử lý hồ sơ đề tài theo đợt tiếp nhận và trạng thái nghiệp vụ.",
     summaryTitle: "Danh mục hồ sơ",

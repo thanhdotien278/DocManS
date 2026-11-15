@@ -14,6 +14,7 @@ const emptyCheckpoint: CheckpointRow = { title: "", dueDate: "", milestonePositi
 
 function day(value?: string | null) { return value?.slice(0, 10) ?? ""; }
 function date(value?: string | null) { return value ? new Intl.DateTimeFormat("vi-VN", { timeZone: "UTC" }).format(new Date(value)) : "Chưa có"; }
+function flag(item: { overdue?: boolean; approaching?: boolean }) { return item.overdue ? " · Quá hạn" : item.approaching ? " · Sắp đến hạn" : ""; }
 
 /** Story 6.2: lập nhiều mốc/điểm báo cáo khi chuẩn bị; CV phụ trách sửa mốc thường khi đang thực hiện. Mốc quan trọng đổi qua yêu cầu điều chỉnh. */
 export function ProjectPlanSection({ project, busy, canSetup, canMaintain, run }: { project: ProjectRecord; busy: boolean; canSetup: boolean; canMaintain: boolean; run: Run }) {
@@ -83,12 +84,12 @@ export function ProjectPlanSection({ project, busy, canSetup, canMaintain, run }
     <SectionCard title="Mốc và lịch báo cáo" subtitle={canMaintain ? "Mốc thường và điểm báo cáo mở được cập nhật trực tiếp; mốc quan trọng cần yêu cầu điều chỉnh." : undefined}>
       {!project.milestones.length && !project.checkpoints.length ? <p>Chưa thiết lập mốc.</p> : null}
       {project.milestones.length ? <><h3>Mốc thực hiện</h3><ul>{project.milestones.map((item) => <li key={item.id}>
-        {item.title} · {date(item.dueDate)} · {milestoneStatusLabel(item.status)}{item.isImportant ? " · Mốc quan trọng" : ""} · Phụ trách: {memberName(item.responsibleMemberId)}
+        {item.title} · {date(item.dueDate)} · {milestoneStatusLabel(item.status)}{item.isImportant ? " · Mốc quan trọng" : ""} · Phụ trách: {memberName(item.responsibleMemberId)}{flag(item)}
         {editable("milestone", item) && editing?.id !== item.id ? <> <button className="button" type="button" disabled={busy} onClick={() => setEditing({ kind: "milestone", id: item.id, title: item.title, dueDate: day(item.dueDate), description: item.description ?? "", responsibleMemberId: item.responsibleMemberId ?? "" })}>Sửa</button></> : null}
         {editing?.id === item.id ? editForm(true) : null}
       </li>)}</ul></> : null}
       {project.checkpoints.length ? <><h3>Điểm báo cáo</h3><ul>{project.checkpoints.map((item) => <li key={item.id}>
-        {item.title} · {date(item.dueDate)} · {milestoneStatusLabel(item.status)}
+        {item.title} · {date(item.dueDate)} · {milestoneStatusLabel(item.status)}{flag(item)}
         {editable("checkpoint", item) && editing?.id !== item.id ? <> <button className="button" type="button" disabled={busy} onClick={() => setEditing({ kind: "checkpoint", id: item.id, title: item.title, dueDate: day(item.dueDate), description: "", responsibleMemberId: "" })}>Sửa</button></> : null}
         {editing?.id === item.id ? editForm(false) : null}
       </li>)}</ul></> : null}
