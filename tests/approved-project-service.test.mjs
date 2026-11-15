@@ -391,3 +391,75 @@ test("6.2: a checkpoint with a report keeps its due date; an ordinary-milestone 
   await w.service.decideRequest(actor("director"), "p1", "adjustment", "approve", { requestId, contextVersion: await w.ctx() });
   assert.equal(w.db.projectMilestone.rows.find((row) => row.id === "ms-1").dueDate.toISOString().slice(0, 10), "2029-02-01");
 });
+
+test("6.5: accept records unresolved issues for PI and members; the internal note stays with CV/TP", async () => {
+  const w = world();
+  const report = await reportUnderReview(w);
+  await w.service.acceptReport(actor("staff"), "p1", { reportId: report, reason: "Đạt", unresolvedIssues: "Còn thiếu số liệu quý 2", internalNote: "Theo dõi sát kỳ sau", contextVersion: await w.ctx() });
+  const row = (view) => view.reports.find((item) => item.id === report);
+  for (const id of ["pi", "member"]) {
+    const view = row(await w.service.getProject(actor(id), "p1"));
+    assert.equal(view.unresolvedIssues, "Còn thiếu số liệu quý 2", id);
+    assert.equal(view.reviewReason, "Đạt", id);
+    assert.equal(view.internalNote, undefined, id);
+  }
+  assert.equal(row(await w.service.getProject(actor("staff"), "p1")).internalNote, "Theo dõi sát kỳ sau");
+  assert.equal(row(await w.service.getProject(actor("head"), "p1")).internalNote, "Theo dõi sát kỳ sau");
+  const piHistory = (await w.service.getProject(actor("pi"), "p1")).history;
+  assert.ok(piHistory.every((item) => !JSON.stringify(item).includes("Theo dõi sát")), "internal note never reaches history visible to the PI");
+});
+
+test("6.5: a TP who is also an active project member does not see the internal note", async () => {
+  const w = world();
+  w.db.approvedProjectMember.rows.push({ id: "m-head", projectId: "p1", userId: "head", name: "Head", participationRole: "TOPIC_MEMBER", status: "ACTIVE", effectiveFrom: past, effectiveUntil: null, createdAt: past });
+  const report = await reportUnderReview(w);
+  await w.service.acceptReport(actor("staff"), "p1", { reportId: report, internalNote: "Nội bộ", contextVersion: await w.ctx() });
+  assert.equal((await w.service.getProject(actor("head"), "p1")).reports.find((item) => item.id === report).internalNote, undefined);
+});
+
+test("6.5: per-item flags and awaiting-action use the project deadline rule", async () => {
+  const soon = new Date(today.getTime() + 5 * DAY);
+  const w = world({ checkpoints: [
+    { id: "cp-1", projectId: "p1", milestoneId: "ms-1", title: "Kỳ 1", dueDate: new Date(today.getTime() - 2 * DAY), status: "open" },
+    { id: "cp-2", projectId: "p1", milestoneId: "ms-2", title: "Kỳ 2", dueDate: soon, status: "open" }] });
+  const staffView = async () => w.service.getProject(actor("staff"), "p1");
+  let view = await staffView();
+  assert.equal(view.trackingVersion, 1);
+  assert.deepEqual(view.checkpoints.map((item) => [item.id, item.overdue, item.approaching]), [["cp-1", true, false], ["cp-2", false, true]]);
+  assert.equal(view.overdue, true);
+  assert.deepEqual(view.milestones.map((item) => [item.overdue, item.approaching]), [[false, false], [false, false]]);
+  const draft = await w.service.createReportDraft(actor("pi"), "p1", { checkpointId: "cp-1", reportingPeriodStart: new Date("2026-01-01T00:00:00Z"), reportingPeriodEnd: new Date(today.getTime() - 3 * DAY), progressResults: "Kỳ 1", contextVersion: await w.ctx() });
+  await w.service.submitReport(actor("pi"), "p1", { reportId: draft.id, contextVersion: await w.ctx() });
+  view = await staffView();
+  assert.equal(view.checkpoints.find((item) => item.id === "cp-1").overdue, false, "a submitted report closes the checkpoint deadline");
+  assert.equal(view.reports[0].awaitingAction, "officer");
+  await w.service.requestReportSupplement(actor("staff"), "p1", { reportId: draft.id, reason: "Bổ sung", responseDeadline: new Date(today.getTime() + DAY), contextVersion: await w.ctx() });
+  const pi = await w.service.getProject(actor("pi"), "p1");
+  assert.deepEqual([pi.reports[0].awaitingAction, pi.reports[0].responseOverdue], ["pi", false]);
+  w.db.projectReportRevision.rows.find((item) => item.id === draft.id).responseDeadline = new Date(today.getTime() - 2 * DAY);
+  assert.equal((await w.service.getProject(actor("member"), "p1")).reports[0].responseOverdue, true);
+  // An unsubmitted correction draft still owes the response and keeps the source deadline.
+  const correction = await w.service.updateReportDraft(actor("pi"), "p1", { reportId: draft.id, progressResults: "Đã bổ sung", contextVersion: await w.ctx() });
+  const row = (await w.service.getProject(actor("staff"), "p1")).reports.find((item) => item.id === correction.id);
+  assert.deepEqual([row.awaitingAction, row.responseOverdue], ["pi", true]);
+});
+
+test("6.5: leadership has no report accept action", async () => {
+  const w = world();
+  const report = await reportUnderReview(w);
+  for (const id of ["director", "science", "head", "board"]) {
+    const view = await w.service.getProject(actor(id), "p1");
+    assert.ok(!view.viewerAuthorization.allowedActions.includes("project.report.accept"), id);
+    assert.ok(!(view.reports.find((item) => item.id === report).allowedActions ?? []).includes("project.report.accept"), id);
+    await assert.rejects(w.service.acceptReport(actor(id), "p1", { reportId: report, contextVersion: await w.ctx() }), undefined, id);
+  }
+});
+
+test("6.5: a project that cannot resolve scope fails the whole monitoring list closed", async () => {
+  const w = world();
+  assert.equal((await w.service.listMonitoring(actor("staff"))).length, 1);
+  // Anything other than a per-record ForbiddenException aborts the list: no partial result.
+  w.db.approvedProject.findUnique = async () => { throw new Error("CONTEXT_UNRESOLVED"); };
+  await assert.rejects(w.service.listMonitoring(actor("staff")), /CONTEXT_UNRESOLVED/);
+  await assert.rejects(w.service.listMonitoring(actor("pi")), code("ACTION_NOT_GRANTED"));
+});

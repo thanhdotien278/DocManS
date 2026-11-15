@@ -10,12 +10,15 @@ import { useSession } from "@/components/auth/session-provider";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { NavLink } from "@/components/layout/nav-link";
 import { NotificationBell } from "@/components/layout/notification-bell";
-import { getNavigationItems } from "@/lib/navigation";
+import { SectionNav } from "@/components/layout/section-nav";
+import { getNavigationGroups, getNavigationItems } from "@/lib/navigation";
 import { getApiBaseUrl, PUBLIC_ROUTES } from "@/lib/session";
+import { useUiTheme } from "@/lib/ui-theme";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { account, isLoading } = useSession();
+  const theme = useUiTheme();
 
   if (PUBLIC_ROUTES.includes(pathname)) {
     return <>{children}</>;
@@ -32,6 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (account.mustChangePassword) return <main className="content" id="main-content" tabIndex={-1}><p role="status">Bạn phải đổi mật khẩu tạm thời trước khi tiếp tục.</p>{pathname === "/change-password" ? children : <a href="/change-password">Đổi mật khẩu</a>}<LogoutButton /></main>;
 
   const navigationItems = getNavigationItems(account.systemRole);
+  const navigationGroups = getNavigationGroups(theme, account.systemRole);
 
   return (
     <div className="app-shell">
@@ -52,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {account.researcherProfileId ? <HeaderAvatar initials={account.initials} /> : <span className="avatar">{account.initials}</span>}
                 <div>
                   <span className="user-name">{account.name}</span>
-                  <span className="user-role">{account.unit}</span>
+                  <span className="user-role">{navigationGroups ? `${account.systemRoleLabel} · ${account.unit}` : account.unit}</span>
                 </div>
                 <ChevronDown className="user-caret" size={16} aria-hidden="true" />
               </summary>
@@ -67,10 +71,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <nav className="topbar-row topbar-nav" aria-label="Điều hướng chính">
-          {navigationItems.map((item) => <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} />)}
+          {navigationGroups
+            ? navigationGroups.map((group) => (
+              <div className="nav-group" key={group.title}>
+                <p className="nav-group-title">{group.title}</p>
+                {group.items.map((item) => <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} />)}
+              </div>
+            ))
+            : navigationItems.map((item) => <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} />)}
         </nav>
       </header>
-      <main className="content" id="main-content" tabIndex={-1}>{children}</main>
+      <main className="content" id="main-content" tabIndex={-1}>
+        {theme === "workspace" ? <SectionNav /> : null}
+        {children}
+      </main>
     </div>
   );
 }
