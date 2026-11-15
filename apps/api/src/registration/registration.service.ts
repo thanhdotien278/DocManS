@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { randomBytes } from "node:crypto";
 import { AuditLogService } from "../auth/audit-log.service.js";
@@ -53,15 +53,16 @@ export class RegistrationService {
         await this.auditLog.record({ action: "self-register", result: "failure", targetEntity: "user", targetEntityId: "unknown", username: input.username, ip: context.ip, userAgent: context.userAgent, reason: "email_in_use" }, tx);
         return null;
       }
+      if (input.organizationUnitId && !(await tx.organizationUnit.findFirst({ where: { id: input.organizationUnitId, status: "active" } }))) throw new BadRequestException({ message: "Đơn vị quản lý không hợp lệ hoặc đã ngừng hoạt động." });
       const user = await tx.user.create({ data: {
         username: input.username, usernameKey: input.username, displayName: input.fullName, credentialEmail: input.email,
         passwordHash,
-        mustChangePassword: false, status: "pending_email_verification", systemRole: systemRoleOf(input.accountType), unit: ""
+        mustChangePassword: false, status: "pending_email_verification", systemRole: systemRoleOf(input.accountType), unit: "", requestedOrganizationUnitId: input.organizationUnitId ?? null
       } });
       const activation = this.passwordService.createResetToken();
       const expiresAt = new Date(Date.now() + VERIFICATION_TTL_MS);
       await tx.accountActivationToken.create({ data: { userId: user.id, createdById: user.id, tokenHash: activation.tokenHash, expiresAt, credentialVersion: user.credentialVersion } });
-      await this.auditLog.record({ action: "self-register", result: "success", actorId: user.id, targetEntity: "user", targetEntityId: user.id, username: input.username, ip: context.ip, userAgent: context.userAgent, afterFacts: { accountType: input.accountType, expiresAt: expiresAt.toISOString() } }, tx);
+      await this.auditLog.record({ action: "self-register", result: "success", actorId: user.id, targetEntity: "user", targetEntityId: user.id, username: input.username, ip: context.ip, userAgent: context.userAgent, afterFacts: { accountType: input.accountType, requestedOrganizationUnitId: input.organizationUnitId ?? null, expiresAt: expiresAt.toISOString() } }, tx);
       return { user, token: activation.token, expiresAt };
     }).catch((error) => {
       if (error && typeof error === "object" && "code" in error && error.code === "P2002") throw new ConflictException({ message: "Tên đăng nhập hoặc email vừa được đăng ký. Vui lòng thử lại.", code: "REGISTRATION_CONFLICT" });
@@ -82,14 +83,23 @@ export class RegistrationService {
     return { message: REGISTER_ACCEPTED_MESSAGE };
   }
 
+  async listUnits() {
+    if (!(await this.isEnabled())) throw new NotFoundException();
+    return { organizationUnits: await this.activeUnits() };
+  }
+
+  private activeUnits() {
+    return this.prisma.organizationUnit.findMany({ where: { status: "active" }, select: { id: true, code: true, name: true }, orderBy: { name: "asc" } });
+  }
+
   async listRequests(actor: SafeUserContext) {
     this.assertApprover(actor);
     const [requests, organizationUnits] = await Promise.all([
-      this.prisma.user.findMany({ where: { status: "pending_approval" }, select: { id: true, username: true, displayName: true, credentialEmail: true, systemRole: true, createdAt: true }, orderBy: { createdAt: "asc" } }),
-      this.prisma.organizationUnit.findMany({ where: { status: "active" }, select: { id: true, code: true, name: true }, orderBy: { name: "asc" } })
+      this.prisma.user.findMany({ where: { status: "pending_approval" }, select: { id: true, username: true, displayName: true, credentialEmail: true, systemRole: true, requestedOrganizationUnitId: true, createdAt: true }, orderBy: { createdAt: "asc" } }),
+      this.activeUnits()
     ]);
     return {
-      requests: requests.map((user) => ({ id: user.id, username: user.username, fullName: user.displayName, email: user.credentialEmail, accountType: user.systemRole === "EXTERNAL_RESEARCHER_USER" ? "EXTERNAL" : "INTERNAL", createdAt: user.createdAt.toISOString() })),
+      requests: requests.map((user) => ({ id: user.id, username: user.username, fullName: user.displayName, email: user.credentialEmail, accountType: user.systemRole === "EXTERNAL_RESEARCHER_USER" ? "EXTERNAL" : "INTERNAL", requestedOrganizationUnitId: user.requestedOrganizationUnitId, createdAt: user.createdAt.toISOString() })),
       organizationUnits
     };
   }

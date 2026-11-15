@@ -23,6 +23,11 @@ export const approvalActionPipe: PipeTransform<unknown, ApprovalActionBody> = {
 export class ApprovalRoutingController {
   constructor(private readonly routing: ApprovalRoutingService) {}
 
+  @Get("queue")
+  async queue(@Req() request: RequestWithCurrentUser) {
+    return this.routing.queue(request.currentUser!);
+  }
+
   @Get("subject")
   async forSubject(@Req() request: RequestWithCurrentUser, @Query("type") type: string, @Query("id") id: string) {
     return this.routing.forSubject(request.currentUser!, type, id);

@@ -35,6 +35,17 @@ export function summarizeManagement(input: {
     count: active.filter((proposal) => (phase.statuses as readonly string[]).includes(proposal.status)).length
   }));
 
+  // FR45a: phân bổ theo CV phụ trách hiện tại, có nhóm "chưa có CV"; "đang xử lý" là hồ sơ chưa có kết quả duyệt.
+  const officers = new Map<string, { key: string; name: string; inProgress: number; total: number }>();
+  for (const proposal of active) {
+    const current = proposal.managementOfficer?.current;
+    const key = current?.officerUserId ?? "";
+    const row = officers.get(key) ?? { key: key || "unassigned", name: current?.officerDisplayName || (key ? "CV không xác định" : "Chưa có CV phụ trách"), inProgress: 0, total: 0 };
+    row.total++;
+    if (proposal.status !== "approved" && proposal.status !== "rejected") row.inProgress++;
+    officers.set(key, row);
+  }
+
   const natureCounts = new Map<string, number>();
   for (const proposal of active) natureCounts.set(proposal.proposalNatureCode || "", (natureCounts.get(proposal.proposalNatureCode || "") ?? 0) + 1);
 
@@ -101,6 +112,8 @@ export function summarizeManagement(input: {
   return {
     total: active.length,
     phases,
+    officers: [...officers.values()].sort((left, right) => right.inProgress - left.inProgress || right.total - left.total || left.name.localeCompare(right.name, "vi")),
+    unassigned: officers.get("")?.inProgress ?? 0,
     natures: [...natureCounts.entries()].map(([code, count]) => ({ code, count })).sort((left, right) => right.count - left.count),
     byIntake: [...proposalsByPeriod.entries()]
       .map(([id, count]) => ({ id, title: periodTitles.get(id) ?? "Đợt không xác định", count }))
