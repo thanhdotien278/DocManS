@@ -5,6 +5,7 @@ import { Check, Circle, KeyRound, LockKeyhole, MailCheck, ShieldCheck, UserRound
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthShell } from "@/components/auth/auth-shell";
+import { PasswordInput } from "@/components/auth/password-input";
 import { changePassword, completeAccountActivation, completePasswordReset, requestPasswordReset } from "@/lib/auth-api";
 
 export function ChangePasswordForm() {
@@ -82,14 +83,14 @@ export function ResetPasswordForm() {
         </div>}
         <div className="field">
           <label htmlFor="reset-new-password">Mật khẩu mới</label>
-          <div className="field-input with-icon"><LockKeyhole size={18} aria-hidden="true" /><input id="reset-new-password" name="newPassword" type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} aria-describedby="reset-password-rules" /></div>
+          <div className="field-input with-icon"><LockKeyhole size={18} aria-hidden="true" /><PasswordInput id="reset-new-password" name="newPassword" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} aria-describedby="reset-password-rules" /></div>
           <ul className="password-rules" id="reset-password-rules" aria-label="Yêu cầu mật khẩu">
             {PASSWORD_RULES.map((rule) => { const ok = rule.test(newPassword); return <li className={ok ? "met" : undefined} key={rule.label}>{ok ? <Check size={14} aria-hidden="true" /> : <Circle size={14} aria-hidden="true" />}{rule.label}<span className="sr-only">{ok ? " — đạt" : " — chưa đạt"}</span></li>; })}
           </ul>
         </div>
         <div className="field">
           <label htmlFor="reset-confirm-password">Xác nhận mật khẩu mới</label>
-          <div className="field-input with-icon"><LockKeyhole size={18} aria-hidden="true" /><input id="reset-confirm-password" name="confirmPassword" type="password" autoComplete="new-password" aria-invalid={Boolean(confirmError)} aria-describedby={confirmError ? "reset-confirm-error" : undefined} onChange={() => setConfirmError("")} /></div>
+          <div className="field-input with-icon"><LockKeyhole size={18} aria-hidden="true" /><PasswordInput id="reset-confirm-password" name="confirmPassword" autoComplete="new-password" aria-invalid={Boolean(confirmError)} aria-describedby={confirmError ? "reset-confirm-error" : undefined} onChange={() => setConfirmError("")} /></div>
           {confirmError ? <span className="field-error" id="reset-confirm-error">{confirmError}</span> : null}
         </div>
         {error ? <p className="auth-notice danger" role="alert">{error}</p> : null}

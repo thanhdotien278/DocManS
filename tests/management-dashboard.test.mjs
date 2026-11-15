@@ -12,11 +12,11 @@ test("dashboard CV tổng hợp đúng số backend trả, chỉ trong phạm vi
     now,
     proposals: [
       proposal("draft"),
-      proposal("submitted"),
+      proposal("submitted", { managementOfficer: { resolved: true, current: { officerUserId: "cv-1", officerDisplayName: "CV Một" } } }),
       proposal("supplement_requested", { proposalNatureCode: "" }),
       // 7 ghế nhưng 1 ghế không chấm: chưa nộp phải là 6 theo backend, không phải 7 - 0.
       proposal("under_review", { reviewWorkflow: { completenessChecked: true, submittedCount: 0, assignmentCount: 7, pendingCount: 6, overdueCount: 2, readyForSynthesis: false } }),
-      proposal("approved", { intakePeriodId: "closed-1", intakePeriodTitle: "Đợt đóng", proposalNatureCode: "civil" })
+      proposal("approved", { managementOfficer: { resolved: true, current: { officerUserId: "cv-1", officerDisplayName: "CV Một" } }, intakePeriodId: "closed-1", intakePeriodTitle: "Đợt đóng", proposalNatureCode: "civil" })
     ],
     projects: [
       {
@@ -38,6 +38,9 @@ test("dashboard CV tổng hợp đúng số backend trả, chỉ trong phạm vi
   assert.deepEqual(summary.phases.map((phase) => phase.count), [2, 1, 0, 1, 0]);
   assert.deepEqual(summary.natures, [{ code: "military", count: 2 }, { code: "", count: 1 }, { code: "civil", count: 1 }]);
   assert.deepEqual(summary.byIntake.map((row) => [row.title, row.count]), [["Đợt không xác định", 3], ["Đợt đóng", 1]]);
+  // Đang xử lý = chưa có kết quả duyệt; hồ sơ chưa có CV gom vào nhóm riêng.
+  assert.deepEqual(summary.officers.map((row) => [row.name, row.inProgress, row.total]), [["Chưa có CV phụ trách", 2, 2], ["CV Một", 1, 2]]);
+  assert.equal(summary.unassigned, 2);
   assert.equal(summary.pendingReviews, 6);
   assert.equal(summary.overdueReviews, 2);
   // Chỉ là việc của CV khi backend cho phép hành động.

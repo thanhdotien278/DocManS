@@ -125,6 +125,7 @@ export default function DashboardPage() {
   // Dashboard đã có số liệu thật theo vai trò được ưu tiên ở mọi theme.
   if (account.systemRole === "SYSTEM_ADMIN") return <AdminDashboardPanel />;
   if (account.systemRole === "RESEARCH_MANAGEMENT_STAFF") return <ManagementDashboardPanel />;
+  if (account.systemRole === "RESEARCH_MANAGEMENT_HEAD" || account.systemRole === "RESEARCH_BOARD_HEAD") return <ManagementDashboardPanel variant="lead" />;
   // Theme "Không gian làm việc" thay số liệu minh họa của các vai trò còn lại bằng hàng đợi việc lấy từ API nghiệp vụ.
   if (theme === "workspace") return <WorkspaceHome />;
   const snapshot = getDashboardSnapshot(account.systemRole);

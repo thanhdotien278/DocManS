@@ -11,7 +11,7 @@ import { CvHistoryDrawer } from "./cv-history";
 import { withScheme } from "./cv-row-table";
 
 type CvDraft = CvGeneralDraft & CvHistoryDraft & CvResearchDraft;
-type CvTab = "general" | "education" | "work" | "research" | "print";
+type CvTab = "general" | "history" | "research" | "print";
 type CvCatalogs = Awaited<ReturnType<typeof loadResearcherProfileCatalogs>>;
 
 function text(value: string | null | undefined) {
@@ -149,13 +149,12 @@ function apiField(field: string) {
   return field;
 }
 
-const tabLabels: Partial<Record<CvTab, string>> = { general: "1. Thông tin chung", education: "2. Quá trình đào tạo", work: "3. Quá trình công tác & Kinh nghiệm chuyên môn", research: "4. Kinh nghiệm & Thành tích nghiên cứu" };
+const tabLabels: Partial<Record<CvTab, string>> = { general: "1. Thông tin chung", history: "2. Quá trình đào tạo và công tác", research: "3. Kinh nghiệm & Thành tích nghiên cứu" };
 
 function errorTabsOf(errors: Record<string, string>): CvTab[] {
   const tabs: CvTab[] = [];
   if (Object.keys(errors).some((key) => !["educationHistory", "workItems", "publications", "intellectualProperty", "awards", "projects"].includes(key))) tabs.push("general");
-  if (errors.educationHistory) tabs.push("education");
-  if (errors.workItems) tabs.push("work");
+  if (errors.educationHistory || errors.workItems) tabs.push("history");
   if (errors.publications || errors.intellectualProperty || errors.awards || errors.projects) tabs.push("research");
   return tabs;
 }
@@ -325,15 +324,13 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
   if (loading) return <p role="status">Đang tải lý lịch khoa học…</p>;
   if (!profile || !draft) return <div className="state-message error" role="alert">{error || "Không tìm thấy lý lịch khoa học."}</div>;
 
-  const educationCount = draft.educationHistory.length;
-  const workCount = draft.workItems.length;
+  const historyCount = draft.educationHistory.length + draft.workItems.length;
   const researchCount = draft.publications.length + draft.intellectualProperty.length + draft.awards.length + draft.projects.length;
   const tabs: Array<{ id: CvTab; label: string; count?: number }> = [
     { id: "general", label: "1. Thông tin chung" },
-    { id: "education", label: "2. Quá trình đào tạo", count: educationCount },
-    { id: "work", label: "3. Quá trình công tác & Kinh nghiệm chuyên môn", count: workCount },
-    { id: "research", label: "4. Kinh nghiệm & Thành tích nghiên cứu", count: researchCount },
-    { id: "print", label: "5. Xem & In Lý lịch khoa học" }
+    { id: "history", label: "2. Quá trình đào tạo và công tác", count: historyCount },
+    { id: "research", label: "3. Kinh nghiệm & Thành tích nghiên cứu", count: researchCount },
+    { id: "print", label: "4. Xem & In Lý lịch khoa học" }
   ];
 
   return <div className="grid cv-workspace">
@@ -345,8 +342,7 @@ export function ScientificCvWorkspace({ target, onSaved }: ScientificCvWorkspace
       <form noValidate onSubmit={(event) => { event.preventDefault(); void save(); }}>
         <div id={`cv-panel-${tab}`} role="tabpanel" aria-labelledby={`cv-tab-${tab}`}>
           {tab === "general" ? <CvGeneralTab draft={draft} catalogs={catalogs} editable={editable && !busy} owner={owner} profileType={profile.profileType ?? "INTERNAL"} hasAccount={!!profile.account} usernameEditable={usernameEditable} errors={fieldErrors} onChange={changeDraft} /> : null}
-          {tab === "education" ? <CvEducationTab draft={draft} editable={editable && !busy} errors={fieldErrors} onChange={changeDraft} /> : null}
-          {tab === "work" ? <CvWorkTab draft={draft} editable={editable && !busy} errors={fieldErrors} onChange={changeDraft} /> : null}
+          {tab === "history" ? <><CvEducationTab draft={draft} editable={editable && !busy} errors={fieldErrors} onChange={changeDraft} /><CvWorkTab draft={draft} editable={editable && !busy} errors={fieldErrors} onChange={changeDraft} /></> : null}
           {tab === "research" ? <CvResearchTab draft={draft} participations={profile.participations} editable={editable && !busy} errors={fieldErrors} onChange={changeDraft} /> : null}
           {tab === "print" ? <CvPrintTab profile={profile} dirty={draftKey(draft) !== draftKey(draftFromProfile(profile))} /> : null}
         </div>

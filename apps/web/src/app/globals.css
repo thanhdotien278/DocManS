@@ -1332,6 +1332,42 @@ summary:focus-visible {
   padding: 10px 12px 10px 44px;
 }
 
+.field .field-input input.has-toggle {
+  padding-right: 48px;
+}
+
+.field-input .password-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.field-input .password-toggle:hover {
+  color: var(--text-primary);
+}
+
+.field-input .password-toggle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.field-input .password-toggle svg {
+  position: static;
+  color: inherit;
+  transform: none;
+}
+
 .field-input.plain {
   display: block;
 }
@@ -2879,4 +2915,13 @@ a.auth-submit { display: inline-flex; align-items: center; margin-top: 8px; text
 .ops-dash-timeline span { display: block; height: 100%; border-radius: 3px; background: var(--institutional-green); }
 .ops-dash-timeline span.is-late { background: var(--accent-gold); }
 .ops-dash-changes time.is-alert { color: var(--danger); font-weight: 800; }
+.ops-dash-flow { display: grid; gap: 0; margin: 0 0 12px; padding: 0; list-style: none; }
+.ops-dash-flow li { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.ops-dash-flow li:last-child { border-bottom: 0; }
+.ops-dash-flow li strong { font-size: 24px; font-weight: 900; line-height: 1; text-align: right; color: var(--text-primary); }
+.ops-dash-flow li span { font-size: 14px; color: var(--text-primary); }
+.ops-dash-flow li.is-zero strong, .ops-dash-flow li.is-zero span { color: var(--text-secondary); }
+.ops-dash-facts:has(> div:nth-child(4)) { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px; }
+.ops-dash-facts:has(> div:nth-child(4)) > div:nth-child(3) { border-left: 0; }
+@media (max-width: 640px) { .ops-dash-facts:has(> div:nth-child(4)) { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .button .spin { animation: none; } }

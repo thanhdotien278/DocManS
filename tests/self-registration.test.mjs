@@ -106,7 +106,7 @@ function createRegistration(options = {}) {
   return { service, prisma, mail, password };
 }
 
-const input = (overrides = {}) => registerPipe.transform({ email: " New.User@Example.com ", username: "New.User", fullName: "Nguyễn Văn A", accountType: "INTERNAL", ...overrides });
+const input = (overrides = {}) => registerPipe.transform({ email: " New.User@Example.com ", username: "New.User", fullName: "Nguyễn Văn A", accountType: "INTERNAL", organizationUnitId: "unit-1", ...overrides });
 const actor = (systemRole, id = "cv-1") => ({ id, username: id, displayName: id, systemRole, unit: "", organizationScopes: [] });
 
 async function registerAndVerify(registration, overrides) {
@@ -118,7 +118,9 @@ async function registerAndVerify(registration, overrides) {
 
 describe("Story 13.11 self registration", () => {
   it("pipe normalizes email/username and rejects email-shaped usernames", () => {
-    assert.deepEqual(input(), { email: "new.user@example.com", username: "new.user", fullName: "Nguyễn Văn A", accountType: "INTERNAL" });
+    assert.deepEqual(input(), { email: "new.user@example.com", username: "new.user", fullName: "Nguyễn Văn A", accountType: "INTERNAL", organizationUnitId: "unit-1" });
+    assert.throws(() => input({ organizationUnitId: "" }), { name: "BadRequestException" });
+    assert.equal(input({ accountType: "EXTERNAL", organizationUnitId: "unit-1" }).organizationUnitId, undefined);
     // The name is echoed into mail and the profile: one line of letters, spaces and . ' - only.
     for (const fullName of ["A\nBcc: x@evil.test", "<b>A</b>", "A https://evil.test"]) assert.throws(() => input({ fullName }), { name: "BadRequestException" });
     assert.equal(input({ fullName: "Trần Thị Mai-Anh Jr." }).fullName, "Trần Thị Mai-Anh Jr.");
@@ -126,6 +128,13 @@ describe("Story 13.11 self registration", () => {
     assert.throws(() => input({ username: "ab" }), { name: "BadRequestException" });
     assert.throws(() => input({ accountType: "STAFF" }), { name: "BadRequestException" });
     assert.equal(approveRegistrationPipe.transform({ organizationUnitId: "unit-1", accountType: "INTERNAL", externalAffiliation: "X" }).externalAffiliation, undefined);
+  });
+
+  it("rejects an inactive or unknown management unit and lists active units publicly", async () => {
+    const { service } = createRegistration();
+    await assert.rejects(() => service.register(input({ organizationUnitId: "unit-x" }), {}), { name: "BadRequestException" });
+    assert.deepEqual((await service.listUnits()).organizationUnits.map((unit) => unit.id), ["unit-1"]);
+    await assert.rejects(() => createRegistration({ enabled: false }).service.listUnits(), { name: "NotFoundException" });
   });
 
   it("returns 404 while the toggle is off", async () => {
@@ -141,6 +150,7 @@ describe("Story 13.11 self registration", () => {
     assert.equal(user.status, "pending_email_verification");
     assert.equal(user.usernameKey, "new.user");
     assert.equal(user.systemRole, "RESEARCHER_INTERNAL_USER");
+    assert.equal(user.requestedOrganizationUnitId, "unit-1");
     assert.equal(prisma.db.tokens[0].createdById, user.id);
     assert.match(mail.sent[0].activationUrl, /\/password-reset\?mode=activation&token=/);
     assert.equal(JSON.stringify(prisma.db.audits).includes(new URL(mail.sent[0].activationUrl).searchParams.get("token")), false);

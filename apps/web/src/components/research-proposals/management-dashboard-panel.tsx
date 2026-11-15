@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { RankedBars, dateTime, fullDate, number } from "@/components/ui/ops-dash";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
+import { loadApprovalQueue, type ApprovalSubmission } from "@/lib/approval-routing-api";
 import { summarizeManagement, type ManagementSummary } from "@/lib/management-dashboard";
 import { listProjects } from "@/lib/projects-api";
 import { loadProposalIntakePeriods } from "@/lib/proposal-intake-periods-api";
@@ -19,10 +20,21 @@ import { loadProposalCatalogs, loadResearchProposals, type ResearchProposal } fr
 const phaseTone: Record<string, string> = { intake: "waiting", review: "pending", decision: "dormant", approved: "active", rejected: "blocked" };
 const intakeStatusLabel: Record<string, string> = { open: "Đang mở", draft: "Chưa mở" };
 
-type Loaded = { summary: ManagementSummary; tasks: Array<{ proposal: ResearchProposal; waiting: string; action: string }>; natureLabels: Map<string, string>; registrations: number; generatedAt: string; failed: string[] };
+const APPROVAL_STAGES = [
+  { key: "BOARD_REVIEW", label: "Trưởng ban rà soát" },
+  { key: "HEAD_REVIEW", label: "Trưởng phòng duyệt" },
+  { key: "LEADERSHIP", label: "Chờ BGĐ ký" }
+] as const;
 
-/** Dashboard CV: số liệu thật từ các API nghiệp vụ; backend đã lọc theo hồ sơ/đề tài được giao cho người xem. */
-export function ManagementDashboardPanel() {
+type Variant = "staff" | "lead";
+type ApprovalQueue = { submissions: ApprovalSubmission[]; pendingByStage: Partial<Record<string, number>> };
+type Loaded = { variant: Variant; role: string | null; approvals: ApprovalQueue | null; summary: ManagementSummary; tasks: Array<{ proposal: ResearchProposal; waiting: string; action: string }>; natureLabels: Map<string, string>; registrations: number; generatedAt: string; failed: string[] };
+
+/**
+ * Dashboard Phòng KHQS từ các API nghiệp vụ; backend lọc theo phạm vi người xem.
+ * "staff" (CV): hồ sơ được giao. "lead" (TP, TB): thêm tờ trình chờ duyệt và phân bổ theo CV phụ trách (FR45a).
+ */
+export function ManagementDashboardPanel({ variant = "staff" }: { variant?: Variant }) {
   const { account } = useSession();
   const [data, setData] = useState<Loaded | null>(null);
   const [error, setError] = useState("");
@@ -37,18 +49,23 @@ export function ManagementDashboardPanel() {
         failed.push(label);
         return fallback;
       });
-    const [proposals, projects, intakePeriods, catalogs, registrations] = await Promise.all([
+    const [proposals, projects, intakePeriods, catalogs, registrations, approvals] = await Promise.all([
       optional("hồ sơ đề xuất", loadResearchProposals(), []),
       optional("đề tài", listProjects(), []),
       optional("đợt tiếp nhận", loadProposalIntakePeriods(), []),
       optional("danh mục", loadProposalCatalogs(), []),
-      optional("yêu cầu đăng ký", listRegistrationRequests(), null)
+      // Không phải vai trò nào cũng được duyệt đăng ký: backend từ chối thì bỏ qua phần này, không coi là lỗi tải.
+      listRegistrationRequests().catch(() => null),
+      variant === "lead" ? optional("tờ trình", loadApprovalQueue(), null) : Promise.resolve(null)
     ]);
-    if (failed.length === 5) {
+    if (failed.length >= 4) {
       setError("Không tải được số liệu. Vui lòng kiểm tra kết nối hoặc thử lại.");
     } else {
       const now = new Date();
       setData({
+        variant,
+        role: account?.systemRole ?? null,
+        approvals,
         summary: summarizeManagement({ proposals, projects, intakePeriods, now }),
         tasks: proposals.flatMap((proposal) => {
           const step = proposalNextStep(proposal);
@@ -61,7 +78,7 @@ export function ManagementDashboardPanel() {
       });
     }
     setIsLoading(false);
-  }, []);
+  }, [variant, account?.systemRole]);
 
   useEffect(() => {
     void refresh();
@@ -72,8 +89,12 @@ export function ManagementDashboardPanel() {
       <Breadcrumb items={[{ label: "Dashboard" }]} />
       <PageHeader
         eyebrow={account?.systemRoleLabel ?? "Điều hành nghiệp vụ"}
-        title="Dashboard chuyên viên quản lý khoa học"
-        description="Hồ sơ, đợt tiếp nhận và đề tài bạn được giao phụ trách: việc cần làm, tiến độ đánh giá và hạn sắp tới."
+        title={variant === "lead" ? "Dashboard điều hành Phòng KHQS" : "Dashboard chuyên viên quản lý khoa học"}
+        description={
+          variant === "lead"
+            ? "Tờ trình chờ bạn xử lý, phân bổ hồ sơ theo CV phụ trách, tiến độ đánh giá và hạn sắp tới trong phạm vi quản lý."
+            : "Hồ sơ, đợt tiếp nhận và đề tài bạn được giao phụ trách: việc cần làm, tiến độ đánh giá và hạn sắp tới."
+        }
         actions={
           <>
             <button className="button" type="button" onClick={() => void refresh()} disabled={isLoading}>
@@ -103,14 +124,19 @@ export function ManagementDashboardPanel() {
 
 function ManagementDashboardBody({ data }: { data: Loaded }) {
   const { summary } = data;
+  const lead = data.variant === "lead";
+  const approvals = data.approvals?.submissions ?? [];
   const nearestOpen = summary.openIntakes[0];
-  const actionCount = data.tasks.length + summary.projectTasks.length + (data.registrations ? 1 : 0);
+  const actionCount = approvals.length + data.tasks.length + summary.projectTasks.length + (data.registrations ? 1 : 0);
+  const scopeLabel = lead ? "trong phạm vi quản lý của bạn" : "bạn được giao";
+  const myStage = data.role === "RESEARCH_BOARD_HEAD" ? "BOARD_REVIEW" : data.role === "RESEARCH_MANAGEMENT_HEAD" ? "HEAD_REVIEW" : null;
+  const blockedAtMyStage = myStage ? Math.max(0, (data.approvals?.pendingByStage[myStage] ?? 0) - approvals.filter((item) => item.stage === myStage).length) : 0;
   const watchRows = summary.reviewProgress.filter((row) => row.pending > 0 || row.overdue > 0 || row.readyForSynthesis);
 
   return (
     <div className="ops-dash">
       <p className="record-meta ops-dash-stamp">
-        Số liệu lúc {dateTime.format(new Date(data.generatedAt)).slice(6)} ngày {fullDate.format(new Date(data.generatedAt))}, chỉ gồm hồ sơ và đề tài bạn được giao.
+        Số liệu lúc {dateTime.format(new Date(data.generatedAt)).slice(6)} ngày {fullDate.format(new Date(data.generatedAt))}, chỉ gồm hồ sơ và đề tài {scopeLabel}.
         {data.failed.length ? <strong className="is-alert"> Không tải được: {data.failed.join(", ")}.</strong> : null}
       </p>
 
@@ -118,7 +144,7 @@ function ManagementDashboardBody({ data }: { data: Loaded }) {
         <div className="ops-dash-ledger-main">
           <div className="ops-dash-figure">
             <span className="ops-dash-figure-value">{number.format(summary.total)}</span>
-            <span className="ops-dash-figure-label">hồ sơ đề xuất bạn phụ trách</span>
+            <span className="ops-dash-figure-label">{lead ? "hồ sơ đề xuất trong phạm vi quản lý" : "hồ sơ đề xuất bạn phụ trách"}</span>
           </div>
           <div className="ops-dash-status-bar" role="img" aria-label={summary.phases.map((phase) => `${phase.label}: ${phase.count}`).join(", ")}>
             {summary.phases.map((phase) => (phase.count ? <span key={phase.key} className={`tone-${phaseTone[phase.key]}`} style={{ flexGrow: phase.count }} title={`${phase.label}: ${phase.count}`} /> : null))}
@@ -136,8 +162,15 @@ function ManagementDashboardBody({ data }: { data: Loaded }) {
           <div>
             <dt>Việc chờ bạn xử lý</dt>
             <dd>{actionCount}</dd>
-            <p>{actionCount ? "hồ sơ, đề tài và tài khoản" : "Không có việc tồn"}</p>
+            <p>{!actionCount ? "Không có việc tồn" : approvals.length ? `gồm ${approvals.length} tờ trình` : "hồ sơ, đề tài và tài khoản"}</p>
           </div>
+          {lead ? (
+            <div>
+              <dt>Hồ sơ chưa có CV phụ trách</dt>
+              <dd>{summary.unassigned}</dd>
+              <p className={summary.unassigned ? "is-alert" : undefined}>{summary.unassigned ? "đang xử lý, cần giao CV" : "Mọi hồ sơ đang xử lý đã có CV"}</p>
+            </div>
+          ) : null}
           <div>
             <dt>Phiếu đánh giá chưa nộp</dt>
             <dd>{summary.pendingReviews}</dd>
@@ -157,6 +190,25 @@ function ManagementDashboardBody({ data }: { data: Loaded }) {
         <SectionCard title="Việc cần xử lý" subtitle="Việc đang chờ bạn thao tác, sau đó là các hồ sơ cần theo dõi">
           {actionCount ? (
             <ol className="ops-dash-queue">
+              {approvals.map((submission) => (
+                <li key={submission.id}>
+                  <div className="ops-dash-queue-who">
+                    <Link className="record-title" href={`/${submission.subjectType === "project" ? "projects" : "proposals"}/${submission.subjectId}`}>
+                      {submission.title}
+                    </Link>
+                    <span className="record-meta">
+                      {submission.kindLabel} · lập bởi {submission.submittedByName || "không rõ"}
+                    </span>
+                  </div>
+                  <div className="ops-dash-queue-state">
+                    <span className="ops-dash-pill tone-pending">{submission.stageLabel}</span>
+                    <span className="ops-dash-wait">Trình từ {fullDate.format(new Date(submission.updatedAt))}</span>
+                  </div>
+                  <div className="ops-dash-queue-next">
+                    <Link href={`/${submission.subjectType === "project" ? "projects" : "proposals"}/${submission.subjectId}`}>Xem tờ trình</Link>
+                  </div>
+                </li>
+              ))}
               {data.tasks.map((task) => (
                 <li key={task.proposal.id}>
                   <div className="ops-dash-queue-who">
@@ -253,7 +305,7 @@ function ManagementDashboardBody({ data }: { data: Loaded }) {
 
         <SectionCard
           title="Đợt tiếp nhận"
-          subtitle="Đợt đang mở và chuẩn bị mở; số hồ sơ là hồ sơ bạn phụ trách"
+          subtitle={`Đợt đang mở và chuẩn bị mở; số hồ sơ là hồ sơ ${scopeLabel}`}
           action={
             <Link className="button" href="/proposal-intake-periods">
               Mở đợt tiếp nhận
@@ -286,8 +338,38 @@ function ManagementDashboardBody({ data }: { data: Loaded }) {
         </SectionCard>
       </div>
 
+      {lead ? (
+        <div className="grid two-column">
+          <SectionCard title="Phân bổ theo CV phụ trách" subtitle="Số hồ sơ đang xử lý (chưa có kết quả duyệt) của từng CV; tổng gồm cả hồ sơ đã có kết quả">
+            <RankedBars
+              title="Hồ sơ đang xử lý"
+              rows={summary.officers.map((officer) => ({ key: officer.key, label: `${officer.name} · tổng ${officer.total}`, value: officer.inProgress }))}
+            />
+          </SectionCard>
+          <SectionCard title="Luồng tờ trình" subtitle="Tờ trình đang chờ ở từng bước, CV → TB → TP → BGĐ">
+            <ol className="ops-dash-flow">
+              {APPROVAL_STAGES.map((stage) => {
+                const count = data.approvals?.pendingByStage[stage.key] ?? 0;
+                return (
+                  <li key={stage.key} className={count ? undefined : "is-zero"}>
+                    <strong>{count}</strong>
+                    <span>{stage.label}</span>
+                  </li>
+                );
+              })}
+            </ol>
+            <p className="record-meta">{data.approvals ? `${approvals.length} tờ trình đang chờ chính bạn xử lý.` : "Không tải được số liệu tờ trình."}</p>
+            {blockedAtMyStage > 0 ? (
+              <p className="record-meta">
+                {blockedAtMyStage} tờ trình ở bước của bạn không thuộc quyền xử lý của bạn (do bạn lập hoặc có xung đột lợi ích với hồ sơ).
+              </p>
+            ) : null}
+          </SectionCard>
+        </div>
+      ) : null}
+
       <div className="grid two-column">
-        <SectionCard title="Cơ cấu hồ sơ phụ trách" subtitle="Theo tính chất đề tài và theo đợt tiếp nhận, không tính hồ sơ nháp">
+        <SectionCard title={lead ? "Cơ cấu hồ sơ trong phạm vi" : "Cơ cấu hồ sơ phụ trách"} subtitle="Theo tính chất đề tài và theo đợt tiếp nhận, không tính hồ sơ nháp">
           <div className="ops-dash-split">
             <RankedBars
               title="Theo tính chất"
@@ -303,7 +385,7 @@ function ManagementDashboardBody({ data }: { data: Loaded }) {
 
         <SectionCard
           title="Đề tài đang theo dõi"
-          subtitle={summary.projects.total ? `${summary.projects.total} đề tài · ${summary.projects.overdue} có mốc quá hạn · ${summary.projects.approaching} sắp đến hạn` : "Đề tài bạn được giao theo dõi"}
+          subtitle={summary.projects.total ? `${summary.projects.total} đề tài · ${summary.projects.overdue} có mốc quá hạn · ${summary.projects.approaching} sắp đến hạn` : `Đề tài ${scopeLabel}`}
           action={
             <Link className="button" href="/projects">
               <FolderKanban size={16} aria-hidden="true" />
