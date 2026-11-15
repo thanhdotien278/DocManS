@@ -23,7 +23,7 @@ const trainingModes = ["Chính quy", "Vừa làm vừa học", "Liên kết qu�
 
 export function CvEducationTab({ draft, editable, errors, onChange }: CvHistoryTabProps) {
   return <section className="section-card cv-tab-panel">
-    <CvRowTable name="educationHistory" title="2. Quá trình đào tạo" rows={draft.educationHistory}
+    <CvRowTable name="educationHistory" title="2.1. Quá trình đào tạo" rows={draft.educationHistory}
       columns={[
         { key: "degreeLevel", label: "Bậc đào tạo *", required: true, options: degreeLevels },
         { key: "major", label: "Ngành đào tạo (Chuyên ngành) *", header: "Ngành", required: true, maxLength: 1000, placeholder: "Y đa khoa, Dược, v.v." },
@@ -43,7 +43,7 @@ export function CvEducationTab({ draft, editable, errors, onChange }: CvHistoryT
 
 export function CvWorkTab({ draft, editable, errors, onChange }: CvHistoryTabProps) {
   return <section className="section-card cv-tab-panel">
-    <h3>3. Quá trình công tác &amp; Kinh nghiệm chuyên môn</h3>
+    <h3>2.2. Quá trình công tác &amp; Kinh nghiệm chuyên môn</h3>
     <label className="field">Tóm tắt chuyên môn
       <textarea rows={4} value={draft.workSummary} disabled={!editable} onChange={(event) => onChange("workSummary", event.target.value)} />
       <small className="record-meta">Tóm tắt về công việc chính, lĩnh vực chuyên môn, kinh nghiệm R&amp;D, chuyển giao công nghệ, quản lý nhiệm vụ KH&amp;CN hoặc đổi mới sáng tạo.</small>
