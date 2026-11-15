@@ -2,7 +2,9 @@ export const ACTIVATION_SENDER_NAME = "Phòng Khoa học quân sự - Học vi�
 export const ACTIVATION_SUBJECT = `${ACTIVATION_SENDER_NAME}: Kích hoạt tài khoản`;
 export const ACTIVATION_DEFAULT_PURPOSE = "Tài khoản của bạn trên Hệ thống quản lý nghiên cứu khoa học (DocManS) đã được tạo. Vui lòng thiết lập mật khẩu để kích hoạt tài khoản.";
 
-export type ActivationEmailValues = { displayName: string; activationUrl: string; expiresAt: string; purpose: string; actionLabel?: string; ignoreNote?: string };
+export type ActivationEmailValues = { displayName: string; activationUrl: string; purpose: string; expiresAt?: string; actionLabel?: string; ignoreNote?: string | null; username?: string };
+// expiresAt vắng = liên kết đăng nhập thường (không có hạn, không có cảnh báo chia sẻ token); ignoreNote null = bỏ dòng này.
+const ignoreNoteOf = (v: ActivationEmailValues) => v.ignoreNote === undefined ? DEFAULT_IGNORE_NOTE : v.ignoreNote;
 
 const DEFAULT_ACTION_LABEL = "Kích hoạt tài khoản";
 const DEFAULT_IGNORE_NOTE = "Nếu bạn không yêu cầu tạo tài khoản, hãy liên hệ quản trị viên hệ thống.";
@@ -18,9 +20,10 @@ export function formatExpiry(date: Date) {
 export function renderActivationText(v: ActivationEmailValues) {
   return [
     ACTIVATION_SENDER_NAME, "", `Xin chào ${v.displayName},`, "", v.purpose, "",
-    `${v.actionLabel ?? DEFAULT_ACTION_LABEL}: ${v.activationUrl}`, `Liên kết có hiệu lực đến ${v.expiresAt}.`, "",
-    "Vui lòng không chia sẻ liên kết này với bất kỳ ai.",
-    v.ignoreNote ?? DEFAULT_IGNORE_NOTE, "",
+    ...(v.username ? [`Tên đăng nhập: ${v.username}`, ""] : []),
+    `${v.actionLabel ?? DEFAULT_ACTION_LABEL}: ${v.activationUrl}`,
+    ...(v.expiresAt ? [`Liên kết có hiệu lực đến ${v.expiresAt}.`, "", "Vui lòng không chia sẻ liên kết này với bất kỳ ai."] : []),
+    ...(ignoreNoteOf(v) ? [ignoreNoteOf(v)!] : []), "",
     "Trân trọng,", ACTIVATION_SENDER_NAME
   ].join("\n");
 }
@@ -37,13 +40,15 @@ export function renderActivationHtml(v: ActivationEmailValues) {
 <tr><td style="background:#145a37;padding:16px 24px;${font}font-size:16px;font-weight:bold;color:#ffffff;">${escapeHtml(ACTIVATION_SENDER_NAME)}</td></tr>
 <tr><td style="padding:24px;${font}font-size:15px;line-height:1.6;color:#1f2933;">
 <p style="margin:0 0 16px;">Xin chào <strong>${escapeHtml(v.displayName)}</strong>,</p>
-<p style="margin:0 0 24px;">${escapeHtml(v.purpose).replace(/\r?\n/g, "<br>")}</p>
+<p style="margin:0 0 ${v.username ? 8 : 24}px;">${escapeHtml(v.purpose).replace(/\r?\n/g, "<br>")}</p>
+${v.username ? `<p style="margin:0 0 24px;">Tên đăng nhập: <strong>${escapeHtml(v.username)}</strong></p>\n` : ""}
 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr><td align="center" bgcolor="#145a37" style="border-radius:4px;"><a href="${url}" style="display:inline-block;padding:12px 28px;${font}font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;">${actionLabel}</a></td></tr></table>
 <p style="margin:0 0 4px;font-size:13px;color:#52606d;">Nếu nút không hoạt động, sao chép liên kết sau vào trình duyệt:</p>
 <p style="margin:0 0 24px;font-size:13px;word-break:break-all;"><a href="${url}" style="color:#145a37;">${url}</a></p>
-<p style="margin:0 0 8px;">Liên kết có hiệu lực đến <strong>${escapeHtml(v.expiresAt)}</strong>.</p>
+${v.expiresAt ? `<p style="margin:0 0 8px;">Liên kết có hiệu lực đến <strong>${escapeHtml(v.expiresAt)}</strong>.</p>
 <p style="margin:0 0 8px;">Vui lòng không chia sẻ liên kết này với bất kỳ ai.</p>
-<p style="margin:0 0 24px;">${escapeHtml(v.ignoreNote ?? DEFAULT_IGNORE_NOTE)}</p>
+` : ""}${ignoreNoteOf(v) ? `<p style="margin:0 0 24px;">${escapeHtml(ignoreNoteOf(v)!)}</p>
+` : ""}
 <p style="margin:0;">Trân trọng,<br><strong>${escapeHtml(ACTIVATION_SENDER_NAME)}</strong></p>
 </td></tr></table></td></tr></table></body></html>`;
 }

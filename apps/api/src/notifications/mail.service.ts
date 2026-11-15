@@ -44,6 +44,15 @@ export class MailService {
     await this.sendText({ to: input.to, subject: `${ACTIVATION_SENDER_NAME}: Đặt lại mật khẩu`, text: renderActivationText(content), html: renderActivationHtml(content) });
   }
 
+  async sendAccountApproved(input: { to: string; displayName: string; username: string | null; loginUrl: string }) {
+    const content = {
+      displayName: input.displayName, activationUrl: input.loginUrl, username: input.username ?? undefined,
+      purpose: "Tài khoản của bạn trên Hệ thống quản lý nghiên cứu khoa học (DocManS) đã được duyệt. Bạn có thể đăng nhập bằng tên đăng nhập hoặc email đã đăng ký.",
+      actionLabel: "Đăng nhập", ignoreNote: null
+    };
+    await this.sendText({ to: input.to, subject: `${ACTIVATION_SENDER_NAME}: Tài khoản đã được duyệt`, text: renderActivationText(content), html: renderActivationHtml(content) });
+  }
+
   async sendText(input: { to: string; subject: string; text: string; html?: string }) {
     const { host, port, from, localHost } = this.configuration();
     const transporter = nodemailer.createTransport({ host, port, secure: process.env.SMTP_SECURE === "true" || port === 465, requireTLS: !localHost,

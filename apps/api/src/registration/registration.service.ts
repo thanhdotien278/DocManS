@@ -115,7 +115,7 @@ export class RegistrationService {
       await this.auditLog.record({ action: "approve-registration-request", result: "success", actorId: actor.id, targetEntity: "user", targetEntityId: user.id, username: actor.username, afterFacts: { systemRole, organizationUnitId: unit.id, researcherProfileId: profile.id } }, tx);
       return user;
     });
-    await this.notifyByMail(actor, approved.id, approved.credentialEmail!, "Tài khoản DocManS đã được duyệt", `Xin chào ${approved.displayName},\n\nTài khoản ${approved.username} đã được duyệt. Bạn có thể đăng nhập bằng tên đăng nhập hoặc email: ${loginUrl}`);
+    await this.notifyByMail(actor, approved.id, () => this.mailService.sendAccountApproved({ to: approved.credentialEmail!, displayName: approved.displayName, username: approved.username, loginUrl }));
     return { ok: true };
   }
 
@@ -128,7 +128,7 @@ export class RegistrationService {
       await this.auditLog.record({ action: "reject-registration-request", result: "success", actorId: actor.id, targetEntity: "user", targetEntityId: user.id, username: actor.username, reason: input.reason, beforeFacts: { username: user.username, email: user.credentialEmail } }, tx);
       return user;
     });
-    await this.notifyByMail(actor, rejected.id, rejected.credentialEmail!, "Yêu cầu đăng ký tài khoản DocManS bị từ chối", `Xin chào ${rejected.displayName},\n\nYêu cầu đăng ký tài khoản của bạn đã bị từ chối.\nLý do: ${input.reason}`);
+    await this.notifyByMail(actor, rejected.id, () => this.mailService.sendText({ to: rejected.credentialEmail!, subject: "Yêu cầu đăng ký tài khoản DocManS bị từ chối", text: `Xin chào ${rejected.displayName},\n\nYêu cầu đăng ký tài khoản của bạn đã bị từ chối.\nLý do: ${input.reason}` }));
     return { ok: true };
   }
 
@@ -157,8 +157,8 @@ export class RegistrationService {
     }
   }
 
-  private async notifyByMail(actor: SafeUserContext, userId: string, to: string, subject: string, text: string) {
-    try { await this.mailService.sendText({ to, subject, text }); } catch {
+  private async notifyByMail(actor: SafeUserContext, userId: string, send: () => Promise<void>) {
+    try { await send(); } catch {
       await this.auditLog.record({ action: "deliver-registration-decision", result: "failure", actorId: actor.id, targetEntity: "user", targetEntityId: userId, reason: "MAIL_DELIVERY_FAILED" });
     }
   }
