@@ -281,3 +281,34 @@ export async function updateParticipantPolicy(policy: Record<string, Participant
     body: JSON.stringify({ policy })
   });
 }
+
+export type AdminDashboardOverview = {
+  generatedAt: string;
+  accounts: { total: number; byStatus: Record<string, number>; mustChangePassword: number; roleIssues: number };
+  roles: Array<{ code: string; label: string; active: number }>;
+  pendingAccounts: Array<{
+    id: string;
+    username: string | null;
+    displayName: string;
+    status: string;
+    systemRole: string | null;
+    roleLabel: string | null;
+    unit: string;
+    createdAt: string;
+  }>;
+  sessions: { active: number; users: number };
+  logins: {
+    days: Array<{ date: string; success: number; failure: number }>;
+    success24h: number;
+    failure24h: number;
+    failedAccounts: Array<{ username: string | null; displayName: string; status: string; failures: number; lastAt: string }>;
+    unknownAccountFailures: number;
+  };
+  units: { active: number; withAccounts: number; top: Array<{ id: string; name: string; active: number }>; noPrimaryUnit: number };
+  catalogs: Array<{ type: string; active: number }>;
+  recentAdminActions: Array<{ id: string; action: string; label: string; actor: string; targetEntity: string | null; timestamp: string }>;
+};
+
+export async function loadAdminDashboard() {
+  return requestJson<AdminDashboardOverview>("/admin/dashboard");
+}
