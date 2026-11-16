@@ -3,6 +3,7 @@ import { randomBytes, scryptSync } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { Client as MinioClient } from "minio";
 
 const databaseUrl = process.env.DATABASE_URL?.trim();
 
@@ -617,6 +618,132 @@ if (!await prisma.approvedProject.findUnique({ where: { id: "gf4-demo-project" }
       { action: "project.extension.prepare", result: "success", actorId: "user-staff-hdtien2", targetEntity: "project-request", targetEntityId: "gf4-demo-extension" }
     ] });
   });
+}
+
+// Văn bản & biểu mẫu mẫu. Tệp nằm trên MinIO, nên thiếu MinIO thì bỏ qua văn bản đó thay vì tạo bản ghi không tải được.
+const sampleDocs = [
+  {
+    id: "doc-tt-05-2023",
+    documentNumber: "05/2023/TT-BKHCN",
+    title: "Thông tư số 05/2023/TT-BKHCN quy định chi tiết một số điều của Nghị định số 70/2018/NĐ-CP và quản lý các nhiệm vụ KH&CN cấp quốc gia",
+    category: "LAW_REGULATION",
+    issuingAuthority: "Bộ Khoa học và Công nghệ",
+    issuedDate: new Date("2023-05-25"),
+    effectiveDate: new Date("2023-07-09"),
+    description: "Quy định trình tự, thủ tục xác định, tuyển chọn, giao trực tiếp và quản lý thực hiện nhiệm vụ khoa học và công nghệ cấp quốc gia sử dụng ngân sách nhà nước.",
+    fileName: "Thong_tu_05_2023_TT_BKHCN.pdf",
+    mimeType: "application/pdf",
+    sampleContent: "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000009 00000 n\n0000000052 00000 n\n0000000101 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n185\n%%EOF"
+  },
+  {
+    id: "doc-qc-hvqy-2024",
+    documentNumber: "1258/QC-HVQY",
+    title: "Quy chế Quản lý hoạt động Nghiên cứu khoa học và Công nghệ tại Học viện Quân y",
+    category: "INTERNAL_REGULATION",
+    issuingAuthority: "Học viện Quân y",
+    issuedDate: new Date("2024-01-15"),
+    effectiveDate: new Date("2024-02-01"),
+    description: "Quy chế toàn diện về tổ chức, quản lý, phân bổ kinh phí, đánh giá nghiệm thu các đề tài, dự án KH&CN cấp cơ sở và phối hợp nghiên cứu.",
+    fileName: "Quy_che_QLKH_Hoc_vien_Quan_y_2024.pdf",
+    mimeType: "application/pdf",
+    sampleContent: "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000009 00000 n\n0000000052 00000 n\n0000000101 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n185\n%%EOF"
+  },
+  {
+    id: "doc-bm-01-thuyet-minh",
+    documentNumber: "BM-01/NCKH",
+    title: "Mẫu BM-01: Thuyết minh đề tài Nghiên cứu khoa học và Công nghệ",
+    category: "DOCUMENT_TEMPLATE",
+    issuingAuthority: "Phòng Quản lý Khoa học Quân sự",
+    issuedDate: new Date("2024-01-20"),
+    effectiveDate: new Date("2024-01-20"),
+    description: "Biểu mẫu thuyết minh đề tài chuẩn quy định tính cấp thiết, mục tiêu nghiên cứu, nội dung triển khai, phương pháp tiếp cận và dự kiến sản phẩm bàn giao.",
+    fileName: "BM01_Thuyet_minh_de_tai_NCKH_CN.docx",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    sampleContent: "PK\x03\x04\x14\x00\x06\x00\x08\x00\x00\x00!\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x00\x00_rels/.relsPK\x05\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+  },
+  {
+    id: "doc-bm-02-du-toan",
+    documentNumber: "BM-02/DTKP",
+    title: "Mẫu BM-02: Bảng lập dự toán kinh phí thực hiện đề tài KH&CN",
+    category: "DOCUMENT_TEMPLATE",
+    issuingAuthority: "Phòng Quản lý Khoa học Quân sự",
+    issuedDate: new Date("2024-01-20"),
+    effectiveDate: new Date("2024-01-20"),
+    description: "Biểu mẫu bảng tính Excel dự toán kinh phí chi tiết theo định mức kinh tế kỹ thuật, tiền công lao động khoa học, nguyên vật liệu và hội thảo.",
+    fileName: "BM02_Du_toan_kinh_phi_de_tai.xlsx",
+    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    sampleContent: "PK\x03\x04\x14\x00\x06\x00\x08\x00\x00\x00!\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x00\x00_rels/.relsPK\x05\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+  },
+  {
+    id: "doc-bm-06-ly-lich",
+    documentNumber: "BM-06/LLKH",
+    title: "Mẫu BM-06: Lý lịch khoa học của cá nhân thực hiện nhiệm vụ KH&CN",
+    category: "DOCUMENT_TEMPLATE",
+    issuingAuthority: "Bộ Khoa học và Công nghệ",
+    issuedDate: new Date("2023-05-25"),
+    effectiveDate: new Date("2023-07-09"),
+    description: "Mẫu chuẩn lý lịch khoa học cá nhân theo quy định Bộ KH&CN (thông tin cá nhân, quá trình đào tạo, công tác, công trình công bố, giải thưởng và bằng sáng chế).",
+    fileName: "BM06_Ly_lich_khoa_hoc_ca_nhan.docx",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    sampleContent: "PK\x03\x04\x14\x00\x06\x00\x08\x00\x00\x00!\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x00\x00_rels/.relsPK\x05\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+  },
+  {
+    id: "doc-bm-04-danh-gia",
+    documentNumber: "BM-04/HĐĐG",
+    title: "Mẫu BM-04: Phiếu nhận xét, đánh giá hồ sơ đề tài KH&CN của chuyên gia",
+    category: "DOCUMENT_TEMPLATE",
+    issuingAuthority: "Phòng Quản lý Khoa học Quân sự",
+    issuedDate: new Date("2024-01-20"),
+    effectiveDate: new Date("2024-01-20"),
+    description: "Mẫu phiếu nhận xét dành cho chuyên gia phản biện và thành viên hội đồng đánh giá tính mới, phương pháp nghiên cứu và năng lực chủ nhiệm.",
+    fileName: "BM04_Phieu_nhan_xet_danh_gia_de_tai.docx",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    sampleContent: "PK\x03\x04\x14\x00\x06\x00\x08\x00\x00\x00!\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x00\x00_rels/.relsPK\x05\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+  },
+  {
+    id: "doc-hd-01-quy-trinh",
+    documentNumber: "HD-01/QLKH",
+    title: "Hướng dẫn quy trình đăng ký, nộp hồ sơ và nghiệm thu đề tài NCKH trực tuyến",
+    category: "GUIDELINE",
+    issuingAuthority: "Phòng Quản lý Khoa học Quân sự",
+    issuedDate: new Date("2024-02-10"),
+    effectiveDate: new Date("2024-02-10"),
+    description: "Tài liệu hướng dẫn thao tác trên hệ thống DocManS: cách nộp hồ sơ thuyết minh, phản hồi yêu cầu bổ sung, nhận thông báo phản biện và theo dõi tiến độ.",
+    fileName: "Huong_dan_nop_va_theo_doi_de_tai_truc_tuyen.pdf",
+    mimeType: "application/pdf",
+    sampleContent: "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000009 00000 n\n0000000052 00000 n\n0000000101 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n185\n%%EOF"
+  }
+];
+
+if (process.env.MINIO_ENDPOINT && process.env.MINIO_ACCESS_KEY && process.env.MINIO_SECRET_KEY && process.env.MINIO_BUCKET_NAME) {
+  const minio = new MinioClient({
+    endPoint: process.env.MINIO_ENDPOINT,
+    port: Number(process.env.MINIO_PORT ?? 9000),
+    useSSL: ["1", "true", "yes"].includes((process.env.MINIO_USE_SSL ?? "").trim().toLowerCase()),
+    accessKey: process.env.MINIO_ACCESS_KEY,
+    secretKey: process.env.MINIO_SECRET_KEY
+  });
+  const bucket = process.env.MINIO_BUCKET_NAME;
+  for (const { sampleContent, ...doc } of sampleDocs) {
+    const storageObjectKey = `scientific-documents/${doc.id}/${doc.fileName}`;
+    // latin1: giữ nguyên từng byte của chữ ký ZIP trong nội dung mẫu.
+    const buffer = Buffer.from(sampleContent, "latin1");
+    try {
+      if (!(await minio.bucketExists(bucket))) await minio.makeBucket(bucket, process.env.MINIO_REGION?.trim() || "us-east-1");
+      await minio.putObject(bucket, storageObjectKey, buffer, buffer.length, { "Content-Type": doc.mimeType });
+    } catch (error) {
+      console.warn(`Bỏ qua văn bản mẫu ${doc.documentNumber}: không ghi được tệp lên MinIO (${error.message}).`);
+      continue;
+    }
+    // update rỗng: seed chạy lại không ghi đè chỉnh sửa hay khôi phục văn bản người quản lý đã xoá.
+    await prisma.scientificDocument.upsert({
+      where: { id: doc.id },
+      update: {},
+      create: { ...doc, fileSize: buffer.length, storageObjectKey, createdById: "user-staff" }
+    });
+  }
+} else {
+  console.warn("Bỏ qua văn bản mẫu: chưa cấu hình MinIO.");
 }
 
 await prisma.$disconnect();

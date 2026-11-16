@@ -18,7 +18,7 @@ export function getNavigationItems(role: UserRole) {
 
 // Theme "guided" và "academy": gom menu theo loại công việc; href chưa khai báo rơi vào nhóm cuối.
 const NAVIGATION_GROUPS: [string, string[]][] = [
-  ["Tổng quan", ["/dashboard", "/notifications"]],
+  ["Tổng quan", ["/dashboard", "/notifications", "/documents"]],
   ["Việc của tôi", ["/my-profile", "/my-proposals", "/my-projects", "/periodic-reports", "/my-tasks", "/my-reviews", "/approvals"]],
   ["Đề xuất và đề tài", ["/proposals", "/intakes", "/reviews", "/projects", "/tasks", "/reports"]],
   ["Nhà khoa học và tài khoản", ["/researcher-profiles", "/registration-requests", "/users", "/roles", "/units"]],
@@ -50,41 +50,42 @@ const PROJECTS: [string, string] = ["/projects", "Đề tài đang thực hiện
 const INTAKES: [string, string] = ["/intakes", "Đợt tiếp nhận"];
 const REVIEWS: [string, string] = ["/reviews", "Đánh giá hồ sơ"];
 const PROFILES: [string, string] = ["/researcher-profiles", "Hồ sơ nhà khoa học"];
+const DOCUMENTS: [string, string] = ["/documents", "Văn bản & Biểu mẫu"];
 const REGISTRATIONS: [string, string] = ["/registration-requests", "Yêu cầu đăng ký"];
 const researcherGroups = (proposals: string, projects: string): [string, [string, string][]][] => [
   [WORK, [HOME, MY_REVIEWS, NOTICES]],
-  ["Nghiên cứu của tôi", [["/my-proposals", proposals], ["/my-projects", projects], CV]]
+  ["Nghiên cứu của tôi", [["/my-proposals", proposals], ["/my-projects", projects], CV, DOCUMENTS]]
 ];
 
 const WORKSPACE_NAVIGATION: Record<UserRole, [string, [string, string][]][]> = {
   SYSTEM_ADMIN: [
     [WORK, [HOME, NOTICES]],
     ["Tài khoản", [["/users", "Người dùng"], REGISTRATIONS, ["/roles", "Vai trò"], ["/units", "Đơn vị"], PROFILES]],
-    [ADMIN, [["/catalogs", "Danh mục"], ["/system-settings", "Cấu hình hệ thống"], ["/system-logs", "Nhật ký hệ thống"]]]
+    [ADMIN, [["/catalogs", "Danh mục"], DOCUMENTS, ["/system-settings", "Cấu hình hệ thống"], ["/system-logs", "Nhật ký hệ thống"]]]
   ],
   LEADERSHIP_APPROVAL_AUTHORITY: [
     [WORK, [HOME, ["/approvals", "Hồ sơ chờ quyết định"], MY_REVIEWS, NOTICES]],
-    [RECORDS, [PROPOSALS, PROJECTS]]
+    [RECORDS, [PROPOSALS, PROJECTS, DOCUMENTS]]
   ],
-  SCIENCE_DEPUTY_DIRECTOR: [[WORK, [HOME, MY_REVIEWS, NOTICES]], [RECORDS, [PROPOSALS, PROJECTS, CV]]],
+  SCIENCE_DEPUTY_DIRECTOR: [[WORK, [HOME, MY_REVIEWS, NOTICES]], [RECORDS, [PROPOSALS, PROJECTS, CV, DOCUMENTS]]],
   RESEARCH_OVERSIGHT_AUTHORITY: [
     [WORK, [HOME, MY_REVIEWS, NOTICES]],
-    [RECORDS, [PROPOSALS, PROJECTS, ["/my-proposals", "Hồ sơ đề xuất của tôi"]]]
+    [RECORDS, [PROPOSALS, PROJECTS, ["/my-proposals", "Hồ sơ đề xuất của tôi"], DOCUMENTS]]
   ],
   RESEARCH_MANAGEMENT_HEAD: [
     [WORK, [HOME, MY_REVIEWS, NOTICES]],
-    [RECORDS, [PROPOSALS, PROJECTS]],
+    [RECORDS, [PROPOSALS, PROJECTS, DOCUMENTS]],
     [MANAGE, [INTAKES, REVIEWS, PROFILES, CV]]
   ],
-  RESEARCH_MANAGEMENT_DEPUTY_HEAD: [[WORK, [HOME, MY_REVIEWS, NOTICES]], [RECORDS, [PROPOSALS, PROJECTS]]],
+  RESEARCH_MANAGEMENT_DEPUTY_HEAD: [[WORK, [HOME, MY_REVIEWS, NOTICES]], [RECORDS, [PROPOSALS, PROJECTS, DOCUMENTS]]],
   RESEARCH_BOARD_HEAD: [
     [WORK, [HOME, MY_REVIEWS, NOTICES]],
-    [RECORDS, [PROPOSALS, PROJECTS]],
+    [RECORDS, [PROPOSALS, PROJECTS, DOCUMENTS]],
     [MANAGE, [REGISTRATIONS, CV]]
   ],
   RESEARCH_MANAGEMENT_STAFF: [
     [WORK, [HOME, MY_REVIEWS, NOTICES]],
-    [RECORDS, [["/proposals", "Hồ sơ tôi phụ trách"], PROJECTS]],
+    [RECORDS, [["/proposals", "Hồ sơ tôi phụ trách"], PROJECTS, DOCUMENTS]],
     [MANAGE, [INTAKES, REVIEWS, PROFILES, REGISTRATIONS, CV]]
   ],
   RESEARCHER_INTERNAL_USER: researcherGroups("Hồ sơ đề xuất của tôi", "Đề tài của tôi"),
