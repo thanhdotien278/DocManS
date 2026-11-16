@@ -8,6 +8,7 @@ datasource db {
 }
 
 model User {
+  createdScientificDocuments ScientificDocument[] @relation("ScientificDocumentCreator")
   researcherProfile ResearcherProfile? @relation("ResearcherProfileAccount")
   id                 String                  @id @default(uuid())
   username           String?                 @unique
@@ -745,6 +746,33 @@ model ProposalDecision {
 }
 
 /// Golden Flow 4: an approved proposal becomes an independent, explicitly activated project.
+model ScientificDocument {
+  id               String    @id @default(uuid())
+  documentNumber   String    @map("document_number")
+  title            String
+  category         String
+  issuingAuthority String?   @map("issuing_authority")
+  issuedDate       DateTime? @map("issued_date")
+  effectiveDate    DateTime? @map("effective_date")
+  description      String?
+  status           String    @default("ACTIVE")
+  fileName         String    @map("file_name")
+  fileSize         Int       @map("file_size")
+  mimeType         String    @map("mime_type")
+  storageObjectKey String    @map("storage_object_key")
+  createdById      String    @map("created_by_id")
+  createdBy        User      @relation("ScientificDocumentCreator", fields: [createdById], references: [id])
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+
+  @@index([category])
+  @@index([status])
+  @@index([createdById])
+  @@index([deletedAt])
+  @@map("scientific_documents")
+}
+
 model ApprovedProject {
   id                         String   @id @default(uuid())
   code                       String?  @unique
