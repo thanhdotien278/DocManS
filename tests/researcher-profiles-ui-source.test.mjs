@@ -28,7 +28,7 @@ describe("Story 2.1 researcher profile UI source", () => {
     const external = navigation.getNavigationItems("EXTERNAL_RESEARCHER_USER");
     const internal = navigation.getNavigationItems("RESEARCHER_INTERNAL_USER");
     assert.deepEqual(external.map(({ href, label }) => ({ href, label })), internal.map(({ href, label }) => ({ href, label })));
-    assert.equal(external.length, 8);
+    assert.equal(external.length, 9);
     assert.equal(dashboard.getDashboardSnapshot("EXTERNAL_RESEARCHER_USER").primaryActionHref, "/my-proposals");
     assert.deepEqual(dashboard.getDashboardSnapshot("EXTERNAL_RESEARCHER_USER"), dashboard.getDashboardSnapshot("RESEARCHER_INTERNAL_USER"));
   });

@@ -2,6 +2,7 @@ import {
   BarChart3,
   Bell,
   BookCopy,
+  BookOpen,
   Building2,
   CalendarDays,
   CalendarRange,
@@ -265,6 +266,13 @@ export const routeDefinitions: Record<string, RouteDefinition> = {
     summaryTitle: "Tình hình cấu hình",
     summaryBody: "Phân hệ này tập trung các tham số quản trị cốt lõi, sử dụng cho nhắc việc, thông báo và vận hành nội bộ."
   },
+  "/documents": {
+    eyebrow: "Văn bản & Biểu mẫu",
+    title: "Văn bản & Biểu mẫu",
+    description: "Hệ thống văn bản quy phạm, quy chế quản lý khoa học công nghệ và biểu mẫu hướng dẫn.",
+    summaryTitle: "Kho tài liệu KH&CN",
+    summaryBody: "Cung cấp các văn bản pháp lý, quy chế và biểu mẫu chuẩn phục vụ nghiên cứu viên và hội đồng."
+  },
   "/system-logs": {
     eyebrow: "Quản trị",
     title: "Nhật ký hệ thống",
@@ -281,7 +289,8 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/approvals", label: "Hồ sơ chờ phê duyệt", icon: FileClock },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
     { href: "/tasks", label: "Giao việc", icon: ClipboardCheck },
-    { href: "/reports", label: "Báo cáo", icon: BarChart3 }
+    { href: "/reports", label: "Báo cáo", icon: BarChart3 },
+    { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
   RESEARCH_MANAGEMENT_HEAD: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -292,7 +301,8 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/reviews", label: "Đánh giá hồ sơ", icon: FileSearch },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
     { href: "/tasks", label: "Giao việc", icon: ClipboardCheck },
-    { href: "/reports", label: "Báo cáo", icon: BarChart3 }
+    { href: "/reports", label: "Báo cáo", icon: BarChart3 },
+    { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
   RESEARCH_MANAGEMENT_STAFF: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -304,7 +314,8 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/reviews", label: "Đánh giá hồ sơ", icon: FileSearch },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
     { href: "/tasks", label: "Giao việc", icon: ClipboardCheck },
-    { href: "/reports", label: "Báo cáo", icon: BarChart3 }
+    { href: "/reports", label: "Báo cáo", icon: BarChart3 },
+    { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
   RESEARCHER_INTERNAL_USER: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -313,7 +324,8 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/my-projects", label: "Đề tài đang thực hiện", icon: FolderKanban },
     { href: "/periodic-reports", label: "Báo cáo định kỳ", icon: NotebookPen },
     { href: "/my-tasks", label: "Công việc của tôi", icon: ListTodo },
-    { href: "/notifications", label: "Thông báo", icon: Bell }
+    { href: "/notifications", label: "Thông báo", icon: Bell },
+    { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
   SYSTEM_ADMIN: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -323,7 +335,8 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/units", label: "Đơn vị", icon: Building2 },
     { href: "/catalogs", label: "Danh mục", icon: BookCopy },
     { href: "/system-settings", label: "Cấu hình hệ thống", icon: Settings2 },
-    { href: "/system-logs", label: "Nhật ký hệ thống", icon: History }
+    { href: "/system-logs", label: "Nhật ký hệ thống", icon: History },
+    { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
   RESEARCH_OVERSIGHT_AUTHORITY: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -331,7 +344,8 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/proposals", label: "Theo dõi đề tài", icon: Files },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
     { href: "/reports", label: "Báo cáo", icon: BarChart3 },
-    { href: "/notifications", label: "Thông báo", icon: Bell }
+    { href: "/notifications", label: "Thông báo", icon: Bell },
+    { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
   EXTERNAL_RESEARCHER_USER: [],
   // shortcut: PP, PGĐ-KH chưa có menu nghiệp vụ. Cấp thêm khi port phân quyền từ tuan/DocManS.
@@ -343,7 +357,8 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/proposals", label: "Quản lý đề tài", icon: Files },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
     { href: "/registration-requests", label: "Yêu cầu đăng ký", icon: UserPlus },
-    { href: "/notifications", label: "Thông báo", icon: Bell }
+    { href: "/notifications", label: "Thông báo", icon: Bell },
+    { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
   SCIENCE_DEPUTY_DIRECTOR: []
 };

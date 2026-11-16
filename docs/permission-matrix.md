@@ -803,3 +803,13 @@ infer expenditure or add ledgers, payments, banking, invoices or ERP integration
 - **Giao diện hệ thống (`ui_theme`).** Chỉ QT (`SYSTEM_ADMIN`) đổi qua `PUT /api/v1/config/system-parameters`
   (giá trị `classic` | `workspace` | `guided` | `academy`, có audit `update-system-parameter`). `GET /api/v1/ui-theme` đọc công khai,
   không cần phiên; thiếu hoặc sai giá trị thì trả `classic`.
+
+## Văn bản & Biểu mẫu (`/documents`, `api/v1/scientific-documents`)
+
+- Mọi tài khoản đã đăng nhập được xem danh sách, chi tiết và tải tệp của văn bản đang hiệu lực (`ACTIVE`);
+  mỗi lượt tải ghi audit `download-scientific-document`.
+- Chỉ QT, TP, TB và CV (`SYSTEM_ADMIN`, `RESEARCH_MANAGEMENT_HEAD`, `RESEARCH_BOARD_HEAD`,
+  `RESEARCH_MANAGEMENT_STAFF`) được tải lên, sửa, thay tệp, xoá mềm và xem văn bản `INACTIVE`; không xét phạm vi đơn vị.
+  Vai trò khác nhận 403. Mọi thay đổi ghi audit `create-` / `update-` / `delete-scientific-document`.
+- Tệp theo cùng quy tắc với `modules/files` (đuôi, MIME, chữ ký nội dung, giới hạn `file_max_upload_mb`);
+  thay tệp tạo object mới, bản cũ vẫn nằm trên MinIO.
