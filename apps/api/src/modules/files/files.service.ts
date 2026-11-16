@@ -110,6 +110,29 @@ export function defaultFileConfig(): FileModuleConfig {
   };
 }
 
+/** Quy tắc kiểm tra tệp tải lên dùng chung: đuôi tệp, MIME, dung lượng và chữ ký nội dung. */
+export function assertValidUpload(input: Pick<FileUploadInput, "fileName" | "mimeType" | "sizeBytes" | "content">, config: FileModuleConfig) {
+  const extension = path.extname(input.fileName).toLowerCase();
+  if (!config.allowedExtensions.includes(extension)) {
+    throw new BadRequestException({ message: "Định dạng tệp không được hỗ trợ." });
+  }
+  const allowedMimeTypes = MIME_TYPES_BY_EXTENSION[extension];
+  // Đuôi tệp được cấu hình cho phép nhưng chưa có MIME/chữ ký đối chiếu thì từ chối, không bỏ qua kiểm tra.
+  if (!allowedMimeTypes?.includes(input.mimeType)) {
+    throw new BadRequestException({ message: "MIME type của tệp không khớp định dạng cho phép." });
+  }
+  if (!Number.isInteger(input.sizeBytes) || input.sizeBytes <= 0 || input.sizeBytes > config.maxFileSizeBytes) {
+    throw new BadRequestException({ message: "Dung lượng tệp vượt quá giới hạn cho phép." });
+  }
+  if (input.content.length !== input.sizeBytes) {
+    throw new BadRequestException({ message: "Dung lượng tệp không khớp nội dung tải lên." });
+  }
+  const signature = SIGNATURES_BY_EXTENSION[extension];
+  if (!signature || !input.content.subarray(0, signature.length).equals(signature)) {
+    throw new BadRequestException({ message: "Nội dung tệp không khớp định dạng cho phép." });
+  }
+}
+
 @Injectable()
 export class FilesService {
   constructor(
@@ -398,25 +421,7 @@ export class FilesService {
   }
 
   private assertUploadInput(input: FileUploadInput) {
-    const extension = path.extname(input.fileName).toLowerCase();
-    if (!this.config.allowedExtensions.includes(extension)) {
-      throw new BadRequestException({ message: "Định dạng tệp không được hỗ trợ." });
-    }
-    const allowedMimeTypes = MIME_TYPES_BY_EXTENSION[extension];
-    // Đuôi tệp được cấu hình cho phép nhưng chưa có MIME/chữ ký đối chiếu thì từ chối, không bỏ qua kiểm tra.
-    if (!allowedMimeTypes?.includes(input.mimeType)) {
-      throw new BadRequestException({ message: "MIME type của tệp không khớp định dạng cho phép." });
-    }
-    if (!Number.isInteger(input.sizeBytes) || input.sizeBytes <= 0 || input.sizeBytes > this.config.maxFileSizeBytes) {
-      throw new BadRequestException({ message: "Dung lượng tệp vượt quá giới hạn cho phép." });
-    }
-    if (input.content.length !== input.sizeBytes) {
-      throw new BadRequestException({ message: "Dung lượng tệp không khớp nội dung tải lên." });
-    }
-    const signature = SIGNATURES_BY_EXTENSION[extension];
-    if (!signature || !input.content.subarray(0, signature.length).equals(signature)) {
-      throw new BadRequestException({ message: "Nội dung tệp không khớp định dạng cho phép." });
-    }
+    assertValidUpload(input, this.config);
   }
 
   private assertSupportedEntity(relatedEntityType: string) {
