@@ -2294,6 +2294,48 @@ summary:focus-visible {
 }
 
 .workspace-dialog::backdrop { background: transparent; }
+/* ---- Văn bản & Biểu mẫu ---- */
+.doc-number {
+  display: inline-block;
+  border-radius: 4px;
+  background: var(--surface-muted);
+  padding: 2px 6px;
+  color: var(--text-primary);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.doc-link { display: inline-flex; align-items: baseline; gap: 4px; color: var(--text-primary); font-weight: 700; text-decoration: none; }
+.doc-link:hover, .doc-link:focus-visible { color: var(--primary); text-decoration: underline; }
+.doc-description { margin: 4px 0 0; color: var(--text-secondary); font-size: 12px; white-space: pre-wrap; }
+.file-type {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--neutral-soft);
+  padding: 1px 6px;
+  color: var(--neutral);
+  font-size: 12px;
+  font-weight: 700;
+}
+.file-type.pdf { border-color: var(--danger-soft); background: var(--danger-soft); color: var(--danger); }
+.file-type.word { border-color: var(--info-soft); background: var(--info-soft); color: var(--info); }
+.file-type.excel { border-color: var(--success-soft); background: var(--success-soft); color: var(--success); }
+.file-size { margin-left: 6px; color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
+.doc-file-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.doc-file-row strong { overflow-wrap: anywhere; font-size: 13px; }
+
 .form-dialog { background: rgba(15, 37, 27, 0.5); padding: 16px; }
 .form-dialog[open] { display: flex; align-items: stretch; justify-content: flex-end; }
 .form-dialog > .section-card { width: min(100%, 860px); max-height: 100%; overflow-y: auto; }
