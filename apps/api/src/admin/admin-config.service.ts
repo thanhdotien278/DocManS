@@ -75,6 +75,13 @@ const SYSTEM_PARAMETER_RULES = {
       if (value !== "true" && value !== "false") throw new BadRequestException({ message: "value phải là true hoặc false." });
       return value;
     }
+  },
+  // Công tắc riêng cho tài khoản Sinh viên (tự kích hoạt, không qua duyệt).
+  student_registration_enabled: {
+    validate(value: string) {
+      if (value !== "true" && value !== "false") throw new BadRequestException({ message: "value phải là true hoặc false." });
+      return value;
+    }
   }
 } as const;
 

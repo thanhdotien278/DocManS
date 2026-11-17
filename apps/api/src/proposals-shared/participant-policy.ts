@@ -69,6 +69,8 @@ export async function readParticipantPolicy(prisma: Pick<PrismaService, "systemP
 /** "Phụ trách" kéo theo "Xem": `view` trả về là `view || manage`. */
 export function participantPolicyFor(actor: { systemRole?: string | null } | undefined | null, policy?: ParticipantPolicy | null): ParticipantPolicyEntry {
   const role = actor?.systemRole;
+  // Sinh viên chỉ dùng phân hệ Sinh viên NCKH: không là chủ nhiệm/thành viên đề xuất.
+  if (role === "STUDENT_USER") return { ...DEFAULT_PARTICIPANT_ENTRY, pi: false, view: false, manage: false };
   if (!role || !(PARTICIPANT_POLICY_ROLES as readonly string[]).includes(role)) return { ...DEFAULT_PARTICIPANT_ENTRY };
   const entry = { ...DEFAULT_PARTICIPANT_ENTRY, ...(policy?.[role as ParticipantPolicyRole] ?? {}) };
   return { ...entry, view: entry.view || entry.manage };

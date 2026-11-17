@@ -5,7 +5,7 @@ All seeded accounts use the existing local password `1234`; the seed stores scry
 Run `npm run db:setup` for a new local database, or `npm run prisma:seed` after migrations.
 
 > **Role model:** the table lists the role codes the seed and code on the `DocManS` branch run
-> (all ten codes exist; PGĐ-KH, PP and TB have no permissions yet). The current business model has ten roles
+> (all ten codes exist; PGĐ-KH, PP and TB have no permissions yet; `STUDENT_USER` is the eleventh, for Sinh viên NCKH only). The current business model has ten roles plus Sinh viên
 > ([`permission-matrix.md`](../permission-matrix.md) §2); the seed has one account per role.
 
 | Username | System role | Demo responsibility |
@@ -19,6 +19,7 @@ Run `npm run db:setup` for a new local database, or `npm run prisma:seed` after 
 | `dnbinh` | `RESEARCH_MANAGEMENT_DEPUTY_HEAD` | Đỗ Như Bình — Phó phòng KHQS (PP) |
 | `nmtrung` | `RESEARCH_BOARD_HEAD` | TS. Đỗ Minh Trung — Trưởng ban QLKH (TB) |
 | `patuan`, `int1`–`int3` | `RESEARCHER_INTERNAL_USER` | Researcher accounts; PI/member/reviewer/council responsibilities come from record relationships |
+| `sv01`–`sv03` | `STUDENT_USER` | Student accounts for Sinh viên NCKH only (student profile seeded; no researcher profile, no proposal access) |
 | `ex1`–`ex3` | `EXTERNAL_RESEARCHER_USER` | Assigned external research/review work only |
 
 Check `apps/api/prisma/seed.mjs` for the complete current seed identity list. Titles shown

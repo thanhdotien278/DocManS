@@ -20,6 +20,7 @@ DocManS is intended to be a useful community project, not institution-specific s
 - **Review and decision support** — assign reviewers, collect evaluations, and support structured proposal decisions.
 - **Role- and scope-aware access** — authorize actions using system roles, organization scope, ownership, project participation, reviewer assignments, and workflow state.
 - **PI-owned proposal submission** — restrict proposal creation, submission, and resubmission to the internal-researcher PI.
+- **Student research (Sinh viên NCKH)** — one yearly period run by a responsible staff member; students self-register, form a team under one leader, upload DOC/DOCX/PDF documents until the deadline, and receive a score and award.
 - **Researcher profiles and teams** — manage researcher-facing information and proposal participation.
 - **Files and object storage** — attach approved file types to research records using S3-compatible MinIO storage.
 - **Administration** — manage users, organization structures, catalogs, and configuration through the API and web application.
@@ -52,7 +53,8 @@ The ten system roles ([permission matrix](docs/permission-matrix.md) §2) are
 `RESEARCHER_INTERNAL_USER` (NCV) and `EXTERNAL_RESEARCHER_USER` (NNB). Submissions route as a
 tờ trình CV → TB → TP → BGĐ; only GĐ approves topic, funding and liquidation. The code on the
 `DocManS` branch has all ten role codes, but PGĐ-KH, PP and TB have no business
-permissions until they are ported from `tuan/DocManS`.
+permissions until they are ported from `tuan/DocManS`. An eleventh role, `STUDENT_USER` (SV), is
+limited to Sinh viên NCKH and has no access to proposals or projects.
 Proposal management officer history is persisted; project officer relationships and institutional
 reporting remain contracts until their backend domains exist. Dashboard showcase values are demo
 data. Funding currently covers requested proposal metadata, not actual expenditure or accounting.

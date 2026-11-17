@@ -12,15 +12,18 @@ export function getNavigationItems(role: UserRole) {
     const profileItem = getRoleNavigationItems("RESEARCH_MANAGEMENT_STAFF").find((item) => item.href === "/researcher-profiles");
     if (profileItem) items.push(profileItem);
   }
-  if (role !== "SYSTEM_ADMIN" && !items.some((item) => item.href === "/my-reviews")) items.push({ href: "/my-reviews", label: "Đánh giá của tôi", icon: ClipboardCheck });
-  return items;
+  if (role !== "SYSTEM_ADMIN" && role !== "STUDENT_USER" && !items.some((item) => item.href === "/my-reviews")) items.push({ href: "/my-reviews", label: "Đánh giá của tôi", icon: ClipboardCheck });
+  // NNB chỉ làm việc được mời/được phân công: nhãn không dẫn dắt tạo đề xuất.
+  return role === "EXTERNAL_RESEARCHER_USER" ? items.map((item) => ({ ...item, label: EXTERNAL_LABELS[item.href] ?? item.label })) : items;
 }
+
+const EXTERNAL_LABELS: Record<string, string> = { "/my-proposals": "Hồ sơ tôi tham gia", "/my-projects": "Đề tài tôi tham gia", "/my-reviews": "Lời mời và phiếu đánh giá" };
 
 // Theme "guided" và "academy": gom menu theo loại công việc; href chưa khai báo rơi vào nhóm cuối.
 const NAVIGATION_GROUPS: [string, string[]][] = [
   ["Tổng quan", ["/dashboard", "/notifications", "/documents"]],
-  ["Việc của tôi", ["/my-profile", "/my-proposals", "/my-projects", "/periodic-reports", "/my-tasks", "/my-reviews", "/approvals"]],
-  ["Đề xuất và đề tài", ["/proposals", "/intakes", "/reviews", "/projects", "/tasks", "/reports"]],
+  ["Việc của tôi", ["/my-profile", "/student-profile", "/my-proposals", "/my-projects", "/periodic-reports", "/my-tasks", "/my-reviews", "/approvals"]],
+  ["Đề xuất và đề tài", ["/proposals", "/intakes", "/reviews", "/projects", "/tasks", "/reports", "/student-research"]],
   ["Nhà khoa học và tài khoản", ["/researcher-profiles", "/registration-requests", "/users", "/roles", "/units"]],
   ["Hệ thống", []]
 ];
@@ -52,8 +55,10 @@ const REVIEWS: [string, string] = ["/reviews", "Đánh giá hồ sơ"];
 const PROFILES: [string, string] = ["/researcher-profiles", "Hồ sơ nhà khoa học"];
 const DOCUMENTS: [string, string] = ["/documents", "Văn bản & Biểu mẫu"];
 const REGISTRATIONS: [string, string] = ["/registration-requests", "Yêu cầu đăng ký"];
-const researcherGroups = (proposals: string, projects: string): [string, [string, string][]][] => [
-  [WORK, [HOME, MY_REVIEWS, NOTICES]],
+const STUDENT_RESEARCH: [string, string] = ["/student-research", "Sinh viên NCKH"];
+const STUDENT_PROFILE: [string, string] = ["/student-profile", "Hồ sơ sinh viên"];
+const researcherGroups = (proposals: string, projects: string, reviews = MY_REVIEWS[1]): [string, [string, string][]][] => [
+  [WORK, [HOME, ["/my-reviews", reviews], NOTICES]],
   ["Nghiên cứu của tôi", [["/my-proposals", proposals], ["/my-projects", projects], CV, DOCUMENTS]]
 ];
 
@@ -64,10 +69,10 @@ const WORKSPACE_NAVIGATION: Record<UserRole, [string, [string, string][]][]> = {
     [ADMIN, [["/catalogs", "Danh mục"], DOCUMENTS, ["/system-settings", "Cấu hình hệ thống"], ["/system-logs", "Nhật ký hệ thống"]]]
   ],
   LEADERSHIP_APPROVAL_AUTHORITY: [
-    [WORK, [HOME, ["/approvals", "Hồ sơ chờ quyết định"], MY_REVIEWS, NOTICES]],
+    [WORK, [HOME, ["/approvals", "Chờ tôi quyết định"], MY_REVIEWS, NOTICES]],
     [RECORDS, [PROPOSALS, PROJECTS, DOCUMENTS]]
   ],
-  SCIENCE_DEPUTY_DIRECTOR: [[WORK, [HOME, MY_REVIEWS, NOTICES]], [RECORDS, [PROPOSALS, PROJECTS, CV, DOCUMENTS]]],
+  SCIENCE_DEPUTY_DIRECTOR: [[WORK, [HOME, ["/approvals", "Văn bản chờ tôi ký"], MY_REVIEWS, NOTICES]], [RECORDS, [PROPOSALS, PROJECTS, CV, DOCUMENTS]]],
   RESEARCH_OVERSIGHT_AUTHORITY: [
     [WORK, [HOME, MY_REVIEWS, NOTICES]],
     [RECORDS, [PROPOSALS, PROJECTS, ["/my-proposals", "Hồ sơ đề xuất của tôi"], DOCUMENTS]]
@@ -75,22 +80,23 @@ const WORKSPACE_NAVIGATION: Record<UserRole, [string, [string, string][]][]> = {
   RESEARCH_MANAGEMENT_HEAD: [
     [WORK, [HOME, MY_REVIEWS, NOTICES]],
     [RECORDS, [PROPOSALS, PROJECTS, DOCUMENTS]],
-    [MANAGE, [INTAKES, REVIEWS, PROFILES, CV]]
+    [MANAGE, [INTAKES, STUDENT_RESEARCH, REVIEWS, PROFILES, CV]]
   ],
-  RESEARCH_MANAGEMENT_DEPUTY_HEAD: [[WORK, [HOME, MY_REVIEWS, NOTICES]], [RECORDS, [PROPOSALS, PROJECTS, DOCUMENTS]]],
+  RESEARCH_MANAGEMENT_DEPUTY_HEAD: [[WORK, [HOME, MY_REVIEWS, NOTICES]], [RECORDS, [["/proposals", "Hồ sơ đang theo dõi"], PROJECTS, DOCUMENTS]]],
   RESEARCH_BOARD_HEAD: [
     [WORK, [HOME, MY_REVIEWS, NOTICES]],
     [RECORDS, [PROPOSALS, PROJECTS, DOCUMENTS]],
-    [MANAGE, [REGISTRATIONS, CV]]
+    [MANAGE, [STUDENT_RESEARCH, REGISTRATIONS, CV]]
   ],
   RESEARCH_MANAGEMENT_STAFF: [
     [WORK, [HOME, MY_REVIEWS, NOTICES]],
     [RECORDS, [["/proposals", "Hồ sơ tôi phụ trách"], PROJECTS, DOCUMENTS]],
-    [MANAGE, [INTAKES, REVIEWS, PROFILES, REGISTRATIONS, CV]]
+    [MANAGE, [INTAKES, STUDENT_RESEARCH, REVIEWS, PROFILES, REGISTRATIONS, CV]]
   ],
   RESEARCHER_INTERNAL_USER: researcherGroups("Hồ sơ đề xuất của tôi", "Đề tài của tôi"),
   // NNB chỉ làm việc được mời/được phân công: nhãn không dẫn dắt tạo đề xuất.
-  EXTERNAL_RESEARCHER_USER: researcherGroups("Hồ sơ tôi tham gia", "Đề tài tôi tham gia")
+  EXTERNAL_RESEARCHER_USER: researcherGroups(EXTERNAL_LABELS["/my-proposals"], EXTERNAL_LABELS["/my-projects"], EXTERNAL_LABELS["/my-reviews"]),
+  STUDENT_USER: [[WORK, [STUDENT_RESEARCH, STUDENT_PROFILE, NOTICES, DOCUMENTS]]]
 };
 
 const NAVIGATION_ICONS = new Map<string, LucideIcon>(

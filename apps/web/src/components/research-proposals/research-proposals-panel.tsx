@@ -52,7 +52,7 @@ function defaultForm(hostOrganizationUnitId = ""): ProposalDraftInput {
   };
 }
 
-export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { allowCreate: boolean; creationOnly?: boolean }) {
+export function ResearchProposalsPanel({ allowCreate, creationOnly = false, initialReviewQueue = "" }: { allowCreate: boolean; creationOnly?: boolean; initialReviewQueue?: string }) {
   const router = useRouter();
   const { account } = useSession();
   const [catalogs, setCatalogs] = useState<CatalogItem[]>([]);
@@ -62,7 +62,7 @@ export function ResearchProposalsPanel({ allowCreate, creationOnly = false }: { 
   const [proposals, setProposals] = useState<ResearchProposal[]>([]);
   const [intakes, setIntakes] = useState<ProposalIntakePeriod[]>([]);
   const [keyword, setKeyword] = useState("");
-  const [reviewQueue, setReviewQueue] = useState("");
+  const [reviewQueue, setReviewQueue] = useState(initialReviewQueue);
   const [statusFilter, setStatusFilter] = useState("");
   const [managementOfficerFilter, setManagementOfficerFilter] = useState("");
   const [form, setForm] = useState<ProposalDraftInput>(() => defaultForm());

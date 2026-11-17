@@ -1,22 +1,19 @@
 import {
-  BarChart3,
   Bell,
   BookCopy,
   BookOpen,
   Building2,
   CalendarDays,
   CalendarRange,
-  ClipboardCheck,
   FileCheck2,
   FileClock,
   FileSearch,
   FileText,
   Files,
   FolderKanban,
+  GraduationCap,
   History,
   LayoutDashboard,
-  ListTodo,
-  NotebookPen,
   Settings2,
   ShieldCheck,
   UserPlus,
@@ -224,6 +221,20 @@ export const routeDefinitions: Record<string, RouteDefinition> = {
     summaryTitle: "Lịch điều phối",
     summaryBody: "Kế hoạch họp hội đồng được sắp xếp theo thời gian và điểm họp để phục vụ công tác tham gia đúng lịch."
   },
+  "/student-research": {
+    eyebrow: "Sinh viên NCKH",
+    title: "Sinh viên nghiên cứu khoa học",
+    description: "Đợt nghiên cứu khoa học sinh viên hằng năm: đăng ký đề tài, nộp tài liệu, chấm điểm và xếp giải.",
+    summaryTitle: "Đợt hằng năm",
+    summaryBody: "Mỗi năm một đợt do một chuyên viên phụ trách; nhóm sinh viên nộp và thay tài liệu đến hạn cuối."
+  },
+  "/student-profile": {
+    eyebrow: "Sinh viên NCKH",
+    title: "Hồ sơ sinh viên",
+    description: "Bổ sung mã sinh viên, lớp, số điện thoại và điểm tổng kết học kỳ trước.",
+    summaryTitle: "Hồ sơ cá nhân",
+    summaryBody: "Cần đủ thông tin này trước khi đăng ký hoặc tham gia đề tài Sinh viên NCKH."
+  },
   "/registration-requests": {
     eyebrow: "Tài khoản nhà nghiên cứu",
     title: "Yêu cầu đăng ký",
@@ -286,10 +297,8 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
   LEADERSHIP_APPROVAL_AUTHORITY: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/proposals", label: "Giám sát hồ sơ đề xuất", icon: Files },
-    { href: "/approvals", label: "Hồ sơ chờ phê duyệt", icon: FileClock },
+    { href: "/approvals", label: "Chờ tôi quyết định", icon: FileClock },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
-    { href: "/tasks", label: "Giao việc", icon: ClipboardCheck },
-    { href: "/reports", label: "Báo cáo", icon: BarChart3 },
     { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
   RESEARCH_MANAGEMENT_HEAD: [
@@ -298,10 +307,9 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/proposals", label: "Quản lý đề tài", icon: Files },
     { href: "/researcher-profiles", label: "Hồ sơ nhà khoa học", icon: UserRoundSearch },
     { href: "/intakes", label: "Đợt tiếp nhận", icon: CalendarRange },
+    { href: "/student-research", label: "Sinh viên NCKH", icon: GraduationCap },
     { href: "/reviews", label: "Đánh giá hồ sơ", icon: FileSearch },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
-    { href: "/tasks", label: "Giao việc", icon: ClipboardCheck },
-    { href: "/reports", label: "Báo cáo", icon: BarChart3 },
     { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
   RESEARCH_MANAGEMENT_STAFF: [
@@ -311,10 +319,9 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/researcher-profiles", label: "Hồ sơ nhà khoa học", icon: UserRoundSearch },
     { href: "/registration-requests", label: "Yêu cầu đăng ký", icon: UserPlus },
     { href: "/intakes", label: "Đợt tiếp nhận", icon: CalendarRange },
+    { href: "/student-research", label: "Sinh viên NCKH", icon: GraduationCap },
     { href: "/reviews", label: "Đánh giá hồ sơ", icon: FileSearch },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
-    { href: "/tasks", label: "Giao việc", icon: ClipboardCheck },
-    { href: "/reports", label: "Báo cáo", icon: BarChart3 },
     { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
   RESEARCHER_INTERNAL_USER: [
@@ -322,8 +329,6 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/my-profile", label: "Lý lịch khoa học", icon: UserRoundSearch },
     { href: "/my-proposals", label: "Hồ sơ của tôi", icon: FileText },
     { href: "/my-projects", label: "Đề tài đang thực hiện", icon: FolderKanban },
-    { href: "/periodic-reports", label: "Báo cáo định kỳ", icon: NotebookPen },
-    { href: "/my-tasks", label: "Công việc của tôi", icon: ListTodo },
     { href: "/notifications", label: "Thông báo", icon: Bell },
     { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
@@ -341,26 +346,46 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
   RESEARCH_OVERSIGHT_AUTHORITY: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/my-proposals", label: "Hồ sơ của tôi", icon: FileText },
-    { href: "/proposals", label: "Theo dõi đề tài", icon: Files },
+    { href: "/proposals", label: "Hồ sơ đề xuất", icon: Files },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
-    { href: "/reports", label: "Báo cáo", icon: BarChart3 },
     { href: "/notifications", label: "Thông báo", icon: Bell },
     { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
   EXTERNAL_RESEARCHER_USER: [],
-  // shortcut: PP, PGĐ-KH chưa có menu nghiệp vụ. Cấp thêm khi port phân quyền từ tuan/DocManS.
-  RESEARCH_MANAGEMENT_DEPUTY_HEAD: [],
+  // Sinh viên chỉ dùng phân hệ Sinh viên NCKH.
+  STUDENT_USER: [
+    { href: "/student-research", label: "Sinh viên NCKH", icon: GraduationCap },
+    { href: "/student-profile", label: "Hồ sơ sinh viên", icon: UserRoundSearch },
+    { href: "/notifications", label: "Thông báo", icon: Bell },
+    { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
+  ],
+  // PP theo dõi trong phạm vi, không có hàng đợi quyết định riêng.
+  RESEARCH_MANAGEMENT_DEPUTY_HEAD: [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/proposals", label: "Hồ sơ đang theo dõi", icon: Files },
+    { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
+    { href: "/notifications", label: "Thông báo", icon: Bell },
+    { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
+  ],
   // TB đọc hồ sơ/đề tài toàn học viện; không quản lý đợt tiếp nhận hay hồ sơ nhà khoa học (khớp menu theme workspace).
   RESEARCH_BOARD_HEAD: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/my-profile", label: "Lý lịch khoa học", icon: UserRoundSearch },
     { href: "/proposals", label: "Quản lý đề tài", icon: Files },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
+    { href: "/student-research", label: "Sinh viên NCKH", icon: GraduationCap },
     { href: "/registration-requests", label: "Yêu cầu đăng ký", icon: UserPlus },
     { href: "/notifications", label: "Thông báo", icon: Bell },
     { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
-  SCIENCE_DEPUTY_DIRECTOR: []
+  SCIENCE_DEPUTY_DIRECTOR: [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/approvals", label: "Văn bản chờ tôi ký", icon: FileClock },
+    { href: "/proposals", label: "Hồ sơ đề xuất", icon: Files },
+    { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
+    { href: "/notifications", label: "Thông báo", icon: Bell },
+    { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
+  ]
 };
 
 export function getAccountById(accountId?: string | null) {

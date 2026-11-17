@@ -56,7 +56,9 @@ export function toShellAccount(user: CurrentUser): ShellAccount {
 }
 
 export function getSystemRoleLabel(systemRole: CurrentUser["systemRole"]) {
-  return systemRole === "SYSTEM_ADMIN"
+  return systemRole === "STUDENT_USER"
+    ? "Sinh viên"
+    : systemRole === "SYSTEM_ADMIN"
     ? "Quản trị hệ thống"
     : systemRole === "RESEARCH_MANAGEMENT_STAFF"
       ? "Chuyên viên quản lý khoa học"
