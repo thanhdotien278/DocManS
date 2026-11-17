@@ -9,9 +9,9 @@ export default function ReviewsPage() {
       <PageHeader
         eyebrow="Quản lý khoa học"
         title="Đánh giá hồ sơ"
-        description="Theo dõi hồ sơ được phân công, tiến độ phản biện và kết quả tổng hợp trong phạm vi được cấp quyền."
+        description="Mở sẵn danh sách hồ sơ chờ kiểm tra đầy đủ; đổi bộ lọc Công việc đánh giá để xem các bước khác."
       />
-      <ResearchProposalsPanel allowCreate={false} />
+      <ResearchProposalsPanel allowCreate={false} initialReviewQueue="recheck" />
     </>
   );
 }

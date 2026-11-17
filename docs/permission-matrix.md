@@ -11,6 +11,10 @@
 > Các tài liệu liên quan trong `docs/` đã được đồng bộ sang mô hình 10 vai trò ngày
 > 18/10/2026. Code và seed trên nhánh `DocManS` đã có đủ 10 mã vai trò, nhưng PGĐ-KH, PP,
 > TB chưa có quyền nghiệp vụ cho đến khi port từ `tuan/DocManS` (xem [`development/auth-seed-users.md`](development/auth-seed-users.md)).
+>
+> **Cập nhật 17/11/2026 — D-045, vai trò thứ 11 `STUDENT_USER` (SV).** SV chỉ dùng phân hệ Sinh viên
+> NCKH; mục "Sinh viên NCKH" cuối file là nguồn chuẩn cho phân hệ này và thay mô hình "giảng viên
+> hướng dẫn đăng ký" trước đây ở §7.1 và §9.6. Các bảng 10 cột còn lại không đổi.
 
 ## 1. Purpose
 
@@ -44,6 +48,7 @@ the 15/10/2026 code audit).
 | CV | Chuyên viên QLKH | `RESEARCH_MANAGEMENT_STAFF` | Phòng KHQS |
 | NCV | Nhà nghiên cứu nội bộ | `RESEARCHER_INTERNAL_USER` | Researcher |
 | NNB | Nhà nghiên cứu bên ngoài | `EXTERNAL_RESEARCHER_USER` | Researcher |
+| SV | Sinh viên | `STUDENT_USER` | Student (Sinh viên NCKH only; added 2026-11-17) |
 
 Role renames versus the former 7-role model: `SCIENTIFIC_MANAGEMENT_HEAD` →
 `RESEARCH_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF` → `RESEARCH_MANAGEMENT_STAFF`.
@@ -115,20 +120,28 @@ Directors who monitor; it is no longer the Science Deputy Director.
   setup, report review, appraising adjustment/extension, acceptance, products,
   drafting liquidation, project closing), funding within assignment.
 - Creates/opens/closes intake periods; manages researcher profiles in unit scope;
-  manages student research (NCKH sinh viên) in unit scope.
+  creates the yearly Sinh viên NCKH period and, as its responsible CV, approves, scores and
+  closes student topics (D-045, section "Sinh viên NCKH").
 - Never operates on records assigned to another CV.
 
 ### NCV — Nhà nghiên cứu nội bộ
 
 - Creates, edits and submits proposals as PI; PI and member work on own projects.
 - Reviewer, council member/secretary or IRB member only when assigned (notes 5, 6).
-- Registers student research as supervising lecturer.
+- Has no action in Sinh viên NCKH: the supervising lecturer is recorded as free text by the
+  student leader (D-045).
 
 ### NNB — Nhà nghiên cứu bên ngoài
 
 - Cannot create proposals, cannot see intake periods, cannot be PI.
 - Participates only as reviewer, council/IRB member, council secretary or project
   member through an explicit record relationship.
+
+### SV — Sinh viên
+
+- Uses only Sinh viên NCKH (`/student-research`), notifications and Văn bản & Biểu mẫu.
+- Cannot create, join, read or review research proposals/projects; has no researcher profile.
+- Account comes only from student self-registration; QT cannot create one or change a role to/from SV.
 
 ### Record-Scoped Participation And Assignment Roles
 
@@ -273,8 +286,11 @@ never creates a new system role.
 | Việc của chủ nhiệm: báo cáo, xin điều chỉnh hoặc gia hạn, nộp nghiệm thu, nộp sản phẩm | — | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | — |
 | Cập nhật tiến độ mốc mình phụ trách (thành viên) | — | — | — | — | — | — | — | — | ◐4 | ◐4 |
 | **Đề tài sinh viên NCKH** | | | | | | | | | | |
-| Đăng ký đề tài (giảng viên hướng dẫn) | — | — | — | — | — | — | — | ✓ | ✓ | — |
-| Duyệt, quản lý, hoàn thành | — | — | — | — | — | — | — | ✓¹ | — | — |
+| Đăng ký đề tài, thêm thành viên, nộp tài liệu (Trưởng nhóm — vai trò SV, ngoài 10 cột này) | — | — | — | — | — | — | — | — | — | — |
+| Lập đợt hằng năm | — | — | — | — | — | — | — | ✓ | — | — |
+| Duyệt/từ chối đăng ký, chấm điểm, xếp giải, đóng đề tài (CV phụ trách đợt) | — | — | — | — | — | — | — | ◐ | — | — |
+| Xem đề tài của đợt, đổi hạn / mở khoá (CV: chỉ CV phụ trách đợt) | — | — | — | — | ✓ | — | ✓ | ◐ | — | — |
+| Giao lại CV phụ trách đợt | — | — | — | — | ✓ | — | — | — | — | — |
 | **Tổng quan** | | | | | | | | | | |
 | Dashboard nghiệp vụ, xuất Excel | — | ✓ | ✓ | ✓⁷ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
@@ -565,10 +581,9 @@ reconciled with the tờ trình routing implemented on `tuan/DocManS`.
 
 ### 9.6 Student Research (Đề tài sinh viên NCKH)
 
-| Action | CV | NCV | Others | Scope Rule | Audit Required |
-| --- | --- | --- | --- | --- | --- |
-| Register topic as supervising lecturer | ✓ | ✓ | None | Own registration | Yes |
-| Approve, manage, complete | ✓¹ | None | None | Unit scope | Yes |
+Superseded on 2026-11-17 by D-045: topics are registered by a student leader (role SV), not by
+a supervising lecturer, and are managed by the CV responsible for the yearly period rather than
+by unit scope. The full action table is in the section "Sinh viên NCKH" at the end of this file.
 
 ### 9.7 Tasks
 
@@ -675,7 +690,8 @@ reconciled with the tờ trình routing implemented on `tuan/DocManS`.
 - This file is the source of truth for permission implementation; §7 wins on conflict.
 - The ten system role codes are those in §2 (`packages/permissions/src/system-roles.js`
   on `tuan/DocManS`). The `DocManS` branch has all ten codes; PGĐ-KH, PP and TB have
-  no business permissions until they are ported.
+  no business permissions until they are ported. An eleventh code, `STUDENT_USER`, was added
+  on 2026-11-17 for Sinh viên NCKH only (D-045).
 - Backend policies combine system role, unit scope, record relationship, assignment,
   workflow state, tờ trình step, and conflict policy.
 - Participation roles (`PROPOSAL_PI`, `TOPIC_PI`, `TOPIC_MEMBER`, `TOPIC_SECRETARY`,
@@ -813,3 +829,52 @@ infer expenditure or add ledgers, payments, banking, invoices or ERP integration
   Vai trò khác nhận 403. Mọi thay đổi ghi audit `create-` / `update-` / `delete-scientific-document`.
 - Tệp theo cùng quy tắc với `modules/files` (đuôi, MIME, chữ ký nội dung, giới hạn `file_max_upload_mb`);
   thay tệp tạo object mới, bản cũ vẫn nằm trên MinIO.
+
+## Sinh viên NCKH (`/student-research`, `api/v1/student-research`) — D-045 (2026-11-17)
+
+The 10-role tables above (§7–§9) do not list SV; every cell for SV there is "Không".
+Student research is a separate module with these rules.
+
+**Student registration.** QT sets `student_registration_enabled = true` (default `false`,
+independent of `self_registration_enabled`). `/register` asks "Sinh viên" or "Nhà khoa học" (a
+researcher then picks inside/outside the academy). A student enters only họ tên, email, username and
+a Hệ (`HVQY-HE-1..5`; the API rejects any other unit). An inside-academy researcher cannot pick the
+`EXT` unit. Flow: `pending_email_verification` → activation link (48h, sets password) → `active`.
+No approval step and no approver notification.
+
+**Student profile** (`/student-profile`, `GET/PUT api/v1/student-research/profile`). After login the
+student fills mã sinh viên (unique), lớp/khoá, số điện thoại and điểm tổng kết học kỳ trước (0–10);
+all four are required to save. Without a profile the student cannot create a topic and the leader
+cannot add them to a group (409 `STUDENT_PROFILE_INCOMPLETE`). A student invited by email without an
+account still joins on activation and completes the profile afterwards.
+
+**Period (đợt).** One per year (`year` unique). Max members per topic 1–5, leader included.
+
+**Topic (đề tài).** Statuses: `pending_approval` → `approved` | `rejected` → (edit = resubmit)
+`pending_approval`; `approved` → `closed`. One student is in at most one topic per period.
+Effective deadline = topic `deadlineOverride`, else the period `submissionDeadline`.
+
+| Action | TP | TB | CV phụ trách đợt | CV khác | Trưởng nhóm (SV) | Thành viên (SV) | SV khác / vai trò khác |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| List periods and download templates | Có | Có | Có | Có | Có | Có | SV: Có; khác: Không |
+| Create period (becomes its officer) | Không | Không | — | Có | Không | Không | Không |
+| Edit period title, max members, templates | Không | Không | Có | Không | Không | Không | Không |
+| Change period deadline | Có | Có | Có | Không | Không | Không | Không |
+| Reassign responsible CV | Có | Không | Không | Không | Không | Không | Không |
+| See topics of the period, download their files | Có | Có | Có | Không | Own topic | Own topic | Không |
+| Register a topic (registration form required, before deadline) | Không | Không | Không | Không | Có | — | SV chưa có đề tài trong đợt |
+| Edit topic / resubmit; add or remove members (pending or rejected, before deadline) | Không | Không | Không | Không | Có | Không | Không |
+| Leave the topic (own membership, not closed) | Không | Không | Không | Không | Không | Có | Không |
+| Approve / reject (reason) registration | Không | Không | Có | Không | Không | Không | Không |
+| Upload or replace registration form (not closed, before deadline) | Không | Không | Không | Không | Có | Không | Không |
+| Upload or replace full / summary report (approved, before deadline) | Không | Không | Không | Không | Có | Không | Không |
+| Set or clear a topic deadline override (unlock) | Có | Có | Có | Không | Không | Không | Không |
+| Score (0–100), optional award, close | Không | Không | Có | Không | Không | Không | Không |
+| Upload award evidence (closed with an award) | Không | Không | Có | Không | Có | Không | Không |
+
+- Members are added by email or username. Only active SV accounts can be added; an email with
+  no account gets an email invitation and joins when that email activates an SV account.
+- Invitation emails are limited to 5 per leader per 15 minutes.
+- Documents: `.doc`, `.docx`, `.pdf`. Award evidence: `.jpg`, `.png`, `.pdf`. Replacing keeps
+  the previous version as a deleted `FileRecord`. These files are not served by `api/v1/files`.
+- After closing, score, award and documents cannot be changed. Every mutation is audited.

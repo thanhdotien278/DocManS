@@ -75,6 +75,15 @@ export function RoutingStatus({ subjectType, subjectId, refreshKey, onChanged }:
     </span>
   ));
 
+  // Tuyến xử lý của từng tờ trình: bước đang giữ được in đậm, bước cuối ghi đúng chức danh người ký.
+  const route = (item: ApprovalSubmission) => (
+    <span className="record-meta" style={{ display: "block" }}>
+      {[["", item.submittedByName], ["BOARD_REVIEW", "Trưởng ban"], ["HEAD_REVIEW", "Trưởng phòng"], ["LEADERSHIP", item.signerLabel]].map(([stage, label], index) => (
+        <span key={stage}>{index ? " → " : ""}{item.status === "PENDING" && item.stage === stage ? <strong aria-current="step">{label}</strong> : label}</span>
+      ))}
+    </span>
+  );
+
   return (
     <SectionCard title="Tờ trình qua Phòng KHQS" subtitle="Người lập → Trưởng ban QLKH → Trưởng phòng KHQS → Ban giám đốc">
       {error ? <p role="alert" className="field-error">{error}</p> : null}
@@ -90,6 +99,7 @@ export function RoutingStatus({ subjectType, subjectId, refreshKey, onChanged }:
                 <td>
                   <span className="record-title">{item.kindLabel}</span>
                   <span className="record-meta">Người ký: {item.signerLabel} · Người lập: {item.submittedByName}</span>
+                  {route(item)}
                 </td>
                 <td>{status(item, "approval-note")}</td>
                 <td>{steps(item)}</td>
@@ -103,6 +113,7 @@ export function RoutingStatus({ subjectType, subjectId, refreshKey, onChanged }:
           <article className="list-card" key={item.id}>
             <span className="record-title">{item.kindLabel}</span>
             <span className="record-meta">Người ký: {item.signerLabel} · Người lập: {item.submittedByName}</span>
+            {route(item)}
             {status(item, "approval-note-mobile")}
             <div>{steps(item)}</div>
           </article>

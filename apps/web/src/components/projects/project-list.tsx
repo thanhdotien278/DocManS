@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SectionCard } from "@/components/ui/section-card";
 import { createProject, listProjects, projectStatusLabel, type ProjectRecord } from "@/lib/projects-api";
@@ -12,6 +13,26 @@ const isPersonal = (project: ProjectRecord) => !!project.viewerAuthorization?.vi
 const canCreateProject = (proposal: ResearchProposal) => !!proposal.viewerAuthorization?.viewerRelationships?.some((item) => item.type === "PROPOSAL_MANAGEMENT_OFFICER");
 
 function date(value?: string | null) { return value ? new Intl.DateTimeFormat("vi-VN", { timeZone: "UTC" }).format(new Date(value)) : "Chưa có"; }
+
+/** Trong hồ sơ đề xuất đã duyệt: mở đề tài đã tạo, hoặc để chuyên viên phụ trách tạo đề tài ngay tại hồ sơ. */
+export function CreateProjectFromProposal({ proposal }: { proposal: ResearchProposal }) {
+  const router = useRouter();
+  const [projectId, setProjectId] = useState<string | null>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => { void listProjects().then((items) => setProjectId(items.find((item) => item.proposalId === proposal.id)?.id ?? null), () => setProjectId(null)); }, [proposal.id]);
+
+  async function create() {
+    if (!window.confirm("Tạo đề tài từ phiên bản đề xuất đã được Lãnh đạo phê duyệt? Sau khi tạo, Trưởng phòng phân công chuyên viên phụ trách đề tài.")) return;
+    setBusy(true); setError("");
+    try { router.push(`/projects/${(await createProject(proposal.id, proposal.viewerAuthorization?.contextVersion)).project.id}`); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể tạo đề tài."); setBusy(false); }
+  }
+
+  if (projectId) return <p><Link className="button" href={`/projects/${projectId}`}>Mở đề tài đã tạo từ đề xuất này</Link></p>;
+  if (projectId === undefined || !canCreateProject(proposal)) return null;
+  return <p><button className="button primary" type="button" disabled={busy} onClick={() => void create()}>Tạo đề tài từ đề xuất này</button>{error ? <span role="alert" className="form-error"> {error}</span> : null}</p>;
+}
 
 export function ProjectList({ mine = false }: { mine?: boolean }) {
   const [projects, setProjects] = useState<ProjectRecord[]>([]);

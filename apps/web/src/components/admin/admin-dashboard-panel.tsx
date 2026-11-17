@@ -96,9 +96,9 @@ export function AdminDashboardPanel() {
               <RefreshCw size={16} aria-hidden="true" className={isLoading ? "spin" : undefined} />
               {isLoading ? "Đang tải" : "Làm mới"}
             </button>
-            <Link className="button primary" href="/users">
-              Mở quản lý người dùng
-            </Link>
+            <Link className="button primary" href="/registration-requests">Duyệt tài khoản</Link>
+            <Link className="button" href="/units">Quản lý đơn vị</Link>
+            <Link className="button" href="/system-settings">Quyền lập hội đồng</Link>
           </>
         }
       />
