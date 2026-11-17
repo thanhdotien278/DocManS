@@ -36,7 +36,8 @@ administration panels, responsive list patterns, shared status badges, KPI
 cards, filters, breadcrumbs, timelines, and UI tokens. The target UX must reuse
 those patterns.
 
-The target product baseline contains ten system roles (one active per account).
+The target product baseline contains ten system roles (one active per account), plus
+`STUDENT_USER` (SV, D-045), whose whole workspace is `/student-research`.
 [`permission-matrix.md`](./permission-matrix.md) §7 is authoritative; superscripts
 below are its condition notes (¹ unit scope, ³ assigned responsible CV only).
 
@@ -49,7 +50,7 @@ below are its condition notes (¹ unit scope, ³ assigned responsible CV only).
 | TP | `RESEARCH_MANAGEMENT_HEAD` | Approves every tờ trình before BGĐ; giao CV phụ trách cho đợt tiếp nhận và đổi CV cả đợt hoặc từng hồ sơ (D-038), assigns responsible CV¹; may do reviewer/council assignment, synthesis, IRB council and tờ trình drafting¹; never completeness/supplement |
 | PP | `RESEARCH_MANAGEMENT_DEPUTY_HEAD` | Monitoring only within unit scope; no tờ trình step or approval |
 | TB | `RESEARCH_BOARD_HEAD` | Reviews CV-authored tờ trình and forwards to TP or returns to author; giao/chuyển/thu hồi CV phụ trách theo từng hồ sơ (D-038)¹; completeness, supplement, reviewer/council assignment, synthesis, IRB council, tờ trình drafting¹ |
-| CV | `RESEARCH_MANAGEMENT_STAFF` | Record operations only on proposals/projects where currently the responsible officer³; intake periods; researcher profiles¹; student research¹ |
+| CV | `RESEARCH_MANAGEMENT_STAFF` | Record operations only on proposals/projects where currently the responsible officer³; intake periods; researcher profiles¹; yearly Sinh viên NCKH period as its responsible CV (D-045) |
 | NCV | `RESEARCHER_INTERNAL_USER` | Researcher-owned and related records |
 | NNB | `EXTERNAL_RESEARCHER_USER` | Only explicitly related approved-topic/task records and assigned review work; never PI, no intake periods |
 

@@ -44,6 +44,7 @@ flowchart LR
   account --> staff["CV — RESEARCH_MANAGEMENT_STAFF<br/>Quản lý hồ sơ được phân công"]
   account --> internal["NCV — RESEARCHER_INTERNAL_USER<br/>Bản ghi của mình / quan hệ hợp lệ"]
   account --> external["NNB — EXTERNAL_RESEARCHER_USER<br/>Chỉ bản ghi được cấp; không là PI"]
+  account --> student["SV — STUDENT_USER<br/>Chỉ Sinh viên NCKH (D-045)"]
 
   record["Một proposal / approved topic / review / task"] --> pi["PROPOSAL_PI / TOPIC_PI (owner-derived)"]
   record --> member["TOPIC_MEMBER"]
@@ -304,6 +305,36 @@ flowchart TD
   immutable_audit --> finish
   blocked --> finish
 ```
+
+### 5.5. Sinh viên NCKH (D-045, 17/11/2026)
+
+Phân hệ riêng, không dùng luồng đề xuất → đề tài. Quy tắc quyền ở
+[`permission-matrix.vi.md`](./permission-matrix.vi.md), mục "Sinh viên NCKH".
+
+```mermaid
+flowchart TD
+  reg["Sinh viên tự đăng ký (chọn Hệ)<br/>(QT bật student_registration_enabled)"] --> verify["Xác minh email, đặt mật khẩu"]
+  verify --> active["Tài khoản SV active<br/>(không qua duyệt)"]
+  active --> profile["SV điền hồ sơ: mã SV, lớp, SĐT, điểm<br/>(bắt buộc đủ trước khi đăng ký đề tài)"]
+  profile --> topic
+  period["CV lập đợt của năm + văn bản mẫu<br/>(CV đó là CV phụ trách; TP giao lại được)"] --> topic
+  topic["Trưởng nhóm đăng ký đề tài<br/>kèm Đơn đăng ký"]
+  topic --> members["Thêm thành viên bằng email / tên đăng nhập<br/>(email chưa có tài khoản: thư mời)"]
+  members --> review{"CV phụ trách duyệt?"}
+  review -- "Từ chối + lý do" --> fix["Trưởng nhóm sửa, gửi lại"] --> review
+  review -- "Duyệt" --> docs["Trưởng nhóm nộp / thay báo cáo toàn văn, tóm tắt"]
+  docs --> deadline{"Quá hạn cuối?"}
+  deadline -- "Chưa" --> docs
+  deadline -- "Rồi: khoá" --> unlock["TP / TB / CV phụ trách<br/>đổi hạn đợt hoặc đặt hạn riêng"] --> docs
+  docs --> close["CV phụ trách chấm điểm 0–100,<br/>chọn giải (nếu có), đóng đề tài"]
+  close --> evidence["Trưởng nhóm hoặc CV phụ trách<br/>tải minh chứng bằng khen, giấy khen"]
+```
+
+- Mỗi sinh viên chỉ thuộc một đề tài trong một đợt; mỗi đề tài một Trưởng nhóm; số thành viên
+  tối đa do CV đặt khi lập đợt (không quá 5, tính cả Trưởng nhóm).
+- Chỉ Trưởng nhóm tải tài liệu; thành viên xem, tải về và tự rời nhóm được.
+- Văn bản là DOC, DOCX hoặc PDF; minh chứng là JPG, PNG hoặc PDF.
+- Trạng thái đề tài: `pending_approval` → `approved` | `rejected` → `pending_approval`; `approved` → `closed`.
 
 ## 6. Trạng thái cốt lõi
 

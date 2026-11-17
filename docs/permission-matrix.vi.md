@@ -11,6 +11,10 @@
 > Các tài liệu liên quan trong `docs/` đã được đồng bộ sang mô hình 10 vai trò ngày
 > 18/10/2026. Code và seed trên nhánh `DocManS` đã có đủ 10 mã vai trò, nhưng PGĐ-KH, PP,
 > TB chưa có quyền nghiệp vụ cho đến khi port từ `tuan/DocManS` (xem [`development/auth-seed-users.md`](development/auth-seed-users.md)).
+>
+> **Cập nhật 17/11/2026 — D-045, vai trò thứ 11 `STUDENT_USER` (SV).** SV chỉ dùng phân hệ Sinh viên
+> NCKH; mục "Sinh viên NCKH" cuối file là nguồn chuẩn cho phân hệ này và thay mô hình "giảng viên
+> hướng dẫn đăng ký" trước đây ở mục 7.1 và 9.6. Các bảng 10 cột còn lại không đổi.
 
 ## 1. Mục đích
 
@@ -43,6 +47,7 @@ hệ theo hồ sơ; 83 mã hành động phân quyền V1 theo đợt đối chi
 | CV | Chuyên viên QLKH | `RESEARCH_MANAGEMENT_STAFF` | Phòng KHQS |
 | NCV | Nhà nghiên cứu nội bộ | `RESEARCHER_INTERNAL_USER` | Nhà nghiên cứu |
 | NNB | Nhà nghiên cứu bên ngoài | `EXTERNAL_RESEARCHER_USER` | Nhà nghiên cứu |
+| SV | Sinh viên | `STUDENT_USER` | Sinh viên (chỉ phân hệ Sinh viên NCKH; thêm ngày 17/11/2026) |
 
 Đổi tên so với mô hình 7 vai trò cũ: `SCIENTIFIC_MANAGEMENT_HEAD` →
 `RESEARCH_MANAGEMENT_HEAD`, `SCIENTIFIC_MANAGEMENT_STAFF` → `RESEARCH_MANAGEMENT_STAFF`.
@@ -112,8 +117,9 @@ làm nhiệm vụ theo dõi, không còn là Phó GĐ phụ trách Khoa học.
   tra đầy đủ, yêu cầu bổ sung, tổng hợp, lập tờ trình (mời phản biện/hội đồng và hội đồng
   IRB chỉ khi QT cấu hình tích role CV, ghi chú 8), nghiệp vụ đề tài hằng ngày (thiết lập mốc, xét báo cáo, thẩm định điều chỉnh/gia
   hạn, nghiệm thu, sản phẩm, lập thanh lý, đóng đề tài), kinh phí trong phạm vi phụ trách.
-- Tạo/mở/đóng đợt tiếp nhận; quản lý hồ sơ nhà khoa học trong phạm vi đơn vị; quản lý đề
-  tài sinh viên NCKH trong phạm vi đơn vị.
+- Tạo/mở/đóng đợt tiếp nhận; quản lý hồ sơ nhà khoa học trong phạm vi đơn vị; lập đợt
+  Sinh viên NCKH hằng năm và, với tư cách CV phụ trách đợt, duyệt, chấm điểm, đóng đề tài sinh
+  viên (D-045, mục "Sinh viên NCKH").
 - Không bao giờ thao tác trên hồ sơ do CV khác phụ trách.
 
 ### NCV — Nhà nghiên cứu nội bộ
@@ -122,13 +128,20 @@ làm nhiệm vụ theo dõi, không còn là Phó GĐ phụ trách Khoa học.
   đề tài của mình.
 - Chỉ là phản biện, thành viên/thư ký hội đồng hoặc thành viên IRB khi được phân công
   (ghi chú 5, 6).
-- Đăng ký đề tài sinh viên NCKH với tư cách giảng viên hướng dẫn.
+- Không có thao tác trong Sinh viên NCKH: giảng viên hướng dẫn do Trưởng nhóm sinh viên ghi
+  dạng văn bản (D-045).
 
 ### NNB — Nhà nghiên cứu bên ngoài
 
 - Không tạo đề xuất, không xem đợt tiếp nhận, không làm chủ nhiệm.
 - Chỉ tham gia với tư cách phản biện, thành viên hội đồng/IRB, thư ký hội đồng hoặc thành
   viên đề tài thông qua quan hệ tường minh với hồ sơ.
+
+### SV — Sinh viên
+
+- Chỉ dùng Sinh viên NCKH (`/student-research`), thông báo và Văn bản & Biểu mẫu.
+- Không tạo, tham gia, xem hay đánh giá đề xuất/đề tài; không có hồ sơ nhà khoa học.
+- Tài khoản chỉ sinh ra từ sinh viên tự đăng ký; QT không tạo và không đổi vai trò sang/từ SV.
 
 ### Vai trò tham gia và phân công theo hồ sơ
 
@@ -268,8 +281,11 @@ bao giờ tạo ra vai trò hệ thống mới.
 | Việc của chủ nhiệm: báo cáo, xin điều chỉnh hoặc gia hạn, nộp nghiệm thu, nộp sản phẩm | — | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | ◐4 | — |
 | Cập nhật tiến độ mốc mình phụ trách (thành viên) | — | — | — | — | — | — | — | — | ◐4 | ◐4 |
 | **Đề tài sinh viên NCKH** | | | | | | | | | | |
-| Đăng ký đề tài (giảng viên hướng dẫn) | — | — | — | — | — | — | — | ✓ | ✓ | — |
-| Duyệt, quản lý, hoàn thành | — | — | — | — | — | — | — | ✓¹ | — | — |
+| Đăng ký đề tài, thêm thành viên, nộp tài liệu (Trưởng nhóm — vai trò SV, ngoài 10 cột này) | — | — | — | — | — | — | — | — | — | — |
+| Lập đợt hằng năm | — | — | — | — | — | — | — | ✓ | — | — |
+| Duyệt/từ chối đăng ký, chấm điểm, xếp giải, đóng đề tài (CV phụ trách đợt) | — | — | — | — | — | — | — | ◐ | — | — |
+| Xem đề tài của đợt, đổi hạn / mở khoá (CV: chỉ CV phụ trách đợt) | — | — | — | — | ✓ | — | ✓ | ◐ | — | — |
+| Giao lại CV phụ trách đợt | — | — | — | — | ✓ | — | — | — | — | — |
 | **Tổng quan** | | | | | | | | | | |
 | Dashboard nghiệp vụ, xuất Excel | — | ✓ | ✓ | ✓⁷ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
@@ -544,10 +560,9 @@ triển khai trên `tuan/DocManS`.
 
 ### 9.6 Đề tài sinh viên NCKH
 
-| Thao tác | CV | NCV | Vai trò khác | Phạm vi | Audit |
-| --- | --- | --- | --- | --- | --- |
-| Đăng ký đề tài với tư cách giảng viên hướng dẫn | ✓ | ✓ | Không | Đăng ký của mình | Có |
-| Duyệt, quản lý, hoàn thành | ✓¹ | Không | Không | Đơn vị | Có |
+Đã được thay ngày 17/11/2026 bởi D-045: đề tài do Trưởng nhóm sinh viên (vai trò SV) đăng ký, không
+phải giảng viên hướng dẫn, và do CV phụ trách đợt hằng năm quản lý thay vì theo phạm vi đơn vị.
+Bảng thao tác đầy đủ ở mục "Sinh viên NCKH" cuối file.
 
 ### 9.7 Task
 
@@ -653,6 +668,7 @@ triển khai trên `tuan/DocManS`.
 - Tài liệu này là nguồn chuẩn cho việc triển khai phân quyền; §7 thắng khi mâu thuẫn.
 - Mười mã vai trò hệ thống là các mã ở §2 (`packages/permissions/src/system-roles.js` trên
   `tuan/DocManS`). Nhánh `DocManS` đã có đủ 10 mã; PGĐ-KH, PP, TB chưa có quyền nghiệp vụ cho đến khi port.
+  Mã thứ 11 `STUDENT_USER` được thêm ngày 17/11/2026, chỉ cho Sinh viên NCKH (D-045).
 - Policy backend kết hợp vai trò hệ thống, phạm vi đơn vị, quan hệ với hồ sơ, phân công,
   trạng thái workflow, bước tờ trình và chính sách xung đột.
 - Vai trò tham gia (`PROPOSAL_PI`, `TOPIC_PI`, `TOPIC_MEMBER`, `TOPIC_SECRETARY`, phản
@@ -761,3 +777,51 @@ toán, ngân hàng, hóa đơn hay tích hợp ERP.
   để dùng lại; giá trị gốc lưu trong audit.
 - Đăng nhập tài khoản `pending_approval` chỉ báo trạng thái chờ duyệt khi mật khẩu đúng.
 
+## Sinh viên NCKH (`/student-research`, `api/v1/student-research`) — D-045 (17/11/2026)
+
+Các bảng 10 vai trò ở trên (mục 7–9) không liệt kê SV; mọi ô của SV ở đó là "Không".
+Sinh viên NCKH là phân hệ riêng với các quy tắc sau.
+
+**Đăng ký tài khoản Sinh viên.** QT đặt `student_registration_enabled = true` (mặc định `false`,
+độc lập với `self_registration_enabled`). Form `/register` hỏi "Sinh viên" hay "Nhà khoa học"
+(nhà khoa học chọn tiếp Trong/Ngoài học viện). Sinh viên chỉ nhập họ tên, email, tên đăng nhập và
+chọn Hệ (`HVQY-HE-1..5`; API từ chối đơn vị khác). Nhà khoa học Trong học viện không chọn được
+đơn vị `EXT`. Luồng: `pending_email_verification` → liên kết kích hoạt (48 giờ, đặt mật khẩu) →
+`active`. Không có bước duyệt, không thông báo cho người duyệt.
+
+**Hồ sơ sinh viên** (`/student-profile`, `GET/PUT api/v1/student-research/profile`). Sinh viên tự
+nhập mã sinh viên (không trùng), lớp/khoá, số điện thoại và điểm tổng kết học kỳ trước (0–10) sau
+khi đăng nhập; phải đủ cả bốn trường mới lưu được. Chưa có hồ sơ thì không đăng ký đề tài và không
+được Trưởng nhóm thêm vào nhóm (409 `STUDENT_PROFILE_INCOMPLETE`). Sinh viên được mời bằng email
+chưa có tài khoản vẫn tự vào nhóm khi kích hoạt và bổ sung hồ sơ sau.
+
+**Đợt.** Mỗi năm một đợt (`year` không trùng). Số thành viên tối đa mỗi đề tài 1–5, tính cả Trưởng nhóm.
+
+**Đề tài.** Trạng thái: `pending_approval` → `approved` | `rejected` → (sửa = gửi lại)
+`pending_approval`; `approved` → `closed`. Mỗi sinh viên chỉ thuộc một đề tài trong một đợt.
+Hạn hiệu lực = hạn riêng của đề tài (`deadlineOverride`), nếu không có thì hạn chung của đợt.
+
+| Thao tác | TP | TB | CV phụ trách đợt | CV khác | Trưởng nhóm (SV) | Thành viên (SV) | SV khác / vai trò khác |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Xem đợt, tải văn bản mẫu | Có | Có | Có | Có | Có | Có | SV: Có; khác: Không |
+| Lập đợt (thành CV phụ trách) | Không | Không | — | Có | Không | Không | Không |
+| Sửa tên đợt, số thành viên tối đa, văn bản mẫu | Không | Không | Có | Không | Không | Không | Không |
+| Đổi hạn cuối của đợt | Có | Có | Có | Không | Không | Không | Không |
+| Giao lại CV phụ trách | Có | Không | Không | Không | Không | Không | Không |
+| Xem đề tài của đợt, tải tệp của đề tài | Có | Có | Có | Không | Đề tài của mình | Đề tài của mình | Không |
+| Đăng ký đề tài (bắt buộc Đơn đăng ký, trước hạn) | Không | Không | Không | Không | Có | — | SV chưa có đề tài trong đợt |
+| Sửa/gửi lại đề tài; thêm, xoá thành viên (chờ duyệt hoặc bị từ chối, trước hạn) | Không | Không | Không | Không | Có | Không | Không |
+| Tự rời nhóm (chính mình, đề tài chưa đóng) | Không | Không | Không | Không | Không | Có | Không |
+| Duyệt / từ chối (kèm lý do) đăng ký | Không | Không | Có | Không | Không | Không | Không |
+| Tải, thay Đơn đăng ký (chưa đóng, trước hạn) | Không | Không | Không | Không | Có | Không | Không |
+| Tải, thay báo cáo toàn văn / tóm tắt (đã duyệt, trước hạn) | Không | Không | Không | Không | Có | Không | Không |
+| Đặt hoặc bỏ hạn riêng của đề tài (mở khoá) | Có | Có | Có | Không | Không | Không | Không |
+| Chấm điểm (0–100), chọn giải (nếu có), đóng đề tài | Không | Không | Có | Không | Không | Không | Không |
+| Tải minh chứng bằng khen, giấy khen (đã đóng, có giải) | Không | Không | Có | Không | Có | Không | Không |
+
+- Thêm thành viên bằng email hoặc tên đăng nhập. Chỉ thêm được tài khoản SV đang hoạt động; email
+  chưa có tài khoản nhận thư mời và tự vào nhóm khi email đó kích hoạt tài khoản SV.
+- Thư mời giới hạn 5 thư mỗi Trưởng nhóm trong 15 phút.
+- Văn bản: `.doc`, `.docx`, `.pdf`. Minh chứng: `.jpg`, `.png`, `.pdf`. Thay tệp giữ bản cũ ở dạng
+  `FileRecord` đã xoá. Các tệp này không tải được qua `api/v1/files`.
+- Sau khi đóng không sửa được điểm, giải và tài liệu. Mọi thay đổi đều ghi audit.

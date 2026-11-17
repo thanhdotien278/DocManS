@@ -1,7 +1,7 @@
 import { BadRequestException, type PipeTransform } from "@nestjs/common";
 
 export type AccountType = "INTERNAL" | "EXTERNAL";
-export type RegisterDto = { email: string; username: string; fullName: string; accountType: AccountType; organizationUnitId?: string };
+export type RegisterDto = { email: string; username: string; fullName: string; accountType: AccountType | "STUDENT"; organizationUnitId?: string };
 export type ApproveRegistrationDto = { organizationUnitId: string; accountType: AccountType; externalAffiliation?: string };
 export type RejectRegistrationDto = { reason: string };
 
@@ -36,6 +36,8 @@ export const registerPipe: PipeTransform<unknown, RegisterDto> = {
     if (!USERNAME_PATTERN.test(username)) throw new BadRequestException({ message: "Tên đăng nhập phải có 3–32 ký tự gồm chữ thường, số, dấu chấm, gạch dưới hoặc gạch ngang." });
     const fullName = text(input, "fullName", 160, "Họ tên là bắt buộc, tối đa 160 ký tự.");
     if (!FULL_NAME_PATTERN.test(fullName)) throw new BadRequestException({ message: "Họ tên chỉ gồm chữ cái, khoảng trắng và các dấu . ' -" });
+    // Mã SV, lớp, SĐT, điểm do sinh viên tự bổ sung ở hồ sơ sau khi đăng nhập.
+    if (input.accountType === "STUDENT") return { email, username, fullName, accountType: "STUDENT", organizationUnitId: text(input, "organizationUnitId", 80, "Vui lòng chọn Hệ.") };
     const type = accountType(input.accountType);
     // Chỉ người Trong học viện chọn đơn vị quản lý lúc đăng ký; người ngoài để cán bộ duyệt chọn.
     const organizationUnitId = type === "INTERNAL" ? text(input, "organizationUnitId", 80, "Vui lòng chọn đơn vị quản lý.") : undefined;
