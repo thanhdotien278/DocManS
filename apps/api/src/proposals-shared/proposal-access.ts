@@ -57,7 +57,7 @@ export function isResearcherInternalUser(user?: SafeUserContext) {
 
 /** Ma trận §7: mọi vai trò trừ QT và NNB được làm chủ nhiệm (tạo, sửa, nộp đề xuất). */
 export function isInternalResearcherEligible(user?: SafeUserContext) {
-  return Boolean(user) && !isSystemAdmin(user) && user?.systemRole !== "EXTERNAL_RESEARCHER_USER";
+  return Boolean(user) && !isSystemAdmin(user) && user?.systemRole !== "EXTERNAL_RESEARCHER_USER" && user?.systemRole !== "STUDENT_USER";
 }
 
 export function isLeadership(user?: SafeUserContext) {

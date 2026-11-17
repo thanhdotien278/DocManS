@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { loadApprovalQueue, type ApprovalSubmission } from "@/lib/approval-routing-api";
 import { loadDecisionQueue, type ResearchProposal } from "@/lib/research-proposals-api";
 
 const DECIDED_STATUSES = ["approved", "rejected"];
@@ -20,63 +21,87 @@ function formatDate(value: string) {
  * that server-filtered projection into waiting and decided sections.
  */
 export function ApprovalQueuePanel() {
-  const [proposals, setProposals] = useState<ResearchProposal[]>([]);
+  const [proposals, setProposals] = useState<ResearchProposal[] | null>(null);
+  const [submissions, setSubmissions] = useState<ApprovalSubmission[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
     let cancelled = false;
-
-    async function load() {
-      try {
-        const data = await loadDecisionQueue();
-        if (!cancelled) {
-          setProposals(data);
-          setState("ready");
-        }
-      } catch {
-        if (!cancelled) {
-          setState("error");
-        }
-      }
-    }
-
-    void load();
+    // Hàng đợi quyết định chỉ dành cho Giám đốc; vai trò khác bị 403 thì chỉ hiện tờ trình chờ chính họ xử lý.
+    void Promise.all([loadApprovalQueue(), loadDecisionQueue().catch(() => null)]).then(([queue, decisions]) => {
+      if (cancelled) return;
+      setSubmissions(queue.submissions);
+      setProposals(decisions);
+      setState("ready");
+    }, () => { if (!cancelled) setState("error"); });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const waiting = useMemo(() => proposals.filter((proposal) => proposal.status === "ready_for_approval"), [proposals]);
-  const decided = useMemo(() => proposals.filter((proposal) => DECIDED_STATUSES.includes(proposal.status)), [proposals]);
+  const waiting = useMemo(() => (proposals ?? []).filter((proposal) => proposal.status === "ready_for_approval"), [proposals]);
+  const decided = useMemo(() => (proposals ?? []).filter((proposal) => DECIDED_STATUSES.includes(proposal.status)), [proposals]);
+  // Hồ sơ đã nằm ở "Chờ quyết định" thì không lặp lại ở danh sách tờ trình.
+  const documents = submissions.filter((item) => !(item.subjectType === "proposal" && waiting.some((proposal) => proposal.id === item.subjectId)));
 
   if (state === "loading") {
-    return <p className="state-message">Đang tải hồ sơ chờ phê duyệt...</p>;
+    return <p className="state-message">Đang tải việc chờ bạn xử lý...</p>;
   }
 
   if (state === "error") {
-    return <p className="state-message error">Không thể tải danh sách hồ sơ chờ phê duyệt.</p>;
+    return <p className="state-message error">Không thể tải danh sách tờ trình chờ xử lý.</p>;
   }
 
   return (
     <>
-      <SectionCard title="Chờ quyết định" subtitle={`${waiting.length} hồ sơ đã được tổng hợp kết quả và đang chờ phê duyệt`}>
-        {waiting.length === 0 ? (
-          <EmptyState
-            title="Chưa có hồ sơ chờ phê duyệt"
-            message="Hồ sơ sẽ xuất hiện sau khi chuyên viên quản lý khoa học tổng hợp kết quả đánh giá."
-          />
+      {proposals ? (
+        <SectionCard title="Chờ quyết định" subtitle={`${waiting.length} hồ sơ đã được tổng hợp kết quả và đang chờ phê duyệt`}>
+          {waiting.length === 0 ? (
+            <EmptyState
+              title="Chưa có hồ sơ chờ phê duyệt"
+              message="Hồ sơ xuất hiện tại đây sau khi tờ trình đã qua Trưởng ban và Trưởng phòng."
+            />
+          ) : (
+            <ProposalRows proposals={waiting} />
+          )}
+        </SectionCard>
+      ) : null}
+
+      <SectionCard title="Tờ trình chờ tôi xử lý" subtitle={`${documents.length} tờ trình đang ở bước của bạn`}>
+        {documents.length === 0 ? (
+          <EmptyState title="Không có tờ trình chờ bạn" message="Tờ trình xuất hiện tại đây khi đến bước thuộc thẩm quyền của bạn." />
         ) : (
-          <ProposalRows proposals={waiting} />
+          <ul className="work-list">
+            {documents.map((item) => (
+              <li className="work-item" key={item.id}>
+                <div className="work-item-record">
+                  <Link className="record-title" href={`/${item.subjectType === "project" ? "projects" : "proposals"}/${item.subjectId}`}>{item.title}</Link>
+                  <span className="record-meta">{item.kindLabel} · {item.submittedByName} trình ngày {formatDate(item.createdAt)}</span>
+                </div>
+                <div className="work-item-step">
+                  <span className="work-item-label">Bước hiện tại</span>
+                  <strong>{item.stageLabel}</strong>
+                </div>
+                <div className="work-item-step">
+                  <span className="work-item-label">Người ký</span>
+                  <span>{item.signerLabel}</span>
+                </div>
+                <Link className="button primary" href={`/${item.subjectType === "project" ? "projects" : "proposals"}/${item.subjectId}`}>Mở hồ sơ</Link>
+              </li>
+            ))}
+          </ul>
         )}
       </SectionCard>
 
-      <SectionCard title="Đã quyết định" subtitle={`${decided.length} hồ sơ đã có quyết định phê duyệt hoặc từ chối`}>
-        {decided.length === 0 ? (
-          <EmptyState title="Chưa có quyết định" message="Các hồ sơ đã phê duyệt hoặc từ chối sẽ được lưu lại ở đây." />
-        ) : (
-          <ProposalRows proposals={decided} />
-        )}
-      </SectionCard>
+      {proposals ? (
+        <SectionCard title="Đã quyết định" subtitle={`${decided.length} hồ sơ đã có quyết định phê duyệt hoặc từ chối`}>
+          {decided.length === 0 ? (
+            <EmptyState title="Chưa có quyết định" message="Các hồ sơ đã phê duyệt hoặc từ chối sẽ được lưu lại ở đây." />
+          ) : (
+            <ProposalRows proposals={decided} />
+          )}
+        </SectionCard>
+      ) : null}
     </>
   );
 }

@@ -1,5 +1,5 @@
 # generated: 2026-07-29T17:30:00+07:00
-# last_updated: 2026-11-09T18:00:00+07:00
+# last_updated: 2026-11-17T21:00:00+07:00
 # project: DocManSystem
 # project_key: NOKEY
 # tracking_system: file-system
@@ -18,7 +18,7 @@
 # - Retrospectives are optional until their Epic is complete.
 
 generated: 2026-07-29T17:30:00+07:00
-last_updated: 2026-11-14
+last_updated: 2026-11-17
 project: DocManSystem
 project_key: NOKEY
 tracking_system: file-system
@@ -151,7 +151,7 @@ development_status:
   8-3-ghi-nhan-dieu-chinh-kinh-phi-san-pham-va-ket-qua: backlog
   8-4-dieu-khien-trang-thai-va-xem-lich-su-hoat-dong: backlog
   8-5-danh-sach-duoc-phan-quyen-va-contract-tich-hop-hoat-dong: backlog
-  8-6-student-research-registration-and-approval: backlog
+  8-6-student-research-registration-and-approval: backlog # superseded by epic-14 (D-045)
   epic-8-retrospective: optional
   epic-9: backlog
   9-1-dang-ky-van-ban-va-tep-noi-dung: backlog
@@ -201,3 +201,12 @@ development_status:
   13-10-own-cv-for-science-managers: done
   13-11-self-registration: review
   epic-13-retrospective: optional
+  epic-14: in-progress
+  14-1-student-role-and-self-activating-registration: review
+  14-2-student-research-period-and-templates: review
+  14-3-student-topic-members-and-approval: review
+  14-4-team-documents-deadline-lock-and-unlock: review
+  14-5-score-award-close-and-evidence: review
+  14-6-student-research-web: review
+  14-7-register-two-step-and-student-profile: review # form 2 bước (Sinh viên/Nhà khoa học → Trong/Ngoài), SV chỉ chọn Hệ 1–5, mã SV/lớp/SĐT/điểm chuyển sang hồ sơ sinh viên và bắt buộc đủ trước khi đăng ký đề tài
+  epic-14-retrospective: optional

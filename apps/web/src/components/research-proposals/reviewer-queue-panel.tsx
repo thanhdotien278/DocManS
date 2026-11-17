@@ -63,7 +63,7 @@ export function ReviewerQueuePanel() {
   ) : (
     <span className="record-meta">{invitation.invitationStatus === "accepted" ? "Đã chấp nhận · Chờ Ban giám đốc ký thành lập hội đồng" : invitation.invitationStatus === "declined" ? "Đã từ chối" : invitation.invitationStatusLabel}</span>
   );
-  const actionLabel = (assignment: ReviewerGrantedItem) => (isSecretary(assignment) ? "Soạn biên bản" : "Chấm phiếu");
+  const actionLabel = (assignment: ReviewerGrantedItem) => (isSecretary(assignment) ? "Soạn biên bản" : assignment.myReviewStatus === "submitted" ? "Xem phiếu đã gửi" : "Chấm phiếu");
 
   return (
     <SectionCard

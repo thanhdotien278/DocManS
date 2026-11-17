@@ -195,7 +195,7 @@ export class ResearchProposalsService {
 
   async listProposals(actor: SafeUserContext) {
     // Chỉ thu hẹp số dòng tải về cho vai trò đọc theo quan hệ; `canReadProposal` bên dưới vẫn quyết định quyền.
-    const byRelationship = ["RESEARCHER_INTERNAL_USER", "EXTERNAL_RESEARCHER_USER", "RESEARCH_MANAGEMENT_STAFF", "SYSTEM_ADMIN"].includes(actor.systemRole);
+    const byRelationship = ["RESEARCHER_INTERNAL_USER", "EXTERNAL_RESEARCHER_USER", "STUDENT_USER", "RESEARCH_MANAGEMENT_STAFF", "SYSTEM_ADMIN"].includes(actor.systemRole);
     const records = (await this.prisma.researchProposal.findMany({
       where: byRelationship ? { OR: [{ ownerId: actor.id }, { members: { some: { userId: actor.id } } }, { reviewAssignments: { some: { reviewerUserId: actor.id } } }, { managementOfficers: { some: { officerUserId: actor.id } } }] } : {},
       orderBy: { createdAt: "desc" },

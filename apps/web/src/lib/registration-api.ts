@@ -11,15 +11,26 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+export type RegistrationStatus = { enabled: boolean; studentEnabled: boolean };
+
+/** enabled: nhà nghiên cứu (chờ duyệt); studentEnabled: sinh viên (tự kích hoạt). Hai công tắc độc lập. */
+export async function getRegistrationStatus(): Promise<RegistrationStatus> {
+  try {
+    const status = await requestJson<Partial<RegistrationStatus>>("/registration/status");
+    return { enabled: status.enabled === true, studentEnabled: status.studentEnabled === true };
+  } catch { return { enabled: false, studentEnabled: false }; }
+}
+
 export async function isSelfRegistrationEnabled() {
-  try { return (await requestJson<{ enabled: boolean }>("/registration/status")).enabled === true; } catch { return false; }
+  const status = await getRegistrationStatus();
+  return status.enabled || status.studentEnabled;
 }
 
-export function listRegistrationUnits() {
-  return requestJson<{ organizationUnits: RegistrationUnit[] }>("/registration/units").then((body) => body.organizationUnits);
+export function listRegistrationUnits(accountType: "STUDENT" | "INTERNAL") {
+  return requestJson<{ organizationUnits: RegistrationUnit[] }>(`/registration/units?accountType=${accountType}`).then((body) => body.organizationUnits);
 }
 
-export function registerAccount(input: { email: string; username: string; fullName: string; accountType: AccountType; organizationUnitId?: string }) {
+export function registerAccount(input: { email: string; username: string; fullName: string; accountType: AccountType | "STUDENT"; organizationUnitId?: string }) {
   return requestJson<{ message: string }>("/registration", { method: "POST", body: JSON.stringify(input) });
 }
 
