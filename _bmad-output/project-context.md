@@ -197,6 +197,10 @@ reviewer/decision, council-position and officer/reviewer/routing-actor/signer co
 relationship changes and protected actions. Apply identical filtering to every read/derived-data
 surface, including files and workflow/business history. Missing/ambiguous context fails closed.
 
+Sinh viên NCKH (D-045, 2026-11-17): an eleventh role `STUDENT_USER` exists only for the student-research module
+(`apps/api/src/student-research`, `/student-research`); it self-activates after email verification and must stay excluded
+from every proposal/project/reviewer path (`isInternalResearcherEligible`, `participantPolicyFor`).
+
 Implementation status: code on `DocManS` has all ten role codes (commit 0a39db3, migration
 `20261016500000`), with TP/CV keeping the former HEAD/STAFF permissions; PGĐ-KH, PP and TB gain business permissions only after
 the routing and IRB implementation is ported from `tuan/DocManS` (no merge base).

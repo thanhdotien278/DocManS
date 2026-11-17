@@ -56,18 +56,26 @@ const MIME_TYPES_BY_EXTENSION: Record<string, string[]> = {
   ".docx": ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
   ".pdf": ["application/pdf"],
   ".xls": ["application/vnd.ms-excel"],
-  ".xlsx": ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
+  ".xlsx": ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+  // Ảnh chỉ dùng khi nơi gọi tự đưa vào allowedExtensions (minh chứng giấy khen); mặc định vẫn không cho phép.
+  ".jpg": ["image/jpeg"],
+  ".jpeg": ["image/jpeg"],
+  ".png": ["image/png"]
 };
 
 // Chữ ký đầu tệp: MIME và đuôi tệp đều do trình duyệt khai, chỉ nội dung mới cho biết tệp thật là gì.
 const ZIP_SIGNATURE = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
 const OLE_SIGNATURE = Buffer.from([0xd0, 0xcf, 0x11, 0xe0]);
+const JPEG_SIGNATURE = Buffer.from([0xff, 0xd8, 0xff]);
 const SIGNATURES_BY_EXTENSION: Record<string, Buffer> = {
   ".doc": OLE_SIGNATURE,
   ".docx": ZIP_SIGNATURE,
   ".pdf": Buffer.from("%PDF"),
   ".xls": OLE_SIGNATURE,
-  ".xlsx": ZIP_SIGNATURE
+  ".xlsx": ZIP_SIGNATURE,
+  ".jpg": JPEG_SIGNATURE,
+  ".jpeg": JPEG_SIGNATURE,
+  ".png": Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 };
 
 export type FileModuleConfig = {

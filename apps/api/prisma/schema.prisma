@@ -8,6 +8,10 @@ datasource db {
 }
 
 model User {
+  studentProfile StudentProfile?
+  responsibleStudentResearchPeriods StudentResearchPeriod[] @relation("StudentResearchPeriodOfficer")
+  ledStudentResearchTopics StudentResearchTopic[] @relation("StudentResearchTopicLeader")
+  studentResearchMemberships StudentResearchTopicMember[]
   createdScientificDocuments ScientificDocument[] @relation("ScientificDocumentCreator")
   researcherProfile ResearcherProfile? @relation("ResearcherProfileAccount")
   id                 String                  @id @default(uuid())
@@ -1297,4 +1301,81 @@ model AcceptanceCouncilMember {
   @@index([projectId])
   @@index([userId])
   @@map("acceptance_council_members")
+}
+
+/// Sinh viên NCKH: hồ sơ cơ bản của tài khoản Sinh viên (không có lý lịch khoa học).
+model StudentProfile {
+  id                    String           @id @default(uuid())
+  userId                String           @unique @map("user_id")
+  user                  User             @relation(fields: [userId], references: [id])
+  studentCode           String           @unique @map("student_code")
+  className             String           @map("class_name")
+  phone                 String
+  organizationUnitId    String           @map("organization_unit_id")
+  previousSemesterScore Decimal          @map("previous_semester_score") @db.Decimal(4, 2)
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+
+  @@map("student_profiles")
+}
+
+/// Mỗi năm một đợt; văn bản mẫu là FileRecord (related_entity_type = student_research_period).
+model StudentResearchPeriod {
+  id                       String    @id @default(uuid())
+  year                     Int       @unique
+  title                    String
+  submissionDeadline       DateTime  @map("submission_deadline")
+  maxMembers               Int       @map("max_members")
+  responsibleOfficerUserId String    @map("responsible_officer_user_id")
+  responsibleOfficer       User      @relation("StudentResearchPeriodOfficer", fields: [responsibleOfficerUserId], references: [id], onDelete: Restrict)
+  responsibleOfficerAssignedById String @map("responsible_officer_assigned_by_id")
+  responsibleOfficerAssignedAt DateTime @default(now()) @map("responsible_officer_assigned_at")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+  topics                   StudentResearchTopic[]
+
+  @@map("student_research_periods")
+}
+
+model StudentResearchTopic {
+  id               String    @id @default(uuid())
+  periodId         String    @map("period_id")
+  period           StudentResearchPeriod @relation(fields: [periodId], references: [id], onDelete: Restrict)
+  title            String
+  summary          String?
+  advisorName      String    @map("advisor_name")
+  advisorUnit      String    @map("advisor_unit")
+  leaderUserId     String    @map("leader_user_id")
+  leader           User      @relation("StudentResearchTopicLeader", fields: [leaderUserId], references: [id], onDelete: Restrict)
+  status           String    @default("pending_approval")
+  rejectionReason  String?   @map("rejection_reason")
+  deadlineOverride DateTime? @map("deadline_override")
+  score            Decimal?  @db.Decimal(5, 2)
+  award            String?
+  closedAt         DateTime? @map("closed_at")
+  closedById       String?   @map("closed_by_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  members          StudentResearchTopicMember[]
+
+  @@index([periodId])
+  @@index([leaderUserId])
+  @@map("student_research_topics")
+}
+
+/// Trưởng nhóm cũng có một dòng; unique theo đợt bảo đảm mỗi sinh viên chỉ thuộc một đề tài trong đợt.
+model StudentResearchTopicMember {
+  id           String   @id @default(uuid())
+  topicId      String   @map("topic_id")
+  topic        StudentResearchTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  periodId     String   @map("period_id")
+  userId       String?  @map("user_id")
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  invitedEmail String?  @map("invited_email")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([periodId, userId])
+  @@unique([periodId, invitedEmail])
+  @@index([topicId])
+  @@map("student_research_topic_members")
 }

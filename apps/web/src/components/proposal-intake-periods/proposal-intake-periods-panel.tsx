@@ -48,6 +48,8 @@ export function ProposalIntakePeriodsPanel() {
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [editingId, setEditingId] = useState("");
+  // Phạm vi phải được chọn rõ: "Toàn Học viện" hoặc danh sách đơn vị, không suy ra từ danh sách trống.
+  const [unitScoped, setUnitScoped] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [message, setMessage] = useState("");
   const [formError, setFormError] = useState("");
@@ -91,6 +93,7 @@ export function ProposalIntakePeriodsPanel() {
   function startEdit(period: ProposalIntakePeriod) {
     setFileInputVersion((value) => value + 1);
     setEditingId(period.id);
+    setUnitScoped(period.applicableOrganizationUnitIds.length > 0);
     setForm({
       code: period.code,
       title: period.title,
@@ -109,6 +112,7 @@ export function ProposalIntakePeriodsPanel() {
   function resetForm() {
     setFileInputVersion((value) => value + 1);
     setEditingId("");
+    setUnitScoped(false);
     setForm(emptyForm);
     setFormError("");
   }
@@ -120,7 +124,11 @@ export function ProposalIntakePeriodsPanel() {
     setFormError("");
 
     if (!form.code || !form.title || !form.startsAt || !form.endsAt || form.requiredPackage.some((item) => !item.file && !item.templateFileId && !item.label)) {
-      setFormError("Vui lòng nhập mã, tên, ngày tiếp nhận và chọn file mẫu.");
+      setFormError("Vui lòng nhập mã, tên, ngày tiếp nhận và chọn tệp mẫu.");
+      return;
+    }
+    if (unitScoped && !form.applicableOrganizationUnitIds.length) {
+      setFormError("Chọn ít nhất một đơn vị hoặc chuyển sang Toàn Học viện.");
       return;
     }
     if (options.canChooseOfficer && !form.responsibleOfficerUserId) {
@@ -163,7 +171,9 @@ export function ProposalIntakePeriodsPanel() {
     const openPrompt = !period.responsibleOfficer && !options.canChooseOfficer
       ? "Đợt chưa có chuyên viên phụ trách. Khi mở, bạn sẽ trở thành chuyên viên phụ trách của đợt này. Tiếp tục?"
       : "Mở đợt tiếp nhận?";
-    if (isSubmitting || !window.confirm(action === "close" ? "Đóng đợt tiếp nhận? Các hồ sơ đã nộp vẫn tiếp tục được xử lý." : openPrompt)) return;
+    const scope = period.applicableOrganizationUnitIds?.map((id) => options.organizationUnits.find((u) => u.id === id)?.name ?? id).join(", ") || "Toàn Học viện";
+    const summary = `\n\nThời gian nhận: ${formatDate(period.startsAt)} - ${formatDate(period.endsAt)}\nPhạm vi: ${scope}\nChuyên viên phụ trách: ${period.responsibleOfficer?.displayName || "Chưa chọn"}\nTệp bắt buộc:\n${period.requiredPackage.map((item, index) => `  ${index + 1}. ${item.fileName || item.label}`).join("\n")}`;
+    if (isSubmitting || !window.confirm(action === "close" ? "Đóng đợt tiếp nhận? Các hồ sơ đã nộp vẫn tiếp tục được xử lý." : `${openPrompt}${summary}`)) return;
     setIsSubmitting(true);
     setMessage("");
     setListError("");
@@ -327,14 +337,14 @@ export function ProposalIntakePeriodsPanel() {
               <input type="date" lang="vi" required min={form.startsAt} value={form.endsAt} onChange={(event) => setForm({ ...form, endsAt: event.target.value })} />
             </label>
           </div>
-          <label className="field">
-            <span>Phạm vi đơn vị áp dụng</span>
-            <select multiple value={form.applicableOrganizationUnitIds} onChange={(event) => setForm({ ...form, applicableOrganizationUnitIds: Array.from(event.target.selectedOptions, (option) => option.value) })}>
+          <fieldset className="field" style={{ border: 0, padding: 0, minWidth: 0 }}>
+            <legend>Phạm vi đơn vị áp dụng</legend>
+            <label><input type="radio" name="intake-scope" checked={!unitScoped} onChange={() => { setUnitScoped(false); setForm({ ...form, applicableOrganizationUnitIds: [] }); }} /> Toàn Học viện</label>
+            <label><input type="radio" name="intake-scope" checked={unitScoped} onChange={() => setUnitScoped(true)} /> Chọn đơn vị</label>
+            {unitScoped ? <select multiple aria-label="Đơn vị áp dụng" value={form.applicableOrganizationUnitIds} onChange={(event) => setForm({ ...form, applicableOrganizationUnitIds: Array.from(event.target.selectedOptions, (option) => option.value) })}>
               {options.organizationUnits.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
-            </select>
-            <span>Không chọn đơn vị: Toàn Học viện.</span>
-            <button className="button" type="button" onClick={() => setForm({ ...form, applicableOrganizationUnitIds: [] })}>Toàn Học viện</button>
-          </label>
+            </select> : null}
+          </fieldset>
           {options.canChooseOfficer ? (
             <label className="field">
               <span>Chuyên viên phụ trách</span>
@@ -355,18 +365,18 @@ export function ProposalIntakePeriodsPanel() {
             {form.requiredPackage.map((item, index) => (
               <div className="document-box" key={`${fileInputVersion}-${item.code}`}>
                 <label className="field">
-                  <span>File upload {index + 1}</span>
+                  <span>Tệp mẫu số {index + 1}</span>
                   <input type="file" accept=".docx,.pdf" required={!item.templateFileId && !item.label} onChange={(event) => updateTemplate(index, { file: event.target.files?.[0] })} />
                 </label>
-                {item.templateFileId && editingId ? <a href={intakeTemplateUrl(editingId, item.templateFileId)}>{item.fileName || item.label}</a> : item.label && !item.file ? <span>{item.label} — chưa có file mẫu</span> : null}
+                {item.templateFileId && editingId ? <a href={intakeTemplateUrl(editingId, item.templateFileId)}>{item.fileName || item.label}</a> : item.label && !item.file ? <span>{item.label} — chưa có tệp mẫu</span> : null}
                 <label className="field">
                   <span>Miêu tả</span>
                   <textarea rows={2} maxLength={500} value={item.description ?? ""} onChange={(event) => updateTemplate(index, { description: event.target.value })} />
                 </label>
-                <button className="button" type="button" disabled={form.requiredPackage.length === 1} onClick={() => setForm({ ...form, requiredPackage: form.requiredPackage.filter((_, i) => i !== index) })}>Bỏ file {index + 1}</button>
+                <button className="button" type="button" disabled={form.requiredPackage.length === 1} onClick={() => setForm({ ...form, requiredPackage: form.requiredPackage.filter((_, i) => i !== index) })}>Bỏ tệp mẫu số {index + 1}</button>
               </div>
             ))}
-            <button className="button" type="button" onClick={() => setForm({ ...form, requiredPackage: [...form.requiredPackage, { ...defaultPackage[0], code: `template-${crypto.randomUUID()}` }] })}>Thêm file</button>
+            <button className="button" type="button" onClick={() => setForm({ ...form, requiredPackage: [...form.requiredPackage, { ...defaultPackage[0], code: `template-${crypto.randomUUID()}` }] })}>Thêm tệp mẫu</button>
           </div>
           {formError ? <p className="form-error">{formError}</p> : null}
           <div className="button-row">

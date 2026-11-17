@@ -424,6 +424,7 @@ Công việc hiện tại:
 
 Bảng 7.1 so sánh vai trò trong hồ sơ (persona), không phải vai trò hệ thống. Bảng 7.2 tóm tắt
 10 vai trò hệ thống; ma trận đầy đủ kèm ghi chú điều kiện ở `docs/permission-matrix.md` §7.
+Vai trò thứ 11 `STUDENT_USER` (Sinh viên, D-045) không tham gia đề tài khoa học nên không có trong bảng.
 
 ### 7.1. Theo vai trò trong hồ sơ
 
@@ -477,7 +478,7 @@ Nên thiết kế theo nguyên tắc:
 ```text
 User account: để đăng nhập
 Researcher profile: hồ sơ nhà khoa học
-System role: quyền nền của tài khoản (đúng một trong 10 vai trò)
+System role: quyền nền của tài khoản (đúng một trong 10 vai trò; vai trò Sinh viên chỉ dùng Sinh viên NCKH)
 Participation role: vai trò của nhà khoa học trong từng proposal/project/council
 Assignment: phân công chuyên viên phụ trách/reviewer/hội đồng/IRB/task cụ thể
 Tờ trình: CV lập → TB rà soát → TP duyệt → Ban giám đốc ký

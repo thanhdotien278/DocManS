@@ -56,9 +56,12 @@ assignments**. The ten system roles ([permission matrix](docs/permission-matrix.
 `SYSTEM_ADMIN` (QT), `LEADERSHIP_APPROVAL_AUTHORITY` (GĐ), `SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH),
 `RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD, monitoring only), `RESEARCH_MANAGEMENT_HEAD` (TP),
 `RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP), `RESEARCH_BOARD_HEAD` (TB), `RESEARCH_MANAGEMENT_STAFF` (CV),
-`RESEARCHER_INTERNAL_USER` (NCV) and `EXTERNAL_RESEARCHER_USER` (NNB). Submissions route as a
+`RESEARCHER_INTERNAL_USER` (NCV) and `EXTERNAL_RESEARCHER_USER` (NNB). An eleventh role,
+`STUDENT_USER` (SV), exists only for **Sinh viên NCKH**: a yearly **Đợt Sinh viên NCKH** run by one
+responsible CV, where a **Trưởng nhóm** (student leader) registers a **Đề tài sinh viên**, adds
+members and uploads documents until the deadline; SV never takes part in proposals or projects. Submissions route as a
 tờ trình CV → TB → TP → BGĐ; only GĐ approves topic, funding and liquidation. The code on the
-`DocManS` branch has all ten role codes, but PGĐ-KH, PP and TB have no business
+`DocManS` branch has all ten role codes (plus `STUDENT_USER`), but PGĐ-KH, PP and TB have no business
 permissions until they are ported from `tuan/DocManS`.
 
 System roles describe account-level responsibility; they do not automatically

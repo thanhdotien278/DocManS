@@ -19,6 +19,9 @@ audience:
 > thuẫn). Code trên nhánh `DocManS` đã có đủ 10 mã vai trò, nhưng PGĐ-KH,
 > PP, TB chưa có quyền nghiệp vụ cho tới khi port từ `tuan/DocManS`. Chỉ số ¹–⁸ trong tài liệu này là ghi chú điều kiện ở
 > permission-matrix §7.2.
+>
+> **17/11/2026 — D-045.** Thêm vai trò thứ 11 `STUDENT_USER` (SV), chỉ dùng phân hệ Sinh viên NCKH và
+> không có quan hệ nào với đề xuất/đề tài. Quy tắc ở permission-matrix, mục "Sinh viên NCKH".
 
 # Mục đích và hiệu lực
 
@@ -62,7 +65,7 @@ role; thay đổi có audit. Một user có system role lãnh đạo hoặc qu�
 | PP | `RESEARCH_MANAGEMENT_DEPUTY_HEAD` | Scope đơn vị¹, chỉ theo dõi | Theo dõi tiến độ, số lượng; xem kinh phí đề tài mình là PI/thành viên⁴ | Không có bước trong luồng tờ trình, không duyệt/ký, kể cả khi TP vắng |
 | TB | `RESEARCH_BOARD_HEAD` | Đề xuất trong scope đơn vị¹; mọi đề tài toàn Học viện | Rà soát tờ trình do CV lập rồi trình TP hoặc trả tác giả; giao/chuyển/thu hồi CV phụ trách theo từng hồ sơ (D-038); kiểm tra đầy đủ, yêu cầu bổ sung, tổng hợp, lập tờ trình trong scope¹; phân công phản biện/hội đồng, lập hội đồng IRB theo cấu hình QT⁸ (mặc định có); quản lý kinh phí toàn Học viện | Không rà soát tờ trình mình lập; không ký thay BGĐ |
 | CV | `RESEARCH_MANAGEMENT_STAFF` | Chỉ hồ sơ/đề tài đang được giao phụ trách³ | Kiểm tra đầy đủ, yêu cầu bổ sung, tổng hợp, lập tờ trình; mời phản biện/hội đồng, lập hội đồng IRB chỉ khi QT cấu hình tích role CV⁸; nghiệp vụ đề tài hằng ngày; kinh phí trong phạm vi giao; tạo/mở/đóng đợt; quản lý hồ sơ nhà khoa học và NCKH sinh viên trong scope¹ | Không thao tác hồ sơ giao cho CV khác; không giao/thu hồi CV (việc hệ thống gán CV mở đợt khi đợt chưa có CV không phải CV tự giao, D-038); quan hệ tham gia không cấp quyền quản lý |
-| NCV | `RESEARCHER_INTERNAL_USER` | Bản ghi có quan hệ hợp lệ⁴ | Tạo/sửa/nộp đề xuất với tư cách PI; làm việc PI/thành viên; reviewer, hội đồng, IRB khi được mời⁵ ⁶; đăng ký NCKH sinh viên với tư cách GVHD | Không xem bản ghi không liên quan, không tự phân công, không quyết định |
+| NCV | `RESEARCHER_INTERNAL_USER` | Bản ghi có quan hệ hợp lệ⁴ | Tạo/sửa/nộp đề xuất với tư cách PI; làm việc PI/thành viên; reviewer, hội đồng, IRB khi được mời⁵ ⁶; không có thao tác trong Sinh viên NCKH (D-045) | Không xem bản ghi không liên quan, không tự phân công, không quyết định |
 | NNB | `EXTERNAL_RESEARCHER_USER` | Chỉ bản ghi có quan hệ được cấp | Reviewer, thành viên hội đồng/IRB, thư ký hội đồng hoặc thành viên đề tài qua quan hệ tường minh | Không bao giờ là PI; không thấy đợt tiếp nhận; không tạo/sửa/nộp đề xuất; không phân công hoặc quyết định |
 
 Đổi tên so với mô hình 7 vai trò cũ: `SCIENTIFIC_MANAGEMENT_HEAD` →

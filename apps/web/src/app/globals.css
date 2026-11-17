@@ -2739,6 +2739,11 @@ a.auth-submit { display: inline-flex; align-items: center; margin-top: 8px; text
   resize: none;
 }
 
+/* Đích của liên kết "mở đúng việc": không bị thanh tiêu đề dính che. */
+.anchor-target { scroll-margin-top: 124px; }
+#project-action { display: grid; gap: 10px; margin-bottom: 12px; }
+#project-action h3, #project-action p { margin: 0; }
+
 .work-list { display: grid; margin: 0; padding: 0; list-style: none; }
 .work-item {
   display: grid;
@@ -2806,9 +2811,9 @@ a.auth-submit { display: inline-flex; align-items: center; margin-top: 8px; text
   :root[data-theme="workspace"] .topbar-row-main :is(.user-name, .user-role) { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
-/* Tóm tắt đầu hồ sơ: markup có sẵn trong trang chi tiết, chỉ theme "Không gian làm việc" hiển thị. */
-.record-summary { display: none; }
-:root[data-theme="workspace"] .record-summary {
+/* Tóm tắt đầu hồ sơ: tên, trạng thái, việc đang chờ người xem và các mục còn thiếu, ở mọi theme. */
+.missing-links { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 4px 0 0; padding: 0; list-style: none; }
+.record-summary {
   display: grid;
   gap: 8px;
   border: 1px solid var(--border);

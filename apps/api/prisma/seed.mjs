@@ -183,6 +183,13 @@ const users = [
   }
 ];
 
+// Sinh viên mẫu cho phân hệ Sinh viên NCKH (cùng mật khẩu "1234"; hồ sơ sinh viên tạo bên dưới).
+const seedStudents = [["sv01", "Nguyễn Văn An", "SV2026001"], ["sv02", "Trần Thị Bình", "SV2026002"], ["sv03", "Lê Minh Châu", "SV2026003"]];
+for (const [username, displayName] of seedStudents) {
+  const id = `user-student-${username}`;
+  users.push({ id, username, passwordHash: `scrypt:${id}:${scryptSync("1234", id, 64).toString("hex")}`, displayName, status: "active", systemRole: "STUDENT_USER", unit: "Khoa Toán - Tin học" });
+}
+
 // Production: the accounts above share a public password, so they are created disabled. Only the admin
 // stays usable, with a password from SEED_ADMIN_PASSWORD and a forced change at first login.
 const isProduction = process.env.NODE_ENV === "production";
@@ -282,6 +289,11 @@ for (const user of users) {
       create: { userId: user.id, organizationUnitId, isPrimary: false }
     });
   }
+}
+
+for (const [username, , studentCode] of seedStudents) {
+  const userId = `user-student-${username}`;
+  await prisma.studentProfile.upsert({ where: { userId }, update: {}, create: { userId, studentCode, className: "DH55A", phone: "0900000000", organizationUnitId: "org-khti", previousSemesterScore: 8 } });
 }
 
 const oversightProfile = await prisma.researcherProfile.upsert({
@@ -513,6 +525,12 @@ await prisma.systemParameter.upsert({
   where: { key: "self_registration_enabled" },
   update: {},
   create: { key: "self_registration_enabled", value: "false", label: "Cho phép tự đăng ký tài khoản nhà nghiên cứu" }
+});
+
+await prisma.systemParameter.upsert({
+  where: { key: "student_registration_enabled" },
+  update: {},
+  create: { key: "student_registration_enabled", value: "false", label: "Cho phép sinh viên tự đăng ký tài khoản" }
 });
 
 await prisma.notificationTemplate.upsert({

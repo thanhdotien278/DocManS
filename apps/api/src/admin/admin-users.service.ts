@@ -172,6 +172,7 @@ export class AdminUsersService {
     const displayName = readText(input.displayName, "displayName");
     const password = validateNewPassword(input.password);
     const systemRole = this.readSystemRole(input.systemRole);
+    this.assertNotStudentRole(systemRole);
     const organizationUnitId = readText(input.organizationUnitId, "organizationUnitId");
 
     const existing = await this.prisma.user.findUnique({ where: { usernameKey: username } });
@@ -266,6 +267,10 @@ export class AdminUsersService {
 
     if (input.systemRole !== undefined) {
       newRole = this.readSystemRole(input.systemRole);
+      if (newRole !== existing.systemRole) {
+        this.assertNotStudentRole(newRole);
+        this.assertNotStudentRole(existing.systemRole);
+      }
       data.systemRole = newRole;
     }
 
@@ -379,8 +384,15 @@ export class AdminUsersService {
     return systemRole as SystemRole;
   }
 
+  /** Tài khoản Sinh viên chỉ sinh ra từ tự đăng ký (kèm hồ sơ sinh viên); không đổi vai trò qua lại. */
+  private assertNotStudentRole(systemRole: string | null) {
+    if (systemRole === "STUDENT_USER") throw new BadRequestException({ message: "Tài khoản Sinh viên do sinh viên tự đăng ký; không tạo hoặc đổi vai trò tại đây." });
+  }
+
   private toRoleLabel(systemRole: SystemRole) {
-    return systemRole === "SYSTEM_ADMIN"
+    return systemRole === "STUDENT_USER"
+      ? "Sinh viên"
+      : systemRole === "SYSTEM_ADMIN"
       ? "Quản trị hệ thống"
       : systemRole === "RESEARCH_MANAGEMENT_STAFF"
         ? "Chuyên viên quản lý khoa học"

@@ -4050,6 +4050,10 @@ So that reminder, dashboard và báo cáo có nguồn dữ liệu đáng tin c�
 
 ### Story 8.6: Đăng ký và duyệt đề tài sinh viên NCKH [FR50, FR51, FR52, FR53]
 
+> **Đã thay bởi Epic 14 (D-045, 17/11/2026).** Đề tài sinh viên do Trưởng nhóm sinh viên (vai trò SV)
+> đăng ký, không phải giảng viên hướng dẫn; AC bên dưới chỉ còn giá trị lịch sử. Phần seminar của
+> Epic 8 (Stories 8.1–8.5) không đổi.
+
 As a CV hoặc NCV làm giảng viên hướng dẫn,
 I want đăng ký đề tài sinh viên NCKH và để CV¹ duyệt, quản lý, hoàn thành,
 So that đề tài sinh viên được theo dõi đúng ma trận §9.6.
@@ -5139,3 +5143,120 @@ So that tôi đăng nhập được bằng tên đăng nhập hoặc email mà k
 **Then** tài khoản chuyển `rejected`/`expired`, email và tên đăng nhập được giải phóng, giá trị gốc lưu trong audit
 **And** khi từ chối, người đăng ký nhận email kèm lý do.
 
+## Epic 14: Sinh viên NCKH (D-045)
+
+Quyết định D-045 (17/11/2026): mỗi năm một đợt Sinh viên NCKH do một CV phụ trách từ đầu đến cuối;
+sinh viên có vai trò hệ thống riêng `STUDENT_USER` (SV), tự đăng ký và tự kích hoạt; đề tài do Trưởng
+nhóm sinh viên đăng ký. Thay Story 8.6. Nguồn quyền: `docs/permission-matrix.md`, mục "Sinh viên NCKH".
+
+### Story 14.1: Vai trò Sinh viên và tự đăng ký không qua duyệt
+
+As a sinh viên chưa có tài khoản,
+I want chọn loại tài khoản Sinh viên, khai thông tin cơ bản và kích hoạt qua email,
+So that tôi dùng được hệ thống ngay mà không chờ chuyên viên duyệt.
+
+**Acceptance Criteria:**
+
+**Given** QT đã bật `student_registration_enabled = true` (mặc định `false`, độc lập với `self_registration_enabled`)
+**When** sinh viên đăng ký với họ tên, email, tên đăng nhập, mã sinh viên, lớp/khoá, số điện thoại, đơn vị và điểm tổng kết học kỳ trước (0–10)
+**Then** hệ thống tạo tài khoản `pending_email_verification` kèm hồ sơ sinh viên và gửi liên kết kích hoạt 48 giờ
+**And** mã sinh viên trùng báo 409; đăng ký hết hạn giải phóng email, tên đăng nhập và mã sinh viên.
+
+**Given** sinh viên bấm liên kết và đặt mật khẩu
+**When** liên kết còn hạn
+**Then** tài khoản chuyển thẳng `active`, không có thông báo cho người duyệt và không tạo hồ sơ nhà khoa học
+**And** sinh viên không tạo, tham gia, xem hay đánh giá đề xuất/đề tài; QT không tạo hoặc đổi vai trò sang/từ SV.
+
+### Story 14.2: Đợt Sinh viên NCKH hằng năm và văn bản mẫu
+
+As a CV,
+I want lập đợt của năm với hạn cuối, số thành viên tối đa và ba văn bản mẫu,
+So that sinh viên biết hạn và có mẫu Đơn đăng ký, Báo cáo toàn văn, Báo cáo tóm tắt.
+
+**Acceptance Criteria:**
+
+**Given** actor là CV
+**When** họ lập đợt cho một năm chưa có đợt
+**Then** đợt được tạo và CV đó là CV phụ trách; năm đã có đợt báo 409
+**And** số thành viên tối đa từ 1 đến 5 (tính cả Trưởng nhóm); văn bản mẫu chỉ nhận DOC, DOCX, PDF.
+
+**Given** đợt đã có
+**When** TP đổi CV phụ trách, hoặc TP/TB/CV phụ trách đổi hạn cuối
+**Then** thay đổi được lưu kèm audit
+**And** CV không phụ trách không sửa được đợt và không thấy đề tài của đợt.
+
+### Story 14.3: Đăng ký đề tài, thành viên, lời mời và duyệt
+
+As a Trưởng nhóm sinh viên,
+I want đăng ký đề tài, thêm thành viên bằng email hoặc tên đăng nhập và gửi cho CV duyệt,
+So that nhóm được chấp nhận trước khi nộp báo cáo.
+
+**Acceptance Criteria:**
+
+**Given** đợt còn hạn và sinh viên chưa thuộc đề tài nào trong đợt
+**When** họ đăng ký đề tài kèm Đơn đăng ký, tên và đơn vị giảng viên hướng dẫn (văn bản tự do)
+**Then** đề tài ở trạng thái `pending_approval` và họ là Trưởng nhóm
+**And** một sinh viên chỉ thuộc một đề tài trong một đợt.
+
+**Given** đề tài đang chờ duyệt hoặc bị từ chối
+**When** Trưởng nhóm thêm thành viên
+**Then** tài khoản SV đang hoạt động được thêm ngay; email chưa có tài khoản nhận thư mời và tự vào nhóm khi kích hoạt tài khoản SV
+**And** tổng thành viên và lời mời không vượt số tối đa của đợt; thư mời giới hạn 5 thư mỗi 15 phút; thành viên tự rời nhóm được.
+
+**Given** CV phụ trách đợt xem đề tài chờ duyệt
+**When** họ duyệt, hoặc từ chối kèm lý do
+**Then** đề tài chuyển `approved` hoặc `rejected`; Trưởng nhóm sửa đề tài bị từ chối là gửi lại
+**And** TP, TB, CV khác và sinh viên không duyệt được.
+
+### Story 14.4: Tài liệu nhóm, khoá theo hạn và mở khoá
+
+As a Trưởng nhóm sinh viên,
+I want tải và thay tài liệu của nhóm đến hạn cuối,
+So that nhóm nộp bản tốt nhất trước khi hệ thống khoá.
+
+**Acceptance Criteria:**
+
+**Given** đề tài chưa đóng và chưa quá hạn hiệu lực (hạn riêng của đề tài, nếu không có thì hạn của đợt)
+**When** Trưởng nhóm tải Đơn đăng ký, hoặc báo cáo toàn văn/tóm tắt sau khi đề tài được duyệt
+**Then** tệp mới thay tệp cũ, bản cũ được giữ làm lịch sử phiên bản
+**And** chỉ nhận DOC, DOCX, PDF; thành viên và vai trò khác không tải lên được.
+
+**Given** đã quá hạn hiệu lực
+**When** Trưởng nhóm tải tệp
+**Then** hệ thống từ chối với thông báo đã khoá
+**And** TP, TB hoặc CV phụ trách đổi hạn của đợt hay đặt hạn riêng cho đề tài thì tải lại được.
+
+### Story 14.5: Chấm điểm, giải thưởng, đóng đề tài và minh chứng
+
+As a CV phụ trách đợt,
+I want nhập điểm, chọn giải (nếu có) rồi đóng đề tài,
+So that kết quả NCKH sinh viên được ghi nhận và không bị sửa sau đó.
+
+**Acceptance Criteria:**
+
+**Given** đề tài đã duyệt
+**When** CV phụ trách nhập điểm 0–100 và chọn giải Nhất, Nhì, Ba, Khuyến khích hoặc không có giải
+**Then** đề tài chuyển `closed`; điểm, giải và tài liệu không sửa được nữa
+**And** TP, TB, CV khác không chấm và không đóng được.
+
+**Given** đề tài đã đóng và có giải
+**When** Trưởng nhóm hoặc CV phụ trách tải ảnh minh chứng bằng khen, giấy khen
+**Then** tệp JPG, PNG hoặc PDF được lưu; định dạng khác bị từ chối.
+
+### Story 14.6: Giao diện Sinh viên NCKH
+
+As a sinh viên hoặc cán bộ Phòng KHQS,
+I want một trang `/student-research` theo vai trò,
+So that tôi làm toàn bộ việc của mình ở một chỗ.
+
+**Acceptance Criteria:**
+
+**Given** người dùng là SV
+**When** họ đăng nhập
+**Then** trang đầu là Sinh viên NCKH; menu chỉ có Sinh viên NCKH, Thông báo, Văn bản & Biểu mẫu
+**And** nút và ô tải tệp chỉ hiện khi API trả capability tương ứng.
+
+**Given** người dùng là TP, TB hoặc CV
+**When** họ mở Sinh viên NCKH
+**Then** họ thấy danh sách đợt, đề tài của đợt mình được xem và các thao tác đúng quyền
+**And** trang đăng ký chỉ hiện loại tài khoản Sinh viên khi `student_registration_enabled` đang bật.

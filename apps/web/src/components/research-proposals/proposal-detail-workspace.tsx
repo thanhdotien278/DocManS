@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Download, FileText, Pencil, Save, Send, Trash2, UploadCloud, X } from "lucide-react";
 import { useSession } from "@/components/auth/session-provider";
 import { RoutingStatus } from "@/components/approvals/routing-status";
+import { CreateProjectFromProposal } from "@/components/projects/project-list";
 import { ProposalCouncilPanel } from "@/components/research-proposals/proposal-council-panel";
 import { CouncilSecretaryPanel, EvaluationFileUpload } from "@/components/research-proposals/council-secretary-panel";
 import { ProposalDecisionPanel } from "@/components/research-proposals/proposal-decision-panel";
@@ -494,6 +495,22 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
             ))}
           </p>
           <p><span className="work-item-label">Việc của bạn ở bước này</span> <strong>{proposalNextStep(proposal)?.waiting ?? "Không có việc đang chờ bạn"}</strong></p>
+          {proposal.status === "approved" ? <CreateProjectFromProposal proposal={proposal} /> : null}
+          {isSupplementFlow && latestSupplementRequest ? (
+            <p>
+              <span className="work-item-label">Yêu cầu bổ sung</span> {latestSupplementRequest.reason} · <strong className={isSupplementOverdue(latestSupplementRequest) ? "work-item-overdue" : undefined}>Hạn sửa {formatIntakeDate(latestSupplementRequest.dueDate)}{isSupplementOverdue(latestSupplementRequest) ? " · Quá hạn" : ""}</strong>
+              {proposal.versions?.length ? ` · Sửa trên bản nháp sau phiên bản đã nộp gần nhất (${proposal.versions.length} phiên bản đã nộp)` : ""}
+            </p>
+          ) : null}
+          {showSubmitPanel && readiness && !readiness.ready && readiness.missingFields.length + readiness.missingFiles.length > 0 ? (
+            <nav aria-label="Mục còn thiếu trước khi nộp">
+              <span className="work-item-label">Còn thiếu trước khi nộp</span>
+              <ul className="missing-links">
+                {readiness.missingFields.map((item) => <li key={item.code}><a href={`#proposal-field-${item.code}`}>{item.label}</a></li>)}
+                {readiness.missingFiles.map((item) => <li key={item.code}><a href={`#document-${item.code}`}>Tệp: {item.label}</a></li>)}
+              </ul>
+            </nav>
+          ) : null}
         </header>
         <button className="button" type="button" disabled={isSaving || isUploading || isSubmitting || isResubmitting} onClick={() => { if (!unsaved || window.confirm("Bỏ thay đổi chưa lưu và tải lại hồ sơ?")) void refresh(); }}>Tải lại hồ sơ</button>
         {unsaved ? <p role="status" className="state-message">Có thay đổi chưa lưu. Lưu bản nháp trước khi nộp.</p> : null}
@@ -557,32 +574,32 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
 
             <div className="form-section-inline">
               <div className="section-mini-heading">Thông tin chung</div>
-              <label className="field">
+              <label className="field anchor-target" id="proposal-field-title">
                 <span>Tên đề tài</span>
                 <input disabled={!canEditAllFields} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
                 {formError.title ? <span className="field-error">{formError.title}</span> : null}
               </label>
               <div className="form-grid two">
-                <label className="field">
+                <label className="field anchor-target" id="proposal-field-research-field">
                   <span>Lĩnh vực</span>
                   <select disabled={!canEditAllFields} value={form.researchFieldCode} onChange={(event) => setForm({ ...form, researchFieldCode: event.target.value })}>
                     <option value="">Chọn lĩnh vực</option>{catalogs.filter((item) => item.type === "research-field" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
                   </select>
                 </label>
-                <label className="field">
+                <label className="field anchor-target" id="proposal-field-proposal-type">
                   <span>Loại đề tài</span>
                   <select disabled={!canEditAllFields} value={form.proposalTypeCode} onChange={(event) => setForm({ ...form, proposalTypeCode: event.target.value })}>
                     {catalogs.filter((item) => item.type === "proposal-type" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
                   </select>
                 </label>
-                <label className="field">
+                <label className="field anchor-target" id="proposal-field-proposal-nature">
                   <span>Tính chất đề tài</span>
                   <select disabled={!canEditAllFields} value={form.proposalNatureCode} onChange={(event) => setForm({ ...form, proposalNatureCode: event.target.value })}>
                     {catalogs.filter((item) => item.type === "proposal-nature" && item.status === "active").map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
                   </select>
                 </label>
               </div>
-              <label className="field">
+              <label className="field anchor-target" id="proposal-field-host-organization-unit">
                 <span>Đơn vị chủ trì</span>
                 <select disabled={!canEditAllFields} value={form.hostOrganizationUnitId} onChange={(event) => setForm({ ...form, hostOrganizationUnitId: event.target.value })}>
                   {!unitOptions.some((unit) => unit.id === form.hostOrganizationUnitId) ? <option value={form.hostOrganizationUnitId}>{hostOrganizationLabel}</option> : null}
@@ -596,7 +613,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               <div className="section-mini-heading">Chủ nhiệm, team và thời gian</div>
               <div className="form-grid two">
                 <ProposalMembersEditor members={form.members ?? []} disabled={!canEditAllFields || isSaving} onChange={(members) => setForm({ ...form, members })} />
-                <label className="field">
+                <label className="field anchor-target" id="proposal-field-timeline">
                   <span>Bắt đầu</span>
                   <input disabled={!canEditAllFields} type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} />
                 </label>
@@ -626,15 +643,15 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
 
             <div className="form-section-inline">
               <div className="section-mini-heading">Mục tiêu, tóm tắt và kinh phí</div>
-              <label className="field">
+              <label className="field anchor-target" id="proposal-field-objectives">
                 <span>Mục tiêu</span>
                 <textarea disabled={!canEditAllFields} rows={3} value={form.objectives} onChange={(event) => setForm({ ...form, objectives: event.target.value })} />
               </label>
-              <label className="field">
+              <label className="field anchor-target" id="proposal-field-summary">
                 <span>Tóm tắt</span>
                 <textarea disabled={!canEdit} rows={4} value={form.summary} onChange={(event) => setForm({ ...form, summary: event.target.value })} />
               </label>
-              <label className="field">
+              <label className="field anchor-target" id="proposal-field-budget">
                 <span>Kinh phí dự kiến</span>
                 <input
                   disabled={!canEditAllFields}
@@ -786,7 +803,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
               <section className="document-box" key={group.code} aria-labelledby={`document-${group.code}`}>
                 <div className="document-box-header">
                   <div>
-                    <h3 id={`document-${group.code}`}>{group.label}</h3>
+                    <h3 className="anchor-target" id={`document-${group.code}`}>{group.label}</h3>
                     <p>
                       {group.description || (group.maxSizeMb === null ? "DOCX, PDF" : `${group.allowedMimeTypes.join(", ")} · tối đa ${group.maxSizeMb}MB`)}
                     </p>

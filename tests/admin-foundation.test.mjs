@@ -895,8 +895,11 @@ describe("admin foundation API behavior", () => {
       "SCIENCE_DEPUTY_DIRECTOR",
       "RESEARCH_OVERSIGHT_AUTHORITY",
       "RESEARCHER_INTERNAL_USER",
-      "EXTERNAL_RESEARCHER_USER"
+      "EXTERNAL_RESEARCHER_USER",
+      "STUDENT_USER"
     ]);
+    // Tài khoản Sinh viên chỉ sinh ra từ tự đăng ký.
+    await assert.rejects(() => service.createUser(adminUser, { username: "sv.tay", displayName: "SV", password: "ValidPassword1", systemRole: "STUDENT_USER", organizationUnitId: unit.id }), { name: "BadRequestException" });
     assert.equal(updatedUnit.status, "inactive");
     assert.deepEqual(
       auditLog.records.map((record) => record.action),
