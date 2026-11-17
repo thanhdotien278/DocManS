@@ -390,7 +390,8 @@ export function AdminUsersPanel() {
             <label className="field">
               <span>Vai trò</span>
               <select name="systemRole" defaultValue={editingUser.systemRole ?? ""}>
-                {roles.map((role) => (
+                {/* Tài khoản Sinh viên chỉ sinh ra từ tự đăng ký; không đổi vai trò qua lại. */}
+                {roles.filter((role) => role.code !== "STUDENT_USER" || editingUser.systemRole === "STUDENT_USER").map((role) => (
                   <option value={role.code} key={role.id}>
                     {role.label}
                   </option>

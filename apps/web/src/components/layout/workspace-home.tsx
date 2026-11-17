@@ -7,6 +7,7 @@ import { useSession } from "@/components/auth/session-provider";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
+import { loadApprovalQueue } from "@/lib/approval-routing-api";
 import { loadNotifications, type UserNotification } from "@/lib/notifications-api";
 import { listProjects, type ProjectRecord } from "@/lib/projects-api";
 import { proposalNextStep } from "@/lib/proposal-next-step";
@@ -62,7 +63,7 @@ function projectItems(projects: ProjectRecord[]): WorkItem[] {
       : mine && project.overdue ? "Có mốc đã quá hạn" : mine && project.approaching ? "Có mốc sắp đến hạn" : "";
     return waiting ? [{
       key: `project-${project.id}`, record: project.title, meta: "Đề tài đang thực hiện", waiting,
-      due: report ? report.responseDeadline : project.nearestDeadline, overdue: report ? report.responseOverdue : project.overdue, href: `/projects/${project.id}`, action: "Mở đề tài"
+      due: report ? report.responseDeadline ?? project.reports.find((item) => item.responseDeadline)?.responseDeadline : project.nearestDeadline, overdue: report ? report.responseOverdue : project.overdue, href: `/projects/${project.id}`, action: report ? report.awaitingAction === "officer" ? "Xét báo cáo" : "Mở bản cần bổ sung" : "Mở đề tài"
     }] : [];
   });
 }
@@ -81,15 +82,21 @@ export function WorkspaceHome() {
     const optional = <T,>(request: Promise<T>) => request.catch(() => null);
     void Promise.all([
       optional(loadResearchProposals()), optional(loadDecisionQueue()), optional(loadMyReviewAssignments()),
-      optional(listProjects()), optional(listRegistrationRequests()), optional(loadNotifications(20))
-    ]).then(([proposals, queue, reviews, projects, registrations, notifications]) => {
+      optional(listProjects()), optional(listRegistrationRequests()), optional(loadNotifications(20)), optional(loadApprovalQueue())
+    ]).then(([proposals, queue, reviews, projects, registrations, notifications, approvals]) => {
       if (cancelled) return;
       const pendingAccounts = registrations?.requests.length ?? 0;
+      const recordItems = [...proposalItems(proposals ?? [], queue ?? []), ...reviewItems(reviews ?? []), ...projectItems(projects ?? [])];
+      // Tờ trình đang ở bước của người xem; bỏ qua khi hồ sơ đó đã có dòng việc ở trên.
+      const routingItems = (approvals?.submissions ?? []).filter((item) => !recordItems.some((row) => row.key === `${item.subjectType}-${item.subjectId}`)).map((item) => ({
+        key: `submission-${item.id}`, record: item.title, meta: `${item.kindLabel} · ${item.submittedByName} trình`, waiting: item.stageLabel,
+        href: `/${item.subjectType === "project" ? "projects" : "proposals"}/${item.subjectId}`, action: "Mở tờ trình"
+      }));
       setData({
         proposals, projects,
         notifications: notifications?.notifications.filter((item) => !item.readAt).slice(0, 5) ?? [],
         items: [
-          ...proposalItems(proposals ?? [], queue ?? []), ...reviewItems(reviews ?? []), ...projectItems(projects ?? []),
+          ...recordItems, ...routingItems,
           ...(pendingAccounts ? [{ key: "registrations", record: `${pendingAccounts} yêu cầu đăng ký tài khoản`, meta: "Tài khoản nhà nghiên cứu", waiting: "Duyệt hoặc từ chối yêu cầu", href: "/registration-requests", action: "Xem yêu cầu" }] : [])
         ]
       });

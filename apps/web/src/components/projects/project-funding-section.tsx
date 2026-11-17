@@ -92,7 +92,7 @@ export function ProjectFundingSection({ project, busy, setBusy, setNotice, onDon
       </div> : null}
     </SectionCard> : null}
 
-    {liquidation ? <SectionCard title="Thanh lý đề tài" subtitle={liquidation.current ? `Biên bản: ${LIQUIDATION_STATUS_LABELS[liquidation.current.status] ?? liquidation.current.status}${liquidation.current.liquidationNumber ? ` · Số ${liquidation.current.liquidationNumber}` : ""}` : liquidation.note ?? "Chưa có biên bản thanh lý"}>
+    {liquidation ? <div id="liquidation" className="anchor-target"><SectionCard title="Thanh lý đề tài" subtitle={liquidation.current ? `Biên bản: ${LIQUIDATION_STATUS_LABELS[liquidation.current.status] ?? liquidation.current.status}${liquidation.current.liquidationNumber ? ` · Số ${liquidation.current.liquidationNumber}` : ""}` : liquidation.note ?? "Chưa có biên bản thanh lý"}>
       <div className="table-wrap"><table className="data-table"><tbody>
         <tr><td>Đã giải ngân</td><td>{vnd(liquidation.current?.totalDisbursed ?? totals.DISBURSEMENT)}</td></tr>
         <tr><td>Đã quyết toán</td><td>{vnd(liquidation.current?.totalSettled ?? totals.SETTLEMENT)}</td></tr>
@@ -108,10 +108,10 @@ export function ProjectFundingSection({ project, busy, setBusy, setNotice, onDon
       {liquidation.canSign && liquidation.current ? <div className="form-grid two">
         <label className="field"><span>Lý do (bắt buộc khi từ chối)</span><input value={reason} onChange={(event) => setReason(event.target.value)} /></label>
         <div className="button-row">
-          <button className="button primary" type="button" disabled={busy || gap !== 0} title={gap !== 0 ? "Chưa cân đối: quyết toán + thu hồi phải bằng đã giải ngân." : undefined} onClick={() => void call(`liquidation/${liquidation.current!.id}/approve`, { reason: reason || undefined }, "Ký biên bản thanh lý và đóng đề tài?")}>Ký biên bản</button>
+          <button className="button primary" type="button" disabled={busy || gap !== 0} title={gap !== 0 ? "Chưa cân đối: quyết toán + thu hồi phải bằng đã giải ngân." : undefined} onClick={() => void call(`liquidation/${liquidation.current!.id}/approve`, { reason: reason || undefined }, "Ký biên bản thanh lý và đóng đề tài?")}>Ký biên bản và đóng đề tài</button>
           <button className="button danger" type="button" disabled={busy || !reason.trim()} onClick={() => void call(`liquidation/${liquidation.current!.id}/reject`, { reason }, "Từ chối biên bản thanh lý?")}>Từ chối</button>
         </div>
       </div> : null}
-    </SectionCard> : null}
+    </SectionCard></div> : null}
   </>;
 }

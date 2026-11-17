@@ -187,7 +187,9 @@ export class AuthStore {
       const user = await tx.user.findUnique({ where: { id: token.userId } });
       if (!user || !["pending_activation", "pending_email_verification"].includes(user.status) || user.credentialVersion !== token.credentialVersion) return null;
       // Story 13.11: tự đăng ký xác minh email xong vẫn phải chờ QT/TB/CV duyệt.
-      const status = user.status === "pending_email_verification" ? "pending_approval" : "active";
+      // Sinh viên tự kích hoạt: xác minh email xong là dùng được ngay.
+      const isStudent = user.systemRole === "STUDENT_USER";
+      const status = user.status === "pending_email_verification" && !isStudent ? "pending_approval" : "active";
       const consumed = await tx.accountActivationToken.updateMany({
         where: { id: token.id, usedAt: null, expiresAt: { gt: new Date() } },
         data: { usedAt: new Date() }
@@ -197,6 +199,8 @@ export class AuthStore {
       await tx.session.updateMany({ where: { userId: token.userId, revokedAt: null }, data: { revokedAt: new Date() } });
       await tx.passwordResetToken.updateMany({ where: { userId: token.userId, usedAt: null }, data: { usedAt: new Date() } });
       await tx.accountActivationToken.updateMany({ where: { userId: token.userId, usedAt: null }, data: { usedAt: new Date() } });
+      // Lời mời vào nhóm đề tài gửi tới email này trước khi có tài khoản.
+      if (isStudent && user.credentialEmail) await tx.studentResearchTopicMember.updateMany({ where: { invitedEmail: user.credentialEmail, userId: null }, data: { userId: user.id, invitedEmail: null } });
       if (status === "pending_approval") await notifyRegistrationApprovers(tx, { id: user.id, displayName: user.displayName });
       return { userId: token.userId, status };
     });

@@ -10,8 +10,10 @@ import { NotificationsService } from "../dist/apps/api/notifications/notificatio
 import { approveRegistrationPipe, registerPipe } from "../dist/apps/api/registration/registration.dto.js";
 import { RegistrationService } from "../dist/apps/api/registration/registration.service.js";
 
+const codeMatches = (unit, code) => !code || (code.startsWith ? unit.code.startsWith(code.startsWith) : unit.code !== code.not);
+
 // Story 13.11: fake Prisma trong bộ nhớ, chỉ đủ cho các truy vấn của luồng tự đăng ký.
-function createDb({ enabled = true } = {}) {
+function createDb({ enabled = true, studentEnabled = false } = {}) {
   const now = () => new Date();
   const db = {
     users: [
@@ -26,8 +28,13 @@ function createDb({ enabled = true } = {}) {
     scopes: [],
     notifications: [],
     audits: [],
-    params: { self_registration_enabled: enabled ? "true" : "false" },
-    units: [{ id: "unit-1", code: "K1", name: "Khoa 1", status: "active" }]
+    invitations: [],
+    params: { self_registration_enabled: enabled ? "true" : "false", student_registration_enabled: studentEnabled ? "true" : "false" },
+    units: [
+      { id: "unit-1", code: "K1", name: "Khoa 1", status: "active" },
+      { id: "he-1", code: "HVQY-HE-1", name: "Hệ 1", status: "active" },
+      { id: "ext", code: "EXT", name: "Đơn vị ngoài", status: "active" }
+    ]
   };
   const matches = (user, where = {}) => Object.entries(where).every(([key, value]) => {
     if (key === "OR") return value.some((clause) => matches(user, clause));
@@ -46,8 +53,10 @@ function createDb({ enabled = true } = {}) {
       async findMany({ where }) { return db.users.filter((user) => matches(user, where)); },
       async create({ data }) {
         if (db.users.some((user) => (data.usernameKey && user.usernameKey === data.usernameKey) || (data.credentialEmail && user.credentialEmail === data.credentialEmail))) throw Object.assign(new Error("unique"), { code: "P2002" });
-        const user = { id: `user-${db.users.length + 1}`, credentialVersion: 0, createdAt: now(), ...data };
+        const { organizationScopes, ...columns } = data;
+        const user = { id: `user-${db.users.length + 1}`, credentialVersion: 0, createdAt: now(), ...columns };
         db.users.push(user);
+        if (organizationScopes) db.scopes.push({ userId: user.id, ...organizationScopes.create });
         return user;
       },
       async update({ where, data }) {
@@ -68,11 +77,14 @@ function createDb({ enabled = true } = {}) {
         return { count: hits.length };
       }
     },
+    studentResearchTopicMember: {
+      async updateMany({ where, data }) { const hits = db.invitations.filter((row) => row.invitedEmail === where.invitedEmail && row.userId === null); hits.forEach((row) => Object.assign(row, data)); return { count: hits.length }; }
+    },
     session: { async updateMany() { return { count: 0 }; } },
     passwordResetToken: { async updateMany() { return { count: 0 }; } },
     organizationUnit: {
-      async findFirst({ where }) { return db.units.find((unit) => unit.id === where.id && unit.status === where.status) ?? null; },
-      async findMany() { return db.units; }
+      async findFirst({ where }) { return db.units.find((unit) => unit.id === where.id && unit.status === where.status && codeMatches(unit, where.code)) ?? null; },
+      async findMany({ where }) { return db.units.filter((unit) => unit.status === where.status && codeMatches(unit, where.code)); }
     },
     researcherProfile: { async create({ data }) { const profile = { id: `profile-${db.profiles.length + 1}`, ...data }; db.profiles.push(profile); return profile; } },
     researcherProfileAccountLink: { async create({ data }) { db.links.push(data); } },
@@ -133,7 +145,9 @@ describe("Story 13.11 self registration", () => {
   it("rejects an inactive or unknown management unit and lists active units publicly", async () => {
     const { service } = createRegistration();
     await assert.rejects(() => service.register(input({ organizationUnitId: "unit-x" }), {}), { name: "BadRequestException" });
-    assert.deepEqual((await service.listUnits()).organizationUnits.map((unit) => unit.id), ["unit-1"]);
+    // Nhà khoa học trong học viện không thấy "Đơn vị ngoài".
+    assert.deepEqual((await service.listUnits()).organizationUnits.map((unit) => unit.id), ["unit-1", "he-1"]);
+    await assert.rejects(() => service.register(input({ organizationUnitId: "ext" }), {}), { name: "BadRequestException" });
     await assert.rejects(() => createRegistration({ enabled: false }).service.listUnits(), { name: "NotFoundException" });
   });
 
@@ -247,5 +261,39 @@ describe("Story 13.11 self registration", () => {
     assert.equal(user.credentialEmail, null);
     assert.match(registration.mail.sent.at(-1).text, /Không xác định được đơn vị/);
     assert.equal(registration.prisma.db.audits.at(-1).beforeFacts.email, "new.user@example.com");
+  });
+
+  const student = (overrides = {}) => input({ accountType: "STUDENT", organizationUnitId: "he-1", ...overrides });
+
+  it("student pipe only needs name, email, username and Hệ", () => {
+    // Mã SV, lớp, SĐT, điểm do sinh viên bổ sung ở hồ sơ sau khi đăng nhập: không đi qua đăng ký.
+    assert.deepEqual(student({ studentCode: "sv001", phone: "0912345678" }), { email: "new.user@example.com", username: "new.user", fullName: "Nguyễn Văn A", accountType: "STUDENT", organizationUnitId: "he-1" });
+    assert.throws(() => student({ organizationUnitId: "" }), { name: "BadRequestException" });
+  });
+
+  it("student registration has its own toggle and only offers Hệ 1-5", async () => {
+    await assert.rejects(() => createRegistration({ enabled: true, studentEnabled: false }).service.register(student(), {}), { name: "NotFoundException" });
+    const { service } = createRegistration({ enabled: false, studentEnabled: true });
+    await service.register(student(), {});
+    await assert.rejects(() => service.register(input({ username: "other", email: "other@example.com" }), {}), { name: "NotFoundException" });
+    await assert.rejects(() => service.listUnits("INTERNAL"), { name: "NotFoundException" });
+    assert.deepEqual((await service.listUnits("STUDENT")).organizationUnits.map((unit) => unit.id), ["he-1"]);
+    // Endpoint công khai: chọn đơn vị không phải Hệ bị từ chối ở API, không chỉ ở form.
+    await assert.rejects(() => service.register(student({ organizationUnitId: "unit-1", username: "other", email: "other@example.com" }), {}), { name: "BadRequestException" });
+  });
+
+  it("a student is active right after verifying the email, with no approval and no approver notice", async () => {
+    const registration = createRegistration({ studentEnabled: true });
+    registration.prisma.db.invitations.push({ invitedEmail: "new.user@example.com", userId: null }, { invitedEmail: "someone@else.vn", userId: null });
+    const result = await registerAndVerify(registration, { accountType: "STUDENT", organizationUnitId: "he-1" });
+    const user = registration.prisma.db.users.at(-1);
+    assert.equal(result.status, "active");
+    assert.equal(user.systemRole, "STUDENT_USER");
+    assert.equal(user.unit, "Hệ 1");
+    assert.deepEqual(registration.prisma.db.scopes, [{ userId: user.id, organizationUnitId: "he-1", isPrimary: true }]);
+    assert.equal(registration.prisma.db.profiles.length, 0);
+    assert.equal(registration.prisma.db.notifications.length, 0);
+    // Lời mời vào nhóm gửi tới đúng email này được nối với tài khoản mới.
+    assert.deepEqual(registration.prisma.db.invitations, [{ invitedEmail: null, userId: user.id }, { invitedEmail: "someone@else.vn", userId: null }]);
   });
 });

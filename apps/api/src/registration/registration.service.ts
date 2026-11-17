@@ -11,6 +11,7 @@ import { normalizeResearcherKey } from "../researcher-profiles/researcher-profil
 import type { AccountType, ApproveRegistrationDto, RegisterDto, RejectRegistrationDto } from "./registration.dto.js";
 
 export const SELF_REGISTRATION_PARAMETER_KEY = "self_registration_enabled";
+export const STUDENT_REGISTRATION_PARAMETER_KEY = "student_registration_enabled";
 const VERIFICATION_TTL_MS = 48 * 60 * 60 * 1000;
 const REGISTER_RATE_LIMIT_MESSAGE = "Đăng ký tạm thời bị giới hạn. Vui lòng thử lại sau.";
 const REGISTER_ACCEPTED_MESSAGE = "Nếu thông tin hợp lệ, hệ thống đã gửi email xác minh. Vui lòng kiểm tra hộp thư trong 48 giờ.";
@@ -18,7 +19,11 @@ const ALREADY_HANDLED_MESSAGE = "Yêu cầu đăng ký đã được xử lý.";
 
 type RequestContext = { ip?: string; userAgent?: string };
 
-const systemRoleOf = (type: AccountType) => (type === "EXTERNAL" ? "EXTERNAL_RESEARCHER_USER" : "RESEARCHER_INTERNAL_USER");
+/** shortcut: chưa có cột loại đơn vị nên nhận diện Hệ bằng tiền tố mã và đơn vị ngoài bằng mã EXT; thêm cột khi có loại thứ ba. */
+export type UnitAudience = "STUDENT" | "INTERNAL";
+const unitFilter = (audience: UnitAudience) => (audience === "STUDENT" ? { code: { startsWith: "HVQY-HE-" } } : { code: { not: "EXT" } });
+
+const systemRoleOf = (type: RegisterDto["accountType"]) => (type === "STUDENT" ? "STUDENT_USER" : type === "EXTERNAL" ? "EXTERNAL_RESEARCHER_USER" : "RESEARCHER_INTERNAL_USER");
 
 /** Story 13.11 (D-044): tự đăng ký → xác minh email → QT/TB/CV duyệt. Hồ sơ nhà nghiên cứu tạo lúc duyệt vì đơn vị quản lý chỉ chọn lúc đó. */
 @Injectable()
@@ -31,13 +36,18 @@ export class RegistrationService {
     private readonly rateLimit: AuthRateLimitService
   ) {}
 
-  async isEnabled() {
-    const row = await this.prisma.systemParameter.findUnique({ where: { key: SELF_REGISTRATION_PARAMETER_KEY } });
+  async isEnabled(key = SELF_REGISTRATION_PARAMETER_KEY) {
+    const row = await this.prisma.systemParameter.findUnique({ where: { key } });
     return row?.value === "true";
   }
 
+  /** Sinh viên có công tắc riêng: bật đăng ký sinh viên không mở đăng ký nhà nghiên cứu. */
+  isStudentEnabled() {
+    return this.isEnabled(STUDENT_REGISTRATION_PARAMETER_KEY);
+  }
+
   async register(input: RegisterDto, context: RequestContext) {
-    if (!(await this.isEnabled())) throw new NotFoundException();
+    if (!(await (input.accountType === "STUDENT" ? this.isStudentEnabled() : this.isEnabled()))) throw new NotFoundException();
     // Endpoint công khai gửi mail tới địa chỉ bất kỳ: giới hạn mọi lần thử theo cả IP lẫn email.
     const keys = [`register-ip:${context.ip ?? "unknown"}`, `register-email:${input.email}`];
     for (const key of keys) this.rateLimit.assertCanAttempt(key, Date.now(), REGISTER_RATE_LIMIT_MESSAGE);
@@ -53,11 +63,17 @@ export class RegistrationService {
         await this.auditLog.record({ action: "self-register", result: "failure", targetEntity: "user", targetEntityId: "unknown", username: input.username, ip: context.ip, userAgent: context.userAgent, reason: "email_in_use" }, tx);
         return null;
       }
-      if (input.organizationUnitId && !(await tx.organizationUnit.findFirst({ where: { id: input.organizationUnitId, status: "active" } }))) throw new BadRequestException({ message: "Đơn vị quản lý không hợp lệ hoặc đã ngừng hoạt động." });
+      const student = input.accountType === "STUDENT";
+      const unit = input.organizationUnitId ? await tx.organizationUnit.findFirst({ where: { id: input.organizationUnitId, status: "active", ...unitFilter(student ? "STUDENT" : "INTERNAL") } }) : null;
+      if (input.organizationUnitId && !unit) throw new BadRequestException({ message: student ? "Hệ không hợp lệ." : "Đơn vị quản lý không hợp lệ hoặc đã ngừng hoạt động." });
       const user = await tx.user.create({ data: {
         username: input.username, usernameKey: input.username, displayName: input.fullName, credentialEmail: input.email,
         passwordHash,
-        mustChangePassword: false, status: "pending_email_verification", systemRole: systemRoleOf(input.accountType), unit: "", requestedOrganizationUnitId: input.organizationUnitId ?? null
+        mustChangePassword: false, status: "pending_email_verification", systemRole: systemRoleOf(input.accountType), requestedOrganizationUnitId: input.organizationUnitId ?? null,
+        // Sinh viên không qua bước duyệt nên Hệ được ghi ngay lúc đăng ký; hồ sơ sinh viên tạo khi họ lưu hồ sơ.
+        ...(student && unit
+          ? { unit: unit.name, organizationScopes: { create: { organizationUnitId: unit.id, isPrimary: true } } }
+          : { unit: "" })
       } });
       const activation = this.passwordService.createResetToken();
       const expiresAt = new Date(Date.now() + VERIFICATION_TTL_MS);
@@ -83,13 +99,13 @@ export class RegistrationService {
     return { message: REGISTER_ACCEPTED_MESSAGE };
   }
 
-  async listUnits() {
-    if (!(await this.isEnabled())) throw new NotFoundException();
-    return { organizationUnits: await this.activeUnits() };
+  async listUnits(audience: UnitAudience = "INTERNAL") {
+    if (!(await (audience === "STUDENT" ? this.isStudentEnabled() : this.isEnabled()))) throw new NotFoundException();
+    return { organizationUnits: await this.activeUnits(unitFilter(audience)) };
   }
 
-  private activeUnits() {
-    return this.prisma.organizationUnit.findMany({ where: { status: "active" }, select: { id: true, code: true, name: true }, orderBy: { name: "asc" } });
+  private activeUnits(filter: object = {}) {
+    return this.prisma.organizationUnit.findMany({ where: { status: "active", ...filter }, select: { id: true, code: true, name: true }, orderBy: { name: "asc" } });
   }
 
   async listRequests(actor: SafeUserContext) {

@@ -40,7 +40,7 @@ Compiled with `tsconfig.app.json` (`module: NodeNext`, `rootDir: src`) to `dist/
 - **The API cannot import `@rtms/*` workspace packages** — `rootDir: src` forbids emitting outside `src`. `packages/permissions` is therefore hand-duplicated at `apps/api/src/permissions/permission-policy.ts`. Keep the two in sync when either changes.
 - `npm run dev:api` has no watch mode; every change needs a rebuild.
 
-Module layout: `auth/`, `admin/`, `modules/files/`, `proposal-intake-periods/`, `research-proposals/`, with cross-cutting helpers in `proposals-shared/` and `infrastructure/` (Prisma, MinIO). All feature modules import `AuthModule` and guard controllers with `@UseGuards(SessionAuthGuard)`; the guard attaches `request.currentUser: SafeUserContext`, and controllers pass it explicitly into services (`request.currentUser!`).
+Module layout: `auth/`, `admin/`, `modules/files/`, `proposal-intake-periods/`, `research-proposals/`, `student-research/`, with cross-cutting helpers in `proposals-shared/` and `infrastructure/` (Prisma, MinIO). All feature modules import `AuthModule` and guard controllers with `@UseGuards(SessionAuthGuard)`; the guard attaches `request.currentUser: SafeUserContext`, and controllers pass it explicitly into services (`request.currentUser!`).
 
 **Validation uses hand-written `PipeTransform` object literals, not class-validator.** DTO classes are plain shapes; a sibling `xxxPipe` const does the checking via helpers in `proposals-shared/proposal-validation.ts` and throws `BadRequestException` with a Vietnamese message. Bind it per-parameter: `@Body(createResearchProposalDraftPipe) body: CreateResearchProposalDraftDto`. Tests import these pipes directly.
 

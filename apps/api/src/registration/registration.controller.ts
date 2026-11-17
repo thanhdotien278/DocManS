@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
 import { approveRegistrationPipe, registerPipe, rejectRegistrationPipe, type ApproveRegistrationDto, type RegisterDto, type RejectRegistrationDto } from "./registration.dto.js";
@@ -10,12 +10,12 @@ export class RegistrationController {
 
   @Get("status")
   async status() {
-    return { enabled: await this.registration.isEnabled() };
+    return { enabled: await this.registration.isEnabled(), studentEnabled: await this.registration.isStudentEnabled() };
   }
 
   @Get("units")
-  async units() {
-    return this.registration.listUnits();
+  async units(@Query("accountType") accountType?: string) {
+    return this.registration.listUnits(accountType === "STUDENT" ? "STUDENT" : "INTERNAL");
   }
 
   @Post()

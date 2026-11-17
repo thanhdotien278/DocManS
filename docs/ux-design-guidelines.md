@@ -387,7 +387,7 @@ No TP/TB/CV approval control for adjustments or extensions exists; only the BGĐ
 QT chọn tại Cấu hình hệ thống (tham số `ui_theme`); mặc định là theme hiện tại (`classic`, điều hướng ngang).
 Theme "Không gian làm việc" (`workspace`) dùng cùng bảng màu §3, đưa điều hướng sang sidebar trái theo §5, bỏ bóng
 đổ panel và giảm radius còn `6px`. Riêng theme này: menu theo nhóm việc của từng vai trò (`getWorkspaceNavigation` trong
-`apps/web/src/lib/navigation.ts`, đủ 10 vai trò, không liệt kê Giao việc/Báo cáo vì chưa có nguồn dữ liệu thật); trang đầu
+`apps/web/src/lib/navigation.ts`, đủ 10 vai trò và vai trò Sinh viên, không liệt kê Giao việc/Báo cáo vì chưa có nguồn dữ liệu thật); trang đầu
 là "Việc cần xử lý" lấy từ API nghiệp vụ, việc tiếp theo suy ra từ `allowedActions` (`components/layout/workspace-home.tsx`,
 `lib/proposal-next-step.ts`); trang có từ 4 panel trở lên có mục lục phần (`components/layout/section-nav.tsx`); chi tiết hồ sơ
 đề xuất có khối tóm tắt đầu trang (tên, trạng thái, quan hệ của người xem, việc đang chờ); trường bị khóa hiện như văn bản,

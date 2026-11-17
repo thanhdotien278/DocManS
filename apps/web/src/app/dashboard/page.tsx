@@ -1,165 +1,19 @@
 "use client";
 
-import Link from "next/link";
 import { useSession } from "@/components/auth/session-provider";
 import { AdminDashboardPanel } from "@/components/admin/admin-dashboard-panel";
 import { WorkspaceHome } from "@/components/layout/workspace-home";
+import { StudentResearchPanel } from "@/components/student-research/student-research-panel";
 import { ManagementDashboardPanel } from "@/components/research-proposals/management-dashboard-panel";
-import { AlertList } from "@/components/ui/alert-list";
-import { Breadcrumb } from "@/components/ui/breadcrumb";
-import { KpiCard } from "@/components/ui/kpi-card";
-import { PageHeader } from "@/components/ui/page-header";
-import { SectionCard } from "@/components/ui/section-card";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { getDashboardSnapshot, type DashboardPanel } from "@/fixtures/showcase-data";
-import { useUiTheme } from "@/lib/ui-theme";
-
-function renderPanel(panel: DashboardPanel) {
-  if (panel.variant === "chart") {
-    return (
-      <SectionCard key={panel.title} title={panel.title} subtitle={panel.subtitle}>
-        <div className="chart-placeholder" aria-label={panel.title}>
-          {panel.bars.map((bar) => (
-            <div className="chart-bar" key={bar.label}>
-              <span style={{ height: bar.height }} />
-              <strong>{bar.label}</strong>
-            </div>
-          ))}
-        </div>
-      </SectionCard>
-    );
-  }
-
-  if (panel.variant === "list") {
-    return (
-      <SectionCard
-        key={panel.title}
-        title={panel.title}
-        subtitle={panel.subtitle}
-        action={
-          panel.actionHref && panel.actionLabel ? (
-            <Link className="button" href={panel.actionHref}>
-              {panel.actionLabel}
-            </Link>
-          ) : undefined
-        }
-      >
-        <AlertList items={panel.items} />
-      </SectionCard>
-    );
-  }
-
-  return (
-    <SectionCard
-      key={panel.title}
-      title={panel.title}
-      subtitle={panel.subtitle}
-      action={
-        panel.actionHref && panel.actionLabel ? (
-          <Link className="button" href={panel.actionHref}>
-            {panel.actionLabel}
-          </Link>
-        ) : undefined
-      }
-    >
-      <div className="table-wrap" tabIndex={0} role="region" aria-label="Danh sách việc cần xử lý">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Mã hồ sơ</th>
-              <th>Tên đề tài</th>
-              <th>Đơn vị</th>
-              <th>Trạng thái</th>
-              <th>Hạn xử lý</th>
-            </tr>
-          </thead>
-          <tbody>
-            {panel.rows.map((row) => (
-              <tr key={row.code}>
-                <td>
-                  <Link className="record-title" href={row.href}>
-                    {row.code}
-                  </Link>
-                </td>
-                <td>
-                  <span className="record-title">{row.title}</span>
-                  <span className="record-meta">{row.meta}</span>
-                </td>
-                <td>{row.unit}</td>
-                <td>
-                  <StatusBadge status={row.status} />
-                </td>
-                <td>{row.dueDate}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="mobile-list">
-        {panel.rows.map((row) => (
-          <article className="list-card" key={row.code}>
-            <div className="list-card-header">
-              <div>
-                <Link className="record-title" href={row.href}>
-                  {row.code}
-                </Link>
-                <span className="record-meta">{row.title}</span>
-              </div>
-              <StatusBadge status={row.status} />
-            </div>
-            <span className="record-meta">
-              {row.unit} - hạn {row.dueDate}
-            </span>
-          </article>
-        ))}
-      </div>
-    </SectionCard>
-  );
-}
 
 export default function DashboardPage() {
   const { account } = useSession();
-  const theme = useUiTheme();
-  // Chờ biết vai trò rồi mới chọn nhánh, tránh nhoáng số liệu minh họa trước.
   if (!account) return null;
-  // Dashboard đã có số liệu thật theo vai trò được ưu tiên ở mọi theme.
   if (account.systemRole === "SYSTEM_ADMIN") return <AdminDashboardPanel />;
   if (account.systemRole === "RESEARCH_MANAGEMENT_STAFF") return <ManagementDashboardPanel />;
   if (account.systemRole === "RESEARCH_MANAGEMENT_HEAD" || account.systemRole === "RESEARCH_BOARD_HEAD") return <ManagementDashboardPanel variant="lead" />;
-  // Theme "Không gian làm việc" thay số liệu minh họa của các vai trò còn lại bằng hàng đợi việc lấy từ API nghiệp vụ.
-  if (theme === "workspace") return <WorkspaceHome />;
-  const snapshot = getDashboardSnapshot(account.systemRole);
-
-  return (
-    <>
-      <Breadcrumb items={[{ label: "Dashboard" }]} />
-      <PageHeader
-        eyebrow={snapshot.eyebrow}
-        title={snapshot.title}
-        description={snapshot.description}
-        actions={
-          <Link className="button primary" href={snapshot.primaryActionHref}>
-            {snapshot.primaryActionLabel}
-          </Link>
-        }
-      />
-      <p className="record-meta" role="note">Dữ liệu dashboard hiện là dữ liệu minh họa giao diện; số liệu vận hành thực tế lấy từ các màn hình nghiệp vụ theo phạm vi quyền.</p>
-
-      <div className="grid kpi-grid" style={{ marginBottom: 16 }}>
-        {snapshot.kpis.map((kpi) => (
-          <KpiCard key={kpi.label} label={kpi.label} value={kpi.value} meta={kpi.meta} tone={kpi.tone} />
-        ))}
-      </div>
-
-      <div className="grid two-column">
-        {renderPanel(snapshot.panels[0])}
-        {renderPanel(snapshot.panels[1])}
-      </div>
-
-      <div className="grid two-column" style={{ marginTop: 16 }}>
-        {renderPanel(snapshot.panels[2])}
-        {renderPanel(snapshot.panels[3])}
-      </div>
-    </>
-  );
+  // Sinh viên chỉ có một việc: đề tài NCKH của nhóm mình.
+  if (account.systemRole === "STUDENT_USER") return <StudentResearchPanel />;
+  // Các vai trò còn lại: hàng đợi việc lấy từ chính các API mà danh sách nghiệp vụ dùng, nên số liệu luôn khớp khi mở ra.
+  return <WorkspaceHome />;
 }
