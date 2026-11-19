@@ -1418,7 +1418,7 @@ for `DECISION_PACKAGE` and `LIQUIDATION`, otherwise `DIRECTOR_OR_SCIENCE_DEPUTY`
   gives profile management only to QT/TP/CV.
 - Who may set an approval
   submission to `REJECTED` or `CANCELLED` is not fixed by the matrix; take it
-  from the `tuan/DocManS` routing implementation when ported.
+  from the routing implementation when it lands.
 
 ## Traceability
 

@@ -326,3 +326,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-6-9-p3-yeu-cau-bo-sung-ho-so-nghiem-thu.md`
   summary: (ĐÃ LÀM 13/11/2026; đã thử trên trình duyệt luồng CV yêu cầu → PI nộp lại v2) Giao diện yêu cầu bổ sung hồ sơ nghiệm thu: form lý do + hạn cho TP/TB/CV phụ trách, hộp lý do/hạn cho PI và sửa/nộp lại ở trạng thái `supplement_requested` trong `acceptance-dossier-workspace.tsx`.
   evidence: Người dùng chọn tách UI ngày 2026-11-13 vì spec vượt 1600 token, giống 6.8/6.9.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-dashboard-analytics-drill-down.md`
+  summary: Tối ưu vòng lặp truy vấn N+1 `loadAuthorized` theo từng đề tài bên trong `ApprovedProjectsService.listProjects` khi số lượng đề tài toàn Học viện tăng lớn.
+  evidence: Review `spec-dashboard-analytics-drill-down` (triage #5) — `ApprovedProjectsService.listProjects` tại `apps/api/src/approved-projects/approved-projects.service.ts:190-192` đã gọi tuần tự `loadAuthorized` cho từng đề tài từ trước `baseline_commit`; giữ nguyên trong phạm vi story này để không thay đổi luồng uỷ quyền cốt lõi của phân hệ đề tài.

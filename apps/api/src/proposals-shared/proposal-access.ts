@@ -3,7 +3,7 @@ import type { SafeUserContext } from "../auth/auth.types.js";
 import { evaluateProposalConflict, type ProposalParticipation } from "./proposal-participation.js";
 import type { ProposalReviewAccess } from "./proposal-review-access.js";
 import type { ProposalManagementOfficerResolution } from "./proposal-management-officer.service.js";
-import { isWorkflowVisibleStatus } from "./proposal-workflow.js";
+import { isWorkflowVisibleStatus, WORKFLOW_VISIBLE_STATUSES } from "./proposal-workflow.js";
 
 type IntakeLike = {
   applicableOrganizationUnitIds?: string[];
@@ -117,7 +117,7 @@ export function canReadProposal(
   reviewAccess?: ProposalReviewAccess,
   managementOfficer?: ProposalManagementOfficerResolution
 ) {
-  if (!user) {
+  if (!user || isSystemAdmin(user) || user.systemRole === "STUDENT_USER") {
     return false;
   }
 
@@ -173,4 +173,44 @@ export function assertCanEditProposalDraft(user: SafeUserContext | undefined, pr
   }
 
   return actor;
+}
+
+/**
+ * Chặn QT (`SYSTEM_ADMIN`) và SV (`STUDENT_USER`) truy cập dữ liệu nghiệp vụ, đồng thời thu hẹp
+ * ứng viên truy vấn DB trước khi kiểm tra `canReadProposal` chi tiết trên từng hồ sơ.
+ */
+export function readableProposalCandidatesWhere(user?: SafeUserContext) {
+  if (!user || isSystemAdmin(user) || user.systemRole === "STUDENT_USER") {
+    throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Không có quyền truy cập dữ liệu nghiệp vụ." });
+  }
+  if (isResearchManagementHead(user) || isResearchOversightAuthority(user) || isResearchBoardHead(user) || isResearchManagementDeputyHead(user)) {
+    return {};
+  }
+  if (isLeadership(user) || isScienceDeputyDirector(user)) {
+    return {
+      OR: [
+        { status: { in: [...WORKFLOW_VISIBLE_STATUSES] } },
+        { ownerId: user.id },
+        { members: { some: { userId: user.id } } },
+        { reviewAssignments: { some: { reviewerUserId: user.id } } }
+      ]
+    };
+  }
+  if (isResearchManagementStaff(user)) {
+    return {
+      OR: [
+        { ownerId: user.id },
+        { members: { some: { userId: user.id } } },
+        { reviewAssignments: { some: { reviewerUserId: user.id } } },
+        { managementOfficers: { some: { officerUserId: user.id } } }
+      ]
+    };
+  }
+  return {
+    OR: [
+      { ownerId: user.id },
+      { members: { some: { userId: user.id } } },
+      { reviewAssignments: { some: { reviewerUserId: user.id } } }
+    ]
+  };
 }
