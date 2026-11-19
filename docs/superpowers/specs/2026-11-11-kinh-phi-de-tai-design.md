@@ -4,8 +4,8 @@ Ngày: 2026-11-11. Nhánh dự kiến: `feat/6-13-kinh-phi-de-tai`. Nguồn AC: 
 
 ## Bối cảnh và kết luận rà soát
 
-- Báo cáo "Kinh phí đề tài DocManS.html" mô tả fork `tuanp83/DocManS` (commit 55a02bb), **không phải** mã hiện tại.
-  Fork dùng mô hình đợt giải ngân + khoản chi, ghi đè toàn bộ mỗi lần lưu, và có 3 lỗi thiết kế
+- Báo cáo "Kinh phí đề tài DocManS.html" mô tả một bản mã khác, **không phải** mã hiện tại.
+  Bản đó dùng mô hình đợt giải ngân + khoản chi, ghi đè toàn bộ mỗi lần lưu, và có 3 lỗi thiết kế
   (hai số "đã quyết toán" không ràng buộc, lịch sử chỉ ghi tổng, không kiểm tra tổng phân bổ/tỷ lệ).
 - Repo này đã có Story 6.12 (`review`): `project_funding_records` (sổ ghi append-only, GRANT / DISBURSEMENT /
   SETTLEMENT, có version) và `project_liquidations` + tờ trình LIQUIDATION (TB → TP → GĐ ký).

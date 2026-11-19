@@ -13,6 +13,7 @@ import { ProposalReviewAccessService } from "../proposals-shared/proposal-review
 import { recordParticipantWaiver } from "../proposal-evaluations/proposal-evaluation-support.js";
 import { assertProposalContext, isSerializationFailure } from "../proposals-shared/proposal-mutation.js";
 import { FUNDING_KINDS, assertFundingInvariant, fundingTotals, latestFunding, readApprovedBudget, readFundingAmount } from "./project-funding.js";
+import { computeProjectProgress, summarizeProjectFunding } from "./project-progress.js";
 import { notifyUsers } from "../notifications/notification-events.js";
 import { canFormCouncil, readCouncilFormationConfig } from "../proposals-shared/council-formation.js";
 import { projectContextVersion, projectViewerAuthorizationV1, PROJECT_STATUSES, TERMINAL_REQUEST_STATUSES, type ProjectOfficerFact } from "./project-capability-v1.js";
@@ -56,7 +57,7 @@ const LIQUIDATABLE = [PROJECT_STATUSES.accepted, PROJECT_STATUSES.failed];
 type AnyRecord = Record<string, any>;
 
 const PROJECT_INCLUDE = {
-  proposal: { select: { id: true, ownerId: true, title: true, status: true, startDate: true, endDate: true, budgetMetadata: true, owner: { select: { displayName: true, username: true } } } },
+  proposal: { select: { id: true, code: true, ownerId: true, title: true, status: true, startDate: true, endDate: true, budgetMetadata: true, researchFieldCode: true, proposalTypeCode: true, proposalNatureCode: true, owner: { select: { displayName: true, username: true } } } },
   hostOrganizationUnit: { select: { id: true, code: true, name: true } },
   members: { include: { user: { select: { id: true, displayName: true, username: true, status: true } } }, orderBy: { createdAt: "asc" } },
   managementOfficers: { include: { officer: { select: { id: true, displayName: true, username: true, status: true, systemRole: true, unit: true } }, assignedBy: { select: { displayName: true } } }, orderBy: [{ effectiveFrom: "desc" }, { createdAt: "desc" }] },
@@ -65,6 +66,7 @@ const PROJECT_INCLUDE = {
   reports: { include: { evidence: { include: { fileRecord: true } }, checkpoint: true, author: { select: { displayName: true, username: true } }, reviewedBy: { select: { displayName: true, username: true } } }, orderBy: [{ revision: "desc" }] },
   requests: { include: { revisions: { orderBy: { revision: "desc" } }, evidence: { include: { fileRecord: true } }, requester: { select: { displayName: true, username: true } }, decisionBy: { select: { displayName: true, username: true } }, preparedBy: { select: { displayName: true, username: true } } }, orderBy: { createdAt: "desc" } },
   history: { orderBy: { createdAt: "desc" } },
+  fundingRecords: { orderBy: { createdAt: "asc" } },
   liquidations: { orderBy: { createdAt: "desc" } },
   ethicsDossier: { select: { id: true, status: true, version: true, submittedAt: true } },
   acceptanceDossier: { select: { id: true, status: true, version: true, submittedAt: true } },
@@ -180,7 +182,7 @@ export class ApprovedProjectsService {
     };
   }
 
-  async listProjects(actor: SafeUserContext, options: { overdue?: boolean; approaching?: boolean } = {}) {
+  async listProjects(actor: SafeUserContext, options: { overdue?: boolean; approaching?: boolean; skipUnresolved?: boolean } = {}) {
     const scopeIds = getOrganizationScopeIds(actor);
     const where = isAcademyWide(actor) ? {} : scopeIds.length ? { OR: [{ hostOrganizationUnitId: { in: scopeIds } }, { members: { some: { userId: actor.id, status: "ACTIVE" } } }, { proposal: { ownerId: actor.id } }] } : { OR: [{ members: { some: { userId: actor.id, status: "ACTIVE" } } }, { proposal: { ownerId: actor.id } }] };
     const records = await (this.prisma as any).approvedProject.findMany({ where, include: PROJECT_INCLUDE, orderBy: { createdAt: "desc" } });
@@ -193,7 +195,9 @@ export class ApprovedProjectsService {
         if (options.approaching !== undefined && response.approaching !== options.approaching) continue;
         visible.push(response);
       } catch (error) {
-        if (!(error instanceof ForbiddenException)) throw error;
+        if (error instanceof ForbiddenException) continue;
+        if (options.skipUnresolved && error instanceof ConflictException) continue;
+        throw error;
       }
     }
     return visible;
@@ -227,7 +231,11 @@ export class ApprovedProjectsService {
     const deadlines = [project.endDate, ...(project.checkpoints ?? []).filter((item: any) => item.status !== "completed" && !reported.has(item.id)).map((item: any) => item.dueDate), ...(project.milestones ?? []).filter((item: any) => item.status !== "completed").map((item: any) => item.dueDate)].filter((value): value is Date => value instanceof Date);
     const nearest = deadlines.sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
     const active = [PREPARING, EXECUTING, PROJECT_STATUSES.paused].includes(project.status);
-    const { overdue, approaching } = deadlineFlags(nearest, active, now);
+    const { overdue: overdueFlag, approaching } = deadlineFlags(nearest, active, now);
+    const progress = computeProjectProgress(project, now);
+    const overdue = overdueFlag || progress.maxDaysOverdue > 0;
+    const fundingSummary = actor && this.canViewFunding(actor, project, officer) ? summarizeProjectFunding(project) : null;
+    const scopeRecord = project.scopeSnapshot as AnyRecord | null;
     // Internal management notes stay with the assigned CV and TP; never a project participant (PI/member), even one holding those roles.
     const internalView = (isOfficer || isHead) && !member;
     const itemActions = (item: AnyRecord, prefix: string) => authorize ? authorize(item).allowedActions.filter((action: string) => action.startsWith(prefix) && !action.endsWith(".create")) : [];
@@ -239,12 +247,18 @@ export class ApprovedProjectsService {
       status: project.status,
       hostOrganizationUnitId: project.hostOrganizationUnitId,
       hostOrganizationUnit: project.hostOrganizationUnit,
+      proposalNatureCode: project.proposal?.proposalNatureCode ?? scopeRecord?.proposalNatureCode ?? null,
+      researchFieldCode: scopeRecord?.researchFieldCode ?? project.proposal?.researchFieldCode ?? null,
+      proposalTypeCode: scopeRecord?.proposalTypeCode ?? project.proposal?.proposalTypeCode ?? null,
+      createdAt: project.createdAt?.toISOString?.() ?? null,
       source: { proposalId: project.proposalId, submissionEventId: project.sourceSubmissionEventId, decisionId: project.sourceDecisionId },
       startDate: project.startDate?.toISOString?.() ?? null,
       endDate: project.endDate?.toISOString?.() ?? null,
       // Kinh phí từng đề tài không hiển thị cho PGĐ-TD (chỉ số liệu tổng hợp, Story 6.12).
       scope: actor && isResearchOversightAuthority(actor) ? omitBudget(project.scopeSnapshot) : project.scopeSnapshot,
       plan: project.planSnapshot,
+      progress,
+      fundingSummary,
       members: (project.members ?? []).map((member: any) => ({ ...member, effectiveFrom: member.effectiveFrom?.toISOString?.() ?? null, effectiveUntil: member.effectiveUntil?.toISOString?.() ?? null })),
       officer: officer ? { id: officer.id, officerUserId: officer.officerUserId, displayName: (project.managementOfficers ?? []).find((row: AnyRecord) => row.id === officer.id)?.officer?.displayName ?? null, status: officer.status, effectiveFrom: officer.effectiveFrom?.toISOString?.() ?? null, effectiveUntil: officer.effectiveUntil?.toISOString?.() ?? null } : null,
       milestones: (project.milestones ?? []).map((item: AnyRecord) => ({ ...item, ...deadlineFlags(item.dueDate, active && item.status !== "completed", now) })),
@@ -320,7 +334,7 @@ export class ApprovedProjectsService {
         sourceDecisionId: decision.id,
         hostOrganizationUnitId: proposal.hostOrganizationUnitId,
         title: snapshot.title,
-        scopeSnapshot: { title: snapshot.title, objectives: snapshot.objectives, summary: snapshot.summary, researchFieldCode: snapshot.researchFieldCode, proposalTypeCode: snapshot.proposalTypeCode, budgetMetadata },
+        scopeSnapshot: { title: snapshot.title, objectives: snapshot.objectives, summary: snapshot.summary, researchFieldCode: snapshot.researchFieldCode, proposalTypeCode: snapshot.proposalTypeCode, proposalNatureCode: proposal.proposalNatureCode ?? snapshot.proposalNatureCode ?? null, budgetMetadata },
         planSnapshot: { startDate: snapshot.startDate, endDate: snapshot.endDate },
         status: PREPARING,
         startDate: snapshot.startDate ? new Date(snapshot.startDate) : null,
@@ -910,7 +924,7 @@ export class ApprovedProjectsService {
   }
 
   /** Ai xem được kinh phí từng đề tài: BGĐ-KH, TP, TB toàn Học viện; CV phụ trách; PP/PI/thành viên chỉ đề tài mình tham gia. PGĐ-TD và QT: không. */
-  private canViewFunding(actor: SafeUserContext, project: AnyRecord, officer: AnyRecord | null) {
+  canViewFunding(actor: SafeUserContext, project: AnyRecord, officer: AnyRecord | null) {
     if (isAcademyWide(actor)) return true;
     if (isResearchManagementStaff(actor)) return officer?.officerUserId === actor.id;
     return !isResearchOversightAuthority(actor) && this.activeMember(project, actor.id);

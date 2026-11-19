@@ -17,7 +17,7 @@ audience:
 > **Đồng bộ 18/10/2026 — 10 vai trò hệ thống.** Tài liệu này đã đồng bộ với
 > [`permission-matrix.md`](./permission-matrix.md) (§2, §5–§8, §10; §7 thắng khi mâu
 > thuẫn). Code trên nhánh `DocManS` đã có đủ 10 mã vai trò, nhưng PGĐ-KH,
-> PP, TB chưa có quyền nghiệp vụ cho tới khi port từ `tuan/DocManS`. Chỉ số ¹–⁸ trong tài liệu này là ghi chú điều kiện ở
+> PP, TB chưa có quyền nghiệp vụ. Chỉ số ¹–⁸ trong tài liệu này là ghi chú điều kiện ở
 > permission-matrix §7.2.
 >
 > **17/11/2026 — D-045.** Thêm vai trò thứ 11 `STUDENT_USER` (SV), chỉ dùng phân hệ Sinh viên NCKH và

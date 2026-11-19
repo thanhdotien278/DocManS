@@ -53,7 +53,7 @@ The ten system roles ([permission matrix](docs/permission-matrix.md) §2) are
 `RESEARCHER_INTERNAL_USER` (NCV) and `EXTERNAL_RESEARCHER_USER` (NNB). Submissions route as a
 tờ trình CV → TB → TP → BGĐ; only GĐ approves topic, funding and liquidation. The code on the
 `DocManS` branch has all ten role codes, but PGĐ-KH, PP and TB have no business
-permissions until they are ported from `tuan/DocManS`. An eleventh role, `STUDENT_USER` (SV), is
+permissions yet. An eleventh role, `STUDENT_USER` (SV), is
 limited to Sinh viên NCKH and has no access to proposals or projects.
 Proposal management officer history is persisted; project officer relationships and institutional
 reporting remain contracts until their backend domains exist. Dashboard showcase values are demo
