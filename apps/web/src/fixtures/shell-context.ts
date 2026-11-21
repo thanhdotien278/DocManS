@@ -304,12 +304,14 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
   RESEARCH_MANAGEMENT_HEAD: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/my-profile", label: "Lý lịch khoa học", icon: UserRoundSearch },
+    { href: "/approvals", label: "Chờ tôi quyết định", icon: FileClock },
     { href: "/proposals", label: "Quản lý đề tài", icon: Files },
     { href: "/researcher-profiles", label: "Hồ sơ nhà khoa học", icon: UserRoundSearch },
     { href: "/intakes", label: "Đợt tiếp nhận", icon: CalendarRange },
     { href: "/student-research", label: "Sinh viên NCKH", icon: GraduationCap },
     { href: "/reviews", label: "Đánh giá hồ sơ", icon: FileSearch },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
+    { href: "/notifications", label: "Thông báo", icon: Bell },
     { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
   RESEARCH_MANAGEMENT_STAFF: [
