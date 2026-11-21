@@ -16,7 +16,7 @@ context:
 
 **Problem:** Người dùng không biết khi có tờ trình chờ mình, hồ sơ bị trả lại/yêu cầu bổ sung, lời mời phản biện hay quyết định; repo chưa có bảng, API hay giao diện thông báo.
 
-**Approach:** Ghi thông báo trong cùng transaction nghiệp vụ (idempotent theo `(user_id, idempotency_key)`), đọc lại có re-authorize theo quyền hiện hành, hiển thị bằng chuông trên topbar và trang `/notifications`. Tham khảo giao diện/schema của DocManS nhưng không chép logic người nhận (gửi cho mọi CV) và gửi email.
+**Approach:** Ghi thông báo trong cùng transaction nghiệp vụ (idempotent theo `(user_id, idempotency_key)`), đọc lại có re-authorize theo quyền hiện hành, hiển thị bằng chuông trên topbar và trang `/notifications`. Không áp dụng logic người nhận cũ (gửi cho mọi CV) và gửi email.
 
 ## Boundaries & Constraints
 

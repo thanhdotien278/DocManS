@@ -36,8 +36,7 @@ implemented. The target account model has one of ten system roles
 (`docs/permission-matrix.md` §2) plus proposal-owned participation/review/management
 relationships. The committed `DocManS` code has the ten role codes (commit 0a39db3, migration
 `20261016500000`), but PGĐ-KH, PP and TB have no business permissions until the
-routing, segment and IRB implementation is ported from `tuan/DocManS`, which has no merge
-base with `DocManS`. Domains without backend sources remain planned; dependent stories
+routing, segment and IRB implementation lands. Domains without backend sources remain planned; dependent stories
 must distinguish requirements from operational evidence.
 
 ## Research Management clarification — 2026-10-18
@@ -260,7 +259,7 @@ flowchart LR
 apps/api/src/common/authorization/   # shared policy composition and decision types
 apps/api/src/modules/delegations/    # future only after a domain contract is approved
 apps/api/src/modules/personal-work/  # authorized cross-module read model
-apps/api/src/approvals/              # approval routing (port from tuan/DocManS)
+apps/api/src/approvals/              # approval routing
 apps/api/src/proposals-shared/approval-routing.ts  # routing rules shared by proposal/project
 packages/permissions/                # shared action, decision, and capability contracts
 ```
