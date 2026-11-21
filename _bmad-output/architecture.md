@@ -326,7 +326,7 @@ conflict-free signer exists, the PI withdraws the request.
 
 Migration adds proposal-owned officer history and role registry checks and the
 responsible CV of the intake period (D-038; no `management_portfolios`/segment persistence);
-routing persistence ports from `tuan/DocManS`.
+routing persistence is not yet implemented.
 Project officer persistence awaits the approved-project domain; no orphan generic
 assignment store is introduced.
 
@@ -1494,7 +1494,7 @@ erDiagram
 - `council_evaluations`
 - `council_decisions`
 
-**Approval Routing Ownership (port from `tuan/DocManS`):**
+**Approval Routing Ownership:**
 
 - `approval_submissions` (kind, subject, stage, status, signer; one open submission per
   kind and subject)

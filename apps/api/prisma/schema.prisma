@@ -819,6 +819,7 @@ model ApprovedProject {
   ethicsDossier             EthicsDossier?
   acceptanceDossier         AcceptanceDossier?
   acceptanceCouncilMembers  AcceptanceCouncilMember[]
+  healthSnapshots           ProjectHealthSnapshot[]
 
   @@index([hostOrganizationUnitId, status])
   @@index([status, endDate])
@@ -1378,4 +1379,29 @@ model StudentResearchTopicMember {
   @@unique([periodId, invitedEmail])
   @@index([topicId])
   @@map("student_research_topic_members")
+}
+
+/// Ảnh chụp sức khoẻ đề tài hằng tuần; bất biến (chỉ ghi thêm).
+model ProjectHealthSnapshot {
+  id                  String          @id @default(uuid())
+  projectId           String          @map("project_id")
+  project             ApprovedProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  snapshotDate        DateTime        @db.Date @map("snapshot_date")
+  projectStatus       String          @map("project_status")
+  health              String
+  plannedPercent      Decimal         @db.Decimal(5, 2) @map("planned_percent")
+  actualPercent       Decimal         @db.Decimal(5, 2) @map("actual_percent")
+  spi                 Decimal         @db.Decimal(6, 3)
+  totalMilestones     Int             @default(0) @map("total_milestones")
+  completedMilestones Int             @default(0) @map("completed_milestones")
+  overdueMilestones   Int             @default(0) @map("overdue_milestones")
+  maxDaysOverdue      Int             @default(0) @map("max_days_overdue")
+  lateReports         Int             @default(0) @map("late_reports")
+  approvedBudget      Decimal         @default(0) @db.Decimal(18, 2) @map("approved_budget")
+  disbursedAmount     Decimal         @default(0) @db.Decimal(18, 2) @map("disbursed_amount")
+  createdAt           DateTime        @default(now()) @map("created_at")
+
+  @@unique([projectId, snapshotDate])
+  @@index([snapshotDate])
+  @@map("project_health_snapshots")
 }

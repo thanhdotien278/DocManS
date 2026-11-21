@@ -10,7 +10,7 @@
 >
 > Các tài liệu liên quan trong `docs/` đã được đồng bộ sang mô hình 10 vai trò ngày
 > 18/10/2026. Code và seed trên nhánh `DocManS` đã có đủ 10 mã vai trò, nhưng PGĐ-KH, PP,
-> TB chưa có quyền nghiệp vụ cho đến khi port từ `tuan/DocManS` (xem [`development/auth-seed-users.md`](development/auth-seed-users.md)).
+> TB chưa có quyền nghiệp vụ (xem [`development/auth-seed-users.md`](development/auth-seed-users.md)).
 >
 > **Cập nhật 17/11/2026 — D-045, vai trò thứ 11 `STUDENT_USER` (SV).** SV chỉ dùng phân hệ Sinh viên
 > NCKH; mục "Sinh viên NCKH" cuối file là nguồn chuẩn cho phân hệ này và thay mô hình "giảng viên
@@ -667,7 +667,7 @@ Bảng thao tác đầy đủ ở mục "Sinh viên NCKH" cuối file.
 
 - Tài liệu này là nguồn chuẩn cho việc triển khai phân quyền; §7 thắng khi mâu thuẫn.
 - Mười mã vai trò hệ thống là các mã ở §2 (`packages/permissions/src/system-roles.js` trên
-  `tuan/DocManS`). Nhánh `DocManS` đã có đủ 10 mã; PGĐ-KH, PP, TB chưa có quyền nghiệp vụ cho đến khi port.
+  `tuan/DocManS`). Nhánh `DocManS` đã có đủ 10 mã; PGĐ-KH, PP, TB chưa có quyền nghiệp vụ.
   Mã thứ 11 `STUDENT_USER` được thêm ngày 17/11/2026, chỉ cho Sinh viên NCKH (D-045).
 - Policy backend kết hợp vai trò hệ thống, phạm vi đơn vị, quan hệ với hồ sơ, phân công,
   trạng thái workflow, bước tờ trình và chính sách xung đột.

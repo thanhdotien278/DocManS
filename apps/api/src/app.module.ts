@@ -3,6 +3,7 @@ import { AdminModule } from "./admin/admin.module.js";
 import { ApprovalsModule } from "./approvals/approvals.module.js";
 import { ApprovedProjectsModule } from "./approved-projects/approved-projects.module.js";
 import { AuthModule } from "./auth/auth.module.js";
+import { DashboardModule } from "./dashboard/dashboard.module.js";
 import { FilesModule } from "./modules/files/files.module.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
 import { ProposalEvaluationsModule } from "./proposal-evaluations/proposal-evaluations.module.js";
@@ -26,7 +27,7 @@ class HealthController {
 }
 
 @Module({
-  imports: [AuthModule, AdminModule, ApprovalsModule, ApprovedProjectsModule, FilesModule, NotificationsModule, ProposalIntakePeriodsModule, ResearchProposalsModule, ProposalEvaluationsModule, ResearcherProfilesModule, RegistrationModule, ScientificDocumentsModule, StudentResearchModule],
+  imports: [AuthModule, AdminModule, ApprovalsModule, ApprovedProjectsModule, DashboardModule, FilesModule, NotificationsModule, ProposalIntakePeriodsModule, ResearchProposalsModule, ProposalEvaluationsModule, ResearcherProfilesModule, RegistrationModule, ScientificDocumentsModule, StudentResearchModule],
   controllers: [HealthController]
 })
 export class AppModule {}
