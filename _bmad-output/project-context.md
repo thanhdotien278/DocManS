@@ -203,7 +203,7 @@ from every proposal/project/reviewer path (`isInternalResearcherEligible`, `part
 
 Implementation status: code on `DocManS` has all ten role codes (commit 0a39db3, migration
 `20261016500000`), with TP/CV keeping the former HEAD/STAFF permissions; PGĐ-KH, PP and TB gain business permissions only after
-the routing and IRB implementation is ported from `tuan/DocManS` (no merge base).
+the routing and IRB implementation lands.
 Account migration: HEAD → TP and STAFF → CV are done (migration `20261016500000`); former
 `RESEARCH_OVERSIGHT_AUTHORITY` holders are re-classified per person; ambiguous accounts are reported, not guessed.
 
