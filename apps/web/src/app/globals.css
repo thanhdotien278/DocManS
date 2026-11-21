@@ -2111,10 +2111,9 @@ summary:focus-visible {
 
 .topbar-nav {
   min-height: 44px;
-  gap: 2px;
-  overflow-x: auto;
+  gap: 0 2px;
+  flex-wrap: wrap;
   background: rgba(0, 0, 0, 0.18);
-  scrollbar-width: thin;
 }
 
 .topbar-nav .nav-link {
@@ -2123,7 +2122,7 @@ summary:focus-visible {
   border: 0;
   border-bottom: 3px solid transparent;
   border-radius: 0;
-  padding: 8px 16px;
+  padding: 8px 12px;
   color: rgba(255, 255, 255, 0.8);
   font-size: 14px;
   font-weight: 600;
