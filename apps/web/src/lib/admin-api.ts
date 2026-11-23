@@ -1,5 +1,9 @@
 import { getApiBaseUrl } from "@/lib/session";
 
+export type UserPosition = { organizationUnitId: string; unitName?: string; positionCode: string; label?: string };
+
+export type UnitTypeDefinition = { code: string; label: string; positions: Array<{ code: string; label: string; max: number }> };
+
 export type AdminUser = {
   id: string;
   username: string;
@@ -8,6 +12,8 @@ export type AdminUser = {
   systemRole: string | null;
   unit: string;
   organizationUnitId?: string;
+  /** Chức danh tại đơn vị (chỉ để hiển thị). */
+  positions?: UserPosition[];
 };
 
 export type AdminRole = {
@@ -22,6 +28,11 @@ export type OrganizationUnit = {
   code: string;
   name: string;
   status: string;
+  parentId?: string | null;
+  /** INSTITUTE (Viện), DEPARTMENT (Phòng), FACULTY (Khoa), DIVISION (Bộ môn), OTHER. */
+  unitType?: string;
+  unitTypeLabel?: string;
+  positions?: Array<{ userId: string; displayName: string; userStatus: string; positionCode: string; label: string }>;
 };
 
 export type CatalogItem = {
@@ -139,6 +150,17 @@ export async function updateAdminUserStatus(userId: string, status: string) {
   });
 }
 
+export async function loadPositionCatalog() {
+  return (await requestJson<{ unitTypes: UnitTypeDefinition[] }>("/organization-units/position-catalog")).unitTypes;
+}
+
+export async function setAdminUserPositions(userId: string, positions: UserPosition[]) {
+  return requestJson<{ user: AdminUser }>(`/users/${userId}/positions`, {
+    method: "PUT",
+    body: JSON.stringify({ positions: positions.map(({ organizationUnitId, positionCode }) => ({ organizationUnitId, positionCode })) })
+  });
+}
+
 export async function updateAdminUser(
   userId: string,
   input: {
@@ -224,9 +246,20 @@ export async function updateNotificationTemplate(input: { key: string; subject: 
   });
 }
 
-export async function createOrganizationUnit(input: { code: string; name: string }) {
+export async function loadAllOrganizationUnits() {
+  return (await requestJson<{ organizationUnits: OrganizationUnit[] }>("/organization-units?includeInactive=true")).organizationUnits;
+}
+
+export async function createOrganizationUnit(input: { code: string; name: string; unitType?: string }) {
   return requestJson<{ organizationUnit: OrganizationUnit }>("/organization-units", {
     method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updateOrganizationUnit(unitId: string, input: { name: string; parentId?: string; unitType?: string }) {
+  return requestJson<{ organizationUnit: OrganizationUnit }>(`/organization-units/${unitId}`, {
+    method: "PATCH",
     body: JSON.stringify(input)
   });
 }

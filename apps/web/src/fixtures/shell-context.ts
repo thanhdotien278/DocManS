@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   Bell,
   BookCopy,
   BookOpen,
@@ -207,6 +208,13 @@ export const routeDefinitions: Record<string, RouteDefinition> = {
     summaryTitle: "Danh sách thẩm định",
     summaryBody: "Hồ sơ được sắp xếp theo hạn nhận xét, lĩnh vực và tình trạng hoàn thành để đảm bảo tiến độ đánh giá."
   },
+  "/invitation-to-review": {
+    eyebrow: "Phản biện chuyên gia",
+    title: "Được mời phản biện",
+    description: "Danh sách các hồ sơ đề xuất và hội đồng nghiệm thu đề tài bạn được mời tham gia phản biện, đánh giá.",
+    summaryTitle: "Hồ sơ nhận xét",
+    summaryBody: "Mỗi mục bao gồm hạn chấm, lời mời hội đồng và tình trạng nộp nhận xét theo phân công."
+  },
   "/my-reviews": {
     eyebrow: "Nhận xét",
     title: "Đánh giá của tôi",
@@ -299,6 +307,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/proposals", label: "Giám sát hồ sơ đề xuất", icon: Files },
     { href: "/approvals", label: "Chờ tôi quyết định", icon: FileClock },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
+    { href: "/reports", label: "Báo cáo", icon: BarChart3 },
     { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
   RESEARCH_MANAGEMENT_HEAD: [
@@ -311,6 +320,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/student-research", label: "Sinh viên NCKH", icon: GraduationCap },
     { href: "/reviews", label: "Đánh giá hồ sơ", icon: FileSearch },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
+    { href: "/reports", label: "Báo cáo", icon: BarChart3 },
     { href: "/notifications", label: "Thông báo", icon: Bell },
     { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
@@ -324,6 +334,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/student-research", label: "Sinh viên NCKH", icon: GraduationCap },
     { href: "/reviews", label: "Đánh giá hồ sơ", icon: FileSearch },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
+    { href: "/reports", label: "Báo cáo", icon: BarChart3 },
     { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
   RESEARCHER_INTERNAL_USER: [
@@ -350,6 +361,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/my-proposals", label: "Hồ sơ của tôi", icon: FileText },
     { href: "/proposals", label: "Hồ sơ đề xuất", icon: Files },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
+    { href: "/reports", label: "Báo cáo", icon: BarChart3 },
     { href: "/notifications", label: "Thông báo", icon: Bell },
     { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
@@ -366,6 +378,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/proposals", label: "Hồ sơ đang theo dõi", icon: Files },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
+    { href: "/reports", label: "Báo cáo", icon: BarChart3 },
     { href: "/notifications", label: "Thông báo", icon: Bell },
     { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ],
@@ -375,6 +388,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/my-profile", label: "Lý lịch khoa học", icon: UserRoundSearch },
     { href: "/proposals", label: "Quản lý đề tài", icon: Files },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
+    { href: "/reports", label: "Báo cáo", icon: BarChart3 },
     { href: "/student-research", label: "Sinh viên NCKH", icon: GraduationCap },
     { href: "/registration-requests", label: "Yêu cầu đăng ký", icon: UserPlus },
     { href: "/notifications", label: "Thông báo", icon: Bell },
@@ -385,6 +399,7 @@ export const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { href: "/approvals", label: "Văn bản chờ tôi ký", icon: FileClock },
     { href: "/proposals", label: "Hồ sơ đề xuất", icon: Files },
     { href: "/projects", label: "Theo dõi đề tài", icon: FolderKanban },
+    { href: "/reports", label: "Báo cáo", icon: BarChart3 },
     { href: "/notifications", label: "Thông báo", icon: Bell },
     { href: "/documents", label: "Văn bản & Biểu mẫu", icon: BookOpen }
   ]

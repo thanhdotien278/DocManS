@@ -1,5 +1,6 @@
 import { BadRequestException } from "@nestjs/common";
 import { PROJECT_HEALTH_VALUES, type ProjectHealth } from "../approved-projects/project-progress.js";
+import { maxRangeEndUtc } from "./vietnam-time.js";
 
 export const DASHBOARD_QUERY_INVALID = "DASHBOARD_QUERY_INVALID";
 
@@ -75,10 +76,6 @@ function parseIsoDay(raw: string, field: string): Date {
     invalidQuery(field);
   }
   return date;
-}
-
-function maxRangeEndUtc(fromDate: Date): Date {
-  return new Date(Date.UTC(fromDate.getUTCFullYear() + 3, fromDate.getUTCMonth(), fromDate.getUTCDate()));
 }
 
 function checkDuplicateKeysInUrl(rawUrl?: string) {

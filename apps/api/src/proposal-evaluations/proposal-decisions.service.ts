@@ -1,5 +1,6 @@
-import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable } from "@nestjs/common";
 import { runProposalMutation } from "../proposals-shared/proposal-mutation.js";
+import { resolveDecisionNumber, vietnamYear } from "../proposals-shared/document-number.js";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
@@ -261,25 +262,37 @@ export class ProposalDecisionsService {
       }
       // Đóng tờ trình trong cùng transaction: quyết định và tờ trình cùng commit hoặc cùng rollback.
       await closeApprovalSubmission(tx as never, actor, decisionKey(proposalId), decision === PROPOSAL_DECISIONS.approved ? "APPROVED" : "REJECTED", note);
+      const decisionNumber = decision === PROPOSAL_DECISIONS.approved
+        ? await resolveDecisionNumber(tx as never, { requested: input.decisionNumber, year: vietnamYear(decidedAt) })
+        : null;
 
-      const record = (await tx.proposalDecision.create({
-        data: {
-          proposalId,
-          decision,
-          note,
-          decidedById: actor.id,
-          decidedAt,
-          fromStatus: proposal.status,
-          toStatus,
-          packageRevision,
-          contextVersion: input.contextVersion,
-          packageSnapshot: currentSummary.evidenceSnapshot,
-          publicSummary: publicSummaryText || requiredFollowUp ? { text: publicSummaryText, requiredFollowUp } : null
-        } as never,
-        // Included so the response names the deciding authority, matching what `findDecisions`
-        // returns on a later read of the same record.
-        include: { decidedBy: { select: { displayName: true } } }
-      })) as ProposalDecisionRecord;
+      let record: ProposalDecisionRecord;
+      try {
+        record = (await tx.proposalDecision.create({
+          data: {
+            proposalId,
+            decision,
+            note,
+            decisionNumber,
+            decidedById: actor.id,
+            decidedAt,
+            fromStatus: proposal.status,
+            toStatus,
+            packageRevision,
+            contextVersion: input.contextVersion,
+            packageSnapshot: currentSummary.evidenceSnapshot,
+            publicSummary: publicSummaryText || requiredFollowUp ? { text: publicSummaryText, requiredFollowUp } : null
+          } as never,
+          // Included so the response names the deciding authority, matching what `findDecisions`
+          // returns on a later read of the same record.
+          include: { decidedBy: { select: { displayName: true } } }
+        })) as ProposalDecisionRecord;
+      } catch (error) {
+        if ((error as { code?: string })?.code === "P2002") {
+          throw new ConflictException({ code: "DECISION_NUMBER_TAKEN", message: "Số quyết định đã được sử dụng cho văn bản khác." });
+        }
+        throw error;
+      }
 
       // Story 11.1/5.8: PI và thành viên/thư ký đang hiệu lực chỉ nhận trạng thái chung, không ghi chú/tóm tắt công bố (AD-11).
       const members = await tx.proposalMember.findMany({ where: { proposalId, userId: { not: null } }, select: { userId: true, status: true, effectiveFrom: true, effectiveUntil: true } });
@@ -297,6 +310,7 @@ export class ProposalDecisionsService {
             kind: "proposal_decision",
             schemaVersion: "proposal-decision-evidence.v1",
             decision,
+            decisionNumber,
             packageRevision,
             packageSnapshot: currentSummary.evidenceSnapshot,
             contextVersion: input.contextVersion
@@ -313,7 +327,7 @@ export class ProposalDecisionsService {
           targetEntity: "proposal-decision",
           targetEntityId: record.id,
           username: actor.username,
-          reason: JSON.stringify({ proposalId, decision, fromStatus: proposal.status, toStatus, packageRevision, hasNote: Boolean(note) })
+          reason: JSON.stringify({ proposalId, decision, decisionNumber, fromStatus: proposal.status, toStatus, packageRevision, hasNote: Boolean(note) })
         }
       });
 
@@ -367,6 +381,7 @@ export class ProposalDecisionsService {
       proposalId: decision.proposalId,
       decision: decision.decision,
       decisionLabel: DECISION_LABELS[decision.decision] ?? decision.decision,
+      decisionNumber: decision.decisionNumber ?? "",
       note: decision.note ?? "",
       decidedById: decision.decidedById,
       decidedByDisplayName: decision.decidedBy?.displayName ?? "",

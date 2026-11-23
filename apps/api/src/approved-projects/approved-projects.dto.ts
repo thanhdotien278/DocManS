@@ -10,7 +10,7 @@ export class ProjectReportDto extends ProjectMutationDto { reportId?: string; ch
 export class ProjectReportReviewDto extends ProjectMutationDto { reportId?: string; reason?: string; responseDeadline?: Date; internalNote?: string; unresolvedIssues?: string; }
 export class ProjectReportSubmissionDto extends ProjectMutationDto { evidenceFileIds?: string[]; }
 export class ProjectRequestDto extends ProjectMutationDto { requestId?: string; currentValues?: unknown; proposedValues!: unknown; reason!: string; evidenceFileIds?: string[]; }
-export class ProjectDecisionDto extends ProjectMutationDto { reason?: string; note?: string; responseDeadline?: Date; }
+export class ProjectDecisionDto extends ProjectMutationDto { reason?: string; note?: string; decisionNumber?: string; responseDeadline?: Date; }
 
 function record(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new BadRequestException({ message: "Dữ liệu đề tài không hợp lệ." });
@@ -76,7 +76,7 @@ export const projectRequestPipe: PipeTransform<unknown, ProjectRequestDto> = { t
   };
 } };
 
-export const projectDecisionPipe: PipeTransform<unknown, ProjectDecisionDto> = { transform(value) { const input = record(value ?? {}); return { reason: readOptionalText(input.reason, "reason", 2000), note: readOptionalText(input.note, "note", 2000), responseDeadline: readOptionalDate(input.responseDeadline, "responseDeadline"), contextVersion: context(input) }; } };
+export const projectDecisionPipe: PipeTransform<unknown, ProjectDecisionDto> = { transform(value) { const input = record(value ?? {}); return { reason: readOptionalText(input.reason, "reason", 2000), note: readOptionalText(input.note, "note", 2000), decisionNumber: readOptionalText(input.decisionNumber, "decisionNumber", 80), responseDeadline: readOptionalDate(input.responseDeadline, "responseDeadline"), contextVersion: context(input) }; } };
 
 export const projectWithdrawPipe: PipeTransform<unknown, ProjectDecisionDto> = { transform(value) { const input = record(value ?? {}); return { reason: readText(input.reason, "reason", 2000), contextVersion: context(input) }; } };
 

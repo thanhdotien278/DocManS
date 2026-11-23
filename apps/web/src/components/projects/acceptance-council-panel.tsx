@@ -2,12 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Send, UserMinus, UserPlus } from "lucide-react";
+import { FileDown, FileText, Send, UserMinus, UserPlus } from "lucide-react";
 import { RoutingStatus } from "@/components/approvals/routing-status";
 import { useSession } from "@/components/auth/session-provider";
+import { OfficialDocumentDialog } from "@/components/research-proposals/official-document-dialog";
 import { ReasonDialog } from "@/components/research-proposals/proposal-council-panel";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
+import { buildDecisionHtml } from "@/lib/decision-document";
+import { acceptanceCouncilDecisionDocument, productPanelDecisionDocument } from "@/lib/decision-templates";
+import {
+  exportAcceptanceCouncilDecisionWord,
+  exportAcceptanceMinutesWord,
+  exportProductPanelDecisionWord
+} from "@/lib/word-export";
 import {
   ACCEPTANCE_COUNCIL_ROLES, ACCEPTANCE_COUNCIL_ROLE_LABELS, ACCEPTANCE_MINUTES, ACCEPTANCE_RESULT_LABELS, INVITATION_STATUS_LABELS,
   acceptanceCouncilCandidates, decideAcceptanceCouncil, deleteEthicsFile, getAcceptanceCouncil, getAcceptanceDossier, inviteAcceptanceMember,
@@ -39,6 +47,7 @@ export function AcceptanceCouncilPanel({ projectId }: { projectId: string }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<DialogKind>(null);
+  const [docModal, setDocModal] = useState<null | "council" | "product">(null);
   const [submitNote, setSubmitNote] = useState("");
   const [minutes, setMinutes] = useState<MinutesFile[]>([]);
   const [minutesError, setMinutesError] = useState("");
@@ -115,7 +124,7 @@ export function AcceptanceCouncilPanel({ projectId }: { projectId: string }) {
   if (state === "declined") return (
     <SectionCard title="Hội đồng nghiệm thu">
       <p className="state-message success" role="status" ref={statusRef} tabIndex={-1}>Bạn đã từ chối lời mời tham gia hội đồng nghiệm thu. Người mời đã được thông báo.</p>
-      <div className="button-row"><Link className="button" href="/my-reviews">Về trang đánh giá của tôi</Link></div>
+      <div className="button-row"><Link className="button" href="/invitation-to-review">Về trang Được mời phản biện</Link></div>
     </SectionCard>
   );
   if (state === "error" || !view) return (
@@ -152,14 +161,14 @@ export function AcceptanceCouncilPanel({ projectId }: { projectId: string }) {
     }, "Đã gửi lời mời.");
   }
 
-  async function dialogAction(reason: string) {
+  async function dialogAction(reason: string, decisionNumber?: string) {
     if (!dialog) return;
     const version = view!.contextVersion;
     const done = { revoke: "Đã thu hồi lời mời.", decline: "", sign: "Đã ký thành lập hội đồng nghiệm thu.", reject: "Đã từ chối tờ trình hội đồng nghiệm thu.", result: "Đã ghi kết quả nghiệm thu." }[dialog.type];
     try {
       if (dialog.type === "revoke") await revokeAcceptanceMember(projectId, dialog.memberId, reason, version);
       else if (dialog.type === "decline") await respondAcceptanceInvitation(projectId, dialog.memberId, "decline", reason);
-      else if (dialog.type === "sign" || dialog.type === "reject") await decideAcceptanceCouncil(projectId, dialog.type === "sign" ? "approve" : "reject", reason, version);
+      else if (dialog.type === "sign" || dialog.type === "reject") await decideAcceptanceCouncil(projectId, dialog.type === "sign" ? "approve" : "reject", reason, version, dialog.type === "sign" ? decisionNumber : undefined);
       else await recordAcceptanceResult(projectId, outcome as "accepted" | "failed", comment.trim(), version);
     } catch (thrown) {
       // Lỗi cần hiện ngoài dialog (tải lại, danh sách thiếu) thì đóng dialog; lỗi khác hiện trong dialog.
@@ -190,9 +199,56 @@ export function AcceptanceCouncilPanel({ projectId }: { projectId: string }) {
   const signVisible = pending && (can("sign") || !!lockedReason("sign"));
   const chairArea = !!view.establishedAt && !result && (can("record-result") || !!lockedReason("record-result"));
   const resultBlocked = !minutes.length ? "Tải biên bản họp hội đồng trước khi ghi kết quả." : !comment.trim() ? "Nhập nhận xét của hội đồng." : !outcome ? "Chọn kết quả Đạt hoặc Không đạt." : "";
-  const subtitle = result ? `Đã ghi kết quả ngày ${date(result.recordedAt)}`
+  const subtitleBase = result ? `Đã ghi kết quả ngày ${date(result.recordedAt)}`
     : view.establishedAt ? `Đã thành lập ngày ${date(view.establishedAt)}`
     : pending ? `Đang trình · ${approval!.stageLabel}` : view.readsProject ? "Đang lập hội đồng" : "Lời mời tham gia hội đồng";
+  const subtitle = view.decisionNumber ? `${subtitleBase} · Số QĐ: ${view.decisionNumber}` : subtitleBase;
+  const acceptanceCouncilInput = {
+    project: {
+      code: view.projectCode,
+      title: view.projectTitle || "Đề tài nghiên cứu",
+      piName: view.piName,
+      unitName: view.hostOrganizationUnitName,
+      startDate: view.startDate,
+      endDate: view.endDate
+    },
+    decisionNumber: view.decisionNumber,
+    decidedAt: view.decidedAt,
+    decidedByName: view.decidedByName,
+    decidedByRole: view.decidedByRole,
+    members: view.members.map((member) => ({
+      displayName: member.displayName,
+      militaryRank: member.militaryRank,
+      academicTitle: member.academicTitle,
+      unit: member.unit,
+      councilRole: member.councilRole,
+      councilRoleLabel: member.councilRoleLabel
+    })),
+    products: (view.products ?? []).map((item) => ({
+      title: item.name || "Sản phẩm KH&CN",
+      type: item.type,
+      description: item.description
+    }))
+  };
+  const productPanelInput = {
+    project: {
+      code: view.projectCode,
+      title: view.projectTitle || "Đề tài nghiên cứu",
+      piName: view.piName,
+      unitName: view.hostOrganizationUnitName
+    },
+    products: (view.products ?? []).map((item, idx) => ({
+      title: item.name || `Sản phẩm ${idx + 1}`,
+      productForm: idx + 1,
+      requirements: [item.type, item.description].filter(Boolean).join(" — ")
+    })),
+    members: view.members.map((member) => ({
+      fullName: member.displayName,
+      academicTitle: member.academicTitle,
+      unit: member.unit,
+      role: (member.councilRole === "council_chair" ? "LEADER" : "MEMBER") as "LEADER" | "MEMBER"
+    }))
+  };
   const badge = result ? <span className={`status-badge ${result.outcome === "accepted" ? "success" : "danger"}`}>{ACCEPTANCE_RESULT_LABELS[result.outcome] ?? result.outcome}</span>
     : view.establishedAt ? <span className="status-badge success">Đã thành lập</span>
     : pending ? <span className="status-badge info">Đang trình ký</span> : <span className="status-badge warning">Đang lập</span>;
@@ -207,6 +263,48 @@ export function AcceptanceCouncilPanel({ projectId }: { projectId: string }) {
       <div className="button-row">
         {view.readsProject ? <Link className="button" href={`/projects/${projectId}`}>Quay lại đề tài</Link> : null}
         {view.establishedAt && (view.readsProject || ownSeat?.invitationStatus === "accepted") ? <Link className="button" href={`/projects/${projectId}/acceptance-dossier`}>Mở hồ sơ nghiệm thu</Link> : null}
+        {view.readsProject && view.members.length > 0 ? (
+          <>
+            <button className="button secondary" type="button" onClick={() => setDocModal("council")}>
+              <FileText size={16} aria-hidden="true" />
+              Xem &amp; Xuất QĐ HĐ Nghiệm thu (QĐ 4626)
+            </button>
+            <button className="button secondary" type="button" onClick={() => setDocModal("product")}>
+              <FileText size={16} aria-hidden="true" />
+              Xem &amp; Xuất QĐ Tổ thẩm định SP
+            </button>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => void exportAcceptanceMinutesWord(
+                {
+                  id: projectId,
+                  code: view.projectCode,
+                  title: view.projectTitle || "Đề tài nghiên cứu",
+                  ownerDisplayName: view.piName,
+                  hostOrganizationUnit: view.hostOrganizationUnitName
+                },
+                {
+                  councilType: "OFFICIAL",
+                  meetingDate: result?.recordedAt ?? view.establishedAt ?? undefined,
+                  establishmentDecisionNumber: view.decisionNumber,
+                  decisionNumber: view.decisionNumber,
+                  outcomeLabel: result ? (ACCEPTANCE_RESULT_LABELS[result.outcome] ?? result.outcome) : null,
+                  assessmentComments: result?.comment ?? (comment.trim() || null),
+                  members: view.members.map((member) => ({
+                    fullName: member.displayName,
+                    academicTitle: member.academicTitle ?? undefined,
+                    unit: member.unit || undefined,
+                    role: member.councilRoleLabel
+                  }))
+                }
+              )}
+            >
+              <FileDown size={16} aria-hidden="true" />
+              Xuất Biên bản nghiệm thu (.docx)
+            </button>
+          </>
+        ) : null}
       </div>
 
       <SectionCard title={view.projectTitle || "Hội đồng nghiệm thu"} subtitle={`${subtitle} · Đề tài: ${projectStatusLabel(view.projectStatus)}`} action={badge}>
@@ -399,9 +497,25 @@ export function AcceptanceCouncilPanel({ projectId }: { projectId: string }) {
 
       {dialog?.type === "revoke" ? <ReasonDialog title={`Thu hồi lời mời của ${dialog.name}`} description="Lịch sử lời mời vẫn được giữ lại." reasonLabel="Lý do thu hồi" confirmLabel="Thu hồi" onConfirm={dialogAction} onClose={() => setDialog(null)} /> : null}
       {dialog?.type === "decline" ? <ReasonDialog title="Từ chối lời mời hội đồng nghiệm thu" description="Sau khi từ chối, bạn không còn xem được hội đồng này." reasonLabel="Lý do từ chối" confirmLabel="Từ chối lời mời" onConfirm={dialogAction} onClose={() => setDialog(null)} /> : null}
-      {dialog?.type === "sign" ? <ReasonDialog title="Ký thành lập hội đồng nghiệm thu" description="Sau khi ký, hội đồng được thành lập và thành viên được đọc hồ sơ nghiệm thu. Không hoàn tác." confirmLabel="Ký thành lập" onConfirm={dialogAction} onClose={() => setDialog(null)} /> : null}
+      {dialog?.type === "sign" ? <ReasonDialog title="Ký thành lập hội đồng nghiệm thu" description="Sau khi ký, hội đồng được thành lập và thành viên được đọc hồ sơ nghiệm thu. Không hoàn tác." decisionNumberLabel="Số quyết định (tùy chọn)" confirmLabel="Ký thành lập" onConfirm={dialogAction} onClose={() => setDialog(null)} /> : null}
       {dialog?.type === "reject" ? <ReasonDialog title="Từ chối tờ trình hội đồng nghiệm thu" description="Danh sách thành viên được giữ; người lập thu hồi/mời thêm rồi trình lại." reasonLabel="Lý do từ chối" confirmLabel="Từ chối" onConfirm={dialogAction} onClose={() => setDialog(null)} /> : null}
       {dialog?.type === "result" ? <ReasonDialog title={`Ghi kết quả: ${ACCEPTANCE_RESULT_LABELS[outcome] ?? ""}`} description={`Đề tài sẽ chuyển sang "${outcome === "accepted" ? "Đã nghiệm thu" : "Không đạt"}" kèm nhận xét và biên bản mới nhất. Không hoàn tác.`} confirmLabel="Ghi kết quả" onConfirm={dialogAction} onClose={() => setDialog(null)} /> : null}
+      <OfficialDocumentDialog
+        isOpen={docModal === "council"}
+        onClose={() => setDocModal(null)}
+        title="Quyết định thành lập Hội đồng đánh giá, nghiệm thu đề tài"
+        subtitle="Mẫu QĐ 4626/QĐ-HVQY — Học viện Quân y"
+        html={docModal === "council" ? buildDecisionHtml(acceptanceCouncilDecisionDocument(acceptanceCouncilInput)) : ""}
+        onDownloadWord={() => exportAcceptanceCouncilDecisionWord(acceptanceCouncilInput)}
+      />
+      <OfficialDocumentDialog
+        isOpen={docModal === "product"}
+        onClose={() => setDocModal(null)}
+        title="Quyết định thành lập Tổ thẩm định, đánh giá sản phẩm KH&CN"
+        subtitle="Mẫu QĐ 4626/QĐ-HVQY — Học viện Quân y"
+        html={docModal === "product" ? buildDecisionHtml(productPanelDecisionDocument(productPanelInput)) : ""}
+        onDownloadWord={() => exportProductPanelDecisionWord(productPanelInput)}
+      />
     </div>
   );
 }

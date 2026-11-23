@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send, UserMinus, UserPlus } from "lucide-react";
+import { FileDown, FileText, Send, UserMinus, UserPlus } from "lucide-react";
+import { OfficialCouncilDecisionModal } from "@/components/research-proposals/official-council-decision-modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Dialog } from "@/components/ui/dialog";
 import { SectionCard } from "@/components/ui/section-card";
 import { formatIntakeDate, intakeDateToIso } from "@/lib/intake-dates";
+import { exportCouncilMinutesWord } from "@/lib/word-export";
 import {
   assignProposalReviewer,
   decideEvaluationCouncil,
@@ -24,9 +26,10 @@ import {
 const STATUS_TONE: Record<CouncilStatus, string> = { NOT_APPLICABLE: "neutral", FORMING: "warning", READY_TO_SUBMIT: "info", IN_APPROVAL: "info", ESTABLISHED: "success" };
 const INVITATION_TONE = { invited: "warning", accepted: "success", declined: "danger" } as const;
 
-/** Dialog xác nhận có (hoặc không) ô lý do; dùng cho thu hồi, ký, trả lại và từ chối lời mời. */
-export function ReasonDialog({ title, description, reasonLabel, requireReason = true, confirmLabel, onConfirm, onClose }: { title: string; description?: string; reasonLabel?: string; requireReason?: boolean; confirmLabel: string; onConfirm: (reason: string) => Promise<void>; onClose: () => void }) {
+/** Dialog xác nhận có (hoặc không) ô lý do và số quyết định tùy chọn; dùng cho thu hồi, ký, trả lại và từ chối lời mời. */
+export function ReasonDialog({ title, description, reasonLabel, requireReason = true, decisionNumberLabel, confirmLabel, onConfirm, onClose }: { title: string; description?: string; reasonLabel?: string; requireReason?: boolean; decisionNumberLabel?: string; confirmLabel: string; onConfirm: (reason: string, decisionNumber?: string) => Promise<void>; onClose: () => void }) {
   const [reason, setReason] = useState("");
+  const [decisionNumber, setDecisionNumber] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const needsReason = Boolean(reasonLabel);
@@ -38,7 +41,7 @@ export function ReasonDialog({ title, description, reasonLabel, requireReason = 
     setBusy(true);
     setError("");
     try {
-      await onConfirm(reason.trim());
+      await onConfirm(reason.trim(), decisionNumber.trim() || undefined);
     } catch (thrown) {
       setError(thrown instanceof Error ? thrown.message : "Không thể thực hiện thao tác.");
       setBusy(false);
@@ -49,6 +52,12 @@ export function ReasonDialog({ title, description, reasonLabel, requireReason = 
     <Dialog className="form-dialog" label={title} onClose={() => { if (!busy) onClose(); }}>
       <SectionCard title={title} subtitle={description}>
         <form className="admin-form" onSubmit={(event) => void submit(event)}>
+          {decisionNumberLabel ? (
+            <label className="field">
+              <span>{decisionNumberLabel}</span>
+              <input maxLength={60} placeholder="Để trống để hệ thống tự động cấp" value={decisionNumber} onChange={(event) => setDecisionNumber(event.target.value)} />
+            </label>
+          ) : null}
           {needsReason ? (
             <label className="field">
               <span>{reasonLabel}{requireReason ? " *" : ""}</span>
@@ -68,11 +77,20 @@ export function ReasonDialog({ title, description, reasonLabel, requireReason = 
 
 type DialogKind = { type: "revoke"; assignmentId: string; name: string } | { type: "sign" } | { type: "return" } | null;
 
+export type CouncilProposalInfo = {
+  code?: string | null;
+  title: string;
+  ownerDisplayName?: string | null;
+  hostOrganizationUnitName?: string | null;
+  proposalTypeCode?: string | null;
+  startDate?: string | null;
+};
+
 /**
  * Hội đồng thẩm định (spec hội đồng §10 S2/S4/S5). Mọi nút do `viewer.*` của backend quyết định; nút bị khóa vẫn hiện
  * kèm lý do. 401/403 thì panel ẩn (người xem không thuộc nhóm lập/rà soát/ký).
  */
-export function ProposalCouncilPanel({ proposalId, onChanged }: { proposalId: string; onChanged: () => void }) {
+export function ProposalCouncilPanel({ proposalId, proposalInfo, onChanged }: { proposalId: string; proposalInfo?: CouncilProposalInfo; onChanged: () => void }) {
   const [council, setCouncil] = useState<EvaluationCouncil | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "hidden" | "error">("loading");
   const [loadError, setLoadError] = useState("");
@@ -81,6 +99,7 @@ export function ProposalCouncilPanel({ proposalId, onChanged }: { proposalId: st
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<DialogKind>(null);
+  const [showCouncilDocModal, setShowCouncilDocModal] = useState(false);
   const [submitNote, setSubmitNote] = useState("");
 
   const [position, setPosition] = useState("");
@@ -167,12 +186,12 @@ export function ProposalCouncilPanel({ proposalId, onChanged }: { proposalId: st
     }, "Đã gửi lời mời.");
   }
 
-  async function dialogAction(reason: string) {
+  async function dialogAction(reason: string, decisionNumber?: string) {
     if (!dialog) return;
     const version = council!.contextVersion;
     try {
       if (dialog.type === "revoke") await revokeProposalReviewAssignment(proposalId, dialog.assignmentId, reason, version);
-      else await decideEvaluationCouncil(proposalId, dialog.type === "sign" ? "sign" : "return", reason, version);
+      else await decideEvaluationCouncil(proposalId, dialog.type === "sign" ? "sign" : "return", reason, version, dialog.type === "sign" ? decisionNumber : undefined);
     } catch (thrown) {
       if ((thrown as EvaluationApiError)?.code === "CONTEXT_VERSION_MISMATCH") void refresh();
       throw thrown;
@@ -184,9 +203,10 @@ export function ProposalCouncilPanel({ proposalId, onChanged }: { proposalId: st
   }
 
   const showSignControls = council.status === "IN_APPROVAL" && (viewer.canSign || viewer.canReturn || Boolean(viewer.signBlockedReason));
-  const subtitle = council.status === "ESTABLISHED"
+  const subtitleBase = council.status === "ESTABLISHED"
     ? `Đã thành lập${council.establishedAt ? ` ngày ${formatIntakeDate(council.establishedAt)}` : ""}`
     : council.status === "IN_APPROVAL" && approval ? `${council.statusLabel} · ${approval.stageLabel}` : council.statusLabel;
+  const subtitle = council.decisionNumber ? `${subtitleBase} · Số QĐ: ${council.decisionNumber}` : subtitleBase;
 
   return (
     <SectionCard
@@ -342,14 +362,52 @@ export function ProposalCouncilPanel({ proposalId, onChanged }: { proposalId: st
       ) : null}
       {showSignControls && !viewer.canSign && viewer.signBlockedReason ? <p className="record-meta">{viewer.signBlockedReason}</p> : null}
 
+      {council.members.length > 0 && proposalInfo ? (
+        <div className="button-row" style={{ marginTop: 12 }}>
+          <button className="button secondary" type="button" onClick={() => setShowCouncilDocModal(true)}>
+            <FileText size={16} aria-hidden="true" />
+            Xem &amp; Xuất QĐ Hội đồng (QĐ 1273)
+          </button>
+          <button
+            className="button secondary"
+            type="button"
+            onClick={() => void exportCouncilMinutesWord({
+              code: proposalInfo.code,
+              title: proposalInfo.title,
+              ownerDisplayName: proposalInfo.ownerDisplayName,
+              councilMetadata: { decisionNumber: council.decisionNumber, members: council.members }
+            })}
+          >
+            <FileDown size={16} aria-hidden="true" />
+            Xuất Biên bản họp HĐ (.docx)
+          </button>
+        </div>
+      ) : null}
+
       {dialog?.type === "revoke" ? (
         <ReasonDialog title={`Thu hồi lời mời của ${dialog.name}`} description="Lịch sử lời mời vẫn được giữ lại." reasonLabel="Lý do thu hồi" confirmLabel="Thu hồi" onConfirm={dialogAction} onClose={() => setDialog(null)} />
       ) : null}
       {dialog?.type === "sign" ? (
-        <ReasonDialog title="Ký thành lập hội đồng" description="Sau khi ký, thành viên được đọc hồ sơ. Không hoàn tác." confirmLabel="Ký thành lập" onConfirm={dialogAction} onClose={() => setDialog(null)} />
+        <ReasonDialog title="Ký thành lập hội đồng" description="Sau khi ký, thành viên được đọc hồ sơ. Không hoàn tác." decisionNumberLabel="Số quyết định (tùy chọn)" confirmLabel="Ký thành lập" onConfirm={dialogAction} onClose={() => setDialog(null)} />
       ) : null}
       {dialog?.type === "return" ? (
         <ReasonDialog title="Trả lại tờ trình" description="Hội đồng quay về trạng thái sẵn sàng trình để chỉnh sửa." reasonLabel="Lý do trả lại" confirmLabel="Trả lại" onConfirm={dialogAction} onClose={() => setDialog(null)} />
+      ) : null}
+      {proposalInfo ? (
+        <OfficialCouncilDecisionModal
+          isOpen={showCouncilDocModal}
+          onClose={() => setShowCouncilDocModal(false)}
+          proposal={{
+            ...proposalInfo,
+            councilMetadata: {
+              decisionNumber: council.decisionNumber,
+              decidedAt: council.decidedAt,
+              decidedByName: council.decidedByName,
+              decidedByRole: council.decidedByRole,
+              members: council.members
+            }
+          }}
+        />
       ) : null}
     </SectionCard>
   );

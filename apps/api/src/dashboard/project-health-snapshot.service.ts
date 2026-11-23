@@ -1,23 +1,9 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { computeProjectProgress, summarizeProjectFunding } from "../approved-projects/project-progress.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
+import { DAY_MS, vietnamDateParts } from "./vietnam-time.js";
 
-const DAY_MS = 86_400_000;
-const VN_OFFSET_MS = 7 * 3_600_000;
 const CHECK_INTERVAL_MS = 60_000;
-
-export function vietnamDateParts(now = new Date()) {
-  const vn = new Date(now.getTime() + VN_OFFSET_MS);
-  const dateStr = vn.toISOString().slice(0, 10);
-  const snapshotDate = new Date(`${dateStr}T00:00:00.000Z`);
-  return {
-    dateStr,
-    snapshotDate,
-    dayOfWeek: vn.getUTCDay(),
-    hour: vn.getUTCHours(),
-    minute: vn.getUTCMinutes()
-  };
-}
 
 @Injectable()
 export class ProjectHealthSnapshotService implements OnModuleInit, OnModuleDestroy {

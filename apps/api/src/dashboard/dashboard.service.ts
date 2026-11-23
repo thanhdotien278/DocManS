@@ -25,8 +25,8 @@ import { ProposalReviewAccessService } from "../proposals-shared/proposal-review
 import { PROPOSAL_STATUS_LABELS } from "../proposals-shared/proposal-workflow.js";
 import { ProposalParticipationService } from "../research-proposals/proposal-participation.service.js";
 import type { DashboardCommonFilters, DashboardProductStatus, ParsedDashboardQuery } from "./dashboard-query.js";
+import { vietnamYear } from "./vietnam-time.js";
 
-const VN_OFFSET_MS = 7 * 3_600_000;
 
 export const PROJECT_STATUS_LABELS: Record<string, string> = {
   preparing: "Chuẩn bị triển khai",
@@ -158,12 +158,6 @@ export type DashboardProductItem = {
   productStatus: DashboardProductStatus;
   productStatusLabel: string;
 };
-
-function vnYearFromDate(value: Date | string | null | undefined, fallback: Date): number {
-  const source = value ? new Date(value) : fallback;
-  const ms = Number.isNaN(source.getTime()) ? fallback.getTime() : source.getTime();
-  return new Date(ms + VN_OFFSET_MS).getUTCFullYear();
-}
 
 export function productTypeLabel(code: string): string {
   const normalized = code.trim() || "unclassified";
@@ -313,7 +307,7 @@ export class DashboardService {
         title: proposal.title,
         status: proposal.status,
         statusLabel: PROPOSAL_STATUS_LABELS[proposal.status] ?? proposal.status,
-        year: vnYearFromDate(proposal.startDate ?? proposal.submittedAt ?? proposal.createdAt, now),
+        year: vietnamYear(proposal.startDate ?? proposal.submittedAt ?? proposal.createdAt, now),
         unitId: proposal.hostOrganizationUnitId,
         unitCode: unit?.code ?? "",
         unitName: unit?.name ?? "Đơn vị chưa xác định",
@@ -397,7 +391,7 @@ export class DashboardService {
         startDate: project.startDate ?? null,
         endDate: project.endDate ?? null,
         createdAt: project.createdAt ?? null,
-        year: vnYearFromDate(project.startDate ?? project.createdAt, now),
+        year: vietnamYear(project.startDate ?? project.createdAt, now),
         unitId: project.hostOrganizationUnitId,
         unitCode: unit?.code ?? "",
         unitName: unit?.name ?? "Đơn vị chưa xác định",
@@ -486,7 +480,7 @@ export class DashboardService {
           startDate: raw.startDate?.toISOString?.() ?? null,
           endDate: raw.endDate?.toISOString?.() ?? null,
           createdAt: raw.createdAt?.toISOString?.() ?? null,
-          year: vnYearFromDate(raw.startDate ?? raw.createdAt, now),
+          year: vietnamYear(raw.startDate ?? raw.createdAt, now),
           unitId: raw.hostOrganizationUnitId,
           unitCode: unit?.code ?? "",
           unitName: unit?.name ?? "Đơn vị chưa xác định",

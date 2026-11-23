@@ -388,7 +388,9 @@ summary:focus-visible {
 
 .notification-all {
   display: block;
+  min-height: 44px;
   margin-top: 10px;
+  padding-block: 10px;
   color: var(--primary);
   font-weight: 700;
 }
@@ -511,6 +513,9 @@ summary:focus-visible {
 }
 
 .breadcrumb a {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
   color: var(--primary);
   font-weight: 700;
 }
@@ -1493,6 +1498,7 @@ summary:focus-visible {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 40px;
   border-radius: var(--radius);
   padding: 8px;
 }
@@ -1503,7 +1509,8 @@ summary:focus-visible {
 }
 
 .field .multi-select-option input {
-  width: auto;
+  width: 18px;
+  height: 18px;
   min-height: auto;
 }
 
