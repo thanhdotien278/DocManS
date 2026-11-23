@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
+import { positionDisplay } from "../organization/unit-positions.js";
 import { notifyUsers } from "../notifications/notification-events.js";
 import { REGISTRATION_APPROVER_ROLES, SYSTEM_ROLES, type AuthSession, type InternalUser, type SafeUserContext, type SystemRole } from "./auth.types.js";
 
@@ -22,7 +23,8 @@ export class AuthStore {
       where: { OR: [{ usernameKey: identifier }, { credentialEmail: identifier }] },
       include: {
         organizationScopes: { include: { organizationUnit: true } },
-        researcherProfile: { select: { id: true, status: true } }
+        researcherProfile: { select: { id: true, status: true } },
+        unitPositions: { include: { organizationUnit: { select: { name: true, unitType: true, status: true } } }, orderBy: { createdAt: "asc" } }
       }
     });
 
@@ -47,7 +49,8 @@ export class AuthStore {
       where: { id: userId },
       include: {
         organizationScopes: { include: { organizationUnit: true } },
-        researcherProfile: { select: { id: true, status: true } }
+        researcherProfile: { select: { id: true, status: true } },
+        unitPositions: { include: { organizationUnit: { select: { name: true, unitType: true, status: true } } }, orderBy: { createdAt: "asc" } }
       }
     });
 
@@ -76,7 +79,8 @@ export class AuthStore {
       unit: user.unit,
       organizationScopes: user.organizationScopes,
       mustChangePassword: user.mustChangePassword,
-      researcherProfileId: user.researcherProfileId
+      researcherProfileId: user.researcherProfileId,
+      positions: user.positions
     };
   }
 
@@ -235,6 +239,7 @@ export class AuthStore {
     mustChangePassword?: boolean;
     credentialVersion?: number;
     researcherProfile?: { id: string; status: string } | null;
+    unitPositions?: Array<{ positionCode: string; organizationUnit: { name: string; unitType: string; status: string } }>;
     organizationScopes?: Array<{
       isPrimary: boolean;
       organizationUnit: {
@@ -273,7 +278,9 @@ export class AuthStore {
       organizationScopes,
       mustChangePassword: user.mustChangePassword ?? false,
       credentialVersion: user.credentialVersion ?? 0,
-      researcherProfileId: user.researcherProfile?.status === "ACTIVE" ? user.researcherProfile.id : undefined
+      researcherProfileId: user.researcherProfile?.status === "ACTIVE" ? user.researcherProfile.id : undefined,
+      // Chức danh tại đơn vị (chỉ để hiển thị, không dùng để phân quyền).
+      positions: (user.unitPositions ?? []).filter((position) => position.organizationUnit.status === "active").map((position) => positionDisplay(position.organizationUnit.unitType, position.positionCode, position.organizationUnit.name))
     };
   }
 

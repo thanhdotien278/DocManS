@@ -7,6 +7,8 @@ export const PUBLIC_ROUTES = ["/login", "/password-reset", "/forgot-password", "
 export type CurrentUser = {
   mustChangePassword?: boolean;
   researcherProfileId?: string;
+  /** Chức danh tại đơn vị, ví dụ "Trưởng khoa – Khoa Nội" (chỉ để hiển thị). */
+  positions?: string[];
   id: string;
   username: string;
   displayName: string;
@@ -32,6 +34,8 @@ export type ShellAccount = {
   systemRole: CurrentUser["systemRole"];
   systemRoleLabel: string;
   unit: string;
+  /** Chức danh tại đơn vị (chỉ để hiển thị). */
+  positions: string[];
   initials: string;
   organizationScopes?: CurrentUser["organizationScopes"];
 };
@@ -50,7 +54,9 @@ export function toShellAccount(user: CurrentUser): ShellAccount {
     systemRole: user.systemRole,
     systemRoleLabel: getSystemRoleLabel(user.systemRole),
     unit: user.displayUnit ?? user.unit,
-    initials: user.displayName.trim().charAt(0).toUpperCase() || "U",
+    positions: user.positions ?? [],
+    // Chữ cái đầu của tên gọi (từ cuối họ tên), không phải của quân hàm hay học hàm đứng trước.
+    initials: user.displayName.trim().split(/\s+/).pop()?.charAt(0).toUpperCase() || "U",
     organizationScopes: user.organizationScopes
   };
 }

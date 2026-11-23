@@ -7,6 +7,9 @@ import type { ContextVersionTokenV1 } from "@rtms/permissions";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
+import { positionDisplay } from "../organization/unit-positions.js";
+import { formatResearcherDisplayName } from "./researcher-display-name.js";
+import { propagateScientistTitles } from "./title-propagation.js";
 import { assertResearcherProfileAction, canEditOwnResearcherProfile, canManageResearcherProfiles, deniesElevatedLinkedWrite, hasResearcherProfileScope, linkableAccountRoles, projectResearcherProfileAuthorization } from "./researcher-profile-access.js";
 import { AVATAR_DATA_URL, normalizeResearcherKey, type CreateResearcherProfileDto, type ResearcherProfileParticipationInput, type ResearcherProfilePublicationInput, type UpdateResearcherProfileDto, type ResearcherAccountInput } from "./researcher-profiles.dto.js";
 import { MailService } from "../notifications/mail.service.js";
@@ -42,10 +45,12 @@ type ProfileWithRelations = {
   expertiseKeywords: Array<{ keyword: string; keywordKey: string }>;
   credentialDeliveries: Array<{ id: string; status: string; recipientEmail: string; expiresAt: Date | null; createdAt: Date }>;
   linkedUserId: string | null;
-  linkedUser: { id: string; username: string | null; displayName: string; status: string; systemRole: string | null; mustChangePassword: boolean; credentialEmail: string | null } | null;
+  linkedUser: { id: string; username: string | null; displayName: string; status: string; systemRole: string | null; mustChangePassword: boolean; credentialEmail: string | null; unitPositions?: AccountPositionRow[] } | null;
   publications: Array<{ id: string; title: string; venue: string | null; publicationYear: number | null; doi: string | null; authors: string | null; issnIsbn: string | null; publicationType: string | null; classification: string | null; proofUrl: string | null; status: string; notes: string | null; createdAt: Date; updatedAt: Date }>;
   participations: Array<{ id: string; projectTitle: string; participationRole: string; level: string; startsOn: Date | null; endsOn: Date | null; status: string; notes: string | null; sourceType: string; sourceRecordId: string | null; supersedesId: string | null; createdAt: Date; updatedAt: Date }>;
 };
+
+type AccountPositionRow = { positionCode: string; organizationUnit: { name: string; unitType: string; status: string } };
 
 const profileInclude = {
   managementOrganizationUnit: { select: { id: true, code: true, name: true, status: true } },
@@ -54,7 +59,7 @@ const profileInclude = {
   researchFields: { include: { catalogItem: { select: { id: true, code: true, name: true, type: true } } }, orderBy: { catalogItem: { name: "asc" } } },
   expertiseKeywords: { orderBy: { keywordKey: "asc" } },
   credentialDeliveries: { select: { id: true, status: true, recipientEmail: true, expiresAt: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 },
-  linkedUser: { select: { id: true, username: true, displayName: true, status: true, systemRole: true, mustChangePassword: true, credentialEmail: true } },
+  linkedUser: { select: { id: true, username: true, displayName: true, status: true, systemRole: true, mustChangePassword: true, credentialEmail: true, unitPositions: { select: { positionCode: true, organizationUnit: { select: { name: true, unitType: true, status: true } } }, orderBy: { createdAt: "asc" } } } },
   publications: { orderBy: [{ publicationYear: "desc" }, { title: "asc" }] },
   participations: { orderBy: [{ startsOn: "desc" }, { projectTitle: "asc" }] }
 } satisfies Prisma.ResearcherProfileInclude;
@@ -174,7 +179,7 @@ export class ResearcherProfilesService {
       await this.assertUniqueCredentialEmail(tx, email!);
       const systemRole = created.profileType === "EXTERNAL" ? "EXTERNAL_RESEARCHER_USER" : "RESEARCHER_INTERNAL_USER";
       const passwordHash = await this.passwordService.hashPassword(randomBytes(32).toString("base64url"));
-      const user = await tx.user.create({ data: { username: null, usernameKey: null, displayName: created.fullName, passwordHash, credentialEmail: email!, mustChangePassword: false, status: "pending_activation", systemRole, unit: organization.name,
+      const user = await tx.user.create({ data: { username: null, usernameKey: null, displayName: formatResearcherDisplayName(created), passwordHash, credentialEmail: email!, mustChangePassword: false, status: "pending_activation", systemRole, unit: organization.name,
         organizationScopes: { create: { organizationUnitId: created.managementOrganizationUnitId, isPrimary: true } } } });
       await tx.researcherProfile.update({ where: { id: created.id }, data: { linkedUserId: user.id, aggregateVersion: { increment: 1 }, updatedById: actor.id } });
       await tx.researcherProfileAccountLink.create({ data: { researcherProfileId: created.id, userId: user.id, effectiveFrom: new Date(), reason: "profile-account-activation", createdById: actor.id } });
@@ -182,6 +187,8 @@ export class ResearcherProfilesService {
       const delivery = await tx.accountCredentialDelivery.create({ data: { researcherProfileId: created.id, userId: user.id, recipientEmail: email!, templateKey: "researcher_account_activation", status: "PENDING", expiresAt: activation.expiresAt } });
       for (const action of ["provision-researcher-account", "link-researcher-account", "issue-researcher-activation"]) await this.auditLog.record({ action, result: "success", actorId: actor.id, targetEntity: "researcher-profile", targetEntityId: created.id, correlationId, afterFacts: { userId: user.id, systemRole, organizationUnitId: created.managementOrganizationUnitId, deliveryId: delivery.id, expiresAt: activation.expiresAt.toISOString() } }, tx);
       await this.writeProfileHistory(tx, created.id, actor.id, "ACCOUNT_CREATED", { linkedUserId: null }, { linkedUserId: user.id });
+      await this.syncLinkedDisplayName(tx, created.id, actor.id, correlationId);
+      await this.propagateTitles(tx, created.id, actor.id, correlationId);
       const withAccount = (await tx.researcherProfile.findUnique({ where: { id: created.id }, include: profileInclude } as never)) as unknown as ProfileWithRelations;
       return { profile: withAccount, duplicateCandidates, activation: { deliveryId: delivery.id, email: email!, displayName: user.displayName, token: activation.token, expiresAt: activation.expiresAt } };
     });
@@ -217,9 +224,10 @@ export class ResearcherProfilesService {
       if (result.count !== 1) throw new ConflictException({ message: "Dữ liệu hồ sơ đã thay đổi. Vui lòng tải lại trước khi thử lại.", code: "CONTEXT_VERSION_MISMATCH", correlationId });
       if (Object.keys(this.childData(input)).length > 0) await tx.researcherProfile.update({ where: { id }, data: this.childData(input) as never });
       if (input.username !== undefined) await this.setLinkedUsername(tx, actor, profile, input.username, correlationId);
-      if (input.fullName !== undefined && profile.linkedUserId) await tx.user.update({ where: { id: profile.linkedUserId }, data: { displayName: input.fullName } });
       await this.syncPublications(tx, id, input.publications, actor.id);
       await this.syncParticipations(tx, id, input.participations, actor.id);
+      await this.syncLinkedDisplayName(tx, id, actor.id, correlationId);
+      await this.propagateTitles(tx, id, actor.id, correlationId);
       const withChildren = (await tx.researcherProfile.findUnique({ where: { id }, include: profileInclude } as never)) as unknown as ProfileWithRelations;
       const cvChanges = input.curriculumVitae === undefined ? undefined : this.cvChanges(profile.curriculumVitae, withChildren.curriculumVitae);
       const beforeFacts = this.auditFacts(profile);
@@ -319,9 +327,10 @@ export class ResearcherProfilesService {
         const result = await tx.researcherProfile.updateMany({ where: { id: profile.id, linkedUserId: actor.id, aggregateVersion: input.contextVersion.aggregateVersion }, data: { ...this.updateData(safeInput), aggregateVersion: { increment: 1 }, updatedById: actor.id } });
         if (result.count !== 1) throw new ConflictException({ message: "Dữ liệu hồ sơ đã thay đổi. Vui lòng tải lại trước khi thử lại.", code: "CONTEXT_VERSION_MISMATCH", correlationId });
         if (Object.keys(this.childData(safeInput)).length > 0) await tx.researcherProfile.update({ where: { id: profile.id }, data: this.childData(safeInput) as never });
-        if (safeInput.fullName !== undefined) await tx.user.update({ where: { id: actor.id }, data: { displayName: safeInput.fullName } });
         await this.syncPublications(tx, profile.id, safeInput.publications, actor.id);
         await this.syncParticipations(tx, profile.id, safeInput.participations, actor.id);
+        await this.syncLinkedDisplayName(tx, profile.id, actor.id, correlationId);
+        await this.propagateTitles(tx, profile.id, actor.id, correlationId);
       }
       const next = (await tx.researcherProfile.findUnique({ where: { id: profile.id }, include: profileInclude } as never)) as unknown as ProfileWithRelations;
       if (hasProfileChanges) {
@@ -394,7 +403,7 @@ export class ResearcherProfilesService {
       await this.assertUniqueCredentialEmail(tx, email);
       const systemRole = profile.profileType === "EXTERNAL" ? "EXTERNAL_RESEARCHER_USER" : "RESEARCHER_INTERNAL_USER";
       const passwordHash = await this.passwordService.hashPassword(randomBytes(32).toString("base64url"));
-      const user = await tx.user.create({ data: { username: null, usernameKey: null, displayName: profile.fullName, passwordHash, credentialEmail: email, mustChangePassword: false, status: "pending_activation", systemRole, unit: profile.managementOrganizationUnit.name,
+      const user = await tx.user.create({ data: { username: null, usernameKey: null, displayName: formatResearcherDisplayName(profile), passwordHash, credentialEmail: email, mustChangePassword: false, status: "pending_activation", systemRole, unit: profile.managementOrganizationUnit.name,
         organizationScopes: { create: { organizationUnitId: profile.managementOrganizationUnitId, isPrimary: true } } } });
       await tx.researcherProfile.update({ where: { id: profileId }, data: { linkedUserId: user.id, aggregateVersion: { increment: 1 }, updatedById: actor.id } });
       await tx.researcherProfileAccountLink.create({ data: { researcherProfileId: profileId, userId: user.id, effectiveFrom: new Date(), reason: "profile-account-activation", createdById: actor.id } });
@@ -402,6 +411,8 @@ export class ResearcherProfilesService {
       const delivery = await tx.accountCredentialDelivery.create({ data: { researcherProfileId: profileId, userId: user.id, recipientEmail: email, templateKey: "researcher_account_activation", status: "PENDING", expiresAt: activation.expiresAt } });
       for (const action of ["provision-researcher-account", "link-researcher-account", "issue-researcher-activation"]) await this.auditLog.record({ action, result: "success", actorId: actor.id, targetEntity: "researcher-profile", targetEntityId: profileId, correlationId, afterFacts: { userId: user.id, systemRole, organizationUnitId: profile.managementOrganizationUnitId, deliveryId: delivery.id, expiresAt: activation.expiresAt.toISOString() } }, tx);
       await this.writeProfileHistory(tx, profileId, actor.id, "ACCOUNT_CREATED", { linkedUserId: null }, { linkedUserId: user.id });
+      await this.syncLinkedDisplayName(tx, profileId, actor.id, correlationId);
+      await this.propagateTitles(tx, profileId, actor.id, correlationId);
       return { user, delivery, activation };
     });
     const delivery = await this.deliverActivation(result.delivery.id, email, result.user.displayName, result.activation.token, result.activation.expiresAt, actor, correlationId);
@@ -418,10 +429,11 @@ export class ResearcherProfilesService {
       const user = await tx.user.findUnique({ where: { id: input.userId }, include: { organizationScopes: { include: { organizationUnit: true } }, researcherProfile: true } });
       if (!user || user.id === actor.id || user.status !== "active" || !linkableAccountRoles(actor, profile.profileType).includes(user.systemRole ?? "") || user.researcherProfile || !user.organizationScopes.some((scope) => scope.organizationUnitId === profile.managementOrganizationUnitId && scope.organizationUnit.status === "active")) throw new ConflictException({ message: "Tài khoản đã liên kết hoặc không phù hợp loại/phạm vi hồ sơ." });
       await tx.researcherProfile.update({ where: { id: profileId }, data: { linkedUserId: user.id, aggregateVersion: { increment: 1 }, updatedById: actor.id } });
-      await tx.user.update({ where: { id: user.id }, data: { displayName: profile.fullName } });
       await tx.researcherProfileAccountLink.create({ data: { researcherProfileId: profileId, userId: user.id, effectiveFrom: new Date(), reason: input.reason, createdById: actor.id } });
       await this.auditLog.record({ action: "link-researcher-account", result: "success", actorId: actor.id, targetEntity: "researcher-profile", targetEntityId: profileId, correlationId, afterFacts: { userId: user.id } }, tx);
       await this.writeProfileHistory(tx, profileId, actor.id, "ACCOUNT_LINKED", { linkedUserId: null }, { linkedUserId: user.id }, input.reason);
+      await this.syncLinkedDisplayName(tx, profileId, actor.id, correlationId);
+      await this.propagateTitles(tx, profileId, actor.id, correlationId);
     });
     return { profile: await this.getProfile(actor, profileId), correlationId };
   }
@@ -477,8 +489,44 @@ export class ResearcherProfilesService {
     }
   }
 
-  private safeAccount(user: { id: string; username: string | null; displayName: string; status: string; systemRole: string | null; mustChangePassword: boolean; credentialEmail?: string | null }) {
-    return { id: user.id, username: user.username, email: user.credentialEmail ?? null, displayName: user.displayName, status: user.status, systemRole: user.systemRole, mustChangePassword: user.mustChangePassword };
+  private async syncLinkedDisplayName(tx: Prisma.TransactionClient, profileId: string, actorId: string, correlationId?: string) {
+    const profile = await tx.researcherProfile.findUnique({
+      where: { id: profileId },
+      select: {
+        linkedUserId: true,
+        fullName: true,
+        militaryRank: true,
+        academicRankCatalogItem: { select: { code: true, name: true } },
+        academicDegreeCatalogItem: { select: { code: true, name: true } },
+        linkedUser: { select: { displayName: true } }
+      }
+    });
+    if (!profile?.linkedUserId) return;
+    const displayName = formatResearcherDisplayName(profile);
+    const before = profile.linkedUser?.displayName;
+    if (before === displayName) return;
+    await tx.user.update({ where: { id: profile.linkedUserId }, data: { displayName } });
+    await this.auditLog.record({ action: "sync-display-name-from-researcher-profile", result: "success", actorId, targetEntity: "user", targetEntityId: profile.linkedUserId, correlationId, beforeFacts: { displayName: before }, afterFacts: { displayName } }, tx);
+  }
+
+  /** Danh sách đang dùng đã chép tên người này (thành viên đề xuất và đề tài đang ACTIVE) đổi theo lý lịch. */
+  private async propagateTitles(tx: Prisma.TransactionClient, profileId: string, actorId: string, correlationId?: string) {
+    const changed = await propagateScientistTitles(tx, profileId);
+    if (!Object.values(changed).some((count) => count > 0)) return;
+    await this.auditLog.record({ action: "propagate-researcher-titles", result: "success", actorId, targetEntity: "researcher-profile", targetEntityId: profileId, correlationId, afterFacts: changed }, tx);
+  }
+
+  private safeAccount(user: { id: string; username: string | null; displayName: string; status: string; systemRole: string | null; mustChangePassword: boolean; credentialEmail?: string | null; unitPositions?: AccountPositionRow[] }) {
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.credentialEmail ?? null,
+      displayName: user.displayName,
+      status: user.status,
+      systemRole: user.systemRole,
+      mustChangePassword: user.mustChangePassword,
+      positions: (user.unitPositions ?? []).filter((item) => item.organizationUnit.status === "active").map((item) => positionDisplay(item.organizationUnit.unitType, item.positionCode, item.organizationUnit.name))
+    };
   }
 
 

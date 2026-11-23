@@ -52,7 +52,7 @@ export type ResearcherProfile = Omit<ResearcherProfileInput, "managementOrganiza
   researchFields: ResearcherCatalogItem[]; expertiseKeywords: string[]; publications: Publication[]; participations: Participation[];
   curriculumVitae?: ScientificCurriculumVitae | null;
   status: "ACTIVE" | "INACTIVE"; aggregateVersion: number; createdAt: string; updatedAt: string; viewerAuthorization: ViewerAuthorizationV1;
-  account: { id: string; username: string | null; email?: string | null; displayName: string; status: string; systemRole: string; mustChangePassword: boolean } | null;
+  account: { id: string; username: string | null; email?: string | null; displayName: string; status: string; systemRole: string; mustChangePassword: boolean; positions?: string[] } | null;
   credentialDelivery?: { id: string; status: string; recipientEmail: string; expiresAt?: string | null; createdAt?: string } | null;
 };
 export type ResearcherProfileSummary = Pick<ResearcherProfile, "id" | "fullName" | "profileType" | "status" | "managementOrganization" | "account" | "viewerAuthorization">;

@@ -472,7 +472,15 @@ function createPrisma() {
       }
     },
     ...createEvaluationTables(store, ACCOUNTS),
-    async $queryRaw() {
+    counters: new Map(),
+    async $queryRaw(strings, ...values) {
+      const sql = Array.isArray(strings) ? strings.join(" ") : String(strings ?? "");
+      if (sql.includes("document_number_counters")) {
+        const key = `${values[0]}:${values[1]}`;
+        const next = (this.counters.get(key) ?? 0) + 1;
+        this.counters.set(key, next);
+        return [{ value: next }];
+      }
       return [{ asOf: new Date() }];
     },
     async $transaction(callback) {
@@ -1463,7 +1471,17 @@ describe("Story 5.4 reviewer access and own-review submission", () => {
     const matches = (row, where = {}) => Object.entries(where).every(([key, value]) => value === undefined || (value?.in ? value.in.includes(row[key]) : row[key] === value));
     return {
       store,
-      $queryRaw: async () => [{ asOf: new Date() }],
+      $queryRaw: async (strings, ...values) => {
+        const sql = Array.isArray(strings) ? strings.join(" ") : String(strings ?? "");
+        if (sql.includes("document_number_counters")) {
+          store.counters ??= new Map();
+          const key = `${values[0]}:${values[1]}`;
+          const next = (store.counters.get(key) ?? 0) + 1;
+          store.counters.set(key, next);
+          return [{ value: next }];
+        }
+        return [{ asOf: new Date() }];
+      },
       async $transaction(work) { return work(this); },
       user: {
         findUnique: async ({ where }) => (where.id === external.id ? { ...external, researcherProfile: null } : null),
