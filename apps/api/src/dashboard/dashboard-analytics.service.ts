@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import type { SafeUserContext } from "../auth/auth.types.js";
-import { PROJECT_HEALTH_LABELS, PROJECT_HEALTH_VALUES, type ProjectHealth } from "../approved-projects/project-progress.js";
+import { PROJECT_HEALTH_LABELS, PROJECT_HEALTH_VALUES, round2, round3, type ProjectHealth } from "../approved-projects/project-progress.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { isResearchOversightAuthority } from "../proposals-shared/proposal-access.js";
 import {
@@ -17,9 +17,8 @@ import {
   type DashboardProjectItem,
   type DashboardProposalItem
 } from "./dashboard.service.js";
-import { vietnamDateParts } from "./project-health-snapshot.service.js";
+import { DAY_MS, maxRangeEndUtc, vietnamDateParts } from "./vietnam-time.js";
 
-const DAY_MS = 86_400_000;
 
 export type DistributionBucket = {
   key: string;
@@ -136,21 +135,9 @@ export type DrillDownProductRow = {
 
 export type DrillDownRow = DrillDownProjectRow | DrillDownProposalRow | DrillDownProductRow;
 
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
-function round3(value: number): number {
-  return Math.round(value * 1000) / 1000;
-}
-
 function shiftIsoDays(isoDate: string, deltaDays: number): string {
   const ms = new Date(`${isoDate}T00:00:00.000Z`).getTime() + deltaDays * DAY_MS;
   return new Date(ms).toISOString().slice(0, 10);
-}
-
-function maxRangeEndUtc(fromDate: Date): Date {
-  return new Date(Date.UTC(fromDate.getUTCFullYear() + 3, fromDate.getUTCMonth(), fromDate.getUTCDate()));
 }
 
 function toDrillDownProjectRow(item: DashboardProjectItem): DrillDownProjectRow {

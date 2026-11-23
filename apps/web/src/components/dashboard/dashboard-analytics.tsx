@@ -257,6 +257,16 @@ export function DashboardAnalytics() {
   };
 
   const options = bundle?.stats.filterOptions ?? cachedOptions;
+  const codeItems = (list: Array<{ code: string; label: string }> = []) => list.map((item) => ({ value: item.code, label: item.label }));
+  const filterFields: Array<{ key: keyof DashboardFilters; id: string; label: string; all: string; items: Array<{ value: string; label: string }> }> = [
+    { key: "year", id: "dash-year", label: "Năm", all: "Tất cả các năm", items: (options?.years ?? []).map((yr) => ({ value: String(yr), label: `Năm ${yr}` })) },
+    { key: "unitId", id: "dash-unit", label: "Đơn vị chủ trì", all: "Tất cả đơn vị", items: (options?.units ?? []).map((u) => ({ value: u.id, label: u.name })) },
+    { key: "level", id: "dash-level", label: "Cấp quản lý", all: "Tất cả cấp", items: codeItems(options?.levels) },
+    { key: "field", id: "dash-field", label: "Lĩnh vực", all: "Tất cả lĩnh vực", items: codeItems(options?.fields) },
+    { key: "scope", id: "dash-scope", label: "Tính chất", all: "Quân sự & Dân sự", items: codeItems(options?.scopes) },
+    { key: "officerId", id: "dash-officer", label: "CV phụ trách", all: "Tất cả CV", items: (options?.officers ?? []).map((o) => ({ value: o.id, label: o.label })) },
+    { key: "health", id: "dash-health", label: "Sức khoẻ đề tài", all: "Mọi trạng thái sức khoẻ", items: codeItems(options?.healths) }
+  ];
   const refreshing = isLoading && Boolean(bundle);
   const fundingUnits = useMemo(
     () => (bundle?.projectDist.byUnit ?? []).filter((b) => b.totalBudget > 0 || b.totalDisbursed > 0),
@@ -309,117 +319,23 @@ export function DashboardAnalytics() {
 
       <section className="dash-filters" aria-label="Bộ lọc thống kê đồng bộ URL">
         <div className="dash-filter-grid">
-          <div className="filter-field">
-            <label htmlFor="dash-year">Năm</label>
-            <select
-              id="dash-year"
-              value={filters.year ?? ""}
-              onChange={(e) => updateFilterUrl({ year: e.target.value })}
-            >
-              <option value="">Tất cả các năm</option>
-              {(options?.years ?? []).map((yr) => (
-                <option key={yr} value={String(yr)}>
-                  Năm {yr}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-field">
-            <label htmlFor="dash-unit">Đơn vị chủ trì</label>
-            <select
-              id="dash-unit"
-              value={filters.unitId ?? ""}
-              onChange={(e) => updateFilterUrl({ unitId: e.target.value })}
-            >
-              <option value="">Tất cả đơn vị</option>
-              {(options?.units ?? []).map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-field">
-            <label htmlFor="dash-level">Cấp quản lý</label>
-            <select
-              id="dash-level"
-              value={filters.level ?? ""}
-              onChange={(e) => updateFilterUrl({ level: e.target.value })}
-            >
-              <option value="">Tất cả cấp</option>
-              {(options?.levels ?? []).map((lv) => (
-                <option key={lv.code} value={lv.code}>
-                  {lv.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-field">
-            <label htmlFor="dash-field">Lĩnh vực</label>
-            <select
-              id="dash-field"
-              value={filters.field ?? ""}
-              onChange={(e) => updateFilterUrl({ field: e.target.value })}
-            >
-              <option value="">Tất cả lĩnh vực</option>
-              {(options?.fields ?? []).map((fd) => (
-                <option key={fd.code} value={fd.code}>
-                  {fd.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-field">
-            <label htmlFor="dash-scope">Tính chất</label>
-            <select
-              id="dash-scope"
-              value={filters.scope ?? ""}
-              onChange={(e) => updateFilterUrl({ scope: e.target.value })}
-            >
-              <option value="">Quân sự & Dân sự</option>
-              {(options?.scopes ?? []).map((sc) => (
-                <option key={sc.code} value={sc.code}>
-                  {sc.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-field">
-            <label htmlFor="dash-officer">CV phụ trách</label>
-            <select
-              id="dash-officer"
-              value={filters.officerId ?? ""}
-              onChange={(e) => updateFilterUrl({ officerId: e.target.value })}
-            >
-              <option value="">Tất cả CV</option>
-              {(options?.officers ?? []).map((ofc) => (
-                <option key={ofc.id} value={ofc.id}>
-                  {ofc.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-field">
-            <label htmlFor="dash-health">Sức khoẻ đề tài</label>
-            <select
-              id="dash-health"
-              value={filters.health ?? ""}
-              onChange={(e) => updateFilterUrl({ health: e.target.value as ProjectHealthCode | "" })}
-            >
-              <option value="">Mọi trạng thái sức khoẻ</option>
-              {(options?.healths ?? []).map((hl) => (
-                <option key={hl.code} value={hl.code}>
-                  {hl.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {filterFields.map((field) => (
+            <div className="filter-field" key={field.key}>
+              <label htmlFor={field.id}>{field.label}</label>
+              <select
+                id={field.id}
+                value={filters[field.key] ?? ""}
+                onChange={(e) => updateFilterUrl({ [field.key]: e.target.value } as Partial<DashboardFilters>)}
+              >
+                <option value="">{field.all}</option>
+                {field.items.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
         </div>
 
         {hasActiveFilters ? (

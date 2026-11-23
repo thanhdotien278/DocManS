@@ -63,6 +63,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="user-menu-panel">
                 <p className="user-menu-heading">{account.name}</p>
                 <p className="user-menu-meta">{account.unit}</p>
+                {account.positions.map((position) => (
+                  <p key={position} className="user-menu-meta" style={{ fontWeight: 600 }}>
+                    {position}
+                  </p>
+                ))}
                 <a className="button" href="/change-password">Đổi mật khẩu</a>
                 <LogoutButton />
               </div>

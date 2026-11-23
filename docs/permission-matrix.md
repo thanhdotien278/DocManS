@@ -878,3 +878,28 @@ Effective deadline = topic `deadlineOverride`, else the period `submissionDeadli
 - Documents: `.doc`, `.docx`, `.pdf`. Award evidence: `.jpg`, `.png`, `.pdf`. Replacing keeps
   the previous version as a deleted `FileRecord`. These files are not served by `api/v1/files`.
 - After closing, score, award and documents cannot be changed. Every mutation is audited.
+
+---
+
+## Báo cáo công tác KHQS & Số quyết định (`/reports`, `api/v1/khqs-reports`)
+
+### 1. Trang báo cáo (`/reports`) và API `api/v1/khqs-reports/:year/:period`
+
+- **Truy cập `/reports` (tab Kinh phí & Tiến độ)**: Ban Giám đốc (`LEADERSHIP_APPROVAL_AUTHORITY`, `SCIENCE_DEPUTY_DIRECTOR`, `RESEARCH_OVERSIGHT_AUTHORITY`), `RESEARCH_MANAGEMENT_HEAD`, `RESEARCH_BOARD_HEAD`, `RESEARCH_MANAGEMENT_DEPUTY_HEAD`, `RESEARCH_MANAGEMENT_STAFF`. Từ chối `RESEARCHER_INTERNAL_USER`, `EXTERNAL_RESEARCHER_USER`, `STUDENT_USER`, `SYSTEM_ADMIN`.
+- **Giới hạn hiển thị kinh phí từng đề tài**: `RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD) và `RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP) chỉ xem báo cáo kinh phí tổng hợp (`BudgetSummaryPanel`) và không thấy cột/bộ lọc kinh phí từng hồ sơ, đề tài ở tab Tiến độ.
+- **Báo cáo công tác KHQS định kỳ (`H1` / `FY`)**:
+
+| Hành động | GĐ | PGĐ-KH | TP | TB | PGĐ-TD / PP / CV / NCV / NNB / SV / QT |
+| --- | --- | --- | --- | --- | --- |
+| Xem và xuất Word (`.docx`) / Excel (`KQ-1..KQ-6`) | Có | Có | Có | Có | Không (403) |
+| Lưu nội dung báo cáo, biểu nhập tay (`KQ-3`, `KQ-4`, `KQ-6`) và ghi chú `overrides` | Không (403) | Không (403) | Có | Có | Không (403) |
+
+- Dữ liệu `KQ-1`, `KQ-2` tổng hợp theo thời gian thực từ `ApprovedProject` (không gồm `preparing`) và `ProjectFundingRecord` (`latestFunding`); ghi nhận vào `KhqsPeriodicReport` kèm kiểm tra khóa lạc quan (`version`, trả 409 khi cũ) và `AuditLog`.
+
+### 2. Bộ đếm số văn bản tự động & Xuất văn bản `.docx`
+
+- Bảng `document_number_counters` cấp phát tuần tự nguyên tử theo `(scope, year)`:
+  - Mã hồ sơ (`research-proposals.code`, `YYYY-UNIT-NNN`) cấp khi nộp lần đầu và kế thừa sang `ApprovedProject.code`.
+  - Số quyết định phê duyệt đề tài (`ProposalDecision.decisionNumber`), thành lập Hội đồng đánh giá / Hội đồng nghiệm thu (`ApprovalSubmission.decisionNumber`, mẫu `QĐ 1273/QĐ-HVQY`, `QĐ 4626/QĐ-HVQY`, `Thông tư 14/2022/TT-BQP`): nhập tay (kiểm tra trùng `@unique`, trả 409 `DECISION_NUMBER_TAKEN`) hoặc để trống để tự động cấp khi phê duyệt / ký thành lập; trả về `null` khi từ chối.
+  - Số biên bản thanh lý (`ProjectLiquidation.liquidationNumber`, mẫu `N/BBTL-HVQY/YYYY`) cấp qua `allocateLiquidationNumber`.
+

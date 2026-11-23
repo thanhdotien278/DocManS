@@ -43,13 +43,13 @@ function reviewItems(assignments: ReviewerQueueItem[]): WorkItem[] {
     if (assignment.access === "preview") {
       return assignment.invitationStatus === "invited" ? [{
         key: `review-${assignment.id}`, record: assignment.proposal.title, meta: `Lời mời đánh giá · ${assignment.assignmentRoleLabel}`,
-        waiting: "Trả lời lời mời tham gia đánh giá", due: assignment.dueDate, href: "/my-reviews", action: "Trả lời"
+        waiting: "Trả lời lời mời tham gia đánh giá", due: assignment.dueDate, href: "/invitation-to-review", action: "Trả lời"
       }] : [];
     }
     if (assignment.assignmentRole === "council_secretary" || assignment.scoring === false || assignment.myReviewStatus === "submitted") return [];
     return [{
       key: `review-${assignment.id}`, record: assignment.proposal.title, meta: `Hồ sơ đề xuất ${assignment.proposal.code} · ${assignment.assignmentRoleLabel}`,
-      waiting: "Chấm và gửi phiếu đánh giá", due: assignment.dueDate, href: "/my-reviews", action: "Chấm phiếu"
+      waiting: "Chấm và gửi phiếu đánh giá", due: assignment.dueDate, href: "/invitation-to-review", action: "Chấm phiếu"
     }];
   });
 }

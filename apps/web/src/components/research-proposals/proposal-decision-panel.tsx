@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { ViewerAuthorizationV1 } from "@rtms/permissions";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, FileText, XCircle } from "lucide-react";
+import { OfficialDecisionModal } from "@/components/research-proposals/official-decision-modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -21,7 +22,26 @@ function formatDate(value: string) {
  * workflow trail behind them. A conflict is shown with its reason rather than silently hiding the
  * buttons (UX-DR27), and the backend re-checks authority, state and conflict on the action itself.
  */
-export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, blockedReason, contextVersion }: { proposalId: string; onDecision: () => void; canDecide: boolean; blockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
+type ProposalDecisionInfo = {
+  id: string;
+  code?: string | null;
+  title: string;
+  proposalTypeCode?: string | null;
+  researchFieldCode?: string | null;
+  ownerDisplayName?: string | null;
+  hostOrganizationUnitName?: string | null;
+  hostOrganizationUnitId?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  budgetMetadata?: {
+    amount?: number | string | null;
+    approvedAmount?: number | null;
+    currency?: string | null;
+    note?: string | null;
+  } | null;
+};
+
+export function ProposalDecisionPanel({ proposalId, proposalInfo, onDecision, canDecide, blockedReason, contextVersion }: { proposalId: string; proposalInfo?: ProposalDecisionInfo; onDecision: () => void; canDecide: boolean; blockedReason: string; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
   const [decisionPackage, setDecisionPackage] = useState<ProposalDecisionPackage | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
   const [loadError, setLoadError] = useState("");
@@ -29,6 +49,8 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
   const [publicSummary, setPublicSummary] = useState("");
   const [requiredFollowUp, setRequiredFollowUp] = useState("");
   const [approvedAmount, setApprovedAmount] = useState<number | undefined>(undefined);
+  const [decisionNumber, setDecisionNumber] = useState("");
+  const [showDecisionModal, setShowDecisionModal] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busyDecision, setBusyDecision] = useState<"" | "approve" | "reject">("");
@@ -90,12 +112,18 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
 
     setBusyDecision(decision);
     try {
-      const result = await decideProposal(proposalId, decision, note.trim(), packageRevision, contextVersion, { publicSummary: publicSummary.trim(), requiredFollowUp: requiredFollowUp.trim(), ...(decision === "approve" && approvedAmount !== undefined ? { approvedAmount } : {}) });
+      const result = await decideProposal(proposalId, decision, note.trim(), packageRevision, contextVersion, {
+        publicSummary: publicSummary.trim(),
+        requiredFollowUp: requiredFollowUp.trim(),
+        ...(decision === "approve" && approvedAmount !== undefined ? { approvedAmount } : {}),
+        ...(decision === "approve" && decisionNumber.trim() ? { decisionNumber: decisionNumber.trim() } : {})
+      });
       setMessage(`Đã ghi nhận quyết định: ${result.decision.decisionLabel}.`);
       setNote("");
       setPublicSummary("");
       setRequiredFollowUp("");
       setApprovedAmount(undefined);
+      setDecisionNumber("");
       await refresh();
       onDecision();
     } catch (thrown) {
@@ -213,6 +241,7 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
                 <span className="timeline-dot" />
                 <div>
                   <p className="timeline-title">{decision.decisionLabel}</p>
+                  {decision.decisionNumber ? <p className="timeline-meta">Số quyết định: <span className="doc-number">{decision.decisionNumber}</span></p> : null}
                   <p className="timeline-meta">
                     {decision.decidedByDisplayName || "Lãnh đạo"} · {formatDate(decision.decidedAt)}
                   </p>
@@ -221,10 +250,28 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
               </article>
             ))}
           </div>
+          {proposalInfo && decisionPackage.decisions.some((decision) => decision.decision === "approved") ? (
+            <div className="button-row" style={{ marginTop: 12 }}>
+              <button className="button secondary" type="button" onClick={() => setShowDecisionModal(true)}>
+                <FileText size={16} aria-hidden="true" />
+                Xem &amp; Xuất QĐ phê duyệt (QĐ 4626)
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
       <form className="admin-form compact-form" onSubmit={(event) => event.preventDefault()}>
+        <label className="field">
+          <span>Số quyết định (không bắt buộc; để trống để hệ thống tự động cấp)</span>
+          <input
+            maxLength={60}
+            placeholder="Ví dụ: 102/QĐ-HVQY"
+            value={decisionNumber}
+            onChange={(event) => setDecisionNumber(event.target.value)}
+            disabled={!canDecide || !decisionPackage.canDecide}
+          />
+        </label>
         <label className="field">
           <span>Ý kiến quyết định nội bộ, không công bố (bắt buộc khi không phê duyệt)</span>
           <textarea
@@ -294,6 +341,13 @@ export function ProposalDecisionPanel({ proposalId, onDecision, canDecide, block
           </p>
         ) : null}
       </form>
+      {proposalInfo ? (
+        <OfficialDecisionModal
+          isOpen={showDecisionModal}
+          onClose={() => setShowDecisionModal(false)}
+          proposal={{ ...proposalInfo, decisions: decisionPackage.decisions }}
+        />
+      ) : null}
     </SectionCard>
   );
 }

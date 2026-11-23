@@ -47,7 +47,21 @@ export type ReviewAssignmentRecord = {
   respondedAt?: Date | null;
   declineReason?: string | null;
   councilEstablishedAt?: Date | null;
-  reviewer?: { displayName: string; username: string | null; unit: string; status?: string } | null;
+  reviewer?: {
+    displayName: string;
+    username: string | null;
+    unit: string;
+    status?: string;
+    researcherProfile?: {
+      fullName?: string | null;
+      militaryRank?: string | null;
+      position?: string | null;
+      profileType?: string | null;
+      externalAffiliation?: string | null;
+      academicRankCatalogItem?: { code?: string | null; name?: string | null } | null;
+      academicDegreeCatalogItem?: { code?: string | null; name?: string | null } | null;
+    } | null;
+  } | null;
   assignedBy?: { displayName: string } | null;
 };
 
@@ -109,6 +123,7 @@ export type ProposalDecisionRecord = {
   contextVersion: unknown;
   packageSnapshot: unknown;
   publicSummary: unknown;
+  decisionNumber?: string | null;
   decidedBy?: { displayName: string } | null;
 };
 

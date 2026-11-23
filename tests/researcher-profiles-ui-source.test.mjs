@@ -298,4 +298,24 @@ describe("Story 2.1 researcher profile UI source", () => {
     assert.match(denied, /Bạn không có quyền xem lý lịch khoa học/);
     assert.ok(!denied.includes("cv-paper") && !denied.includes("NGUYỄN VĂN A") && !denied.includes("a@hvqy.vn"));
   });
+
+  it("exposes the dedicated /invitation-to-review page, redirects /my-reviews, and links navigation", async () => {
+    const [invitationPage, myReviewsPage] = await Promise.all([
+      readFile("apps/web/src/app/invitation-to-review/page.tsx", "utf8"),
+      readFile("apps/web/src/app/my-reviews/page.tsx", "utf8")
+    ]);
+    assert.match(invitationPage, /Được mời phản biện/);
+    assert.match(invitationPage, /<AcceptanceCouncilSeats \/>/);
+    assert.match(invitationPage, /<ReviewerQueuePanel \/>/);
+    assert.match(myReviewsPage, /redirect\("\/invitation-to-review"\)/);
+
+    const shell = await loadFixture("apps/web/src/fixtures/shell-context.ts");
+    const navigation = await loadFixture("apps/web/src/lib/navigation.ts", { "@/fixtures/shell-context": shell });
+    for (const role of ["RESEARCHER_INTERNAL_USER", "EXTERNAL_RESEARCHER_USER"]) {
+      const items = navigation.getNavigationItems(role);
+      const entry = items.find((item) => item.href === "/invitation-to-review");
+      assert.ok(entry, `${role} should expose /invitation-to-review`);
+      assert.equal(entry.label, "Được mời phản biện");
+    }
+  });
 });

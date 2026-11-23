@@ -12,6 +12,7 @@ import { CheckCircle2, Download, FileText, Pencil, Save, Send, Trash2, UploadClo
 import { useSession } from "@/components/auth/session-provider";
 import { RoutingStatus } from "@/components/approvals/routing-status";
 import { CreateProjectFromProposal } from "@/components/projects/project-list";
+import { OfficialDecisionModal } from "@/components/research-proposals/official-decision-modal";
 import { ProposalCouncilPanel } from "@/components/research-proposals/proposal-council-panel";
 import { CouncilSecretaryPanel, EvaluationFileUpload } from "@/components/research-proposals/council-secretary-panel";
 import { ProposalDecisionPanel } from "@/components/research-proposals/proposal-decision-panel";
@@ -129,6 +130,7 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
   const [isResubmitting, setIsResubmitting] = useState(false);
   // Thư ký (đã nhận lời, đã thành lập) không gọi được evaluation-council nên nhận diện qua hàng đợi của chính mình (spec S7).
   const [isCouncilSecretary, setIsCouncilSecretary] = useState(false);
+  const [showApprovalDecisionModal, setShowApprovalDecisionModal] = useState(false);
 
   async function refresh() {
     setState("loading");
@@ -779,20 +781,82 @@ export function ProposalDetailWorkspace({ proposalId }: { proposalId: string }) 
         ) : null}
 
         {/* Panel hội đồng tự ẩn khi backend trả 401/403 (người xem không lập, rà soát hay ký). */}
-        {["submitted", "resubmitted", "under_review"].includes(proposal.status) ? <ProposalCouncilPanel proposalId={proposal.id} onChanged={() => void refreshWorkflowState()} /> : null}
+        {["submitted", "resubmitted", "under_review"].includes(proposal.status) ? (
+          <ProposalCouncilPanel
+            proposalId={proposal.id}
+            proposalInfo={{
+              code: proposal.code,
+              title: proposal.title,
+              ownerDisplayName: proposal.ownerDisplayName,
+              hostOrganizationUnitName: proposal.hostOrganizationUnitName,
+              proposalTypeCode: proposal.proposalTypeCode,
+              startDate: proposal.startDate
+            }}
+            onChanged={() => void refreshWorkflowState()}
+          />
+        ) : null}
 
         {proposal.publishedDecision ? (
           <SectionCard title="Kết quả quyết định" subtitle="Thông tin được công bố về quyết định của Giám đốc">
             <div className="meta-grid">
               <div className="meta-item"><span className="meta-label">Quyết định</span><span className="meta-value">{proposal.publishedDecision.decisionLabel}</span></div>
               <div className="meta-item"><span className="meta-label">Ngày quyết định</span><span className="meta-value">{formatDate(proposal.publishedDecision.decidedAt)}</span></div>
+              {proposal.approvalDecision ? (
+                <div className="meta-item"><span className="meta-label">Số quyết định</span><span className="meta-value doc-number">{proposal.approvalDecision.decisionNumber}</span></div>
+              ) : null}
             </div>
             {proposal.publishedDecision.publicSummary ? <p style={{ whiteSpace: "pre-wrap" }}>{proposal.publishedDecision.publicSummary}</p> : null}
             {proposal.publishedDecision.requiredFollowUp ? <><div className="section-mini-heading">Yêu cầu tiếp theo</div><p style={{ whiteSpace: "pre-wrap" }}>{proposal.publishedDecision.requiredFollowUp}</p></> : null}
+            {proposal.approvalDecision ? (
+              <div className="button-row" style={{ marginTop: 12 }}>
+                <button className="button secondary" type="button" onClick={() => setShowApprovalDecisionModal(true)}>
+                  <FileText size={16} aria-hidden="true" />
+                  Xem &amp; Xuất QĐ phê duyệt (QĐ 4626)
+                </button>
+              </div>
+            ) : null}
+            {proposal.approvalDecision ? (
+              <OfficialDecisionModal
+                isOpen={showApprovalDecisionModal}
+                onClose={() => setShowApprovalDecisionModal(false)}
+                proposal={{
+                  ...proposal,
+                  decisions: [{
+                    id: proposal.id,
+                    decision: "approved",
+                    decisionLabel: proposal.publishedDecision.decisionLabel,
+                    decidedAt: proposal.approvalDecision.decidedAt,
+                    decidedByDisplayName: proposal.approvalDecision.decidedByDisplayName || undefined,
+                    decisionNumber: proposal.approvalDecision.decisionNumber
+                  }]
+                }}
+              />
+            ) : null}
           </SectionCard>
         ) : null}
 
-        {showDecisionPanel ? <ProposalDecisionPanel contextVersion={proposal.viewerAuthorization?.contextVersion} proposalId={proposal.id} onDecision={() => void refreshWorkflowState()} canDecide={canPerformProposalAction(capabilityState, "proposal.decision.approve")} blockedReason={blockedProposalAction(capabilityState, "proposal.decision.approve")?.reason ?? capabilityState.reason} /> : null}
+        {showDecisionPanel ? (
+          <ProposalDecisionPanel
+            contextVersion={proposal.viewerAuthorization?.contextVersion}
+            proposalId={proposal.id}
+            proposalInfo={{
+              id: proposal.id,
+              code: proposal.code,
+              title: proposal.title,
+              proposalTypeCode: proposal.proposalTypeCode,
+              researchFieldCode: proposal.researchFieldCode,
+              ownerDisplayName: proposal.ownerDisplayName,
+              hostOrganizationUnitName: proposal.hostOrganizationUnitName,
+              hostOrganizationUnitId: proposal.hostOrganizationUnitId,
+              startDate: proposal.startDate,
+              endDate: proposal.endDate,
+              budgetMetadata: proposal.budgetMetadata
+            }}
+            onDecision={() => void refreshWorkflowState()}
+            canDecide={canPerformProposalAction(capabilityState, "proposal.decision.approve")}
+            blockedReason={blockedProposalAction(capabilityState, "proposal.decision.approve")?.reason ?? capabilityState.reason}
+          />
+        ) : null}
 
         <SectionCard title="Tệp tài liệu" subtitle="Theo dõi từng tài liệu bắt buộc và metadata nộp hồ sơ">
           {uploadError ? <p className="form-error">{uploadError}</p> : null}

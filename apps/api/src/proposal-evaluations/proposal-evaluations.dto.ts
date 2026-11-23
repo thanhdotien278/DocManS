@@ -44,6 +44,7 @@ export class ProposalDecisionDto {
   [key: string]: unknown;
 
   note?: string;
+  decisionNumber?: string;
   contextVersion!: ContextVersionTokenV1;
   packageRevision!: number;
   publicSummary?: string;
@@ -160,6 +161,7 @@ export const proposalDecisionPipe: PipeTransform<unknown, ProposalDecisionDto> =
     // required for every approve/reject mutation; the reject-needs-a-reason rule stays in the service.
     const input = value === undefined || value === null || value === "" ? {} : assertRecord(value);
     assertOptionalText(input.note, "note", 2000);
+    assertOptionalText(input.decisionNumber, "decisionNumber", 80);
     if (!Number.isInteger(input.packageRevision) || Number(input.packageRevision) < 0) {
       throw new BadRequestException({ message: "Thiếu hoặc không hợp lệ phiên bản gói đánh giá." });
     }
@@ -219,13 +221,14 @@ export const submitEvaluationCouncilPipe: PipeTransform<unknown, SubmitEvaluatio
   }
 };
 
-export type DecideEvaluationCouncilDto = { decision: "sign" | "return"; note?: string; contextVersion: ContextVersionTokenV1 };
+export type DecideEvaluationCouncilDto = { decision: "sign" | "return"; note?: string; decisionNumber?: string; contextVersion: ContextVersionTokenV1 };
 
 export const decideEvaluationCouncilPipe: PipeTransform<unknown, DecideEvaluationCouncilDto> = {
   transform(value: unknown) {
     const input = assertRecord(value);
     if (input.decision !== "sign" && input.decision !== "return") throw new BadRequestException({ message: "Chọn ký hoặc trả lại." });
     assertOptionalText(input.note, "note", 2000);
-    return { decision: input.decision, note: typeof input.note === "string" ? input.note : undefined, contextVersion: readContextVersion(input) };
+    assertOptionalText(input.decisionNumber, "decisionNumber", 80);
+    return { decision: input.decision, note: typeof input.note === "string" ? input.note : undefined, decisionNumber: typeof input.decisionNumber === "string" ? input.decisionNumber : undefined, contextVersion: readContextVersion(input) };
   }
 };
