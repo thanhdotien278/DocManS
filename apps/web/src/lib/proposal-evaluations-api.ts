@@ -1,4 +1,5 @@
 import type { ViewerAuthorizationV1 } from "@rtms/permissions";
+import { apiFetch } from "@/lib/csrf";
 import { getApiBaseUrl } from "@/lib/session";
 
 /**
@@ -275,7 +276,7 @@ export function isNotEntitled(error: unknown) {
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${getApiBaseUrl()}${path}`, {
+    response = await apiFetch(`${getApiBaseUrl()}${path}`, {
       ...init,
       credentials: "include",
       headers: {

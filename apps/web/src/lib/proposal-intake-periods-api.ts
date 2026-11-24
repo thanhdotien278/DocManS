@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/csrf";
 import { getApiBaseUrl } from "@/lib/session";
 
 export type RequiredPackageItem = {
@@ -43,7 +44,7 @@ export type IntakePeriodInput = {
 };
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+  const response = await apiFetch(`${getApiBaseUrl()}${path}`, {
     ...init,
     credentials: "include",
     headers: {

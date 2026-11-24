@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/csrf";
 import { getApiBaseUrl } from "@/lib/session";
 import type { RequiredPackageItem } from "@/lib/proposal-intake-periods-api";
 import { isViewerAuthorizationV1, type BlockedActionV1, type PermissionActionV1, type ViewerAuthorizationV1 } from "@rtms/permissions";
@@ -266,7 +267,7 @@ export type ApiErrorWithReadiness = Error & {
 };
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+  const response = await apiFetch(`${getApiBaseUrl()}${path}`, {
     ...init,
     credentials: "include",
     headers: {
@@ -375,7 +376,7 @@ export async function uploadProposalAttachment(
   formData.set("description", input.description);
   formData.set("file", input.file);
 
-  const response = await fetch(`${getApiBaseUrl()}/files`, {
+  const response = await apiFetch(`${getApiBaseUrl()}/files`, {
     method: "POST",
     credentials: "include",
     body: formData
@@ -390,7 +391,7 @@ export async function uploadProposalAttachment(
 }
 
 export async function updateProposalAttachmentMetadata(attachmentId: string, input: { description: string | null; contextVersion?: ViewerAuthorizationV1["contextVersion"] }) {
-  const response = await fetch(`${getApiBaseUrl()}/files/${attachmentId}`, {
+  const response = await apiFetch(`${getApiBaseUrl()}/files/${attachmentId}`, {
     method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -406,7 +407,7 @@ export async function updateProposalAttachmentMetadata(attachmentId: string, inp
 }
 
 export async function deleteProposalAttachment(attachmentId: string, contextVersion?: ViewerAuthorizationV1["contextVersion"]) {
-  const response = await fetch(`${getApiBaseUrl()}/files/${attachmentId}`, {
+  const response = await apiFetch(`${getApiBaseUrl()}/files/${attachmentId}`, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ contextVersion }),

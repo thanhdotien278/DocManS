@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/csrf";
 import { getApiBaseUrl } from "@/lib/session";
 
 export type ScientificDocument = {
@@ -18,7 +19,7 @@ export type ScientificDocument = {
 async function request<T>(path: string, init: RequestInit | undefined, fallback: string): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${getApiBaseUrl()}/scientific-documents${path}`, { ...init, credentials: "include" });
+    response = await apiFetch(`${getApiBaseUrl()}/scientific-documents${path}`, { ...init, credentials: "include" });
   } catch {
     throw new Error("Không kết nối được tới máy chủ. Kiểm tra kết nối và thử lại.");
   }

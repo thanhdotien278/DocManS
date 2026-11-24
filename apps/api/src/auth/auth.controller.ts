@@ -1,13 +1,15 @@
 import { Body, Controller, ForbiddenException, Get, Post, Query, Req, Res, UseGuards } from "@nestjs/common";
 import { AuthService } from "./auth.service.js";
 import type { LoginRequest } from "./auth.types.js";
+import { csrfTokenForSession } from "./csrf.js";
 import { LoginRequestPipe } from "./login-request.pipe.js";
 import { SessionAuthGuard } from "./session-auth.guard.js";
 import { ChangePasswordRequestPipe, CompleteAccountActivationRequestPipe, CompletePasswordResetRequestPipe, RequestPasswordResetPipe } from "./password-request.pipe.js";
 import {
   createExpiredSessionCookie,
   createSessionCookie,
-  readSessionCookie
+  readSessionCookie,
+  sessionSetCookieHeaders
 } from "./session-cookie.js";
 
 function requestContext(request: any) {
@@ -15,6 +17,13 @@ function requestContext(request: any) {
     ip: request.ip ?? request.socket?.remoteAddress,
     userAgent: request.headers?.["user-agent"]
   };
+}
+
+function issueSession(result: { session: { token?: string; expiresAt?: string }; user: unknown }, response: any) {
+  const isProduction = process.env.NODE_ENV === "production";
+  const token = result.session.token!;
+  response.setHeader("Set-Cookie", sessionSetCookieHeaders(createSessionCookie(token, isProduction, result.session.expiresAt), isProduction));
+  return { user: result.user, csrfToken: csrfTokenForSession(token) };
 }
 
 @Controller("api/v1/auth")
@@ -28,16 +37,15 @@ export class AuthController {
     @Res({ passthrough: true }) response: any
   ) {
     const result = await this.authService.login(body, requestContext(request));
-    response.setHeader("Set-Cookie", createSessionCookie(result.session.token!, process.env.NODE_ENV === "production"));
-
-    return { user: result.user };
+    return issueSession(result, response);
   }
 
   @Post("logout")
   async logout(@Req() request: any, @Res({ passthrough: true }) response: any) {
     const sessionId = readSessionCookie(request.headers.cookie);
     const result = await this.authService.logout(sessionId, requestContext(request));
-    response.setHeader("Set-Cookie", createExpiredSessionCookie(process.env.NODE_ENV === "production"));
+    const isProduction = process.env.NODE_ENV === "production";
+    response.setHeader("Set-Cookie", sessionSetCookieHeaders(createExpiredSessionCookie(isProduction), isProduction));
 
     return result;
   }
@@ -45,7 +53,11 @@ export class AuthController {
   @Get("me")
   @UseGuards(SessionAuthGuard)
   async me(@Req() request: any) {
-    return { user: await this.authService.getCurrentUserView(request.currentUser) };
+    const sessionToken = readSessionCookie(request.headers?.cookie);
+    return {
+      user: await this.authService.getCurrentUserView(request.currentUser),
+      ...(sessionToken ? { csrfToken: csrfTokenForSession(sessionToken) } : {})
+    };
   }
 
   @Post("change-password")
@@ -59,7 +71,8 @@ export class AuthController {
       throw error;
     }
     await this.authService.changePassword(request.currentUser.id, input, requestContext(request));
-    response.setHeader("Set-Cookie", createExpiredSessionCookie(process.env.NODE_ENV === "production"));
+    const isProduction = process.env.NODE_ENV === "production";
+    response.setHeader("Set-Cookie", sessionSetCookieHeaders(createExpiredSessionCookie(isProduction), isProduction));
     return { success: true };
   }
 
