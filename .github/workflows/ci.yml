@@ -1,0 +1,130 @@
+# CI cho DocManS: chạy mỗi lần push lên nhánh chính/nhánh tính năng và mỗi pull request.
+#
+#   hygiene : chặn dữ liệu nhạy cảm/file không thuộc mã nguồn (scripts/check-repo-hygiene.sh)
+#   test    : typecheck + check-type-looseness + build web + toàn bộ test trên PostgreSQL thật
+#   docker  : kiểm tra docker-compose.prod.yml và build 2 target api & web trong Dockerfile
+name: CI
+
+on:
+  push:
+    branches: [DocManS, "feat/**", "fix/**", "chore/**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "24"
+
+jobs:
+  hygiene:
+    name: Vệ sinh repo
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kiểm tra dữ liệu nhạy cảm và file không thuộc mã nguồn
+        run: ./scripts/check-repo-hygiene.sh
+
+  test:
+    name: Typecheck, test và build web
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: docmans_ci
+          POSTGRES_PASSWORD: docmans_ci
+          POSTGRES_DB: docmans_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U docmans_ci -d docmans_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://docmans_ci:docmans_ci@localhost:5432/docmans_ci?schema=public
+      CSRF_SECRET: ci-csrf-secret-khong-dung-that-0123456789
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Cài dependencies
+        run: npm ci
+
+      - name: Sinh Prisma client
+        run: npm run prisma:generate
+
+      - name: Kiểm tra migration áp dụng được trên database trống
+        run: npm run prisma:deploy
+
+      - name: Typecheck (web + api)
+        run: npm run typecheck
+
+      - name: Chốt chặn nợ kiểu dữ liệu (any, ép kiểu không được tăng)
+        run: node scripts/check-type-looseness.mjs
+
+      - name: Test (build api + node --test)
+        run: npm test
+
+      - name: Build giao diện Next.js
+        run: npm run build:web
+
+  docker:
+    name: Build image production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: hygiene
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Kiểm tra cú pháp docker-compose.prod.yml
+        run: |
+          cat > /tmp/ci.env <<'EOF'
+          POSTGRES_USER=ci
+          POSTGRES_PASSWORD=ci
+          POSTGRES_DB=ci
+          MINIO_ACCESS_KEY=ci-root
+          MINIO_SECRET_KEY=ci-secret-ci
+          MINIO_APP_ACCESS_KEY=ci-app
+          MINIO_APP_SECRET_KEY=ci-app-secret
+          CLOUDFLARE_TUNNEL_TOKEN=ci-tunnel-token
+          CSRF_SECRET=ci-csrf-secret-khong-dung-that-0123456789
+          EOF
+          docker compose -f docker-compose.prod.yml --env-file /tmp/ci.env config --quiet
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build Dockerfile target api (không push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          target: api
+          push: false
+          tags: docmans-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Dockerfile target web (không push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          target: web
+          push: false
+          tags: docmans-web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
