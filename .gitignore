@@ -6,6 +6,7 @@ dist/
 coverage/
 .env
 .env.local
+.env.prod
 __pycache__/
 *.pyc
 *.tsbuildinfo
