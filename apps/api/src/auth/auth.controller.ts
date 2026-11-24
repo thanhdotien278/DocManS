@@ -37,7 +37,29 @@ export class AuthController {
     @Res({ passthrough: true }) response: any
   ) {
     const result = await this.authService.login(body, requestContext(request));
+    // Cần mã xác thực qua thư: chưa có phiên, giao diện chuyển sang bước nhập mã.
+    if ("challenge" in result) return { otpRequired: true, ...result.challenge };
     return issueSession(result, response);
+  }
+
+  @Post("login/verify")
+  async verifyLoginOtp(
+    @Body() body: { challengeId?: unknown; code?: unknown },
+    @Req() request: any,
+    @Res({ passthrough: true }) response: any
+  ) {
+    return issueSession(await this.authService.verifyLoginOtp(body ?? {}, requestContext(request)), response);
+  }
+
+  @Post("login/resend")
+  async resendLoginOtp(@Body() body: { challengeId?: unknown }, @Req() request: any) {
+    return { otpRequired: true, ...(await this.authService.resendLoginOtp(body ?? {}, requestContext(request))) };
+  }
+
+  @Post("login-otp")
+  @UseGuards(SessionAuthGuard)
+  async setLoginOtp(@Body() body: { enabled?: unknown }, @Req() request: any) {
+    return this.authService.setLoginOtpEnabled(request.currentUser.id, body?.enabled, requestContext(request));
   }
 
   @Post("logout")

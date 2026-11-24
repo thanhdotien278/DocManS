@@ -23,6 +23,8 @@ export type InternalUser = {
   organizationScopes: OrganizationScope[];
   mustChangePassword?: boolean;
   credentialVersion: number;
+  credentialEmail?: string | null;
+  loginOtpEnabled?: boolean;
   researcherProfileId?: string;
   /** Chức danh tại đơn vị, ví dụ "Trưởng khoa – Khoa Nội". Chỉ để hiển thị, không phân quyền. */
   positions?: string[];
@@ -42,6 +44,7 @@ export type SafeUserContext = {
   unit: string;
   organizationScopes: OrganizationScope[];
   mustChangePassword?: boolean;
+  loginOtp?: { required: boolean; enabled: boolean };
   researcherProfileId?: string;
   /** Chức danh tại đơn vị, ví dụ "Trưởng khoa – Khoa Nội". Chỉ để hiển thị, không phân quyền. */
   positions?: string[];

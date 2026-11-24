@@ -21,6 +21,7 @@ model User {
   passwordHash       String                  @map("password_hash")
   credentialEmail     String? @unique @map("credential_email")
   mustChangePassword  Boolean                 @default(false) @map("must_change_password")
+  loginOtpEnabled     Boolean                 @default(false) @map("login_otp_enabled")
   credentialVersion   Int                     @default(0) @map("credential_version")
   status             String
   legacyRole         String?                 @map("legacy_role")
@@ -31,6 +32,7 @@ model User {
   createdAt          DateTime                @default(now()) @map("created_at")
   updatedAt          DateTime                @updatedAt @map("updated_at")
   sessions           Session[]
+  loginChallenges    LoginChallenge[]
   passwordResetTokens PasswordResetToken[] @relation("PasswordResetTarget")
   issuedPasswordResetTokens PasswordResetToken[] @relation("PasswordResetIssuer")
   activationTokens AccountActivationToken[] @relation("AccountActivationTarget")
@@ -1457,4 +1459,25 @@ model KhqsPeriodicReport {
 
   @@unique([year, period])
   @@map("khqs_periodic_reports")
+}
+
+/// Lượt đăng nhập chờ xác thực hai lớp bằng mã gửi qua thư công vụ.
+model LoginChallenge {
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  user              User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  credentialVersion Int       @map("credential_version")
+  codeHash          String    @map("code_hash")
+  attempts          Int       @default(0)
+  sendCount         Int       @default(1) @map("send_count")
+  lastSentAt        DateTime  @default(now()) @map("last_sent_at")
+  expiresAt         DateTime  @map("expires_at")
+  consumedAt        DateTime? @map("consumed_at")
+  ip                String?
+  userAgent         String?   @map("user_agent")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("login_challenges")
 }

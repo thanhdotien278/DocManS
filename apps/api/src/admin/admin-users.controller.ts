@@ -10,13 +10,15 @@ const createUserPipe = adminRequestPipe({
   displayName: { maxLength: 160 },
   password: { maxLength: 256 },
   systemRole: { maxLength: 80 },
-  organizationUnitId: { maxLength: 80 }
+  organizationUnitId: { maxLength: 80 },
+  credentialEmail: { maxLength: 254, optional: true }
 });
 const updateUserPipe = adminRequestPipe({
   displayName: { maxLength: 160, optional: true },
   systemRole: { maxLength: 80, optional: true },
   organizationUnitId: { maxLength: 80, optional: true },
-  status: { maxLength: 40, optional: true }
+  status: { maxLength: 40, optional: true },
+  credentialEmail: { maxLength: 254, optional: true }
 });
 const updateUserStatusPipe = adminRequestPipe({ status: { maxLength: 40 } });
 const passwordResetPipe = adminRequestPipe({});
