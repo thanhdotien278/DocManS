@@ -5,7 +5,7 @@ import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import type { ObjectStorage } from "../infrastructure/minio/minio-object-storage.service.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
-import { assertValidUpload, defaultFileConfig, readMaxUploadBytes, type FileModuleConfig } from "../modules/files/files.service.js";
+import { assertValidUpload, defaultFileConfig, readMaxUploadBytes, type FileModuleConfig } from "../modules/files/file-validation.js";
 import type {
   CreateScientificDocumentDto,
   QueryScientificDocumentsDto,

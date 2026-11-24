@@ -3,7 +3,9 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { SessionAuthGuard } from "../../auth/session-auth.guard.js";
 import type { RequestWithCurrentUser } from "../../proposals-shared/proposal-types.js";
 import { listFilesPipe, type ListFilesDto, updateFilePipe, type UpdateFileDto, uploadFilePipe, type UploadFileDto } from "./files.dto.js";
-import { defaultFileConfig, FilesService, streamToBuffer } from "./files.service.js";
+import { FilesService } from "./files.service.js";
+import { sendObjectContent, type ObjectContentResponse } from "./send-object-content.js";
+import { uploadInterceptorOptions } from "./upload-limits.js";
 
 type UploadedMultipartFile = {
   originalname: string;
@@ -12,10 +14,7 @@ type UploadedMultipartFile = {
   buffer: Buffer;
 };
 
-type DownloadResponse = {
-  setHeader(name: string, value: string): void;
-  send(content: Buffer): void;
-};
+type DownloadResponse = ObjectContentResponse;
 
 function encodeRfc5987Value(value: string) {
   return encodeURIComponent(value).replace(/['()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
@@ -44,7 +43,7 @@ export class FilesController {
 
   @Post()
   // Enforced while the body streams in, so an oversized upload is never buffered in memory.
-  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: defaultFileConfig().maxFileSizeBytes, files: 1 } }))
+  @UseInterceptors(FileInterceptor("file", uploadInterceptorOptions()))
   async uploadFile(
     @Req() request: RequestWithCurrentUser,
     @Body(uploadFilePipe) body: UploadFileDto,
@@ -99,10 +98,8 @@ export class FilesController {
   @Get(":id/download")
   async downloadFile(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Res() response: DownloadResponse) {
     const download = await this.filesService.downloadFile(request.currentUser!, id);
-    const content = await streamToBuffer(download.content);
     response.setHeader("Content-Type", download.mimeType);
-    response.setHeader("Content-Length", String(download.sizeBytes));
     response.setHeader("Content-Disposition", buildContentDisposition(download.fileName));
-    response.send(content);
+    await sendObjectContent(response, download.content, download.sizeBytes);
   }
 }
