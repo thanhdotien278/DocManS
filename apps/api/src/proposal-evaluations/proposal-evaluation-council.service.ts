@@ -1,9 +1,10 @@
-import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable } from "@nestjs/common";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { readTransactionClockV1 } from "../permissions/authorization-v1.service.js";
 import { APPROVAL_STAGE_LABELS, APPROVAL_STATUS_LABELS, assertReadyForLeadership, canSignApproval, closeApprovalSubmission, openApprovalSubmission, type ApprovalKey } from "../proposals-shared/approval-routing.js";
+import { formatAcademicTitleFromProfile, resolveDecisionNumber, vietnamYear } from "../proposals-shared/document-number.js";
 import { EVALUATION_COUNCIL_STRUCTURE, readCouncilFormationConfig } from "../proposals-shared/council-formation.js";
 import { participantPolicyFor, readParticipantPolicy } from "../proposals-shared/participant-policy.js";
 import {
@@ -76,7 +77,28 @@ export class ProposalEvaluationCouncilService {
     const rows = (await this.prisma.proposalReviewAssignment.findMany({
       where: { proposalId: proposal.id },
       orderBy: { assignedAt: "asc" },
-      include: { reviewer: { select: { displayName: true, username: true, unit: true, status: true } }, assignedBy: { select: { displayName: true } } }
+      include: {
+        reviewer: {
+          select: {
+            displayName: true,
+            username: true,
+            unit: true,
+            status: true,
+            researcherProfile: {
+              select: {
+                fullName: true,
+                militaryRank: true,
+                position: true,
+                profileType: true,
+                externalAffiliation: true,
+                academicRankCatalogItem: { select: { code: true, name: true } },
+                academicDegreeCatalogItem: { select: { code: true, name: true } }
+              }
+            }
+          }
+        },
+        assignedBy: { select: { displayName: true } }
+      }
     })) as unknown as ReviewAssignmentRecord[];
     return filterCurrentRoundAssignments(rows, roundId);
   }
@@ -118,7 +140,21 @@ export class ProposalEvaluationCouncilService {
     const legacyRound = roster.length > 0 && !roster.some((row) => ["council_chair", "council_secretary"].includes(normalizeAssignmentRole(row.assignmentRole) ?? "reviewer"));
     const blockers = legacyRound && established ? [] : councilRosterBlockers(roster, config.memberCount);
     const pending = roundId ? await this.prisma.approvalSubmission.findFirst({ where: { ...councilKey(proposalId, roundId), status: "PENDING" }, select: { id: true } }) : null;
-    const latest = roundId ? await this.prisma.approvalSubmission.findFirst({ where: { ...councilKey(proposalId, roundId), status: { not: "CANCELLED" } }, orderBy: { createdAt: "desc" }, include: { submittedBy: { select: { displayName: true } } } }) : null;
+    const latest = roundId
+      ? await this.prisma.approvalSubmission.findFirst({
+          where: { ...councilKey(proposalId, roundId), status: { not: "CANCELLED" } },
+          orderBy: { createdAt: "desc" },
+          include: {
+            submittedBy: { select: { displayName: true } },
+            steps: {
+              where: { action: "APPROVE", stage: "LEADERSHIP" },
+              include: { actor: { select: { displayName: true, systemRole: true } } },
+              orderBy: { createdAt: "desc" },
+              take: 1
+            }
+          }
+        })
+      : null;
     const status: CouncilStatus = !applicable ? "NOT_APPLICABLE" : pending ? "IN_APPROVAL" : established ? "ESTABLISHED" : blockers.length === 0 ? "READY_TO_SUBMIT" : "FORMING";
     const summary = applicable ? await this.prisma.proposalEvaluationSummary.findFirst({ where: { proposalId }, select: { status: true } }) : null;
     const summaryOpen = !summary || summary.status === "draft";
@@ -158,6 +194,8 @@ export class ProposalEvaluationCouncilService {
     // Người xung đột vẫn nhận 200 nhưng không thấy danh sách, tiến độ hay tờ trình.
     const visible = readConflict.conflicted ? [] : roster;
     const establishedAt = status === "ESTABLISHED" ? roster.map((row) => row.councilEstablishedAt?.getTime() ?? 0).reduce((max, time) => Math.max(max, time), 0) : 0;
+    const latestWithMeta = latest as (typeof latest & { decisionNumber?: string | null; steps?: Array<{ actor?: { displayName?: string; systemRole?: string } | null }> }) | null;
+    const approvedMeta = !readConflict.conflicted && latestWithMeta?.status === "APPROVED";
     return {
       contextVersion: proposalContextVersion(proposal),
       roundId,
@@ -173,14 +211,24 @@ export class ProposalEvaluationCouncilService {
       viewer,
       approval: readConflict.conflicted || !latest ? null : { id: latest.id, stage: latest.stage, stageLabel: APPROVAL_STAGE_LABELS[latest.stage as keyof typeof APPROVAL_STAGE_LABELS] ?? latest.stage, status: latest.status, statusLabel: APPROVAL_STATUS_LABELS[latest.status as keyof typeof APPROVAL_STATUS_LABELS] ?? latest.status, submittedByName: latest.submittedBy?.displayName ?? "", lastNote: latest.lastNote ?? "" },
       establishedAt: establishedAt ? new Date(establishedAt).toISOString() : "",
+      decisionNumber: approvedMeta ? (latestWithMeta.decisionNumber ?? null) : null,
+      decidedAt: approvedMeta ? (latestWithMeta.closedAt?.toISOString() ?? (establishedAt ? new Date(establishedAt).toISOString() : null)) : null,
+      decidedByName: approvedMeta ? (latestWithMeta.steps?.[0]?.actor?.displayName ?? null) : null,
+      decidedByRole: approvedMeta ? (latestWithMeta.steps?.[0]?.actor?.systemRole ?? null) : null,
       members: visible.map((row) => {
         const position = normalizeAssignmentRole(row.assignmentRole) ?? "reviewer";
+        const profile = row.reviewer?.researcherProfile;
         return {
           assignmentId: row.id,
           reviewerUserId: row.reviewerUserId,
-          displayName: row.reviewer?.displayName ?? "",
+          displayName: profile?.fullName || row.reviewer?.displayName || "",
           username: row.reviewer?.username ?? "",
-          unit: row.reviewer?.unit ?? "",
+          unit: profile?.profileType === "EXTERNAL" && profile.externalAffiliation ? profile.externalAffiliation : (row.reviewer?.unit ?? ""),
+          militaryRank: profile?.militaryRank ?? "",
+          academicTitle: formatAcademicTitleFromProfile(profile),
+          position: profile?.position ?? "",
+          profileType: profile?.profileType ?? "INTERNAL",
+          externalAffiliation: profile?.externalAffiliation ?? "",
           assignmentRole: position,
           assignmentRoleLabel: getAssignmentRoleLabel(position),
           scoring: isScoringRole(position),
@@ -218,7 +266,7 @@ export class ProposalEvaluationCouncilService {
   }
 
   /** GĐ/PGĐ-KH ký (thành lập hội đồng) hoặc trả lại. Trả lại không đổi gì ở danh sách phân công. */
-  async decideCouncil(actor: SafeUserContext, proposalId: string, input: { decision: "sign" | "return"; note?: string; contextVersion: unknown }): Promise<any> {
+  async decideCouncil(actor: SafeUserContext, proposalId: string, input: { decision: "sign" | "return"; note?: string; decisionNumber?: string; contextVersion: unknown }): Promise<any> {
     if (!this.transactional) return this.mutate(actor, proposalId, input.contextVersion, (service, current) => service.decideCouncil(current, proposalId, input));
     const proposal = await findEvaluationProposal(this.prisma, proposalId);
     assertProposalStatus(proposal, ["under_review"], "Chỉ hồ sơ đang đánh giá mới ký hội đồng.");
@@ -234,8 +282,17 @@ export class ProposalEvaluationCouncilService {
     const config = await readCouncilFormationConfig(this.prisma, "EVALUATION");
     const blockers = councilRosterBlockers(roster, config.memberCount);
     if (blockers.length) throw new BadRequestException({ code: "COUNCIL_NOT_READY", message: `Không thể ký: ${blockers.join(" ")}`, blockers });
-    await closeApprovalSubmission(this.prisma as never, actor, key, "APPROVED", input.note);
     const establishedAt = await readTransactionClockV1(this.prisma);
+    const decisionNumber = await resolveDecisionNumber(this.prisma as never, { requested: input.decisionNumber, year: vietnamYear(establishedAt) });
+    await closeApprovalSubmission(this.prisma as never, actor, key, "APPROVED", input.note);
+    try {
+      await this.prisma.approvalSubmission.updateMany({ where: { id: pending.id }, data: { decisionNumber } as never });
+    } catch (error) {
+      if ((error as { code?: string })?.code === "P2002") {
+        throw new ConflictException({ code: "DECISION_NUMBER_TAKEN", message: "Số quyết định đã được sử dụng cho văn bản khác." });
+      }
+      throw error;
+    }
     const moved = await this.prisma.proposalReviewAssignment.updateMany({ where: { id: { in: roster.map((row) => row.id) }, councilEstablishedAt: null }, data: { councilEstablishedAt: establishedAt } as never });
     await this.prisma.researchProposal.update({
       where: { id: proposalId },
@@ -248,9 +305,9 @@ export class ProposalEvaluationCouncilService {
       targetEntity: "research-proposal",
       targetEntityId: proposalId,
       username: actor.username,
-      reason: JSON.stringify({ proposalId, approvalSubmissionId: pending.id, councilRound: evidence.eventId, supplement: moved.count < roster.length, assignmentIds: roster.map((row) => row.id), establishedAt: establishedAt.toISOString(), newlyEstablished: moved.count })
+      reason: JSON.stringify({ proposalId, approvalSubmissionId: pending.id, decisionNumber, councilRound: evidence.eventId, supplement: moved.count < roster.length, assignmentIds: roster.map((row) => row.id), establishedAt: establishedAt.toISOString(), newlyEstablished: moved.count })
     });
-    return { submissionId: pending.id, status: "APPROVED", establishedAt: establishedAt.toISOString() };
+    return { submissionId: pending.id, status: "APPROVED", establishedAt: establishedAt.toISOString(), decisionNumber };
   }
 
   /**

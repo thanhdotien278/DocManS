@@ -2,8 +2,11 @@ import { getApiBaseUrl } from "@/lib/session";
 import { isViewerAuthorizationV1, type PermissionActionV1, type ViewerAuthorizationV1 } from "@rtms/permissions";
 
 export type ProjectRecord = {
-  id: string; proposalId: string; title: string; status: string; startDate: string | null; endDate: string | null;
+  id: string; code?: string | null; proposalId: string; title: string; status: string; startDate: string | null; endDate: string | null;
+  proposalNatureCode?: string | null; researchFieldCode?: string | null; proposalTypeCode?: string | null;
   scope: Record<string, unknown>; plan: Record<string, unknown> | null;
+  progress?: { plannedPercent: number; actualPercent: number; spi: number; health: "on_track" | "at_risk" | "delayed" | "completed"; totalMilestones: number; completedMilestones: number; overdueMilestones: number; maxDaysOverdue: number; lateReports: number } | null;
+  fundingSummary?: { approvedBudget: number; totalDisbursed: number; totalSettled: number } | null;
   hostOrganizationUnit?: { name: string }; officer?: { officerUserId: string; displayName?: string | null } | null;
   members: Array<{ id: string; name: string; participationRole: string; status: string; userId?: string }>;
   milestones: Array<{ id: string; title: string; description?: string | null; dueDate: string; isImportant: boolean; status: string; responsibleMemberId?: string | null; overdue?: boolean; approaching?: boolean }>;
@@ -195,11 +198,16 @@ export type AcceptanceCouncilMember = {
   id: string; userId: string; displayName: string; username: string; unit: string; councilRole: AcceptanceCouncilRole; councilRoleLabel: string;
   invitationStatus: "invited" | "accepted" | "declined" | "revoked"; declineReason: string | null; revokeReason: string | null;
   invitedAt: string; respondedAt: string | null; revokedAt: string | null; councilEstablishedAt: string | null;
+  militaryRank?: string | null; academicTitle?: string | null; position?: string | null; profileType?: string | null; externalAffiliation?: string | null;
 };
 export type AcceptanceCouncilView = {
-  contextVersion: unknown; projectTitle: string; projectStatus: string; readsProject: boolean; readsApproval: boolean; dossierId: string | null;
+  contextVersion: unknown; projectTitle: string; projectCode?: string | null; piName?: string | null; hostOrganizationUnitName?: string | null;
+  proposalTypeCode?: string | null; startDate?: string | null; endDate?: string | null;
+  projectStatus: string; readsProject: boolean; readsApproval: boolean; dossierId: string | null;
   config: { memberCount: number; structure: Record<AcceptanceCouncilRole, number> };
-  establishedAt: string | null; blockers: string[]; members: AcceptanceCouncilMember[];
+  establishedAt: string | null; decisionNumber?: string | null; decidedAt?: string | null; decidedByName?: string | null; decidedByRole?: string | null;
+  products?: Array<{ name?: string; type?: string; description?: string }> | null;
+  blockers: string[]; members: AcceptanceCouncilMember[];
   approval: null | { id: string; stage: string; stageLabel: string; status: string; statusLabel: string; lastNote: string | null };
   result: null | { outcome: string; comment: string | null; minutesFileId: string | null; recordedAt: string };
   allowedActions: string[]; blockedActions: Array<{ action: string; code?: string; reason: string }>;
@@ -221,5 +229,5 @@ export async function revokeAcceptanceMember(projectId: string, memberId: string
 // Từ chối trả `{ memberId, invitationStatus: "declined" }`: người từ chối mất ghế nên không còn view.
 export async function respondAcceptanceInvitation(projectId: string, memberId: string, decision: "accept" | "decline", reason?: string) { return (await post(`${councilPath(projectId)}/members/${memberId}/respond`, { decision, reason })).acceptanceCouncil; }
 export async function submitAcceptanceCouncil(projectId: string, note: string, contextVersion: unknown) { return (await post(`${councilPath(projectId)}/submit`, { note: note || undefined, contextVersion })).acceptanceCouncil; }
-export async function decideAcceptanceCouncil(projectId: string, decision: "approve" | "reject", reason: string, contextVersion: unknown) { return (await post(`${councilPath(projectId)}/${decision}`, { reason: reason || undefined, contextVersion })).acceptanceCouncil; }
+export async function decideAcceptanceCouncil(projectId: string, decision: "approve" | "reject", reason: string, contextVersion: unknown, decisionNumber?: string) { return (await post(`${councilPath(projectId)}/${decision}`, { reason: reason || undefined, decisionNumber: decisionNumber?.trim() || undefined, contextVersion })).acceptanceCouncil; }
 export async function recordAcceptanceResult(projectId: string, outcome: "accepted" | "failed", comment: string, contextVersion: unknown) { return (await post(`${councilPath(projectId)}/result`, { outcome, comment, contextVersion })).acceptanceCouncil; }

@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
@@ -8,6 +8,7 @@ import { readTransactionClockV1 } from "../permissions/authorization-v1.service.
 import { recordParticipantWaiver } from "../proposal-evaluations/proposal-evaluation-support.js";
 import { APPROVAL_STAGE_LABELS, APPROVAL_STATUS_LABELS, assertReadyForLeadership, canViewApproval, closeApprovalSubmission, openApprovalSubmission, type ApprovalKey } from "../proposals-shared/approval-routing.js";
 import { canFormCouncil, readCouncilFormationConfig } from "../proposals-shared/council-formation.js";
+import { formatAcademicTitleFromProfile, resolveDecisionNumber, vietnamYear } from "../proposals-shared/document-number.js";
 import { isRelationshipActiveAt } from "../proposals-shared/proposal-participation.js";
 import { ApprovedProjectsService, SKIP_CONTEXT } from "./approved-projects.service.js";
 import { ethicsCapabilityError as capabilityError } from "./ethics-dossiers.service.js";
@@ -187,10 +188,19 @@ export class AcceptanceCouncilService {
       // Thành viên đã nhận lời có thể vừa vào đề tài hoặc bị khóa tài khoản sau khi trình.
       const ineligible = rows.filter((row) => projectMember(project, row.userId) || row.user?.status !== "active");
       if (ineligible.length) throw new BadRequestException({ code: "COUNCIL_MEMBER_INELIGIBLE", message: "Có thành viên hội đồng không còn hợp lệ (thuộc đề tài hoặc tài khoản không hoạt động): thu hồi và mời người khác.", memberIds: ineligible.map((row) => row.id) });
-      await closeApprovalSubmission(tx, current, key, "APPROVED", input.note ?? input.reason);
       const now = await readTransactionClockV1(tx);
+      const decisionNumber = await resolveDecisionNumber(tx, { requested: input.decisionNumber, year: vietnamYear(now) });
+      await closeApprovalSubmission(tx, current, key, "APPROVED", input.note ?? input.reason);
+      try {
+        await tx.approvalSubmission.updateMany({ where: { id: pending.id }, data: { decisionNumber } });
+      } catch (error) {
+        if ((error as { code?: string })?.code === "P2002") {
+          throw new ConflictException({ code: "DECISION_NUMBER_TAKEN", message: "Số quyết định đã được sử dụng cho văn bản khác." });
+        }
+        throw error;
+      }
       await tx.acceptanceCouncilMember.updateMany({ where: { id: { in: rows.map((row) => row.id) }, councilEstablishedAt: null }, data: { councilEstablishedAt: now } });
-      await this.record(tx, current, project, now, { action: "acceptance-council.establish", toStatus: "established", facts: { approvalSubmissionId: pending.id, memberIds: rows.map((row) => row.id), establishedAt: now.toISOString() }, audit: "establish-acceptance-council", targetId: pending.id, relationship: true });
+      await this.record(tx, current, project, now, { action: "acceptance-council.establish", toStatus: "established", facts: { approvalSubmissionId: pending.id, decisionNumber, memberIds: rows.map((row) => row.id), establishedAt: now.toISOString() }, audit: "establish-acceptance-council", targetId: pending.id, relationship: true });
       await notifyUsers(tx, { userIds: rows.map((row) => row.userId), exclude: [current.id], type: "acceptance-council.established", title: "Hội đồng nghiệm thu đã được thành lập", body: project.title, link: `/projects/${project.id}/acceptance-council`, sourceType: "acceptance_council", sourceId: project.id, idempotencyKey: `acceptance-council-established:${pending.id}` });
       return this.view(tx, current, project.id);
     });
@@ -252,25 +262,78 @@ export class AcceptanceCouncilService {
     const rows: AnyRecord[] = project.acceptanceCouncilMembers ?? [];
     const live = liveRows(project);
     const establishedAt = live.map((row) => row.councilEstablishedAt?.getTime() ?? 0).reduce((max, time) => Math.max(max, time), 0);
-    const latest = readsProject ? await tx.approvalSubmission.findFirst({ where: { kind: "ACCEPTANCE_COUNCIL", subjectType: "project", subjectId: projectId, status: { not: "CANCELLED" } }, orderBy: { createdAt: "desc" } }) : null;
+    const latest = readsProject
+      ? await tx.approvalSubmission.findFirst({
+          where: { kind: "ACCEPTANCE_COUNCIL", subjectType: "project", subjectId: projectId, status: { not: "CANCELLED" } },
+          orderBy: { createdAt: "desc" },
+          include: {
+            steps: {
+              where: { action: "APPROVE", stage: "LEADERSHIP" },
+              include: { actor: { select: { displayName: true, systemRole: true } } },
+              orderBy: { createdAt: "desc" },
+              take: 1
+            }
+          }
+        })
+      : null;
     const result = await tx.projectHistory.findFirst({ where: { projectId, action: RESULT_ACTION }, orderBy: { createdAt: "desc" } });
+    const piMember = (project.members ?? []).find((member: AnyRecord) => member.participationRole === "TOPIC_PI" && isRelationshipActiveAt(member, new Date()));
+    const scopeSnapshot = project.scopeSnapshot as AnyRecord | null;
+    const rawProducts = readsProject ? (project.acceptanceDossier?.sections as AnyRecord | null)?.products : null;
+    const products = Array.isArray(rawProducts)
+      ? rawProducts.map((item: AnyRecord) => ({
+          title: typeof item?.name === "string" ? item.name : (typeof item?.title === "string" ? item.title : ""),
+          type: typeof item?.type === "string" ? item.type : "",
+          description: typeof item?.description === "string" ? item.description : ""
+        })).filter((item) => item.title)
+      : [];
+    const approvedMeta = readsProject && latest?.status === "APPROVED";
     return {
       contextVersion: projectContextVersion(project),
       projectTitle: project.title,
       projectStatus: project.status,
+      projectCode: readsProject ? (project.code ?? project.proposal?.code ?? null) : null,
+      piName: readsProject ? (piMember?.user?.displayName || piMember?.name || null) : null,
+      hostOrganizationUnitName: readsProject ? (project.hostOrganizationUnit?.name ?? "") : null,
+      proposalTypeCode: readsProject ? (scopeSnapshot?.proposalTypeCode ?? project.proposal?.proposalTypeCode ?? null) : null,
+      startDate: readsProject ? (project.startDate?.toISOString?.() ?? null) : null,
+      endDate: readsProject ? (project.endDate?.toISOString?.() ?? null) : null,
       readsProject,
       // Cùng luật với GET /approval-submissions/subject, để PI không gọi rồi nhận 403.
       readsApproval: !!latest && canViewApproval(actor, latest),
       dossierId: project.acceptanceDossier?.id ?? null,
       config: { memberCount: config.memberCount, structure: ACCEPTANCE_COUNCIL_STRUCTURE(config.memberCount) },
       establishedAt: establishedAt ? new Date(establishedAt).toISOString() : null,
+      decisionNumber: approvedMeta ? (latest.decisionNumber ?? null) : null,
+      decidedAt: approvedMeta ? (latest.closedAt?.toISOString?.() ?? (establishedAt ? new Date(establishedAt).toISOString() : null)) : null,
+      decidedByName: approvedMeta ? (latest.steps?.[0]?.actor?.displayName ?? null) : null,
+      decidedByRole: approvedMeta ? (latest.steps?.[0]?.actor?.systemRole ?? null) : null,
+      products,
       blockers: readsProject ? acceptanceCouncilBlockers(live, config.memberCount) : [],
-      members: (readsProject ? rows : rows.filter((row) => row.userId === actor.id)).map((row) => ({
-        id: row.id, userId: row.userId, displayName: row.user?.displayName ?? "", username: row.user?.username ?? "", unit: row.user?.unit ?? "",
-        councilRole: row.councilRole, councilRoleLabel: ROLE_LABELS[row.councilRole as AcceptanceCouncilRole] ?? row.councilRole, invitationStatus: row.invitationStatus,
-        declineReason: row.declineReason, revokeReason: row.revokeReason, invitedAt: row.invitedAt.toISOString(), respondedAt: row.respondedAt?.toISOString() ?? null,
-        revokedAt: row.revokedAt?.toISOString() ?? null, councilEstablishedAt: row.councilEstablishedAt?.toISOString() ?? null
-      })),
+      members: (readsProject ? rows : rows.filter((row) => row.userId === actor.id)).map((row) => {
+        const profile = row.user?.researcherProfile;
+        return {
+          id: row.id,
+          userId: row.userId,
+          displayName: profile?.fullName || row.user?.displayName || "",
+          username: row.user?.username ?? "",
+          unit: profile?.profileType === "EXTERNAL" && profile.externalAffiliation ? profile.externalAffiliation : (row.user?.unit ?? ""),
+          militaryRank: profile?.militaryRank ?? "",
+          academicTitle: formatAcademicTitleFromProfile(profile),
+          position: profile?.position ?? "",
+          profileType: profile?.profileType ?? "INTERNAL",
+          externalAffiliation: profile?.externalAffiliation ?? "",
+          councilRole: row.councilRole,
+          councilRoleLabel: ROLE_LABELS[row.councilRole as AcceptanceCouncilRole] ?? row.councilRole,
+          invitationStatus: row.invitationStatus,
+          declineReason: row.declineReason,
+          revokeReason: row.revokeReason,
+          invitedAt: row.invitedAt.toISOString(),
+          respondedAt: row.respondedAt?.toISOString() ?? null,
+          revokedAt: row.revokedAt?.toISOString() ?? null,
+          councilEstablishedAt: row.councilEstablishedAt?.toISOString() ?? null
+        };
+      }),
       approval: latest ? { id: latest.id, stage: latest.stage, stageLabel: APPROVAL_STAGE_LABELS[latest.stage as keyof typeof APPROVAL_STAGE_LABELS] ?? latest.stage, status: latest.status, statusLabel: APPROVAL_STATUS_LABELS[latest.status as keyof typeof APPROVAL_STATUS_LABELS] ?? latest.status, lastNote: latest.lastNote ?? null } : null,
       result: result ? { outcome: result.toStatus, comment: result.reason, minutesFileId: (result.afterFacts as AnyRecord)?.minutesFileId ?? null, recordedAt: result.createdAt.toISOString() } : null,
       allowedActions: own(capability.allowedActions),

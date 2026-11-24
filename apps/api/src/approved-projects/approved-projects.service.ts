@@ -16,6 +16,7 @@ import { FUNDING_KINDS, assertFundingInvariant, fundingTotals, latestFunding, re
 import { computeProjectProgress, summarizeProjectFunding } from "./project-progress.js";
 import { notifyUsers } from "../notifications/notification-events.js";
 import { canFormCouncil, readCouncilFormationConfig } from "../proposals-shared/council-formation.js";
+import { allocateLiquidationNumber } from "../proposals-shared/document-number.js";
 import { projectContextVersion, projectViewerAuthorizationV1, PROJECT_STATUSES, TERMINAL_REQUEST_STATUSES, type ProjectOfficerFact } from "./project-capability-v1.js";
 
 const PREPARING = PROJECT_STATUSES.preparing;
@@ -69,8 +70,8 @@ const PROJECT_INCLUDE = {
   fundingRecords: { orderBy: { createdAt: "asc" } },
   liquidations: { orderBy: { createdAt: "desc" } },
   ethicsDossier: { select: { id: true, status: true, version: true, submittedAt: true } },
-  acceptanceDossier: { select: { id: true, status: true, version: true, submittedAt: true } },
-  acceptanceCouncilMembers: { include: { user: { select: { id: true, displayName: true, username: true, unit: true, status: true } } }, orderBy: { invitedAt: "asc" } }
+  acceptanceDossier: { select: { id: true, status: true, version: true, submittedAt: true, sections: true } },
+  acceptanceCouncilMembers: { include: { user: { select: { id: true, displayName: true, username: true, unit: true, status: true, researcherProfile: { select: { fullName: true, militaryRank: true, position: true, profileType: true, externalAffiliation: true, academicRankCatalogItem: { select: { code: true, name: true } }, academicDegreeCatalogItem: { select: { code: true, name: true } } } } } } }, orderBy: { invitedAt: "asc" } }
 };
 
 @Injectable()
@@ -328,7 +329,9 @@ export class ApprovedProjectsService {
       // Story 6.13: số lãnh đạo chốt khi phê duyệt nằm ở đề xuất hiện tại, không ở snapshot lúc nộp.
       const budgetMetadata = { ...(snapshot.budgetMetadata ?? {}), ...((proposal.budgetMetadata as AnyRecord | null)?.approvedAmount !== undefined ? { approvedAmount: (proposal.budgetMetadata as AnyRecord).approvedAmount } : {}) };
       const approvedBudget = readApprovedBudget(budgetMetadata);
+      const inheritedCode = proposal.code && !(await tx.approvedProject.findFirst({ where: { code: proposal.code }, select: { id: true } })) ? proposal.code : null;
       const project = await tx.approvedProject.create({ data: {
+        ...(inheritedCode ? { code: inheritedCode } : {}),
         proposalId,
         sourceSubmissionEventId: submission.id,
         sourceDecisionId: decision.id,
@@ -1108,8 +1111,8 @@ export class ApprovedProjectsService {
         if (totals.SETTLEMENT + recovered !== totals.DISBURSEMENT) throw new BadRequestException({ code: "LIQUIDATION_UNBALANCED", message: `Chưa cân đối kinh phí: đã giải ngân ${totals.DISBURSEMENT.toLocaleString("vi-VN")} đ, đã quyết toán ${totals.SETTLEMENT.toLocaleString("vi-VN")} đ, thu hồi ${recovered.toLocaleString("vi-VN")} đ. Phần chênh lệch phải được quyết toán hoặc thu hồi trước khi ký.` });
         // Năm UTC cho cả nhãn và khoảng đếm, để hai thứ không lệch nhau quanh giao thừa.
         const year = (await readTransactionClockV1(tx)).getUTCFullYear();
-        const sequence = (await tx.projectLiquidation.count({ where: { status: "SIGNED", decidedAt: { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) } } })) + 1;
-        closing = { approvedBudget: totals.GRANT, totalDisbursed: totals.DISBURSEMENT, totalSettled: totals.SETTLEMENT, liquidationNumber: `${sequence}/BBTL-HVQY/${year}` };
+        const liquidationNumber = await allocateLiquidationNumber(tx, year);
+        closing = { approvedBudget: totals.GRANT, totalDisbursed: totals.DISBURSEMENT, totalSettled: totals.SETTLEMENT, liquidationNumber };
       }
       await closeApprovalSubmission(tx, currentActor, { kind: "LIQUIDATION", subjectType: "project", subjectId: project.id, subjectRef: liquidation.id }, decision === "approve" ? "APPROVED" : "REJECTED", input.reason ?? null);
       const now = await readTransactionClockV1(tx);

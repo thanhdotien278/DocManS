@@ -90,6 +90,9 @@ model User {
   acceptanceDossierSubmissions AcceptanceDossierSubmission[] @relation("AcceptanceDossierSubmissionActor")
   acceptanceCouncilSeats   AcceptanceCouncilMember[] @relation("AcceptanceCouncilMemberUser")
   acceptanceCouncilInvites AcceptanceCouncilMember[] @relation("AcceptanceCouncilMemberInviter")
+  unitPositions            UnitPosition[] @relation("UnitPositionHolder")
+  assignedUnitPositions    UnitPosition[] @relation("UnitPositionAssigner")
+  updatedKhqsPeriodicReports KhqsPeriodicReport[] @relation("KhqsPeriodicReportUpdater")
 
   @@map("users")
 }
@@ -113,9 +116,12 @@ model OrganizationUnit {
   parent     OrganizationUnit?       @relation("OrganizationHierarchy", fields: [parentId], references: [id])
   children   OrganizationUnit[]      @relation("OrganizationHierarchy")
   status     String                  @default("active")
+  /// Loại đơn vị: INSTITUTE (Viện), DEPARTMENT (Phòng), FACULTY (Khoa), DIVISION (Bộ môn), OTHER.
+  unitType   String                  @default("OTHER") @map("unit_type")
   createdAt  DateTime                @default(now()) @map("created_at")
   updatedAt  DateTime                @updatedAt @map("updated_at")
   userScopes UserOrganizationScope[]
+  unitPositions UnitPosition[]
   proposalIntakePeriods ProposalIntakePeriod[]
   hostedResearchProposals ResearchProposal[]
   approvedProjects ApprovedProject[]
@@ -124,6 +130,22 @@ model OrganizationUnit {
 
   @@index([parentId])
   @@map("organization_units")
+}
+
+model UnitPosition {
+  id                 String           @id @default(uuid())
+  organizationUnitId String           @map("organization_unit_id")
+  organizationUnit   OrganizationUnit @relation(fields: [organizationUnitId], references: [id], onDelete: Restrict)
+  userId             String           @map("user_id")
+  user               User             @relation("UnitPositionHolder", fields: [userId], references: [id], onDelete: Restrict)
+  positionCode       String           @map("position_code")
+  assignedById       String           @map("assigned_by_id")
+  assignedBy         User             @relation("UnitPositionAssigner", fields: [assignedById], references: [id], onDelete: Restrict)
+  createdAt          DateTime         @default(now()) @map("created_at")
+
+  @@unique([organizationUnitId, userId])
+  @@index([userId])
+  @@map("unit_positions")
 }
 
 model UserOrganizationScope {
@@ -740,6 +762,7 @@ model ProposalDecision {
   contextVersion Json?         @map("context_version")
   packageSnapshot Json?        @map("package_snapshot")
   publicSummary Json?          @map("public_summary")
+  decisionNumber String?       @unique @map("decision_number")
   createdAt   DateTime         @default(now()) @map("created_at")
   approvedProjects ApprovedProject[] @relation("ProjectSourceDecision")
 
@@ -823,6 +846,7 @@ model ApprovedProject {
 
   @@index([hostOrganizationUnitId, status])
   @@index([status, endDate])
+  @@index([startDate])
   @@map("approved_projects")
 }
 
@@ -1080,6 +1104,7 @@ model ApprovalSubmission {
   submittedBy            User     @relation("ApprovalSubmissionAuthor", fields: [submittedById], references: [id])
   authorRole             String   @map("author_role")
   lastNote               String?  @map("last_note")
+  decisionNumber         String?  @unique @map("decision_number")
   closedAt               DateTime? @map("closed_at")
   createdAt              DateTime @default(now()) @map("created_at")
   updatedAt              DateTime @updatedAt @map("updated_at")
@@ -1123,6 +1148,7 @@ model ProjectFundingRecord {
 
   @@unique([entryId, version])
   @@index([projectId, kind])
+  @@index([projectId, kind, recordedOn])
   @@map("project_funding_records")
 }
 
@@ -1404,4 +1430,31 @@ model ProjectHealthSnapshot {
   @@unique([projectId, snapshotDate])
   @@index([snapshotDate])
   @@map("project_health_snapshots")
+}
+
+/// Bộ đếm số văn bản nguyên tử theo (scope, year); reset mỗi năm theo giờ Việt Nam.
+model DocumentNumberCounter {
+  scope     String
+  year      Int
+  lastValue Int    @default(0) @map("last_value")
+
+  @@id([scope, year])
+  @@map("document_number_counters")
+}
+
+/// Báo cáo kết quả công tác KHQS định kỳ (H1 = 6 tháng đầu năm, FY = cả năm).
+model KhqsPeriodicReport {
+  id           String   @id @default(uuid())
+  year         Int
+  period       String
+  narrative    Json     @default("{}")
+  manualTables Json     @default("{}") @map("manual_tables")
+  version      Int      @default(0)
+  updatedById  String?  @map("updated_by_id")
+  updatedBy    User?    @relation("KhqsPeriodicReportUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([year, period])
+  @@map("khqs_periodic_reports")
 }

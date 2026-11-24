@@ -176,6 +176,7 @@ export type ProposalDecisionRecord = {
   proposalId: string;
   decision: "approved" | "rejected";
   decisionLabel: string;
+  decisionNumber?: string;
   note: string;
   decidedById: string;
   decidedByDisplayName: string;
@@ -365,12 +366,17 @@ export type EvaluationCouncil = {
   };
   approval: { id: string; stage: "BOARD_REVIEW" | "HEAD_REVIEW" | "LEADERSHIP" | "CLOSED"; stageLabel: string; status: string; statusLabel: string; submittedByName: string; lastNote: string } | null;
   establishedAt: string;
+  decisionNumber?: string | null;
+  decidedAt?: string | null;
+  decidedByName?: string | null;
+  decidedByRole?: string | null;
   members: Array<{
     assignmentId: string; reviewerUserId: string; displayName: string; username: string; unit: string;
     assignmentRole: CouncilPosition; assignmentRoleLabel: string; scoring: boolean;
     invitationStatus: "invited" | "accepted" | "declined"; invitationStatusLabel: string;
     declineReason: string; respondedAt: string; dueDate: string; assignedByDisplayName: string;
     councilEstablishedAt: string;
+    militaryRank?: string; academicTitle?: string; position?: string; profileType?: string; externalAffiliation?: string;
   }>;
 };
 
@@ -382,8 +388,8 @@ export async function submitEvaluationCouncil(proposalId: string, contextVersion
   return requestJson<{ submissionId: string; stage: string }>(`/research-proposals/${proposalId}/evaluation-council/submit`, { method: "POST", body: JSON.stringify({ contextVersion, note: note || undefined }) });
 }
 
-export async function decideEvaluationCouncil(proposalId: string, decision: "sign" | "return", note: string, contextVersion: EvaluationCouncil["contextVersion"]) {
-  return requestJson<{ submissionId: string; status: "APPROVED" | "RETURNED"; establishedAt?: string }>(`/research-proposals/${proposalId}/evaluation-council/decide`, { method: "POST", body: JSON.stringify({ decision, note, contextVersion }) });
+export async function decideEvaluationCouncil(proposalId: string, decision: "sign" | "return", note: string, contextVersion: EvaluationCouncil["contextVersion"], decisionNumber?: string) {
+  return requestJson<{ submissionId: string; status: "APPROVED" | "RETURNED"; establishedAt?: string; decisionNumber?: string | null }>(`/research-proposals/${proposalId}/evaluation-council/decide`, { method: "POST", body: JSON.stringify({ decision, note, contextVersion, decisionNumber: decisionNumber?.trim() || undefined }) });
 }
 
 /** Chỉ thư ký (P7): phiếu ẩn danh "Phiếu 1..N", không có tên người chấm. */
@@ -476,7 +482,7 @@ export async function loadProposalDecisionPackage(proposalId: string) {
   return response.decisionPackage;
 }
 
-export async function decideProposal(proposalId: string, decision: "approve" | "reject", note: string, packageRevision: number, contextVersion: ViewerAuthorizationV1["contextVersion"], published: { publicSummary: string; requiredFollowUp: string; approvedAmount?: number } = { publicSummary: "", requiredFollowUp: "" }) {
+export async function decideProposal(proposalId: string, decision: "approve" | "reject", note: string, packageRevision: number, contextVersion: ViewerAuthorizationV1["contextVersion"], published: { publicSummary: string; requiredFollowUp: string; approvedAmount?: number; decisionNumber?: string } = { publicSummary: "", requiredFollowUp: "" }) {
   return requestJson<{ decision: ProposalDecisionRecord; proposalStatus: string; proposalStatusLabel: string }>(
     `/research-proposals/${proposalId}/${decision}`,
     { method: "POST", body: JSON.stringify({ note, packageRevision, contextVersion, ...published }) }
