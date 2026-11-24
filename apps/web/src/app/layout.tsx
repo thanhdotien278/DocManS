@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import "./globals.css";
 import "./reports-documents.css";
 import { SessionProvider } from "@/components/auth/session-provider";
@@ -31,6 +32,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Dựng động ở mọi yêu cầu để Next.js gắn được nonce CSP (src/middleware.ts) vào script của framework.
+  await connection();
   return (
     <html lang="vi" data-theme={await readUiTheme()} suppressHydrationWarning>
       <body>

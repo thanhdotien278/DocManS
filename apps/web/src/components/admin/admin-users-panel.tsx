@@ -107,7 +107,8 @@ export function AdminUsersPanel() {
       password: String(form.get("password") ?? ""),
       confirmPassword: String(form.get("confirmPassword") ?? ""),
       systemRole: String(form.get("systemRole") ?? ""),
-      organizationUnitId: String(form.get("organizationUnitId") ?? "")
+      organizationUnitId: String(form.get("organizationUnitId") ?? ""),
+      credentialEmail: String(form.get("credentialEmail") ?? "").trim()
     };
 
     if (
@@ -134,7 +135,8 @@ export function AdminUsersPanel() {
         displayName: input.displayName,
         password: input.password,
         systemRole: input.systemRole,
-        organizationUnitId: input.organizationUnitId
+        organizationUnitId: input.organizationUnitId,
+        ...(input.credentialEmail ? { credentialEmail: input.credentialEmail } : {})
       });
       if (formElement.isConnected) {
         formElement.reset();
@@ -188,10 +190,12 @@ export function AdminUsersPanel() {
     setFormError("");
     setMessage("");
     const form = new FormData(event.currentTarget);
+    const credentialEmail = String(form.get("credentialEmail") ?? "").trim();
     const input = {
       displayName: String(form.get("displayName") ?? "").trim(),
       systemRole: String(form.get("systemRole") ?? ""),
-      organizationUnitId: String(form.get("organizationUnitId") ?? "")
+      organizationUnitId: String(form.get("organizationUnitId") ?? ""),
+      ...(credentialEmail ? { credentialEmail } : {})
     };
 
     if (!input.displayName || !input.systemRole || !input.organizationUnitId) {
@@ -396,6 +400,11 @@ export function AdminUsersPanel() {
               <input name="displayName" defaultValue={editingUser.displayName} autoComplete="name" />
             </label>
             <label className="field">
+              <span>Thư công vụ</span>
+              <input name="credentialEmail" type="email" autoComplete="off" defaultValue={editingUser.credentialEmail ?? ""} />
+              <small className="record-meta">Nhận mã xác thực hai lớp khi đăng nhập; bắt buộc với lãnh đạo, Phòng KHQS và quản trị.</small>
+            </label>
+            <label className="field">
               <span>Vai trò</span>
               <select name="systemRole" defaultValue={editingUser.systemRole ?? ""}>
                 {/* Tài khoản Sinh viên chỉ sinh ra từ tự đăng ký; không đổi vai trò qua lại. */}
@@ -451,6 +460,11 @@ export function AdminUsersPanel() {
             <label className="field">
               <span>Họ tên hiển thị</span>
               <input name="displayName" autoComplete="name" />
+            </label>
+            <label className="field">
+              <span>Thư công vụ</span>
+              <input name="credentialEmail" type="email" autoComplete="off" />
+              <small className="record-meta">Nhận mã xác thực hai lớp khi đăng nhập; bắt buộc với lãnh đạo, Phòng KHQS và quản trị.</small>
             </label>
             <label className="field">
               <span>Mật khẩu khởi tạo</span>

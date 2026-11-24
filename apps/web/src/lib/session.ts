@@ -7,6 +7,8 @@ export const PUBLIC_ROUTES = ["/login", "/password-reset", "/forgot-password", "
 
 export type CurrentUser = {
   mustChangePassword?: boolean;
+  /** Xác thực hai lớp qua thư: bắt buộc theo vai trò, hoặc tự bật. */
+  loginOtp?: { required: boolean; enabled: boolean };
   researcherProfileId?: string;
   /** Chức danh tại đơn vị, ví dụ "Trưởng khoa – Khoa Nội" (chỉ để hiển thị). */
   positions?: string[];
@@ -39,6 +41,7 @@ export type ShellAccount = {
   positions: string[];
   initials: string;
   organizationScopes?: CurrentUser["organizationScopes"];
+  loginOtp?: CurrentUser["loginOtp"];
 };
 
 export function getApiBaseUrl() {
@@ -58,7 +61,8 @@ export function toShellAccount(user: CurrentUser): ShellAccount {
     positions: user.positions ?? [],
     // Chữ cái đầu của tên gọi (từ cuối họ tên), không phải của quân hàm hay học hàm đứng trước.
     initials: user.displayName.trim().split(/\s+/).pop()?.charAt(0).toUpperCase() || "U",
-    organizationScopes: user.organizationScopes
+    organizationScopes: user.organizationScopes,
+    loginOtp: user.loginOtp
   };
 }
 
