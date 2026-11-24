@@ -13,6 +13,7 @@ export interface ObjectStorage {
   putObject(input: PutObjectInput): Promise<void>;
   getObject(objectKey: string): Promise<Readable | Buffer>;
   deleteObject?(objectKey: string): Promise<void>;
+  checkBucket?(): Promise<void>;
 }
 
 function readRequiredEnv(name: string) {
@@ -45,6 +46,14 @@ export class MinioObjectStorageService implements ObjectStorage {
 
   async deleteObject(objectKey: string) {
     await this.getClient().removeObject(this.getBucketName(), objectKey);
+  }
+
+  /** Kiểm tra kết nối và bucket MinIO phục vụ endpoint `/api/v1/health/ready`. */
+  async checkBucket() {
+    const exists = await this.getClient().bucketExists(this.getBucketName());
+    if (!exists) {
+      throw new Error("MinIO bucket does not exist.");
+    }
   }
 
   private getBucketName() {

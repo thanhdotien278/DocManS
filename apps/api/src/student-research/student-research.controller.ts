@@ -2,7 +2,8 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Req, Res, Uploa
 import { FileInterceptor } from "@nestjs/platform-express";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import { buildContentDisposition } from "../modules/files/files.controller.js";
-import { defaultFileConfig, streamToBuffer } from "../modules/files/files.service.js";
+import { sendObjectContent, type ObjectContentResponse } from "../modules/files/send-object-content.js";
+import { uploadInterceptorOptions } from "../modules/files/upload-limits.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
 import {
   closeTopicPipe, createPeriodPipe, createTopicPipe, studentProfilePipe, documentPurposePipe, memberPipe, rejectTopicPipe, topicDeadlinePipe, topicFilePurposePipe, updatePeriodPipe, updateTopicPipe,
@@ -11,7 +12,7 @@ import {
 import { StudentResearchService, type StudentResearchUpload } from "./student-research.service.js";
 
 // Enforced while the body streams in, so an oversized upload is never buffered in memory.
-const SINGLE_FILE = () => FileInterceptor("file", { limits: { fileSize: defaultFileConfig().maxFileSizeBytes, files: 1 } });
+const SINGLE_FILE = () => FileInterceptor("file", uploadInterceptorOptions());
 
 @Controller("api/v1/student-research")
 @UseGuards(SessionAuthGuard)
@@ -76,10 +77,10 @@ export class StudentResearchController {
   }
 
   @Get("files/:fileId")
-  async download(@Req() request: RequestWithCurrentUser, @Param("fileId") fileId: string, @Res() response: { setHeader(name: string, value: string): void; send(content: Buffer): void }) {
+  async download(@Req() request: RequestWithCurrentUser, @Param("fileId") fileId: string, @Res() response: ObjectContentResponse) {
     const file = await this.service.download(request.currentUser!, fileId);
     response.setHeader("Content-Type", file.mimeType);
     response.setHeader("Content-Disposition", buildContentDisposition(file.fileName));
-    response.send(await streamToBuffer(file.content));
+    await sendObjectContent(response, file.content);
   }
 }
