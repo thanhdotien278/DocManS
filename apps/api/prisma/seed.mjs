@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Client as MinioClient } from "minio";
+import { applySnapshotIfAvailable } from "./snapshot.mjs";
 
 const databaseUrl = process.env.DATABASE_URL?.trim();
 
@@ -13,6 +14,9 @@ if (!databaseUrl) {
 
 const databaseSchema = new URL(databaseUrl).searchParams.get("schema") ?? "public";
 if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(databaseSchema)) throw new Error("Invalid DATABASE_URL schema");
+if (await applySnapshotIfAvailable({ databaseUrl, databaseSchema })) {
+  process.exit(0);
+}
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: databaseUrl, options: `-c search_path=${databaseSchema}` }, { schema: databaseSchema })
 });
