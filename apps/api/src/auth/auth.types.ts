@@ -3,6 +3,8 @@ import { SYSTEM_ROLES, type SystemRole } from "@rtms/permissions/system-roles";
 export { SYSTEM_ROLES, type SystemRole };
 
 export const AUTH_SESSION_COOKIE = "rtms_session";
+/** Production dùng tiền tố __Host- (bắt buộc HTTPS, Path=/, không Domain) để tên miền con không ghi đè được cookie phiên. */
+export const SECURE_AUTH_SESSION_COOKIE = "__Host-rtms_session";
 export const AUTH_FAILURE_MESSAGE = "Tên đăng nhập hoặc mật khẩu không hợp lệ.";
 export const AUTH_PENDING_APPROVAL_MESSAGE = "Tài khoản đang chờ cán bộ quản lý khoa học duyệt.";
 /** Story 13.11: QT, TB, CV duyệt yêu cầu tự đăng ký, không phụ thuộc scope đơn vị (D-044). */

@@ -1,3 +1,4 @@
+import { apiFetch, setCsrfToken } from "@/lib/csrf";
 import { getApiBaseUrl, type CurrentUser } from "@/lib/session";
 import { SYSTEM_ROLES } from "@rtms/permissions";
 
@@ -46,11 +47,12 @@ export async function loginWithPassword(username: string, password: string): Pro
       return { ok: false, message: error.code === "ACCOUNT_PENDING_APPROVAL" && typeof error.message === "string" ? error.message : safeAuthError };
     }
 
-    const body = (await response.json()) as { user?: unknown };
+    const body = (await response.json()) as { user?: unknown; csrfToken?: unknown };
     if (!isCurrentUser(body.user)) {
       return { ok: false, message: safeAuthError };
     }
 
+    setCsrfToken(body.csrfToken);
     return { ok: true, user: body.user };
   } catch {
     return { ok: false, message: safeAuthError };
@@ -64,6 +66,7 @@ export async function logoutSession() {
       credentials: "include"
     });
 
+    setCsrfToken(null);
     return response.ok;
   } catch {
     return false;
@@ -71,7 +74,7 @@ export async function logoutSession() {
 }
 
 export async function changePassword(currentPassword: string, newPassword: string) {
-  const response = await fetch(`${getApiBaseUrl()}/auth/change-password`, {
+  const response = await apiFetch(`${getApiBaseUrl()}/auth/change-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -124,7 +127,8 @@ export async function getCurrentUser() {
       return null;
     }
 
-    const body = (await response.json()) as { user?: unknown };
+    const body = (await response.json()) as { user?: unknown; csrfToken?: unknown };
+    setCsrfToken(body.csrfToken);
     return isCurrentUser(body.user) ? body.user : null;
   } catch {
     return null;

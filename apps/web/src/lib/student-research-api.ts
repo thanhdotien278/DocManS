@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/csrf";
 import { getApiBaseUrl } from "@/lib/session";
 
 export const DOCUMENT_PURPOSES = [
@@ -33,7 +34,7 @@ export type TopicInput = { title: string; summary: string; advisorName: string; 
 
 async function request<T>(path: string, method = "GET", body?: FormData | object): Promise<T> {
   const form = body instanceof FormData;
-  const response = await fetch(`${getApiBaseUrl()}/student-research${path}`, {
+  const response = await apiFetch(`${getApiBaseUrl()}/student-research${path}`, {
     method, credentials: "include",
     headers: body && !form ? { "Content-Type": "application/json" } : undefined,
     body: form ? body : body && JSON.stringify(body)
