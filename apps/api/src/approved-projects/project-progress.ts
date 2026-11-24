@@ -62,11 +62,11 @@ function isApproachingAt(due: Date | string | null | undefined, asOf: Date): boo
   return dueMs - nowMs <= 14 * DAY_MS;
 }
 
-function round2(value: number): number {
+export function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-function round3(value: number): number {
+export function round3(value: number): number {
   return Math.round(value * 1000) / 1000;
 }
 

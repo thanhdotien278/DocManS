@@ -17,6 +17,7 @@ import {
 } from "@/components/dashboard/viz";
 import { UnitHealthHeatmap } from "@/components/dashboard/unit-health-heatmap";
 import { DrillDownPanel, type DrillDownSelection } from "@/components/dashboard/drill-down-panel";
+import { BUDGET_COLUMN, BucketChartCard, DrillLink, OfficerTable, type OfficerSummaryRow } from "@/components/dashboard/dashboard-cards";
 import {
   downloadDrillDownExcel,
   downloadProposalsExcel,
@@ -49,15 +50,6 @@ type DashboardBundle = {
   products: DashboardProductsResponse;
 };
 
-type OfficerSummaryRow = {
-  key: string;
-  label: string;
-  projects: number;
-  overdue: number;
-  proposals: number;
-};
-
-const SINGLE_SERIES: Series[] = [{ key: "count", label: "Số lượng", color: "var(--series-1)" }];
 const BUDGET_SERIES: Series[] = [
   { key: "totalBudget", label: "Kinh phí được cấp", color: "var(--series-1)" },
   { key: "totalDisbursed", label: "Đã giải ngân", color: "var(--series-2)" }
@@ -105,67 +97,6 @@ function mergeOfficers(
       Number(a.key === "unassigned") - Number(b.key === "unassigned") ||
       b.projects + b.proposals - (a.projects + a.proposals) ||
       a.label.localeCompare(b.label, "vi")
-  );
-}
-
-function DrillLink({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button type="button" className="dash-cell-link" onClick={onClick}>
-      {label}
-    </button>
-  );
-}
-
-function OfficerTable({
-  rows,
-  onOpen
-}: {
-  rows: OfficerSummaryRow[];
-  onOpen: (
-    officerId: string,
-    metric: "projects" | "overdue_projects" | "proposals",
-    title: string
-  ) => void;
-}) {
-  return (
-    <BucketTable
-      columns={[
-        { key: "label", label: "Chuyên viên phụ trách" },
-        { key: "projects", label: "Đề tài", numeric: true },
-        { key: "overdue", label: "Quá hạn", numeric: true },
-        { key: "proposals", label: "Hồ sơ đề xuất", numeric: true }
-      ]}
-      rows={rows.map((row) => ({
-        key: row.key,
-        cells: {
-          label: row.label,
-          projects: row.projects ? (
-            <DrillLink
-              label={number.format(row.projects)}
-              onClick={() => onOpen(row.key, "projects", `Đề tài phụ trách — ${row.label}`)}
-            />
-          ) : (
-            "0"
-          ),
-          overdue: row.overdue ? (
-            <DrillLink
-              label={number.format(row.overdue)}
-              onClick={() => onOpen(row.key, "overdue_projects", `Đề tài quá hạn — ${row.label}`)}
-            />
-          ) : (
-            "0"
-          ),
-          proposals: row.proposals ? (
-            <DrillLink
-              label={number.format(row.proposals)}
-              onClick={() => onOpen(row.key, "proposals", `Hồ sơ đề xuất — ${row.label}`)}
-            />
-          ) : (
-            "0"
-          )
-        }
-      }))}
-    />
   );
 }
 
@@ -257,7 +188,18 @@ export function DashboardAnalytics() {
   };
 
   const options = bundle?.stats.filterOptions ?? cachedOptions;
+  const codeItems = (list: Array<{ code: string; label: string }> = []) => list.map((item) => ({ value: item.code, label: item.label }));
+  const filterFields: Array<{ key: keyof DashboardFilters; id: string; label: string; all: string; items: Array<{ value: string; label: string }> }> = [
+    { key: "year", id: "dash-year", label: "Năm", all: "Tất cả các năm", items: (options?.years ?? []).map((yr) => ({ value: String(yr), label: `Năm ${yr}` })) },
+    { key: "unitId", id: "dash-unit", label: "Đơn vị chủ trì", all: "Tất cả đơn vị", items: (options?.units ?? []).map((u) => ({ value: u.id, label: u.name })) },
+    { key: "level", id: "dash-level", label: "Cấp quản lý", all: "Tất cả cấp", items: codeItems(options?.levels) },
+    { key: "field", id: "dash-field", label: "Lĩnh vực", all: "Tất cả lĩnh vực", items: codeItems(options?.fields) },
+    { key: "scope", id: "dash-scope", label: "Tính chất", all: "Quân sự & Dân sự", items: codeItems(options?.scopes) },
+    { key: "officerId", id: "dash-officer", label: "CV phụ trách", all: "Tất cả CV", items: (options?.officers ?? []).map((o) => ({ value: o.id, label: o.label })) },
+    { key: "health", id: "dash-health", label: "Sức khoẻ đề tài", all: "Mọi trạng thái sức khoẻ", items: codeItems(options?.healths) }
+  ];
   const refreshing = isLoading && Boolean(bundle);
+  const openDrill = (selection: Partial<DrillDownSelection> & Pick<DrillDownSelection, "metric" | "title">) => setDrillDown({ ...filters, ...selection });
   const fundingUnits = useMemo(
     () => (bundle?.projectDist.byUnit ?? []).filter((b) => b.totalBudget > 0 || b.totalDisbursed > 0),
     [bundle]
@@ -309,117 +251,23 @@ export function DashboardAnalytics() {
 
       <section className="dash-filters" aria-label="Bộ lọc thống kê đồng bộ URL">
         <div className="dash-filter-grid">
-          <div className="filter-field">
-            <label htmlFor="dash-year">Năm</label>
-            <select
-              id="dash-year"
-              value={filters.year ?? ""}
-              onChange={(e) => updateFilterUrl({ year: e.target.value })}
-            >
-              <option value="">Tất cả các năm</option>
-              {(options?.years ?? []).map((yr) => (
-                <option key={yr} value={String(yr)}>
-                  Năm {yr}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-field">
-            <label htmlFor="dash-unit">Đơn vị chủ trì</label>
-            <select
-              id="dash-unit"
-              value={filters.unitId ?? ""}
-              onChange={(e) => updateFilterUrl({ unitId: e.target.value })}
-            >
-              <option value="">Tất cả đơn vị</option>
-              {(options?.units ?? []).map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-field">
-            <label htmlFor="dash-level">Cấp quản lý</label>
-            <select
-              id="dash-level"
-              value={filters.level ?? ""}
-              onChange={(e) => updateFilterUrl({ level: e.target.value })}
-            >
-              <option value="">Tất cả cấp</option>
-              {(options?.levels ?? []).map((lv) => (
-                <option key={lv.code} value={lv.code}>
-                  {lv.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-field">
-            <label htmlFor="dash-field">Lĩnh vực</label>
-            <select
-              id="dash-field"
-              value={filters.field ?? ""}
-              onChange={(e) => updateFilterUrl({ field: e.target.value })}
-            >
-              <option value="">Tất cả lĩnh vực</option>
-              {(options?.fields ?? []).map((fd) => (
-                <option key={fd.code} value={fd.code}>
-                  {fd.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-field">
-            <label htmlFor="dash-scope">Tính chất</label>
-            <select
-              id="dash-scope"
-              value={filters.scope ?? ""}
-              onChange={(e) => updateFilterUrl({ scope: e.target.value })}
-            >
-              <option value="">Quân sự & Dân sự</option>
-              {(options?.scopes ?? []).map((sc) => (
-                <option key={sc.code} value={sc.code}>
-                  {sc.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-field">
-            <label htmlFor="dash-officer">CV phụ trách</label>
-            <select
-              id="dash-officer"
-              value={filters.officerId ?? ""}
-              onChange={(e) => updateFilterUrl({ officerId: e.target.value })}
-            >
-              <option value="">Tất cả CV</option>
-              {(options?.officers ?? []).map((ofc) => (
-                <option key={ofc.id} value={ofc.id}>
-                  {ofc.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-field">
-            <label htmlFor="dash-health">Sức khoẻ đề tài</label>
-            <select
-              id="dash-health"
-              value={filters.health ?? ""}
-              onChange={(e) => updateFilterUrl({ health: e.target.value as ProjectHealthCode | "" })}
-            >
-              <option value="">Mọi trạng thái sức khoẻ</option>
-              {(options?.healths ?? []).map((hl) => (
-                <option key={hl.code} value={hl.code}>
-                  {hl.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {filterFields.map((field) => (
+            <div className="filter-field" key={field.key}>
+              <label htmlFor={field.id}>{field.label}</label>
+              <select
+                id={field.id}
+                value={filters[field.key] ?? ""}
+                onChange={(e) => updateFilterUrl({ [field.key]: e.target.value } as Partial<DashboardFilters>)}
+              >
+                <option value="">{field.all}</option>
+                {field.items.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
         </div>
 
         {hasActiveFilters ? (
@@ -460,8 +308,7 @@ export function DashboardAnalytics() {
               type="button"
               className="dash-kpi-card"
               onClick={() =>
-                setDrillDown({
-                  ...filters,
+                openDrill({
                   metric: "projects",
                   title: "Danh sách đề tài trong phạm vi",
                   subtitle: "Hỗ trợ xem tiến độ Gantt và tải Excel"
@@ -479,8 +326,7 @@ export function DashboardAnalytics() {
               type="button"
               className={`dash-kpi-card ${bundle.stats.projects.overdue > 0 ? "is-danger" : ""}`}
               onClick={() =>
-                setDrillDown({
-                  ...filters,
+                openDrill({
                   metric: "overdue_projects",
                   title: "Đề tài quá hạn cần đôn đốc",
                   subtitle: "Có mốc thực hiện, điểm báo cáo hoặc thời hạn đã quá hạn"
@@ -498,8 +344,7 @@ export function DashboardAnalytics() {
               type="button"
               className="dash-kpi-card is-info"
               onClick={() =>
-                setDrillDown({
-                  ...filters,
+                openDrill({
                   metric: "funding",
                   title: "Phân tích kinh phí đề tài",
                   subtitle: bundle.stats.fundingRestricted
@@ -522,8 +367,7 @@ export function DashboardAnalytics() {
               type="button"
               className="dash-kpi-card"
               onClick={() =>
-                setDrillDown({
-                  ...filters,
+                openDrill({
                   metric: "proposals",
                   title: "Danh sách hồ sơ đề xuất",
                   subtitle: "Theo phạm vi phân quyền hiện tại"
@@ -541,8 +385,7 @@ export function DashboardAnalytics() {
               type="button"
               className="dash-kpi-card"
               onClick={() =>
-                setDrillDown({
-                  ...filters,
+                openDrill({
                   metric: "products",
                   title: "Sản phẩm từ hồ sơ nghiệm thu",
                   subtitle: "Tổng hợp từ các hồ sơ nghiệm thu được phép đọc"
@@ -589,8 +432,7 @@ export function DashboardAnalytics() {
               <WeeklyHealthChart
                 points={bundle.trends.points}
                 onSelectHealth={(health) =>
-                  setDrillDown({
-                    ...filters,
+                  openDrill({
                     health,
                     metric: "projects",
                     title: `Đề tài: ${HEALTH_LABELS[health]}`,
@@ -628,8 +470,7 @@ export function DashboardAnalytics() {
               <SCurveChart
                 points={bundle.trends.points}
                 onDrillProjects={() =>
-                  setDrillDown({
-                    ...filters,
+                  openDrill({
                     metric: "projects",
                     title: "Chi tiết tiến độ & chỉ số SPI các đề tài"
                   })
@@ -656,8 +497,7 @@ export function DashboardAnalytics() {
                         <DrillLink
                           label={row.unitName}
                           onClick={() =>
-                            setDrillDown({
-                              ...filters,
+                            openDrill({
                               unitId: row.unitId,
                               metric: "projects",
                               title: row.unitName,
@@ -673,8 +513,7 @@ export function DashboardAnalytics() {
                             <DrillLink
                               label={number.format(row[col])}
                               onClick={() =>
-                                setDrillDown({
-                                  ...filters,
+                                openDrill({
                                   unitId: row.unitId,
                                   health: col,
                                   metric: "projects",
@@ -693,8 +532,7 @@ export function DashboardAnalytics() {
                           <DrillLink
                             label={number.format(row.total)}
                             onClick={() =>
-                              setDrillDown({
-                                ...filters,
+                              openDrill({
                                 unitId: row.unitId,
                                 metric: "projects",
                                 title: row.unitName,
@@ -713,8 +551,7 @@ export function DashboardAnalytics() {
               <UnitHealthHeatmap
                 rows={bundle.projectDist.byUnitHealth}
                 onSelectCell={({ unitId, unitName, health }) =>
-                  setDrillDown({
-                    ...filters,
+                  openDrill({
                     unitId,
                     ...(health ? { health } : {}),
                     metric: "projects",
@@ -750,8 +587,7 @@ export function DashboardAnalytics() {
                           <DrillLink
                             label={unit.label}
                             onClick={() =>
-                              setDrillDown({
-                                ...filters,
+                              openDrill({
                                 unitId: unit.key,
                                 metric: "funding",
                                 title: `Kinh phí đề tài — ${unit.label}`
@@ -779,8 +615,7 @@ export function DashboardAnalytics() {
                 format={formatShortMoneyVnd}
                 emptyText="Chưa có số liệu kinh phí được cấp trong phạm vi hiển thị."
                 onSelect={(unitId, label) =>
-                  setDrillDown({
-                    ...filters,
+                  openDrill({
                     unitId,
                     metric: "funding",
                     title: `Kinh phí đề tài — ${label}`
@@ -789,209 +624,28 @@ export function DashboardAnalytics() {
               />
             </ChartCard>
 
-            <ChartCard
-              refreshing={refreshing}
-              title="Đề tài theo cấp quản lý"
-              table={
-                <BucketTable
-                  columns={[
-                    { key: "label", label: "Cấp quản lý" },
-                    { key: "count", label: "Số đề tài", numeric: true },
-                    { key: "budget", label: "Kinh phí được cấp", numeric: true }
-                  ]}
-                  rows={bundle.projectDist.byLevel.map((bucket) => ({
-                    key: bucket.key,
-                    cells: {
-                      label: (
-                        <DrillLink
-                          label={bucket.label}
-                          onClick={() =>
-                            setDrillDown({
-                              ...filters,
-                              level: bucket.key,
-                              metric: "projects",
-                              title: `Đề tài — Cấp: ${bucket.label}`
-                            })
-                          }
-                        />
-                      ),
-                      count: number.format(bucket.count),
-                      budget: formatMoneyVnd(bucket.totalBudget)
-                    }
-                  }))}
-                />
-              }
-            >
-              <HBarChart
-                rows={bundle.projectDist.byLevel.map((b) => ({
-                  key: b.key,
-                  label: b.label,
-                  values: { count: b.count }
-                }))}
-                series={SINGLE_SERIES}
-                onSelect={(level, label) =>
-                  setDrillDown({
-                    ...filters,
-                    level,
-                    metric: "projects",
-                    title: `Đề tài — Cấp: ${label}`
-                  })
-                }
-              />
-            </ChartCard>
+            <BucketChartCard refreshing={refreshing} title="Đề tài theo cấp quản lý" labelHeader="Cấp quản lý" countHeader="Số đề tài" extra={BUDGET_COLUMN}
+              buckets={bundle.projectDist.byLevel}
+              onDrill={(level, label) => openDrill({ level, metric: "projects", title: `Đề tài — Cấp: ${label}` })}
+            />
 
-            <ChartCard
-              refreshing={refreshing}
-              title="Đề tài theo trạng thái"
-              table={
-                <BucketTable
-                  columns={[
-                    { key: "label", label: "Trạng thái" },
-                    { key: "count", label: "Số đề tài", numeric: true }
-                  ]}
-                  rows={bundle.projectDist.byStatus.map((bucket) => ({
-                    key: bucket.key,
-                    cells: {
-                      label: (
-                        <DrillLink
-                          label={bucket.label}
-                          onClick={() =>
-                            setDrillDown({
-                              ...filters,
-                              status: bucket.key,
-                              metric: "projects",
-                              title: `Đề tài — ${bucket.label}`
-                            })
-                          }
-                        />
-                      ),
-                      count: number.format(bucket.count)
-                    }
-                  }))}
-                />
-              }
-            >
-              <HBarChart
-                rows={bundle.projectDist.byStatus.map((b) => ({
-                  key: b.key,
-                  label: b.label,
-                  values: { count: b.count }
-                }))}
-                series={SINGLE_SERIES}
-                onSelect={(status, label) =>
-                  setDrillDown({
-                    ...filters,
-                    status,
-                    metric: "projects",
-                    title: `Đề tài — ${label}`
-                  })
-                }
-              />
-            </ChartCard>
+            <BucketChartCard refreshing={refreshing} title="Đề tài theo trạng thái" labelHeader="Trạng thái" countHeader="Số đề tài"
+              buckets={bundle.projectDist.byStatus}
+              onDrill={(status, label) => openDrill({ status, metric: "projects", title: `Đề tài — ${label}` })}
+            />
           </div>
 
           <h2 className="dash-section-title">Theo tính chất và chuyên viên phụ trách</h2>
           <div className="dash-grid">
-            <ChartCard
-              refreshing={refreshing}
-              title="Đề tài theo tính chất"
-              subtitle="Quân sự / Dân sự theo hồ sơ đề xuất gốc"
-              table={
-                <BucketTable
-                  columns={[
-                    { key: "label", label: "Tính chất" },
-                    { key: "count", label: "Số đề tài", numeric: true },
-                    { key: "budget", label: "Kinh phí được cấp", numeric: true }
-                  ]}
-                  rows={bundle.projectDist.byScope.map((bucket) => ({
-                    key: bucket.key,
-                    cells: {
-                      label: (
-                        <DrillLink
-                          label={bucket.label}
-                          onClick={() =>
-                            setDrillDown({
-                              ...filters,
-                              scope: bucket.key,
-                              metric: "projects",
-                              title: `Đề tài — Tính chất: ${bucket.label}`
-                            })
-                          }
-                        />
-                      ),
-                      count: number.format(bucket.count),
-                      budget: formatMoneyVnd(bucket.totalBudget)
-                    }
-                  }))}
-                />
-              }
-            >
-              <HBarChart
-                rows={bundle.projectDist.byScope.map((b) => ({
-                  key: b.key,
-                  label: b.label,
-                  values: { count: b.count }
-                }))}
-                series={SINGLE_SERIES}
-                onSelect={(scope, label) =>
-                  setDrillDown({
-                    ...filters,
-                    scope,
-                    metric: "projects",
-                    title: `Đề tài — Tính chất: ${label}`
-                  })
-                }
-              />
-            </ChartCard>
+            <BucketChartCard refreshing={refreshing} title="Đề tài theo tính chất" subtitle="Quân sự / Dân sự theo hồ sơ đề xuất gốc" labelHeader="Tính chất" countHeader="Số đề tài" extra={BUDGET_COLUMN}
+              buckets={bundle.projectDist.byScope}
+              onDrill={(scope, label) => openDrill({ scope, metric: "projects", title: `Đề tài — Tính chất: ${label}` })}
+            />
 
-            <ChartCard
-              refreshing={refreshing}
-              title="Hồ sơ đề xuất theo tính chất"
-              table={
-                <BucketTable
-                  columns={[
-                    { key: "label", label: "Tính chất" },
-                    { key: "count", label: "Số hồ sơ", numeric: true }
-                  ]}
-                  rows={bundle.proposalDist.byScope.map((bucket) => ({
-                    key: bucket.key,
-                    cells: {
-                      label: (
-                        <DrillLink
-                          label={bucket.label}
-                          onClick={() =>
-                            setDrillDown({
-                              ...filters,
-                              scope: bucket.key,
-                              metric: "proposals",
-                              title: `Hồ sơ đề xuất — Tính chất: ${bucket.label}`
-                            })
-                          }
-                        />
-                      ),
-                      count: number.format(bucket.count)
-                    }
-                  }))}
-                />
-              }
-            >
-              <HBarChart
-                rows={bundle.proposalDist.byScope.map((b) => ({
-                  key: b.key,
-                  label: b.label,
-                  values: { count: b.count }
-                }))}
-                series={SINGLE_SERIES}
-                onSelect={(scope, label) =>
-                  setDrillDown({
-                    ...filters,
-                    scope,
-                    metric: "proposals",
-                    title: `Hồ sơ đề xuất — Tính chất: ${label}`
-                  })
-                }
-              />
-            </ChartCard>
+            <BucketChartCard refreshing={refreshing} title="Hồ sơ đề xuất theo tính chất" labelHeader="Tính chất" countHeader="Số hồ sơ"
+              buckets={bundle.proposalDist.byScope}
+              onDrill={(scope, label) => openDrill({ scope, metric: "proposals", title: `Hồ sơ đề xuất — Tính chất: ${label}` })}
+            />
 
             <ChartCard
               wide
@@ -1002,8 +656,7 @@ export function DashboardAnalytics() {
                 <OfficerTable
                   rows={officerRows}
                   onOpen={(officerId, metric, title) =>
-                    setDrillDown({
-                      ...filters,
+                    openDrill({
                       officerId,
                       metric,
                       title
@@ -1020,8 +673,7 @@ export function DashboardAnalytics() {
                 }))}
                 series={OFFICER_SERIES}
                 onSelect={(officerId, label) =>
-                  setDrillDown({
-                    ...filters,
+                  openDrill({
                     officerId,
                     metric: "projects",
                     title: `Đề tài phụ trách — ${label}`
@@ -1033,366 +685,43 @@ export function DashboardAnalytics() {
 
           <h2 className="dash-section-title">Sản phẩm nghiệm thu</h2>
           <div className="dash-grid">
-            <ChartCard
-              refreshing={refreshing}
-              title="Sản phẩm theo loại"
-              subtitle="Tổng hợp từ các hồ sơ nghiệm thu trong phạm vi được đọc"
-              table={
-                <BucketTable
-                  emptyText="Chưa có sản phẩm trong hồ sơ nghiệm thu."
-                  columns={[
-                    { key: "label", label: "Loại sản phẩm" },
-                    { key: "count", label: "Tổng số", numeric: true },
-                    { key: "accepted", label: "Đã nghiệm thu", numeric: true }
-                  ]}
-                  rows={bundle.products.byType.map((bucket) => ({
-                    key: bucket.key,
-                    cells: {
-                      label: (
-                        <DrillLink
-                          label={bucket.label}
-                          onClick={() =>
-                            setDrillDown({
-                              ...filters,
-                              type: bucket.key,
-                              metric: "products",
-                              title: `Sản phẩm nghiệm thu — ${bucket.label}`
-                            })
-                          }
-                        />
-                      ),
-                      count: number.format(bucket.count),
-                      accepted: number.format(bucket.acceptedCount)
-                    }
-                  }))}
-                />
-              }
-            >
-              <HBarChart
-                rows={bundle.products.byType.map((b) => ({
-                  key: b.key,
-                  label: b.label,
-                  values: { count: b.count }
-                }))}
-                series={SINGLE_SERIES}
-                emptyText="Chưa có sản phẩm trong hồ sơ nghiệm thu."
-                onSelect={(type, label) =>
-                  setDrillDown({
-                    ...filters,
-                    type,
-                    metric: "products",
-                    title: `Sản phẩm nghiệm thu — ${label}`
-                  })
-                }
-              />
-            </ChartCard>
+            <BucketChartCard refreshing={refreshing} title="Sản phẩm theo loại" subtitle="Tổng hợp từ các hồ sơ nghiệm thu trong phạm vi được đọc" labelHeader="Loại sản phẩm" countHeader="Tổng số" extra={{ header: "Đã nghiệm thu", value: (bucket) => number.format(bucket.acceptedCount) }} emptyText="Chưa có sản phẩm trong hồ sơ nghiệm thu."
+              buckets={bundle.products.byType}
+              onDrill={(type, label) => openDrill({ type, metric: "products", title: `Sản phẩm nghiệm thu — ${label}` })}
+            />
 
-            <ChartCard
-              refreshing={refreshing}
-              title="Sản phẩm theo trạng thái nghiệm thu"
-              table={
-                <BucketTable
-                  emptyText="Chưa có dữ liệu trạng thái nghiệm thu."
-                  columns={[
-                    { key: "label", label: "Trạng thái nghiệm thu" },
-                    { key: "count", label: "Số lượng", numeric: true }
-                  ]}
-                  rows={bundle.products.byStatus.map((bucket) => ({
-                    key: bucket.key,
-                    cells: {
-                      label: (
-                        <DrillLink
-                          label={bucket.label}
-                          onClick={() =>
-                            setDrillDown({
-                              ...filters,
-                              productStatus: bucket.key,
-                              metric: "products",
-                              title: `Sản phẩm — ${bucket.label}`
-                            })
-                          }
-                        />
-                      ),
-                      count: number.format(bucket.count)
-                    }
-                  }))}
-                />
-              }
-            >
-              <HBarChart
-                rows={bundle.products.byStatus.map((b) => ({
-                  key: b.key,
-                  label: b.label,
-                  values: { count: b.count }
-                }))}
-                series={SINGLE_SERIES}
-                emptyText="Chưa có dữ liệu trạng thái nghiệm thu."
-                onSelect={(productStatus, label) =>
-                  setDrillDown({
-                    ...filters,
-                    productStatus: productStatus as DashboardProductStatus,
-                    metric: "products",
-                    title: `Sản phẩm — ${label}`
-                  })
-                }
-              />
-            </ChartCard>
+            <BucketChartCard refreshing={refreshing} title="Sản phẩm theo trạng thái nghiệm thu" labelHeader="Trạng thái nghiệm thu" countHeader="Số lượng" emptyText="Chưa có dữ liệu trạng thái nghiệm thu."
+              buckets={bundle.products.byStatus}
+              onDrill={(productStatus, label) => openDrill({ productStatus: productStatus as DashboardProductStatus, metric: "products", title: `Sản phẩm — ${label}` })}
+            />
           </div>
 
           <h2 className="dash-section-title">Hồ sơ đề xuất</h2>
           <div className="dash-grid">
-            <ChartCard
-              wide
-              refreshing={refreshing}
-              title="Hồ sơ đề xuất theo đơn vị"
-              table={
-                <BucketTable
-                  columns={[
-                    { key: "label", label: "Đơn vị chủ trì" },
-                    { key: "count", label: "Số hồ sơ", numeric: true },
-                    { key: "budget", label: "Kinh phí", numeric: true }
-                  ]}
-                  rows={bundle.proposalDist.byUnit.map((bucket) => ({
-                    key: bucket.key,
-                    cells: {
-                      label: (
-                        <DrillLink
-                          label={bucket.label}
-                          onClick={() =>
-                            setDrillDown({
-                              ...filters,
-                              unitId: bucket.key,
-                              metric: "proposals",
-                              title: `Hồ sơ đề xuất — ${bucket.label}`
-                            })
-                          }
-                        />
-                      ),
-                      count: number.format(bucket.count),
-                      budget: formatMoneyVnd(bucket.totalBudget)
-                    }
-                  }))}
-                />
-              }
-            >
-              <HBarChart
-                rows={bundle.proposalDist.byUnit.map((b) => ({
-                  key: b.key,
-                  label: b.label,
-                  values: { count: b.count }
-                }))}
-                series={SINGLE_SERIES}
-                onSelect={(unitId, label) =>
-                  setDrillDown({
-                    ...filters,
-                    unitId,
-                    metric: "proposals",
-                    title: `Hồ sơ đề xuất — ${label}`
-                  })
-                }
-              />
-            </ChartCard>
+            <BucketChartCard wide refreshing={refreshing} title="Hồ sơ đề xuất theo đơn vị" labelHeader="Đơn vị chủ trì" countHeader="Số hồ sơ" extra={{ header: "Kinh phí", value: (bucket) => formatMoneyVnd(bucket.totalBudget) }}
+              buckets={bundle.proposalDist.byUnit}
+              onDrill={(unitId, label) => openDrill({ unitId, metric: "proposals", title: `Hồ sơ đề xuất — ${label}` })}
+            />
 
-            <ChartCard
-              refreshing={refreshing}
-              title="Hồ sơ đề xuất theo trạng thái"
-              table={
-                <BucketTable
-                  columns={[
-                    { key: "label", label: "Trạng thái" },
-                    { key: "count", label: "Số hồ sơ", numeric: true }
-                  ]}
-                  rows={bundle.proposalDist.byStatus.map((bucket) => ({
-                    key: bucket.key,
-                    cells: {
-                      label: (
-                        <DrillLink
-                          label={bucket.label}
-                          onClick={() =>
-                            setDrillDown({
-                              ...filters,
-                              status: bucket.key,
-                              metric: "proposals",
-                              title: `Hồ sơ đề xuất — ${bucket.label}`
-                            })
-                          }
-                        />
-                      ),
-                      count: number.format(bucket.count)
-                    }
-                  }))}
-                />
-              }
-            >
-              <HBarChart
-                rows={bundle.proposalDist.byStatus.map((b) => ({
-                  key: b.key,
-                  label: b.label,
-                  values: { count: b.count }
-                }))}
-                series={SINGLE_SERIES}
-                onSelect={(status, label) =>
-                  setDrillDown({
-                    ...filters,
-                    status,
-                    metric: "proposals",
-                    title: `Hồ sơ đề xuất — ${label}`
-                  })
-                }
-              />
-            </ChartCard>
+            <BucketChartCard refreshing={refreshing} title="Hồ sơ đề xuất theo trạng thái" labelHeader="Trạng thái" countHeader="Số hồ sơ"
+              buckets={bundle.proposalDist.byStatus}
+              onDrill={(status, label) => openDrill({ status, metric: "proposals", title: `Hồ sơ đề xuất — ${label}` })}
+            />
 
-            <ChartCard
-              refreshing={refreshing}
-              title="Hồ sơ đề xuất theo cấp quản lý"
-              table={
-                <BucketTable
-                  columns={[
-                    { key: "label", label: "Cấp quản lý" },
-                    { key: "count", label: "Số hồ sơ", numeric: true },
-                    { key: "budget", label: "Kinh phí", numeric: true }
-                  ]}
-                  rows={bundle.proposalDist.byLevel.map((bucket) => ({
-                    key: bucket.key,
-                    cells: {
-                      label: (
-                        <DrillLink
-                          label={bucket.label}
-                          onClick={() =>
-                            setDrillDown({
-                              ...filters,
-                              level: bucket.key,
-                              metric: "proposals",
-                              title: `Hồ sơ đề xuất — Cấp: ${bucket.label}`
-                            })
-                          }
-                        />
-                      ),
-                      count: number.format(bucket.count),
-                      budget: formatMoneyVnd(bucket.totalBudget)
-                    }
-                  }))}
-                />
-              }
-            >
-              <HBarChart
-                rows={bundle.proposalDist.byLevel.map((b) => ({
-                  key: b.key,
-                  label: b.label,
-                  values: { count: b.count }
-                }))}
-                series={SINGLE_SERIES}
-                onSelect={(level, label) =>
-                  setDrillDown({
-                    ...filters,
-                    level,
-                    metric: "proposals",
-                    title: `Hồ sơ đề xuất — Cấp: ${label}`
-                  })
-                }
-              />
-            </ChartCard>
+            <BucketChartCard refreshing={refreshing} title="Hồ sơ đề xuất theo cấp quản lý" labelHeader="Cấp quản lý" countHeader="Số hồ sơ" extra={{ header: "Kinh phí", value: (bucket) => formatMoneyVnd(bucket.totalBudget) }}
+              buckets={bundle.proposalDist.byLevel}
+              onDrill={(level, label) => openDrill({ level, metric: "proposals", title: `Hồ sơ đề xuất — Cấp: ${label}` })}
+            />
 
-            <ChartCard
-              refreshing={refreshing}
-              title="Hồ sơ đề xuất theo lĩnh vực"
-              table={
-                <BucketTable
-                  columns={[
-                    { key: "label", label: "Lĩnh vực" },
-                    { key: "count", label: "Số hồ sơ", numeric: true }
-                  ]}
-                  rows={bundle.proposalDist.byField.map((bucket) => ({
-                    key: bucket.key,
-                    cells: {
-                      label: (
-                        <DrillLink
-                          label={bucket.label}
-                          onClick={() =>
-                            setDrillDown({
-                              ...filters,
-                              field: bucket.key,
-                              metric: "proposals",
-                              title: `Hồ sơ đề xuất — Lĩnh vực: ${bucket.label}`
-                            })
-                          }
-                        />
-                      ),
-                      count: number.format(bucket.count)
-                    }
-                  }))}
-                />
-              }
-            >
-              <HBarChart
-                rows={bundle.proposalDist.byField.map((b) => ({
-                  key: b.key,
-                  label: b.label,
-                  values: { count: b.count }
-                }))}
-                series={SINGLE_SERIES}
-                onSelect={(field, label) =>
-                  setDrillDown({
-                    ...filters,
-                    field,
-                    metric: "proposals",
-                    title: `Hồ sơ đề xuất — Lĩnh vực: ${label}`
-                  })
-                }
-              />
-            </ChartCard>
+            <BucketChartCard refreshing={refreshing} title="Hồ sơ đề xuất theo lĩnh vực" labelHeader="Lĩnh vực" countHeader="Số hồ sơ"
+              buckets={bundle.proposalDist.byField}
+              onDrill={(field, label) => openDrill({ field, metric: "proposals", title: `Hồ sơ đề xuất — Lĩnh vực: ${label}` })}
+            />
 
-            <ChartCard
-              refreshing={refreshing}
-              title="Hồ sơ đề xuất theo năm nộp"
-              table={
-                <BucketTable
-                  columns={[
-                    { key: "label", label: "Năm" },
-                    { key: "count", label: "Số hồ sơ", numeric: true }
-                  ]}
-                  rows={bundle.proposalDist.byYear.map((bucket) => ({
-                    key: bucket.key,
-                    cells: {
-                      label: /^\d{4}$/.test(bucket.key) ? (
-                        <DrillLink
-                          label={bucket.label}
-                          onClick={() =>
-                            setDrillDown({
-                              ...filters,
-                              year: bucket.key,
-                              metric: "proposals",
-                              title: `Hồ sơ đề xuất — Năm ${bucket.label}`
-                            })
-                          }
-                        />
-                      ) : (
-                        bucket.label
-                      ),
-                      count: number.format(bucket.count)
-                    }
-                  }))}
-                />
-              }
-            >
-              <HBarChart
-                rows={bundle.proposalDist.byYear.map((b) => ({
-                  key: b.key,
-                  label: b.label,
-                  values: { count: b.count },
-                  clickable: /^\d{4}$/.test(b.key)
-                }))}
-                series={SINGLE_SERIES}
-                onSelect={(year, label) =>
-                  setDrillDown({
-                    ...filters,
-                    year,
-                    metric: "proposals",
-                    title: `Hồ sơ đề xuất — Năm ${label}`
-                  })
-                }
-              />
-            </ChartCard>
+            <BucketChartCard refreshing={refreshing} title="Hồ sơ đề xuất theo năm nộp" labelHeader="Năm" countHeader="Số hồ sơ" canDrill={(key) => /^\d{4}$/.test(key)}
+              buckets={bundle.proposalDist.byYear}
+              onDrill={(year, label) => openDrill({ year, metric: "proposals", title: `Hồ sơ đề xuất — Năm ${label}` })}
+            />
           </div>
         </>
       ) : null}

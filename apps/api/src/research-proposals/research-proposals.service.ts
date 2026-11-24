@@ -1,4 +1,5 @@
 import { filterCurrentRoundAssignments, isWaivableParticipation, recordParticipantWaiver, summarizeReviewProgress } from "../proposal-evaluations/proposal-evaluation-support.js";
+import { allocateProposalCode } from "../proposals-shared/document-number.js";
 import { pendingApprovalStages } from "../proposals-shared/approval-routing.js";
 import { toPublishedReviewSummaryV1 } from "../proposal-evaluations/proposal-decisions.service.js";
 import { proposalContextVersion, runProposalMutation } from "../proposals-shared/proposal-mutation.js";
@@ -19,6 +20,7 @@ import {
   isResearchBoardHead,
   isResearchManagementHead,
   isResearchManagementStaff,
+  isScienceDeputyDirector,
   intakeAppliesToUser,
   isIntakeOpenForSubmission,
   isSystemAdmin
@@ -94,6 +96,7 @@ type ResearchProposalRecord = {
   updatedAt: Date;
   owner?: { displayName: string; researcherProfile?: { fullName: string } | null } | null;
   intakePeriod?: { title: string } | null;
+  hostOrganizationUnit?: { name: string; code?: string } | null;
 };
 
 type ProposalMemberRecord = {
@@ -199,7 +202,7 @@ export class ResearchProposalsService {
     const records = (await this.prisma.researchProposal.findMany({
       where: byRelationship ? { OR: [{ ownerId: actor.id }, { members: { some: { userId: actor.id } } }, { reviewAssignments: { some: { reviewerUserId: actor.id } } }, { managementOfficers: { some: { officerUserId: actor.id } } }] } : {},
       orderBy: { createdAt: "desc" },
-      include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } }, intakePeriod: { select: { title: true } } }
+      include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } }, intakePeriod: { select: { title: true } }, hostOrganizationUnit: { select: { name: true, code: true } } }
     })) as ResearchProposalRecord[];
     return this.projectProposalList(actor, records);
   }
@@ -213,7 +216,7 @@ export class ResearchProposalsService {
         status: { in: ["ready_for_approval", "approved", "rejected"] }
       },
       orderBy: { createdAt: "desc" },
-      include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } }, intakePeriod: { select: { title: true } } }
+      include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } }, intakePeriod: { select: { title: true } }, hostOrganizationUnit: { select: { name: true, code: true } } }
     })) as ResearchProposalRecord[];
     // Hồ sơ chờ phê duyệt chỉ vào hàng đợi của GĐ khi tờ trình đã qua TB và TP (5.7).
     const stages = await pendingApprovalStages(this.prisma as never, "proposal", records.filter((r) => r.status === "ready_for_approval").map((r) => r.id));
@@ -454,12 +457,25 @@ export class ResearchProposalsService {
 
     const submittedAt = new Date();
     const submitted = (await this.prisma.$transaction(async (tx) => {
+      let generatedCode = proposal.code;
+      if (!generatedCode) {
+        const unit = proposal.hostOrganizationUnit?.code
+          ? { code: proposal.hostOrganizationUnit.code }
+          : typeof (tx as { organizationUnit?: { findFirst?: (args: unknown) => Promise<{ code?: string } | null> } }).organizationUnit?.findFirst === "function"
+            ? await (tx as { organizationUnit: { findFirst: (args: unknown) => Promise<{ code?: string } | null> } }).organizationUnit.findFirst({ where: { id: proposal.hostOrganizationUnitId }, select: { code: true } })
+            : null;
+        if (unit?.code) {
+          generatedCode = await allocateProposalCode(tx as never, unit.code, submittedAt);
+        }
+      }
+
       let updated = (await tx.researchProposal.update({
         where: { id: proposalId },
         data: {
           status: "submitted",
           submittedAt,
-          submittedById: actor.id
+          submittedById: actor.id,
+          ...(generatedCode && !proposal.code ? { code: generatedCode } : {})
         } as never
       })) as ResearchProposalRecord;
 
@@ -931,7 +947,7 @@ export class ResearchProposalsService {
   private async findProposal(proposalId: string) {
     const proposal = (await this.prisma.researchProposal.findUnique({
       where: { id: proposalId },
-      include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } }, intakePeriod: { select: { title: true } } }
+      include: { owner: { select: { displayName: true, researcherProfile: { select: { fullName: true } } } }, intakePeriod: { select: { title: true } }, hostOrganizationUnit: { select: { name: true, code: true } } }
     })) as ResearchProposalRecord | null;
 
     if (!proposal) {
@@ -1338,6 +1354,9 @@ export class ResearchProposalsService {
     if (proposal.owner === undefined) {
       proposal = { ...proposal, owner: await this.prisma.user.findUnique({ where: { id: proposal.ownerId }, select: { displayName: true, researcherProfile: { select: { fullName: true } } } }) };
     }
+    if (proposal.hostOrganizationUnit === undefined && typeof (this.prisma as { organizationUnit?: { findFirst?: unknown } }).organizationUnit?.findFirst === "function") {
+      proposal = { ...proposal, hostOrganizationUnit: await this.prisma.organizationUnit.findFirst({ where: { id: proposal.hostOrganizationUnitId }, select: { name: true, code: true } }) };
+    }
     const members = await this.findMembers(proposal.id);
     const participation = resolvedParticipation ?? (await this.participation.resolveForProposal(actor?.id, proposal, members));
     const reviewAccess = resolvedReviewAccess ?? (await this.reviewAccess.resolveForProposal(actor?.id, proposal.id));
@@ -1354,8 +1373,14 @@ export class ResearchProposalsService {
     const managementOfficerHistory = await this.managementOfficers.listHistory(proposal.id);
     // Story 5.8: chỉ quyết định khớp trạng thái hiện tại mới được công bố, qua projection chung.
     const latestDecision = ["approved", "rejected"].includes(proposal.status)
-      ? await this.prisma.proposalDecision.findFirst({ where: { proposalId: proposal.id, toStatus: proposal.status }, orderBy: { decidedAt: "desc" } })
+      ? await this.prisma.proposalDecision.findFirst({
+          where: { proposalId: proposal.id, toStatus: proposal.status },
+          orderBy: { decidedAt: "desc" },
+          include: { decidedBy: { select: { displayName: true } } }
+        })
       : null;
+    const canSeeDecisionSigner = isLeadership(actor) || isScienceDeputyDirector(actor) || isResearchManagementHead(actor) || isResearchBoardHead(actor) || (isResearchManagementStaff(actor) && managementOfficer.officer?.officerUserId === actor?.id);
+    const typedDecision = latestDecision as (typeof latestDecision & { decisionNumber?: string | null; decidedBy?: { displayName: string } | null }) | null;
 
     const response = this.toProposalResponse(proposal, actor, participation, reviewAccess, completenessCheckCompleted, managementOfficer, evaluationSummaryStatus ?? await this.findEvaluationSummaryStatus(proposal.id), await this.findReviewReadiness(proposal), await this.findDecisionApprovalStage(proposal.id), await this.readCouncilFormationConfigForView(), await readParticipantPolicy(this.prisma));
     const versions = await this.prisma.proposalSubmissionEvent.findMany({ where: { proposalId: proposal.id, toStatus: { in: ["submitted", "resubmitted"] } }, orderBy: { submittedAt: "asc" }, select: { id: true, submittedAt: true, snapshot: true } });
@@ -1370,7 +1395,14 @@ export class ResearchProposalsService {
       supplementRequests: redactsAsReviewer(reviewAccess, participation) ? [] : supplementRequests,
       managementOfficer: this.toManagementOfficerResponse(managementOfficer, managementOfficerHistory),
       requiredPackage,
-      publishedDecision: latestDecision ? toPublishedReviewSummaryV1(latestDecision as never) : null
+      publishedDecision: latestDecision ? toPublishedReviewSummaryV1(latestDecision as never) : null,
+      approvalDecision: typedDecision && typedDecision.decision === "approved" && !redactsAsReviewer(reviewAccess, participation)
+        ? {
+            decisionNumber: typedDecision.decisionNumber ?? "",
+            decidedAt: typedDecision.decidedAt.toISOString(),
+            decidedByDisplayName: canSeeDecisionSigner ? (typedDecision.decidedBy?.displayName ?? "") : ""
+          }
+        : null
     };
   }
 
@@ -1506,6 +1538,7 @@ export class ResearchProposalsService {
       intakePeriodTitle: proposal.intakePeriod?.title ?? "",
       ...(redactsAsReviewer(reviewAccess, participation) ? {} : { ownerId: proposal.ownerId, ownerDisplayName: proposal.owner?.researcherProfile?.fullName || proposal.owner?.displayName || "" }),
       hostOrganizationUnitId: proposal.hostOrganizationUnitId,
+      hostOrganizationUnitName: proposal.hostOrganizationUnit?.name ?? "",
       researchFieldCode: proposal.researchFieldCode ?? "",
       proposalTypeCode: proposal.proposalTypeCode ?? "",
       proposalNatureCode: proposal.proposalNatureCode ?? "",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSession } from "@/components/auth/session-provider";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ScientificCvWorkspace } from "@/components/researcher-profiles/scientific-cv/cv-workspace";
 import { HistoryChanges, HistoryFacts, historyActions } from "@/components/researcher-profiles/scientific-cv/cv-history";
@@ -12,6 +13,7 @@ const levels = { ACADEMY_INSTITUTIONAL: "Cấp Học viện / cơ sở", MINISTR
 type ProfileTab = "profile" | "account" | "history" | "preview" | "cv";
 
 export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
+  const { refreshCurrentUser } = useSession();
   const [profiles, setProfiles] = useState<ResearcherProfileSummary[]>([]);
   const [organizations, setOrganizations] = useState<ResearcherOrganization[]>([]);
   const [catalogs, setCatalogs] = useState<Awaited<ReturnType<typeof loadResearcherProfileCatalogs>>>({ organizationUnits: [], organizationUnitOptions: [], researchFields: [], academicRanks: [], academicDegrees: [] });
@@ -99,7 +101,8 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
         if (result.profile) select(result.profile);
       }
       setMessage("Đã lưu hồ sơ.");
-      if (!self) await load();
+      if (self) void refreshCurrentUser();
+      else await load();
     });
   }
 
@@ -135,7 +138,7 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
         <label className="field"><span>Đơn vị quản lý</span><select value={filters.organizationUnitId} onChange={(event) => filter("organizationUnitId", event.target.value)}><option value="">Tất cả đơn vị được cấp</option>{organizations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <label className="field"><span>Lĩnh vực</span><select value={filters.researchFieldId} onChange={(event) => filter("researchFieldId", event.target.value)}><option value="">Tất cả</option>{catalogs.researchFields.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       </div>
-      {!profiles.length && !loading ? <EmptyState title="Không có hồ sơ phù hợp" message="Thay đổi bộ lọc hoặc tạo hồ sơ trong phạm vi được cấp." /> : <div className="table-wrap" tabIndex={0} role="region" aria-label="Danh sách hồ sơ nhà khoa học"><table className="data-table"><thead><tr><th>Họ tên</th><th>Loại / đơn vị</th><th>Trạng thái</th><th>Tài khoản</th><th>Thao tác</th></tr></thead><tbody>{profiles.map((profile) => <tr key={profile.id}><td>{profile.fullName}</td><td>{profile.profileType === "EXTERNAL" ? "Bên ngoài" : "Nội bộ"}<br />{profile.managementOrganization.name}</td><td>{profile.status === "ACTIVE" ? "Hoạt động" : "Ngừng hoạt động"}</td><td>{accountLabel(profile.account)}</td><td><button className="button" disabled={busy} onClick={() => void perform(async () => select((await getResearcherProfile(profile.id)).profile))}>Xem / sửa</button></td></tr>)}</tbody></table></div>}
+      {!profiles.length && !loading ? <EmptyState title="Không có hồ sơ phù hợp" message="Thay đổi bộ lọc hoặc tạo hồ sơ trong phạm vi được cấp." /> : <div className="table-wrap" tabIndex={0} role="region" aria-label="Danh sách hồ sơ nhà khoa học"><table className="data-table"><thead><tr><th>Họ tên</th><th>Loại / đơn vị</th><th>Trạng thái</th><th>Tài khoản</th><th>Thao tác</th></tr></thead><tbody>{profiles.map((profile) => <tr key={profile.id}><td><strong>{profile.fullName}</strong>{profile.account?.positions?.map((position) => <small key={position} style={{ display: "block", color: "#065f46" }}>{position}</small>)}</td><td>{profile.profileType === "EXTERNAL" ? "Bên ngoài" : "Nội bộ"}<br />{profile.managementOrganization.name}</td><td>{profile.status === "ACTIVE" ? "Hoạt động" : "Ngừng hoạt động"}</td><td>{accountLabel(profile.account)}</td><td><button className="button" disabled={busy} onClick={() => void perform(async () => select((await getResearcherProfile(profile.id)).profile))}>Xem / sửa</button></td></tr>)}</tbody></table></div>}
       <div className="mobile-list">{profiles.map((profile) => <article className="list-card" key={profile.id}><h3>{profile.fullName}</h3><p>{profile.profileType === "EXTERNAL" ? "Bên ngoài" : "Nội bộ"} · {profile.managementOrganization.name}</p><p>{profile.status === "ACTIVE" ? "Hoạt động" : "Ngừng hoạt động"} · {accountLabel(profile.account)}</p><button className="button" disabled={busy} onClick={() => void perform(async () => select((await getResearcherProfile(profile.id)).profile))}>Xem / sửa</button></article>)}</div>
       <div className="button-row"><button className="button" disabled={Number(filters.page) <= 1 || loading} onClick={() => filter("page", String(Number(filters.page) - 1))}>Trang trước</button><span>Trang {filters.page} · {total} hồ sơ</span><button className="button" disabled={Number(filters.page) * 20 >= total || loading} onClick={() => filter("page", String(Number(filters.page) + 1))}>Trang sau</button></div>
     </section> : null}
@@ -149,6 +152,7 @@ export function ResearcherProfilesPanel({ self = false }: { self?: boolean }) {
     </div> : null}
     {self && !editing ? (!loading ? <EmptyState title="Chưa có hồ sơ được liên kết" message="Liên hệ cán bộ quản lý khoa học để kiểm tra liên kết tài khoản." /> : null) : (!editing || profileTab === "profile") ? <section className="section-card" id="profile-panel-profile" role={editing ? "tabpanel" : undefined} aria-labelledby={editing ? "profile-tab-profile" : undefined}>
       <h2>{self ? "Hồ sơ của tôi" : editing ? editing.fullName : "Tạo hồ sơ độc lập"}</h2>
+      {editing?.account?.positions?.length ? <p className="record-meta" style={{ color: "#065f46", fontWeight: 600 }}>{editing.account.positions.join(" · ")}</p> : null}
       <form onSubmit={(event) => { event.preventDefault(); void save(); }}>
         <fieldset disabled={busy || !editable} style={{ border: 0, padding: 0, minWidth: 0 }}>
           <div className="form-grid two">

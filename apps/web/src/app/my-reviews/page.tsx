@@ -1,19 +1,6 @@
-import { Breadcrumb } from "@/components/ui/breadcrumb";
-import { PageHeader } from "@/components/ui/page-header";
-import { AcceptanceCouncilSeats } from "@/components/projects/acceptance-council-seats";
-import { ReviewerQueuePanel } from "@/components/research-proposals/reviewer-queue-panel";
+import { redirect } from "next/navigation";
 
+// Phiếu phản biện được giao nằm chung trang "Được mời phản biện"; giữ đường dẫn cũ cho liên kết đã gửi.
 export default function MyReviewsPage() {
-  return (
-    <>
-      <Breadcrumb items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Đánh giá của tôi" }]} />
-      <PageHeader
-        eyebrow="Nhận xét"
-        title="Đánh giá của tôi"
-        description="Các hồ sơ bạn được phân công đánh giá, hạn nhận xét và tình trạng phiếu chấm điểm."
-      />
-      <AcceptanceCouncilSeats />
-      <ReviewerQueuePanel />
-    </>
-  );
+  redirect("/invitation-to-review");
 }

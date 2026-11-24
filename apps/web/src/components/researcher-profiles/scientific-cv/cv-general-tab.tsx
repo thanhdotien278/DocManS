@@ -129,7 +129,7 @@ export function CvGeneralTab({ draft, catalogs, editable, owner, profileType, ha
           <div className="cv-portrait-box" aria-label="Khung xem trước ảnh chân dung 3x4">{PORTRAIT_PREVIEW.test(draft.avatarUrl) ? <img src={draft.avatarUrl} alt="Ảnh chân dung 3x4" /> : <span>3 × 4</span>}</div>
           <div>
             <strong>Ảnh chân dung nhà khoa học (Khung chuẩn 3x4)</strong><small className="field-hint">Định dạng: JPG, PNG, WebP. Tối đa 5MB.</small>
-            <input ref={portraitInput} id="cv-avatar-file" type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => pickPortrait(event.target.files?.[0])} />
+            <input ref={portraitInput} id="cv-avatar-file" aria-label="Chọn ảnh chân dung 3x4" type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => pickPortrait(event.target.files?.[0])} />
             <div className="button-row">
               <button type="button" className="button" disabled={!editable} onClick={() => portraitInput.current?.click()} aria-describedby={portraitError || errors.avatarUrl ? "cv-avatar-error" : undefined}><Upload size={16} aria-hidden="true" />Tải ảnh lên</button>
               {draft.avatarUrl ? <button type="button" className="button danger" disabled={!editable} onClick={() => { if (window.confirm("Xóa ảnh đại diện?")) onChange("avatarUrl", ""); }}><Trash2 size={16} aria-hidden="true" />Xóa ảnh</button> : null}

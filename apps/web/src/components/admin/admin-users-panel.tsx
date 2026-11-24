@@ -1,6 +1,7 @@
 "use client";
 
 import { Dialog } from "@/components/ui/dialog";
+import { UserPositionsEditor } from "@/components/admin/user-positions-editor";
 import { useEffect, useMemo, useState } from "react";
 import { Edit3, KeyRound, Lock, Save, Search, Unlock, UserPlus, X } from "lucide-react";
 import {
@@ -298,6 +299,7 @@ export function AdminUsersPanel() {
                     <th>Tài khoản</th>
                     <th>Vai trò</th>
                     <th>Đơn vị</th>
+                    <th>Chức danh</th>
                     <th>Trạng thái</th>
                     <th>Thao tác</th>
                   </tr>
@@ -311,6 +313,11 @@ export function AdminUsersPanel() {
                       </td>
                       <td>{roles.find((role) => role.code === user.systemRole)?.label ?? "Chưa xác định"}</td>
                       <td>{user.unit}</td>
+                      <td>
+                        {user.positions?.length ? user.positions.map((position) => (
+                          <span key={position.organizationUnitId} className="record-meta" style={{ display: "block" }}>{position.label}</span>
+                        )) : <span className="record-meta">—</span>}
+                      </td>
                       <td>
                         <StatusBadge status={user.status === "active" ? "approved" : "blocked"} />
                         <span className="record-meta">{user.status === "active" ? "Được truy cập" : "Bị chặn truy cập"}</span>
@@ -378,6 +385,7 @@ export function AdminUsersPanel() {
         subtitle={editingUser ? editingUser.username : "Gán vai trò chính và phạm vi đơn vị ngay khi tạo"}
       >
         {editingUser ? (
+          <>
           <form className="admin-form" key={editingUser.id} onSubmit={(event) => void handleEditUser(event)}>
             <label className="field">
               <span>Tên đăng nhập</span>
@@ -424,6 +432,16 @@ export function AdminUsersPanel() {
               </button>
             </div>
           </form>
+          <UserPositionsEditor
+            key={`positions-${editingUser.id}`}
+            user={editingUser}
+            organizationUnits={organizationUnits}
+            onSaved={(updated) => {
+              setUsers((current) => current.map((item) => (item.id === updated.id ? { ...item, positions: updated.positions } : item)));
+              setEditingUser((current) => (current && current.id === updated.id ? { ...current, positions: updated.positions } : current));
+            }}
+          />
+          </>
         ) : (
           <form className="admin-form" key="create-user" onSubmit={(event) => void handleCreateUser(event)}>
             <label className="field">

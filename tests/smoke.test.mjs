@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { gunzipSync } from "node:zlib";
 
 function collectSourceFiles(directory) {
   return readdirSync(directory).flatMap((entry) => {
@@ -167,5 +168,21 @@ describe("workspace smoke checks", () => {
         `Prohibited presentation label found in ${filePath}`
       );
     }
+  });
+
+  it("includes a clean, schema-compatible canonical demo snapshot", () => {
+    const dataPath = "apps/api/prisma/snapshot/demo-data.json.gz";
+    const minioPath = "apps/api/prisma/snapshot/minio-objects.pack.gz";
+    assert.equal(existsSync(dataPath), true);
+    assert.equal(existsSync(minioPath), true);
+
+    const payload = JSON.parse(gunzipSync(readFileSync(dataPath)).toString("utf8"));
+    assert.equal(payload.tables.users.rows.length, 49);
+    assert.equal(payload.tables.research_proposals.rows.length, 32);
+    assert.equal(payload.tables.approved_projects.rows.length, 22);
+    assert.equal(payload.tables.project_health_snapshots.rows.length, 161);
+    assert.equal("sessions" in payload.tables, false);
+    assert.equal("login_challenges" in payload.tables, false);
+    assert.equal(payload.tables.users.columns.includes("login_otp_enabled"), false);
   });
 });

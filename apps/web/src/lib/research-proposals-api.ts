@@ -175,6 +175,7 @@ export type ResearchProposal = {
   ownerId: string;
   ownerDisplayName?: string;
   hostOrganizationUnitId: string;
+  hostOrganizationUnitName?: string;
   researchFieldCode: string;
   proposalTypeCode: string;
   proposalNatureCode: string;
@@ -185,6 +186,7 @@ export type ResearchProposal = {
   endDate: string;
   budgetMetadata: {
     amount?: number;
+    approvedAmount?: number;
     currency?: string;
     note?: string;
   };
@@ -208,6 +210,11 @@ export type ResearchProposal = {
   requiredPackage?: RequiredPackageItem[];
   /** Story 5.8: kết quả quyết định được công bố, không có ghi chú nội bộ; null khi chưa có quyết định. */
   publishedDecision?: PublishedReviewSummaryV1 | null;
+  approvalDecision?: {
+    decisionNumber: string;
+    decidedAt: string;
+    decidedByDisplayName: string;
+  } | null;
 };
 
 export type PublishedReviewSummaryV1 = {

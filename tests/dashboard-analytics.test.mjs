@@ -3,13 +3,13 @@ import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { inflateRawSync } from "node:zlib";
 import vm from "node:vm";
 import ts from "typescript";
 import * as react from "react";
 import * as jsxRuntime from "react/jsx-runtime";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ConflictException } from "@nestjs/common";
+import ExcelJS from "exceljs";
 import { NestFactory } from "@nestjs/core";
 import { createMigratedDatabase } from "./helpers/disposable-database.mjs";
 import { AppModule } from "../dist/apps/api/app.module.js";
@@ -18,40 +18,13 @@ import { ApprovedProjectsService } from "../dist/apps/api/approved-projects/appr
 import { computeProjectProgress } from "../dist/apps/api/approved-projects/project-progress.js";
 import { ProjectHealthSnapshotService } from "../dist/apps/api/dashboard/project-health-snapshot.service.js";
 
-function unzipEntries(zipBuffer) {
-  const entries = new Map();
-  let eocdOffset = -1;
-  for (let i = zipBuffer.length - 22; i >= 0; i--) {
-    if (zipBuffer.readUInt32LE(i) === 0x06054b50) {
-      eocdOffset = i;
-      break;
-    }
-  }
-  assert.notEqual(eocdOffset, -1, "ZIP phải có End of Central Directory");
-  const totalEntries = zipBuffer.readUInt16LE(eocdOffset + 10);
-  let cdOffset = zipBuffer.readUInt32LE(eocdOffset + 16);
-
-  for (let idx = 0; idx < totalEntries; idx++) {
-    assert.equal(zipBuffer.readUInt32LE(cdOffset), 0x02014b50);
-    const method = zipBuffer.readUInt16LE(cdOffset + 10);
-    const compressedSize = zipBuffer.readUInt32LE(cdOffset + 20);
-    const nameLen = zipBuffer.readUInt16LE(cdOffset + 28);
-    const extraLen = zipBuffer.readUInt16LE(cdOffset + 30);
-    const commentLen = zipBuffer.readUInt16LE(cdOffset + 32);
-    const localHeaderOffset = zipBuffer.readUInt32LE(cdOffset + 42);
-    const name = zipBuffer.subarray(cdOffset + 46, cdOffset + 46 + nameLen).toString("utf8");
-
-    assert.equal(zipBuffer.readUInt32LE(localHeaderOffset), 0x04034b50);
-    const localNameLen = zipBuffer.readUInt16LE(localHeaderOffset + 26);
-    const localExtraLen = zipBuffer.readUInt16LE(localHeaderOffset + 28);
-    const dataStart = localHeaderOffset + 30 + localNameLen + localExtraLen;
-    const rawSlice = zipBuffer.subarray(dataStart, dataStart + compressedSize);
-    const content = method === 8 ? inflateRawSync(rawSlice) : rawSlice;
-    entries.set(name, content.toString("utf8"));
-
-    cdOffset += 46 + nameLen + extraLen + commentLen;
-  }
-  return entries;
+async function readSheet(buffer) {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+  const sheet = workbook.worksheets[0];
+  const cells = [];
+  sheet.eachRow((row) => row.eachCell((cell) => cells.push(String(cell.value))));
+  return { sheet, cells, text: cells.join("\n") };
 }
 
 let database;
@@ -657,7 +630,7 @@ test("4. RESEARCH_OVERSIGHT_AUTHORITY Funding Masking: aggregate totals visible 
   const excel = await apiGet("/dashboard/drill-down/export?metric=projects", "ndbac");
   assert.equal(excel.status, 200);
   assert.equal(excel.headers.get("access-control-expose-headers"), "Content-Disposition");
-  const sheetXml = unzipEntries(excel.body).get("xl/worksheets/sheet1.xml");
+  const { text: sheetXml } = await readSheet(excel.body);
   assert.ok(!sheetXml.includes("250000000"), "Excel của PGĐ-TD không được chứa số kinh phí từng dòng");
   assert.ok(!sheetXml.includes("100000000"), "Excel của PGĐ-TD không được chứa số giải ngân từng dòng");
 
@@ -666,7 +639,7 @@ test("4. RESEARCH_OVERSIGHT_AUTHORITY Funding Masking: aggregate totals visible 
     const propExcel = await apiGet(propExportPath, "ndbac");
     assert.equal(propExcel.status, 200);
     assert.equal(propExcel.headers.get("access-control-expose-headers"), "Content-Disposition");
-    const xml = unzipEntries(propExcel.body).get("xl/worksheets/sheet1.xml");
+    const { text: xml } = await readSheet(propExcel.body);
     assert.ok(!xml.includes("250000000"), `PGĐ-TD không được thấy kinh phí từng đề xuất trên ${propExportPath}`);
     assert.ok(!xml.includes("400000000"), `PGĐ-TD không được thấy kinh phí từng đề xuất trên ${propExportPath}`);
     assert.ok(!xml.includes("80000000"), `PGĐ-TD không được thấy kinh phí nháp từng đề xuất trên ${propExportPath}`);
@@ -811,25 +784,23 @@ test("8. Excel (.xlsx) Export: OOXML structure, formula injection guard (=, +, -
   assert.equal(propExport.status, 200);
   assert.match(propExport.headers.get("content-type") ?? "", /spreadsheetml\.sheet/);
 
-  const propZip = unzipEntries(propExport.body);
-  const propStyles = propZip.get("xl/styles.xml");
-  const propSheet = propZip.get("xl/worksheets/sheet1.xml");
-  assert.match(propStyles, /formatCode="#,##0"/);
-  assert.match(propSheet, /state="frozen"/);
-  assert.match(propSheet, /<autoFilter ref="A1:/);
-  assert.match(propSheet, /&apos;=SUM\(1,2\) Đề tài Quân y A/);
-  assert.match(propSheet, /&apos;-Đề tài Dân sự B/);
+  const { sheet: propWs, text: propSheet } = await readSheet(propExport.body);
+  assert.equal(propWs.getRow(2).getCell(1).numFmt, "#,##0");
+  assert.equal(propWs.views[0]?.state, "frozen");
+  assert.ok(propWs.autoFilter, "Sheet phải bật autoFilter cho dòng tiêu đề");
+  assert.ok(propSheet.includes("'=SUM(1,2) Đề tài Quân y A"));
+  assert.ok(propSheet.includes("'-Đề tài Dân sự B"));
 
   const projExport = await apiGet("/dashboard/drill-down/export?metric=projects&year=2026", "nmphuong");
   assert.equal(projExport.status, 200);
-  const projSheet = unzipEntries(projExport.body).get("xl/worksheets/sheet1.xml");
-  assert.match(projSheet, /&apos;\+Đề tài thực hiện Quân y A/);
-  assert.match(projSheet, /<v>250000000<\/v>/);
+  const { cells: projCells, text: projSheet } = await readSheet(projExport.body);
+  assert.ok(projSheet.includes("'+Đề tài thực hiện Quân y A"));
+  assert.ok(projCells.includes("250000000"));
 
   const prodExport = await apiGet("/dashboard/drill-down/export?metric=products", "nmphuong");
   assert.equal(prodExport.status, 200);
-  const prodSheet = unzipEntries(prodExport.body).get("xl/worksheets/sheet1.xml");
-  assert.match(prodSheet, /&apos;@Bài báo Quân y 1/);
+  const { text: prodSheet } = await readSheet(prodExport.body);
+  assert.ok(prodSheet.includes("'@Bài báo Quân y 1"));
 
   const afterAudits = await db.auditLog.count({
     where: { targetEntity: "dashboard-export" }
@@ -838,9 +809,10 @@ test("8. Excel (.xlsx) Export: OOXML structure, formula injection guard (=, +, -
 });
 
 test("9. Dashboard UI Integration: 2-tab layout, ChartCard chart/table toggle, >=12px fonts, and omits unsupported conferences", async () => {
-  const [pageSrc, analyticsSrc, drillSrc, vizSrc, heatmapSrc, cssSrc] = await Promise.all([
+  const [pageSrc, analyticsSrc, cardsSrc, drillSrc, vizSrc, heatmapSrc, cssSrc] = await Promise.all([
     readFile(new URL("../apps/web/src/app/dashboard/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../apps/web/src/components/dashboard/dashboard-analytics.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/src/components/dashboard/dashboard-cards.tsx", import.meta.url), "utf8"),
     readFile(new URL("../apps/web/src/components/dashboard/drill-down-panel.tsx", import.meta.url), "utf8"),
     readFile(new URL("../apps/web/src/components/dashboard/viz.tsx", import.meta.url), "utf8"),
     readFile(new URL("../apps/web/src/components/dashboard/unit-health-heatmap.tsx", import.meta.url), "utf8"),
@@ -855,7 +827,7 @@ test("9. Dashboard UI Integration: 2-tab layout, ChartCard chart/table toggle, >
   assert.match(pageSrc, /Thống kê &amp; Phân tích|Thống kê & Phân tích/);
   assert.match(pageSrc, /Việc cần xử lý/);
   assert.match(drillSrc, /ProjectGantt/);
-  assert.doesNotMatch(`${pageSrc}\n${analyticsSrc}\n${drillSrc}\n${vizSrc}`, /Hội nghị khoa học/i);
+  assert.doesNotMatch(`${pageSrc}\n${analyticsSrc}\n${cardsSrc}\n${drillSrc}\n${vizSrc}`, /Hội nghị khoa học/i);
   assert.doesNotMatch(heatmapSrc, /unitCode/);
 
   assert.match(vizSrc, /className="view-toggle"/);
@@ -864,8 +836,10 @@ test("9. Dashboard UI Integration: 2-tab layout, ChartCard chart/table toggle, >
   assert.match(vizSrc, /aria-pressed=\{view === "chart"\}/);
   assert.match(vizSrc, /tabIndex=\{0\}[^>]*role="region"/);
 
-  const cardSections = analyticsSrc.split(/<ChartCard\b/).slice(1);
-  assert.ok(cardSections.length >= 10, "DashboardAnalytics phải có đầy đủ thẻ biểu đồ");
+  // BucketChartCard luôn dựng ChartCard kèm table= (kiểm tra trong dashboard-cards.tsx bên dưới).
+  const cardCount = analyticsSrc.split(/<(?:Bucket)?ChartCard\b/).length - 1;
+  assert.ok(cardCount >= 10, "DashboardAnalytics phải có đầy đủ thẻ biểu đồ");
+  const cardSections = `${analyticsSrc}\n${cardsSrc}`.split(/<ChartCard\b/).slice(1);
   for (const section of cardSections) {
     assert.match(section.split("</ChartCard>")[0] ?? "", /\btable=/, "Mỗi ChartCard phải có chế độ Bảng tương đương");
   }
@@ -918,8 +892,8 @@ test("10. Stats KPIs, Scoped FilterOptions, Reviewer Anonymity, Drill-down Modes
 
   const revExcel = await apiGet("/dashboard/export-proposals", "reviewer");
   assert.equal(revExcel.status, 200);
-  const revSheet = unzipEntries(revExcel.body).get("xl/worksheets/sheet1.xml");
-  assert.ok(revSheet.includes(">—<"));
+  const { cells: revCells, text: revSheet } = await readSheet(revExcel.body);
+  assert.ok(revCells.includes("—"));
   assert.ok(!revSheet.includes(fixture.users.piA.displayName));
   assert.ok(!revSheet.includes("250000000"));
   assert.ok(!revSheet.includes("300000000"));
