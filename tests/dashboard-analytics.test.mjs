@@ -809,9 +809,10 @@ test("8. Excel (.xlsx) Export: OOXML structure, formula injection guard (=, +, -
 });
 
 test("9. Dashboard UI Integration: 2-tab layout, ChartCard chart/table toggle, >=12px fonts, and omits unsupported conferences", async () => {
-  const [pageSrc, analyticsSrc, drillSrc, vizSrc, heatmapSrc, cssSrc] = await Promise.all([
+  const [pageSrc, analyticsSrc, cardsSrc, drillSrc, vizSrc, heatmapSrc, cssSrc] = await Promise.all([
     readFile(new URL("../apps/web/src/app/dashboard/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../apps/web/src/components/dashboard/dashboard-analytics.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/src/components/dashboard/dashboard-cards.tsx", import.meta.url), "utf8"),
     readFile(new URL("../apps/web/src/components/dashboard/drill-down-panel.tsx", import.meta.url), "utf8"),
     readFile(new URL("../apps/web/src/components/dashboard/viz.tsx", import.meta.url), "utf8"),
     readFile(new URL("../apps/web/src/components/dashboard/unit-health-heatmap.tsx", import.meta.url), "utf8"),
@@ -826,7 +827,7 @@ test("9. Dashboard UI Integration: 2-tab layout, ChartCard chart/table toggle, >
   assert.match(pageSrc, /Thống kê &amp; Phân tích|Thống kê & Phân tích/);
   assert.match(pageSrc, /Việc cần xử lý/);
   assert.match(drillSrc, /ProjectGantt/);
-  assert.doesNotMatch(`${pageSrc}\n${analyticsSrc}\n${drillSrc}\n${vizSrc}`, /Hội nghị khoa học/i);
+  assert.doesNotMatch(`${pageSrc}\n${analyticsSrc}\n${cardsSrc}\n${drillSrc}\n${vizSrc}`, /Hội nghị khoa học/i);
   assert.doesNotMatch(heatmapSrc, /unitCode/);
 
   assert.match(vizSrc, /className="view-toggle"/);
@@ -835,8 +836,10 @@ test("9. Dashboard UI Integration: 2-tab layout, ChartCard chart/table toggle, >
   assert.match(vizSrc, /aria-pressed=\{view === "chart"\}/);
   assert.match(vizSrc, /tabIndex=\{0\}[^>]*role="region"/);
 
-  const cardSections = analyticsSrc.split(/<ChartCard\b/).slice(1);
-  assert.ok(cardSections.length >= 10, "DashboardAnalytics phải có đầy đủ thẻ biểu đồ");
+  // BucketChartCard luôn dựng ChartCard kèm table= (kiểm tra trong dashboard-cards.tsx bên dưới).
+  const cardCount = analyticsSrc.split(/<(?:Bucket)?ChartCard\b/).length - 1;
+  assert.ok(cardCount >= 10, "DashboardAnalytics phải có đầy đủ thẻ biểu đồ");
+  const cardSections = `${analyticsSrc}\n${cardsSrc}`.split(/<ChartCard\b/).slice(1);
   for (const section of cardSections) {
     assert.match(section.split("</ChartCard>")[0] ?? "", /\btable=/, "Mỗi ChartCard phải có chế độ Bảng tương đương");
   }
