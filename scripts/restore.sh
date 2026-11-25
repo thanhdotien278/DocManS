@@ -10,6 +10,7 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_DIR/docker-compose.prod.yml}"
+MINIO_BACKUP_IMAGE="${MINIO_BACKUP_IMAGE:-nginx:1.27-alpine}"
 if [[ -z "${ENV_FILE:-}" ]]; then
   if [[ -f "$PROJECT_DIR/.env.prod" ]]; then
     ENV_FILE="$PROJECT_DIR/.env.prod"
@@ -36,26 +37,31 @@ read -r -p "Ghi đè dữ liệu hiện tại bằng bản $SOURCE? Gõ 'KHOI PH
 
 if [[ "${SKIP_SAFETY_BACKUP:-}" != "1" ]]; then
   log "Sao lưu dữ liệu hiện tại trước khi ghi đè..."
-  ENV_FILE="$ENV_FILE" COMPOSE_FILE="$COMPOSE_FILE" RETENTION_DAYS=36500 "$SCRIPT_DIR/backup.sh" || {
+  ENV_FILE="$ENV_FILE" COMPOSE_FILE="$COMPOSE_FILE" MINIO_BACKUP_IMAGE="$MINIO_BACKUP_IMAGE" RETENTION_DAYS=36500 "$SCRIPT_DIR/backup.sh" || {
     log "Không sao lưu được dữ liệu hiện tại. Kiểm tra stack đang chạy, hoặc chạy lại với SKIP_SAFETY_BACKUP=1."
     exit 1
   }
 fi
 
-log "Dừng ứng dụng (giữ postgres và minio)..."
+log "Dừng ứng dụng và đảm bảo postgres đang chạy..."
 compose stop cloudflared nginx web api || true
+compose up -d --wait postgres
 
-log "Khôi phục PostgreSQL..."
+log "Khôi phục PostgreSQL (drop schema + nạp lại trong cùng một transaction)..."
 compose exec -T postgres sh -c 'set -e
-  trap "rm -f /tmp/restore.sql" EXIT
-  pg_restore --no-owner --no-acl -f /tmp/restore.sql
-  psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 --single-transaction -q \
-    -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;" -f /tmp/restore.sql' < "$SOURCE/postgres.dump"
+  trap "rm -f /tmp/restore.sql /tmp/restore-body.sql" EXIT
+  pg_restore --no-owner --no-acl -f /tmp/restore-body.sql
+  {
+    echo "DROP SCHEMA IF EXISTS public CASCADE;"
+    echo "CREATE SCHEMA public;"
+    cat /tmp/restore-body.sql
+  } > /tmp/restore.sql
+  psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 --single-transaction -q -f /tmp/restore.sql' < "$SOURCE/postgres.dump"
 
 log "Khôi phục MinIO..."
 compose stop minio
 MINIO_CONTAINER="$(compose ps -aq minio)"
-docker run --rm --volumes-from "$MINIO_CONTAINER" -v "$SOURCE":/backup:ro alpine:3.20 sh -c 'set -e
+docker run --rm --volumes-from "$MINIO_CONTAINER" -v "$SOURCE":/backup:ro "$MINIO_BACKUP_IMAGE" sh -c 'set -e
   rm -rf /data/.restore && mkdir /data/.restore
   tar -xzf /backup/minio-data.tar.gz -C /data/.restore
   find /data -mindepth 1 -maxdepth 1 ! -name .restore -exec rm -rf {} +

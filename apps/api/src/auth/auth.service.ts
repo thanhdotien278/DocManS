@@ -96,7 +96,6 @@ export class AuthService {
     }
 
     this.rateLimit.reset(rateLimitKey);
-    this.rateLimit.markTrusted(rateLimitKey);
 
     // Xác thực hai lớp: mật khẩu đúng chưa cấp phiên, gửi mã qua thư và chờ /auth/login/verify (auth/login-otp.ts).
     if (loginOtpApplies(user)) {
@@ -201,6 +200,7 @@ export class AuthService {
   }
 
   private async openSession(user: NonNullable<Awaited<ReturnType<AuthStore["findUserById"]>>>, context: RequestContext, method = "password") {
+    this.rateLimit.markTrusted(this.createRateLimitKey(user.username, context.ip));
     const session = await this.authStore.createSession(user.id, user.credentialVersion);
     const safeUser = this.authStore.toSafeUser(user);
 

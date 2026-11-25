@@ -12,7 +12,10 @@ RUN npm ci --ignore-scripts
 FROM deps AS builder-api
 COPY tsconfig.base.json ./
 COPY apps/api ./apps/api
-RUN npm run build:api && npm prune --omit=dev --ignore-scripts
+RUN npm run build:api \
+  && npm prune --omit=dev --ignore-scripts \
+  && node node_modules/@prisma/engines/scripts/postinstall.js \
+  && ls node_modules/@prisma/engines/schema-engine-*
 
 # ---- Production API ----
 FROM node:24-alpine AS api
@@ -28,7 +31,7 @@ COPY --from=builder-api --chown=node:node /app/dist/apps/api ./dist/apps/api
 
 USER node
 EXPOSE 4000
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy --schema apps/api/prisma/schema.prisma && node dist/apps/api/main.js"]
+CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy --schema apps/api/prisma/schema.prisma && exec node dist/apps/api/main.js"]
 
 # ---- Build Web ----
 FROM deps AS builder-web
@@ -51,7 +54,7 @@ ENV NODE_ENV=production \
 COPY --from=builder-web --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder-web --chown=node:node /app/package.json ./package.json
 COPY --from=builder-web --chown=node:node /app/packages ./packages
-COPY --from=builder-web --chown=node:node /app/apps/web/next.config.ts ./apps/web/next.config.ts
+COPY --from=builder-web --chown=node:node /app/apps/web/next.config.mjs ./apps/web/next.config.mjs
 COPY --from=builder-web --chown=node:node /app/apps/web/public ./apps/web/public
 COPY --from=builder-web --chown=node:node /app/apps/web/.next ./apps/web/.next
 

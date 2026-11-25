@@ -33,12 +33,11 @@ function csrfSecret() {
   const configured = process.env.CSRF_SECRET?.trim();
   if (secret && configured === configuredSecretSource) return secret;
   configuredSecretSource = configured;
-  if (configured && configured.length >= 32) {
+  if (configured && configured.length >= 32 && !/^change_me/i.test(configured)) {
     secret = Buffer.from(configured, "utf8");
   } else {
-    // Nếu chưa khai báo CSRF_SECRET (hoặc < 32 ký tự): dùng khoá ngẫu nhiên theo tiến trình
-    // để không làm gián đoạn khởi động khi .env.prod chưa kịp cập nhật.
-    logJson("warn", "csrf_secret_ephemeral", { reason: "CSRF_SECRET chưa được cấu hình (cần ít nhất 32 ký tự); dùng khoá ngẫu nhiên theo tiến trình." });
+    // Nếu chưa khai báo CSRF_SECRET (hoặc còn giá trị mẫu CHANGE_ME / < 32 ký tự): dùng khoá ngẫu nhiên theo tiến trình.
+    logJson("warn", "csrf_secret_ephemeral", { reason: "CSRF_SECRET chưa được cấu hình hợp lệ (cần ít nhất 32 ký tự và không dùng giá trị mẫu); dùng khoá ngẫu nhiên theo tiến trình." });
     secret = randomBytes(32);
   }
   return secret;

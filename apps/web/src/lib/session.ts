@@ -8,7 +8,7 @@ export const PUBLIC_ROUTES = ["/login", "/password-reset", "/forgot-password", "
 export type CurrentUser = {
   mustChangePassword?: boolean;
   /** Xác thực hai lớp qua thư: bắt buộc theo vai trò, hoặc tự bật. */
-  loginOtp?: { required: boolean; enabled: boolean };
+  loginOtp?: { required: boolean; enabled: boolean; modeActive?: boolean };
   researcherProfileId?: string;
   /** Chức danh tại đơn vị, ví dụ "Trưởng khoa – Khoa Nội" (chỉ để hiển thị). */
   positions?: string[];

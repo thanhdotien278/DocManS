@@ -24,6 +24,12 @@ set -a; source "$ENV_FILE"; set +a
 : "${LETSENCRYPT_EMAIL:?thiếu LETSENCRYPT_EMAIL trong $ENV_FILE}"
 compose() { docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"; }
 
+if ! grep -q "/var/www/certbot" "$COMPOSE_FILE" 2>/dev/null || ! grep -q "/etc/nginx/ssl" "$COMPOSE_FILE" 2>/dev/null; then
+  log "CẢNH BÁO: $COMPOSE_FILE hiện cấu hình cho Cloudflare Tunnel (không mount /var/www/certbot và /etc/nginx/ssl vào nginx)."
+  log "Hãy truyền COMPOSE_FILE trỏ tới bản compose/override có nginx TLS + webroot ACME trước khi chạy script này."
+  exit 1
+fi
+
 mkdir -p "$SSL_DIR" "$PROJECT_DIR/certbot/www" "$PROJECT_DIR/certbot/conf"
 
 if [[ ! -s "$SSL_DIR/fullchain.pem" || ! -s "$SSL_DIR/privkey.pem" ]]; then

@@ -118,8 +118,9 @@ export class LoginOtpService {
   /** Gửi lại mã mới cho lượt đang chờ (mã cũ hết hiệu lực). */
   async resend(challengeId: string, loadUser: (userId: string) => Promise<InternalUser | null>): Promise<LoginChallengeResult> {
     const challenge = await this.openChallenge(challengeId);
+    this.rateLimit.assertCanAttempt(failureKey(challenge.userId), Date.now(), OTP_LOCKED_MESSAGE, LOGIN_OTP_MAX_FAILURES_PER_USER);
     const user = await loadUser(challenge.userId);
-    if (!user?.credentialEmail || user.status !== "active") {
+    if (!user?.credentialEmail || user.status !== "active" || user.credentialVersion !== challenge.credentialVersion) {
       throw new UnauthorizedException({ code: "LOGIN_OTP_INVALID", message: "Lượt đăng nhập không còn hiệu lực. Vui lòng đăng nhập lại." });
     }
     const waitMs = challenge.lastSentAt.getTime() + LOGIN_OTP_RESEND_AFTER_MS - Date.now();
@@ -132,11 +133,22 @@ export class LoginOtpService {
     const code = generateCode();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + LOGIN_OTP_TTL_MS);
-    await this.send(user, code);
-    await this.prisma.loginChallenge.update({
-      where: { id: challenge.id },
+    // Chiếm chỗ gửi lại nguyên tử trước khi gọi SMTP để chặn race condition gửi hàng loạt thư cùng lúc.
+    const claimed = await this.prisma.loginChallenge.updateMany({
+      where: {
+        id: challenge.id,
+        consumedAt: null,
+        attempts: { lt: LOGIN_OTP_MAX_ATTEMPTS },
+        sendCount: challenge.sendCount,
+        lastSentAt: challenge.lastSentAt,
+        expiresAt: { gt: now }
+      },
       data: { codeHash: hashLoginOtp(challenge.id, code), attempts: 0, sendCount: { increment: 1 }, lastSentAt: now, expiresAt }
     });
+    if (claimed.count !== 1) {
+      throw new HttpException({ code: "LOGIN_OTP_RESEND_TOO_SOON", message: "Yêu cầu gửi lại mã đang được xử lý. Vui lòng thử lại sau." }, HttpStatus.TOO_MANY_REQUESTS);
+    }
+    await this.send(user, code);
     return this.describe(challenge.id, user.credentialEmail, expiresAt);
   }
 
@@ -147,7 +159,6 @@ export class LoginOtpService {
   async verify(challengeId: string, code: string) {
     const challenge = await this.openChallenge(challengeId);
     this.rateLimit.assertCanAttempt(failureKey(challenge.userId), Date.now(), OTP_LOCKED_MESSAGE, LOGIN_OTP_MAX_FAILURES_PER_USER);
-    if (challenge.attempts >= LOGIN_OTP_MAX_ATTEMPTS) throw this.invalid();
     const expected = Buffer.from(challenge.codeHash);
     const actual = Buffer.from(hashLoginOtp(challenge.id, /^\d{6}$/.test(code) ? code : "x"));
     if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
@@ -160,8 +171,11 @@ export class LoginOtpService {
           : { code: "LOGIN_OTP_INVALID", message: "Nhập sai mã quá số lần cho phép. Vui lòng đăng nhập lại.", attemptsLeft: 0 }
       );
     }
-    // Đánh dấu đã dùng có điều kiện: hai yêu cầu cùng lúc với cùng một mã chỉ một yêu cầu thành công.
-    const consumed = await this.prisma.loginChallenge.updateMany({ where: { id: challenge.id, consumedAt: null }, data: { consumedAt: new Date() } });
+    // Đánh dấu đã dùng có điều kiện: kiểm tra cả consumedAt, attempts và hạn dùng để chặn race condition ở lần thử cuối.
+    const consumed = await this.prisma.loginChallenge.updateMany({
+      where: { id: challenge.id, consumedAt: null, attempts: { lt: LOGIN_OTP_MAX_ATTEMPTS }, expiresAt: { gt: new Date() } },
+      data: { consumedAt: new Date() }
+    });
     if (consumed.count !== 1) throw this.invalid();
     this.rateLimit.reset(failureKey(challenge.userId));
     return { userId: challenge.userId, credentialVersion: challenge.credentialVersion };
@@ -172,7 +186,9 @@ export class LoginOtpService {
       typeof challengeId === "string" && challengeId && challengeId.length <= 64
         ? await this.prisma.loginChallenge.findUnique({ where: { id: challengeId } })
         : null;
-    if (!challenge || challenge.consumedAt || challenge.expiresAt.getTime() <= Date.now()) throw this.invalid();
+    if (!challenge || challenge.consumedAt || challenge.attempts >= LOGIN_OTP_MAX_ATTEMPTS || challenge.expiresAt.getTime() <= Date.now()) {
+      throw this.invalid();
+    }
     return challenge;
   }
 

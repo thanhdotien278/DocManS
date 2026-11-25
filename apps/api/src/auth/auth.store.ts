@@ -5,7 +5,7 @@ import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { positionDisplay } from "../organization/unit-positions.js";
 import { notifyUsers } from "../notifications/notification-events.js";
 import { REGISTRATION_APPROVER_ROLES, SYSTEM_ROLES, type AuthSession, type InternalUser, type SafeUserContext, type SystemRole } from "./auth.types.js";
-import { isLoginOtpRequiredRole, loginOtpApplies } from "./login-otp.js";
+import { isLoginOtpRequiredRole, loginOtpApplies, loginOtpMode } from "./login-otp.js";
 
 const DEFAULT_SESSION_TIMEOUT_MINUTES = 720;
 
@@ -80,7 +80,11 @@ export class AuthStore {
       unit: user.unit,
       organizationScopes: user.organizationScopes,
       mustChangePassword: user.mustChangePassword,
-      loginOtp: { required: isLoginOtpRequiredRole(user.systemRole), enabled: loginOtpApplies(user, "required-roles") },
+      loginOtp: {
+        required: isLoginOtpRequiredRole(user.systemRole),
+        enabled: loginOtpApplies(user, "required-roles"),
+        modeActive: loginOtpMode() !== "off"
+      },
       researcherProfileId: user.researcherProfileId,
       positions: user.positions
     };

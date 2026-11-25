@@ -89,7 +89,7 @@ test("endpoint không cần phiên chỉ kiểm tra nguồn gửi, kể cả khi
     "/api/v1/auth/password-reset/complete",
     "/api/v1/auth/account-activation/complete",
     "/api/v1/registration",
-    "/api/v1/public/conference-invitations/respond"
+    "/api/v1/public/health-ping"
   ]) {
     assert.equal((await send(path, { headers: session("het-han") })).status, 200, path);
   }
@@ -102,6 +102,23 @@ test("mã CSRF: cố định theo phiên, khác giữa các phiên, so khớp an
   assert.ok(isValidCsrfToken("s1", csrfTokenForSession("s1")));
   for (const value of [undefined, "", ["x"], 1, csrfTokenForSession("s1").slice(1)]) {
     assert.equal(isValidCsrfToken("s1", value), false);
+  }
+});
+
+test("giá trị mẫu CHANGE_ME không được dùng làm khoá ký CSRF cố định", () => {
+  const prev = process.env.CSRF_SECRET;
+  const silenceOut = process.stdout.write;
+  process.stdout.write = () => true;
+  try {
+    process.env.CSRF_SECRET = "CHANGE_ME_CSRF_SECRET_AT_LEAST_32_CHARS";
+    const ephemeralA = csrfTokenForSession("s1");
+    process.env.CSRF_SECRET = "CHANGE_ME_ANOTHER_PLACEHOLDER_32_CHARS";
+    const ephemeralB = csrfTokenForSession("s1");
+    assert.notEqual(ephemeralA, ephemeralB);
+  } finally {
+    process.stdout.write = silenceOut;
+    if (prev === undefined) delete process.env.CSRF_SECRET;
+    else process.env.CSRF_SECRET = prev;
   }
 });
 

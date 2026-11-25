@@ -44,7 +44,7 @@ export type SafeUserContext = {
   unit: string;
   organizationScopes: OrganizationScope[];
   mustChangePassword?: boolean;
-  loginOtp?: { required: boolean; enabled: boolean };
+  loginOtp?: { required: boolean; enabled: boolean; modeActive?: boolean };
   researcherProfileId?: string;
   /** Chức danh tại đơn vị, ví dụ "Trưởng khoa – Khoa Nội". Chỉ để hiển thị, không phân quyền. */
   positions?: string[];

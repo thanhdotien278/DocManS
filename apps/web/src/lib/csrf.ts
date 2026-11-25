@@ -35,6 +35,7 @@ export async function refreshCsrfToken() {
  */
 export async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
   if (!isUnsafe(init?.method)) return fetch(input, init);
+  if (!csrfToken) await refreshCsrfToken();
   const send = () => {
     const headers = new Headers(init?.headers);
     if (csrfToken) headers.set(CSRF_HEADER, csrfToken);

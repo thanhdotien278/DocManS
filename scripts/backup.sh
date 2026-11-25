@@ -20,6 +20,7 @@ if [[ -z "${ENV_FILE:-}" ]]; then
 fi
 BACKUP_DIR="${BACKUP_DIR:-$PROJECT_DIR/backups}"
 RETENTION_DAYS="${RETENTION_DAYS:-30}"
+MINIO_BACKUP_IMAGE="${MINIO_BACKUP_IMAGE:-nginx:1.27-alpine}"
 STAMP="$(date +%Y%m%d_%H%M%S)"
 TARGET="$BACKUP_DIR/$STAMP"
 
@@ -43,7 +44,7 @@ compose exec -T postgres pg_restore --list < "$TARGET/postgres.dump" > /dev/null
 MINIO_CONTAINER="$(compose ps -q minio)"
 [[ -n "$MINIO_CONTAINER" ]] || { log "Container minio không chạy"; exit 1; }
 log "Sao lưu MinIO..."
-docker run --rm --volumes-from "$MINIO_CONTAINER":ro -v "$TARGET":/backup alpine:3.20 \
+docker run --rm --volumes-from "$MINIO_CONTAINER":ro -v "$TARGET":/backup "$MINIO_BACKUP_IMAGE" \
   tar -czf /backup/minio-data.tar.gz -C /data .
 tar -tzf "$TARGET/minio-data.tar.gz" > /dev/null
 

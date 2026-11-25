@@ -114,6 +114,7 @@ jobs:
           file: Dockerfile
           target: api
           push: false
+          load: true
           tags: docmans-api:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -125,6 +126,12 @@ jobs:
           file: Dockerfile
           target: web
           push: false
+          load: true
           tags: docmans-web:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Kiểm tra nhanh entrypoint & phụ thuộc runtime trong container
+        run: |
+          docker run --rm --entrypoint sh docmans-api:ci -c "ls node_modules/@prisma/engines/schema-engine-* && node node_modules/prisma/build/index.js --version"
+          docker run --rm --entrypoint sh docmans-web:ci -c "test -f apps/web/next.config.mjs && test -d apps/web/.next && node node_modules/next/dist/bin/next --version"

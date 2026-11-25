@@ -1,5 +1,6 @@
 import type { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { logJson } from "../../infrastructure/observability/log.js";
 
 export type ObjectContentResponse = {
   setHeader(name: string, value: string): void;
@@ -29,7 +30,10 @@ export async function sendObjectContent(response: ObjectContentResponse, content
   if (sizeBytes !== undefined) response.setHeader("Content-Length", String(sizeBytes));
   try {
     await pipeline(content, response as NodeJS.WritableStream);
-  } catch {
-    // Header đã gửi nên không trả lỗi JSON được: pipeline đã huỷ kết nối.
+  } catch (error) {
+    const code = (error as { code?: string } | null)?.code;
+    if (code !== "ERR_STREAM_PREMATURE_CLOSE") {
+      logJson("warn", "file_stream_error", { code, error: error instanceof Error ? error.message : String(error) });
+    }
   }
 }
