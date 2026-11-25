@@ -320,7 +320,7 @@ describe("auth API behavior", () => {
 
     assert.equal(/hasSessionCookie\s*&&\s*pathname\s*===\s*["']\/login["']/.test(middlewareSource), false);
     assert.match(middlewareSource, /PUBLIC_ROUTES\.includes\(pathname\)/);
-    assert.match(readFileSync("apps/web/src/lib/session.ts", "utf8"), /PUBLIC_ROUTES = \["\/login", "\/password-reset", "\/forgot-password", "\/register"\]/);
+    assert.match(readFileSync("apps/web/src/lib/session.ts", "utf8"), /PUBLIC_ROUTES = \["\/login", "\/password-reset", "\/forgot-password", "\/register", "\/conference-invitation"\]/);
     assert.match(middlewareSource, /!hasSessionCookie && !isPublicRoute/);
     assert.match(middlewareSource, /hasValidSession/);
     assert.match(middlewareSource, /\/auth\/me/);
