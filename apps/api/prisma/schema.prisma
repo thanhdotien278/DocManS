@@ -95,6 +95,18 @@ model User {
   unitPositions            UnitPosition[] @relation("UnitPositionHolder")
   assignedUnitPositions    UnitPosition[] @relation("UnitPositionAssigner")
   updatedKhqsPeriodicReports KhqsPeriodicReport[] @relation("KhqsPeriodicReportUpdater")
+  createdConferences           ScientificConference[]      @relation("ConferenceCreator")
+  conferenceOfficerAssignments ConferenceOfficer[]         @relation("ConferenceOfficerUser")
+  assignedConferenceOfficers   ConferenceOfficer[]         @relation("ConferenceOfficerAssigner")
+  conferenceInvitations        ConferenceInvitation[]      @relation("ConferenceInvitee")
+  createdConferenceInvitations ConferenceInvitation[]      @relation("ConferenceInvitationCreator")
+  ownedConferencePapers        ConferencePaper[]           @relation("ConferencePaperOwner")
+  submittedConferencePapers    ConferencePaperVersion[]    @relation("ConferencePaperSubmitter")
+  conferenceRevisionRequests   ConferenceRevisionRequest[] @relation("ConferenceRevisionRequester")
+  sentConferenceMailings       ConferenceMailing[]         @relation("ConferenceMailingSender")
+  conferenceEvents             ConferenceEvent[]           @relation("ConferenceEventActor")
+  publishedConferencePrograms  ConferenceProgramVersion[]  @relation("ConferenceProgramPublisher")
+  uploadedConferenceProceedings ConferenceProceedings[]    @relation("ConferenceProceedingsUploader")
 
   @@map("users")
 }
@@ -129,6 +141,8 @@ model OrganizationUnit {
   approvedProjects ApprovedProject[]
   researcherProfiles ResearcherProfile[]
   ethicsDossiers EthicsDossier[]
+  hostedConferences ScientificConference[] @relation("ConferenceHostUnit")
+  conferenceInvitations ConferenceInvitation[] @relation("ConferenceInviteeUnit")
 
   @@index([parentId])
   @@map("organization_units")
@@ -613,6 +627,8 @@ model FileRecord {
   deletedAt         DateTime? @map("deleted_at")
   projectReportEvidence ProjectReportEvidence[]
   projectRequestEvidence ProjectRequestEvidence[]
+  conferencePaperVersions ConferencePaperVersion[]
+  conferenceProceedings ConferenceProceedings[]
 
   @@index([relatedEntityType, relatedEntityId])
   @@index([relatedEntityType, relatedEntityId, documentType], map: "file_records_entity_doctype_idx")
@@ -1459,6 +1475,337 @@ model KhqsPeriodicReport {
 
   @@unique([year, period])
   @@map("khqs_periodic_reports")
+}
+
+model ScientificConference {
+  id                     String           @id @default(uuid())
+  code                   String           @unique
+  title                  String
+  description            String?
+  /// Cấp hội nghị: academy (Học viện), faculty (khoa, viện), national (toàn quốc), international (quốc tế).
+  level                  String           @default("academy")
+  hostOrganizationUnitId String           @map("host_organization_unit_id")
+  hostOrganizationUnit   OrganizationUnit @relation("ConferenceHostUnit", fields: [hostOrganizationUnitId], references: [id])
+  location               String
+  startsAt               DateTime         @map("starts_at")
+  endsAt                 DateTime         @map("ends_at")
+  /// Hạn trả lời thư mời (tuỳ chọn): quá hạn chỉ gắn cờ, không tự huỷ lời mời.
+  responseDeadline       DateTime?        @map("response_deadline")
+  abstractDeadline       DateTime         @map("abstract_deadline")
+  fullPaperDeadline      DateTime         @map("full_paper_deadline")
+  /// Thời lượng mặc định mỗi báo cáo (phút, gồm trình bày và thảo luận); phiên có thể ghi đè.
+  defaultSlotMinutes     Int              @default(15) @map("default_slot_minutes")
+  /// Lần cuối sửa phiên, khoảng nghỉ hoặc xếp lịch: sau lần chốt chương trình gần nhất thì cần chốt lại.
+  programChangedAt       DateTime?        @map("program_changed_at")
+  status                 String           @default("draft")
+  cancelReason           String?          @map("cancel_reason")
+  createdById            String           @map("created_by_id")
+  createdBy              User             @relation("ConferenceCreator", fields: [createdById], references: [id])
+  createdAt              DateTime         @default(now()) @map("created_at")
+  updatedAt              DateTime         @updatedAt @map("updated_at")
+
+  officers    ConferenceOfficer[]
+  invitations ConferenceInvitation[]
+  papers      ConferencePaper[]
+  mailings    ConferenceMailing[]
+  events      ConferenceEvent[]
+  sessions    ConferenceSession[]
+  programs    ConferenceProgramVersion[]
+  proceedings ConferenceProceedings[]
+
+  @@index([status])
+  @@index([hostOrganizationUnitId])
+  @@map("scientific_conferences")
+}
+
+/// Chuyên viên phụ trách hội nghị. Tối đa một dòng còn hiệu lực (revokedAt null) mỗi hội nghị; giao lại hoặc thu hồi giữ lịch sử.
+model ConferenceOfficer {
+  id           String               @id @default(uuid())
+  conferenceId String               @map("conference_id")
+  conference   ScientificConference @relation(fields: [conferenceId], references: [id], onDelete: Restrict)
+  userId       String               @map("user_id")
+  user         User                 @relation("ConferenceOfficerUser", fields: [userId], references: [id], onDelete: Restrict)
+  assignedById String               @map("assigned_by_id")
+  assignedBy   User                 @relation("ConferenceOfficerAssigner", fields: [assignedById], references: [id], onDelete: Restrict)
+  assignedAt   DateTime             @default(now()) @map("assigned_at")
+  revokedAt    DateTime?            @map("revoked_at")
+  reason       String?
+
+  @@index([conferenceId, revokedAt])
+  @@index([userId, revokedAt])
+  @@map("conference_officers")
+}
+
+/// Lời mời: báo cáo viên (speaker) hoặc đại biểu (delegate). userId có sẵn khi mời người đã có tài khoản, hoặc
+/// được gắn khi người được mời nhận lời (tạo tài khoản mới hoặc khớp email với tài khoản có sẵn).
+/// Trạng thái: draft -> sent -> accepted | declined; revoked.
+model ConferenceInvitation {
+  id                   String               @id @default(uuid())
+  conferenceId         String               @map("conference_id")
+  conference           ScientificConference @relation(fields: [conferenceId], references: [id], onDelete: Restrict)
+  kind                 String
+  userId               String?              @map("user_id")
+  user                 User?                @relation("ConferenceInvitee", fields: [userId], references: [id])
+  fullName             String               @map("full_name")
+  academicTitle        String?              @map("academic_title")
+  /// Email nhận thư (chữ thường). Người đã có tài khoản mà chưa có email chỉ nhận thông báo trong hệ thống.
+  email                String?
+  /// Người trong Học viện: tài khoản tạo khi nhận lời là tài khoản nội bộ của organizationUnitId.
+  isInternal           Boolean              @default(false) @map("is_internal")
+  organizationUnitId   String?              @map("organization_unit_id")
+  organizationUnit     OrganizationUnit?    @relation("ConferenceInviteeUnit", fields: [organizationUnitId], references: [id])
+  externalOrganization String?              @map("external_organization")
+  status               String               @default("draft")
+  sentAt               DateTime?            @map("sent_at")
+  respondedAt          DateTime?            @map("responded_at")
+  declineReason        String?              @map("decline_reason")
+  revokedAt            DateTime?            @map("revoked_at")
+  revokeReason         String?              @map("revoke_reason")
+  createdById          String               @map("created_by_id")
+  createdBy            User                 @relation("ConferenceInvitationCreator", fields: [createdById], references: [id])
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  tokens     ConferenceInvitationToken[]
+  paper      ConferencePaper?
+  recipients ConferenceMailingRecipient[]
+  events     ConferenceEvent[]
+
+  /// Unique (conferenceId, email) và (conferenceId, userId) là index một phần (trừ lời mời đã huỷ), khai báo trong migration.
+  @@index([userId])
+  @@index([conferenceId, status])
+  @@map("conference_invitations")
+}
+
+/// Mã trong đường link thư mời (chỉ lưu bản băm). Dùng một lần để trả lời; gửi lại thư thì mã cũ bị thu hồi.
+model ConferenceInvitationToken {
+  id           String               @id @default(uuid())
+  invitationId String               @map("invitation_id")
+  invitation   ConferenceInvitation @relation(fields: [invitationId], references: [id], onDelete: Restrict)
+  tokenHash    String               @unique @map("token_hash")
+  expiresAt    DateTime             @map("expires_at")
+  usedAt       DateTime?            @map("used_at")
+  revokedAt    DateTime?            @map("revoked_at")
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  @@index([invitationId, usedAt, revokedAt])
+  @@map("conference_invitation_tokens")
+}
+
+/// Báo cáo tham luận, tạo khi báo cáo viên nhận lời. Trạng thái: awaiting_abstract -> abstract_submitted ->
+/// full_paper_submitted -> scheduled; withdrawn. Yêu cầu sửa không đổi trạng thái (xem ConferenceRevisionRequest).
+model ConferencePaper {
+  id             String               @id @default(uuid())
+  conferenceId   String               @map("conference_id")
+  conference     ScientificConference @relation(fields: [conferenceId], references: [id], onDelete: Restrict)
+  invitationId   String               @unique @map("invitation_id")
+  invitation     ConferenceInvitation @relation(fields: [invitationId], references: [id], onDelete: Restrict)
+  ownerId        String               @map("owner_id")
+  owner          User                 @relation("ConferencePaperOwner", fields: [ownerId], references: [id])
+  title          String?
+  /// Danh sách tác giả: [{ fullName, organization, corresponding }], theo thứ tự.
+  authors        Json                 @default("[]")
+  status         String               @default("awaiting_abstract")
+  withdrawReason String?              @map("withdraw_reason")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  versions         ConferencePaperVersion[]
+  revisionRequests ConferenceRevisionRequest[]
+  events           ConferenceEvent[]
+  slot             ConferenceSessionSlot?
+
+  @@index([conferenceId, status])
+  @@index([ownerId])
+  @@map("conference_papers")
+}
+
+/// Bản nộp bất biến: kind = abstract | full_paper. Nộp lại tạo phiên bản mới.
+model ConferencePaperVersion {
+  id            String          @id @default(uuid())
+  paperId       String          @map("paper_id")
+  paper         ConferencePaper @relation(fields: [paperId], references: [id], onDelete: Restrict)
+  kind          String
+  versionNumber Int             @map("version_number")
+  title         String
+  abstractText  String?         @map("abstract_text")
+  fileId        String?         @map("file_id")
+  file          FileRecord?     @relation(fields: [fileId], references: [id])
+  submittedById String          @map("submitted_by_id")
+  submittedBy   User            @relation("ConferencePaperSubmitter", fields: [submittedById], references: [id])
+  submittedAt   DateTime        @default(now()) @map("submitted_at")
+
+  resolvedRequests ConferenceRevisionRequest[]
+
+  @@unique([paperId, kind, versionNumber])
+  @@map("conference_paper_versions")
+}
+
+/// Yêu cầu sửa tóm tắt hoặc toàn văn. Mở cho tới khi báo cáo viên nộp phiên bản mới cùng loại.
+model ConferenceRevisionRequest {
+  id                String                  @id @default(uuid())
+  paperId           String                  @map("paper_id")
+  paper             ConferencePaper         @relation(fields: [paperId], references: [id], onDelete: Restrict)
+  kind              String
+  reason            String
+  dueAt             DateTime                @map("due_at")
+  requestedById     String                  @map("requested_by_id")
+  requestedBy       User                    @relation("ConferenceRevisionRequester", fields: [requestedById], references: [id])
+  requestedAt       DateTime                @default(now()) @map("requested_at")
+  resolvedAt        DateTime?               @map("resolved_at")
+  resolvedVersionId String?                 @map("resolved_version_id")
+  resolvedVersion   ConferencePaperVersion? @relation(fields: [resolvedVersionId], references: [id])
+
+  @@index([paperId, kind, resolvedAt])
+  @@map("conference_revision_requests")
+}
+
+/// Một đợt thư: invitation | reminder | change_notice | program | proceedings.
+model ConferenceMailing {
+  id             String               @id @default(uuid())
+  conferenceId   String               @map("conference_id")
+  conference     ScientificConference @relation(fields: [conferenceId], references: [id], onDelete: Restrict)
+  kind           String
+  subject        String
+  message        String?
+  sentById       String               @map("sent_by_id")
+  sentBy         User                 @relation("ConferenceMailingSender", fields: [sentById], references: [id])
+  sentAt         DateTime             @default(now()) @map("sent_at")
+  recipientCount Int                  @default(0) @map("recipient_count")
+
+  recipients ConferenceMailingRecipient[]
+
+  @@index([conferenceId, sentAt])
+  @@map("conference_mailings")
+}
+
+/// Người nhận của một đợt thư. channel: notification (có tài khoản) | email (chưa có tài khoản, kèm đường link trả lời).
+/// status: sent | failed | skipped (chưa cấu hình email).
+model ConferenceMailingRecipient {
+  id           String               @id @default(uuid())
+  mailingId    String               @map("mailing_id")
+  mailing      ConferenceMailing    @relation(fields: [mailingId], references: [id], onDelete: Restrict)
+  invitationId String               @map("invitation_id")
+  invitation   ConferenceInvitation @relation(fields: [invitationId], references: [id], onDelete: Restrict)
+  channel      String
+  email        String?
+  status       String
+  error        String?
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  @@index([mailingId])
+  @@index([invitationId])
+  @@map("conference_mailing_recipients")
+}
+
+/// Lịch sử thao tác trên hội nghị, lời mời, báo cáo.
+model ConferenceEvent {
+  id           String                @id @default(uuid())
+  conferenceId String                @map("conference_id")
+  conference   ScientificConference  @relation(fields: [conferenceId], references: [id], onDelete: Restrict)
+  paperId      String?               @map("paper_id")
+  paper        ConferencePaper?      @relation(fields: [paperId], references: [id])
+  invitationId String?               @map("invitation_id")
+  invitation   ConferenceInvitation? @relation(fields: [invitationId], references: [id])
+  actorId      String?               @map("actor_id")
+  actor        User?                 @relation("ConferenceEventActor", fields: [actorId], references: [id])
+  action       String
+  fromStatus   String?               @map("from_status")
+  toStatus     String?               @map("to_status")
+  reason       String?
+  facts        Json?
+  createdAt    DateTime              @default(now()) @map("created_at")
+
+  @@index([conferenceId, createdAt])
+  @@index([paperId])
+  @@map("conference_events")
+}
+
+/// Phiên họp: phiên toàn thể (plenary, mọi người cùng dự, không có phiên nào song song) hoặc tiểu ban
+/// (track, các tiểu ban chạy song song với nhau, sau phiên toàn thể). Khung giờ do chuyên viên nhập.
+model ConferenceSession {
+  id            String               @id @default(uuid())
+  conferenceId  String               @map("conference_id")
+  conference    ScientificConference @relation(fields: [conferenceId], references: [id], onDelete: Restrict)
+  kind          String
+  name          String
+  room          String?
+  chairName     String?              @map("chair_name")
+  secretaryName String?              @map("secretary_name")
+  startsAt      DateTime             @map("starts_at")
+  endsAt        DateTime             @map("ends_at")
+  /// Ghi đè thời lượng mỗi báo cáo của hội nghị (phút).
+  slotMinutes   Int?                 @map("slot_minutes")
+  sortOrder     Int                  @default(0) @map("sort_order")
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+
+  breaks ConferenceSessionBreak[]
+  slots  ConferenceSessionSlot[]
+
+  @@index([conferenceId, startsAt])
+  @@map("conference_sessions")
+}
+
+model ConferenceSessionBreak {
+  id        String            @id @default(uuid())
+  sessionId String            @map("session_id")
+  session   ConferenceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  label     String
+  startsAt  DateTime          @map("starts_at")
+  endsAt    DateTime          @map("ends_at")
+
+  @@index([sessionId])
+  @@map("conference_session_breaks")
+}
+
+/// Báo cáo trong phiên. Giờ do hệ thống xếp (manuallyAdjusted = false) hoặc chuyên viên đặt tay (giữ nguyên khi xếp lại).
+model ConferenceSessionSlot {
+  id               String            @id @default(uuid())
+  sessionId        String            @map("session_id")
+  session          ConferenceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  paperId          String            @unique @map("paper_id")
+  paper            ConferencePaper   @relation(fields: [paperId], references: [id], onDelete: Restrict)
+  position         Int
+  startsAt         DateTime?         @map("starts_at")
+  endsAt           DateTime?         @map("ends_at")
+  manuallyAdjusted Boolean           @default(false) @map("manually_adjusted")
+
+  @@index([sessionId, position])
+  @@map("conference_session_slots")
+}
+
+/// Bản chương trình chi tiết đã chốt (bất biến): ảnh chụp phiên, khoảng nghỉ, báo cáo và giờ tại lúc chốt.
+model ConferenceProgramVersion {
+  id            String               @id @default(uuid())
+  conferenceId  String               @map("conference_id")
+  conference    ScientificConference @relation(fields: [conferenceId], references: [id], onDelete: Restrict)
+  versionNumber Int                  @map("version_number")
+  snapshot      Json
+  publishedById String               @map("published_by_id")
+  publishedBy   User                 @relation("ConferenceProgramPublisher", fields: [publishedById], references: [id])
+  publishedAt   DateTime             @default(now()) @map("published_at")
+
+  @@unique([conferenceId, versionNumber])
+  @@map("conference_program_versions")
+}
+
+/// Kỷ yếu do chuyên viên biên soạn bên ngoài rồi tải lên; mỗi lần tải là một phiên bản.
+model ConferenceProceedings {
+  id            String               @id @default(uuid())
+  conferenceId  String               @map("conference_id")
+  conference    ScientificConference @relation(fields: [conferenceId], references: [id], onDelete: Restrict)
+  versionNumber Int                  @map("version_number")
+  fileId        String               @map("file_id")
+  file          FileRecord           @relation(fields: [fileId], references: [id])
+  isbn          String?
+  note          String?
+  uploadedById  String               @map("uploaded_by_id")
+  uploadedBy    User                 @relation("ConferenceProceedingsUploader", fields: [uploadedById], references: [id])
+  uploadedAt    DateTime             @default(now()) @map("uploaded_at")
+
+  @@unique([conferenceId, versionNumber])
+  @@map("conference_proceedings")
 }
 
 /// Lượt đăng nhập chờ xác thực hai lớp bằng mã gửi qua thư công vụ.

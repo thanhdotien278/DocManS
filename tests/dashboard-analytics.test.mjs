@@ -808,7 +808,7 @@ test("8. Excel (.xlsx) Export: OOXML structure, formula injection guard (=, +, -
   assert.equal(afterAudits - beforeAudits, 3);
 });
 
-test("9. Dashboard UI Integration: 2-tab layout, ChartCard chart/table toggle, >=12px fonts, and omits unsupported conferences", async () => {
+test("9. Dashboard UI Integration: 2-tab layout, ChartCard chart/table toggle, >=12px fonts, and includes the conference statistics section", async () => {
   const [pageSrc, analyticsSrc, cardsSrc, drillSrc, vizSrc, heatmapSrc, cssSrc] = await Promise.all([
     readFile(new URL("../apps/web/src/app/dashboard/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../apps/web/src/components/dashboard/dashboard-analytics.tsx", import.meta.url), "utf8"),
@@ -827,7 +827,7 @@ test("9. Dashboard UI Integration: 2-tab layout, ChartCard chart/table toggle, >
   assert.match(pageSrc, /Thống kê &amp; Phân tích|Thống kê & Phân tích/);
   assert.match(pageSrc, /Việc cần xử lý/);
   assert.match(drillSrc, /ProjectGantt/);
-  assert.doesNotMatch(`${pageSrc}\n${analyticsSrc}\n${cardsSrc}\n${drillSrc}\n${vizSrc}`, /Hội nghị khoa học/i);
+  assert.match(analyticsSrc, /DashboardConferenceSection/);
   assert.doesNotMatch(heatmapSrc, /unitCode/);
 
   assert.match(vizSrc, /className="view-toggle"/);

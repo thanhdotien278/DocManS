@@ -1,7 +1,10 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import { ApprovedProjectsService } from "../approved-projects/approved-projects.service.js";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import { REGISTRATION_APPROVER_ROLES, type SafeUserContext } from "../auth/auth.types.js";
+import { canReadConferenceManagement } from "../conferences/conference-access.js";
+import { logJson } from "../infrastructure/observability/log.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { actorConflicted, canViewApproval, type ApprovalSubmissionRow } from "../proposals-shared/approval-routing.js";
 import { canReadProposal } from "../proposals-shared/proposal-access.js";
@@ -43,6 +46,29 @@ export class NotificationsService {
   async markAllRead(actor: SafeUserContext) {
     const updated = await this.prisma.userNotification.updateMany({ where: { userId: actor.id, readAt: null }, data: { readAt: new Date() } });
     return { updated: updated.count };
+  }
+
+  /** Tạo thông báo hội nghị cho tài khoản đang hoạt động; không làm hỏng thao tác nghiệp vụ nếu lỗi. */
+  async createConferenceNotification(input: { userId: string; conferenceId: string; title: string; message: string; link?: string }) {
+    try {
+      const user = await this.prisma.user.findUnique({ where: { id: input.userId }, select: { id: true, status: true } });
+      if (!user || user.status !== "active") return null;
+      return await this.prisma.userNotification.create({
+        data: {
+          userId: input.userId,
+          type: "conference",
+          title: input.title,
+          body: input.message,
+          link: input.link ?? null,
+          sourceType: "conference",
+          sourceId: input.conferenceId,
+          idempotencyKey: `conference:${input.conferenceId}:${randomUUID()}`
+        }
+      });
+    } catch (error) {
+      logJson("warn", "conference_notification_failed", { userId: input.userId, conferenceId: input.conferenceId, error: (error as Error)?.message });
+      return null;
+    }
   }
 
   private async authorized(actor: SafeUserContext, rows: NotificationRow[]) {
@@ -127,6 +153,27 @@ export class NotificationsService {
 
     // Story 13.11: yêu cầu đăng ký chỉ hiện với người còn quyền duyệt.
     if ((REGISTRATION_APPROVER_ROLES as readonly string[]).includes(actor.systemRole)) for (const id of idsOf("registration_request")) allowed.add(`registration_request:${id}`);
+
+    const conferenceIds = idsOf("conference");
+    if (conferenceIds.length) {
+      const conferences = await this.prisma.scientificConference.findMany({
+        where: { id: { in: conferenceIds } },
+        include: {
+          officers: { where: { revokedAt: null }, select: { userId: true } },
+          invitations: { where: { userId: actor.id }, select: { userId: true, status: true } }
+        }
+      });
+      for (const conference of conferences) {
+        const isManagement = canReadConferenceManagement(actor, {
+          status: conference.status,
+          hostOrganizationUnitId: conference.hostOrganizationUnitId,
+          createdById: conference.createdById,
+          activeOfficerId: conference.officers[0]?.userId ?? null
+        });
+        const hasInvitation = conference.invitations.some((inv) => inv.userId === actor.id && ["sent", "accepted", "declined", "revoked"].includes(inv.status));
+        if (isManagement || hasInvitation) allowed.add(`conference:${conference.id}`);
+      }
+    }
 
     return rows.filter((row) => allowed.has(`${row.sourceType}:${row.sourceId}`));
   }

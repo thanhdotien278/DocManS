@@ -1,6 +1,12 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import { Client } from "minio";
 import { Readable } from "node:stream";
+
+export function storageReadFailure(error: unknown) {
+  return error instanceof ServiceUnavailableException
+    ? error
+    : new NotFoundException({ message: "Không tìm thấy nội dung tệp." });
+}
 
 export type PutObjectInput = {
   objectKey: string;
