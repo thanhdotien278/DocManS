@@ -20,11 +20,13 @@ export function LoginOtpSettings() {
     <div className="admin-form">
       <h2>Xác thực hai lớp</h2>
       <p className="record-meta">
-        {state.required
-          ? "Vai trò của đồng chí bắt buộc xác thực hai lớp: mỗi lần đăng nhập, hệ thống gửi mã 6 chữ số tới thư công vụ."
-          : state.enabled
-            ? "Đang bật: mỗi lần đăng nhập, hệ thống gửi mã 6 chữ số tới thư công vụ của đồng chí."
-            : "Đang tắt. Bật để mỗi lần đăng nhập cần thêm mã gửi tới thư công vụ, kể cả khi mật khẩu bị lộ."}
+        {state.modeActive === false
+          ? "Chính sách xác thực hai lớp qua thư đang tạm tắt trên máy chủ (LOGIN_OTP_MODE=off)."
+          : state.required
+            ? "Vai trò của đồng chí bắt buộc xác thực hai lớp: mỗi lần đăng nhập, hệ thống gửi mã 6 chữ số tới thư công vụ."
+            : state.enabled
+              ? "Đang bật: mỗi lần đăng nhập, hệ thống gửi mã 6 chữ số tới thư công vụ của đồng chí."
+              : "Đang tắt. Bật để mỗi lần đăng nhập cần thêm mã gửi tới thư công vụ, kể cả khi mật khẩu bị lộ."}
       </p>
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       {state.required ? null : (

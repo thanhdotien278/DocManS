@@ -4,7 +4,6 @@ import { AdminModule } from "./admin/admin.module.js";
 import { ApprovalsModule } from "./approvals/approvals.module.js";
 import { ApprovedProjectsModule } from "./approved-projects/approved-projects.module.js";
 import { AuthModule } from "./auth/auth.module.js";
-import { ConferencesModule } from "./conferences/conferences.module.js";
 import { DashboardModule } from "./dashboard/dashboard.module.js";
 import { HealthController } from "./infrastructure/health/health.controller.js";
 import { MinioObjectStorageService } from "./infrastructure/minio/minio-object-storage.service.js";
@@ -22,7 +21,7 @@ import { ScientificDocumentsModule } from "./scientific-documents/scientific-doc
 import { ResearcherProfilesModule } from "./researcher-profiles/researcher-profiles.module.js";
 
 @Module({
-  imports: [AuthModule, AdminModule, ApprovalsModule, ApprovedProjectsModule, ConferencesModule, DashboardModule, FilesModule, KhqsReportsModule, NotificationsModule, ProposalIntakePeriodsModule, ResearchProposalsModule, ProposalEvaluationsModule, ResearcherProfilesModule, RegistrationModule, ScientificDocumentsModule, StudentResearchModule],
+  imports: [AuthModule, AdminModule, ApprovalsModule, ApprovedProjectsModule, DashboardModule, FilesModule, KhqsReportsModule, NotificationsModule, ProposalIntakePeriodsModule, ResearchProposalsModule, ProposalEvaluationsModule, ResearcherProfilesModule, RegistrationModule, ScientificDocumentsModule, StudentResearchModule],
   controllers: [HealthController],
   providers: [PrismaService, MinioObjectStorageService, { provide: APP_FILTER, useClass: AppExceptionFilter }]
 })

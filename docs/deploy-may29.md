@@ -127,4 +127,5 @@ curl -s http://127.0.0.1:8080/api/v1/health/ready
 ```
 
 ### Chứng chỉ TLS khi triển khai on-premise (tuỳ chọn dự phòng)
-- Trên Máy 29, TLS do Cloudflare Tunnel quản lý nên không cần chạy certbot. Nếu triển khai trực tiếp trên mạng nội bộ/Internet không qua Cloudflare Tunnel, có thể dùng `scripts/letsencrypt-init.sh` (kết hợp profile `letsencrypt`) và `scripts/check-cert-expiry.sh` để cấp và giám sát hạn chứng chỉ TLS.
+- Trên Máy 29, TLS do Cloudflare Tunnel quản lý nên không cần chạy certbot (`docker-compose.prod.yml` và `nginx/conf.d/rtms.conf` chỉ lắng nghe HTTP nội bộ cho `cloudflared`).
+- Nếu triển khai trực tiếp trên mạng nội bộ/Internet không qua Cloudflare Tunnel, cần bổ sung file compose override (mount `./certbot/www:/var/www/certbot:ro`, `./nginx/ssl:/etc/nginx/ssl:ro`, mở cổng `80`/`443`) và cấu hình nginx TLS (`listen 443 ssl`, `/.well-known/acme-challenge/`), rồi dùng `scripts/letsencrypt-init.sh` (kèm profile `letsencrypt`) và `scripts/check-cert-expiry.sh` để cấp và giám sát hạn chứng chỉ.

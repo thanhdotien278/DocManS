@@ -23,10 +23,17 @@ function createFakes({ mailFail = false } = {}) {
         }
         return { ...row };
       },
-      updateMany: async ({ where: { id, consumedAt }, data }) => {
-        const row = rows.get(id);
-        if (!row || row.consumedAt !== consumedAt) return { count: 0 };
-        Object.assign(row, data);
+      updateMany: async ({ where, data }) => {
+        const row = rows.get(where.id);
+        if (!row) return { count: 0 };
+        if ("consumedAt" in where && row.consumedAt !== where.consumedAt) return { count: 0 };
+        if (where.attempts?.lt !== undefined && !(row.attempts < where.attempts.lt)) return { count: 0 };
+        if (where.sendCount !== undefined && row.sendCount !== where.sendCount) return { count: 0 };
+        if (where.lastSentAt !== undefined && row.lastSentAt?.getTime() !== where.lastSentAt.getTime()) return { count: 0 };
+        if (where.expiresAt?.gt !== undefined && !(row.expiresAt.getTime() > where.expiresAt.gt.getTime())) return { count: 0 };
+        for (const [key, value] of Object.entries(data)) {
+          row[key] = value && typeof value === "object" && "increment" in value ? row[key] + value.increment : value;
+        }
         return { count: 1 };
       },
       delete: async ({ where: { id } }) => { rows.delete(id); }
@@ -111,16 +118,85 @@ describe("xác thực hai lớp qua thư (apps/api/src/auth/login-otp.ts)", () =
     }
   });
 
-  it("gửi lại mã phải chờ 60 giây, làm mã cũ vô hiệu", async () => {
-    const { service } = createFakes();
+  it("gửi lại mã phải chờ 60 giây, làm mã cũ vô hiệu, giới hạn 5 lần và chống gửi song song/hồi sinh", async () => {
+    const { rows, sent, service } = createFakes();
     const { challengeId } = await service.start(user, {});
+    const firstCode = readCode(sent[0].html);
     await assert.rejects(() => service.resend(challengeId, async () => user), (error) => error instanceof HttpException && error.getStatus() === 429);
+
+    // Sau 60 giây: gửi lại thành công, mã cũ vô hiệu, mã mới dùng được.
+    rows.get(challengeId).lastSentAt = new Date(Date.now() - 61_000);
+    await service.resend(challengeId, async () => user);
+    assert.equal(sent.length, 2);
+    const secondCode = readCode(sent[1].html);
+    await assert.rejects(() => service.verify(challengeId, firstCode), UnauthorizedException);
+
+    // Gửi song song 2 yêu cầu tại cùng thời điểm: chỉ 1 yêu cầu chiếm được chỗ và gửi thư.
+    rows.get(challengeId).lastSentAt = new Date(Date.now() - 61_000);
+    const parallel = await Promise.allSettled([
+      service.resend(challengeId, async () => user),
+      service.resend(challengeId, async () => user)
+    ]);
+    assert.equal(parallel.filter((item) => item.status === "fulfilled").length, 1);
+    assert.equal(parallel.filter((item) => item.status === "rejected").length, 1);
+    assert.equal(sent.length, 3);
+
+    // Đổi mật khẩu (credentialVersion tăng) thì không resend được challenge cũ.
+    rows.get(challengeId).lastSentAt = new Date(Date.now() - 61_000);
+    await assert.rejects(() => service.resend(challengeId, async () => ({ ...user, credentialVersion: 4 })), UnauthorizedException);
+
+    // Quá 5 lần gửi bị chặn 429.
+    rows.get(challengeId).sendCount = 5;
+    await assert.rejects(() => service.resend(challengeId, async () => user), (error) => error instanceof HttpException && error.getStatus() === 429);
+
+    // Lượt đã sai đủ 5 lần không thể hồi sinh bằng resend; mã mới ở lượt khác mới dùng được.
+    const { challengeId: exhaustedId } = await service.start(user, {});
+    for (let i = 0; i < 5; i += 1) await assert.rejects(() => service.verify(exhaustedId, "000000"), UnauthorizedException);
+    rows.get(exhaustedId).lastSentAt = new Date(Date.now() - 61_000);
+    await assert.rejects(() => service.resend(exhaustedId, async () => user), UnauthorizedException);
+
+    assert.equal((await service.verify(challengeId, readCode(sent[2].html))).userId, "u1");
+    void secondCode;
   });
 
   it("mã hoặc lượt không hợp lệ đều trả cùng lỗi, không đụng CSDL với id quá dài", async () => {
     const { service } = createFakes();
     await assert.rejects(() => service.verify("khong-ton-tai", "123456"), UnauthorizedException);
     await assert.rejects(() => service.verify("x".repeat(65), "123456"), UnauthorizedException);
+  });
+
+  it("AuthService.verifyLoginOtp kiểm tra credentialVersion và chỉ đánh dấu IP tin cậy sau khi xác thực xong", async () => {
+    const prevMode = process.env.LOGIN_OTP_MODE;
+    process.env.LOGIN_OTP_MODE = "required-roles";
+    try {
+      const { sent, service: otpService } = createFakes();
+      let currentVersion = 3;
+      const store = {
+        async findUserByUsername() { return { ...user, credentialVersion: currentVersion }; },
+        async findUserById() { return { ...user, credentialVersion: currentVersion }; },
+        async createSession(userId, credentialVersion) { return { id: "s1", token: "t1", userId, credentialVersion, expiresAt: new Date(Date.now() + 60_000).toISOString() }; },
+        toSafeUser: (u) => ({ id: u.id, username: u.username, displayName: u.displayName, systemRole: u.systemRole, unit: u.unit, organizationScopes: [] })
+      };
+      const rateLimit = new AuthRateLimitService();
+      const passwordService = { async verifyPassword() { return true; } };
+      const auth = new AuthService({ async record() {} }, rateLimit, store, passwordService, {}, otpService);
+
+      const step1 = await auth.login({ username: "admin", password: "ok" }, { ip: "10.0.0.9" });
+      assert.ok("challenge" in step1);
+      assert.equal(rateLimit.isTrusted("10.0.0.9:admin"), false, "chưa hoàn tất 2FA thì IP chưa được đánh dấu tin cậy");
+
+      const code = readCode(sent[0].html);
+      currentVersion = 4;
+      await assert.rejects(() => auth.verifyLoginOtp({ challengeId: step1.challenge.challengeId, code }, { ip: "10.0.0.9" }), UnauthorizedException);
+
+      currentVersion = 3;
+      const step2 = await auth.login({ username: "admin", password: "ok" }, { ip: "10.0.0.9" });
+      await auth.verifyLoginOtp({ challengeId: step2.challenge.challengeId, code: readCode(sent[1].html) }, { ip: "10.0.0.9" });
+      assert.equal(rateLimit.isTrusted("10.0.0.9:admin"), true);
+    } finally {
+      if (prevMode === undefined) delete process.env.LOGIN_OTP_MODE;
+      else process.env.LOGIN_OTP_MODE = prevMode;
+    }
   });
 
   it("AuthService.setLoginOtpEnabled không cho vai trò bắt buộc tắt 2FA và yêu cầu email khi bật", async () => {
