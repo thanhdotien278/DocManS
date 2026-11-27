@@ -7,7 +7,7 @@ name: CI
 
 on:
   push:
-    branches: [DocManS, "feat/**", "fix/**", "chore/**"]
+    branches: [main, "feat/**", "fix/**", "chore/**"]
   pull_request:
   workflow_dispatch:
 

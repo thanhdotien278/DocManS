@@ -9,7 +9,7 @@
 > `tuan/DocManS`, chưa merge vào `DocManS`). Khi mâu thuẫn, mục 7 của file này thắng.
 >
 > Các tài liệu liên quan trong `docs/` đã được đồng bộ sang mô hình 10 vai trò ngày
-> 18/10/2026. Code và seed trên nhánh `DocManS` đã có đủ 10 mã vai trò, nhưng PGĐ-KH, PP,
+> 18/10/2026. Code và seed trên nhánh `main` đã có đủ 10 mã vai trò, nhưng PGĐ-KH, PP,
 > TB chưa có quyền nghiệp vụ (xem [`development/auth-seed-users.md`](development/auth-seed-users.md)).
 >
 > **Cập nhật 17/11/2026 — D-045, vai trò thứ 11 `STUDENT_USER` (SV).** SV chỉ dùng phân hệ Sinh viên
@@ -522,9 +522,8 @@ assignment opens `under_review`. Invalid or unresolved context denies.
 
 #### 9.4.1 Read-Scope Contract
 
-This table is a contract, not a completion claim; see the
-[Proposal Review & Approval plan](../_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/implementation-plan.md)
-for implementation gaps.
+This table is a contract, not a completion claim; implementation gaps are
+tracked in [GitHub issues](https://github.com/thanhdotien278/DocManS/issues).
 
 | Rule | Decision | Where |
 | --- | --- | --- |
@@ -689,7 +688,7 @@ by unit scope. The full action table is in the section "Sinh viên NCKH" at the 
 
 - This file is the source of truth for permission implementation; §7 wins on conflict.
 - The ten system role codes are those in §2 (`packages/permissions/src/system-roles.js`
-  on `tuan/DocManS`). The `DocManS` branch has all ten codes; PGĐ-KH, PP and TB have
+  on `tuan/DocManS`). The `main` branch has all ten codes; PGĐ-KH, PP and TB have
   no business permissions yet. An eleventh code, `STUDENT_USER`, was added
   on 2026-11-17 for Sinh viên NCKH only (D-045).
 - Backend policies combine system role, unit scope, record relationship, assignment,

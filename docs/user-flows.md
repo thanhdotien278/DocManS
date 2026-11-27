@@ -339,8 +339,7 @@ flowchart TD
 ## 6. Trạng thái cốt lõi
 
 Các trạng thái dưới đây ánh xạ vào vòng đời đề tài 9 bước, 2 giai đoạn (D-033)
-theo bảng duy nhất trong `_bmad-output/architecture.md` → "Topic Lifecycle Step
-Mapping (D-033)". Yêu cầu bổ sung chỉ phát sinh ở bước 3 (kiểm tra đầy đủ).
+theo quyết định D-033. Yêu cầu bổ sung chỉ phát sinh ở bước 3 (kiểm tra đầy đủ).
 
 ### Đề xuất
 
