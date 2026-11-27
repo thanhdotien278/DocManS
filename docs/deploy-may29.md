@@ -1,12 +1,12 @@
 # Hướng dẫn triển khai & tự động cập nhật DocManS trên Máy 29
 
-Tài liệu này mô tả cách chạy DocManS trên **Máy 29 (Linux/Ubuntu + Docker)**, công khai qua tên miền **https://khqs.thanhdotien.com** bằng **Cloudflare Tunnel**, và tự động cập nhật theo nhánh `main` trên GitHub (`thanhdotien278/DocManS`).
+Tài liệu này mô tả cách chạy DocManS trên **Máy 29 (Linux/Ubuntu + Docker)**, công khai qua tên miền của bạn (ví dụ **https://docmans.example.org**) bằng **Cloudflare Tunnel**, và tự động cập nhật theo nhánh `main` trên GitHub (`thanhdotien278/DocManS`).
 
 ## 1. Kiến trúc triển khai
 
 - **GitHub (`origin/main`)**: nguồn code chính. Mọi thay đổi đẩy lên nhánh `main` sẽ tự động được kéo về Máy 29.
 - **Máy 29 (`docker-compose.prod.yml`)**: chạy 6 container (`postgres`, `minio`, `api`, `web`, `nginx`, `cloudflared`). Không cần mở port ra ngoài Internet.
-- **Cloudflare Tunnel (`khqs-docmans`)**: định tuyến `https://khqs.thanhdotien.com` trực tiếp vào `http://nginx:80` trong mạng nội bộ Docker.
+- **Cloudflare Tunnel**: định tuyến `https://docmans.example.org` trực tiếp vào `http://nginx:80` trong mạng nội bộ Docker.
 
 ## 2. Cài đặt lần đầu trên Máy 29
 
@@ -26,10 +26,13 @@ cp .env.prod.example .env.prod
 nano .env.prod
 ```
 
+Đặt tên miền của bạn (bắt buộc, `docker compose` sẽ báo lỗi nếu thiếu):
+- `WEB_ORIGIN`, `NEXT_PUBLIC_API_BASE_URL`, `ACCOUNT_LOGIN_URL`: thay `docmans.example.org` bằng tên miền thật.
+
 Cập nhật các giá trị bí mật bắt buộc:
 - `POSTGRES_PASSWORD`: mật khẩu mạnh cho PostgreSQL.
 - `MINIO_SECRET_KEY`: mật khẩu mạnh cho MinIO (tối thiểu 8 ký tự).
-- `CLOUDFLARE_TUNNEL_TOKEN`: token của tunnel `khqs-docmans` trên Cloudflare.
+- `CLOUDFLARE_TUNNEL_TOKEN`: token của tunnel của bạn trên Cloudflare.
 - `SEED_ADMIN_PASSWORD`: mật khẩu khởi tạo cho tài khoản `admin` (tối thiểu 12 ký tự, chỉ dùng khi chạy seed lần đầu).
 
 ### Bước 3: Build và khởi chạy lần đầu
@@ -51,7 +54,7 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml ps
 docker compose --env-file .env.prod -f docker-compose.prod.yml exec api npm run prisma:seed
 ```
 
-Sau khi hoàn tất, truy cập `https://khqs.thanhdotien.com` để kiểm tra.
+Sau khi hoàn tất, truy cập `https://docmans.example.org` để kiểm tra.
 
 ## 3. Bật tự động cập nhật theo GitHub (mỗi 2 phút)
 
@@ -83,7 +86,7 @@ git merge <nhanh-tinh-nang>   # hoặc commit trực tiếp
 git push origin main
 ```
 
-Trong vòng tối đa 2 phút, Máy 29 sẽ tự cập nhật và phản ánh thay đổi trên `https://khqs.thanhdotien.com`.
+Trong vòng tối đa 2 phút, Máy 29 sẽ tự cập nhật và phản ánh thay đổi trên `https://docmans.example.org`.
 
 ## 5. Lệnh vận hành & kiểm tra sự cố
 
