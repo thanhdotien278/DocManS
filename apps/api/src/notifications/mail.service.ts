@@ -64,6 +64,36 @@ export class MailService {
     } finally { transporter.close(); }
   }
 
+  /** Gửi email HTML tuỳ chọn (trả về null nếu chưa cấu hình SMTP để caller ghi nhận trạng thái skipped). */
+  async sendMail(to: string, subject: string, html: string) {
+    const host = process.env.SMTP_HOST?.trim();
+    const port = Number(process.env.SMTP_PORT ?? "587");
+    const from = process.env.SMTP_FROM?.trim();
+    if (!host || !from || /[\r\n]/.test(from) || !Number.isInteger(port) || port < 1 || port > 65535) {
+      return null;
+    }
+    const localHost = /^(localhost|127\.0\.0\.1|::1)$/i.test(host);
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: process.env.SMTP_SECURE === "true" || port === 465,
+      requireTLS: !localHost,
+      auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD ?? "" } : undefined,
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 10000,
+      disableFileAccess: true,
+      disableUrlAccess: true
+    });
+    try {
+      const result = await transporter.sendMail({ from, to, subject, html });
+      if (!result.accepted.length) throw new Error("MAIL_NOT_ACCEPTED");
+      return result;
+    } finally {
+      transporter.close();
+    }
+  }
+
   passwordResetUrl(token: string) {
     const url = new URL("/password-reset", this.configuration().loginUrl);
     url.searchParams.set("token", token);

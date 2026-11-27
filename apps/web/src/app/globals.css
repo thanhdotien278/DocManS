@@ -27,6 +27,8 @@
   --neutral-soft: #eef2ef;
   --shadow: 0 8px 20px rgba(15, 63, 42, 0.06);
   --radius: 8px;
+  --z-overlay: 1000;
+  --z-confirm: 10000;
   color-scheme: light;
 }
 
@@ -4023,4 +4025,124 @@ button.hbar-row:focus-visible {
   .heatmap-cell {
     transition: none;
   }
+}
+
+.dash-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.dash-tile {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  background: var(--surface);
+  text-align: left;
+  font: inherit;
+}
+
+.dash-tile-label {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.dash-tile-value {
+  color: var(--text-primary);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.dash-tile-meta {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .dash-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Hộp thoại dùng chung (components/ui/modal-dialog.tsx & confirm-dialog.tsx). */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(16, 37, 27, 0.35);
+}
+
+.modal-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(640px, 100%);
+  max-height: calc(100vh - 32px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 16px 40px rgba(15, 37, 27, 0.22);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 18px;
+}
+
+.modal-header h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+}
+
+.modal-body {
+  display: grid;
+  gap: 14px;
+  overflow: auto;
+  padding: 16px 18px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding: 12px 18px;
+}
+
+.modal-backdrop:has(.confirm-message) {
+  z-index: var(--z-confirm);
+}
+
+.modal-panel:has(.confirm-message) {
+  width: min(480px, 100%);
+}
+
+.confirm-message {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.modal-footer .button.danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #ffffff;
 }

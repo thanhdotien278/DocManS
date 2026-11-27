@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/csrf";
 import { getApiBaseUrl } from "@/lib/session";
 
 /** Báo cáo kết quả công tác KHQS theo kỳ: /api/v1/khqs-reports/:year/:period (apps/api/src/khqs-reports). */
@@ -60,7 +61,7 @@ const path = (year: number, period: KhqsPeriod) => `/khqs-reports/${year}/${peri
 async function requestJson<T>(endpoint: string, init: RequestInit | undefined, fallback: string): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
+    response = await apiFetch(`${getApiBaseUrl()}${endpoint}`, {
       ...init,
       credentials: "include",
       headers: {

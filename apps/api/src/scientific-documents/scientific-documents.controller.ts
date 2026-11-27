@@ -2,7 +2,8 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, Upl
 import { FileInterceptor } from "@nestjs/platform-express";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import { buildContentDisposition } from "../modules/files/files.controller.js";
-import { defaultFileConfig, streamToBuffer } from "../modules/files/files.service.js";
+import { sendObjectContent, type ObjectContentResponse } from "../modules/files/send-object-content.js";
+import { uploadInterceptorOptions } from "../modules/files/upload-limits.js";
 import type { RequestWithCurrentUser } from "../proposals-shared/proposal-types.js";
 import {
   createScientificDocumentPipe,
@@ -15,13 +16,10 @@ import {
 } from "./scientific-documents.dto.js";
 import { ScientificDocumentsService } from "./scientific-documents.service.js";
 
-type DownloadResponse = {
-  setHeader(name: string, value: string): void;
-  send(content: Buffer): void;
-};
+type DownloadResponse = ObjectContentResponse;
 
 // Chặn ngay khi body đang truyền, tệp quá cỡ không bị nạp hết vào bộ nhớ.
-const uploadInterceptor = () => FileInterceptor("file", { limits: { fileSize: defaultFileConfig().maxFileSizeBytes, files: 1 } });
+const uploadInterceptor = () => FileInterceptor("file", uploadInterceptorOptions());
 
 @Controller("api/v1/scientific-documents")
 @UseGuards(SessionAuthGuard)
@@ -67,10 +65,8 @@ export class ScientificDocumentsController {
   @Get(":id/download")
   async downloadDocument(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Res() response: DownloadResponse) {
     const file = await this.service.downloadDocument(request.currentUser!, id);
-    const content = await streamToBuffer(file.stream);
     response.setHeader("Content-Type", file.mimeType);
-    response.setHeader("Content-Length", String(content.length));
     response.setHeader("Content-Disposition", buildContentDisposition(file.fileName));
-    response.send(content);
+    await sendObjectContent(response, file.stream);
   }
 }

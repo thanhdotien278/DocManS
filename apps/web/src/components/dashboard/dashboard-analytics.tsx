@@ -17,6 +17,7 @@ import {
 } from "@/components/dashboard/viz";
 import { UnitHealthHeatmap } from "@/components/dashboard/unit-health-heatmap";
 import { DrillDownPanel, type DrillDownSelection } from "@/components/dashboard/drill-down-panel";
+import { DashboardConferenceSection } from "@/components/conferences/conference-stats";
 import { BUDGET_COLUMN, BucketChartCard, DrillLink, OfficerTable, type OfficerSummaryRow } from "@/components/dashboard/dashboard-cards";
 import {
   downloadDrillDownExcel,
@@ -725,6 +726,8 @@ export function DashboardAnalytics() {
           </div>
         </>
       ) : null}
+
+      <DashboardConferenceSection year={filters.year} unitId={filters.unitId} />
 
       <DrillDownPanel selection={drillDown} onClose={() => setDrillDown(null)} />
     </div>

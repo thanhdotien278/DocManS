@@ -6,7 +6,53 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { PasswordInput } from "@/components/auth/password-input";
-import { changePassword, completeAccountActivation, completePasswordReset, requestPasswordReset } from "@/lib/auth-api";
+import { useSession } from "@/components/auth/session-provider";
+import { changePassword, completeAccountActivation, completePasswordReset, requestPasswordReset, setLoginOtpEnabled } from "@/lib/auth-api";
+
+/** Xác thực hai lớp qua thư: vai trò bắt buộc chỉ xem trạng thái; vai trò khác tự bật, tắt. */
+export function LoginOtpSettings() {
+  const { account, refreshCurrentUser } = useSession();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const state = account?.loginOtp;
+  if (!state || account?.mustChangePassword) return null;
+  return (
+    <div className="admin-form">
+      <h2>Xác thực hai lớp</h2>
+      <p className="record-meta">
+        {state.modeActive === false
+          ? "Chính sách xác thực hai lớp qua thư đang tạm tắt trên máy chủ (LOGIN_OTP_MODE=off)."
+          : state.required
+            ? "Vai trò của đồng chí bắt buộc xác thực hai lớp: mỗi lần đăng nhập, hệ thống gửi mã 6 chữ số tới thư công vụ."
+            : state.enabled
+              ? "Đang bật: mỗi lần đăng nhập, hệ thống gửi mã 6 chữ số tới thư công vụ của đồng chí."
+              : "Đang tắt. Bật để mỗi lần đăng nhập cần thêm mã gửi tới thư công vụ, kể cả khi mật khẩu bị lộ."}
+      </p>
+      {error ? <p className="form-error" role="alert">{error}</p> : null}
+      {state.required ? null : (
+        <button
+          className="button"
+          disabled={busy}
+          type="button"
+          onClick={async () => {
+            setError("");
+            setBusy(true);
+            try {
+              await setLoginOtpEnabled(!state.enabled);
+              await refreshCurrentUser();
+            } catch (cause) {
+              setError(cause instanceof Error ? cause.message : "Không thể thay đổi xác thực hai lớp.");
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? "Đang xử lý" : state.enabled ? "Tắt xác thực hai lớp" : "Bật xác thực hai lớp"}
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function ChangePasswordForm() {
   const router = useRouter(); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
@@ -35,7 +81,7 @@ const PASSWORD_RULES: { label: string; test: (value: string) => boolean }[] = [
 
 export function ResetPasswordForm() {
   const router = useRouter(); const [activationToken, setActivationToken] = useState(""); const [linkToken, setLinkToken] = useState(""); const [ready, setReady] = useState(false); const [error, setError] = useState(""); const [confirmError, setConfirmError] = useState(""); const [busy, setBusy] = useState(false); const [pendingApproval, setPendingApproval] = useState(false); const [succeeded, setSucceeded] = useState(false); const [newPassword, setNewPassword] = useState("");
-  useEffect(() => { const params = new URLSearchParams(window.location.search); const token = params.get("token") ?? ""; if (params.get("mode") === "activation") setActivationToken(token); else setLinkToken(token); setReady(true); }, []);
+  useEffect(() => { const params = new URLSearchParams(window.location.hash.length > 1 ? window.location.hash.slice(1) : window.location.search); const token = params.get("token") ?? ""; if (params.get("mode") === "activation") setActivationToken(token); else setLinkToken(token); setReady(true); }, []);
   useEffect(() => { if (!succeeded) return; const timer = setTimeout(() => router.replace("/login"), 5000); return () => clearTimeout(timer); }, [succeeded, router]);
   const isActivation = Boolean(activationToken);
   const footer = <Link href="/login">Về trang đăng nhập</Link>;

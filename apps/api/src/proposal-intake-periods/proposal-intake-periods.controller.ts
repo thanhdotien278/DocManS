@@ -1,6 +1,7 @@
 import { FilesInterceptor } from "@nestjs/platform-express";
 import { buildContentDisposition } from "../modules/files/files.controller.js";
-import { streamToBuffer } from "../modules/files/files.service.js";
+import { sendObjectContent, type ObjectContentResponse } from "../modules/files/send-object-content.js";
+import { uploadInterceptorOptions } from "../modules/files/upload-limits.js";
 import type { IntakeTemplateUpload } from "./proposal-intake-periods.service.js";
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, UploadedFiles, UseInterceptors, UseGuards } from "@nestjs/common";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
@@ -18,7 +19,7 @@ import { ProposalIntakePeriodsService } from "./proposal-intake-periods.service.
 // Enforced while the body streams in, so an oversized or over-numerous upload is never buffered in memory.
 // File mẫu của đợt tiếp nhận không theo giới hạn tải lên chung (có mẫu trên 10 MB) nên dùng trần riêng.
 const MAX_TEMPLATE_FILES = 30;
-const TEMPLATE_UPLOAD_OPTIONS = { limits: { fileSize: 50 * 1024 * 1024 } };
+const TEMPLATE_UPLOAD_OPTIONS = uploadInterceptorOptions(50 * 1024 * 1024, MAX_TEMPLATE_FILES);
 
 @Controller("api/v1/proposal-intake-periods")
 @UseGuards(SessionAuthGuard)
@@ -54,11 +55,11 @@ export class ProposalIntakePeriodsController {
   }
 
   @Get(":id/templates/:fileId")
-  async downloadTemplate(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Param("fileId") fileId: string, @Res() response: { setHeader(name: string, value: string): void; send(content: Buffer): void }) {
+  async downloadTemplate(@Req() request: RequestWithCurrentUser, @Param("id") id: string, @Param("fileId") fileId: string, @Res() response: ObjectContentResponse) {
     const file = await this.intakePeriodsService.downloadTemplate(request.currentUser!, id, fileId);
     response.setHeader("Content-Type", file.mimeType);
     response.setHeader("Content-Disposition", buildContentDisposition(file.fileName));
-    response.send(await streamToBuffer(file.content));
+    await sendObjectContent(response, file.content);
   }
 
   @Post(":id/open")

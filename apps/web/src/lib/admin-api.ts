@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/csrf";
 import { getApiBaseUrl } from "@/lib/session";
 
 export type UserPosition = { organizationUnitId: string; unitName?: string; positionCode: string; label?: string };
@@ -11,6 +12,8 @@ export type AdminUser = {
   status: string;
   systemRole: string | null;
   unit: string;
+  /** Thư công vụ: đăng nhập bằng thư và nhận mã xác thực hai lớp. */
+  credentialEmail?: string | null;
   organizationUnitId?: string;
   /** Chức danh tại đơn vị (chỉ để hiển thị). */
   positions?: UserPosition[];
@@ -60,7 +63,7 @@ export type NotificationTemplate = {
 };
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+  const response = await apiFetch(`${getApiBaseUrl()}${path}`, {
     ...init,
     credentials: "include",
     headers: {
@@ -136,6 +139,7 @@ export async function createAdminUser(input: {
   password: string;
   systemRole: string;
   organizationUnitId: string;
+  credentialEmail?: string;
 }) {
   return requestJson<{ user: AdminUser }>("/users", {
     method: "POST",
@@ -167,6 +171,7 @@ export async function updateAdminUser(
     displayName: string;
     systemRole: string;
     organizationUnitId: string;
+    credentialEmail?: string;
   }
 ) {
   return requestJson<{ user: AdminUser }>(`/users/${userId}`, {

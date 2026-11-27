@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ClipboardList, Coins, Timer } from "lucide-react";
+import { ClipboardList, Coins, Presentation, Timer } from "lucide-react";
 import { useSession } from "@/components/auth/session-provider";
+import { ConferenceReportPanel } from "@/components/conferences/conference-stats";
 import { BudgetReportPanel } from "@/components/reports/budget-report-panel";
 import { KhqsReportPanel } from "@/components/reports/khqs-report-panel";
 import { ProgressReportPanel } from "@/components/reports/progress-report-panel";
@@ -10,7 +11,7 @@ import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 
-type ReportTab = "budget" | "progress" | "khqs";
+type ReportTab = "budget" | "progress" | "khqs" | "conferences";
 
 const KHQS_REPORT_ROLES = [
   "LEADERSHIP_APPROVAL_AUTHORITY",
@@ -41,6 +42,11 @@ const TAB_TITLES: Record<ReportTab, { crumb: string; title: string; description:
     crumb: "Kết quả công tác KHQS",
     title: "Báo cáo kết quả công tác khoa học quân sự",
     description: "Báo cáo 6 tháng đầu năm / cả năm theo mẫu Phòng KHQS gửi Cục Khoa học quân sự: văn bản báo cáo và các Biểu KQ-1 đến KQ-6, xuất Word và Excel."
+  },
+  conferences: {
+    crumb: "Hội nghị khoa học",
+    title: "Báo cáo hội nghị khoa học",
+    description: "Số hội nghị, tỉ lệ nhận lời, tỉ lệ nộp tóm tắt và toàn văn, báo cáo viên theo đơn vị, theo từng hội nghị và từng phiên."
   }
 };
 
@@ -53,7 +59,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     const tab = new URLSearchParams(window.location.search).get("tab");
-    if (tab === "budget" || tab === "progress") setActiveTab(tab);
+    if (tab === "budget" || tab === "progress" || tab === "conferences") setActiveTab(tab);
     else if (tab === "khqs" && showKhqs) setActiveTab("khqs");
   }, [showKhqs]);
 
@@ -113,10 +119,18 @@ export default function ReportsPage() {
               <span>Báo cáo công tác KHQS</span>
             </button>
           ) : null}
+          <button
+            type="button"
+            className={`tab-btn ${activeTab === "conferences" ? "active" : ""}`}
+            onClick={() => setActiveTab("conferences")}
+          >
+            <Presentation size={16} aria-hidden="true" />
+            <span>Báo cáo Hội nghị khoa học</span>
+          </button>
         </nav>
       </div>
 
-      {activeTab === "budget" ? <BudgetReportPanel /> : activeTab === "progress" ? <ProgressReportPanel /> : showKhqs ? <KhqsReportPanel /> : <BudgetReportPanel />}
+      {activeTab === "budget" ? <BudgetReportPanel /> : activeTab === "progress" ? <ProgressReportPanel /> : activeTab === "conferences" ? <ConferenceReportPanel /> : showKhqs ? <KhqsReportPanel /> : <BudgetReportPanel />}
     </>
   );
 }

@@ -64,6 +64,10 @@ export function isLeadership(user?: SafeUserContext) {
   return user?.systemRole === "LEADERSHIP_APPROVAL_AUTHORITY";
 }
 
+export function isAcademyLeadership(user?: SafeUserContext) {
+  return isLeadership(user) || isScienceDeputyDirector(user);
+}
+
 export function assertCanManageIntakePeriods(user?: SafeUserContext) {
   if (!user || !isResearchManagement(user)) {
     throw new ForbiddenException({ message: "Không có quyền quản lý đợt tiếp nhận." });

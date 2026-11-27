@@ -1,8 +1,16 @@
 # Production stack for May 29 behind Cloudflare Tunnel (docmans.example.org).
 # Usage: docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
 services:
   postgres:
     image: postgres:16.15-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+    logging: *default-logging
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-docmansystem}
@@ -15,33 +23,73 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits: { memory: 2g, cpus: "1.5" }
 
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    logging: *default-logging
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}}
     volumes:
       - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits: { memory: 1g, cpus: "1" }
+
+  # Idempotent: đảm bảo bucket tồn tại và tạo tài khoản quyền giới hạn trong bucket nếu cấu hình MINIO_APP_ACCESS_KEY.
+  minio-init:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    logging: *default-logging
+    restart: "no"
+    entrypoint: ["sh", "/minio-init.sh"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-rtms-files}
+      MINIO_APP_ACCESS_KEY: ${MINIO_APP_ACCESS_KEY:-${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}}
+      MINIO_APP_SECRET_KEY: ${MINIO_APP_SECRET_KEY:-${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}}
+    volumes:
+      - ./scripts/minio-init.sh:/minio-init.sh:ro
+    depends_on:
+      minio:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits: { memory: 128m, cpus: "0.5" }
 
   api:
     build:
       context: .
       dockerfile: Dockerfile
       target: api
+    logging: *default-logging
     restart: unless-stopped
     environment:
       NODE_ENV: production
       API_PORT: 4000
+      NODE_OPTIONS: --max-old-space-size=768
+      LOG_REQUESTS: ${LOG_REQUESTS:-errors}
       DATABASE_URL: postgresql://${POSTGRES_USER:-docmansystem}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-docmansystem}?schema=public
       WEB_ORIGIN: ${WEB_ORIGIN:-https://docmans.example.org}
       ACCOUNT_LOGIN_URL: ${ACCOUNT_LOGIN_URL:-https://docmans.example.org/login}
+      APP_BASE_URL: ${WEB_ORIGIN:-https://docmans.example.org}
+      CSRF_SECRET: ${CSRF_SECRET:-}
+      # Mặc định off trên Máy 29 cho tới khi cấu hình SMTP và đủ thư công vụ; bật thành required-roles khi sẵn sàng.
+      LOGIN_OTP_MODE: ${LOGIN_OTP_MODE:-off}
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+      MINIO_ACCESS_KEY: ${MINIO_APP_ACCESS_KEY:-${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}}
+      MINIO_SECRET_KEY: ${MINIO_APP_SECRET_KEY:-${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}}
       MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-rtms-files}
       MINIO_REGION: ${MINIO_REGION:-us-east-1}
       MINIO_USE_SSL: "false"
@@ -55,11 +103,20 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    deploy:
+      resources:
+        limits: { memory: 1g, cpus: "1.5" }
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_started
+      minio-init:
+        condition: service_completed_successfully
 
   web:
     build:
@@ -69,34 +126,79 @@ services:
       args:
         NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-RTMS}
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://docmans.example.org/api/v1}
+    logging: *default-logging
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=512
       NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-RTMS}
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://docmans.example.org/api/v1}
       API_INTERNAL_BASE_URL: http://api:4000/api/v1
       WEB_ORIGIN: ${WEB_ORIGIN:-https://docmans.example.org}
+      # report-only ghi log csp_violation trước khi đổi sang enforce.
+      CSP_MODE: ${CSP_MODE:-report-only}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    deploy:
+      resources:
+        limits: { memory: 768m, cpus: "1" }
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
   nginx:
     image: nginx:1.27-alpine
+    logging: *default-logging
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/nginx-health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits: { memory: 256m, cpus: "0.5" }
     depends_on:
-      - web
-      - api
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
 
   cloudflared:
     image: cloudflare/cloudflared:latest
+    logging: *default-logging
     restart: unless-stopped
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN is required}
     depends_on:
-      - nginx
+      nginx:
+        condition: service_healthy
+
+  # Tuỳ chọn dự phòng khi triển khai on-premise cấp TLS trực tiếp (không qua Cloudflare Tunnel):
+  #   docker compose --profile letsencrypt up -d certbot
+  certbot:
+    image: certbot/certbot:v5.8.0
+    profiles: ["letsencrypt"]
+    logging: *default-logging
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["trap 'exit 0' TERM; while true; do certbot renew --webroot -w /var/www/certbot --quiet --deploy-hook 'cp -L \"$$RENEWED_LINEAGE/fullchain.pem\" \"$$RENEWED_LINEAGE/privkey.pem\" /ssl/'; sleep 43200 & wait $$!; done"]
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+      - ./nginx/ssl:/ssl
+    deploy:
+      resources:
+        limits: { memory: 256m, cpus: "0.5" }
 
 volumes:
   postgres-data:

@@ -1,10 +1,11 @@
-import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Optional, UnauthorizedException } from "@nestjs/common";
 import { MailService } from "../notifications/mail.service.js";
 import { AuditLogService } from "./audit-log.service.js";
 import { AuthRateLimitService } from "./auth-rate-limit.service.js";
 import { AuthStore, type ProfileDisplayRow } from "./auth.store.js";
 import { PasswordService } from "./password.service.js";
 import { AUTH_FAILURE_MESSAGE, AUTH_PENDING_APPROVAL_MESSAGE, type LoginRequest, type SafeUserContext } from "./auth.types.js";
+import { isLoginOtpRequiredRole, loginOtpApplies, LoginOtpService, type LoginChallengeResult } from "./login-otp.js";
 import { validateNewPassword } from "./password-request.pipe.js";
 
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
@@ -50,7 +51,8 @@ export class AuthService {
     private readonly rateLimit: AuthRateLimitService,
     private readonly authStore: AuthStore,
     private readonly passwordService: PasswordService,
-    private readonly mailService: MailService
+    private readonly mailService: MailService,
+    @Optional() private readonly loginOtp?: LoginOtpService
   ) {}
 
   async login(input: LoginRequest, context: RequestContext) {
@@ -94,7 +96,111 @@ export class AuthService {
     }
 
     this.rateLimit.reset(rateLimitKey);
-    this.rateLimit.markTrusted(rateLimitKey);
+
+    // Xác thực hai lớp: mật khẩu đúng chưa cấp phiên, gửi mã qua thư và chờ /auth/login/verify (auth/login-otp.ts).
+    if (loginOtpApplies(user)) {
+      const challenge = await this.otp().start(user, context).catch(async (error) => {
+        await this.auditLog.record({
+          action: "login-otp-send",
+          result: "failure",
+          actorId: user.id,
+          targetEntity: "auth-session",
+          targetEntityId: user.id,
+          username: user.username,
+          ip: context.ip,
+          userAgent: context.userAgent,
+          reason: (error as { response?: { code?: string } })?.response?.code ?? "send_failed"
+        });
+        throw error;
+      });
+      await this.auditLog.record({
+        action: "login-otp-send",
+        result: "success",
+        actorId: user.id,
+        targetEntity: "login-challenge",
+        targetEntityId: challenge.challengeId,
+        username: user.username,
+        ip: context.ip,
+        userAgent: context.userAgent
+      });
+      return { challenge };
+    }
+
+    return this.openSession(user, context);
+  }
+
+  /** Nhập đúng mã thì cấp phiên; phiên chỉ cấp được khi mật khẩu chưa đổi từ lúc gửi mã (credentialVersion). */
+  async verifyLoginOtp(input: { challengeId?: unknown; code?: unknown }, context: RequestContext) {
+    const challengeId = typeof input.challengeId === "string" ? input.challengeId : "";
+    const code = typeof input.code === "string" ? input.code.trim() : "";
+    let verified: { userId: string; credentialVersion: number };
+    try {
+      verified = await this.otp().verify(challengeId, code);
+    } catch (error) {
+      await this.auditLog.record({
+        action: "login-otp-verify",
+        result: "failure",
+        targetEntity: "login-challenge",
+        targetEntityId: challengeId.slice(0, 64) || "unknown",
+        ip: context.ip,
+        userAgent: context.userAgent,
+        reason: (error as { response?: { code?: string } })?.response?.code ?? "invalid"
+      });
+      throw error;
+    }
+    const user = await this.authStore.findUserById(verified.userId);
+    if (!user || user.status !== "active" || user.credentialVersion !== verified.credentialVersion) {
+      throw new UnauthorizedException({ code: "LOGIN_OTP_INVALID", message: "Lượt đăng nhập không còn hiệu lực. Vui lòng đăng nhập lại." });
+    }
+    return this.openSession(user, context, "email-otp");
+  }
+
+  async resendLoginOtp(input: { challengeId?: unknown }, context: RequestContext): Promise<LoginChallengeResult> {
+    const challengeId = typeof input.challengeId === "string" ? input.challengeId : "";
+    const challenge = await this.otp().resend(challengeId, (userId) => this.authStore.findUserById(userId));
+    await this.auditLog.record({
+      action: "login-otp-resend",
+      result: "success",
+      targetEntity: "login-challenge",
+      targetEntityId: challengeId,
+      ip: context.ip,
+      userAgent: context.userAgent
+    });
+    return challenge;
+  }
+
+  /** Tự bật / tắt xác thực hai lớp. Vai trò bắt buộc không tắt được; bật cần có thư công vụ. */
+  async setLoginOtpEnabled(userId: string, enabled: unknown, context: RequestContext) {
+    if (typeof enabled !== "boolean") throw new BadRequestException({ message: "Giá trị bật/tắt không hợp lệ." });
+    const user = await this.authStore.findUserById(userId);
+    if (!user) throw new UnauthorizedException({ message: "Yêu cầu đăng nhập để tiếp tục." });
+    if (!enabled && isLoginOtpRequiredRole(user.systemRole)) {
+      throw new ForbiddenException({ code: "LOGIN_OTP_REQUIRED", message: "Vai trò của đồng chí bắt buộc xác thực hai lớp, không tắt được." });
+    }
+    if (enabled && !user.credentialEmail) {
+      throw new BadRequestException({ code: "LOGIN_OTP_EMAIL_MISSING", message: "Tài khoản chưa có thư công vụ để nhận mã. Liên hệ quản trị hệ thống để bổ sung." });
+    }
+    await this.authStore.setLoginOtpEnabled(userId, enabled);
+    await this.auditLog.record({
+      action: enabled ? "login-otp-enable" : "login-otp-disable",
+      result: "success",
+      actorId: userId,
+      targetEntity: "user",
+      targetEntityId: userId,
+      username: user.username,
+      ip: context.ip,
+      userAgent: context.userAgent
+    });
+    return { loginOtp: this.authStore.toSafeUser({ ...user, loginOtpEnabled: enabled }).loginOtp };
+  }
+
+  private otp() {
+    if (!this.loginOtp) throw new Error("LoginOtpService chưa được cấu hình.");
+    return this.loginOtp;
+  }
+
+  private async openSession(user: NonNullable<Awaited<ReturnType<AuthStore["findUserById"]>>>, context: RequestContext, method = "password") {
+    this.rateLimit.markTrusted(this.createRateLimitKey(user.username, context.ip));
     const session = await this.authStore.createSession(user.id, user.credentialVersion);
     const safeUser = this.authStore.toSafeUser(user);
 
@@ -106,7 +212,8 @@ export class AuthService {
       targetEntityId: session.id,
       username: user.username,
       ip: context.ip,
-      userAgent: context.userAgent
+      userAgent: context.userAgent,
+      reason: method === "password" ? undefined : method
     });
 
     return { session, user: safeUser };

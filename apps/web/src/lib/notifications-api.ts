@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/csrf";
 import { getApiBaseUrl } from "@/lib/session";
 
 /** Thông báo trong ứng dụng (Story 11.1). Backend đã lọc theo quyền hiện hành; link chỉ để điều hướng. */
@@ -19,7 +20,7 @@ export const NOTIFICATIONS_CHANGED_EVENT = "notifications-changed";
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${getApiBaseUrl()}${path}`, { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...init?.headers } });
+    response = await apiFetch(`${getApiBaseUrl()}${path}`, { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...init?.headers } });
   } catch {
     throw new Error("Không kết nối được tới máy chủ. Kiểm tra kết nối và thử lại.");
   }
