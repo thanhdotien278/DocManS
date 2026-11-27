@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Auto-update script for May 29: pulls origin/DocManS and rebuilds/restarts only when new commits arrive.
+# Auto-update script for May 29: pulls origin/main and rebuilds/restarts only when new commits arrive.
 # Usage:
-#   ./scripts/deploy-may29.sh           # update only if origin/DocManS has new commits
+#   ./scripts/deploy-may29.sh           # update only if origin/main has new commits
 #   ./scripts/deploy-may29.sh --force   # force rebuild and restart even without new commits
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BRANCH="${DEPLOY_BRANCH:-DocManS}"
+BRANCH="${DEPLOY_BRANCH:-main}"
 ENV_FILE="${REPO_DIR}/.env.prod"
 COMPOSE_FILE="${REPO_DIR}/docker-compose.prod.yml"
 LOCK_FILE="/tmp/docmans-deploy.lock"
