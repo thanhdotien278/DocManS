@@ -3,6 +3,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable 
 import ExcelJS from "exceljs";
 import { AuditLogService } from "../auth/audit-log.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
+import { sanitizeSpreadsheetText } from "../dashboard/dashboard-export.service.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import {
   canConference,
@@ -33,6 +34,7 @@ import { CONFERENCE_STATUS_LABELS, CONFERENCE_TRANSITIONS, type ConferenceStatus
 import { assertConferenceDates, type AssignOfficerDto, type ConferenceInfoDto, type UpdateConferenceDto, type VersionedReasonDto } from "./conferences.dto.js";
 
 const INFO_FIELDS = ["title", "description", "level", "hostOrganizationUnitId", "location", "startsAt", "endsAt", "responseDeadline", "abstractDeadline", "fullPaperDeadline"] as const;
+const PROGRAM_SNAPSHOT_FIELDS: readonly string[] = ["title", "location", "startsAt", "endsAt"];
 
 const MANAGEMENT_DETAIL_INCLUDE = {
   ...CONFERENCE_INCLUDE,
@@ -42,7 +44,7 @@ const MANAGEMENT_DETAIL_INCLUDE = {
       user: { select: { id: true, displayName: true, status: true, unit: true } },
       paper: {
         include: {
-          versions: { select: { id: true, kind: true, versionNumber: true, title: true, abstractText: true, submittedAt: true, file: { select: { id: true, originalFileName: true, sizeBytes: true } } }, orderBy: { versionNumber: "desc" } },
+          versions: { select: { id: true, kind: true, versionNumber: true, title: true, abstractText: true, authors: true, submittedAt: true, file: { select: { id: true, originalFileName: true, sizeBytes: true } } }, orderBy: { versionNumber: "desc" } },
           revisionRequests: { orderBy: { requestedAt: "desc" }, include: { requestedBy: { select: { displayName: true } } } }
         }
       }
@@ -62,6 +64,9 @@ const PAPER_STATUS_LABELS: Record<string, string> = {
   scheduled: "Đã xếp lịch",
   withdrawn: "Đã rút"
 };
+
+/** Ô văn bản trong Excel xuất ra: dữ liệu do khách nhập phải qua lớp chống formula injection và ký tự XML lỗi, như dashboard. */
+const cellText = (value: string | null | undefined) => sanitizeSpreadsheetText(value ?? "");
 
 const INVITATION_STATUS_LABELS: Record<string, string> = { draft: "Chưa gửi", sent: "Chờ trả lời", accepted: "Đã nhận lời", declined: "Từ chối", revoked: "Đã huỷ" };
 
@@ -159,6 +164,8 @@ export class ConferencesService {
     const after = Object.fromEntries(changed.map((key) => [key, iso(input[key]) || null]));
     const invitationsSent = await this.prisma.conferenceMailing.count({ where: { conferenceId: id } });
     await this.prisma.$transaction(async (tx) => {
+      // Bản chương trình đã chốt có ghi tên, địa điểm, thời gian hội nghị: đổi các trường này thì cần chốt lại.
+      if (changed.some((key) => PROGRAM_SNAPSHOT_FIELDS.includes(key)) && (await tx.conferenceProgramVersion.count({ where: { conferenceId: id } }))) data.programChangedAt = new Date();
       if (!(await guardedConferenceUpdate(tx, conference, input.version, data))) stale();
       await recordConferenceEvent(tx, { conferenceId: id, actorId: actor.id, action: "update", fromStatus: conference.status, toStatus: conference.status, facts: { fields: [...changed], before, after } });
     });
@@ -278,7 +285,7 @@ export class ConferencesService {
       if (!full) conferenceNotFound();
       return { mode: "management" as const, conference: this.presentManagement(actor, full) };
     }
-    const invitation = await this.prisma.conferenceInvitation.findFirst({ where: { conferenceId: id, userId: actor.id } });
+    const invitation = await this.prisma.conferenceInvitation.findFirst({ where: { conferenceId: id, userId: actor.id, status: { in: ["sent", "accepted"] } } });
     if (!isConferenceParticipant(actor, invitation)) conferenceNotFound();
     return { mode: "participant" as const, conference: this.presentInfo(conference) };
   }
@@ -332,6 +339,11 @@ export class ConferencesService {
     }));
     const events = conference.events.map((event) => ({ id: event.id, action: event.action, fromStatus: event.fromStatus, toStatus: event.toStatus, reason: event.reason, facts: event.facts, actor: event.actor, paperId: event.paperId, invitationId: event.invitationId, createdAt: event.createdAt }));
     return { ...this.presentSummary(actor, conference), invitations, mailings, events };
+  }
+
+  /** Người xem có tạo được hội nghị không (Trưởng phòng còn đơn vị chủ trì đang hoạt động): giao diện chỉ hiển thị theo giá trị này. */
+  async viewerCanCreate(actor: SafeUserContext) {
+    return canCreateConference(actor) && (await this.hostUnits(actor)).length > 0;
   }
 
   /** Đơn vị chủ trì Trưởng phòng được chọn khi tạo hội nghị. */
@@ -389,15 +401,15 @@ export class ConferencesService {
       { header: "Đã xếp lịch", key: "scheduled", width: 12 }, { header: "Số phiên", key: "sessions", width: 10 }
     ];
     header(sheet);
-    result.perConference.forEach((row, index) => sheet.addRow({ ...row, stt: index + 1, startsAt: day(row.startsAt), host: row.hostUnitName, status: CONFERENCE_STATUS_LABELS[row.status as ConferenceStatus] ?? row.status, acceptanceRate: percent(row.acceptanceRate), fullPaperRate: percent(row.fullPaperRate) }));
+    result.perConference.forEach((row, index) => sheet.addRow({ ...row, stt: index + 1, code: cellText(row.code), title: cellText(row.title), startsAt: day(row.startsAt), host: cellText(row.hostUnitName), status: CONFERENCE_STATUS_LABELS[row.status as ConferenceStatus] ?? row.status, acceptanceRate: percent(row.acceptanceRate), fullPaperRate: percent(row.fullPaperRate) }));
     const units = workbook.addWorksheet("Bao_cao_vien_theo_don_vi");
     units.columns = [{ header: "Đơn vị", key: "label", width: 40 }, { header: "Số báo cáo viên", key: "count", width: 16 }];
     header(units);
-    result.speakersByUnit.forEach((row) => units.addRow(row));
+    result.speakersByUnit.forEach((row) => units.addRow({ label: cellText(row.label), count: row.count }));
     const tracks = workbook.addWorksheet("Theo_phien");
     tracks.columns = [{ header: "Hội nghị", key: "conferenceCode", width: 14 }, { header: "Loại", key: "kind", width: 16 }, { header: "Phiên", key: "name", width: 40 }, { header: "Số báo cáo", key: "papers", width: 12 }];
     header(tracks);
-    result.tracks.forEach((row) => tracks.addRow({ ...row, kind: row.kind === "plenary" ? "Phiên toàn thể" : "Tiểu ban" }));
+    result.tracks.forEach((row) => tracks.addRow({ conferenceCode: cellText(row.conferenceCode), kind: row.kind === "plenary" ? "Phiên toàn thể" : "Tiểu ban", name: cellText(row.name), papers: row.papers }));
     await this.auditLog.record({ action: "export-conference-stats", result: "success", actorId: actor.id, targetEntity: "scientific-conference", targetEntityId: "stats", username: actor.username, afterFacts: { ...filters, conferences: result.perConference.length } });
     return Buffer.from(await workbook.xlsx.writeBuffer());
   }
@@ -435,13 +447,13 @@ export class ConferencesService {
       const latest = (kind: string) => paper?.versions.find((version) => version.kind === kind)?.submittedAt ?? null;
       sheet.addRow({
         stt: index + 1,
-        fullName: invitation.fullName,
-        academicTitle: invitation.academicTitle ?? "",
-        unit: invitation.organizationUnit?.name ?? invitation.externalOrganization ?? invitation.user?.unit ?? "",
-        email: invitation.email ?? "",
+        fullName: cellText(invitation.fullName),
+        academicTitle: cellText(invitation.academicTitle),
+        unit: cellText(invitation.organizationUnit?.name ?? invitation.externalOrganization ?? invitation.user?.unit),
+        email: cellText(invitation.email),
         kind: invitation.kind === "speaker" ? "Báo cáo viên" : "Đại biểu",
         status: INVITATION_STATUS_LABELS[invitation.status] ?? invitation.status,
-        paperTitle: paper?.title ?? "",
+        paperTitle: cellText(paper?.title),
         paperStatus: paper ? PAPER_STATUS_LABELS[paper.status] ?? paper.status : "",
         abstractAt: day(latest("abstract")),
         fullPaperAt: day(latest("full_paper")),

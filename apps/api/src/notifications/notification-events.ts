@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
-export type NotificationSourceType = "approval" | "proposal" | "review_assignment" | "ethics_dossier" | "acceptance_dossier" | "acceptance_council" | "registration_request" | "project_funding" | "project_liquidation" | "conference";
+export type NotificationSourceType = "approval" | "proposal" | "review_assignment" | "ethics_dossier" | "acceptance_dossier" | "acceptance_council" | "registration_request" | "project_funding" | "project_liquidation" | "conference" | "conference_management";
 
 export function escapeHtml(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");

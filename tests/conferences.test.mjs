@@ -28,7 +28,7 @@ test("only the head creates conferences, for a host unit in their own scope", ()
 test("the head assigns the officer; only the assigned officer runs invitations and mailings", () => {
   assert.equal(canConference(head, conference({ status: "draft", activeOfficerId: null }), "officer.assign"), true);
   assert.equal(canConference(headB, conference(), "officer.assign"), false);
-  assert.equal(canConference(headB, conference({ createdById: "head-b" }), "officer.assign"), true, "người tạo vẫn quản lý");
+  assert.equal(canConference(headB, conference({ createdById: "head-b" }), "officer.assign"), false, "người tạo mất phạm vi thì mất quyền");
   assert.equal(canConference(officer, conference(), "officer.assign"), false);
   for (const action of ["invitation.manage", "mailing.send", "paper.review", "close-submission"]) {
     assert.equal(canConference(officer, conference(), action), true, action);

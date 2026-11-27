@@ -81,7 +81,7 @@ const PASSWORD_RULES: { label: string; test: (value: string) => boolean }[] = [
 
 export function ResetPasswordForm() {
   const router = useRouter(); const [activationToken, setActivationToken] = useState(""); const [linkToken, setLinkToken] = useState(""); const [ready, setReady] = useState(false); const [error, setError] = useState(""); const [confirmError, setConfirmError] = useState(""); const [busy, setBusy] = useState(false); const [pendingApproval, setPendingApproval] = useState(false); const [succeeded, setSucceeded] = useState(false); const [newPassword, setNewPassword] = useState("");
-  useEffect(() => { const params = new URLSearchParams(window.location.search); const token = params.get("token") ?? ""; if (params.get("mode") === "activation") setActivationToken(token); else setLinkToken(token); setReady(true); }, []);
+  useEffect(() => { const params = new URLSearchParams(window.location.hash.length > 1 ? window.location.hash.slice(1) : window.location.search); const token = params.get("token") ?? ""; if (params.get("mode") === "activation") setActivationToken(token); else setLinkToken(token); setReady(true); }, []);
   useEffect(() => { if (!succeeded) return; const timer = setTimeout(() => router.replace("/login"), 5000); return () => clearTimeout(timer); }, [succeeded, router]);
   const isActivation = Boolean(activationToken);
   const footer = <Link href="/login">Về trang đăng nhập</Link>;

@@ -11,7 +11,7 @@ import { NotificationsService } from "../notifications/notifications.service.js"
 import { canConference, canReadConferenceManagement, isPaperOwner } from "./conference-access.js";
 import { CONFERENCE_INCLUDE, CONFERENCE_PAPER_ENTITY_TYPE, conferenceFacts, iso, lockConference, recordConferenceEvent, stale } from "./conference-support.js";
 import { readProgramSnapshot } from "./conference-program.service.js";
-import { CONFERENCE_STATUS_LABELS, PAPER_OPEN_STATUSES, paperStatusAfterSubmit, submissionBlockReason, type ConferenceStatus, type PaperVersionKind } from "./conference-workflow.js";
+import { CONFERENCE_STATUS_LABELS, PAPER_OPEN_STATUSES, PAPER_WITHDRAWABLE_STATUSES, paperStatusAfterSubmit, submissionBlockReason, type ConferenceStatus, type PaperVersionKind } from "./conference-workflow.js";
 import type { RevisionRequestDto, SubmitPaperDto, VersionedReasonDto } from "./conferences.dto.js";
 
 export type UploadedPaperFile = { originalname: string; mimetype: string; size: number; buffer: Buffer };
@@ -19,7 +19,7 @@ export type UploadedPaperFile = { originalname: string; mimetype: string; size: 
 const PAPER_INCLUDE = {
   conference: { include: CONFERENCE_INCLUDE },
   invitation: { select: { id: true, status: true, fullName: true } },
-  versions: { select: { id: true, kind: true, versionNumber: true, title: true, abstractText: true, submittedAt: true, file: { select: { id: true, originalFileName: true, sizeBytes: true, mimeType: true } } }, orderBy: { versionNumber: "desc" } },
+  versions: { select: { id: true, kind: true, versionNumber: true, title: true, abstractText: true, authors: true, submittedAt: true, file: { select: { id: true, originalFileName: true, sizeBytes: true, mimeType: true } } }, orderBy: { versionNumber: "desc" } },
   revisionRequests: { orderBy: { requestedAt: "desc" } }
 } satisfies Prisma.ConferencePaperInclude;
 
@@ -65,7 +65,7 @@ export class ConferencePapersService {
       viewer: owner ? {
         canSubmitAbstract: !abstractBlock, abstractBlockReason: abstractBlock,
         canSubmitFullPaper: !fullBlock, fullPaperBlockReason: fullBlock,
-        canWithdraw: (PAPER_OPEN_STATUSES as string[]).includes(paper.status) && paper.invitation.status === "accepted" && !["completed", "cancelled"].includes(paper.conference.status)
+        canWithdraw: (PAPER_WITHDRAWABLE_STATUSES as string[]).includes(paper.status) && paper.invitation.status === "accepted" && !["completed", "cancelled"].includes(paper.conference.status)
       } : null
     };
   }
@@ -153,7 +153,7 @@ export class ConferencePapersService {
           });
         }
         const versionNumber = (current.versions.filter((version) => version.kind === input.kind)[0]?.versionNumber ?? 0) + 1;
-        const version = await tx.conferencePaperVersion.create({ data: { paperId: paper.id, kind: input.kind, versionNumber, title, abstractText: input.abstractText ?? null, fileId: upload?.fileId ?? null, submittedById: actor.id } });
+        const version = await tx.conferencePaperVersion.create({ data: { paperId: paper.id, kind: input.kind, versionNumber, title, abstractText: input.abstractText ?? null, authors: input.authors ?? (current.authors as Prisma.InputJsonValue), fileId: upload?.fileId ?? null, submittedById: actor.id } });
         // Nộp bản mới cùng loại giải quyết yêu cầu sửa đang mở.
         const resolved = await tx.conferenceRevisionRequest.updateMany({ where: { paperId: paper.id, kind: input.kind, resolvedAt: null }, data: { resolvedAt: new Date(), resolvedVersionId: version.id } });
         const toStatus = paperStatusAfterSubmit(current.status, input.kind);
@@ -167,7 +167,7 @@ export class ConferencePapersService {
     }
     await this.auditLog.record({ action: input.kind === "abstract" ? "submit-conference-abstract" : "submit-conference-full-paper", result: "success", actorId: actor.id, targetEntity: "conference-paper", targetEntityId: paper.id, username: actor.username, afterFacts: { versionId: created.id, versionNumber: created.versionNumber } });
     const officerId = paper.conference.officers[0]?.userId;
-    if (officerId) await this.notifications?.createConferenceNotification({ userId: officerId, conferenceId: paper.conferenceId, title: `Báo cáo viên nộp ${KIND_LABEL[input.kind]}`, message: `${paper.invitation.fullName} đã nộp ${KIND_LABEL[input.kind]} (lần ${created.versionNumber}) cho ${paper.conference.title}: ${title}`, link: `/conferences/${paper.conferenceId}` });
+    if (officerId) await this.notifications?.createConferenceNotification({ userId: officerId, conferenceId: paper.conferenceId, audience: "management", title: `Báo cáo viên nộp ${KIND_LABEL[input.kind]}`, message: `${paper.invitation.fullName} đã nộp ${KIND_LABEL[input.kind]} (lần ${created.versionNumber}) cho ${paper.conference.title}: ${title}`, link: `/conferences/${paper.conferenceId}` });
     return { versionId: created.id, versionNumber: created.versionNumber, status: created.toStatus };
   }
 
@@ -179,8 +179,10 @@ export class ConferencePapersService {
     const officer = canConference(actor, conferenceFacts(paper.conference), "paper.review");
     if (!owner && !officer) throw new ForbiddenException({ code: "ACTION_NOT_GRANTED", message: "Chỉ báo cáo viên hoặc chuyên viên phụ trách rút được báo cáo." });
     if (!owner && !input.reason) throw new BadRequestException({ message: "Cần nêu lý do huỷ báo cáo." });
-    if (!(PAPER_OPEN_STATUSES as string[]).includes(paper.status) || ["completed", "cancelled"].includes(paper.conference.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Báo cáo không còn rút được." });
+    if (!(PAPER_WITHDRAWABLE_STATUSES as string[]).includes(paper.status) || ["completed", "cancelled"].includes(paper.conference.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Báo cáo không còn rút được." });
     await this.prisma.$transaction(async (tx) => {
+      // Khoá như setSessionSlots để bài vừa rút không bị xếp lại vào phiên song song.
+      await lockConference(tx, paper.conferenceId);
       const changed = await tx.conferencePaper.updateMany({ where: { id: paper.id, status: paper.status, updatedAt: new Date(input.version) }, data: { status: "withdrawn", withdrawReason: input.reason ?? null } });
       if (changed.count !== 1) stale();
       const removed = await tx.conferenceSessionSlot.deleteMany({ where: { paperId: paper.id } });
@@ -190,7 +192,7 @@ export class ConferencePapersService {
     });
     await this.auditLog.record({ action: owner ? "withdraw-conference-paper" : "cancel-conference-paper", result: "success", actorId: actor.id, targetEntity: "conference-paper", targetEntityId: paper.id, username: actor.username, reason: input.reason, beforeFacts: { status: paper.status } });
     const notifyId = owner ? paper.conference.officers[0]?.userId : paper.ownerId;
-    if (notifyId) await this.notifications?.createConferenceNotification({ userId: notifyId, conferenceId: paper.conferenceId, title: owner ? "Báo cáo viên rút bài" : "Báo cáo đã bị huỷ", message: `${owner ? `${paper.invitation.fullName} đã rút báo cáo` : "Chuyên viên phụ trách đã huỷ báo cáo của bạn"} tại ${paper.conference.title}.${input.reason ? ` Lý do: ${input.reason}` : ""}`, link: owner ? `/conferences/${paper.conferenceId}` : "/my-conferences" });
+    if (notifyId) await this.notifications?.createConferenceNotification({ userId: notifyId, conferenceId: paper.conferenceId, audience: owner ? "management" : "invitation", title: owner ? "Báo cáo viên rút bài" : "Báo cáo đã bị huỷ", message: `${owner ? `${paper.invitation.fullName} đã rút báo cáo` : "Chuyên viên phụ trách đã huỷ báo cáo của bạn"} tại ${paper.conference.title}.${input.reason ? ` Lý do: ${input.reason}` : ""}`, link: owner ? `/conferences/${paper.conferenceId}` : "/my-conferences" });
     return { id: paper.id, status: "withdrawn" };
   }
 
@@ -218,7 +220,7 @@ export class ConferencePapersService {
       throw error;
     }
     await this.auditLog.record({ action: "request-conference-paper-revision", result: "success", actorId: actor.id, targetEntity: "conference-paper", targetEntityId: paper.id, username: actor.username, reason: input.reason, afterFacts: { kind: input.kind, dueAt: input.dueAt.toISOString() } });
-    await this.notifications?.createConferenceNotification({ userId: paper.ownerId, conferenceId: paper.conferenceId, title: `Yêu cầu sửa ${KIND_LABEL[input.kind]}`, message: `Chuyên viên phụ trách ${paper.conference.title} đề nghị sửa ${KIND_LABEL[input.kind]}: ${input.reason}`, link: "/my-conferences" });
+    await this.notifications?.createConferenceNotification({ userId: paper.ownerId, conferenceId: paper.conferenceId, audience: "invitation", title: `Yêu cầu sửa ${KIND_LABEL[input.kind]}`, message: `Chuyên viên phụ trách ${paper.conference.title} đề nghị sửa ${KIND_LABEL[input.kind]}: ${input.reason}`, link: "/my-conferences" });
     return { id: paper.id };
   }
 

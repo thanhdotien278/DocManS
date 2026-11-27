@@ -122,10 +122,13 @@ describe("Scientific conferences on real PostgreSQL", () => {
     await invitations.addInvitations(officer, created.id, [
       { kind: "speaker", userId: researcher.id },
       { kind: "speaker", fullName: "PGS Ngoài", academicTitle: "PGS.TS", email: externalEmail, isInternal: false, externalOrganization: "Bệnh viện X" },
-      { kind: "speaker", fullName: "ThS Nội bộ", email: internalEmail, isInternal: true, organizationUnitId: orgB.id },
+      { kind: "speaker", fullName: "ThS Nội bộ", email: internalEmail, isInternal: true, organizationUnitId: orgA.id },
       { kind: "delegate", fullName: "Đại biểu", email: delegateEmail, isInternal: false }
     ]);
     await assert.rejects(invitations.addInvitations(officer, created.id, [{ kind: "delegate", fullName: "Lặp", email: externalEmail }]), /đã có trong danh sách/);
+    // Nhận lời sẽ tạo tài khoản nội bộ của đơn vị: chuyên viên chỉ chọn được đơn vị trong phạm vi của mình.
+    await assert.rejects(invitations.addInvitations(officer, created.id, [{ kind: "delegate", fullName: "Ngoài phạm vi", email: `${unique("scope")}@x.vn`, isInternal: true, organizationUnitId: orgB.id }]), /không thuộc phạm vi/);
+    assert.deepEqual((await invitations.organizationUnits(officer, created.id)).map((unit) => unit.id), [orgA.id]);
     await assert.rejects(conferences.assignOfficer(head, created.id, { version: await version(head, created.id), userId: researcher.id }), /chuyên viên QLKH/);
 
     let detail = (await conferences.detail(officer, created.id)).conference;
@@ -150,7 +153,7 @@ describe("Scientific conferences on real PostgreSQL", () => {
     await assert.rejects(invitations.publicLookup("x".repeat(43), ctx), /không hợp lệ/);
     const accepted = await invitations.publicRespond({ token: externalToken, decision: "accept" }, ctx);
     assert.equal(accepted.account, "created");
-    assert.match(accepted.activationPath, /^\/password-reset\?mode=activation&token=/);
+    assert.match(accepted.activationPath, /^\/password-reset#mode=activation&token=/);
     const externalUser = await db.user.findUnique({ where: { credentialEmail: externalEmail }, include: { organizationScopes: true } });
     assert.equal(externalUser.systemRole, "EXTERNAL_RESEARCHER_USER");
     assert.equal(externalUser.status, "pending_activation");
@@ -162,7 +165,7 @@ describe("Scientific conferences on real PostgreSQL", () => {
       return db.user.findUnique({ where: { credentialEmail: internalEmail }, include: { organizationScopes: true } });
     })();
     assert.equal(internalUser.systemRole, "RESEARCHER_INTERNAL_USER", "người trong Học viện được tài khoản nội bộ");
-    assert.deepEqual(internalUser.organizationScopes.map((scope) => scope.organizationUnitId), [orgB.id]);
+    assert.deepEqual(internalUser.organizationScopes.map((scope) => scope.organizationUnitId), [orgA.id]);
 
     const declined = await invitations.publicRespond({ token: tokenFrom(mailTo(delegateEmail).html), decision: "decline", reason: "Bận công tác" }, ctx);
     assert.equal(declined.account, null);
@@ -318,6 +321,19 @@ describe("Scientific conferences on real PostgreSQL", () => {
     assert.equal((await db.conferencePaper.findUnique({ where: { id: paperIds[1] } })).status, "full_paper_submitted", "bỏ khỏi chương trình thì trở về đã nộp toàn văn");
     assert.equal((await program.getProgram(officer, created.id)).changedSincePublish, false);
 
+    // Đổi địa điểm sau khi chốt: bản chốt ghi địa điểm nên cần chốt lại; bản mới lấy địa điểm mới.
+    await conferences.update(head, created.id, { version: await version(head, created.id), location: "Hội trường B" });
+    assert.equal((await program.getProgram(officer, created.id)).changedSincePublish, true);
+    await program.publish(officer, created.id, { acknowledgeUnscheduled: true });
+    assert.equal((await program.publishedForViewer(officer, created.id)).program.snapshot.conference.location, "Hội trường B");
+
+    // Báo cáo viên rút bài đã xếp lịch: gỡ khỏi phiên, đánh dấu cần chốt lại.
+    const scheduledPaper = await db.conferencePaper.findUnique({ where: { id: paperIds[0] } });
+    assert.equal(scheduledPaper.status, "scheduled");
+    assert.equal((await papers.withdraw(speakers[0], paperIds[0], { version: scheduledPaper.updatedAt.toISOString() })).status, "withdrawn");
+    assert.equal(await db.conferenceSessionSlot.count({ where: { paperId: paperIds[0] } }), 0);
+    assert.equal((await program.getProgram(officer, created.id)).changedSincePublish, true);
+
     // Huỷ lời mời của báo cáo viên đã xếp lịch: xoá khỏi phiên và đánh dấu cần chốt lại.
     const slottedInv = await db.conferenceInvitation.findFirst({ where: { conferenceId: created.id, userId: speakers[2].id } });
     await invitations.revokeInvitation(officer, created.id, slottedInv.id, "Báo cáo viên xin vắng");
@@ -398,15 +414,25 @@ describe("Scientific conferences on real PostgreSQL", () => {
       ["B", "", "khong-phai-email", "Đại biểu", "", "BV"],
       ["C", "", `${unique("c")}@x.vn`, "Khách", "", ""]
     ]));
-    assert.deepEqual(bad.errors.map((error) => error.row), [3, 4]);
+    assert.deepEqual(bad.errors.map((error) => error.row), [2, 3, 4], "đơn vị ngoài phạm vi cũng báo theo dòng");
     assert.equal(await db.conferenceInvitation.count({ where: { conferenceId: created.id } }), 0, "có lỗi thì không thêm dòng nào");
+    const emailA = `${unique("a")}@x.vn`;
     const good = await invitations.importInvitations(officer, created.id, await build([
-      ["A", "TS", `${unique("a")}@x.vn`, "Báo cáo viên", orgB.code, ""],
+      ["A", "TS", emailA, "Báo cáo viên", orgA.code, ""],
       ["B", "", `${unique("b")}@x.vn`, "Đại biểu", "", "Bệnh viện Y"]
     ]));
     assert.equal(good.created.length, 2);
     const rows = await db.conferenceInvitation.findMany({ where: { conferenceId: created.id }, orderBy: { fullName: "asc" } });
-    assert.deepEqual(rows.map((row) => [row.kind, row.isInternal, row.organizationUnitId]), [["speaker", true, orgB.id], ["delegate", false, null]]);
+    assert.deepEqual(rows.map((row) => [row.kind, row.isInternal, row.organizationUnitId]), [["speaker", true, orgA.id], ["delegate", false, null]]);
+    // Trùng khách mời đã có hoặc là chuyên viên phụ trách: báo theo dòng, không ghi dòng nào.
+    const officerEmail = (await db.user.findUnique({ where: { id: officer.id } })).credentialEmail;
+    const conflicts = await invitations.importInvitations(officer, created.id, await build([
+      ["Mới", "", `${unique("n")}@x.vn`, "Đại biểu", "", ""],
+      ["A lặp", "", emailA, "Đại biểu", "", ""],
+      ["Chuyên viên", "", officerEmail, "Đại biểu", "", ""]
+    ]));
+    assert.deepEqual(conflicts.errors.map((error) => error.row), [3, 4]);
+    assert.equal(await db.conferenceInvitation.count({ where: { conferenceId: created.id } }), 2);
   });
 
   it("enforces inbox notification filter, token invalidation on email change, re-invite after revoke, paper withdraw, officer handover, and update guards", async () => {
@@ -460,6 +486,20 @@ describe("Scientific conferences on real PostgreSQL", () => {
     await conferences.assignOfficer(head, created.id, { version: await version(head, created.id), userId: otherStaff.id });
     await assert.rejects(conferences.detail(officer, created.id), /Không tìm thấy/);
     assert.equal((await conferences.detail(otherStaff, created.id)).mode, "management");
+    // Chuyên viên cũ được mời làm khách: thấy thư mời, không thấy lại thông báo quản lý cũ (kể cả khi lời mời bị huỷ).
+    const officerInviteIds = async () => (await db.conferenceInvitation.findMany({ where: { conferenceId: created.id, userId: officer.id, status: "draft" } })).map((item) => item.id);
+    await invitations.addInvitations(otherStaff, created.id, [{ kind: "delegate", userId: officer.id }]);
+    const [firstInvite] = await officerInviteIds();
+    await invitations.sendMailing(otherStaff, created.id, { kind: "invitation", invitationIds: [firstInvite] });
+    await invitations.revokeInvitation(otherStaff, created.id, firstInvite, "Mời nhầm");
+    assert.ok(await db.userNotification.findFirst({ where: { userId: officer.id, sourceType: "conference_management", sourceId: created.id } }), "chuyên viên cũ từng nhận thông báo quản lý của hội nghị này");
+    const exOfficerInbox = (await notifications.list(officer, 50)).notifications;
+    assert.ok(exOfficerInbox.some((n) => n.title === "Lời mời hội nghị đã được huỷ"));
+    assert.equal(exOfficerInbox.some((n) => n.link === `/conferences/${created.id}`), false);
+    // Mời lại sau khi huỷ: dòng lời mời đã huỷ không che lời mời mới.
+    await invitations.addInvitations(otherStaff, created.id, [{ kind: "delegate", userId: officer.id }]);
+    await invitations.sendMailing(otherStaff, created.id, { kind: "invitation", invitationIds: await officerInviteIds() });
+    assert.equal((await conferences.detail(officer, created.id)).mode, "participant");
     await conferences.revokeOfficer(head, created.id, { version: await version(head, created.id), reason: "Thay đổi phân công" });
     await assert.rejects(conferences.detail(otherStaff, created.id), /Không tìm thấy/);
   });
@@ -487,7 +527,7 @@ describe("Scientific conferences on real PostgreSQL", () => {
     assert.ok(pendingMail, "tài khoản pending_activation phải nhận email kèm đường link");
     const pendingResp = await invitations.publicRespond({ token: tokenFrom(pendingMail.html), decision: "accept" }, ctx);
     assert.equal(pendingResp.account, "pending_activation");
-    assert.match(pendingResp.activationPath, /^\/password-reset\?mode=activation&token=/);
+    assert.match(pendingResp.activationPath, /^\/password-reset#mode=activation&token=/);
 
     // P2 + P23: huỷ hội nghị khoá cả respondInApp lẫn token công khai.
     const cancelToken = tokenFrom(sentMail.filter((mail) => mail.to === cancelEmail).at(-1).html);

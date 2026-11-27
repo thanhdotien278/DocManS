@@ -48,8 +48,11 @@ export class NotificationsService {
     return { updated: updated.count };
   }
 
-  /** Tạo thông báo hội nghị cho tài khoản đang hoạt động; không làm hỏng thao tác nghiệp vụ nếu lỗi. */
-  async createConferenceNotification(input: { userId: string; conferenceId: string; title: string; message: string; link?: string }) {
+  /**
+   * Tạo thông báo hội nghị cho tài khoản đang hoạt động; không làm hỏng thao tác nghiệp vụ nếu lỗi.
+   * `audience` quyết định quyền đọc lại: thông báo quản lý chỉ cho người còn đọc được bản quản lý, thông báo khách mời chỉ cho người được mời.
+   */
+  async createConferenceNotification(input: { userId: string; conferenceId: string; audience: "management" | "invitation"; title: string; message: string; link?: string }) {
     try {
       const user = await this.prisma.user.findUnique({ where: { id: input.userId }, select: { id: true, status: true } });
       if (!user || user.status !== "active") return null;
@@ -60,7 +63,7 @@ export class NotificationsService {
           title: input.title,
           body: input.message,
           link: input.link ?? null,
-          sourceType: "conference",
+          sourceType: input.audience === "management" ? "conference_management" : "conference",
           sourceId: input.conferenceId,
           idempotencyKey: `conference:${input.conferenceId}:${randomUUID()}`
         }
@@ -154,7 +157,7 @@ export class NotificationsService {
     // Story 13.11: yêu cầu đăng ký chỉ hiện với người còn quyền duyệt.
     if ((REGISTRATION_APPROVER_ROLES as readonly string[]).includes(actor.systemRole)) for (const id of idsOf("registration_request")) allowed.add(`registration_request:${id}`);
 
-    const conferenceIds = idsOf("conference");
+    const conferenceIds = [...new Set([...idsOf("conference"), ...idsOf("conference_management")])];
     if (conferenceIds.length) {
       const conferences = await this.prisma.scientificConference.findMany({
         where: { id: { in: conferenceIds } },
@@ -167,11 +170,11 @@ export class NotificationsService {
         const isManagement = canReadConferenceManagement(actor, {
           status: conference.status,
           hostOrganizationUnitId: conference.hostOrganizationUnitId,
-          createdById: conference.createdById,
           activeOfficerId: conference.officers[0]?.userId ?? null
         });
         const hasInvitation = conference.invitations.some((inv) => inv.userId === actor.id && ["sent", "accepted", "declined", "revoked"].includes(inv.status));
-        if (isManagement || hasInvitation) allowed.add(`conference:${conference.id}`);
+        if (isManagement) allowed.add(`conference_management:${conference.id}`);
+        if (hasInvitation) allowed.add(`conference:${conference.id}`);
       }
     }
 

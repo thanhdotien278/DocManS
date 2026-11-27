@@ -25,7 +25,6 @@ import { CONFERENCE_CLOSED_STATUSES, CONFERENCE_INVITABLE_STATUSES, CONFERENCE_P
 export type ConferenceFacts = {
   status: ConferenceStatus | string;
   hostOrganizationUnitId: string;
-  createdById: string;
   activeOfficerId: string | null;
 };
 
@@ -57,9 +56,9 @@ export function canCreateConference(actor: SafeUserContext, hostOrganizationUnit
   return hostOrganizationUnitId === undefined ? getOrganizationScopeIds(actor).length > 0 : getOrganizationScopeIds(actor).includes(hostOrganizationUnitId);
 }
 
-/** Trưởng phòng chịu trách nhiệm hội nghị: trong phạm vi đơn vị chủ trì, hoặc là người tạo. */
+/** Trưởng phòng chịu trách nhiệm hội nghị: đơn vị chủ trì đang trong phạm vi của mình (người tạo mất phạm vi thì mất quyền). */
 export function isConferenceHead(actor: SafeUserContext, conference: ConferenceFacts) {
-  return isResearchManagementHead(actor) && (inScope(actor, conference) || conference.createdById === actor.id);
+  return isResearchManagementHead(actor) && inScope(actor, conference);
 }
 
 /** Chuyên viên phụ trách còn hiệu lực, và tài khoản vẫn giữ vai trò chuyên viên. */
@@ -131,7 +130,6 @@ export function conferenceManagementFilter(actor: SafeUserContext) {
   const or: Record<string, unknown>[] = [];
   const scopes = getOrganizationScopeIds(actor);
   if ((isResearchManagementHead(actor) || isResearchManagementDeputyHead(actor) || isResearchBoardHead(actor)) && scopes.length) or.push({ hostOrganizationUnitId: { in: scopes } });
-  if (isResearchManagementHead(actor)) or.push({ createdById: actor.id });
   if (isResearchManagementStaff(actor)) or.push({ officers: { some: { userId: actor.id, revokedAt: null } } });
   return or.length ? { OR: or } : null;
 }

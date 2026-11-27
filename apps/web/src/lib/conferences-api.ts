@@ -112,7 +112,7 @@ const post = <T>(path: string, body: unknown) => json<T>(path, { method: "POST",
 const conferencePath = (id: string) => `/conferences/${encodeURIComponent(id)}`;
 const paperPath = (id: string) => `/conference-papers/${encodeURIComponent(id)}`;
 
-export async function listConferences() { return (await json<{ conferences: ConferenceSummary[] }>("/conferences")).conferences; }
+export async function listConferences() { return json<{ conferences: ConferenceSummary[]; viewer: { canCreate: boolean } }>("/conferences"); }
 export async function getConference(id: string) { return json<ConferenceDetail>(conferencePath(id)); }
 export async function createConference(input: Record<string, unknown>) { return post<ConferenceDetail>("/conferences", input); }
 export async function updateConference(id: string, input: Record<string, unknown>) { return json<ConferenceDetail>(conferencePath(id), { method: "PATCH", body: JSON.stringify(input) }); }

@@ -71,7 +71,10 @@ export class ConferencesController {
   ) {}
 
   @Get()
-  async list(@Req() req: RequestWithCurrentUser) { return { conferences: await this.conferences.list(req.currentUser!) }; }
+  async list(@Req() req: RequestWithCurrentUser) {
+    const [conferences, canCreate] = await Promise.all([this.conferences.list(req.currentUser!), this.conferences.viewerCanCreate(req.currentUser!)]);
+    return { conferences, viewer: { canCreate } };
+  }
 
   @Post()
   async create(@Req() req: RequestWithCurrentUser, @Body(createConferencePipe) body: ConferenceInfoDto) { return this.conferences.create(req.currentUser!, body); }
@@ -237,7 +240,10 @@ export class ConferencePapersController {
   }
 }
 
-/** Đường link trong thư mời: không cần đăng nhập. Mã đi trong thân yêu cầu để không nằm trong nhật ký truy cập. */
+/**
+ * Đường link trong thư mời: không cần đăng nhập. Mã nằm sau dấu # của trang (trình duyệt không gửi lên máy chủ) và đi
+ * trong thân yêu cầu API, nên không nằm trong nhật ký truy cập.
+ */
 @Controller("api/v1/public/conference-invitations")
 export class PublicConferenceInvitationsController {
   constructor(private readonly invitations: ConferenceInvitationsService) {}
