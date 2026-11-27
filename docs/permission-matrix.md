@@ -522,9 +522,8 @@ assignment opens `under_review`. Invalid or unresolved context denies.
 
 #### 9.4.1 Read-Scope Contract
 
-This table is a contract, not a completion claim; see the
-[Proposal Review & Approval plan](../_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/implementation-plan.md)
-for implementation gaps.
+This table is a contract, not a completion claim; implementation gaps are
+tracked in [GitHub issues](https://github.com/thanhdotien278/DocManS/issues).
 
 | Rule | Decision | Where |
 | --- | --- | --- |

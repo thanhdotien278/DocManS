@@ -29,9 +29,7 @@ audience:
 viết story và triển khai code DocManS. Code không được tự suy diễn quyền từ
 giao diện, chức danh hiển thị hoặc quan hệ ở một bản ghi khác.
 
-`_bmad-output/planning-artifacts/architecture/architecture-DocManSystem-2026-07-29/AUTHORIZATION-CONTRACTS.md`
-tiếp tục là contract kỹ thuật cho context, version, fail-closed, delegation,
-disclosure và audit. Tài liệu này là nguồn quyết định sản phẩm cho role, scope,
+Tài liệu này là nguồn quyết định sản phẩm cho role, scope,
 workflow và hành vi nghiệp vụ; ma trận vai trò chi tiết nằm ở `docs/permission-matrix.md`.
 Khi triển khai, phải đồng bộ các nguồn và cập nhật `packages/permissions` cùng các
 test contract.

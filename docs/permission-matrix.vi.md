@@ -503,9 +503,8 @@ công đầu tiên mở `under_review`. Ngữ cảnh không hợp lệ hoặc kh
 
 #### 9.4.1 Hợp đồng phạm vi đọc
 
-Bảng này là hợp đồng, không phải tuyên bố đã hoàn thành; xem
-[kế hoạch Proposal Review & Approval](../_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/implementation-plan.md)
-về các phần chưa triển khai.
+Bảng này là hợp đồng, không phải tuyên bố đã hoàn thành; các phần chưa triển khai
+được theo dõi trong [GitHub issues](https://github.com/thanhdotien278/DocManS/issues).
 
 | Quy tắc | Quyết định | Vị trí |
 | --- | --- | --- |

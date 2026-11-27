@@ -18,8 +18,13 @@ users.md
 _bmad/
 graphify-out/
 
-# Bằng chứng QA cục bộ (ảnh, JSON), không commit
-_bmad-output/qa-evidence/
+# Artefact lập kế hoạch/AI và tài liệu nội bộ: chỉ giữ cục bộ, không đưa lên repo
+_bmad-output/
+output/
+GEMINI.md
+skills-lock.json
+run-main.sh
+requirements.md
 # Archify: sơ đồ sinh ra
 .archify/
 .playwright-mcp/
