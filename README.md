@@ -287,25 +287,13 @@ DocManS benefits from the experience of research administrators, clinicians, inv
 
 ## Contributing
 
-Contributions are welcome.
-
-1. Search existing issues and discussions before opening a new one.
-2. Open an issue for bugs, feature proposals, or questions, including the relevant institutional workflow and expected outcome.
-3. For a code change, create a focused branch and keep the pull request scoped to one concern.
-4. Run the relevant checks before submitting:
-
-   ```bash
-   npm run typecheck
-   npm test
-   ```
-
-5. Explain what changed, why it is needed, and how you verified it.
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, project conventions, required checks, and pull request process. Release history is in [CHANGELOG.md](CHANGELOG.md).
 
 Please keep contributions respectful, evidence-based, and mindful of the security and privacy expectations of research organizations.
 
 ## Security
 
-Do not report security vulnerabilities in a public issue. Please use [GitHub's private security advisory reporting](https://github.com/thanhdotien278/DocManS/security/advisories/new) when it is available for this repository. Include a clear description, impact assessment, reproduction steps, and any suggested mitigation.
+Do not report security vulnerabilities in a public issue. See [SECURITY.md](SECURITY.md) for supported versions and how to report privately through GitHub.
 
 ## License
 
