@@ -47,7 +47,7 @@ An operational control surface for research administration, not a form repositor
 ## Evidence on Hand
 
 - Product is in development, not yet piloted. There are no real users, testimonials, usage metrics or baselines; business targets are to be baselined during pilot/UAT. Do not invent any.
-- Requirements and journeys: `_bmad-output/prd.md`, `docs/user-flows.md`, `docs/ux-ui-spec.md`, `docs/permission-matrix.md`.
+- Requirements and journeys: `docs/user-flows.md`, `docs/ux-ui-spec.md`, `docs/permission-matrix.md`.
 - Dev seed accounts (password `1234`) exist only for local development: `docs/development/auth-seed-users.md`.
 
 ## Product Principles

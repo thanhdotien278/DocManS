@@ -1,10 +1,10 @@
 # Hướng dẫn triển khai & tự động cập nhật DocManS trên Máy 29
 
-Tài liệu này mô tả cách chạy DocManS trên **Máy 29 (Linux/Ubuntu + Docker)**, công khai qua tên miền **https://khqs.thanhdotien.com** bằng **Cloudflare Tunnel**, và tự động cập nhật theo nhánh `DocManS` trên GitHub (`thanhdotien278/DocManS`).
+Tài liệu này mô tả cách chạy DocManS trên **Máy 29 (Linux/Ubuntu + Docker)**, công khai qua tên miền **https://khqs.thanhdotien.com** bằng **Cloudflare Tunnel**, và tự động cập nhật theo nhánh `main` trên GitHub (`thanhdotien278/DocManS`).
 
 ## 1. Kiến trúc triển khai
 
-- **GitHub (`origin/DocManS`)**: nguồn code chính. Mọi thay đổi đẩy lên nhánh `DocManS` sẽ tự động được kéo về Máy 29.
+- **GitHub (`origin/main`)**: nguồn code chính. Mọi thay đổi đẩy lên nhánh `main` sẽ tự động được kéo về Máy 29.
 - **Máy 29 (`docker-compose.prod.yml`)**: chạy 6 container (`postgres`, `minio`, `api`, `web`, `nginx`, `cloudflared`). Không cần mở port ra ngoài Internet.
 - **Cloudflare Tunnel (`khqs-docmans`)**: định tuyến `https://khqs.thanhdotien.com` trực tiếp vào `http://nginx:80` trong mạng nội bộ Docker.
 
@@ -13,7 +13,7 @@ Tài liệu này mô tả cách chạy DocManS trên **Máy 29 (Linux/Ubuntu + D
 ### Bước 1: Clone repository
 
 ```bash
-git clone -b DocManS https://github.com/thanhdotien278/DocManS.git /opt/docmans
+git clone -b main https://github.com/thanhdotien278/DocManS.git /opt/docmans
 cd /opt/docmans
 ```
 
@@ -68,7 +68,7 @@ Thêm dòng sau (thay `/opt/docmans` nếu bạn đặt thư mục khác):
 ```
 
 Cơ chế hoạt động:
-- Mỗi 2 phút, script chạy `git fetch origin DocManS`.
+- Mỗi 2 phút, script chạy `git fetch origin main`.
 - Nếu không có commit mới, script thoát ngay (không tốn tài nguyên).
 - Nếu có commit mới, script kéo code mới, build image mới song song trong khi bản cũ vẫn đang chạy, sau đó khởi động lại container (`api` tự động chạy `npm run prisma:deploy` để cập nhật migration mà không làm mất dữ liệu).
 - Dùng `flock` để tránh 2 tiến trình deploy chạy chồng lên nhau.
@@ -78,9 +78,9 @@ Cơ chế hoạt động:
 Khi hoàn thành thay đổi trên máy cá nhân:
 
 ```bash
-git checkout DocManS
+git checkout main
 git merge <nhanh-tinh-nang>   # hoặc commit trực tiếp
-git push origin DocManS
+git push origin main
 ```
 
 Trong vòng tối đa 2 phút, Máy 29 sẽ tự cập nhật và phản ánh thay đổi trên `https://khqs.thanhdotien.com`.
@@ -129,3 +129,13 @@ curl -s http://127.0.0.1:8080/api/v1/health/ready
 ### Chứng chỉ TLS khi triển khai on-premise (tuỳ chọn dự phòng)
 - Trên Máy 29, TLS do Cloudflare Tunnel quản lý nên không cần chạy certbot (`docker-compose.prod.yml` và `nginx/conf.d/rtms.conf` chỉ lắng nghe HTTP nội bộ cho `cloudflared`).
 - Nếu triển khai trực tiếp trên mạng nội bộ/Internet không qua Cloudflare Tunnel, cần bổ sung file compose override (mount `./certbot/www:/var/www/certbot:ro`, `./nginx/ssl:/etc/nginx/ssl:ro`, mở cổng `80`/`443`) và cấu hình nginx TLS (`listen 443 ssl`, `/.well-known/acme-challenge/`), rồi dùng `scripts/letsencrypt-init.sh` (kèm profile `letsencrypt`) và `scripts/check-cert-expiry.sh` để cấp và giám sát hạn chứng chỉ.
+
+## Chuyển nhánh `DocManS` → `main` (làm một lần)
+
+Nhánh mặc định trên GitHub đã đổi từ `DocManS` sang `main`. GitHub không chuyển hướng `git fetch` theo tên nhánh cũ, nên Máy 29 cần chuyển một lần:
+
+```bash
+cd /opt/docmans && git fetch origin --prune && git checkout -B main origin/main && git branch -D DocManS
+```
+
+Sau đó cron giữ nguyên; script mặc định theo dõi `main`.

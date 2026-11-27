@@ -24,7 +24,7 @@ policy and current workflow rules, use the linked normative documents.
 | **Relationship** | A record-scoped participation fact, such as proposal PI/team secretary/team member or approved-topic PI/team secretary/team member. It has a lifecycle and grants no authority outside its owning record. |
 | **Assignment** | A record-scoped duty, such as proposal/project management officer, reviewer, council member, ethics reviewer, or task assignee. It grants only the actions and disclosure needed for that assignment. |
 | **Delegation** | A time-bounded, approved grant for an exact action on one record where the owning contract permits delegation. It is not a general substitute for role, relationship, assignment, or decision authority; proposal submission is PI-only and non-delegable. |
-| **Topic lifecycle** | The fixed 9-step, 2-phase path of a topic: proposal phase (intake period, proposal dossier, completeness check, appraisal/council, approval/funding) then execution and closure phase (create topic, execution, acceptance, liquidation/closure). Approval and closure are the two official decisions. Decided in `_bmad-output/.decision-log.md` D-033; do not re-ask or alter. |
+| **Topic lifecycle** | The fixed 9-step, 2-phase path of a topic: proposal phase (intake period, proposal dossier, completeness check, appraisal/council, approval/funding) then execution and closure phase (create topic, execution, acceptance, liquidation/closure). Approval and closure are the two official decisions. Decided in D-033; do not re-ask or alter. |
 | **Workflow state** | The controlled lifecycle state of a business record. A state transition is a domain action, not an unrestricted field update. |
 | **Version** | An immutable business or file revision retained as evidence. Replacing or correcting creates a new version rather than overwriting a submitted, reviewed, or decided artifact. |
 | **Related document** | A governed, legal, planning, or supporting document with metadata, effective status, and version context. It is not an authorization bypass for the record it references. |
@@ -61,7 +61,7 @@ assignments**. The ten system roles ([permission matrix](docs/permission-matrix.
 responsible CV, where a **Trưởng nhóm** (student leader) registers a **Đề tài sinh viên**, adds
 members and uploads documents until the deadline; SV never takes part in proposals or projects. Submissions route as a
 tờ trình CV → TB → TP → BGĐ; only GĐ approves topic, funding and liquidation. The code on the
-`DocManS` branch has all ten role codes (plus `STUDENT_USER`), but PGĐ-KH, PP and TB have no business
+`main` branch has all ten role codes (plus `STUDENT_USER`), but PGĐ-KH, PP and TB have no business
 permissions yet.
 
 System roles describe account-level responsibility; they do not automatically
@@ -175,9 +175,6 @@ Read these only when the task needs their detail; do not duplicate them here:
   disclosure.
 - [`docs/permission-matrix.md`](docs/permission-matrix.md) — detailed action
   permissions and test expectations.
-- [`_bmad-output/planning-artifacts/architecture/architecture-DocManSystem-2026-07-29/AUTHORIZATION-CONTRACTS.md`](_bmad-output/planning-artifacts/architecture/architecture-DocManSystem-2026-07-29/AUTHORIZATION-CONTRACTS.md)
-  — authorization context, decision, versioning, delegation, and disclosure
-  contracts.
 - [`docs/user-flows.md`](docs/user-flows.md) — concrete workflow paths and
   state transitions.
 

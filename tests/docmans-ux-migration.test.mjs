@@ -34,9 +34,8 @@ describe("DocManS UX migration boundaries", () => {
   });
 
   it("derives the printable researcher view without adding unsupported fields", async () => {
-    const [panel, audit, css] = await Promise.all([
+    const [panel, css] = await Promise.all([
       read("apps/web/src/components/researcher-profiles/researcher-profiles-panel.tsx"),
-      read("_bmad-output/implementation-artifacts/docmans-ux-field-audit.md"),
       read("apps/web/src/app/globals.css")
     ]);
     const preview = panel.match(/<section[^>]+id="profile-panel-preview"[\s\S]*?<\/section>/)?.[0];
@@ -45,7 +44,6 @@ describe("DocManS UX migration boundaries", () => {
     assert.match(preview, /form\.publications/);
     assert.match(preview, /form\.participations/);
     assert.doesNotMatch(preview, /curriculumVitae|bankAccount|smartCaSerial|idNumber/);
-    assert.match(audit, /No Category C schema\/API work is required/);
     assert.match(css, /\.grid:has\(> \.profile-print-preview\) > :not\(\.profile-print-preview\)/);
   });
 
