@@ -80,8 +80,8 @@ const outOfScopeStaffUser = {
 const piUser = {
   ...adminUser,
   id: "user-pi",
-  username: "patuan",
-  displayName: "Phạm Anh Tuấn",
+  username: "pi1",
+  displayName: "Phạm Văn Dũng",
   role: "principal-investigator",
   systemRole: "RESEARCHER_INTERNAL_USER",
   roleLabel: "Chủ nhiệm đề tài",

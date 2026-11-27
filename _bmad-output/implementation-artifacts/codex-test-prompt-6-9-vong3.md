@@ -16,7 +16,7 @@ Repo `/Users/Super/DocManS`, nhánh `feat/6-9-quyet-dinh-nghiem-thu` (PR #33). G
 
 Làm theo các mục **Vai trò và mục tiêu**, **Chuẩn bị môi trường** và **Tài khoản theo vai trò** trong `_bmad-output/implementation-artifacts/codex-test-prompt-6-9.md`. Dùng script fixture **mới** (đơn vị `org-khti`). Chạy fixture hai lần (lần 2 đổi `code` đợt thành `DOT-CODEX-69B`) để có 4 đề tài A1, A2, B1, B2. DB riêng `docmans_codex69`, API `:4005`, web `:3005`.
 
-Riêng ca E7 cần hồ sơ có tệp. Sau khi chạy fixture, tải 2 tệp PDF vào hồ sơ nghiệm thu của **A1** trước khi lập hội đồng. Cách làm: sửa tạm `acceptance_dossiers.status` của A1 về `draft`, đăng nhập `patuan`, tải "Báo cáo tổng kết" và "Minh chứng sản phẩm" qua `/projects/{A1}/acceptance-dossier`, rồi đặt lại `status = 'submitted'`. Ghi lại các bước này trong báo cáo.
+Riêng ca E7 cần hồ sơ có tệp. Sau khi chạy fixture, tải 2 tệp PDF vào hồ sơ nghiệm thu của **A1** trước khi lập hội đồng. Cách làm: sửa tạm `acceptance_dossiers.status` của A1 về `draft`, đăng nhập `pi1`, tải "Báo cáo tổng kết" và "Minh chứng sản phẩm" qua `/projects/{A1}/acceptance-dossier`, rồi đặt lại `status = 'submitted'`. Ghi lại các bước này trong báo cáo.
 
 Ảnh chụp lưu ở `/tmp/codex69c-shots/`, đặt tên theo mã ca. Quy tắc giữ nguyên: không sửa code, không commit, không dùng DB dev chung, xóa DB tạm và object MinIO thử nghiệm khi xong.
 
@@ -28,10 +28,10 @@ Riêng ca E7 cần hồ sơ có tệp. Sau khi chạy fixture, tải 2 tệp PDF
 
 ### E4, E5 — Mở thông báo tờ trình để chuyển bước (A1)
 
-1. `hdtien1` lập tờ trình hội đồng A1.
-2. Đăng nhập `nmtrung`. Mở chuông thông báo (hoặc `/notifications`) và **bấm** vào thông báo tờ trình hội đồng nghiệm thu.
+1. `rmstaff1` lập tờ trình hội đồng A1.
+2. Đăng nhập `boardhead`. Mở chuông thông báo (hoặc `/notifications`) và **bấm** vào thông báo tờ trình hội đồng nghiệm thu.
 3. Đạt khi: trình duyệt đến `/projects/{A1}/acceptance-council`, thấy mục "Tờ trình qua Phòng KHQS" có nút chuyển bước, và chuyển bước được ngay trên trang đó.
-4. Làm lại với `nmphuong` (E5), rồi với `tvtien`: bấm thông báo thì vào trang có nút "Ký thành lập".
+4. Làm lại với `rmhead` (E5), rồi với `director`: bấm thông báo thì vào trang có nút "Ký thành lập".
 
 ### E7 — Ủy viên đọc hồ sơ có tệp (A1)
 
@@ -49,7 +49,7 @@ Riêng ca E7 cần hồ sơ có tệp. Sau khi chạy fixture, tải 2 tệp PDF
 
 ### E12 — Chạy lại: PI xem kết quả (A1 sau khi Đạt, B1 sau khi Không đạt)
 
-1. Đăng nhập `patuan`. Mở `/projects/{A1}`, `/projects/{A1}/acceptance-council` và `/notifications`.
+1. Đăng nhập `pi1`. Mở `/projects/{A1}`, `/projects/{A1}/acceptance-council` và `/notifications`.
 2. Đạt khi:
    - Trang đề tài hiện "Đã nghiệm thu".
    - Trang hội đồng hiện thẻ "Kết quả nghiệm thu" ở chế độ chỉ đọc, không có nút thao tác.
@@ -59,13 +59,13 @@ Riêng ca E7 cần hồ sơ có tệp. Sau khi chạy fixture, tải 2 tệp PDF
 ### F7 — TB có ghế không chuyển bước được (B2)
 
 1. Trình tờ trình hội đồng B2, đang ở bước TB.
-2. Thêm ghế cho `nmtrung` bằng DB: `INSERT` một dòng `acceptance_council_members` với `invitation_status = 'accepted'`, `council_role = 'committee_member'`, `project_id` = B2.
-3. Gọi `POST /api/v1/approval-submissions/{id}/advance` với tài khoản `nmtrung`, body `{"expectedStage":"BOARD_REVIEW","note":"x"}`.
+2. Thêm ghế cho `boardhead` bằng DB: `INSERT` một dòng `acceptance_council_members` với `invitation_status = 'accepted'`, `council_role = 'committee_member'`, `project_id` = B2.
+3. Gọi `POST /api/v1/approval-submissions/{id}/advance` với tài khoản `boardhead`, body `{"expectedStage":"BOARD_REVIEW","note":"x"}`.
 4. Đạt khi: nhận `403 APPROVAL_CONFLICT`, và trên UI (nếu nút còn hiện) bấm chuyển bước thì hiện lỗi tiếng Việt, không có mã kỹ thuật. Xóa dòng ghế đã thêm sau khi kiểm.
 
 ### F10 — Vai trò không có quyền trên B2
 
-Mở `/projects/{B2}/acceptance-council` và gọi `GET /api/v1/projects/{B2}/acceptance-council` với từng tài khoản sau: `hdtien2`, `dnbinh`, `ndbac`, `int1`, `admin`, `ex3` (không có ghế ở B2).
+Mở `/projects/{B2}/acceptance-council` và gọi `GET /api/v1/projects/{B2}/acceptance-council` với từng tài khoản sau: `rmstaff2`, `rmdeputy`, `oversight`, `int1`, `admin`, `ex3` (không có ghế ở B2).
 
 Đạt khi mỗi tài khoản rơi vào đúng một trong hai trường hợp:
 - Đọc được đề tài: xem ở chế độ chỉ đọc, `allowedActions` rỗng, không có nút nào.
@@ -76,7 +76,7 @@ Ghi bảng: tài khoản, HTTP code, `allowedActions`, ảnh chụp.
 ### F13 — Thao tác song song
 
 1. **Nhận lời song song:** đã chạy ở vòng 2 (201 + 409). Lần này đối chiếu thêm `project_history` và `audit_logs` của đề tài: chỉ có một dòng `acceptance-council.accept` cho người đã nhận lời thành công, không có dòng thừa.
-2. **Ký song song (B1 hoặc B2 ở bước Ban giám đốc):** gửi đồng thời 2 request `POST /api/v1/projects/{id}/acceptance-council/approve` của `tvtien`, cùng `contextVersion`.
+2. **Ký song song (B1 hoặc B2 ở bước Ban giám đốc):** gửi đồng thời 2 request `POST /api/v1/projects/{id}/acceptance-council/approve` của `director`, cùng `contextVersion`.
 3. **Ghi kết quả song song:** gửi đồng thời 2 request `POST .../result` của Chủ tịch (một Đạt, một Không đạt).
 4. Đạt khi:
    - Mỗi nhóm request chỉ có một request thành công; request còn lại nhận 409 hoặc 400.

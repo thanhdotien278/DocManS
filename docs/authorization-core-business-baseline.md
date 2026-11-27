@@ -165,11 +165,11 @@ thêm officer relationship cho các domain khác trong thay đổi này.
   council secretary drafts synthesis/minutes and does not score. The tờ trình goes CV → TB →
   TP → BGĐ; no role on that path edits research content through management authority.
 - Demo accounts under the 10-role model (the `DocManS` seed now has all ten codes;
-  see `docs/development/auth-seed-users.md`): `nmphuong` → `RESEARCH_MANAGEMENT_HEAD`;
-  `hdtien1`, `hdtien2` → `RESEARCH_MANAGEMENT_STAFF`; `tvtien` →
-  `LEADERSHIP_APPROVAL_AUTHORITY`; `vndinh` (PGĐ phụ trách Khoa học) →
-  `SCIENCE_DEPUTY_DIRECTOR`; `ndbac` (PGĐ-TD) → `RESEARCH_OVERSIGHT_AUTHORITY`; `dnbinh` →
-  `RESEARCH_MANAGEMENT_DEPUTY_HEAD`; `nmtrung` → `RESEARCH_BOARD_HEAD`. Local demo institutional scope is granted explicitly for
+  see `docs/development/auth-seed-users.md`): `rmhead` → `RESEARCH_MANAGEMENT_HEAD`;
+  `rmstaff1`, `rmstaff2` → `RESEARCH_MANAGEMENT_STAFF`; `director` →
+  `LEADERSHIP_APPROVAL_AUTHORITY`; `deputysci` (PGĐ phụ trách Khoa học) →
+  `SCIENCE_DEPUTY_DIRECTOR`; `oversight` (PGĐ-TD) → `RESEARCH_OVERSIGHT_AUTHORITY`; `rmdeputy` →
+  `RESEARCH_MANAGEMENT_DEPUTY_HEAD`; `boardhead` → `RESEARCH_BOARD_HEAD`. Local demo institutional scope is granted explicitly for
   each internal unit, never inherited from an organization tree.
 - Proposal PI eligibility: every system role except `SYSTEM_ADMIN` and
   `EXTERNAL_RESEARCHER_USER`. Create/edit/submit/resubmit still require the current

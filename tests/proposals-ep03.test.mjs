@@ -22,8 +22,8 @@ const ORG_KHTI = "org-khti";
 
 const staffUser = {
   id: "user-staff",
-  username: "nmphuong",
-  displayName: "TS. Nguyễn Minh Phương",
+  username: "rmhead",
+  displayName: "TS. Trần Thị Mai",
   status: "active",
   role: "scientific-management",
   systemRole: "RESEARCH_MANAGEMENT_STAFF",
@@ -40,16 +40,16 @@ const staffUser = {
 const outOfScopeStaffUser = {
   ...staffUser,
   id: "user-staff-other",
-  username: "hdtien2",
-  displayName: "HD Tiến 2",
+  username: "rmstaff2",
+  displayName: "Chuyên viên 2",
   organizationScopes: [{ id: "org-khqs", code: "KHQS", name: "Phòng KHQS" }]
 };
 
 const piUser = {
   ...staffUser,
   id: "user-pi",
-  username: "patuan",
-  displayName: "TS. Phạm Anh Tuấn",
+  username: "pi1",
+  displayName: "TS. Phạm Văn Dũng",
   role: "principal-investigator",
   systemRole: "RESEARCHER_INTERNAL_USER",
   roleLabel: "Chủ nhiệm đề tài",
@@ -61,8 +61,8 @@ const piUser = {
 const leadershipUser = {
   ...piUser,
   id: "user-leadership",
-  username: "tvtien",
-  displayName: "GS. TS. Trần Viết Tiến",
+  username: "director",
+  displayName: "GS. TS. Nguyễn Văn Bảo",
   role: "leadership",
   systemRole: "LEADERSHIP_APPROVAL_AUTHORITY",
   roleLabel: "Giám Đốc",
@@ -85,8 +85,8 @@ const conflictedLeadershipUser = {
 const reviewerUser = {
   ...piUser,
   id: "user-reviewer",
-  username: "nmtrung",
-  displayName: "TS. Đỗ Minh Trung",
+  username: "boardhead",
+  displayName: "TS. Hoàng Minh Đức",
   role: "reviewer",
   systemRole: "RESEARCHER_INTERNAL_USER",
   roleLabel: "Thành viên Hội đồng",
@@ -113,7 +113,7 @@ const unassignedReviewerUser = {
 const councilMemberUser = {
   ...reviewerUser,
   id: "user-council-member",
-  username: "hdtien3",
+  username: "rmstaff3",
   displayName: "TS. Thành viên Hội đồng",
   role: "council-member",
   roles: ["council-member"]
@@ -347,7 +347,7 @@ function createPrisma() {
           createdAt: new Date(),
           updatedAt: new Date(),
           deletedAt: null,
-          uploadedBy: { displayName: "TS. Phạm Anh Tuấn" },
+          uploadedBy: { displayName: "TS. Phạm Văn Dũng" },
           ...data
         };
         store.fileRecords.push(record);

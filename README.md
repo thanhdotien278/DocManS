@@ -59,10 +59,10 @@ Proposal management officer history is persisted; project officer relationships 
 reporting remain contracts until their backend domains exist. Dashboard showcase values are demo
 data. Funding currently covers requested proposal metadata, not actual expenditure or accounting.
 
-Local accounts (current seed): `nmphuong` (`RESEARCH_MANAGEMENT_HEAD`, TP),
-`hdtien1`/`hdtien2` (`RESEARCH_MANAGEMENT_STAFF`, CV), `tvtien` (`LEADERSHIP_APPROVAL_AUTHORITY`, GĐ),
-`vndinh` (`SCIENCE_DEPUTY_DIRECTOR`, PGĐ-KH), `ndbac` (`RESEARCH_OVERSIGHT_AUTHORITY`, PGĐ-TD),
-`dnbinh` (`RESEARCH_MANAGEMENT_DEPUTY_HEAD`, PP), `nmtrung` (`RESEARCH_BOARD_HEAD`, TB). See
+Local accounts (current seed): `rmhead` (`RESEARCH_MANAGEMENT_HEAD`, TP),
+`rmstaff1`/`rmstaff2` (`RESEARCH_MANAGEMENT_STAFF`, CV), `director` (`LEADERSHIP_APPROVAL_AUTHORITY`, GĐ),
+`deputysci` (`SCIENCE_DEPUTY_DIRECTOR`, PGĐ-KH), `oversight` (`RESEARCH_OVERSIGHT_AUTHORITY`, PGĐ-TD),
+`rmdeputy` (`RESEARCH_MANAGEMENT_DEPUTY_HEAD`, PP), `boardhead` (`RESEARCH_BOARD_HEAD`, TB). See
 [local demo accounts](docs/development/auth-seed-users.md). Existing proposals remain unassigned
 until TP explicitly assigns a CV; organization scope alone gives a CV no management access.
 

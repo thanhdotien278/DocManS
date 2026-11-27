@@ -5107,7 +5107,7 @@ So that các tab hiển thị đầy đủ khi demo và tài khoản thật khô
 **Acceptance Criteria:**
 
 **Given** seed chạy
-**When** mở `/my-profile` bằng tài khoản demo (TS. Phạm Anh Tuấn)
+**When** mở `/my-profile` bằng tài khoản demo (TS. Phạm Văn Dũng)
 **Then** cả 5 tab có dữ liệu và dữ liệu qua được kiểm tra hợp đồng.
 
 **Given** tài khoản nghiên cứu viên chưa có hồ sơ

@@ -23,7 +23,7 @@ context:
 - Add the "Lý lịch khoa học" nav entry to HEAD and STAFF.
 - An active `SYSTEM_ADMIN` may link an active HEAD/STAFF account to an INTERNAL profile in that account's scope. Managers still link only researcher-role accounts, and nobody can link themselves. This keeps elevated-account administration with SYSTEM_ADMIN, as the contract says.
 - A linked owner can never activate or deactivate their own profile, in the API or in `allowedActions`.
-- The demo seed links `nmphuong`, `hdtien1` and `hdtien2` to INTERNAL profiles, created like `vndinh`'s: only name and unit, nothing invented.
+- The demo seed links `rmhead`, `rmstaff1` and `rmstaff2` to INTERNAL profiles, created like `deputysci`'s: only name and unit, nothing invented.
 - Decided 2026-10-13. The user delegated the decision to Codex gpt-6-astra/high, which chose the manager link flow over self-service. It was narrowed to SYSTEM_ADMIN per `researcher-profile-access.md:46-52`.
 
 ## Boundaries & Constraints
@@ -51,7 +51,7 @@ context:
 - `apps/web/src/fixtures/shell-context.ts:278-297` -- `navigationByRole` HEAD/STAFF arrays; add `{ href: "/my-profile", label: "Lý lịch khoa học", icon: UserRoundSearch }` after Dashboard.
 - `apps/api/src/researcher-profiles/researcher-profile-access.ts` -- add a `linkableAccountRoles(actor, profileType)` helper used by both service callers; in `projectResearcherProfileAuthorization` deny activate/deactivate when `own`.
 - `apps/api/src/researcher-profiles/researcher-profiles.service.ts:368-375` (`accountCandidates`, `systemRole` filter → `{ in: roles }`), `:412-414` (`linkResearcherAccount` expectedRole check), `:241` (`setStatus`: reject when `current.linkedUserId === actor.id`).
-- `apps/api/prisma/seed.mjs:246` -- after the `vndinh` profile upsert, upsert `profile-staff-nmphuong` / `-hdtien1` / `-hdtien2` (INTERNAL, ACTIVE, primary unit, displayName), only when the user has no other linked profile.
+- `apps/api/prisma/seed.mjs:246` -- after the `deputysci` profile upsert, upsert `profile-staff-rmhead` / `-rmstaff1` / `-rmstaff2` (INTERNAL, ACTIVE, primary unit, displayName), only when the user has no other linked profile.
 - `docs/contracts/researcher-profile-access.md:46-52` -- document the SYSTEM_ADMIN elevated-link rule and the self status guard.
 - Unchanged: `/my-profile` page, `ScientificCvWorkspace`, the unlink rule (an admin already detaches elevated links), GET/PATCH my-profile.
 
@@ -65,7 +65,7 @@ context:
 - [x] `tests/researcher-profiles.test.mjs` -- extend "fails closed outside scope…" with the self-status case and the linkable-roles matrix; extend the UI source navigation test for the HEAD/STAFF entry.
 
 **Acceptance Criteria:**
-- Given seeded `nmphuong`, when they open "Lý lịch khoa học", then their own CV loads and saves.
+- Given seeded `rmhead`, when they open "Lý lịch khoa học", then their own CV loads and saves.
 - Given an account with no linked profile, when `/my-profile` loads, then the existing 403 message shows and nothing is created.
 
 ## Implementation Notes
@@ -73,7 +73,7 @@ context:
 - The seed is create-only: it skips a user who has, or ever had, a profile link, so it never overwrites edits or undoes an admin's unlink. It creates the profile, an account-link row and a CREATE history row. Name and unit only.
 - Self status guard keyed on `linkedUserId === actor.id` (also covers an INACTIVE own profile). `deniesElevatedLinkedWrite` is shared by the projection, `updateProfile` and `setStatus`.
 - `login-form.tsx`: HEAD/STAFF land on `/dashboard` even with a linked profile, otherwise the seed link would have moved their landing to `/my-profile`.
-- Verified: 26/26 tests in the two spec'd files and web `tsc`. Seed run twice is idempotent. Real app: `nmphuong` lands on `/dashboard`, the nav shows "Lý lịch khoa học", and `/my-profile` loads their CV. The local API process on :4000 was not restarted, so the new API guards were checked by tests only.
+- Verified: 26/26 tests in the two spec'd files and web `tsc`. Seed run twice is idempotent. Real app: `rmhead` lands on `/dashboard`, the nav shows "Lý lịch khoa học", and `/my-profile` loads their CV. The local API process on :4000 was not restarted, so the new API guards were checked by tests only.
 
 ## Review Triage Log
 
@@ -88,7 +88,7 @@ context:
 - Blind 9: unlinked HEAD/STAFF see a nav entry that returns the existing 403 message (low). Rejected: the user asked for the entry, and the 403 copy already says the linked profile is missing.
 - Blind 9b: icon is the same as the neighbouring entry (low, cosmetic). Rejected; researchers already use it.
 - Blind 10: `linkableAccountRoles` comment says "active" (low). Patched (deleted). Role-list duplication elsewhere is pre-existing; rejected.
-- Verification-gap 3: seed outcome only checked manually (low). Rejected: the implementer re-ran the seed twice, and `nmphuong` was checked in the browser.
+- Verification-gap 3: seed outcome only checked manually (low). Rejected: the implementer re-ran the seed twice, and `rmhead` was checked in the browser.
 
 ## Spec Change Log
 
@@ -101,4 +101,4 @@ context:
 - `(cd apps/web && npx tsc --noEmit -p .)` -- expected: clean.
 
 **Manual checks:**
-- Re-run the seed, then sign in as `nmphuong`: the nav shows "Lý lịch khoa học" and `/my-profile` loads the CV.
+- Re-run the seed, then sign in as `rmhead`: the nav shows "Lý lịch khoa học" and `/my-profile` loads the CV.
