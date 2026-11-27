@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest an improvement for an institutional workflow
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Data safety
+        Never paste real research data or personal data. Use mock or anonymized examples.
+
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Institutional workflow
+      description: Describe the workflow that this request affects.
+    validations:
+      required: true
+
+  - type: textarea
+    id: roles
+    attributes:
+      label: Roles involved
+      description: List the institutional roles involved and what each role should do.
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Expected outcome
+      description: Describe the result that users expect from this feature.
+    validations:
+      required: true

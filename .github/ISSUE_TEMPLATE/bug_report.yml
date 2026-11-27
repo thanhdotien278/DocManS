@@ -1,0 +1,70 @@
+name: Bug report
+description: Report a reproducible problem
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Data safety
+        Never paste real research data or personal data. Replace sensitive values
+        with mock or anonymized information.
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Describe every action needed to reproduce the issue.
+      placeholder: |
+        1. Sign in with the seeded account
+        2. Open ...
+        3. Click ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: Seeded account role
+      description: Which role did the seeded account you used have?
+      options:
+        - SYSTEM_ADMIN
+        - RESEARCH_MANAGEMENT_HEAD
+        - RESEARCH_MANAGEMENT_STAFF
+        - LEADERSHIP_APPROVAL_AUTHORITY
+        - SCIENCE_DEPUTY_DIRECTOR
+        - RESEARCH_OVERSIGHT_AUTHORITY
+        - RESEARCH_MANAGEMENT_DEPUTY_HEAD
+        - RESEARCH_BOARD_HEAD
+        - RESEARCHER_INTERNAL_USER
+        - STUDENT_USER
+        - EXTERNAL_RESEARCHER_USER
+        - Other/unknown
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Enter a release version or commit SHA.
+      placeholder: "Example: v1.2.0 or 1a2b3c4"
+    validations:
+      required: true
