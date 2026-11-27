@@ -7,7 +7,7 @@ DocManS manages research records, personal data, and institutional decisions, so
 | Version | Supported |
 | --- | --- |
 | Latest release (1.1.x) | Yes |
-| `DocManS` default branch | Yes |
+| `main` branch | Yes |
 | Older releases | No — please upgrade |
 
 ## Reporting a vulnerability

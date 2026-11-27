@@ -5,7 +5,7 @@ Flow 4 authority and execution boundary. It is normative for the Phase 2
 implementation; acceptance/council/closure remains a later flow.
 
 > Synced to [`permission-matrix.md`](../permission-matrix.md) (10 system roles,
-> 18/10/2026; §7 and §9.5 govern on conflict). The `DocManS` branch code still ships
+> 18/10/2026; §7 and §9.5 govern on conflict). The `main` branch code still ships
 > the former 7 roles until `tuan/DocManS` merges.
 
 ## Source and scope

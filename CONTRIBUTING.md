@@ -47,7 +47,7 @@ All three must pass. Service tests run without a database using fake Prisma obje
 
 ## Pull requests
 
-1. Branch from `DocManS` using a prefix such as `feat/`, `fix/`, `docs/`, or `chore/`.
+1. Branch from `main` using a prefix such as `feat/`, `fix/`, `docs/`, or `chore/`.
 2. Keep each pull request to one concern and match the style of the surrounding code.
 3. Use [Conventional Commits](https://www.conventionalcommits.org/) messages, for example `fix(projects): ...` or `docs(readme): ...`.
 4. In the description, explain what changed, why, and how you verified it. Include screenshots for UI changes, using seeded data only.

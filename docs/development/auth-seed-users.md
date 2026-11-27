@@ -4,7 +4,7 @@ These identities and credentials are **local/demo only**, not production identit
 All seeded accounts use the existing local password `1234`; the seed stores scrypt hashes.
 Run `npm run db:setup` for a new local database, or `npm run prisma:seed` after migrations.
 
-> **Role model:** the table lists the role codes the seed and code on the `DocManS` branch run
+> **Role model:** the table lists the role codes the seed and code on the `main` branch run
 > (all ten codes exist; PGĐ-KH, PP and TB have no permissions yet; `STUDENT_USER` is the eleventh, for Sinh viên NCKH only). The current business model has ten roles plus Sinh viên
 > ([`permission-matrix.md`](../permission-matrix.md) §2); the seed has one account per role.
 

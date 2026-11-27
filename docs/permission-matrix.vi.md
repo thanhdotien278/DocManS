@@ -9,7 +9,7 @@
 > `tuan/DocManS`, chưa merge vào `DocManS`). Khi mâu thuẫn, mục 7 của tài liệu này thắng.
 >
 > Các tài liệu liên quan trong `docs/` đã được đồng bộ sang mô hình 10 vai trò ngày
-> 18/10/2026. Code và seed trên nhánh `DocManS` đã có đủ 10 mã vai trò, nhưng PGĐ-KH, PP,
+> 18/10/2026. Code và seed trên nhánh `main` đã có đủ 10 mã vai trò, nhưng PGĐ-KH, PP,
 > TB chưa có quyền nghiệp vụ (xem [`development/auth-seed-users.md`](development/auth-seed-users.md)).
 >
 > **Cập nhật 17/11/2026 — D-045, vai trò thứ 11 `STUDENT_USER` (SV).** SV chỉ dùng phân hệ Sinh viên
