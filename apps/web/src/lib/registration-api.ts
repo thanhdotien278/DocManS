@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/csrf";
 import { getApiBaseUrl } from "@/lib/session";
 
 export type AccountType = "INTERNAL" | "EXTERNAL";
@@ -5,7 +6,7 @@ export type RegistrationRequest = { id: string; username: string; fullName: stri
 export type RegistrationUnit = { id: string; code: string; name: string };
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${getApiBaseUrl()}${path}`, { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...init?.headers } });
+  const response = await apiFetch(`${getApiBaseUrl()}${path}`, { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...init?.headers } });
   const body = (await response.json().catch(() => ({}))) as { message?: unknown };
   if (!response.ok) throw new Error(typeof body.message === "string" ? body.message : "Không thể xử lý yêu cầu. Vui lòng thử lại.");
   return body as T;

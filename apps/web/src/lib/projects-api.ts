@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/csrf";
 import { getApiBaseUrl } from "@/lib/session";
 import { isViewerAuthorizationV1, type PermissionActionV1, type ViewerAuthorizationV1 } from "@rtms/permissions";
 
@@ -75,7 +76,7 @@ export function canItem(item: { allowedActions?: PermissionActionV1[] }, action:
 export function projectDenial(project: ProjectRecord, action: PermissionActionV1) { return projectCapability(project)?.blockedActions.find((item) => item.action === action)?.reason ?? "Quyền thao tác chưa được xác minh. Vui lòng tải lại."; }
 
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${getApiBaseUrl()}${path}`, { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...init?.headers } });
+  const response = await apiFetch(`${getApiBaseUrl()}${path}`, { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...init?.headers } });
   const body = await response.json().catch(() => ({}));
   // Keep the full error body so callers can read extra fields (e.g. READINESS_INCOMPLETE missing lists).
   if (!response.ok) throw Object.assign(new Error(typeof body.message === "string" ? body.message : "Không thể xử lý thao tác đề tài."), { code: body.code as string | undefined, status: response.status, body });
@@ -104,7 +105,7 @@ export async function uploadProjectFile(project: ProjectRecord, file: File, purp
   form.set("relatedEntityId", project.id);
   form.set("filePurpose", purpose);
   form.set("contextVersion", JSON.stringify(capability.contextVersion));
-  const response = await fetch(`${getApiBaseUrl()}/files`, { method: "POST", credentials: "include", body: form });
+  const response = await apiFetch(`${getApiBaseUrl()}/files`, { method: "POST", credentials: "include", body: form });
   const body = await response.json().catch(() => ({}));
   if (!response.ok || !body.file?.id) throw new Error(typeof body.message === "string" ? body.message : "Không thể tải minh chứng.");
   return body.file as { id: string; fileName: string };
@@ -154,7 +155,7 @@ export async function uploadEthicsFile(dossierId: string, file: File, purpose: s
   form.set("relatedEntityId", dossierId);
   form.set("filePurpose", purpose);
   form.set("contextVersion", JSON.stringify(contextVersion));
-  const response = await fetch(`${getApiBaseUrl()}/files`, { method: "POST", credentials: "include", body: form });
+  const response = await apiFetch(`${getApiBaseUrl()}/files`, { method: "POST", credentials: "include", body: form });
   const body = await response.json().catch(() => ({}));
   if (!response.ok || !body.file?.id) throw Object.assign(new Error(typeof body.message === "string" ? body.message : "Không thể tải tệp hồ sơ."), { code: body.code as string | undefined, status: response.status, body });
   return body.file as { id: string; fileName: string };

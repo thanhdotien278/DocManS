@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/csrf";
 import { getApiBaseUrl } from "@/lib/session";
 import type { ContextVersionTokenV1, ViewerAuthorizationV1 } from "@rtms/permissions";
 
@@ -75,7 +76,7 @@ export class ProfileRequestError extends Error {
 }
 
 export async function profileRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${getApiBaseUrl()}/researcher-profiles${path}`, { ...init, credentials: "include", cache: "no-store", headers: { "Content-Type": "application/json", ...init?.headers } });
+  const response = await apiFetch(`${getApiBaseUrl()}/researcher-profiles${path}`, { ...init, credentials: "include", cache: "no-store", headers: { "Content-Type": "application/json", ...init?.headers } });
   const body = (await response.json().catch(() => ({}))) ?? {};
   if (!response.ok) {
     const errors = Array.isArray(body.errors) ? body.errors.filter((item: unknown): item is ProfileRequestFieldError => !!item && typeof item === "object" && typeof (item as ProfileRequestFieldError).field === "string" && typeof (item as ProfileRequestFieldError).message === "string") : [];

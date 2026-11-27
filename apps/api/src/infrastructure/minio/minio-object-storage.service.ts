@@ -1,6 +1,12 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import { Client } from "minio";
 import { Readable } from "node:stream";
+
+export function storageReadFailure(error: unknown) {
+  return error instanceof ServiceUnavailableException
+    ? error
+    : new NotFoundException({ message: "Không tìm thấy nội dung tệp." });
+}
 
 export type PutObjectInput = {
   objectKey: string;
@@ -13,6 +19,7 @@ export interface ObjectStorage {
   putObject(input: PutObjectInput): Promise<void>;
   getObject(objectKey: string): Promise<Readable | Buffer>;
   deleteObject?(objectKey: string): Promise<void>;
+  checkBucket?(): Promise<void>;
 }
 
 function readRequiredEnv(name: string) {
@@ -45,6 +52,14 @@ export class MinioObjectStorageService implements ObjectStorage {
 
   async deleteObject(objectKey: string) {
     await this.getClient().removeObject(this.getBucketName(), objectKey);
+  }
+
+  /** Kiểm tra kết nối và bucket MinIO phục vụ endpoint `/api/v1/health/ready`. */
+  async checkBucket() {
+    const exists = await this.getClient().bucketExists(this.getBucketName());
+    if (!exists) {
+      throw new Error("MinIO bucket does not exist.");
+    }
   }
 
   private getBucketName() {

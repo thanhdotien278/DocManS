@@ -1,9 +1,14 @@
-import { Controller, Get, Module } from "@nestjs/common";
+import { Module } from "@nestjs/common";
+import { APP_FILTER } from "@nestjs/core";
 import { AdminModule } from "./admin/admin.module.js";
 import { ApprovalsModule } from "./approvals/approvals.module.js";
 import { ApprovedProjectsModule } from "./approved-projects/approved-projects.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { DashboardModule } from "./dashboard/dashboard.module.js";
+import { HealthController } from "./infrastructure/health/health.controller.js";
+import { MinioObjectStorageService } from "./infrastructure/minio/minio-object-storage.service.js";
+import { AppExceptionFilter } from "./infrastructure/observability/app-exception.filter.js";
+import { PrismaService } from "./infrastructure/prisma/prisma.service.js";
 import { FilesModule } from "./modules/files/files.module.js";
 import { KhqsReportsModule } from "./khqs-reports/khqs-reports.module.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
@@ -15,20 +20,9 @@ import { StudentResearchModule } from "./student-research/student-research.modul
 import { ScientificDocumentsModule } from "./scientific-documents/scientific-documents.module.js";
 import { ResearcherProfilesModule } from "./researcher-profiles/researcher-profiles.module.js";
 
-@Controller("api/v1/health")
-class HealthController {
-  @Get()
-  health() {
-    return {
-      status: "ok",
-      service: "DocManSystem API",
-      timestamp: new Date().toISOString()
-    };
-  }
-}
-
 @Module({
   imports: [AuthModule, AdminModule, ApprovalsModule, ApprovedProjectsModule, DashboardModule, FilesModule, KhqsReportsModule, NotificationsModule, ProposalIntakePeriodsModule, ResearchProposalsModule, ProposalEvaluationsModule, ResearcherProfilesModule, RegistrationModule, ScientificDocumentsModule, StudentResearchModule],
-  controllers: [HealthController]
+  controllers: [HealthController],
+  providers: [PrismaService, MinioObjectStorageService, { provide: APP_FILTER, useClass: AppExceptionFilter }]
 })
 export class AppModule {}

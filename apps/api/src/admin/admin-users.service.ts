@@ -18,6 +18,7 @@ type CreateUserInput = {
   password?: unknown;
   systemRole?: unknown;
   organizationUnitId?: unknown;
+  credentialEmail?: unknown;
 };
 
 type UpdateUserInput = {
@@ -25,6 +26,7 @@ type UpdateUserInput = {
   systemRole?: unknown;
   organizationUnitId?: unknown;
   status?: unknown;
+  credentialEmail?: unknown;
 };
 
 type ListUsersInput = {
@@ -276,6 +278,7 @@ export class AdminUsersService {
     if (existing) {
       throw new BadRequestException({ message: "Tên đăng nhập đã tồn tại." });
     }
+    const credentialEmail = input.credentialEmail === undefined ? null : await this.readCredentialEmail(input.credentialEmail);
 
     const organizationUnit = await this.findActiveOrganizationUnit(organizationUnitId);
     if (systemRole === "RESEARCH_BOARD_HEAD") await this.assertNoOtherActiveBoardHead();
@@ -292,6 +295,7 @@ export class AdminUsersService {
           mustChangePassword: true,
           status: "active",
           systemRole,
+          credentialEmail,
           unit: organizationUnit.name
         }
       });
@@ -348,6 +352,7 @@ export class AdminUsersService {
       status?: string;
       systemRole?: string;
       unit?: string;
+      credentialEmail?: string | null;
     } = {};
 
     if (input.displayName !== undefined) {
@@ -411,6 +416,15 @@ export class AdminUsersService {
     if (existing.systemRole === "SYSTEM_ADMIN" && existing.status === "active" && (resultingRole !== "SYSTEM_ADMIN" || resultingStatus !== "active")) {
       const otherAdmin = await this.prisma.user.findFirst({ where: { systemRole: "SYSTEM_ADMIN", status: "active", id: { not: userId } }, select: { id: true } });
       if (!otherAdmin) throw new ConflictException({ message: "Không thể hạ quyền hoặc vô hiệu quản trị viên hệ thống đang hoạt động cuối cùng." });
+    }
+
+    if (input.credentialEmail !== undefined) {
+      const credentialEmail = await this.readCredentialEmail(input.credentialEmail, userId);
+      if (credentialEmail !== existing.credentialEmail) {
+        data.credentialEmail = credentialEmail;
+        // Thư công vụ nhận mã xác thực hai lớp và đăng nhập được bằng thư: đổi thư luôn ghi nhật ký.
+        auditEvents.push({ action: "admin-user-email-change", before: { credentialEmail: existing.credentialEmail }, after: { credentialEmail } });
+      }
     }
 
     if (organizationUnit) {
@@ -556,6 +570,15 @@ export class AdminUsersService {
     return status;
   }
 
+  /** Thư công vụ: đăng nhập được bằng thư và nhận mã xác thực hai lớp, nên không được trùng tài khoản khác. */
+  private async readCredentialEmail(value: unknown, userId?: string) {
+    const email = readText(value, "credentialEmail", 254).toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new BadRequestException({ message: "Thư công vụ không hợp lệ." });
+    const owner = await this.prisma.user.findUnique({ where: { credentialEmail: email }, select: { id: true } });
+    if (owner && owner.id !== userId) throw new BadRequestException({ message: "Thư công vụ đã được dùng cho tài khoản khác." });
+    return email;
+  }
+
   private readUserStatus(value: unknown) {
     const status = readText(value, "status", 40);
     if (status !== "active" && status !== "disabled" && status !== "locked") {
@@ -572,6 +595,7 @@ export class AdminUsersService {
     status: string;
     systemRole: string | null;
     unit: string;
+    credentialEmail?: string | null;
     organizationScopes?: Array<{
       isPrimary: boolean;
       organizationUnit: {
@@ -590,6 +614,7 @@ export class AdminUsersService {
       status: user.status,
       systemRole: user.systemRole,
       unit: user.unit,
+      credentialEmail: user.credentialEmail ?? null,
       organizationUnitId: organizationScope?.organizationUnit.id,
       positions: (user.unitPositions ?? []).map((position) => ({
         organizationUnitId: position.organizationUnitId,

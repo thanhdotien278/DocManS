@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import "./globals.css";
 import "./reports-documents.css";
 import { SessionProvider } from "@/components/auth/session-provider";
 import { AppShell } from "@/components/layout/app-shell";
+import { ConfirmProvider } from "@/components/ui/confirm-dialog";
 
 export const metadata: Metadata = {
   title: "Hệ thống quản lý NCKH, CN và đổi mới sáng tạo | Học viện Quân y",
@@ -31,11 +33,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Dựng động ở mọi yêu cầu để Next.js gắn được nonce CSP (src/middleware.ts) vào script của framework.
+  await connection();
   return (
     <html lang="vi" data-theme={await readUiTheme()} suppressHydrationWarning>
       <body>
         <SessionProvider>
-          <AppShell>{children}</AppShell>
+          <ConfirmProvider>
+            <AppShell>{children}</AppShell>
+          </ConfirmProvider>
         </SessionProvider>
       </body>
     </html>

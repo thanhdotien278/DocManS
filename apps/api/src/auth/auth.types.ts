@@ -3,6 +3,8 @@ import { SYSTEM_ROLES, type SystemRole } from "@rtms/permissions/system-roles";
 export { SYSTEM_ROLES, type SystemRole };
 
 export const AUTH_SESSION_COOKIE = "rtms_session";
+/** Production dùng tiền tố __Host- (bắt buộc HTTPS, Path=/, không Domain) để tên miền con không ghi đè được cookie phiên. */
+export const SECURE_AUTH_SESSION_COOKIE = "__Host-rtms_session";
 export const AUTH_FAILURE_MESSAGE = "Tên đăng nhập hoặc mật khẩu không hợp lệ.";
 export const AUTH_PENDING_APPROVAL_MESSAGE = "Tài khoản đang chờ cán bộ quản lý khoa học duyệt.";
 /** Story 13.11: QT, TB, CV duyệt yêu cầu tự đăng ký, không phụ thuộc scope đơn vị (D-044). */
@@ -21,6 +23,8 @@ export type InternalUser = {
   organizationScopes: OrganizationScope[];
   mustChangePassword?: boolean;
   credentialVersion: number;
+  credentialEmail?: string | null;
+  loginOtpEnabled?: boolean;
   researcherProfileId?: string;
   /** Chức danh tại đơn vị, ví dụ "Trưởng khoa – Khoa Nội". Chỉ để hiển thị, không phân quyền. */
   positions?: string[];
@@ -40,6 +44,7 @@ export type SafeUserContext = {
   unit: string;
   organizationScopes: OrganizationScope[];
   mustChangePassword?: boolean;
+  loginOtp?: { required: boolean; enabled: boolean; modeActive?: boolean };
   researcherProfileId?: string;
   /** Chức danh tại đơn vị, ví dụ "Trưởng khoa – Khoa Nội". Chỉ để hiển thị, không phân quyền. */
   positions?: string[];

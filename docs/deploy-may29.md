@@ -97,6 +97,35 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f api web n
 # Kiểm tra phản hồi cục bộ qua nginx
 curl -I http://127.0.0.1:8080
 
+# Kiểm tra sức khoẻ API (liveness & readiness Postgres + MinIO)
+curl -s http://127.0.0.1:8080/api/v1/health
+curl -s http://127.0.0.1:8080/api/v1/health/ready
+
 # Ép build và khởi động lại ngay
 ./scripts/deploy-may29.sh --force
 ```
+
+## 6. Cấu hình Bảo mật & Vận hành nâng cao
+
+### Biến bảo mật trong `.env.prod`
+- `CSRF_SECRET`: chuỗi bí mật tối thiểu 32 ký tự (`openssl rand -base64 32`) để ký mã CSRF theo phiên.
+- `CSP_MODE`: mặc định `report-only` để ghi nhận vi phạm (`csp_violation` trong log `api`) trước khi chuyển sang `enforce`.
+- `LOGIN_OTP_MODE`: mặc định `off` trên Máy 29. Chỉ đổi sang `required-roles` sau khi cấu hình `SMTP_*` hoạt động ổn định và đã nhập đủ `Thư công vụ` (`credentialEmail`) cho các tài khoản lãnh đạo, Phòng KHQS và quản trị.
+- `MINIO_APP_ACCESS_KEY` / `MINIO_APP_SECRET_KEY`: tuỳ chọn tách tài khoản ứng dụng MinIO có quyền giới hạn trong đúng bucket hệ thống (thông qua `scripts/minio-init.sh`).
+
+### Sao lưu và khôi phục dữ liệu
+- Chạy thủ công hoặc gắn cron hằng ngày lúc 01:30 để sao lưu PostgreSQL (`pg_dump -Fc`) và volume MinIO kèm `SHA256SUMS`:
+
+```cron
+30 1 * * * cd /opt/docmans && ./scripts/backup.sh >> /var/log/docmans-backup.log 2>&1
+```
+
+- Diễn tập hoặc khôi phục từ một thư mục sao lưu:
+
+```bash
+./scripts/restore.sh backups/<YYYYMMDD_HHMMSS>
+```
+
+### Chứng chỉ TLS khi triển khai on-premise (tuỳ chọn dự phòng)
+- Trên Máy 29, TLS do Cloudflare Tunnel quản lý nên không cần chạy certbot (`docker-compose.prod.yml` và `nginx/conf.d/rtms.conf` chỉ lắng nghe HTTP nội bộ cho `cloudflared`).
+- Nếu triển khai trực tiếp trên mạng nội bộ/Internet không qua Cloudflare Tunnel, cần bổ sung file compose override (mount `./certbot/www:/var/www/certbot:ro`, `./nginx/ssl:/etc/nginx/ssl:ro`, mở cổng `80`/`443`) và cấu hình nginx TLS (`listen 443 ssl`, `/.well-known/acme-challenge/`), rồi dùng `scripts/letsencrypt-init.sh` (kèm profile `letsencrypt`) và `scripts/check-cert-expiry.sh` để cấp và giám sát hạn chứng chỉ.

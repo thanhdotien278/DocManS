@@ -22,8 +22,8 @@ const EXTERNAL_LABELS: Record<string, string> = { "/my-proposals": "Hồ sơ tô
 // Theme "guided" và "academy": gom menu theo loại công việc; href chưa khai báo rơi vào nhóm cuối.
 const NAVIGATION_GROUPS: [string, string[]][] = [
   ["Tổng quan", ["/dashboard", "/notifications", "/documents"]],
-  ["Việc của tôi", ["/my-profile", "/student-profile", "/my-proposals", "/my-projects", "/periodic-reports", "/my-tasks", "/invitation-to-review", "/approvals"]],
-  ["Đề xuất và đề tài", ["/proposals", "/intakes", "/reviews", "/projects", "/tasks", "/reports", "/student-research"]],
+  ["Việc của tôi", ["/my-profile", "/student-profile", "/my-proposals", "/my-projects", "/my-conferences", "/periodic-reports", "/my-tasks", "/invitation-to-review", "/approvals"]],
+  ["Đề xuất và đề tài", ["/proposals", "/intakes", "/reviews", "/projects", "/conferences", "/tasks", "/reports", "/student-research"]],
   ["Nhà khoa học và tài khoản", ["/researcher-profiles", "/registration-requests", "/users", "/roles", "/units"]],
   ["Hệ thống", []]
 ];
@@ -58,9 +58,11 @@ const DOCUMENTS: [string, string] = ["/documents", "Văn bản & Biểu mẫu"];
 const REGISTRATIONS: [string, string] = ["/registration-requests", "Yêu cầu đăng ký"];
 const STUDENT_RESEARCH: [string, string] = ["/student-research", "Sinh viên NCKH"];
 const STUDENT_PROFILE: [string, string] = ["/student-profile", "Hồ sơ sinh viên"];
+const CONFERENCES: [string, string] = ["/conferences", "Hội nghị khoa học"];
+const MY_CONFERENCES: [string, string] = ["/my-conferences", "Hội nghị của tôi"];
 const researcherGroups = (proposals: string, projects: string, reviews = MY_REVIEWS[1]): [string, [string, string][]][] => [
   [WORK, [HOME, ["/invitation-to-review", reviews], NOTICES]],
-  ["Nghiên cứu của tôi", [["/my-proposals", proposals], ["/my-projects", projects], CV, DOCUMENTS]]
+  ["Nghiên cứu của tôi", [["/my-proposals", proposals], ["/my-projects", projects], MY_CONFERENCES, CV, DOCUMENTS]]
 ];
 
 const WORKSPACE_NAVIGATION: Record<UserRole, [string, [string, string][]][]> = {
@@ -70,28 +72,28 @@ const WORKSPACE_NAVIGATION: Record<UserRole, [string, [string, string][]][]> = {
     [ADMIN, [["/catalogs", "Danh mục"], DOCUMENTS, ["/system-settings", "Cấu hình hệ thống"], ["/system-logs", "Nhật ký hệ thống"]]]
   ],
   LEADERSHIP_APPROVAL_AUTHORITY: [
-    [WORK, [HOME, ["/approvals", "Chờ tôi quyết định"], MY_REVIEWS, NOTICES]],
-    [RECORDS, [PROPOSALS, PROJECTS, REPORTS, DOCUMENTS]]
+    [WORK, [HOME, ["/approvals", "Chờ tôi quyết định"], MY_REVIEWS, MY_CONFERENCES, NOTICES]],
+    [RECORDS, [PROPOSALS, PROJECTS, CONFERENCES, REPORTS, DOCUMENTS]]
   ],
-  SCIENCE_DEPUTY_DIRECTOR: [[WORK, [HOME, ["/approvals", "Văn bản chờ tôi ký"], MY_REVIEWS, NOTICES]], [RECORDS, [PROPOSALS, PROJECTS, REPORTS, CV, DOCUMENTS]]],
+  SCIENCE_DEPUTY_DIRECTOR: [[WORK, [HOME, ["/approvals", "Văn bản chờ tôi ký"], MY_REVIEWS, MY_CONFERENCES, NOTICES]], [RECORDS, [PROPOSALS, PROJECTS, CONFERENCES, REPORTS, CV, DOCUMENTS]]],
   RESEARCH_OVERSIGHT_AUTHORITY: [
-    [WORK, [HOME, MY_REVIEWS, NOTICES]],
-    [RECORDS, [PROPOSALS, PROJECTS, REPORTS, ["/my-proposals", "Hồ sơ đề xuất của tôi"], DOCUMENTS]]
+    [WORK, [HOME, MY_REVIEWS, MY_CONFERENCES, NOTICES]],
+    [RECORDS, [PROPOSALS, PROJECTS, CONFERENCES, REPORTS, ["/my-proposals", "Hồ sơ đề xuất của tôi"], DOCUMENTS]]
   ],
   RESEARCH_MANAGEMENT_HEAD: [
-    [WORK, [HOME, MY_REVIEWS, NOTICES]],
-    [RECORDS, [PROPOSALS, PROJECTS, REPORTS, DOCUMENTS]],
+    [WORK, [HOME, MY_REVIEWS, MY_CONFERENCES, NOTICES]],
+    [RECORDS, [PROPOSALS, PROJECTS, CONFERENCES, REPORTS, DOCUMENTS]],
     [MANAGE, [INTAKES, STUDENT_RESEARCH, REVIEWS, PROFILES, CV]]
   ],
-  RESEARCH_MANAGEMENT_DEPUTY_HEAD: [[WORK, [HOME, MY_REVIEWS, NOTICES]], [RECORDS, [["/proposals", "Hồ sơ đang theo dõi"], PROJECTS, REPORTS, DOCUMENTS]]],
+  RESEARCH_MANAGEMENT_DEPUTY_HEAD: [[WORK, [HOME, MY_REVIEWS, MY_CONFERENCES, NOTICES]], [RECORDS, [["/proposals", "Hồ sơ đang theo dõi"], PROJECTS, CONFERENCES, REPORTS, DOCUMENTS]]],
   RESEARCH_BOARD_HEAD: [
-    [WORK, [HOME, MY_REVIEWS, NOTICES]],
-    [RECORDS, [PROPOSALS, PROJECTS, REPORTS, DOCUMENTS]],
+    [WORK, [HOME, MY_REVIEWS, MY_CONFERENCES, NOTICES]],
+    [RECORDS, [PROPOSALS, PROJECTS, CONFERENCES, REPORTS, DOCUMENTS]],
     [MANAGE, [STUDENT_RESEARCH, REGISTRATIONS, CV]]
   ],
   RESEARCH_MANAGEMENT_STAFF: [
-    [WORK, [HOME, MY_REVIEWS, NOTICES]],
-    [RECORDS, [["/proposals", "Hồ sơ tôi phụ trách"], PROJECTS, REPORTS, DOCUMENTS]],
+    [WORK, [HOME, MY_REVIEWS, MY_CONFERENCES, NOTICES]],
+    [RECORDS, [["/proposals", "Hồ sơ tôi phụ trách"], PROJECTS, CONFERENCES, REPORTS, DOCUMENTS]],
     [MANAGE, [INTAKES, STUDENT_RESEARCH, REVIEWS, PROFILES, REGISTRATIONS, CV]]
   ],
   RESEARCHER_INTERNAL_USER: researcherGroups("Hồ sơ đề xuất của tôi", "Đề tài của tôi"),

@@ -5,7 +5,7 @@ import { AuthRateLimitService } from "../auth/auth-rate-limit.service.js";
 import type { SafeUserContext } from "../auth/auth.types.js";
 import { MinioObjectStorageService } from "../infrastructure/minio/minio-object-storage.service.js";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
-import { assertValidUpload, defaultFileConfig, readMaxUploadBytes } from "../modules/files/files.service.js";
+import { assertValidUpload, defaultFileConfig, readMaxUploadBytes } from "../modules/files/file-validation.js";
 import { MailService } from "../notifications/mail.service.js";
 import { readTransactionClockV1 } from "../permissions/authorization-v1.service.js";
 import { isResearchBoardHead, isResearchManagementHead, isResearchManagementStaff } from "../proposals-shared/proposal-access.js";

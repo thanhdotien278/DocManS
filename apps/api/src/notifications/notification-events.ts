@@ -1,6 +1,31 @@
 import type { Prisma } from "@prisma/client";
 
-export type NotificationSourceType = "approval" | "proposal" | "review_assignment" | "ethics_dossier" | "acceptance_dossier" | "acceptance_council" | "registration_request" | "project_funding" | "project_liquidation";
+export type NotificationSourceType = "approval" | "proposal" | "review_assignment" | "ethics_dossier" | "acceptance_dossier" | "acceptance_council" | "registration_request" | "project_funding" | "project_liquidation" | "conference" | "conference_management";
+
+export function escapeHtml(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+/**
+ * Liên kết tuyệt đối cho email. Gốc lấy từ APP_BASE_URL, nếu không có thì từ ACCOUNT_LOGIN_URL.
+ * Chỉ nhận đường dẫn nội bộ bắt đầu bằng "/"; thiếu cấu hình thì trả chuỗi rỗng.
+ */
+export function absoluteLink(link: string | undefined, env: Record<string, string | undefined> = process.env) {
+  if (!link || !link.startsWith("/") || link.startsWith("//")) return "";
+  const bases: string[] = [];
+  if (env.APP_BASE_URL) bases.push(env.APP_BASE_URL.replace(/\/+$/, "") + "/");
+  if (env.ACCOUNT_LOGIN_URL) bases.push(env.ACCOUNT_LOGIN_URL.replace(/[^/]*$/, ""));
+  for (const base of bases) {
+    try {
+      const url = new URL(base);
+      if (url.protocol !== "https:" && url.protocol !== "http:") continue;
+      return new URL(link.slice(1), url).toString();
+    } catch {
+      continue;
+    }
+  }
+  return "";
+}
 
 export type NotificationEvent = {
   userIds: Array<string | null | undefined>;
