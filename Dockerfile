@@ -36,7 +36,7 @@ CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy --schem
 # ---- Build Web ----
 FROM deps AS builder-web
 ARG NEXT_PUBLIC_APP_NAME=RTMS
-ARG NEXT_PUBLIC_API_BASE_URL=https://khqs.thanhdotien.com/api/v1
+ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:4000/api/v1
 ENV NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
