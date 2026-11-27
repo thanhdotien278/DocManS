@@ -75,7 +75,7 @@ Files: `modules/files` stores uploads in MinIO and metadata in `FileRecord`; the
 
 ## Planning artifacts
 
-Work is organized as BMAD epics/stories (branches like `EP-03-review-approval-workflow`, `ST-2.4-proposal-submit-history`; commits `feat(st-2.4): ...`). Planning output lives in `_bmad-output/` (`prd.md`, `architecture.md`, `epics-and-stories.md`) with `_bmad/` holding the tool config — BMAD writes Vietnamese. Repo-side docs: `docs/permission-matrix.md`, `docs/ux-design-guidelines.md`, `docs/stories-notes-vi/epics-and-stories.md`, `docs/sprints/`, `docs/story-logs/`.
+Work is organized as BMAD epics/stories (branches like `EP-03-review-approval-workflow`, `ST-2.4-proposal-submit-history`; commits `feat(st-2.4): ...`). Planning output lives locally in `_bmad-output/` (`prd.md`, `architecture.md`, `epics-and-stories.md`; git-ignored, not published) with `_bmad/` holding the tool config — BMAD writes Vietnamese. Repo-side docs: `docs/permission-matrix.md`, `docs/ux-design-guidelines.md`, `docs/stories-notes-vi/epics-and-stories.md`, `docs/sprints/`, `docs/story-logs/`.
 
 Issues are tracked in GitHub Issues for `thanhdotien278/DocManS` via `gh` (`docs/agents/issue-tracker.md`); triage labels are `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`.
 

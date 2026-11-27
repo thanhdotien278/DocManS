@@ -45,8 +45,7 @@ Baseline §2.1 governs officer lifecycle, conflict checks and finalized role dec
   view/update only their own active profile through My Profile. Personal/contact, academic, position/rank, expertise, publication
   and participation fields are editable. Self requests containing type, status,
   management scope, account IDs, roles or other administrative fields are rejected.
-  The scientific CV uses the versioned contract in
-  `_bmad-output/specs/spec-scientific-cv/cv-data-contract.md`. The full actions
+  The scientific CV uses a versioned data contract. The full actions
   `researcher-profile.cv.read` and `researcher-profile.cv.update` are granted to
   the active linked owner and to active `SYSTEM_ADMIN`,
   `RESEARCH_MANAGEMENT_HEAD` and `RESEARCH_MANAGEMENT_STAFF` managers only

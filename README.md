@@ -264,7 +264,6 @@ packages/
   validation/             Shared validation utilities
   ui-tokens/              Shared UI tokens
 docs/                     Project and contributor documentation
-_bmad-output/             Planning and implementation artifacts
 tests/                    Node.js test suites
 docker-compose.yml        Local Docker services
 ```
