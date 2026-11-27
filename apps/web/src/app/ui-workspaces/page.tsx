@@ -73,7 +73,7 @@ const workspaces: WorkspaceMockup[] = [
     id: "admin-console",
     title: "Admin Console",
     subtitle: "Quản trị nền tảng, tài khoản, vai trò, đơn vị và cấu hình dùng chung.",
-    user: "TS. Đỗ Tiến Thành",
+    user: "TS. Bùi Văn Khánh",
     scope: "Quản trị hệ thống - Khoa Toán Tin học",
     icon: ShieldCheck,
     nav: [
@@ -129,7 +129,7 @@ const workspaces: WorkspaceMockup[] = [
     id: "staff-operations",
     title: "Staff Operations Workspace",
     subtitle: "Điều phối tiếp nhận, kiểm tra, bổ sung, phân công reviewer và tổng hợp kết quả.",
-    user: "TS. Nguyễn Minh Phương",
+    user: "TS. Trần Thị Mai",
     scope: "Trưởng phòng KHQS - phạm vi đơn vị được cấp",
     icon: ClipboardCheck,
     nav: [
@@ -170,7 +170,7 @@ const workspaces: WorkspaceMockup[] = [
     id: "leadership-dashboard",
     title: "Leadership Decision Dashboard",
     subtitle: "Tập trung vào quyết định, drill-down hồ sơ, phê duyệt, từ chối và chỉ đạo xử lý.",
-    user: "GS. TS. Trần Viết Tiến",
+    user: "GS. TS. Nguyễn Văn Bảo",
     scope: "Giám đốc - approval authority scope",
     icon: LayoutDashboard,
     nav: [
@@ -210,7 +210,7 @@ const workspaces: WorkspaceMockup[] = [
     id: "researcher-workspace",
     title: "Researcher Workspace",
     subtitle: "Không tách app riêng cho PI, thành viên, thư ký; quyền thay đổi theo từng hồ sơ.",
-    user: "TS. Phạm Anh Tuấn",
+    user: "TS. Phạm Văn Dũng",
     scope: "Chủ nhiệm đề tài - participation scope",
     icon: NotebookPen,
     nav: [
@@ -251,7 +251,7 @@ const workspaces: WorkspaceMockup[] = [
     id: "reviewer-council-ethics",
     title: "Reviewer / Council / Ethics Workspace",
     subtitle: "Workspace đánh giá độc lập cho hồ sơ được phân công, hội đồng và y đức.",
-    user: "TS. Đỗ Minh Trung",
+    user: "TS. Hoàng Minh Đức",
     scope: "Thành viên Hội đồng - reviewer assignment scope",
     icon: FileCheck2,
     nav: [

@@ -37,7 +37,7 @@ export function officialTitles(titles?: string | null) {
   return (titles ?? "").split(/[\s,]+/).map((token) => token.replace(/\.+$/, "")).filter(Boolean).join(", ");
 }
 
-/** "Thiếu tướng, PGS, TS Vũ Nhất Định"; thiếu cấp bậc: "PGS, TS Lê Đức Hậu"; thiếu học vị: "Trung tướng Trần Viết Tiến". */
+/** "Thiếu tướng, PGS, TS Lê Quang Khải"; thiếu cấp bậc: "PGS, TS Lê Văn Phúc"; thiếu học vị: "Trung tướng Nguyễn Văn Bảo". */
 export function officialName(input: { militaryRank?: string | null; titles?: string | null; name: string }) {
   const rank = input.militaryRank?.trim();
   const titles = officialTitles(input.titles);
@@ -48,7 +48,7 @@ export function officialName(input: { militaryRank?: string | null; titles?: str
   return titles ? `${capitalized}, ${withTitles}` : `${capitalized} ${withTitles}`;
 }
 
-/** Tách tên hiển thị của tài khoản ("Thượng tá, PGS. TS. Đỗ Minh Trung", đồng bộ theo lý lịch) thành cấp bậc, học vị, họ tên. */
+/** Tách tên hiển thị của tài khoản ("Thượng tá, PGS. TS. Hoàng Minh Đức", đồng bộ theo lý lịch) thành cấp bậc, học vị, họ tên. */
 export function splitDisplayName(displayName?: string | null) {
   const value = displayName?.trim() ?? "";
   const comma = value.indexOf(",");
@@ -62,13 +62,13 @@ export function splitDisplayName(displayName?: string | null) {
   return { militaryRank: hasRank ? head : "", titles: titleTokens.join(" "), name: tokens.join(" ") };
 }
 
-/** Tên chủ nhiệm, thành viên trong thân quyết định: "Thượng tá, TS Phạm Anh Tuấn". */
+/** Tên chủ nhiệm, thành viên trong thân quyết định: "Thượng tá, TS Phạm Văn Dũng". */
 export function officialNameFromDisplay(displayName?: string | null) {
   const parts = splitDisplayName(displayName);
   return parts.name ? officialName(parts) : "";
 }
 
-/** Dòng người ký: cấp bậc và họ tên, bỏ học hàm, học vị ("Trung tướng, GS. TS. Trần Viết Tiến" → "Trung tướng Trần Viết Tiến"). */
+/** Dòng người ký: cấp bậc và họ tên, bỏ học hàm, học vị ("Trung tướng, GS. TS. Nguyễn Văn Bảo" → "Trung tướng Nguyễn Văn Bảo"). */
 export function signerLine(displayName?: string | null) {
   const parts = splitDisplayName(displayName);
   return parts.name ? officialName({ militaryRank: parts.militaryRank, name: parts.name }) : "";

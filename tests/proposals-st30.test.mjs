@@ -44,8 +44,8 @@ const piUser = {
   ...staffUser,
   id: "user-pi",
   researcherProfileId: "profile-pi",
-  username: "patuan",
-  displayName: "Phạm Anh Tuấn",
+  username: "pi1",
+  displayName: "Phạm Văn Dũng",
   role: "principal-investigator",
   systemRole: "RESEARCHER_INTERNAL_USER",
   roleLabel: "Chủ nhiệm đề tài",
@@ -310,7 +310,7 @@ function createPrisma() {
           createdAt: new Date(),
           updatedAt: new Date(),
           deletedAt: null,
-          uploadedBy: { displayName: "Phạm Anh Tuấn" },
+          uploadedBy: { displayName: "Phạm Văn Dũng" },
           ...data
         };
         store.fileRecords.push(record);
@@ -829,7 +829,7 @@ describe("ST-3.0 proposal participation model and conflict primitives", () => {
     assert.deepEqual(listView.viewerAuthorization, detailView.viewerAuthorization);
     assert.deepEqual(detailView.viewerAuthorization.viewerRelationships.map((relationship) => relationship.type), ["TOPIC_MEMBER"]);
     assert.equal(detailView.viewerAuthorization.blockedActions.find((action) => action.action === "proposal.draft.update").code, "ACTION_NOT_GRANTED");
-    assert.doesNotMatch(JSON.stringify(detailView.viewerAuthorization), /patuan|ttminh|Phạm Anh Tuấn|Thanh Minh/);
+    assert.doesNotMatch(JSON.stringify(detailView.viewerAuthorization), /pi1|ttminh|Phạm Văn Dũng|Thanh Minh/);
     assert.equal(detailView.viewerAuthorization.contextVersion.relationshipVersion, 1);
     assert.equal(detailView.viewerAuthorization.contextVersion.conflictVersion, 1);
     assert.match(detailView.viewerAuthorization.viewerRelationships[0].effectiveFrom, /^\d{4}-\d{2}-\d{2}T/);

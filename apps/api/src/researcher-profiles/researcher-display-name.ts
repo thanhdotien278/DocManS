@@ -1,6 +1,6 @@
 /**
  * Tên hiển thị của tài khoản theo lý lịch khoa học: quân hàm, học hàm, học vị rồi họ tên,
- * ví dụ "Thượng tá, PGS. TS. Đỗ Minh Trung". Dùng chung mọi nơi hiện tên tài khoản.
+ * ví dụ "Thượng tá, PGS. TS. Hoàng Minh Đức". Dùng chung mọi nơi hiện tên tài khoản.
  */
 
 type CatalogRef = { code?: string | null; name?: string | null } | null | undefined;

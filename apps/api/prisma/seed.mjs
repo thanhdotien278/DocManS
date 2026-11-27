@@ -30,47 +30,47 @@ const users = [
     username: "admin",
     passwordHash:
       "scrypt:user-admin:88577689e88df3ec17a117384f8a68ff4e516d4ccc3c4a7783764eb66f4a72a8c35ae574d915e01d7ba3fe5e3a800b30463e721c488544ca3fc90192544e0c43",
-    displayName: "TS. Đỗ Tiến Thành",
+    displayName: "TS. Bùi Văn Khánh",
     status: "active",
     systemRole: "SYSTEM_ADMIN",
     unit: "Khoa Toán - Tin học"
   },
   {
     id: "user-leadership",
-    username: "tvtien",
+    username: "director",
     passwordHash:
       "scrypt:user-leadership:ee6993e65023030a9cf863925cf50c6a8e94a829eaeb344059bfb66e2c5419622123ea57a1891543a9f3aa308e48e24057a41bd16860c6150bbfac36614ef657",
-    displayName: "GS. TS. Trần Viết Tiến",
+    displayName: "GS. TS. Nguyễn Văn Bảo",
     status: "active",
     systemRole: "LEADERSHIP_APPROVAL_AUTHORITY",
     unit: "Ban Giám Đốc"
   },
   {
     id: "user-staff",
-    username: "nmphuong",
+    username: "rmhead",
     passwordHash:
       "scrypt:user-staff:ea925bf5f31fe306cb863a45afec44a4e67d84423e431cb93de5af91425c6723cb66ac59963afe1f47ad86d3c16aec95f73bffc74c22d75b032fd1093f7a71d5",
-    displayName: "TS. Nguyễn Minh Phương",
+    displayName: "TS. Trần Thị Mai",
     status: "active",
     systemRole: "RESEARCH_MANAGEMENT_HEAD",
     unit: "Phòng KHQS"
   },
   {
     id: "user-pi",
-    username: "patuan",
+    username: "pi1",
     passwordHash:
       "scrypt:user-pi:a2b881672bd86b9b7bc23fa6b11a507a1d4142e00c19a9ff0f66f815bee1882f417f0253352b0bd54c66772e4a3949671c0c7f37a691a43c5d05e556e6919a38",
-    displayName: "TS. Phạm Anh Tuấn",
+    displayName: "TS. Phạm Văn Dũng",
     status: "active",
     systemRole: "RESEARCHER_INTERNAL_USER",
     unit: "Khoa Toán - Tin học"
   },
   {
-    id: "user-board-head-nmtrung",
-    username: "nmtrung",
+    id: "user-board-head-boardhead",
+    username: "boardhead",
     passwordHash:
       "scrypt:user-reviewer:b0782812a1c75cef9db6596a7c88ae497fac0d08b7c7230c908d3c413fc08c2bed386eccfc0cbc10a64a088f1ad9bf6a2f6507410ea3d833bbb0907d958ac12a",
-    displayName: "TS. Đỗ Minh Trung",
+    displayName: "TS. Hoàng Minh Đức",
     status: "active",
     systemRole: "RESEARCH_BOARD_HEAD",
     unit: "Ban Quản lý KHQS"
@@ -136,51 +136,51 @@ const users = [
     unit: "Đơn vị ngoài"
   },
   {
-    id: "user-staff-hdtien1",
-    username: "hdtien1",
+    id: "user-staff-rmstaff1",
+    username: "rmstaff1",
     passwordHash:
-      "scrypt:user-staff-hdtien1:0ca10cf0ed59766007948d5e2010afb69514a438a457e62f20eb392bfae619b1d91f2fed126c591a8a9f2d945e1d0705fbf6545f1e371e3ce692d19ab1ecdea0",
-    displayName: "HD Tiến 1",
+      "scrypt:user-staff-rmstaff1:ecc1f010670b5b4723c679f7aa82e7076d9a171dc4ed6c86eb415f1dd351b4b03bc325135a34cf96f9a8a013a45df1914142dd6551e144ec2ad0484ade2f7a32",
+    displayName: "Chuyên viên 1",
     status: "active",
     systemRole: "RESEARCH_MANAGEMENT_STAFF",
     unit: "Phòng KHQS"
   },
   {
-    id: "user-staff-hdtien2",
-    username: "hdtien2",
+    id: "user-staff-rmstaff2",
+    username: "rmstaff2",
     passwordHash:
-      "scrypt:user-staff-hdtien2:3fcf32d5cd6957b752759325f0ee8c06f19db00e53ba051225606826fe336f7fe8bf4655570b109ee0a59eb1e90bf02c40e9a5f7d67f93562cbbac1774e7ad74",
-    displayName: "HD Tiến 2",
+      "scrypt:user-staff-rmstaff2:1f86b96c58477658efaf3d950d9fd68611e9e65ba061e55e17b54034b45e1ac007bcfca525f4336f2e6718aad969b5f9f9aa637de1a220982e2b389df1b6b255",
+    displayName: "Chuyên viên 2",
     status: "active",
     systemRole: "RESEARCH_MANAGEMENT_STAFF",
     unit: "Phòng KHQS"
   },
   {
-    id: "user-science-deputy-vndinh",
-    username: "vndinh",
+    id: "user-science-deputy-deputysci",
+    username: "deputysci",
     passwordHash:
-      "scrypt:user-oversight-vndinh:160c990dff95c8879c814e0cfebadd0ab04305c0442bdff044342674d7ef241c364e1457a75a02617d6f303aec6e1a01c26d97b2baaa7522e14b9ef8874cbd7f",
-    displayName: "Thiếu tướng PGS. TS. Vũ Nhất Định",
+      "scrypt:user-oversight-deputysci:a6d43d3676f444c6a8912b2d3a0a51a0453f1d9e85aef5c83a6d94bf9e72ad2159eda0dc07710fdccc7363b4737452d8bb46a238dd32d7b6c6cf039a064b66c4",
+    displayName: "Thiếu tướng PGS. TS. Lê Quang Khải",
     status: "active",
     systemRole: "SCIENCE_DEPUTY_DIRECTOR",
     unit: "Ban Giám Đốc"
   },
   {
-    id: "user-oversight-ndbac",
-    username: "ndbac",
+    id: "user-oversight-oversight",
+    username: "oversight",
     passwordHash:
-      "scrypt:user-oversight-ndbac:3e86748fc789cb583dbccf2b6bfc74b4d5dd1f732a26287422ecc4986a3df3f9b04b6669bc201b6202306d892e05acf596f57d3e0b35172e0caa021e0cea5441",
-    displayName: "Nguyễn Duy Bắc",
+      "scrypt:user-oversight-oversight:ba9398e9bda13ad70e3a6f11fbefc5f8a0f00c8b2161a7a71a98ef1091e69ff7c9513b4b4bbb40795e2217f7d9258b40845211465bd657f470a85eaca05bfd37",
+    displayName: "Vũ Văn Giang",
     status: "active",
     systemRole: "RESEARCH_OVERSIGHT_AUTHORITY",
     unit: "Ban Giám Đốc"
   },
   {
-    id: "user-deputy-head-dnbinh",
-    username: "dnbinh",
+    id: "user-deputy-head-rmdeputy",
+    username: "rmdeputy",
     passwordHash:
-      "scrypt:user-deputy-head-dnbinh:2828b8d36f9c394f205ca7c7ec4e49a17741797519047102833baeb58a143376cd2ac23dc83bb1dc200b9ab06435862d791e92fa36e3ff57681ebbd88e8751cb",
-    displayName: "Đỗ Như Bình",
+      "scrypt:user-deputy-head-rmdeputy:b5cd780b7e2634e028fd5a98d9d87682df4e978b05fc534335157f6ee957b826e7522806a285d6219c89d08a60f9ee8e45bf0988f7fb8e3c9ce77d04c8611366",
+    displayName: "Đặng Thị Hoa",
     status: "active",
     systemRole: "RESEARCH_MANAGEMENT_DEPUTY_HEAD",
     unit: "Phòng KHQS"
@@ -232,13 +232,13 @@ const organizationUnits = [
 const additionalOrganizationScopes = {
   "user-admin": ["org-bgq", "org-khqs", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
   "user-leadership": ["org-hvqy", "org-khti", "org-khqs", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
-  "user-staff-hdtien1": ["org-khti", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
-  "user-staff-hdtien2": ["org-khti", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
+  "user-staff-rmstaff1": ["org-khti", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
+  "user-staff-rmstaff2": ["org-khti", "org-bqlkhqs", "org-k30", "org-k81", "org-k82", "org-k84"],
   "user-staff": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-khqs").map(([id]) => id),
-  "user-science-deputy-vndinh": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-bgq").map(([id]) => id),
-  "user-oversight-ndbac": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-bgq").map(([id]) => id),
-  "user-board-head-nmtrung": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-bqlkhqs").map(([id]) => id),
-  "user-deputy-head-dnbinh": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-khqs").map(([id]) => id)
+  "user-science-deputy-deputysci": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-bgq").map(([id]) => id),
+  "user-oversight-oversight": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-bgq").map(([id]) => id),
+  "user-board-head-boardhead": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-bqlkhqs").map(([id]) => id),
+  "user-deputy-head-rmdeputy": organizationUnits.filter(([id]) => id !== "org-external" && id !== "org-khqs").map(([id]) => id)
 };
 
 // Units published on hocvienquany.vn; kept out of `organizationUnits` so they do not widen seeded account scopes.
@@ -301,12 +301,12 @@ for (const [username, , studentCode] of seedStudents) {
 }
 
 const oversightProfile = await prisma.researcherProfile.upsert({
-  where: { id: "profile-science-deputy-vndinh" },
+  where: { id: "profile-science-deputy-deputysci" },
   update: {
     managementOrganizationUnitId: "org-bgq",
-    linkedUserId: "user-science-deputy-vndinh",
+    linkedUserId: "user-science-deputy-deputysci",
     profileType: "INTERNAL",
-    fullName: "Thiếu tướng PGS. TS. Vũ Nhất Định",
+    fullName: "Thiếu tướng PGS. TS. Lê Quang Khải",
     fullNameKey: "thieu tuong pgs ts vu nhat dinh",
     militaryRank: "Thiếu tướng",
     title: "PGS. TS.",
@@ -315,11 +315,11 @@ const oversightProfile = await prisma.researcherProfile.upsert({
     updatedById: "user-admin"
   },
   create: {
-    id: "profile-science-deputy-vndinh",
+    id: "profile-science-deputy-deputysci",
     managementOrganizationUnitId: "org-bgq",
-    linkedUserId: "user-science-deputy-vndinh",
+    linkedUserId: "user-science-deputy-deputysci",
     profileType: "INTERNAL",
-    fullName: "Thiếu tướng PGS. TS. Vũ Nhất Định",
+    fullName: "Thiếu tướng PGS. TS. Lê Quang Khải",
     fullNameKey: "thieu tuong pgs ts vu nhat dinh",
     militaryRank: "Thiếu tướng",
     title: "PGS. TS.",
@@ -330,15 +330,15 @@ const oversightProfile = await prisma.researcherProfile.upsert({
   }
 });
 
-const existingOversightLink = await prisma.researcherProfileAccountLink.findFirst({ where: { researcherProfileId: oversightProfile.id, userId: "user-science-deputy-vndinh" } });
+const existingOversightLink = await prisma.researcherProfileAccountLink.findFirst({ where: { researcherProfileId: oversightProfile.id, userId: "user-science-deputy-deputysci" } });
 if (existingOversightLink) {
   await prisma.researcherProfileAccountLink.update({ where: { id: existingOversightLink.id }, data: { status: "ACTIVE", effectiveUntil: null, reason: "seed-oversight-account" } });
 } else {
-  await prisma.researcherProfileAccountLink.create({ data: { researcherProfileId: oversightProfile.id, userId: "user-science-deputy-vndinh", status: "ACTIVE", effectiveFrom: new Date(), reason: "seed-oversight-account", createdById: "user-admin" } });
+  await prisma.researcherProfileAccountLink.create({ data: { researcherProfileId: oversightProfile.id, userId: "user-science-deputy-deputysci", status: "ACTIVE", effectiveFrom: new Date(), reason: "seed-oversight-account", createdById: "user-admin" } });
 }
 
 // Story 13.10: science-management demo accounts get their own INTERNAL CV profile. Create-only, name and unit only.
-for (const [userId, profileId] of [["user-staff", "profile-staff-nmphuong"], ["user-staff-hdtien1", "profile-staff-hdtien1"], ["user-staff-hdtien2", "profile-staff-hdtien2"]]) {
+for (const [userId, profileId] of [["user-staff", "profile-staff-rmhead"], ["user-staff-rmstaff1", "profile-staff-rmstaff1"], ["user-staff-rmstaff2", "profile-staff-rmstaff2"]]) {
   const user = users.find((candidate) => candidate.id === userId);
   await prisma.$transaction(async (tx) => {
     const existing = await tx.researcherProfile.findFirst({ where: { OR: [{ id: profileId }, { linkedUserId: userId }] } });
@@ -594,7 +594,7 @@ async function ensureApprovedDemoProposal(id, title) {
     const submissionId = `${id}-submission`;
     await tx.proposalSubmissionEvent.create({ data: { id: submissionId, proposalId: id, actorId: "user-pi", fromStatus: "draft", toStatus: "submitted", submittedAt: demoNow, snapshot: { id, ownerId: "user-pi", title, objectives: "Kiểm tra quy trình thực hiện đề tài", summary: "Dữ liệu mẫu Golden Flow 4", startDate: demoDay(-60).toISOString(), endDate: demoDay(120).toISOString(), hostOrganizationUnitId: "org-khti", members: [{ id: `${id}-source-member`, userId: "user-researcher1", name: "Nhà nghiên cứu nội bộ 1", role: "TOPIC_MEMBER", participationRole: "TOPIC_MEMBER" }] } } });
     await tx.proposalDecision.create({ data: { id: `${id}-decision`, proposalId: id, decision: "approved", decidedById: "user-leadership", decidedAt: demoNow, fromStatus: "ready_for_approval", toStatus: "approved", packageSnapshot: { lifecycle: "finalized", submissionEventId: submissionId }, publicSummary: { decision: "approved" } } });
-    await tx.proposalManagementOfficer.create({ data: { id: `${id}-officer`, proposalId: id, officerUserId: "user-staff-hdtien1", assignedById: "user-staff", status: "ACTIVE", effectiveFrom: demoDay(-30) } });
+    await tx.proposalManagementOfficer.create({ data: { id: `${id}-officer`, proposalId: id, officerUserId: "user-staff-rmstaff1", assignedById: "user-staff", status: "ACTIVE", effectiveFrom: demoDay(-30) } });
   });
 }
 
@@ -606,15 +606,15 @@ if (!await prisma.approvedProject.findUnique({ where: { id: "gf4-demo-project" }
     const memberId = "gf4-demo-member";
     const projectId = "gf4-demo-project";
     const contextVersion = { domain: "approved-project", recordId: projectId, aggregateVersion: 1, relationshipVersion: 1, conflictVersion: 0, delegationVersion: 0, policyVersion: "v1" };
-    await tx.approvedProject.create({ data: { id: projectId, proposalId: "gf4-demo-source", sourceSubmissionEventId: "gf4-demo-source-submission", sourceDecisionId: "gf4-demo-source-decision", hostOrganizationUnitId: "org-khti", title: "Đề tài mẫu đang thực hiện", scopeSnapshot: { title: "Đề tài mẫu đang thực hiện", objectives: "Kiểm tra quy trình thực hiện đề tài", summary: "Dữ liệu mẫu Golden Flow 4" }, planSnapshot: { startDate: demoDay(-60).toISOString(), endDate: demoDay(120).toISOString() }, status: "executing", startDate: demoDay(-60), endDate: demoDay(120), aggregateVersion: 1, relationshipVersion: 1, createdById: "user-staff-hdtien1", confirmedById: "user-staff-hdtien2", confirmedAt: demoNow } });
+    await tx.approvedProject.create({ data: { id: projectId, proposalId: "gf4-demo-source", sourceSubmissionEventId: "gf4-demo-source-submission", sourceDecisionId: "gf4-demo-source-decision", hostOrganizationUnitId: "org-khti", title: "Đề tài mẫu đang thực hiện", scopeSnapshot: { title: "Đề tài mẫu đang thực hiện", objectives: "Kiểm tra quy trình thực hiện đề tài", summary: "Dữ liệu mẫu Golden Flow 4" }, planSnapshot: { startDate: demoDay(-60).toISOString(), endDate: demoDay(120).toISOString() }, status: "executing", startDate: demoDay(-60), endDate: demoDay(120), aggregateVersion: 1, relationshipVersion: 1, createdById: "user-staff-rmstaff1", confirmedById: "user-staff-rmstaff2", confirmedAt: demoNow } });
     await tx.approvedProjectMember.createMany({ data: [
-      { id: "gf4-demo-pi", projectId, userId: "user-pi", name: "TS. Phạm Anh Tuấn", role: "TOPIC_PI", participationRole: "TOPIC_PI", status: "ACTIVE", effectiveFrom: demoDay(-60), createdById: "user-staff-hdtien1" },
-      { id: memberId, projectId, userId: "user-researcher1", name: "Nhà nghiên cứu nội bộ 1", role: "TOPIC_MEMBER", participationRole: "TOPIC_MEMBER", status: "ACTIVE", effectiveFrom: demoDay(-60), createdById: "user-staff-hdtien1" }
+      { id: "gf4-demo-pi", projectId, userId: "user-pi", name: "TS. Phạm Văn Dũng", role: "TOPIC_PI", participationRole: "TOPIC_PI", status: "ACTIVE", effectiveFrom: demoDay(-60), createdById: "user-staff-rmstaff1" },
+      { id: memberId, projectId, userId: "user-researcher1", name: "Nhà nghiên cứu nội bộ 1", role: "TOPIC_MEMBER", participationRole: "TOPIC_MEMBER", status: "ACTIVE", effectiveFrom: demoDay(-60), createdById: "user-staff-rmstaff1" }
     ] });
-    await tx.projectManagementOfficer.create({ data: { id: "gf4-demo-project-officer", projectId, officerUserId: "user-staff-hdtien2", assignedById: "user-staff", status: "ACTIVE", effectiveFrom: demoDay(-30) } });
+    await tx.projectManagementOfficer.create({ data: { id: "gf4-demo-project-officer", projectId, officerUserId: "user-staff-rmstaff2", assignedById: "user-staff", status: "ACTIVE", effectiveFrom: demoDay(-30) } });
     await tx.projectMilestone.createMany({ data: [
-      { id: "gf4-demo-milestone-overdue", projectId, title: "Mốc cần rà soát quá hạn", dueDate: demoDay(-5), status: "open", isImportant: true, position: 0, responsibleMemberId: "gf4-demo-pi", createdById: "user-staff-hdtien2" },
-      { id: "gf4-demo-milestone-upcoming", projectId, title: "Mốc sắp đến hạn", dueDate: demoDay(7), status: "open", isImportant: true, position: 1, responsibleMemberId: memberId, createdById: "user-staff-hdtien2" }
+      { id: "gf4-demo-milestone-overdue", projectId, title: "Mốc cần rà soát quá hạn", dueDate: demoDay(-5), status: "open", isImportant: true, position: 0, responsibleMemberId: "gf4-demo-pi", createdById: "user-staff-rmstaff2" },
+      { id: "gf4-demo-milestone-upcoming", projectId, title: "Mốc sắp đến hạn", dueDate: demoDay(7), status: "open", isImportant: true, position: 1, responsibleMemberId: memberId, createdById: "user-staff-rmstaff2" }
     ] });
     await tx.projectCheckpoint.createMany({ data: [
       { id: "gf4-demo-checkpoint-overdue", projectId, milestoneId: "gf4-demo-milestone-overdue", title: "Báo cáo mốc quá hạn", dueDate: demoDay(-5), status: "open" },
@@ -624,20 +624,20 @@ if (!await prisma.approvedProject.findUnique({ where: { id: "gf4-demo-project" }
       { id: "gf4-demo-report-submitted", projectId, checkpointId: "gf4-demo-checkpoint-overdue", revision: 1, status: "submitted", reportingPeriodStart: demoDay(-30), reportingPeriodEnd: demoDay(-6), deadline: demoDay(-5), progressResults: "Báo cáo tiến độ mẫu đã nộp; chờ chuyên viên xem xét.", authorId: "user-pi", submittedAt: demoNow, submittedContextVersion: contextVersion },
       { id: "gf4-demo-report-draft", projectId, checkpointId: "gf4-demo-checkpoint-upcoming", revision: 2, status: "draft", reportingPeriodStart: demoDay(-5), reportingPeriodEnd: demoDay(5), deadline: demoDay(7), progressResults: "Bản nháp báo cáo kỳ tiếp theo.", authorId: "user-pi" }
     ] });
-    await tx.projectRequest.create({ data: { id: "gf4-demo-extension", projectId, requestType: "extension", status: "ready_for_head_decision", revision: 1, requesterId: "user-pi", currentValues: { endDate: demoDay(120).toISOString() }, proposedValues: { requestedEndDate: demoDay(150).toISOString().slice(0, 10) }, reason: "Cần thêm thời gian hoàn thiện kết quả mẫu.", submittedContextVersion: contextVersion, preparedById: "user-staff-hdtien2", preparedAt: demoNow, appraisal: { validationNote: "Đã kiểm tra hành chính" }, revisions: { create: { id: "gf4-demo-extension-revision", revision: 1, status: "submitted", currentValues: { endDate: demoDay(120).toISOString() }, proposedValues: { requestedEndDate: demoDay(150).toISOString().slice(0, 10) }, reason: "Cần thêm thời gian hoàn thiện kết quả mẫu.", contextVersion, createdById: "user-pi", submittedAt: demoNow } } } });
+    await tx.projectRequest.create({ data: { id: "gf4-demo-extension", projectId, requestType: "extension", status: "ready_for_head_decision", revision: 1, requesterId: "user-pi", currentValues: { endDate: demoDay(120).toISOString() }, proposedValues: { requestedEndDate: demoDay(150).toISOString().slice(0, 10) }, reason: "Cần thêm thời gian hoàn thiện kết quả mẫu.", submittedContextVersion: contextVersion, preparedById: "user-staff-rmstaff2", preparedAt: demoNow, appraisal: { validationNote: "Đã kiểm tra hành chính" }, revisions: { create: { id: "gf4-demo-extension-revision", revision: 1, status: "submitted", currentValues: { endDate: demoDay(120).toISOString() }, proposedValues: { requestedEndDate: demoDay(150).toISOString().slice(0, 10) }, reason: "Cần thêm thời gian hoàn thiện kết quả mẫu.", contextVersion, createdById: "user-pi", submittedAt: demoNow } } } });
     await tx.projectHistory.createMany({ data: [
-      { projectId, actorId: "user-staff-hdtien1", action: "project.created", toStatus: "preparing", reason: "Tạo từ đề xuất mẫu đã duyệt" },
+      { projectId, actorId: "user-staff-rmstaff1", action: "project.created", toStatus: "preparing", reason: "Tạo từ đề xuất mẫu đã duyệt" },
       { projectId, actorId: "user-staff", action: "project.officer.assign", reason: "Phân công chuyên viên đề tài mẫu" },
-      { projectId, actorId: "user-staff-hdtien2", action: "project.setup.confirm", fromStatus: "preparing", toStatus: "executing" },
+      { projectId, actorId: "user-staff-rmstaff2", action: "project.setup.confirm", fromStatus: "preparing", toStatus: "executing" },
       { projectId, actorId: "user-pi", action: "project.report.submit", toStatus: "submitted" },
       { projectId, actorId: "user-pi", action: "project.extension.submit", toStatus: "submitted", requestId: "gf4-demo-extension" },
-      { projectId, actorId: "user-staff-hdtien2", action: "project.extension.prepare", fromStatus: "under_staff_validation", toStatus: "ready_for_head_decision", requestId: "gf4-demo-extension" }
+      { projectId, actorId: "user-staff-rmstaff2", action: "project.extension.prepare", fromStatus: "under_staff_validation", toStatus: "ready_for_head_decision", requestId: "gf4-demo-extension" }
     ] });
     await tx.auditLog.createMany({ data: [
-      { action: "create-approved-project", result: "success", actorId: "user-staff-hdtien1", targetEntity: "approved-project", targetEntityId: projectId },
-      { action: "confirm-approved-project-setup", result: "success", actorId: "user-staff-hdtien2", targetEntity: "approved-project", targetEntityId: projectId },
+      { action: "create-approved-project", result: "success", actorId: "user-staff-rmstaff1", targetEntity: "approved-project", targetEntityId: projectId },
+      { action: "confirm-approved-project-setup", result: "success", actorId: "user-staff-rmstaff2", targetEntity: "approved-project", targetEntityId: projectId },
       { action: "submit-project-report", result: "success", actorId: "user-pi", targetEntity: "project-report-revision", targetEntityId: "gf4-demo-report-submitted" },
-      { action: "project.extension.prepare", result: "success", actorId: "user-staff-hdtien2", targetEntity: "project-request", targetEntityId: "gf4-demo-extension" }
+      { action: "project.extension.prepare", result: "success", actorId: "user-staff-rmstaff2", targetEntity: "project-request", targetEntityId: "gf4-demo-extension" }
     ] });
   });
 }

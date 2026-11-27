@@ -124,13 +124,13 @@ describe("Official decision document templates (QĐ 1273, QĐ 4626, TT 14/2022/T
       tplMod.councilDecisionDocument({
         code: "2026-KHTH-001",
         title: "Nghiên cứu <script>alert(1)</script> y học",
-        ownerDisplayName: "Thượng tá, TS. Phạm Anh Tuấn",
+        ownerDisplayName: "Thượng tá, TS. Phạm Văn Dũng",
         hostOrganizationUnitName: "Khoa Toán - Tin học",
         proposalTypeCode: "academy-level",
         councilMetadata: {
           decisionNumber: "1273/QĐ-HVQY",
           decidedAt: "2026-05-15T03:00:00.000Z",
-          decidedByName: "Thiếu tướng, PGS. TS. Vũ Nhất Định",
+          decidedByName: "Thiếu tướng, PGS. TS. Lê Quang Khải",
           decidedByRole: "SCIENCE_DEPUTY_DIRECTOR",
           members: [
             { displayName: "GS. TS. Trần A", assignmentRole: "council_chair", academicTitle: "GS. TS.", unit: "Bộ môn Nội" },
@@ -144,7 +144,7 @@ describe("Official decision document templates (QĐ 1273, QĐ 4626, TT 14/2022/T
     assert.match(councilHtml, /Thông tư 14\/2022\/TT-BQP/);
     assert.match(councilHtml, /KT\. GIÁM ĐỐC/);
     assert.match(councilHtml, /PHÓ GIÁM ĐỐC/);
-    assert.match(councilHtml, /Thiếu tướng Vũ Nhất Định/);
+    assert.match(councilHtml, /Thiếu tướng Lê Quang Khải/);
     assert.doesNotMatch(councilHtml, /<script>/);
     assert.match(councilHtml, /&lt;script&gt;/);
     assert.doesNotMatch(councilHtml, /57\/2021/);
@@ -170,7 +170,7 @@ describe("Official decision document templates (QĐ 1273, QĐ 4626, TT 14/2022/T
         project: { code: "2026-KHTH-003", title: "Đề tài nghiệm thu", piName: "TS. Lê C", unitName: "Khoa Ngoại" },
         decisionNumber: "4626/QĐ-HVQY",
         decidedAt: "2026-11-20T00:00:00Z",
-        decidedByName: "Trung tướng Trần Viết Tiến",
+        decidedByName: "Trung tướng Nguyễn Văn Bảo",
         decidedByRole: "LEADERSHIP_APPROVAL_AUTHORITY",
         members: [{ displayName: "PGS. TS. Hoàng D", councilRole: "council_chair", unit: "Học viện Quân y" }],
         products: [{ title: "Quy trình chẩn đoán", type: "Quy trình", description: "Đạt chuẩn" }]

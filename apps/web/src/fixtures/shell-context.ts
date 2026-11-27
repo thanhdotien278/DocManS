@@ -55,7 +55,7 @@ export const accountProfiles: AccountProfile[] = [
   {
     id: "leadership-nguyen-van-minh",
     username: "nvm_bgh",
-    name: "GS. TS. Trần Viết Tiến",
+    name: "GS. TS. Nguyễn Văn Bảo",
     role: "LEADERSHIP_APPROVAL_AUTHORITY",
     roleLabel: "Giám Đốc",
     unit: "Ban Giám Đốc",
@@ -64,7 +64,7 @@ export const accountProfiles: AccountProfile[] = [
   {
     id: "staff-vu-lan",
     username: "vlan_qlkh",
-    name: "TS. Nguyễn Minh Phương",
+    name: "TS. Trần Thị Mai",
     role: "RESEARCH_MANAGEMENT_HEAD",
     roleLabel: "Trưởng phòng quản lý khoa học",
     unit: "Trưởng phòng KHQS",
@@ -72,7 +72,7 @@ export const accountProfiles: AccountProfile[] = [
   },
   {
     id: "staff-huynh-dang-tien",
-    username: "hdtien1",
+    username: "rmstaff1",
     name: "TS. Huỳnh Đặng Tiến",
     role: "RESEARCH_MANAGEMENT_STAFF",
     roleLabel: "Chuyên viên quản lý khoa học",
@@ -81,8 +81,8 @@ export const accountProfiles: AccountProfile[] = [
   },
   {
     id: "oversight-vu-nhat-dinh",
-    username: "vndinh",
-    name: "Thiếu tướng PGS. TS. Vũ Nhất Định",
+    username: "deputysci",
+    name: "Thiếu tướng PGS. TS. Lê Quang Khải",
     role: "SCIENCE_DEPUTY_DIRECTOR",
     roleLabel: "Phó Giám đốc phụ trách Khoa học",
     unit: "Ban Giám Đốc",
@@ -90,8 +90,8 @@ export const accountProfiles: AccountProfile[] = [
   },
   {
     id: "pi-pham-anh-tuan",
-    username: "patuan_pi",
-    name: "TS. Phạm Anh Tuấn",
+    username: "pi1_pi",
+    name: "TS. Phạm Văn Dũng",
     role: "RESEARCHER_INTERNAL_USER",
     roleLabel: "Chủ nhiệm đề tài",
     unit: "Khoa Toán - Tin học",
@@ -100,7 +100,7 @@ export const accountProfiles: AccountProfile[] = [
   {
     id: "reviewer-tran-thu-ha",
     username: "ttha_reviewer",
-    name: "TS. Đỗ Minh Trung",
+    name: "TS. Hoàng Minh Đức",
     role: "RESEARCHER_INTERNAL_USER",
     roleLabel: "Thành viên Hội đồng",
     unit: "Ban Quản lý KHQS",
@@ -109,7 +109,7 @@ export const accountProfiles: AccountProfile[] = [
   {
     id: "admin-nguyen-quoc-bao",
     username: "nqbao_admin",
-    name: "TS. Đỗ Tiến Thành",
+    name: "TS. Bùi Văn Khánh",
     role: "SYSTEM_ADMIN",
     roleLabel: "Quản trị hệ thống",
     unit: "Khoa Toán - Tin học",

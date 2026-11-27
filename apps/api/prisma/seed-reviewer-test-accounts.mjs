@@ -4,7 +4,7 @@ import { scryptSync } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-// Local test fixtures only. Run after the base seed; only adds linked profiles for tvtien (Director) and nmtrung (Board Head); no account is changed.
+// Local test fixtures only. Run after the base seed; only adds linked profiles for director (Director) and boardhead (Board Head); no account is changed.
 const databaseUrl = new URL(process.env.DATABASE_URL);
 assert(["localhost", "127.0.0.1", "[::1]"].includes(databaseUrl.hostname), "Local database required");
 assert.notEqual(process.env.NODE_ENV, "production");
@@ -56,8 +56,8 @@ try {
     }
     // Director and Board Head need a linked profile to be review candidates (council scenarios). Idempotent.
     const staffProfiles = [
-      ["user-leadership", "profile-leadership-tvtien", "GS. TS. Trần Viết Tiến"],
-      ["user-board-head-nmtrung", "profile-board-head-nmtrung", "Nguyễn Mạnh Trung"]
+      ["user-leadership", "profile-leadership-director", "GS. TS. Nguyễn Văn Bảo"],
+      ["user-board-head-boardhead", "profile-board-head-boardhead", "Hoàng Minh Đức"]
     ];
     for (const [id, profileId, fallbackName] of staffProfiles) {
       const user = await tx.user.findUniqueOrThrow({ where: { id } });
