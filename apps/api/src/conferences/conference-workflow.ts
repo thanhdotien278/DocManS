@@ -65,8 +65,11 @@ export const PAPER_STATUS = {
 export type PaperStatus = (typeof PAPER_STATUS)[keyof typeof PAPER_STATUS];
 export type PaperVersionKind = "abstract" | "full_paper";
 
-/** Báo cáo còn nhận bài và còn rút được (chưa xếp vào chương trình, chưa rút). */
+/** Báo cáo còn nhận bài (chưa xếp vào chương trình, chưa rút). */
 export const PAPER_OPEN_STATUSES: PaperStatus[] = ["awaiting_abstract", "abstract_submitted", "full_paper_submitted"];
+
+/** Báo cáo còn rút hoặc huỷ được: còn nhận bài, hoặc đã xếp lịch (rút thì gỡ khỏi phiên). */
+export const PAPER_WITHDRAWABLE_STATUSES: PaperStatus[] = [...PAPER_OPEN_STATUSES, "scheduled"];
 
 export type OpenRevision = { kind: PaperVersionKind; dueAt: Date };
 

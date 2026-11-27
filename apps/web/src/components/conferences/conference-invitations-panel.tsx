@@ -143,7 +143,7 @@ export function ConferenceInvitationsPanel({ conference, onChanged }: Props) {
         {canManage || canReview ? <td><div className="button-row">
           {canReview && item.paper && item.paper.status !== "withdrawn" && item.paper.status !== "scheduled" && item.paper.latestAbstract && !item.paper.openRevisions.some((r) => r.kind === "abstract") ? <button className="button" type="button" disabled={busy} onClick={() => setRevision({ invitation: item, kind: "abstract", reason: "", dueAt: "" })}>Yêu cầu sửa tóm tắt</button> : null}
           {canReview && item.paper && item.paper.status !== "withdrawn" && item.paper.status !== "scheduled" && item.paper.latestFullPaper && !item.paper.openRevisions.some((r) => r.kind === "full_paper") ? <button className="button" type="button" disabled={busy} onClick={() => setRevision({ invitation: item, kind: "full_paper", reason: "", dueAt: "" })}>Yêu cầu sửa toàn văn</button> : null}
-          {canReview && item.paper && item.paper.status !== "withdrawn" && item.paper.status !== "scheduled" ? <button className="button" type="button" disabled={busy} onClick={() => void cancelPaper(item)}>Huỷ báo cáo</button> : null}
+          {canReview && item.paper && item.paper.status !== "withdrawn" ? <button className="button" type="button" disabled={busy} onClick={() => void cancelPaper(item)}>Huỷ báo cáo</button> : null}
           {canManage && ["draft", "sent", "accepted"].includes(item.status) ? <button className="button danger" type="button" disabled={busy} onClick={() => void revoke(item)}>Huỷ lời mời</button> : null}
         </div></td> : null}
       </tr>)}</tbody>

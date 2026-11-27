@@ -12,7 +12,8 @@ import { absoluteLink, escapeHtml } from "../notifications/notification-events.j
 import { canConference, isConferenceParticipant } from "./conference-access.js";
 import { conferenceMailLines, conferenceMailSubject, formatVietnamDateTime, formatVietnamTime, renderConferenceMailHtml, type ConferenceMailFacts } from "./conference-mail-templates.js";
 import { readProgramSnapshot } from "./conference-program.service.js";
-import { CONFERENCE_INCLUDE, conferenceFacts, conferenceNotFound, lockConference, recordConferenceEvent, stale, touchConference, type ConferenceRecord } from "./conference-support.js";
+import { getOrganizationScopeIds } from "../proposals-shared/proposal-access.js";
+import { CONFERENCE_INCLUDE, conferenceFacts, conferenceNotFound, lockAndRecheck, lockConference, recordConferenceEvent, stale, touchConference, type ConferenceRecord } from "./conference-support.js";
 import { CONFERENCE_CLOSED_STATUSES, CONFERENCE_INVITABLE_STATUSES } from "./conference-workflow.js";
 import { readEmail, readInvitationInput, type InvitationInputDto, type InvitationResponseDto, type MailingKind, type PublicInvitationResponseDto, type SendMailingDto, type UpdateInvitationDto } from "./conferences.dto.js";
 
@@ -21,6 +22,10 @@ const ACTIVATION_TTL_MS = 48 * 60 * 60 * 1000;
 const MIN_TOKEN_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 const PUBLIC_WINDOW_MS = 15 * 60 * 1000;
 const PUBLIC_MAX_FAILURES = 10;
+/** Khoá theo IP lấy từ yêu cầu không đăng nhập: vượt ngưỡng thì dọn khoá hết hạn để Map không phình mãi (như AuthRateLimitService). */
+const PUBLIC_MAX_TRACKED_IPS = 10_000;
+/** Ghi nhiều token/lời mời trong một giao dịch: mặc định 5 giây của Prisma không đủ cho đợt thư lớn. */
+const BULK_TRANSACTION_OPTIONS = { timeout: 30_000 };
 
 /** Trạng thái lời mời được chọn làm người nhận theo từng loại thư. */
 const MAILING_RECIPIENT_STATUSES: Record<MailingKind, string[]> = {
@@ -108,14 +113,21 @@ export class ConferenceInvitationsService {
     });
   }
 
-  /** Đơn vị trong Học viện để chọn cho khách mời nội bộ chưa có tài khoản. */
+  /**
+   * Đơn vị để chọn cho khách mời nội bộ chưa có tài khoản: chỉ đơn vị trong phạm vi của chuyên viên, vì nhận lời sẽ
+   * tạo tài khoản nội bộ thuộc đơn vị đó (chuyên viên chỉ cấp tài khoản trong phạm vi được giao).
+   */
   async organizationUnits(actor: SafeUserContext, conferenceId: string) {
     await this.loadForAction(actor, conferenceId, "invitation.manage");
-    return this.prisma.organizationUnit.findMany({ where: { status: "active" }, select: { id: true, code: true, name: true }, orderBy: { name: "asc" } });
+    return this.prisma.organizationUnit.findMany({ where: { status: "active", id: { in: getOrganizationScopeIds(actor) } }, select: { id: true, code: true, name: true }, orderBy: { name: "asc" } });
+  }
+
+  private assertUnitInScope(actor: SafeUserContext, organizationUnitId: string, fullName?: string) {
+    if (!getOrganizationScopeIds(actor).includes(organizationUnitId)) throw new ForbiddenException({ code: "ORG_SCOPE_DENIED", message: `Đơn vị của ${fullName ?? "khách mời"} không thuộc phạm vi của bạn.` });
   }
 
   /** Chuẩn hoá một khách mời: người có tài khoản lấy họ tên, email, đơn vị từ tài khoản. */
-  private async resolveInvitee(tx: Prisma.TransactionClient, input: InvitationInputDto) {
+  private async resolveInvitee(tx: Prisma.TransactionClient, actor: SafeUserContext, input: InvitationInputDto) {
     if (input.userId) {
       const user = await tx.user.findUnique({ where: { id: input.userId }, include: { organizationScopes: { select: { organizationUnitId: true, isPrimary: true } } } });
       if (!user || !["active", "pending_activation"].includes(user.status) || user.systemRole === "SYSTEM_ADMIN") throw new BadRequestException({ message: "Tài khoản được mời không hợp lệ hoặc đã ngừng hoạt động." });
@@ -126,6 +138,7 @@ export class ConferenceInvitationsService {
       };
     }
     if (input.isInternal && input.organizationUnitId) {
+      this.assertUnitInScope(actor, input.organizationUnitId, input.fullName);
       const unit = await tx.organizationUnit.findUnique({ where: { id: input.organizationUnitId } });
       if (!unit || unit.status !== "active") throw new BadRequestException({ message: `Đơn vị của ${input.fullName} không tồn tại hoặc đã ngừng hoạt động.` });
     }
@@ -148,7 +161,7 @@ export class ConferenceInvitationsService {
       const officer = officerId ? await tx.user.findUnique({ where: { id: officerId } }) : null;
       const rows: { id: string; fullName: string }[] = [];
       for (const input of inputs) {
-        const invitee = await this.resolveInvitee(tx, input);
+        const invitee = await this.resolveInvitee(tx, actor, input);
         // Tách nhiệm vụ: chuyên viên phụ trách không là khách mời của chính hội nghị mình phụ trách.
         if (invitee.userId === officerId || (invitee.email && invitee.email === officer?.credentialEmail?.toLowerCase())) throw new ConflictException({ code: "CONFLICT_DENIED", message: "Chuyên viên phụ trách không thể là khách mời của hội nghị này." });
         try {
@@ -162,7 +175,7 @@ export class ConferenceInvitationsService {
       }
       await touchConference(tx, conferenceId);
       return rows;
-    });
+    }, BULK_TRANSACTION_OPTIONS);
     await this.auditLog.record({ action: "add-conference-invitations", result: "success", actorId: actor.id, targetEntity: "scientific-conference", targetEntityId: conferenceId, username: actor.username, afterFacts: { count: created.length } });
     return { created };
   }
@@ -183,7 +196,7 @@ export class ConferenceInvitationsService {
    * Cột "Mã đơn vị trong Học viện" có giá trị nghĩa là người trong Học viện (tài khoản nội bộ của đơn vị đó).
    */
   async importInvitations(actor: SafeUserContext, conferenceId: string, file: UploadedSheet | undefined) {
-    await this.loadForAction(actor, conferenceId, "invitation.manage");
+    const conference = await this.loadForAction(actor, conferenceId, "invitation.manage");
     if (!file?.buffer?.length) throw new BadRequestException({ message: "Chưa chọn tệp Excel." });
     if (!/\.xlsx$/i.test(file.originalname)) throw new BadRequestException({ message: "Chỉ nhận tệp Excel .xlsx." });
     const workbook = new ExcelJS.Workbook();
@@ -199,7 +212,9 @@ export class ConferenceInvitationsService {
     for (const key of ["fullName", "email", "kind"]) if (!headerIndex.has(key)) throw new BadRequestException({ message: `Thiếu cột "${IMPORT_COLUMNS.find((item) => item.key === key)!.header}". Hãy dùng tệp mẫu.` });
     const units = await this.prisma.organizationUnit.findMany({ where: { status: "active" }, select: { id: true, code: true } });
     const unitByCode = new Map(units.map((unit) => [unit.code.toLowerCase(), unit.id]));
+    const scopeIds = getOrganizationScopeIds(actor);
     const inputs: InvitationInputDto[] = [];
+    const inputRows: number[] = [];
     const errors: { row: number; message: string }[] = [];
     const seen = new Set<string>();
     sheet.eachRow((row, rowNumber) => {
@@ -213,20 +228,44 @@ export class ConferenceInvitationsService {
         const unitCode = cell("unitCode");
         const organizationUnitId = unitCode ? unitByCode.get(unitCode.toLowerCase()) : undefined;
         if (unitCode && !organizationUnitId) throw new BadRequestException({ message: `Không có đơn vị mã ${unitCode}.` });
+        if (organizationUnitId && !scopeIds.includes(organizationUnitId)) throw new BadRequestException({ message: `Đơn vị mã ${unitCode} không thuộc phạm vi của bạn.` });
         const input = readInvitationInput({ kind, fullName: cell("fullName"), academicTitle: cell("academicTitle"), email: cell("email"), isInternal: !!organizationUnitId, organizationUnitId, externalOrganization: cell("externalOrganization") });
         if (seen.has(input.email!)) throw new BadRequestException({ message: `Email ${input.email} bị lặp trong tệp.` });
         seen.add(input.email!);
         inputs.push(input);
+        inputRows.push(rowNumber);
       } catch (error) {
         const message = error instanceof HttpException ? String((error.getResponse() as { message?: string }).message ?? error.message) : "Dòng không hợp lệ.";
         errors.push({ row: rowNumber, message });
       }
     });
-    if (errors.length) return { created: [], errors };
+    if (!errors.length && inputs.length) errors.push(...(await this.importConflicts(conferenceId, conference.officers[0]?.userId, inputs, inputRows)));
+    if (errors.length) return { created: [], errors: errors.sort((a, b) => a.row - b.row) };
     if (!inputs.length) throw new BadRequestException({ message: "Tệp không có khách mời nào." });
     if (inputs.length > 500) throw new BadRequestException({ message: "Mỗi lần nhập tối đa 500 khách mời." });
     const result = await this.addInvitations(actor, conferenceId, inputs);
     return { ...result, errors: [] };
+  }
+
+  /** Lỗi theo dòng khi ghi sẽ bị chặn: đã có trong danh sách khách mời (theo email hoặc tài khoản trùng email), hoặc là chuyên viên phụ trách. */
+  private async importConflicts(conferenceId: string, officerId: string | undefined, inputs: InvitationInputDto[], rows: number[]) {
+    const emails = inputs.map((input) => input.email!);
+    const [invited, accounts] = await Promise.all([
+      this.prisma.conferenceInvitation.findMany({ where: { conferenceId, status: { not: "revoked" }, email: { in: emails } }, select: { email: true } }),
+      this.prisma.user.findMany({ where: { credentialEmail: { in: emails }, status: { in: ["active", "pending_activation"] }, systemRole: { not: "SYSTEM_ADMIN" } }, select: { id: true, credentialEmail: true } })
+    ]);
+    const accountByEmail = new Map(accounts.map((account) => [account.credentialEmail!, account.id]));
+    const invitedUsers = accounts.length ? new Set((await this.prisma.conferenceInvitation.findMany({ where: { conferenceId, status: { not: "revoked" }, userId: { in: accounts.map((account) => account.id) } }, select: { userId: true } })).map((item) => item.userId)) : new Set<string | null>();
+    const officerEmail = officerId ? (await this.prisma.user.findUnique({ where: { id: officerId }, select: { credentialEmail: true } }))?.credentialEmail?.toLowerCase() : undefined;
+    const invitedEmails = new Set(invited.map((item) => item.email));
+    const errors: { row: number; message: string }[] = [];
+    inputs.forEach((input, index) => {
+      const email = input.email!;
+      const accountId = accountByEmail.get(email);
+      if (email === officerEmail || (officerId && accountId === officerId)) errors.push({ row: rows[index], message: "Chuyên viên phụ trách không thể là khách mời của hội nghị này." });
+      else if (invitedEmails.has(email) || (accountId && invitedUsers.has(accountId))) errors.push({ row: rows[index], message: `${input.fullName} (${email}) đã có trong danh sách khách mời.` });
+    });
+    return errors;
   }
 
   private async loadInvitation(conferenceId: string, invitationId: string) {
@@ -255,6 +294,7 @@ export class ConferenceInvitationsService {
       const unitId = "organizationUnitId" in input ? input.organizationUnitId ?? null : invitation.organizationUnitId;
       if (isInternal && !unitId) throw new BadRequestException({ message: "Người trong Học viện cần chọn đơn vị." });
       if (isInternal && unitId !== invitation.organizationUnitId) {
+        this.assertUnitInScope(actor, unitId!, invitation.fullName);
         const unit = await this.prisma.organizationUnit.findUnique({ where: { id: unitId! } });
         if (!unit || unit.status !== "active") throw new BadRequestException({ message: "Đơn vị không tồn tại hoặc đã ngừng hoạt động." });
       }
@@ -269,7 +309,7 @@ export class ConferenceInvitationsService {
     }
     try {
       await this.prisma.$transaction(async (tx) => {
-        await lockConference(tx, conferenceId);
+        await lockAndRecheck(tx, actor, conferenceId, "invitation.manage");
         const current = await tx.conferenceInvitation.findFirst({ where: { id: invitationId, conferenceId }, select: { status: true } });
         if (!current || current.status !== invitation.status) stale();
         await tx.conferenceInvitation.update({ where: { id: invitationId }, data });
@@ -292,6 +332,8 @@ export class ConferenceInvitationsService {
     const invitation = await this.loadInvitation(conferenceId, invitationId);
     if (!["draft", "sent", "accepted"].includes(invitation.status)) throw new BadRequestException({ code: "WORKFLOW_STATE_DENIED", message: "Lời mời đã bị từ chối hoặc đã huỷ." });
     await this.prisma.$transaction(async (tx) => {
+      // Khoá như setSessionSlots: báo cáo bị rút không thể được xếp vào phiên song song.
+      await lockAndRecheck(tx, actor, conferenceId, "invitation.manage");
       const changed = await tx.conferenceInvitation.updateMany({ where: { id: invitationId, status: invitation.status }, data: { status: "revoked", revokedAt: new Date(), revokeReason: reason } });
       if (changed.count !== 1) throw new ConflictException({ code: "CONTEXT_VERSION_MISMATCH", message: "Lời mời vừa thay đổi. Vui lòng tải lại trang." });
       await tx.conferenceInvitationToken.updateMany({ where: { invitationId, usedAt: null, revokedAt: null }, data: { revokedAt: new Date() } });
@@ -307,7 +349,7 @@ export class ConferenceInvitationsService {
     });
     await this.auditLog.record({ action: "revoke-conference-invitation", result: "success", actorId: actor.id, targetEntity: "conference-invitation", targetEntityId: invitationId, username: actor.username, reason, beforeFacts: { status: invitation.status } });
     if (invitation.userId && invitation.status !== "draft") {
-      await this.notifications?.createConferenceNotification({ userId: invitation.userId, conferenceId, title: "Lời mời hội nghị đã được huỷ", message: `Lời mời tham dự ${(await this.prisma.scientificConference.findUnique({ where: { id: conferenceId } }))?.title ?? "hội nghị"} đã được huỷ. Lý do: ${reason}`, link: "/my-conferences" });
+      await this.notifications?.createConferenceNotification({ userId: invitation.userId, conferenceId, audience: "invitation", title: "Lời mời hội nghị đã được huỷ", message: `Lời mời tham dự ${(await this.prisma.scientificConference.findUnique({ where: { id: conferenceId } }))?.title ?? "hội nghị"} đã được huỷ. Lý do: ${reason}`, link: "/my-conferences" });
     }
     return { id: invitationId, status: "revoked" };
   }
@@ -328,9 +370,7 @@ export class ConferenceInvitationsService {
     const subject = conferenceMailSubject({ kind: input.kind, conference: mailFacts(conference), subject: input.subject });
 
     const prepared = await this.prisma.$transaction(async (tx) => {
-      await lockConference(tx, conferenceId);
-      const current = await tx.scientificConference.findUnique({ where: { id: conferenceId } });
-      if (!current || current.status === "cancelled" || (current.status === "completed" && input.kind !== "proceedings")) throw new ConflictException({ code: "CONTEXT_VERSION_MISMATCH", message: "Hội nghị vừa đổi trạng thái. Vui lòng tải lại trang." });
+      const current = await lockAndRecheck(tx, actor, conferenceId, input.kind === "proceedings" ? "proceedings.manage" : "mailing.send");
       const invitations = await tx.conferenceInvitation.findMany({ where: { conferenceId, id: { in: input.invitationIds } } });
       const targets = invitations.filter((invitation) => allowed.includes(invitation.status));
       if (!targets.length) throw new BadRequestException({ message: "Không có người nhận phù hợp với loại thư này." });
@@ -361,7 +401,7 @@ export class ConferenceInvitationsService {
       }
       await recordConferenceEvent(tx, { conferenceId, actorId: actor.id, action: `mailing.${input.kind}`, facts: { mailingId: mailing.id, recipients: targets.length, skipped: input.invitationIds.length - targets.length } });
       return { mailing, deliveries };
-    });
+    }, BULK_TRANSACTION_OPTIONS);
 
     // Gửi sau khi đã ghi: lỗi gửi một người không làm hỏng cả đợt, chỉ ghi nhận trạng thái từng người.
     const facts = mailFacts(conference);
@@ -371,11 +411,11 @@ export class ConferenceInvitationsService {
       let channel = "notification", status = "sent", error: string | null = null;
       if (viaAccount) {
         const lines = conferenceMailLines({ kind: input.kind, conference: facts, recipient, message: input.message, programLines });
-        const notification = await this.notifications?.createConferenceNotification({ userId: invitation.userId!, conferenceId, title: subject, message: lines.join("\n"), link: "/my-conferences" });
+        const notification = await this.notifications?.createConferenceNotification({ userId: invitation.userId!, conferenceId, audience: "invitation", title: subject, message: lines.join("\n"), link: "/my-conferences" });
         if (!notification) { status = "failed"; error = "Tài khoản không hoạt động hoặc không ghi được thông báo."; }
       } else {
         channel = "email";
-        const responseUrl = token ? absoluteLink(`/conference-invitation?token=${encodeURIComponent(token)}`) : "";
+        const responseUrl = token ? absoluteLink(`/conference-invitation#token=${encodeURIComponent(token)}`) : "";
         if (token && !responseUrl) { status = "failed"; error = "Chưa cấu hình APP_BASE_URL để tạo đường link trong thư."; }
         else if (!invitation.email) { status = "failed"; error = "Không có email."; }
         else {
@@ -423,8 +463,12 @@ export class ConferenceInvitationsService {
 
   private recordPublicFailure(ip: string) {
     const state = this.publicFailures.get(ip);
-    if (!state || Date.now() - state.startedAt >= PUBLIC_WINDOW_MS) this.publicFailures.set(ip, { count: 1, startedAt: Date.now() });
+    const now = Date.now();
+    if (!state || now - state.startedAt >= PUBLIC_WINDOW_MS) this.publicFailures.set(ip, { count: 1, startedAt: now });
     else state.count += 1;
+    if (this.publicFailures.size > PUBLIC_MAX_TRACKED_IPS) {
+      for (const [key, tracked] of this.publicFailures) if (now - tracked.startedAt >= PUBLIC_WINDOW_MS) this.publicFailures.delete(key);
+    }
   }
 
   /** Mã còn hiệu lực; mọi trường hợp sai, hết hạn, đã dùng, đã thu hồi đều trả cùng một lỗi. */
@@ -531,12 +575,13 @@ export class ConferenceInvitationsService {
     });
     await this.auditLog.record({ action: input.decision === "accept" ? "accept-conference-invitation" : "decline-conference-invitation", result: "success", actorId: outcome.userId ?? undefined, targetEntity: "conference-invitation", targetEntityId: invitationId, ip: via.kind === "token" ? via.context.ip : undefined, userAgent: via.kind === "token" ? via.context.userAgent : undefined, afterFacts: { account: accountState } });
     if (outcome.officerId) {
-      await this.notifications?.createConferenceNotification({ userId: outcome.officerId, conferenceId: outcome.conferenceId, title: input.decision === "accept" ? "Khách mời nhận lời" : "Khách mời từ chối", message: `${outcome.fullName} đã ${input.decision === "accept" ? "nhận lời" : "từ chối"} lời mời ${outcome.title}.${input.reason ? ` Lý do: ${input.reason}` : ""}`, link: `/conferences/${outcome.conferenceId}` });
+      await this.notifications?.createConferenceNotification({ userId: outcome.officerId, conferenceId: outcome.conferenceId, audience: "management", title: input.decision === "accept" ? "Khách mời nhận lời" : "Khách mời từ chối", message: `${outcome.fullName} đã ${input.decision === "accept" ? "nhận lời" : "từ chối"} lời mời ${outcome.title}.${input.reason ? ` Lý do: ${input.reason}` : ""}`, link: `/conferences/${outcome.conferenceId}` });
     }
     const pending = activation as { token: string; expiresAt: Date; email: string; displayName: string } | null;
     let activationPath: string | null = null;
     if (pending) {
-      activationPath = `/password-reset?mode=activation&token=${encodeURIComponent(pending.token)}`;
+      // Mã nằm sau dấu # để trình duyệt không gửi lên máy chủ (không vào nhật ký truy cập).
+      activationPath = `/password-reset#mode=activation&token=${encodeURIComponent(pending.token)}`;
       // Gửi kèm email phòng khi người dùng đóng trang trước khi đặt mật khẩu.
       const url = absoluteLink(activationPath);
       if (url) {

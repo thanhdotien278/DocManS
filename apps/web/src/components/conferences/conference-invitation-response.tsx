@@ -19,7 +19,8 @@ export function ConferenceInvitationResponse() {
   const [result, setResult] = useState<"declined" | "login" | null>(null);
 
   useEffect(() => {
-    const value = new URLSearchParams(window.location.search).get("token") ?? "";
+    // Mã nằm sau dấu # (không gửi lên máy chủ); vẫn nhận ?token= của thư gửi trước đây.
+    const value = new URLSearchParams(window.location.hash.slice(1)).get("token") ?? new URLSearchParams(window.location.search).get("token") ?? "";
     if (value) window.history.replaceState(null, "", window.location.pathname);
     setToken(value);
     if (!value) { setError("Đường link thư mời không hợp lệ."); return; }

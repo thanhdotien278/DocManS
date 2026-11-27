@@ -9,8 +9,7 @@ import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { assertValidUpload, defaultFileConfig, readUploadFileName, type FileModuleConfig } from "../modules/files/file-validation.js";
 import { canConference, canReadConferenceManagement, isConferenceParticipant, type ConferenceAction } from "./conference-access.js";
 import { scheduleProgram, type ScheduleSessionInput } from "./conference-scheduling.js";
-import { CONFERENCE_INCLUDE, conferenceFacts, conferenceNotFound, lockConference, recordConferenceEvent, stale } from "./conference-support.js";
-import { CONFERENCE_PROGRAM_STATUSES } from "./conference-workflow.js";
+import { CONFERENCE_INCLUDE, conferenceFacts, conferenceNotFound, lockAndRecheck, recordConferenceEvent } from "./conference-support.js";
 import type { ProceedingsInputDto, ProgramSettingsDto, PublishProgramDto, SessionInputDto, SessionSlotsDto, SlotTimeDto } from "./conferences.dto.js";
 
 /** Loại thực thể của tệp kỷ yếu: chỉ đi qua module hội nghị. */
@@ -129,7 +128,7 @@ export class ConferenceProgramService {
     const conference = await this.prisma.scientificConference.findUnique({ where: { id: conferenceId }, include: CONFERENCE_INCLUDE });
     if (!conference) conferenceNotFound();
     if (!canReadConferenceManagement(actor, conferenceFacts(conference))) {
-      const invitation = await this.prisma.conferenceInvitation.findFirst({ where: { conferenceId, userId: actor.id } });
+      const invitation = await this.prisma.conferenceInvitation.findFirst({ where: { conferenceId, userId: actor.id, status: { in: ["sent", "accepted"] } } });
       if (!isConferenceParticipant(actor, invitation) || invitation!.status !== "accepted") conferenceNotFound();
     }
     const [program, proceedings] = await Promise.all([
@@ -151,7 +150,7 @@ export class ConferenceProgramService {
   async updateSettings(actor: SafeUserContext, conferenceId: string, input: ProgramSettingsDto) {
     await this.loadConference(actor, conferenceId, "program.manage");
     await this.prisma.$transaction(async (tx) => {
-      await lockConference(tx, conferenceId);
+      await lockAndRecheck(tx, actor, conferenceId, "program.manage");
       await tx.scientificConference.update({ where: { id: conferenceId }, data: { defaultSlotMinutes: input.defaultSlotMinutes, programChangedAt: new Date() } });
       await recordConferenceEvent(tx, { conferenceId, actorId: actor.id, action: "program.settings", facts: { defaultSlotMinutes: input.defaultSlotMinutes } });
     });
@@ -162,7 +161,7 @@ export class ConferenceProgramService {
     const conference = await this.loadConference(actor, conferenceId, "program.manage");
     await this.assertWithinConference(conference, input);
     await this.prisma.$transaction(async (tx) => {
-      await lockConference(tx, conferenceId);
+      await lockAndRecheck(tx, actor, conferenceId, "program.manage");
       const { breaks, ...data } = input;
       const session = await tx.conferenceSession.create({ data: { ...data, conferenceId, breaks: { create: breaks } } });
       await this.markChanged(tx, conferenceId);
@@ -182,7 +181,7 @@ export class ConferenceProgramService {
     await this.loadSession(conferenceId, sessionId);
     await this.assertWithinConference(conference, input);
     await this.prisma.$transaction(async (tx) => {
-      await lockConference(tx, conferenceId);
+      await lockAndRecheck(tx, actor, conferenceId, "program.manage");
       const { breaks, ...data } = input;
       await tx.conferenceSession.update({ where: { id: sessionId }, data });
       // Khoảng nghỉ là cấu hình của phiên: thay cả danh sách.
@@ -199,7 +198,7 @@ export class ConferenceProgramService {
     await this.loadConference(actor, conferenceId, "program.manage");
     const session = await this.loadSession(conferenceId, sessionId);
     await this.prisma.$transaction(async (tx) => {
-      await lockConference(tx, conferenceId);
+      await lockAndRecheck(tx, actor, conferenceId, "program.manage");
       await tx.conferenceSession.delete({ where: { id: sessionId } });
       await this.markChanged(tx, conferenceId);
       await recordConferenceEvent(tx, { conferenceId, actorId: actor.id, action: "program.session-delete", facts: { sessionId, name: session.name } });
@@ -217,7 +216,7 @@ export class ConferenceProgramService {
     await this.loadConference(actor, conferenceId, "program.manage");
     await this.loadSession(conferenceId, sessionId);
     await this.prisma.$transaction(async (tx) => {
-      await lockConference(tx, conferenceId);
+      await lockAndRecheck(tx, actor, conferenceId, "program.manage");
       const papers = await tx.conferencePaper.findMany({ where: { id: { in: input.paperIds }, conferenceId } });
       if (papers.length !== input.paperIds.length) throw new BadRequestException({ message: "Có báo cáo không thuộc hội nghị này." });
       const notReady = papers.filter((paper) => !SCHEDULABLE_PAPER_STATUSES.includes(paper.status));
@@ -242,7 +241,7 @@ export class ConferenceProgramService {
     const slot = await this.prisma.conferenceSessionSlot.findFirst({ where: { id: slotId, session: { conferenceId } } });
     if (!slot) throw new NotFoundException({ message: "Không tìm thấy báo cáo trong phiên." });
     await this.prisma.$transaction(async (tx) => {
-      await lockConference(tx, conferenceId);
+      await lockAndRecheck(tx, actor, conferenceId, "program.manage");
       await tx.conferenceSessionSlot.update({ where: { id: slotId }, data: "clear" in input ? { manuallyAdjusted: false, startsAt: null, endsAt: null } : { manuallyAdjusted: true, startsAt: input.startsAt, endsAt: input.endsAt } });
       await this.markChanged(tx, conferenceId);
     });
@@ -257,13 +256,14 @@ export class ConferenceProgramService {
    * và chuyển hội nghị sang "đã gửi chương trình". Gửi thư là bước riêng (thư loại "program").
    */
   async publish(actor: SafeUserContext, conferenceId: string, input: PublishProgramDto) {
-    const conference = await this.loadConference(actor, conferenceId, "program.manage");
+    await this.loadConference(actor, conferenceId, "program.manage");
     const result = await this.prisma.$transaction(async (tx) => {
-      await lockConference(tx, conferenceId);
-      const current = await tx.scientificConference.findUnique({ where: { id: conferenceId } });
-      if (!current || !(CONFERENCE_PROGRAM_STATUSES as string[]).includes(current.status)) stale();
+      const current = await lockAndRecheck(tx, actor, conferenceId, "program.manage");
       const sessions = await tx.conferenceSession.findMany({ where: { conferenceId }, include: SESSION_INCLUDE, orderBy: [{ startsAt: "asc" }, { sortOrder: "asc" }, { name: "asc" }] });
       if (!sessions.length) throw new BadRequestException({ message: "Chưa có phiên nào." });
+      // Bản chốt bất biến: không đưa vào báo cáo đã rút hoặc chưa nộp toàn văn dù còn sót trong phiên.
+      const unready = sessions.flatMap((session) => session.slots).filter((slot) => !SCHEDULABLE_PAPER_STATUSES.includes(slot.paper.status));
+      if (unready.length) throw new ConflictException({ code: "PROGRAM_INVALID", message: `Có ${unready.length} báo cáo đã rút hoặc chưa nộp toàn văn còn trong phiên. Bỏ khỏi phiên trước khi chốt chương trình.` });
       if (sessions.some((session) => session.startsAt < current.startsAt || session.endsAt > current.endsAt)) {
         throw new BadRequestException({ message: "Có phiên nằm ngoài thời gian tổ chức hội nghị. Sửa phiên trước khi chốt chương trình." });
       }
@@ -278,7 +278,7 @@ export class ConferenceProgramService {
         if (!slot.manuallyAdjusted) await tx.conferenceSessionSlot.update({ where: { id: slot.id }, data: { startsAt: time.startsAt, endsAt: time.endsAt } });
       }
       const snapshot: ProgramSnapshot = {
-        conference: { title: conference.title, code: conference.code, location: conference.location, startsAt: conference.startsAt.toISOString(), endsAt: conference.endsAt.toISOString(), hostUnitName: conference.hostOrganizationUnit.name },
+        conference: { title: current.title, code: current.code, location: current.location, startsAt: current.startsAt.toISOString(), endsAt: current.endsAt.toISOString(), hostUnitName: current.hostOrganizationUnit.name },
         sessions: sessions.map((session) => ({
           kind: session.kind, name: session.name, room: session.room, chairName: session.chairName, secretaryName: session.secretaryName, startsAt: session.startsAt.toISOString(), endsAt: session.endsAt.toISOString(),
           items: [
@@ -318,7 +318,7 @@ export class ConferenceProgramService {
     let versionNumber: number;
     try {
       versionNumber = await this.prisma.$transaction(async (tx) => {
-        await lockConference(tx, conferenceId);
+        await lockAndRecheck(tx, actor, conferenceId, "proceedings.manage");
         await tx.fileRecord.create({
           data: { id: fileId, relatedEntityType: CONFERENCE_PROCEEDINGS_ENTITY_TYPE, relatedEntityId: conferenceId, filePurpose: "CONFERENCE_PROCEEDINGS", documentType: "CONFERENCE_PROCEEDINGS", originalFileName, version: 1, mimeType: file.mimetype, sizeBytes: file.size, storageBucket: this.fileConfig.bucketName ?? "rtms-files", storageObjectKey: objectKey, uploadedById: actor.id, status: "active" }
         });

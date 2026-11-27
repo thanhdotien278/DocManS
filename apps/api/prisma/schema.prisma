@@ -1629,6 +1629,8 @@ model ConferencePaperVersion {
   versionNumber Int             @map("version_number")
   title         String
   abstractText  String?         @map("abstract_text")
+  /// Danh sách tác giả tại lúc nộp (bất biến cùng phiên bản).
+  authors       Json            @default("[]")
   fileId        String?         @map("file_id")
   file          FileRecord?     @relation(fields: [fileId], references: [id])
   submittedById String          @map("submitted_by_id")

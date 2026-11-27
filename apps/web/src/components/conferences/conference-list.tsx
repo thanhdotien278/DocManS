@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useSession } from "@/components/auth/session-provider";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/ui/section-card";
 import { formatIntakeDate } from "@/lib/intake-dates";
@@ -12,9 +11,8 @@ import { ConferenceFields, EMPTY_CONFERENCE_FORM, formToPayload, useConferenceFo
 
 export function ConferenceList() {
   const router = useRouter();
-  const { account } = useSession();
-  // Chỉ là gợi ý hiển thị; máy chủ kiểm tra lại quyền tạo.
-  const canCreate = account?.systemRole === "RESEARCH_MANAGEMENT_HEAD" && !!account.organizationScopes?.length;
+  // Theo quyền máy chủ trả về; máy chủ vẫn kiểm tra lại khi tạo.
+  const [canCreate, setCanCreate] = useState(false);
   const [conferences, setConferences] = useState<ConferenceSummary[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState("");
@@ -26,7 +24,7 @@ export function ConferenceList() {
   const { form, setForm, problem } = useConferenceForm(EMPTY_CONFERENCE_FORM);
 
   useEffect(() => {
-    listConferences().then((items) => { setConferences(items); setState("ready"); }).catch((error) => { setMessage(error instanceof Error ? error.message : "Không tải được danh sách."); setState("error"); });
+    listConferences().then((result) => { setConferences(result.conferences); setCanCreate(result.viewer.canCreate); setState("ready"); }).catch((error) => { setMessage(error instanceof Error ? error.message : "Không tải được danh sách."); setState("error"); });
   }, []);
   useEffect(() => {
     if (!creating || units.length) return;

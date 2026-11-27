@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { ConflictException, NotFoundException } from "@nestjs/common";
-import type { ConferenceFacts } from "./conference-access.js";
+import type { SafeUserContext } from "../auth/auth.types.js";
+import { canConference, type ConferenceAction, type ConferenceFacts } from "./conference-access.js";
 
 /** Loại thực thể của tệp báo cáo tham luận: dịch vụ tệp chung không nhận loại này, nên tệp chỉ đi qua module hội nghị. */
 export const CONFERENCE_PAPER_ENTITY_TYPE = "conference-paper";
@@ -21,7 +22,6 @@ export function conferenceFacts(conference: ConferenceRecord): ConferenceFacts {
   return {
     status: conference.status,
     hostOrganizationUnitId: conference.hostOrganizationUnitId,
-    createdById: conference.createdById,
     activeOfficerId: conference.officers[0]?.userId ?? null
   };
 }
@@ -42,6 +42,17 @@ export function assertVersion(record: { updatedAt: Date }, version: string | und
 /** Khoá dòng hội nghị trong giao dịch để thao tác đồng thời (gửi thư, nhận lời, đổi trạng thái) xếp hàng. */
 export async function lockConference(tx: Prisma.TransactionClient, conferenceId: string) {
   await tx.$queryRaw`SELECT id FROM scientific_conferences WHERE id = ${conferenceId} FOR UPDATE`;
+}
+
+/**
+ * Khoá hội nghị rồi đọc lại cùng chuyên viên đang hiệu lực và kiểm tra lại quyền: kiểm tra trước giao dịch có thể đã cũ
+ * (chuyên viên vừa bị giao lại, hội nghị vừa bị huỷ). Trả về bản đã khoá.
+ */
+export async function lockAndRecheck(tx: Prisma.TransactionClient, actor: SafeUserContext, conferenceId: string, action: ConferenceAction) {
+  await lockConference(tx, conferenceId);
+  const current = await tx.scientificConference.findUnique({ where: { id: conferenceId }, include: CONFERENCE_INCLUDE });
+  if (!current || !canConference(actor, conferenceFacts(current), action)) stale();
+  return current;
 }
 
 /**
