@@ -367,7 +367,7 @@ Quy ước chung: nhãn tiếng Việt; ngày nhập theo nguyên ngày lịch V
 2. Với cấu hình mặc định: TP¹ và TB¹ mời được; CV³ nhận `403 COUNCIL_FORMATION_DENIED` khi mời và không thấy form mời; sau khi QT tích CV, CV³ mời được; CV không phụ trách vẫn bị từ chối.
 3. QT không bao giờ là ứng viên, không mời được, không ký được.
 4. Mời PI/thành viên đề tài, CV phụ trách, chính mình, người đã có vị trí khác, vị trí đã đủ, quá `memberCount` đều bị từ chối đúng mã §7.3 và không tạo hàng.
-5. Mời TB duy nhất (`nmtrung`) bị `ROUTING_ACTOR_UNAVAILABLE`.
+5. Mời TB duy nhất (`boardhead`) bị `ROUTING_ACTOR_UNAVAILABLE`.
 6. Người được mời chỉ thấy tên đề tài, vị trí, hạn, người mời trước khi nhận lời; từ chối không lý do bị `DECLINE_REASON_REQUIRED`.
 7. Lập tờ trình bị `COUNCIL_NOT_READY` (kèm `blockers`) cho tới khi đủ đúng cấu trúc §5 và mọi người đã nhận lời; khi đang `PENDING` thì mời/thu hồi bị `COUNCIL_SUBMISSION_PENDING`.
 8. Tờ trình do CV lập đi `BOARD_REVIEW → HEAD_REVIEW → LEADERSHIP`; trả lại ở mọi bước bắt buộc lý do và đưa hội đồng về `READY_TO_SUBMIT`.
@@ -408,27 +408,27 @@ Playwright **không** là dependency của repo; tester chạy bằng Playwright
 
 1. `npm run db:setup` (database mới) rồi `node apps/api/prisma/seed-reviewer-test-accounts.mjs` (tạo `test_internal01..10`, `test_external01..10`, có lý lịch khoa học).
 2. Chạy API (`npm run dev:api`, cổng 4000) và web (`npm run dev:web`, <http://localhost:3000>). Kiểm `GET http://localhost:4000/api/v1/health` = 200. Khởi động lại API sau mỗi lần đổi code API.
-3. Mật khẩu mọi tài khoản seed: `1234` (local/demo). Tài khoản: `admin` (QT), `nmphuong` (TP), `nmtrung` (TB), `hdtien1`/`hdtien2` (CV), `tvtien` (GĐ), `vndinh` (PGĐ-KH), `ndbac` (PGĐ-TD), `dnbinh` (PP), `patuan` (NCV, chủ nhiệm), `int1..3`, `ex1..3`, `test_internal01..10`, `test_external01..10`.
-4. Tạo hồ sơ thử (dùng chung cho K2–K10): đăng nhập `patuan` → tạo đề xuất trong đợt đang mở, đơn vị chủ trì Khoa Toán - Tin học, thêm `int1` làm thành viên, tải đủ tệp bắt buộc → Nộp. Đăng nhập `nmphuong` → mở hồ sơ → giao CV phụ trách `hdtien1` (lý do bất kỳ). Đăng nhập `hdtien1` → "Xác nhận hồ sơ đầy đủ".
+3. Mật khẩu mọi tài khoản seed: `1234` (local/demo). Tài khoản: `admin` (QT), `rmhead` (TP), `boardhead` (TB), `rmstaff1`/`rmstaff2` (CV), `director` (GĐ), `deputysci` (PGĐ-KH), `oversight` (PGĐ-TD), `rmdeputy` (PP), `pi1` (NCV, chủ nhiệm), `int1..3`, `ex1..3`, `test_internal01..10`, `test_external01..10`.
+4. Tạo hồ sơ thử (dùng chung cho K2–K10): đăng nhập `pi1` → tạo đề xuất trong đợt đang mở, đơn vị chủ trì Khoa Toán - Tin học, thêm `int1` làm thành viên, tải đủ tệp bắt buộc → Nộp. Đăng nhập `rmhead` → mở hồ sơ → giao CV phụ trách `rmstaff1` (lý do bất kỳ). Đăng nhập `rmstaff1` → "Xác nhận hồ sơ đầy đủ".
 
 | # | Kịch bản | Bước | Kết quả mong đợi |
 | --- | --- | --- | --- |
-| K1 | CV chưa được phép (cấu hình mặc định) | `hdtien1` → hồ sơ thử | Panel "Hội đồng thẩm định" hiện, không có form mời, có lý do không được thành lập hội đồng; vẫn thấy trạng thái. |
-| K2 | QT cấu hình | `admin` → `/system-settings` → thẻ "Hội đồng đánh giá": thấy TP, TB đã tích, số 7, dòng "1 Chủ tịch · 2 Phản biện · 3 Ủy viên · 1 Thư ký"; bỏ tích hết → nút Lưu khóa kèm lý do; đặt 4 → Lưu; đặt lại 7, tích thêm CV → Lưu. `hdtien1` tải lại hồ sơ thử. Cuối kịch bản bỏ tích CV → Lưu (trả về mặc định cho K4–K16) | Lỗi "số lượng" hiển thị; lưu hợp lệ → "Đã lưu cấu hình"; `hdtien1` thấy form mời khi CV được tích. Thẻ IRB/nghiệm thu có badge "Chưa áp dụng". |
+| K1 | CV chưa được phép (cấu hình mặc định) | `rmstaff1` → hồ sơ thử | Panel "Hội đồng thẩm định" hiện, không có form mời, có lý do không được thành lập hội đồng; vẫn thấy trạng thái. |
+| K2 | QT cấu hình | `admin` → `/system-settings` → thẻ "Hội đồng đánh giá": thấy TP, TB đã tích, số 7, dòng "1 Chủ tịch · 2 Phản biện · 3 Ủy viên · 1 Thư ký"; bỏ tích hết → nút Lưu khóa kèm lý do; đặt 4 → Lưu; đặt lại 7, tích thêm CV → Lưu. `rmstaff1` tải lại hồ sơ thử. Cuối kịch bản bỏ tích CV → Lưu (trả về mặc định cho K4–K16) | Lỗi "số lượng" hiển thị; lưu hợp lệ → "Đã lưu cấu hình"; `rmstaff1` thấy form mời khi CV được tích. Thẻ IRB/nghiệm thu có badge "Chưa áp dụng". |
 | K3 | QT không thao tác nghiệp vụ | `admin` mở `/proposals/<id>` hồ sơ thử | Không truy cập được hoặc không có panel hội đồng/nút ký. |
-| K4 | TP lập hội đồng, conflict | `nmphuong` → panel → vị trí "Phản biện" → tìm "patuan", "int1", "hdtien1", "nmphuong", "admin" | Không ai trong 5 người xuất hiện trong kết quả. Tìm "nmtrung" (TB duy nhất) với vị trí Ủy viên: không xuất hiện; nếu gọi API mời trực tiếp thì lỗi `ROUTING_ACTOR_UNAVAILABLE` (chỉ kiểm được khi `nmtrung` có lý lịch khoa học; nếu không, lỗi là `CANDIDATE_NOT_ELIGIBLE` — ghi lại mã thực tế). |
-| K5 | Mời đủ 7 | `nmphuong` mời: Chủ tịch `test_internal01`, Phản biện `test_internal02`, `test_external01`, Ủy viên `test_internal03`, `test_internal04`, `test_external02`, Thư ký `test_internal05`, hạn = hôm nay + 14 ngày | Dải vị trí "1/1 · 0/2…" theo số nhận lời = 0; bảng có 7 dòng "Chờ chấp nhận"; select vị trí không còn lựa chọn; mời người thứ 8 không thực hiện được. Hồ sơ chuyển "Đang đánh giá". Blocker "7 thành viên chưa chấp nhận lời mời." |
-| K6 | Người được mời trước khi nhận lời | `test_internal02` → `/my-reviews` | Thấy tên đề tài, "Phản biện", hạn, người mời "…nmphuong…"; không có liên kết mở hồ sơ. Mở thẳng `/proposals/<id>` → bị từ chối. |
-| K7 | Từ chối có lý do | `test_external02` → Từ chối → gửi khi để trống | Nút gửi khóa/lỗi "Nhập lý do"; nhập lý do → dòng "Đã từ chối". `nmphuong` thấy badge "Đã từ chối" + lý do, blocker "1 thành viên đã từ chối…". |
-| K8 | Thay thế người từ chối | `nmphuong` thu hồi `test_external02` (lý do bắt buộc) → mời Ủy viên `test_external03`; 7 người còn lại lần lượt đăng nhập và Chấp nhận | Trạng thái "Sẵn sàng trình", blockers rỗng, nút "Lập tờ trình thành lập hội đồng" hiện với `hdtien1` (CV phụ trách) và `nmphuong`. |
-| K9 | Khóa danh sách khi trình | `hdtien1` lập tờ trình → `nmphuong` thử thu hồi một thành viên | Trạng thái "Đang trình ký · Chờ Trưởng ban QLKH rà soát"; thu hồi bị từ chối với thông báo trả lại tờ trình trước. |
-| K10 | Luồng tờ trình + trả lại | `nmtrung` Chuyển → `nmphuong` Trả lại để trống lý do (bị chặn) rồi có lý do | Hội đồng về "Sẵn sàng trình"; `RoutingStatus` hiện "Bị trả lại" + lý do. `hdtien1` lập lại → `nmtrung` Chuyển → `nmphuong` Duyệt → "Chờ Ban giám đốc ký". |
-| K11 | Người không được ký | `ndbac`, `dnbinh`, `nmtrung` mở hồ sơ | Không có nút "Ký thành lập hội đồng". |
-| K12 | BGĐ ký | `vndinh` → Ký thành lập hội đồng → xác nhận | "Đã thành lập" + ngày; audit có `establish-evaluation-council`. |
+| K4 | TP lập hội đồng, conflict | `rmhead` → panel → vị trí "Phản biện" → tìm "pi1", "int1", "rmstaff1", "rmhead", "admin" | Không ai trong 5 người xuất hiện trong kết quả. Tìm "boardhead" (TB duy nhất) với vị trí Ủy viên: không xuất hiện; nếu gọi API mời trực tiếp thì lỗi `ROUTING_ACTOR_UNAVAILABLE` (chỉ kiểm được khi `boardhead` có lý lịch khoa học; nếu không, lỗi là `CANDIDATE_NOT_ELIGIBLE` — ghi lại mã thực tế). |
+| K5 | Mời đủ 7 | `rmhead` mời: Chủ tịch `test_internal01`, Phản biện `test_internal02`, `test_external01`, Ủy viên `test_internal03`, `test_internal04`, `test_external02`, Thư ký `test_internal05`, hạn = hôm nay + 14 ngày | Dải vị trí "1/1 · 0/2…" theo số nhận lời = 0; bảng có 7 dòng "Chờ chấp nhận"; select vị trí không còn lựa chọn; mời người thứ 8 không thực hiện được. Hồ sơ chuyển "Đang đánh giá". Blocker "7 thành viên chưa chấp nhận lời mời." |
+| K6 | Người được mời trước khi nhận lời | `test_internal02` → `/my-reviews` | Thấy tên đề tài, "Phản biện", hạn, người mời "…rmhead…"; không có liên kết mở hồ sơ. Mở thẳng `/proposals/<id>` → bị từ chối. |
+| K7 | Từ chối có lý do | `test_external02` → Từ chối → gửi khi để trống | Nút gửi khóa/lỗi "Nhập lý do"; nhập lý do → dòng "Đã từ chối". `rmhead` thấy badge "Đã từ chối" + lý do, blocker "1 thành viên đã từ chối…". |
+| K8 | Thay thế người từ chối | `rmhead` thu hồi `test_external02` (lý do bắt buộc) → mời Ủy viên `test_external03`; 7 người còn lại lần lượt đăng nhập và Chấp nhận | Trạng thái "Sẵn sàng trình", blockers rỗng, nút "Lập tờ trình thành lập hội đồng" hiện với `rmstaff1` (CV phụ trách) và `rmhead`. |
+| K9 | Khóa danh sách khi trình | `rmstaff1` lập tờ trình → `rmhead` thử thu hồi một thành viên | Trạng thái "Đang trình ký · Chờ Trưởng ban QLKH rà soát"; thu hồi bị từ chối với thông báo trả lại tờ trình trước. |
+| K10 | Luồng tờ trình + trả lại | `boardhead` Chuyển → `rmhead` Trả lại để trống lý do (bị chặn) rồi có lý do | Hội đồng về "Sẵn sàng trình"; `RoutingStatus` hiện "Bị trả lại" + lý do. `rmstaff1` lập lại → `boardhead` Chuyển → `rmhead` Duyệt → "Chờ Ban giám đốc ký". |
+| K11 | Người không được ký | `oversight`, `rmdeputy`, `boardhead` mở hồ sơ | Không có nút "Ký thành lập hội đồng". |
+| K12 | BGĐ ký | `deputysci` → Ký thành lập hội đồng → xác nhận | "Đã thành lập" + ngày; audit có `establish-evaluation-council`. |
 | K13 | Thành viên chấm | `test_internal02` → `/my-reviews` → mở hồ sơ → chấm đủ 4 tiêu chí → Gửi | Phiếu khóa sau khi gửi; tiêu đề có vị trí. |
 | K14 | Thư ký không chấm, soạn biên bản | `test_internal05` → `/my-reviews` | Hành động "Soạn biên bản" (không có "Chấm phiếu"); trang hiện "Phiếu 1" ẩn danh, không có tên người chấm; lưu nháp tổng hợp thành công; không có nút Chốt/Trình. |
-| K15 | Readiness | Cả 6 thành viên chấm gửi phiếu → `nmphuong` chốt tổng hợp → trình | Trước khi đủ 6 phiếu nút chốt bị khóa với lý do "Còn N phiếu chưa gửi"; thư ký không nằm trong danh sách chờ; sau đủ 6 phiếu chốt/trình được, hồ sơ "Chờ phê duyệt". |
-| K16 | GĐ không ký khi là thành viên (tùy chọn) | Trên hồ sơ thử thứ hai, mời `tvtien` làm Ủy viên, đủ người, trình tới BGĐ | `tvtien` thấy nút ký bị khóa với lý do xung đột; `vndinh` ký được. |
+| K15 | Readiness | Cả 6 thành viên chấm gửi phiếu → `rmhead` chốt tổng hợp → trình | Trước khi đủ 6 phiếu nút chốt bị khóa với lý do "Còn N phiếu chưa gửi"; thư ký không nằm trong danh sách chờ; sau đủ 6 phiếu chốt/trình được, hồ sơ "Chờ phê duyệt". |
+| K16 | GĐ không ký khi là thành viên (tùy chọn) | Trên hồ sơ thử thứ hai, mời `director` làm Ủy viên, đủ người, trình tới BGĐ | `director` thấy nút ký bị khóa với lý do xung đột; `deputysci` ký được. |
 
 ## 15. Rủi ro đã biết
 

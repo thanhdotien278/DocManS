@@ -251,7 +251,7 @@
   evidence: UI 08/11.
 - source_spec: `_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/refined-flow-verification.md`
   summary: Nội dung thông báo trả lại tờ trình hội đồng lặp tiền tố: "Thành lập hội đồng đánh giá: Hội đồng đánh giá: …".
-  evidence: UI 08/11, thông báo của CV hdtien1.
+  evidence: UI 08/11, thông báo của CV rmstaff1.
 - source_spec: `_bmad-output/implementation-artifacts/epic-05-proposal-review-and-approval/refined-flow-verification.md`
   summary: Mời lại người đã gửi phiếu sau khi bị thu hồi trong cùng vòng không bị chặn; cần chốt có cấm hay không (AC 5.3 chỉ yêu cầu giữ xung đột ở bước tổng hợp/quyết định).
   evidence: Thông báo "đã gửi phiếu đánh giá" của test cũ không còn trong code API (08/11).

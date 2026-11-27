@@ -38,13 +38,13 @@ DATABASE_URL="$DB69" npm run prisma:seed
 npm run build:api
 ```
 
-Tạo dữ liệu: lưu đoạn sau thành `/tmp/codex69-fixture.mjs` rồi chạy `DATABASE_URL="$DB69" node /tmp/codex69-fixture.mjs`. Đơn vị chủ trì là `org-khti`, nằm trong phạm vi của PI `patuan` và CV `hdtien1` như dữ liệu mẫu trong seed. Nếu dùng đơn vị ngoài phạm vi của PI, PI sẽ không đọc được đề tài: đó là luật phạm vi đã có từ trước, không phải lỗi của 6.9. Script tạo **2 đề tài** `pending_acceptance` có hồ sơ đã nộp (PI `patuan`, thành viên `int1`, CV phụ trách `hdtien1`) và đặt cấu hình hội đồng 3 người, cho phép TP/TB/CV.
+Tạo dữ liệu: lưu đoạn sau thành `/tmp/codex69-fixture.mjs` rồi chạy `DATABASE_URL="$DB69" node /tmp/codex69-fixture.mjs`. Đơn vị chủ trì là `org-khti`, nằm trong phạm vi của PI `pi1` và CV `rmstaff1` như dữ liệu mẫu trong seed. Nếu dùng đơn vị ngoài phạm vi của PI, PI sẽ không đọc được đề tài: đó là luật phạm vi đã có từ trước, không phải lỗi của 6.9. Script tạo **2 đề tài** `pending_acceptance` có hồ sơ đã nộp (PI `pi1`, thành viên `int1`, CV phụ trách `rmstaff1`) và đặt cấu hình hội đồng 3 người, cho phép TP/TB/CV.
 
 ```js
 import { PrismaService } from "/Users/Super/DocManS/dist/apps/api/infrastructure/prisma/prisma.service.js";
 const db = new PrismaService();
 const u = (username) => db.user.findUniqueOrThrow({ where: { username } });
-const [pi, member, staff, head] = await Promise.all(["patuan", "int1", "hdtien1", "nmphuong"].map(u));
+const [pi, member, staff, head] = await Promise.all(["pi1", "int1", "rmstaff1", "rmhead"].map(u));
 await db.systemParameter.upsert({ where: { key: "council_formation.ACCEPTANCE" }, create: { key: "council_formation.ACCEPTANCE", value: JSON.stringify({ allowedRoles: ["RESEARCH_MANAGEMENT_HEAD", "RESEARCH_BOARD_HEAD", "RESEARCH_MANAGEMENT_STAFF"], memberCount: 3 }), label: "Hội đồng nghiệm thu" }, update: {} });
 const intake = await db.proposalIntakePeriod.create({ data: { code: "DOT-CODEX-69", title: "Đợt kiểm thử", startsAt: new Date("2026-01-01"), endsAt: new Date("2027-01-01"), requiredPackage: [] } });
 for (const title of ["Đề tài A — nghiệm thu đạt", "Đề tài B — nghiệm thu không đạt / trả lại"]) {
@@ -74,15 +74,15 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:4005/api/v1 API_INTERNAL_BASE_URL=http
 
 | Tài khoản | Vai trò | Vai trò trong kịch bản |
 |---|---|---|
-| `hdtien1` | CV (`RESEARCH_MANAGEMENT_STAFF`) | CV phụ trách hai đề tài |
-| `hdtien2` | CV | CV **không** phụ trách |
-| `nmtrung` | TB | Rà soát bước 1, có thể lập hội đồng |
-| `nmphuong` | TP | Rà soát bước 2, có thể lập hội đồng |
-| `tvtien` | GĐ | Ký |
-| `vndinh` | PGĐ-KH | Ký; dùng thử làm thành viên hội đồng để kiểm xung đột |
-| `dnbinh` | PP | Chỉ đọc theo phạm vi |
-| `ndbac` | PGĐ-TD | Chỉ đọc |
-| `patuan` | PI đề tài | Không được mời, không ghi kết quả |
+| `rmstaff1` | CV (`RESEARCH_MANAGEMENT_STAFF`) | CV phụ trách hai đề tài |
+| `rmstaff2` | CV | CV **không** phụ trách |
+| `boardhead` | TB | Rà soát bước 1, có thể lập hội đồng |
+| `rmhead` | TP | Rà soát bước 2, có thể lập hội đồng |
+| `director` | GĐ | Ký |
+| `deputysci` | PGĐ-KH | Ký; dùng thử làm thành viên hội đồng để kiểm xung đột |
+| `rmdeputy` | PP | Chỉ đọc theo phạm vi |
+| `oversight` | PGĐ-TD | Chỉ đọc |
+| `pi1` | PI đề tài | Không được mời, không ghi kết quả |
 | `int1` | Thành viên đề tài | Không được mời |
 | `int2`, `int3`, `ex1`–`ex3` | Nhà nghiên cứu (đơn vị khác/ngoài) | Ứng viên hội đồng; không đọc được đề tài |
 | `admin` | QT | Không được mời, không lập hội đồng |

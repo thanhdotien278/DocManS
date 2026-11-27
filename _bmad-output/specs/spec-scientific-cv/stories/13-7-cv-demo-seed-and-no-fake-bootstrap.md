@@ -15,7 +15,7 @@ context:
 
 **Problem:** No seeded account has a scientific CV, so the CV tabs cannot be demoed or exercised against the real contract (CAP-7). The review repo's `ensureProfileForResearcher` invented personal data on first `/my-profile` access, and that defect must not be ported.
 
-**Approach:** Store one demo CV as a JSON file next to `apps/api/prisma/seed.mjs` (loaded like `hvqy-organization-units.json`). After the profile-create loop, the seed writes it to the demo researcher `patuan` (`profile-user-pi`), but only when that profile's `curriculumVitae` is null. It reads first, then updates, and bumps `aggregateVersion`. In the same guarded step it fills the Tab 1 required profile columns that are still null (`contactEmail` and its key), so saving with no edits is not blocked. User edits are never overwritten, and a second run changes nothing.
+**Approach:** Store one demo CV as a JSON file next to `apps/api/prisma/seed.mjs` (loaded like `hvqy-organization-units.json`). After the profile-create loop, the seed writes it to the demo researcher `pi1` (`profile-user-pi`), but only when that profile's `curriculumVitae` is null. It reads first, then updates, and bumps `aggregateVersion`. In the same guarded step it fills the Tab 1 required profile columns that are still null (`contactEmail` and its key), so saving with no edits is not blocked. User edits are never overwritten, and a second run changes nothing.
 
 Rules for the JSON:
 - `cvSchemaVersion: 1`
@@ -39,7 +39,7 @@ Tests, in `tests/researcher-profiles.test.mjs`:
 ## Implementation Notes
 
 
-- Deviation (user, 2026-10-13): the demo CVs target `int2` (`profile-user-researcher2`, INTERNAL) and `ex1` (`profile-user-external1`, EXTERNAL) instead of `patuan`. The frozen Intent above is unchanged.
+- Deviation (user, 2026-10-13): the demo CVs target `int2` (`profile-user-researcher2`, INTERNAL) and `ex1` (`profile-user-external1`, EXTERNAL) instead of `pi1`. The frozen Intent above is unchanged.
 - `apps/api/prisma/demo-cvs.json` holds one entry per profile id: `contactEmail` and `curriculumVitae` (Tab 1–3 plus `intellectualProperty` and `awards`; no publications or projects, pending 13-4). Sensitive values are `DEMO-*`; emails are `*.demo@example.invalid`.
 - `seed.mjs` writes an entry only while that profile's `curriculumVitae` is null, fills `contactEmail` only when null, and bumps `aggregateVersion`. Verified against the local DB: first run wrote both, second run changed nothing.
 - Tests in `tests/researcher-profiles.test.mjs`: demo JSON round-trips through `updateMyProfilePipe` unchanged; the existing denial test now also asserts `getMyProfile`/`updateMyProfile` for an unlinked account return 403 with no profile, history or audit writes.

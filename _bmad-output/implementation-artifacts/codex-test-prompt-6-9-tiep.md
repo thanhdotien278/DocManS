@@ -29,18 +29,18 @@ Quy tắc giữ nguyên: không sửa code, không commit, không dùng DB dev c
 
 | Ca | Ai | Thao tác trên UI | Đạt khi |
 |---|---|---|---|
-| E1 | `nmtrung` (TB, cấu hình gồm TP/TB/CV) | Vào trang đề tài A1 → thẻ "Hội đồng nghiệm thu" → mời `int2` làm Chủ tịch, `int3` làm Thư ký, `ex1` làm Ủy viên | 3 dòng "Chờ phản hồi"; tiến độ 0/1 mỗi vị trí; nút "Lập tờ trình" khóa kèm lý do; khi chưa chọn gì, nút "Gửi lời mời" hiện lý do (kiểm lại C4) |
+| E1 | `boardhead` (TB, cấu hình gồm TP/TB/CV) | Vào trang đề tài A1 → thẻ "Hội đồng nghiệm thu" → mời `int2` làm Chủ tịch, `int3` làm Thư ký, `ex1` làm Ủy viên | 3 dòng "Chờ phản hồi"; tiến độ 0/1 mỗi vị trí; nút "Lập tờ trình" khóa kèm lý do; khi chưa chọn gì, nút "Gửi lời mời" hiện lý do (kiểm lại C4) |
 | E2 | `int2`, `int3`, `ex1` | Vào `/my-reviews` → "Xem lời mời" → "Nhận lời" | Dòng chuyển "Đã nhận lời"; thông báo của người mời có loại `accepted`, link trỏ `/projects/:id/acceptance-council` |
-| E3 | `hdtien1` (CV phụ trách) | Mở trang hội đồng A1 → "Lập tờ trình thành lập hội đồng" có ghi chú | Phụ đề "Đang trình · Chờ Trưởng ban…"; danh sách bị khóa; mục "Tờ trình qua Phòng KHQS" hiện |
-| E4 | `nmtrung` | Mở thông báo tờ trình (kiểm link) → chuyển bước trong mục "Tờ trình qua Phòng KHQS" | Bước sang "Chờ Trưởng phòng" |
-| E5 | `nmphuong` | Như E4 | Bước sang "Chờ Ban giám đốc ký" |
-| E6 | `tvtien` (GĐ) | Mở thông báo → "Ký thành lập" → xác nhận | Huy hiệu "Đã thành lập"; ngày thành lập đúng giờ Việt Nam; thành viên nhận thông báo `established` |
+| E3 | `rmstaff1` (CV phụ trách) | Mở trang hội đồng A1 → "Lập tờ trình thành lập hội đồng" có ghi chú | Phụ đề "Đang trình · Chờ Trưởng ban…"; danh sách bị khóa; mục "Tờ trình qua Phòng KHQS" hiện |
+| E4 | `boardhead` | Mở thông báo tờ trình (kiểm link) → chuyển bước trong mục "Tờ trình qua Phòng KHQS" | Bước sang "Chờ Trưởng phòng" |
+| E5 | `rmhead` | Như E4 | Bước sang "Chờ Ban giám đốc ký" |
+| E6 | `director` (GĐ) | Mở thông báo → "Ký thành lập" → xác nhận | Huy hiệu "Đã thành lập"; ngày thành lập đúng giờ Việt Nam; thành viên nhận thông báo `established` |
 | E7 | `ex1` (Ủy viên) | Trang hội đồng → "Mở hồ sơ nghiệm thu" | Xem được 4 mục và tệp ở chế độ chỉ đọc; không có ô sửa, ô tải, nút nộp; không có khu ghi kết quả |
 | E8 | `int2` (Chủ tịch) | Khu "Ghi kết quả": tải biên bản PDF → xóa → tải lại → nhập nhận xét → chọn Đạt → xác nhận | Nút ghi kết quả khóa kèm lý do cho tới khi đủ ba điều kiện; hộp xác nhận ghi "Không hoàn tác"; sau đó thẻ "Kết quả nghiệm thu" chỉ đọc, có link tải biên bản |
-| E9 | `hdtien1` | Trang chi tiết đề tài A1 | Trạng thái "Đã nghiệm thu"; lịch sử có các mục hội đồng với nhãn tiếng Việt; thẻ thanh lý mở |
-| E10 | `hdtien1` → `tvtien` | Lập biên bản thanh lý → trình → GĐ ký (theo luồng thanh lý hiện có) | Đề tài `closed` |
+| E9 | `rmstaff1` | Trang chi tiết đề tài A1 | Trạng thái "Đã nghiệm thu"; lịch sử có các mục hội đồng với nhãn tiếng Việt; thẻ thanh lý mở |
+| E10 | `rmstaff1` → `director` | Lập biên bản thanh lý → trình → GĐ ký (theo luồng thanh lý hiện có) | Đề tài `closed` |
 | E11 | `int2`, `int3`, `ex1` | `/my-reviews` sau khi có kết quả | Mục "Hội đồng nghiệm thu" không còn đề tài A1 |
-| E12 | `patuan` (PI) | Trang đề tài và trang hội đồng A1 | Thấy kết quả và thông báo kết quả; không có nút thao tác hội đồng nào |
+| E12 | `pi1` (PI) | Trang đề tài và trang hội đồng A1 | Thấy kết quả và thông báo kết quả; không có nút thao tác hội đồng nào |
 
 ## F. Nhánh rẽ và chặn
 
@@ -51,12 +51,12 @@ Quy tắc giữ nguyên: không sửa code, không commit, không dùng DB dev c
 | F3 | B1 | Trình; **TB trả lại** qua UI có lý do | Danh sách giữ nguyên; mời/thu hồi mở lại; "Ghi chú gần nhất" hiện lý do |
 | F4 | B1 | Trình lại tới GĐ; **GĐ từ chối** qua UI (thử để trống lý do trước) | Nút xác nhận khóa khi chưa có lý do; sau đó tờ trình bị từ chối, danh sách giữ nguyên, đề tài vẫn "Chờ nghiệm thu"; người trình và CV nhận thông báo `rejected` |
 | F5 | B1 | Trình lại, ký; Chủ tịch ghi **Không đạt** | Đề tài `failed`; thanh lý mở |
-| F6 | B2 | Mời `vndinh` (PGĐ-KH) làm Ủy viên, đủ cơ cấu, trình tới Ban giám đốc | `vndinh` không thấy nút ký (API: không có `acceptance-council.sign`; gọi approve → `403 APPROVAL_CONFLICT`); `tvtien` vẫn ký được |
-| F7 | B2 | Thêm một ghế `accepted` cho `nmtrung` bằng DB khi tờ trình đang ở bước TB | `nmtrung` chuyển bước → `403 APPROVAL_CONFLICT`, UI hiện lỗi tiếng Việt; xóa ghế đó sau khi kiểm |
+| F6 | B2 | Mời `deputysci` (PGĐ-KH) làm Ủy viên, đủ cơ cấu, trình tới Ban giám đốc | `deputysci` không thấy nút ký (API: không có `acceptance-council.sign`; gọi approve → `403 APPROVAL_CONFLICT`); `director` vẫn ký được |
+| F7 | B2 | Thêm một ghế `accepted` cho `boardhead` bằng DB khi tờ trình đang ở bước TB | `boardhead` chuyển bước → `403 APPROVAL_CONFLICT`, UI hiện lỗi tiếng Việt; xóa ghế đó sau khi kiểm |
 | F8 | B2 | Sau khi ký, thêm Chủ tịch vào `approved_project_members` (ACTIVE) bằng DB | Chủ tịch ghi kết quả bị chặn (`403`); trả DB về như cũ sau khi kiểm |
 | F9 | B2 | Trước khi ký: cho một thành viên đã nhận lời trở thành thành viên đề tài (DB) | GĐ ký → `400 COUNCIL_MEMBER_INELIGIBLE`, UI hiện thông báo; trả DB về như cũ |
-| F10 | B2 | Các vai trò không có quyền mở trang hội đồng B2: `hdtien2`, `dnbinh`, `ndbac`, `int1`, `admin`, và một nhà nghiên cứu không có ghế ở B2 (vd. `ex3`) | Hoặc chỉ đọc (người đọc được đề tài, không có nút) hoặc thông báo "không có quyền" (người không đọc được); không ai có nút thao tác ngoài quyền |
-| F11 | B2 | Đổi cấu hình `council_formation.ACCEPTANCE` về mặc định (xóa dòng `system_parameters`) | `hdtien1` không còn form mời (nút ẩn hoặc lý do); API → `403 COUNCIL_FORMATION_DENIED`; TP/TB vẫn mời được |
+| F10 | B2 | Các vai trò không có quyền mở trang hội đồng B2: `rmstaff2`, `rmdeputy`, `oversight`, `int1`, `admin`, và một nhà nghiên cứu không có ghế ở B2 (vd. `ex3`) | Hoặc chỉ đọc (người đọc được đề tài, không có nút) hoặc thông báo "không có quyền" (người không đọc được); không ai có nút thao tác ngoài quyền |
+| F11 | B2 | Đổi cấu hình `council_formation.ACCEPTANCE` về mặc định (xóa dòng `system_parameters`) | `rmstaff1` không còn form mời (nút ẩn hoặc lý do); API → `403 COUNCIL_FORMATION_DENIED`; TP/TB vẫn mời được |
 | F12 | bất kỳ | Mở trang hội đồng ở 2 tab; thao tác ở tab 1 rồi thao tác ở tab 2 | Tab 2 báo lỗi kèm nút "Tải lại", nội dung đang nhập (nhận xét, ghi chú trình) không mất |
 | F13 | bất kỳ | Hai người cùng bấm nhận lời / hai lần bấm ký thật nhanh (gửi song song qua API) | Không có trạng thái lệch: không trùng lịch sử, tờ trình đóng một lần |
 | F14 | bất kỳ | PI hoặc Ủy viên gọi `DELETE /files/:id` với biên bản trước khi có kết quả; Chủ tịch xóa sau khi có kết quả | `403` và `400 WORKFLOW_STATE_DENIED` |

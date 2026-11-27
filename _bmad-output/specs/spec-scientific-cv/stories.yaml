@@ -51,6 +51,6 @@
 - id: "13-10"
   title: Lý lịch khoa học của bản thân cho cán bộ quản lý khoa học
   description: >-
-    Give SCIENTIFIC_MANAGEMENT_HEAD and SCIENTIFIC_MANAGEMENT_STAFF a "Lý lịch khoa học" entry for their own CV: SYSTEM_ADMIN may link their accounts to INTERNAL profiles, owners cannot activate/deactivate their own profile, demo seed links nmphuong/hdtien1/hdtien2.
+    Give SCIENTIFIC_MANAGEMENT_HEAD and SCIENTIFIC_MANAGEMENT_STAFF a "Lý lịch khoa học" entry for their own CV: SYSTEM_ADMIN may link their accounts to INTERNAL profiles, owners cannot activate/deactivate their own profile, demo seed links rmhead/rmstaff1/rmstaff2.
   invoke_dev_with: >-
     Use bmad-build. Reuse /my-profile and the existing link flow; no auto-create on access (13.7).

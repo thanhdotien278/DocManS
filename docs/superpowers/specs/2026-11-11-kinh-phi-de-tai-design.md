@@ -82,4 +82,4 @@ PI và CV phụ trách nhận; ghi lại cùng entry không tạo trùng (idempo
 
 ## Kiểm chứng chung
 
-`npm run typecheck`, `npm test` (gồm DB test với `DATABASE_URL`), đi tay trên UI với `admin`/`patuan`/`nmphuong`.
+`npm run typecheck`, `npm test` (gồm DB test với `DATABASE_URL`), đi tay trên UI với `admin`/`pi1`/`rmhead`.

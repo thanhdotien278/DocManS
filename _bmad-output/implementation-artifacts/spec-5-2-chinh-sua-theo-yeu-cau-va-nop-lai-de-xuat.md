@@ -29,7 +29,7 @@ context: []
   - AC4: `runProposalMutation` nạp lại actor (tài khoản phải active), khóa hồ sơ và so `contextVersion` trong transaction.
 - File thay đổi: `apps/web/src/components/research-proposals/proposal-detail-workspace.tsx`.
 - Sau review: gom `latestSupplementRequest` để bỏ gọi `at(-1)` lặp và bỏ non-null assertion.
-- Kiểm chứng UI (localhost:3000, hồ sơ `cc36d963-…` "Mùa thu 3", hạn 02/11/2026): PI `int1` thấy "Hạn phản hồi 02/11/2026 · Quá hạn", "Đang chờ bổ sung · Quá hạn", nút "Nộp lại hồ sơ", không thấy form "Lý do bổ sung"; CV `hdtien1` vẫn thấy form và cờ quá hạn. Chưa bấm nộp lại thật trên UI (không đổi dữ liệu dev).
+- Kiểm chứng UI (localhost:3000, hồ sơ `cc36d963-…` "Mùa thu 3", hạn 02/11/2026): PI `int1` thấy "Hạn phản hồi 02/11/2026 · Quá hạn", "Đang chờ bổ sung · Quá hạn", nút "Nộp lại hồ sơ", không thấy form "Lý do bổ sung"; CV `rmstaff1` vẫn thấy form và cờ quá hạn. Chưa bấm nộp lại thật trên UI (không đổi dữ liệu dev).
 
 ## Review Triage Log
 
@@ -46,4 +46,4 @@ context: []
 
 ## Verification
 
-- Luồng nộp lại thật trên UI (2026-11-08, theo yêu cầu người dùng): PI `int1` bấm "Nộp lại hồ sơ" trên hồ sơ `cc36d963-6b91-4f9f-9c40-c0ccd3c1e8b8` → "Đã nộp lại hồ sơ.", trạng thái `resubmitted`, yêu cầu bổ sung "Đã xử lý". CV `hdtien1` nhận thông báo `proposal.resubmitted`, thấy "Xác nhận hồ sơ đầy đủ" (`proposal.completeness.check` được cấp). TP `nmphuong`: `proposal.review.assign` bị chặn `WORKFLOW_STATE_DENIED` "Cần xác nhận hồ sơ đầy đủ trước khi phân công đánh giá.", `proposal.completeness.check` bị chặn `ACTION_NOT_GRANTED`. Chưa bấm xác nhận đầy đủ (thuộc Story 5.1).
+- Luồng nộp lại thật trên UI (2026-11-08, theo yêu cầu người dùng): PI `int1` bấm "Nộp lại hồ sơ" trên hồ sơ `cc36d963-6b91-4f9f-9c40-c0ccd3c1e8b8` → "Đã nộp lại hồ sơ.", trạng thái `resubmitted`, yêu cầu bổ sung "Đã xử lý". CV `rmstaff1` nhận thông báo `proposal.resubmitted`, thấy "Xác nhận hồ sơ đầy đủ" (`proposal.completeness.check` được cấp). TP `rmhead`: `proposal.review.assign` bị chặn `WORKFLOW_STATE_DENIED` "Cần xác nhận hồ sơ đầy đủ trước khi phân công đánh giá.", `proposal.completeness.check` bị chặn `ACTION_NOT_GRANTED`. Chưa bấm xác nhận đầy đủ (thuộc Story 5.1).

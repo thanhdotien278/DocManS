@@ -38,7 +38,7 @@ context:
 
 | Scenario | Input / State | Expected Output / Behavior | Error Handling |
 |----------|--------------|---------------------------|----------------|
-| Phân bố theo quyền | `GET /api/v1/dashboard/distribution?subject=projects&year=2026` (`nmphuong` / `tvtien`) | Trả `totals`, `byUnit`, `byLevel`, `byField`, `byStatus`, `byScope`, `byOfficer`, `byYear`, `byHealth`, `byUnitHealth` trong phạm vi xem | `401` chưa đăng nhập; `403` với `SYSTEM_ADMIN` / `STUDENT_USER` |
+| Phân bố theo quyền | `GET /api/v1/dashboard/distribution?subject=projects&year=2026` (`rmhead` / `director`) | Trả `totals`, `byUnit`, `byLevel`, `byField`, `byStatus`, `byScope`, `byOfficer`, `byYear`, `byHealth`, `byUnitHealth` trong phạm vi xem | `401` chưa đăng nhập; `403` với `SYSTEM_ADMIN` / `STUDENT_USER` |
 | Query sai / lặp | `?subject=projects&unknown=1` hoặc `?unitId=a&unitId=b` | Chặn truy vấn | `400` `{ code: "DASHBOARD_QUERY_INVALID", field }` |
 | Che kinh phí giám sát | `RESEARCH_OVERSIGHT_AUTHORITY` gọi `distribution` vs `drill-down?metric=projects` | `totals` có tổng kinh phí; từng dòng `drill-down` và Excel có `totalBudget: null`, `totalDisbursed: null` | N/A |
 | Thống kê sản phẩm hồ sơ nghiệm thu | `GET /api/v1/dashboard/products` & `drill-down?metric=products` | Chỉ tính sản phẩm từ `AcceptanceDossier` của đề tài người xem có quyền `acceptance-dossier.read` | `400` nếu bộ lọc `type` / `productStatus` sai định dạng |
@@ -66,11 +66,11 @@ context:
 - [x] `apps/api/src/proposals-shared/proposal-access.ts` -- Thêm `readableProposalCandidatesWhere` -- Chặn `SYSTEM_ADMIN` / `STUDENT_USER` và thu hẹp ứng viên DB.
 - [x] `apps/api/src/dashboard/*` & `apps/api/src/app.module.ts` -- Tạo `DashboardModule` với các API `stats`, `trends`, `distribution`, `drill-down`, xuất `.xlsx` và lịch chụp snapshot -- Cung cấp dữ liệu backend có thẩm quyền.
 - [x] `apps/web/src/lib/dashboard-api.ts` & `apps/web/src/components/dashboard/*` -- Xây dựng các biểu đồ SVG/HTML, heatmap, Gantt và bảng trượt drill-down -- Hiển thị phân tích trực quan.
-- [x] `apps/web/src/app/dashboard/page.tsx` & `apps/web/src/app/globals.css` -- Gắn `DashboardAnalytics` vào `/dashboard` và thêm CSS -- Hoàn thiện giao diện cho `nmphuong`, `tvtien` và các vai trò nghiệp vụ.
+- [x] `apps/web/src/app/dashboard/page.tsx` & `apps/web/src/app/globals.css` -- Gắn `DashboardAnalytics` vào `/dashboard` và thêm CSS -- Hoàn thiện giao diện cho `rmhead`, `director` và các vai trò nghiệp vụ.
 - [x] `tests/dashboard-analytics.test.mjs` -- Kiểm thử toàn bộ kịch bản trong ma trận I/O -- Chống rò rỉ dữ liệu và sai lệch số liệu.
 
 **Acceptance Criteria:**
-- Given `nmphuong` hoặc `tvtien` mở `/dashboard`, when trang tải xong, then hiển thị bộ lọc URL, KPI, biểu đồ sức khoẻ tuần, đường cong S, heatmap Đơn vị × Sức khoẻ, kinh phí theo đơn vị, chuyên viên phụ trách và hồ sơ đề xuất.
+- Given `rmhead` hoặc `director` mở `/dashboard`, when trang tải xong, then hiển thị bộ lọc URL, KPI, biểu đồ sức khoẻ tuần, đường cong S, heatmap Đơn vị × Sức khoẻ, kinh phí theo đơn vị, chuyên viên phụ trách và hồ sơ đề xuất.
 - Given người dùng bấm vào KPI, thanh biểu đồ hoặc ô heatmap, when `DrillDownPanel` mở ra, then hiển thị danh sách bản ghi khớp bộ lọc kèm chế độ xem Gantt (cho đề tài) và tải `.xlsx`.
 - Given `SYSTEM_ADMIN` hoặc `STUDENT_USER` mở `/dashboard`, when tải trang, then giữ nguyên `AdminDashboardPanel` / `StudentResearchPanel`; gọi thẳng `/api/v1/dashboard/*` trả `403`.
 
@@ -111,7 +111,7 @@ context:
 | 23 | `edge-case-hunter` | Tải `.xlsx` khác cổng (`localhost:3000` → `localhost:4000`) mất tên tệp do thiếu `Access-Control-Expose-Headers: Content-Disposition` và thu hồi sớm Blob URL | `medium` | `patch` | `main.ts` bật CORS mặc định không phơi bày `Content-Disposition`, còn `triggerExcelDownload` gọi `URL.revokeObjectURL` đồng bộ ngay sau `anchor.click()`. |
 | 24 | `edge-case-hunter` | `listProjects({ overdue })` và Dashboard chưa thống nhất điều kiện quá hạn với báo cáo bổ sung và `pending_acceptance` | `medium` | `patch` | Xác nhận trùng nguyên nhân gốc với mục #2 & #20 giữa `ApprovedProjectsService.toProjectResponse` và `computeProjectProgress`. |
 | 25 | `verification-gap` | `GET /api/v1/dashboard/stats` chưa có kiểm thử đường thành công `200` sau bước kiểm tra quyền | `high` | `patch` | Lỗ hổng kiểm thử đã xác minh: `tests/dashboard-analytics.test.mjs` mới chỉ gọi `/dashboard/stats` ở nhánh `403` và `400`, chưa kiểm chứng thân hàm `getStats`. |
-| 26 | `verification-gap` | Chưa kiểm thử che kinh phí từng dòng đề xuất của `RESEARCH_OVERSIGHT_AUTHORITY` khi xuất `.xlsx` | `medium` | `patch` | Lỗ hổng kiểm thử đã xác minh: chưa có bài test gọi `/dashboard/export-proposals` và `/dashboard/drill-down/export?metric=proposals` dưới tài khoản `ndbac`. |
+| 26 | `verification-gap` | Chưa kiểm thử che kinh phí từng dòng đề xuất của `RESEARCH_OVERSIGHT_AUTHORITY` khi xuất `.xlsx` | `medium` | `patch` | Lỗ hổng kiểm thử đã xác minh: chưa có bài test gọi `/dashboard/export-proposals` và `/dashboard/drill-down/export?metric=proposals` dưới tài khoản `oversight`. |
 | 27 | `verification-gap` | Chưa có kiểm thử ẩn danh `piName === "—"` cho phản biện đề xuất trên Dashboard và `.xlsx` | `medium` | `patch` | Lỗ hổng kiểm thử đã xác minh: chưa tạo `proposalReviewAssignment` trong `tests/dashboard-analytics.test.mjs` để xác nhận ẩn tên chủ nhiệm. |
 | 28 | `verification-gap` | Chưa kiểm thử `metric=overdue_projects`, sắp xếp `metric=funding` và phân trang `page`/`pageSize` trên `drill-down` | `medium` | `patch` | Lỗ hổng kiểm thử đã xác minh: các tham số này chưa được gọi trong `tests/dashboard-analytics.test.mjs`. |
 | 29 | `verification-gap` | Chưa có kiểm thử đơn vị cho các nhánh `at_risk`, `failed` và `lateReports` của `computeProjectProgress` | `medium` | `patch` | Lỗ hổng kiểm thử đã xác minh: dữ liệu mồi hiện chỉ đi qua nhánh `delayed` (do mốc trễ) và `completed` (`accepted`). |

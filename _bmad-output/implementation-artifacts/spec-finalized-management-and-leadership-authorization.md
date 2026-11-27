@@ -75,7 +75,7 @@ context:
 - [x] Add proposal officer persistence and a new migration with foreign keys, lifecycle history and database enforcement of one active primary officer. Project persistence is out of this approved scope; update its shared contract only.
 - [x] Add capability-guarded officer assignment/reassignment/revocation and UI controls; preserve actor/effective interval/reason/audit and context versions atomically. Check conflicts in both assignment and participant changes.
 - [x] Apply the same access predicate and disclosure to every implemented record-derived surface; expose explicit access reasons. Preserve separate researcher, review, management and decision capabilities.
-- [x] Update `seed.mjs`: `nmphuong` `SCIENTIFIC_MANAGEMENT_HEAD`; `hdtien1`/`hdtien2` `SCIENTIFIC_MANAGEMENT_STAFF`; `tvtien` `LEADERSHIP_APPROVAL_AUTHORITY`; `vndinh` `RESEARCH_OVERSIGHT_AUTHORITY` with linked internal profile, explicit institutional scopes and existing demo-only credential policy. Never silently reassign existing operational records.
+- [x] Update `seed.mjs`: `rmhead` `SCIENTIFIC_MANAGEMENT_HEAD`; `rmstaff1`/`rmstaff2` `SCIENTIFIC_MANAGEMENT_STAFF`; `director` `LEADERSHIP_APPROVAL_AUTHORITY`; `deputysci` `RESEARCH_OVERSIGHT_AUTHORITY` with linked internal profile, explicit institutional scopes and existing demo-only credential policy. Never silently reassign existing operational records.
 
 **Acceptance Criteria:**
 - Given all seven roles, when authentication and capability resolution run, then each role is recognized and grants only its defined authority.
@@ -101,7 +101,7 @@ Investigation baseline: `fc30696223e78ff36e1434a531fd955365b069c6`. Working tree
 ## Verification
 
 - Prisma format/validate/generate; inspect migration status before applying the new migration to local development data.
-- Run the existing local seed and verify role mappings, profile linkage and `vndinh` authentication without logging credentials/tokens.
+- Run the existing local seed and verify role mappings, profile linkage and `deputysci` authentication without logging credentials/tokens.
 - `npm run typecheck` and relevant existing build/check commands; no test files added or modified. Report incompatible existing test expectations honestly rather than changing tests.
 - `git diff --check`; inspect changed scope and reconcile active role enumerations.
 - Final report must identify files, schema/migration, roles/relationships, demo mappings, enforced rules, updated docs, actual verification and remaining coverage limitations.

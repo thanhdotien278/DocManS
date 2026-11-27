@@ -18,7 +18,7 @@ Ghi lại các quyết định của chủ dự án trong khi làm Epic 13, kèm
 - **Đánh số lại mục I:** 1 Họ và tên · 2 Ngày sinh / Giới tính / Nơi sinh / Quốc tịch · 3 Quân hàm / Chức vụ · 4 Học hàm, học vị · 5 Cơ quan công tác · 6 Địa chỉ liên hệ · 7 Điện thoại / Email · 8 Lĩnh vực nghiên cứu · 9 Từ khóa chuyên môn · 10 Ngoại ngữ.
 
 **Tự kiểm thử**
-1. Đăng nhập bằng tài khoản nhà khoa học (ví dụ `patuan`) và mở "Hồ sơ của tôi".
+1. Đăng nhập bằng tài khoản nhà khoa học (ví dụ `pi1`) và mở "Hồ sơ của tôi".
 2. Ở Tab 1, nhập Số CCCD, Ngày cấp, Nơi cấp, Số tài khoản, Ngân hàng, Chi nhánh, Serial SmartCA. Bấm "Lưu lý lịch khoa học".
 3. Mở Tab 5. Ở cả "Tiếng Việt" và "English", kiểm tra trên tờ giấy không có giá trị nào vừa nhập, và không có dòng nhãn "CCCD", "Tài khoản / SmartCA", "ID / Passport", "Bank account".
 4. Bấm "In lý lịch khoa học (A4)" và xem trước bản in (hoặc lưu thành PDF). Kiểm tra lại như bước 3.

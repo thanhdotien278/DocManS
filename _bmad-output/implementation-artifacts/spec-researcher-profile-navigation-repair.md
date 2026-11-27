@@ -39,7 +39,7 @@ dashboard for both researcher roles.
   tests 15/15 against the available compiled API; seed syntax and diff checks passed.
 - Reproduced the empty external navigation on HEAD before the fix.
 - Live local repair created eight missing profiles. API login, own profile and
-  profile catalogs succeeded for int1-int3, ex1-ex3, patuan and nmtrung.
+  profile catalogs succeeded for int1-int3, ex1-ex3, pi1 and boardhead.
 - Assert-based local DB check verified repeat-run equality, unchanged accounts
   and previous profiles, and preservation of inactive/unlinked states in a rolled-back
   transaction. Only the new profile seed block was applied, not the full seed.

@@ -14,7 +14,7 @@ context: []
 
 ## Intent
 
-**Problem:** Local development needs representative internal- and external-researcher accounts, and `patuan` must use the documented default password.
+**Problem:** Local development needs representative internal- and external-researcher accounts, and `pi1` must use the documented default password.
 
 **Approach:** Add three accounts for each researcher system role to the Prisma seed with deterministic scrypt hashes for password `1234`, and list the credentials in the local-only `users.md` file.
 
@@ -24,6 +24,6 @@ context: []
 
 - Added `researcher1`–`researcher3` as `RESEARCHER_INTERNAL_USER` accounts scoped to Khoa Toán - Tin học.
 - Added `external1`–`external3` as `EXTERNAL_RESEARCHER_USER` accounts with unit `Đơn vị ngoài`; no implicit organization scope was added.
-- Existing `patuan` hash already derives from password `1234`, so no hash text change was necessary; reseeding still upserts that value.
-- Verified seed syntax, all seven researcher/patuan hashes against `1234`, and the six new credential rows in `users.md`.
+- Existing `pi1` hash already derives from password `1234`, so no hash text change was necessary; reseeding still upserts that value.
+- Verified seed syntax, all seven researcher/pi1 hashes against `1234`, and the six new credential rows in `users.md`.
 - Blind-hunter review was started but timed out without returning findings; no review findings were available to triage.

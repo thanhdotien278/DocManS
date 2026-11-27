@@ -111,7 +111,7 @@ The matrix now defines:
   Run a second scan for `SCIENTIFIC_MANAGEMENT_STAFF`. Do not edit migration `20260921000000`; add a forward migration.
 - Account migration:
   - HEAD → TP and STAFF → CV are mechanical.
-  - The old `RESEARCH_OVERSIGHT_AUTHORITY` holders (e.g. `vndinh`) must be re-classified per person, PGĐ-KH or PGĐ-TD.
+  - The old `RESEARCH_OVERSIGHT_AUTHORITY` holders (e.g. `deputysci`) must be re-classified per person, PGĐ-KH or PGĐ-TD.
   - PP, TB and PGĐ-TD accounts are created fresh. TB has exactly one holder.
 - The routing, segment and IRB implementation exists on `tuan/DocManS`. That branch has **no merge base** with `DocManS` and carries its own 7-role `_bmad-output`, so any later merge will conflict on every planning file rewritten here.
 - The "83 V1 action codes / 11 relationship types" figure is quoted from the matrix (15/10/2026 audit) and has not been re-verified here.

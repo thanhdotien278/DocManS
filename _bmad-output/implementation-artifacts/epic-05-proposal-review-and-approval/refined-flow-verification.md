@@ -10,28 +10,28 @@ Giới hạn công cụ: trình duyệt chặn `window.confirm()` (luôn trả `
 
 | Bước | Tác nhân | Kết quả |
 | --- | --- | --- |
-| Xác nhận đầy đủ | CV `hdtien1` | "Đã ghi nhận kết quả kiểm tra" |
-| Mời 7 (1/2/3/1) | TP `nmphuong` | 7 dòng "Chờ chấp nhận"; điều kiện trình hiện "7 thành viên chưa chấp nhận lời mời" (chỉ thấy thông báo, chưa thử bấm trình). Lượt này không tra từng ứng viên bị loại; luật loại PI/thành viên/QT/tự mời được phủ bởi `tests/approval-routing-db.test.mjs:310` và QA K4 |
+| Xác nhận đầy đủ | CV `rmstaff1` | "Đã ghi nhận kết quả kiểm tra" |
+| Mời 7 (1/2/3/1) | TP `rmhead` | 7 dòng "Chờ chấp nhận"; điều kiện trình hiện "7 thành viên chưa chấp nhận lời mời" (chỉ thấy thông báo, chưa thử bấm trình). Lượt này không tra từng ứng viên bị loại; luật loại PI/thành viên/QT/tự mời được phủ bởi `tests/approval-routing-db.test.mjs:310` và QA K4 |
 | Thông báo lời mời (11.1) | `test_internal01` | Chuông "1 chưa đọc", `review.invited` → `/my-reviews` |
 | Từ chối | `test_external02` | Lý do trống: nút "Gửi từ chối" khóa; có lý do → "Đã từ chối"; TP thấy lý do và điều kiện chặn |
 | Thu hồi, mời thay | TP | Hộp thoại bắt buộc lý do; mời `test_external03`; 7/7 nhận lời → "Sẵn sàng trình" |
 | Tờ trình `EVALUATION_COUNCIL` | CV → TB → TP | TB nhận thông báo và mở link đúng hồ sơ; TP trả lại lý do trống bị chặn ("Nhập lý do trả lại."); trả lại có lý do → CV nhận "Tờ trình bị trả lại"; lập lại → TB chuyển → TP trình |
-| Ký hội đồng | PGĐ-KH `vndinh` | PP `dnbinh` không có nút, không có thông báo; `vndinh` ký → "Đã thành lập ngày 08/11/2026"; thông báo chờ ký cũ của GĐ tự đánh dấu đã đọc |
+| Ký hội đồng | PGĐ-KH `deputysci` | PP `rmdeputy` không có nút, không có thông báo; `deputysci` ký → "Đã thành lập ngày 08/11/2026"; thông báo chờ ký cũ của GĐ tự đánh dấu đã đọc |
 | Chấm phiếu | 6 thành viên | Mỗi phiếu khóa sau khi gửi; thư ký chỉ có "Soạn biên bản", phiếu hiện ẩn danh "Phiếu N" |
 | Chốt tổng hợp | TP | 5/6 phiếu: "Chốt bản tổng hợp" khóa, lý do "Còn 1 phiếu chưa gửi." (N02 đã sửa); nháp cũ bị chặn chốt cho tới khi lưu lại; chốt thành công |
 | Tờ trình `DECISION_PACKAGE` | TP → TB → GĐ | TP lập → TB chuyển → lên thẳng "Chờ Ban giám đốc ký" (D-037); PGĐ-KH không có nút quyết định, không có thông báo |
-| Quyết định | GĐ `tvtien` | "Không phê duyệt" khi trống lý do bị chặn; Phê duyệt → hồ sơ `approved`; PI nhận "Hồ sơ đã có quyết định — Đã duyệt"; TP (người lập) nhận "Tờ trình đã được ký duyệt"; PI GET roster hội đồng → 403 |
+| Quyết định | GĐ `director` | "Không phê duyệt" khi trống lý do bị chặn; Phê duyệt → hồ sơ `approved`; PI nhận "Hồ sơ đã có quyết định — Đã duyệt"; TP (người lập) nhận "Tờ trình đã được ký duyệt"; PI GET roster hội đồng → 403 |
 
 Đối chiếu DB: hồ sơ `approved`, 1 `proposal_decisions`; 3 `approval_submissions` (council RETURNED, council APPROVED, DECISION_PACKAGE APPROVED với chuỗi `SUBMIT > FORWARD > APPROVE@LEADERSHIP`); audit có `establish-evaluation-council`, `return-approval-submission`, `decline-review-invitation`, `finalize-evaluation-summary`, `submit-evaluation-package`, `approve-proposal`.
 
 ### Nhánh không phê duyệt (cùng ngày)
 
-Hồ sơ QA mới `83104e2d-b93c-4bbf-8f21-67b48fce7757` ("QA 08/11 — Nhánh không phê duyệt"), PI `test_internal06`. PI tạo nháp, tải 2 tệp PDF bắt buộc và nộp qua UI. CV phụ trách `hdtien1` được gán tự động theo đợt.
+Hồ sơ QA mới `83104e2d-b93c-4bbf-8f21-67b48fce7757` ("QA 08/11 — Nhánh không phê duyệt"), PI `test_internal06`. PI tạo nháp, tải 2 tệp PDF bắt buộc và nộp qua UI. CV phụ trách `rmstaff1` được gán tự động theo đợt.
 
 | Bước | Tác nhân | Kết quả |
 | --- | --- | --- |
 | Xác nhận đầy đủ, mời 7, 7/7 nhận lời | CV, TP, 7 thành viên | "Sẵn sàng trình" |
-| Tờ trình `EVALUATION_COUNCIL` | CV → TB → TP → GĐ `tvtien` ký | "Đã thành lập ngày 08/11/2026" (lần này GĐ ký; nhánh phê duyệt là PGĐ-KH ký) |
+| Tờ trình `EVALUATION_COUNCIL` | CV → TB → TP → GĐ `director` ký | "Đã thành lập ngày 08/11/2026" (lần này GĐ ký; nhánh phê duyệt là PGĐ-KH ký) |
 | 6 phiếu "không phê duyệt" | 6 thành viên | Mỗi phiếu khóa sau khi gửi (30–39/100) |
 | Tổng hợp, `DECISION_PACKAGE` | TP lưu nháp → chốt → lập; TB chuyển | "Chờ Ban giám đốc ký" |
 | Không phê duyệt | GĐ | Nhập lý do → "Không phê duyệt"; nút quyết định khóa sau khi ban hành; hồ sơ `rejected` |
@@ -62,11 +62,11 @@ Independent review pending. No commit or push requested or performed.
 
 Both records were created, supplied with required synthetic PDFs, submitted, assigned to
 Staff, sent for supplements, edited and resubmitted through normal UI. This session then
-confirmed completeness as `hdtien1`, assigned two reviewers (`researcher2`, `researcher3`)
-and three committee members (`external1`–`external3`) as Head `nmphuong`, and submitted
+confirmed completeness as `rmstaff1`, assigned two reviewers (`researcher2`, `researcher3`)
+and three committee members (`external1`–`external3`) as Head `rmhead`, and submitted
 all ten reviews through UI. Reviewer draft/save and submitted read-only mode were checked.
 Staff monitoring showed 5/5 and named assignments on both records without synthesis controls.
-Head separately saved, finalized and submitted each synthesis; `LEADERSHIP_APPROVAL_AUTHORITY` `tvtien` approved A
+Head separately saved, finalized and submitted each synthesis; `LEADERSHIP_APPROVAL_AUTHORITY` `director` approved A
 and rejected B through UI. No direct database/status writes, reset or reseed were used.
 
 Final authenticated reads verified both terminal states, one decision each, package revision 2,
@@ -122,12 +122,12 @@ Cách thao tác: đăng nhập, điền form và bấm nút làm trên UI. File 
 |---|---|---|
 | 5.6: tải biên bản họp hội đồng qua UI (`under_review`) | Thư ký hội đồng `test_internal05` | PASS: tệp `7de36648…` (`COUNCIL_MINUTES`) |
 | 5.6: ẩn biên bản với người tham gia | PI `int1` | PASS: UI và API không liệt kê; tải theo id trả 404 |
-| 5.6: quản lý xem biên bản | TP `nmphuong` | PASS: thấy trên UI, tải trả 200 |
+| 5.6: quản lý xem biên bản | TP `rmhead` | PASS: thấy trên UI, tải trả 200 |
 | Bước chuẩn bị (gọi HTTP thật, không sửa DB) | 5 thành viên chấm phiếu; TP tổng hợp, chốt, trình; TB chuyển tiếp | Tờ trình `DECISION_PACKAGE` tới LEADERSHIP. TP là người lập nên không qua bước `HEAD_REVIEW` (đúng luật 5.9) |
-| 5.7: từ chối PGĐ-KH và PGĐ-TD | `vndinh`, `ndbac` | PASS (gọi API với contextVersion hợp lệ, chạy từ trang): approve 403 "Chỉ lãnh đạo có thẩm quyền…", gói 403, hàng đợi 403; capability `ACTION_NOT_GRANTED`; UI không có nút Phê duyệt/Không phê duyệt |
-| 5.7: hàng đợi và gói của GĐ | `tvtien` | PASS: hồ sơ có trong hàng đợi; gói có 6/7 phiếu, điểm ẩn, danh sách tệp (gồm biên bản, có nhãn tiếng Việt), bản tổng hợp |
-| 5.8: phê duyệt kèm ghi chú nội bộ, tóm tắt công bố, yêu cầu tiếp theo | `tvtien` | PASS: hồ sơ chuyển `approved`, tờ trình đóng |
-| 5.8: quyết định lần hai | `tvtien` | PASS: 400 kèm `currentStatus: approved`; không tạo quyết định thứ hai |
+| 5.7: từ chối PGĐ-KH và PGĐ-TD | `deputysci`, `oversight` | PASS (gọi API với contextVersion hợp lệ, chạy từ trang): approve 403 "Chỉ lãnh đạo có thẩm quyền…", gói 403, hàng đợi 403; capability `ACTION_NOT_GRANTED`; UI không có nút Phê duyệt/Không phê duyệt |
+| 5.7: hàng đợi và gói của GĐ | `director` | PASS: hồ sơ có trong hàng đợi; gói có 6/7 phiếu, điểm ẩn, danh sách tệp (gồm biên bản, có nhãn tiếng Việt), bản tổng hợp |
+| 5.8: phê duyệt kèm ghi chú nội bộ, tóm tắt công bố, yêu cầu tiếp theo | `director` | PASS: hồ sơ chuyển `approved`, tờ trình đóng |
+| 5.8: quyết định lần hai | `director` | PASS: 400 kèm `currentStatus: approved`; không tạo quyết định thứ hai |
 | 5.8: PI xem kết quả | `int1` | PASS: thẻ "Kết quả quyết định" theo `PublishedReviewSummaryV1`; không có ghi chú nội bộ; có thông báo `proposal.decided` |
 
 Chưa kiểm trên UI:
@@ -137,5 +137,5 @@ Chưa kiểm trên UI:
 ### Bổ sung 09/11/2026 — quyền xem biên bản sau Codex review
 
 Kiểm trên API 4001, hồ sơ `cc36d963`, biên bản `7de36648`, cả chi tiết hồ sơ và tải tệp:
-- Thấy và tải được (200): TP `nmphuong`, GĐ `tvtien`, thư ký hội đồng `test_internal05`.
-- Không thấy, tải trả 404: PGĐ-KH `vndinh`, PGĐ-TD `ndbac`, reviewer `test_internal01`, PI `int1`.
+- Thấy và tải được (200): TP `rmhead`, GĐ `director`, thư ký hội đồng `test_internal05`.
+- Không thấy, tải trả 404: PGĐ-KH `deputysci`, PGĐ-TD `oversight`, reviewer `test_internal01`, PI `int1`.

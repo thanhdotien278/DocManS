@@ -24,7 +24,7 @@ npm run db:setup         # prisma generate + migrate deploy + seed
 npm run prisma:migrate   # create a new migration during development
 ```
 
-Full stack: `docker compose up` (postgres, minio, web, api, nginx on :8080). Seeded dev logins are in `docs/development/auth-seed-users.md` (all password `1234`, e.g. `admin`, `patuan`, `nmphuong`).
+Full stack: `docker compose up` (postgres, minio, web, api, nginx on :8080). Seeded dev logins are in `docs/development/auth-seed-users.md` (all password `1234`, e.g. `admin`, `pi1`, `rmhead`).
 
 There is no ESLint and no test runner beyond `node:test`. `npm run lint` runs TypeScript only.
 
