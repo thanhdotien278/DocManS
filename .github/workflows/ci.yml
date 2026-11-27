@@ -101,6 +101,9 @@ jobs:
           MINIO_APP_ACCESS_KEY=ci-app
           MINIO_APP_SECRET_KEY=ci-app-secret
           CLOUDFLARE_TUNNEL_TOKEN=ci-tunnel-token
+          NEXT_PUBLIC_API_BASE_URL=https://docmans.example.org/api/v1
+          WEB_ORIGIN=https://docmans.example.org
+          ACCOUNT_LOGIN_URL=https://docmans.example.org/login
           CSRF_SECRET=ci-csrf-secret-khong-dung-that-0123456789
           EOF
           docker compose -f docker-compose.prod.yml --env-file /tmp/ci.env config --quiet
