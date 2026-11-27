@@ -61,7 +61,7 @@ assignments**. The ten system roles ([permission matrix](docs/permission-matrix.
 responsible CV, where a **Trưởng nhóm** (student leader) registers a **Đề tài sinh viên**, adds
 members and uploads documents until the deadline; SV never takes part in proposals or projects. Submissions route as a
 tờ trình CV → TB → TP → BGĐ; only GĐ approves topic, funding and liquidation. The code on the
-`DocManS` branch has all ten role codes (plus `STUDENT_USER`), but PGĐ-KH, PP and TB have no business
+`main` branch has all ten role codes (plus `STUDENT_USER`), but PGĐ-KH, PP and TB have no business
 permissions yet.
 
 System roles describe account-level responsibility; they do not automatically
