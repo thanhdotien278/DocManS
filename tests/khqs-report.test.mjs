@@ -37,11 +37,11 @@ function sampleProject(overrides = {}) {
     proposal: overrides.proposal ?? { proposalTypeCode: "academy-level" },
     members: [
       {
-        name: "TS. Phạm Anh Tuấn",
+        name: "TS. Phạm Văn Dũng",
         participationRole: "TOPIC_PI",
         status: "ACTIVE",
         effectiveUntil: null,
-        user: { displayName: "TS. Phạm Anh Tuấn" }
+        user: { displayName: "TS. Phạm Văn Dũng" }
       }
     ],
     fundingRecords: overrides.fundingRecords ?? [

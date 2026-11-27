@@ -102,10 +102,10 @@ before(async () => {
   const users = {
     admin: await makeUser("admin", "SYSTEM_ADMIN", [unitA]),
     student: await makeUser("sv01", "STUDENT_USER", [unitA]),
-    tvtien: await makeUser("tvtien", "LEADERSHIP_APPROVAL_AUTHORITY", [unitA, unitB]),
-    nmphuong: await makeUser("nmphuong", "RESEARCH_MANAGEMENT_HEAD", [unitA, unitB]),
-    oversight: await makeUser("ndbac", "RESEARCH_OVERSIGHT_AUTHORITY", [unitA]),
-    oversightWide: await makeUser("ndbacWide", "RESEARCH_OVERSIGHT_AUTHORITY", [unitA, unitB]),
+    director: await makeUser("director", "LEADERSHIP_APPROVAL_AUTHORITY", [unitA, unitB]),
+    rmhead: await makeUser("rmhead", "RESEARCH_MANAGEMENT_HEAD", [unitA, unitB]),
+    oversight: await makeUser("oversight", "RESEARCH_OVERSIGHT_AUTHORITY", [unitA]),
+    oversightWide: await makeUser("oversightWideUser", "RESEARCH_OVERSIGHT_AUTHORITY", [unitA, unitB]),
     cv1: await makeUser("cv1", "RESEARCH_MANAGEMENT_STAFF", [unitA, unitB]),
     cv2: await makeUser("cv2", "RESEARCH_MANAGEMENT_STAFF", [unitA, unitB]),
     piA: await makeUser("piA", "RESEARCHER_INTERNAL_USER", [unitA]),
@@ -148,7 +148,7 @@ before(async () => {
     data: {
       proposalId: prop1.id,
       officerUserId: users.cv1.id,
-      assignedById: users.nmphuong.id,
+      assignedById: users.rmhead.id,
       status: "ACTIVE",
       effectiveFrom: new Date("2026-01-10T00:00:00.000Z")
     }
@@ -166,7 +166,7 @@ before(async () => {
     data: {
       proposalId: prop1.id,
       decision: "approved",
-      decidedById: users.tvtien.id,
+      decidedById: users.director.id,
       fromStatus: "ready_for_approval",
       toStatus: "approved"
     }
@@ -175,7 +175,7 @@ before(async () => {
     data: {
       proposalId: prop1.id,
       reviewerUserId: users.reviewer.id,
-      assignedById: users.nmphuong.id,
+      assignedById: users.rmhead.id,
       assignmentRole: "reviewer",
       status: "assigned",
       invitationStatus: "accepted",
@@ -224,7 +224,7 @@ before(async () => {
     data: {
       projectId: proj1.id,
       officerUserId: users.cv1.id,
-      assignedById: users.nmphuong.id,
+      assignedById: users.rmhead.id,
       status: "ACTIVE",
       effectiveFrom: new Date("2026-01-15T00:00:00.000Z")
     }
@@ -324,7 +324,7 @@ before(async () => {
     data: {
       proposalId: prop2.id,
       decision: "approved",
-      decidedById: users.tvtien.id,
+      decidedById: users.director.id,
       fromStatus: "ready_for_approval",
       toStatus: "approved"
     }
@@ -367,7 +367,7 @@ before(async () => {
     data: {
       projectId: proj2.id,
       officerUserId: users.cv2.id,
-      assignedById: users.nmphuong.id,
+      assignedById: users.rmhead.id,
       status: "ACTIVE",
       effectiveFrom: new Date("2026-02-01T00:00:00.000Z")
     }
@@ -440,13 +440,13 @@ before(async () => {
       userId: users.councilExternal.id,
       councilRole: "committee_member",
       invitationStatus: "accepted",
-      invitedById: users.nmphuong.id,
+      invitedById: users.rmhead.id,
       respondedAt: new Date("2026-09-12T00:00:00.000Z"),
       councilEstablishedAt: new Date("2026-09-15T00:00:00.000Z")
     }
   });
 
-  // Draft proposal owned by piA (visible to nmphuong & piA, NOT visible to tvtien per matrix 7.1 note 2)
+  // Draft proposal owned by piA (visible to rmhead & piA, NOT visible to director per matrix 7.1 note 2)
   const propDraft = await db.researchProposal.create({
     data: {
       code: "DX-2026-DRAFT",
@@ -509,64 +509,64 @@ test("1. Auth & Role Boundaries: 401 unauthenticated; 403 for SYSTEM_ADMIN and S
 });
 
 test("2. Whitelist & Duplicate Query Validation: unknown keys, duplicate keys and bad formats return 400 DASHBOARD_QUERY_INVALID", async () => {
-  const unknown = await apiGet("/dashboard/distribution?subject=projects&unknown=1", "nmphuong");
+  const unknown = await apiGet("/dashboard/distribution?subject=projects&unknown=1", "rmhead");
   assert.equal(unknown.status, 400);
   assert.equal(unknown.body.code, "DASHBOARD_QUERY_INVALID");
   assert.equal(unknown.body.field, "unknown");
 
-  const duplicate = await apiGet("/dashboard/distribution?unitId=a&unitId=b", "nmphuong");
+  const duplicate = await apiGet("/dashboard/distribution?unitId=a&unitId=b", "rmhead");
   assert.equal(duplicate.status, 400);
   assert.equal(duplicate.body.code, "DASHBOARD_QUERY_INVALID");
   assert.equal(duplicate.body.field, "unitId");
 
-  const sameDuplicate = await apiGet("/dashboard/stats?year=2026&year=2026", "nmphuong");
+  const sameDuplicate = await apiGet("/dashboard/stats?year=2026&year=2026", "rmhead");
   assert.equal(sameDuplicate.status, 400);
   assert.equal(sameDuplicate.body.code, "DASHBOARD_QUERY_INVALID");
   assert.equal(sameDuplicate.body.field, "year");
 
-  const badMetric = await apiGet("/dashboard/drill-down?metric=conferences", "nmphuong");
+  const badMetric = await apiGet("/dashboard/drill-down?metric=conferences", "rmhead");
   assert.equal(badMetric.status, 400);
   assert.equal(badMetric.body.code, "DASHBOARD_QUERY_INVALID");
   assert.equal(badMetric.body.field, "metric");
 
-  const badProductStatus = await apiGet("/dashboard/products?productStatus=not_valid", "nmphuong");
+  const badProductStatus = await apiGet("/dashboard/products?productStatus=not_valid", "rmhead");
   assert.equal(badProductStatus.status, 400);
   assert.equal(badProductStatus.body.code, "DASHBOARD_QUERY_INVALID");
   assert.equal(badProductStatus.body.field, "productStatus");
 
-  const badProductType = await apiGet("/dashboard/products?type=bad$type!", "nmphuong");
+  const badProductType = await apiGet("/dashboard/products?type=bad$type!", "rmhead");
   assert.equal(badProductType.status, 400);
   assert.equal(badProductType.body.code, "DASHBOARD_QUERY_INVALID");
   assert.equal(badProductType.body.field, "type");
 
-  const badExportMetric = await apiGet("/dashboard/drill-down/export?metric=invalid", "nmphuong");
+  const badExportMetric = await apiGet("/dashboard/drill-down/export?metric=invalid", "rmhead");
   assert.equal(badExportMetric.status, 400);
   assert.equal(badExportMetric.body.code, "DASHBOARD_QUERY_INVALID");
   assert.equal(badExportMetric.body.field, "metric");
 
-  const badProposalExportFilter = await apiGet("/dashboard/export-proposals?unknown=1", "nmphuong");
+  const badProposalExportFilter = await apiGet("/dashboard/export-proposals?unknown=1", "rmhead");
   assert.equal(badProposalExportFilter.status, 400);
   assert.equal(badProposalExportFilter.body.code, "DASHBOARD_QUERY_INVALID");
   assert.equal(badProposalExportFilter.body.field, "unknown");
 
   // type và productStatus bị từ chối khi metric !== "products"
-  const wrongMetricType = await apiGet("/dashboard/drill-down?metric=projects&type=publication", "nmphuong");
+  const wrongMetricType = await apiGet("/dashboard/drill-down?metric=projects&type=publication", "rmhead");
   assert.equal(wrongMetricType.status, 400);
   assert.equal(wrongMetricType.body.code, "DASHBOARD_QUERY_INVALID");
   assert.equal(wrongMetricType.body.field, "type");
 
-  const wrongMetricProdStatus = await apiGet("/dashboard/drill-down/export?metric=proposals&productStatus=accepted", "nmphuong");
+  const wrongMetricProdStatus = await apiGet("/dashboard/drill-down/export?metric=proposals&productStatus=accepted", "rmhead");
   assert.equal(wrongMetricProdStatus.status, 400);
   assert.equal(wrongMetricProdStatus.body.code, "DASHBOARD_QUERY_INVALID");
   assert.equal(wrongMetricProdStatus.body.field, "productStatus");
 
   // type sản phẩm hợp lệ chứa dấu /, ., (), , : được chấp nhận
-  const richType = await apiGet(`/dashboard/products?type=${encodeURIComponent("Sáng chế / Quy trình (v1.2): Y học, Dược")}`, "nmphuong");
+  const richType = await apiGet(`/dashboard/products?type=${encodeURIComponent("Sáng chế / Quy trình (v1.2): Y học, Dược")}`, "rmhead");
   assert.equal(richType.status, 200);
 });
 
-test("3. Scoped Distribution & Out-of-Scope unitId: nmphuong, tvtien, CV1 and PI see only permitted records; out-of-scope unitId returns 0 instead of 403", async () => {
-  for (const lead of ["nmphuong", "tvtien"]) {
+test("3. Scoped Distribution & Out-of-Scope unitId: rmhead, director, CV1 and PI see only permitted records; out-of-scope unitId returns 0 instead of 403", async () => {
+  for (const lead of ["rmhead", "director"]) {
     const res = await apiGet("/dashboard/distribution?subject=projects&year=2026", lead);
     assert.equal(res.status, 200);
     for (const key of [
@@ -589,11 +589,11 @@ test("3. Scoped Distribution & Out-of-Scope unitId: nmphuong, tvtien, CV1 and PI
     assert.equal(res.body.byUnitHealth.length, 2);
   }
 
-  // tvtien (GĐ) chỉ đọc đề xuất đã nộp vào quy trình (2 đề xuất), không đọc bản nháp của người khác; nmphuong (TP) đọc cả 3
-  const tvtienProps = await apiGet("/dashboard/distribution?subject=proposals&year=2026", "tvtien");
-  assert.equal(tvtienProps.body.totals.count, 2);
-  const nmphuongProps = await apiGet("/dashboard/distribution?subject=proposals&year=2026", "nmphuong");
-  assert.equal(nmphuongProps.body.totals.count, 3);
+  // director (GĐ) chỉ đọc đề xuất đã nộp vào quy trình (2 đề xuất), không đọc bản nháp của người khác; rmhead (TP) đọc cả 3
+  const directorProps = await apiGet("/dashboard/distribution?subject=proposals&year=2026", "director");
+  assert.equal(directorProps.body.totals.count, 2);
+  const rmheadProps = await apiGet("/dashboard/distribution?subject=proposals&year=2026", "rmhead");
+  assert.equal(rmheadProps.body.totals.count, 3);
 
   // CV1 chỉ được giao phụ trách proj1 -> chỉ thấy 1 đề tài
   const cv1Dist = await apiGet("/dashboard/distribution?subject=projects&year=2026", "cv1");
@@ -608,26 +608,26 @@ test("3. Scoped Distribution & Out-of-Scope unitId: nmphuong, tvtien, CV1 and PI
 });
 
 test("4. RESEARCH_OVERSIGHT_AUTHORITY Funding Masking: aggregate totals visible in distribution, per-row funding is null in drill-down and Excel", async () => {
-  // ndbac chỉ có scope ở unitA -> thấy proj1 (250M cấp, 100M giải ngân), không thấy proj2 ở unitB
-  const dist = await apiGet("/dashboard/distribution?subject=projects&year=2026", "ndbac");
+  // oversight chỉ có scope ở unitA -> thấy proj1 (250M cấp, 100M giải ngân), không thấy proj2 ở unitB
+  const dist = await apiGet("/dashboard/distribution?subject=projects&year=2026", "oversight");
   assert.equal(dist.status, 200);
   assert.equal(dist.body.fundingRestricted, true);
   assert.equal(dist.body.totals.count, 1);
   assert.equal(dist.body.totals.totalBudget, 250_000_000);
   assert.equal(dist.body.totals.totalDisbursed, 100_000_000);
 
-  const drill = await apiGet("/dashboard/drill-down?metric=projects", "ndbac");
+  const drill = await apiGet("/dashboard/drill-down?metric=projects", "oversight");
   assert.equal(drill.status, 200);
   assert.equal(drill.body.total, 1);
   assert.equal(drill.body.items[0].totalBudget, null);
   assert.equal(drill.body.items[0].totalDisbursed, null);
   assert.equal(drill.body.items[0].totalSettled, null);
 
-  const propDrill = await apiGet("/dashboard/drill-down?metric=proposals", "ndbac");
+  const propDrill = await apiGet("/dashboard/drill-down?metric=proposals", "oversight");
   assert.equal(propDrill.status, 200);
   assert.equal(propDrill.body.items.every((row) => row.totalBudget === null), true);
 
-  const excel = await apiGet("/dashboard/drill-down/export?metric=projects", "ndbac");
+  const excel = await apiGet("/dashboard/drill-down/export?metric=projects", "oversight");
   assert.equal(excel.status, 200);
   assert.equal(excel.headers.get("access-control-expose-headers"), "Content-Disposition");
   const { text: sheetXml } = await readSheet(excel.body);
@@ -636,7 +636,7 @@ test("4. RESEARCH_OVERSIGHT_AUTHORITY Funding Masking: aggregate totals visible 
 
   // Che kinh phí đề xuất từng dòng cho PGĐ-TD trên cả export-proposals và drill-down/export?metric=proposals
   for (const propExportPath of ["/dashboard/export-proposals", "/dashboard/drill-down/export?metric=proposals"]) {
-    const propExcel = await apiGet(propExportPath, "ndbac");
+    const propExcel = await apiGet(propExportPath, "oversight");
     assert.equal(propExcel.status, 200);
     assert.equal(propExcel.headers.get("access-control-expose-headers"), "Content-Disposition");
     const { text: xml } = await readSheet(propExcel.body);
@@ -647,7 +647,7 @@ test("4. RESEARCH_OVERSIGHT_AUTHORITY Funding Masking: aggregate totals visible 
 });
 
 test("5. Acceptance Dossier Products: respects acceptance-dossier.read (including established council member) and drill-down filters", async () => {
-  const headProducts = await apiGet("/dashboard/products", "nmphuong");
+  const headProducts = await apiGet("/dashboard/products", "rmhead");
   assert.equal(headProducts.status, 200);
   assert.equal(headProducts.body.totals.count, 3);
 
@@ -661,7 +661,7 @@ test("5. Acceptance Dossier Products: respects acceptance-dossier.read (includin
   assert.equal(outsiderProducts.status, 200);
   assert.equal(outsiderProducts.body.totals.count, 0);
 
-  const drillPub = await apiGet("/dashboard/drill-down?metric=products&type=publication&productStatus=accepted", "nmphuong");
+  const drillPub = await apiGet("/dashboard/drill-down?metric=products&type=publication&productStatus=accepted", "rmhead");
   assert.equal(drillPub.status, 200);
   assert.equal(drillPub.body.total, 1);
   assert.equal(drillPub.body.items[0].name, "Bài báo Quốc tế B");
@@ -671,19 +671,19 @@ test("6. Trends on Fresh DB & Range Validation: always ends with live=true today
   const snapshotCount = await db.projectHealthSnapshot.count();
   assert.equal(snapshotCount, 0, "DB mới chưa có snapshot");
 
-  const trends = await apiGet("/dashboard/trends", "nmphuong");
+  const trends = await apiGet("/dashboard/trends", "rmhead");
   assert.equal(trends.status, 200);
   assert.equal(trends.body.points.length, 1);
   assert.equal(trends.body.points[0].live, true);
   assert.equal(trends.body.points[0].date, trends.body.today);
   assert.equal(trends.body.points[0].total, 2);
 
-  const inverted = await apiGet("/dashboard/trends?from=2026-10-10&to=2026-05-01", "nmphuong");
+  const inverted = await apiGet("/dashboard/trends?from=2026-10-10&to=2026-05-01", "rmhead");
   assert.equal(inverted.status, 400);
   assert.equal(inverted.body.code, "DASHBOARD_QUERY_INVALID");
   assert.equal(inverted.body.field, "from");
 
-  const tooLong = await apiGet("/dashboard/trends?from=2022-01-01&to=2026-01-02", "nmphuong");
+  const tooLong = await apiGet("/dashboard/trends?from=2022-01-01&to=2026-01-02", "rmhead");
   assert.equal(tooLong.status, 400);
   assert.equal(tooLong.body.code, "DASHBOARD_QUERY_INVALID");
   assert.equal(tooLong.body.field, "to");
@@ -756,7 +756,7 @@ test("7. Weekly Health Snapshots: Sunday 23:55 / >=7d schedule, skipDuplicates i
   assert.equal(diSnapshotService.timer, null);
 
   // Khi đã có snapshot lịch sử 2026-11-08, GET /trends trả điểm lịch sử live=false + điểm hôm nay live=true
-  const trendsWithHistory = await apiGet("/dashboard/trends?from=2026-11-01", "nmphuong");
+  const trendsWithHistory = await apiGet("/dashboard/trends?from=2026-11-01", "rmhead");
   assert.equal(trendsWithHistory.status, 200);
   assert.equal(trendsWithHistory.body.points.some((p) => p.date === "2026-11-08" && p.live === false), true);
   assert.equal(trendsWithHistory.body.points.at(-1).live, true);
@@ -780,7 +780,7 @@ test("8. Excel (.xlsx) Export: OOXML structure, formula injection guard (=, +, -
     where: { targetEntity: "dashboard-export" }
   });
 
-  const propExport = await apiGet("/dashboard/export-proposals?year=2026", "nmphuong");
+  const propExport = await apiGet("/dashboard/export-proposals?year=2026", "rmhead");
   assert.equal(propExport.status, 200);
   assert.match(propExport.headers.get("content-type") ?? "", /spreadsheetml\.sheet/);
 
@@ -791,13 +791,13 @@ test("8. Excel (.xlsx) Export: OOXML structure, formula injection guard (=, +, -
   assert.ok(propSheet.includes("'=SUM(1,2) Đề tài Quân y A"));
   assert.ok(propSheet.includes("'-Đề tài Dân sự B"));
 
-  const projExport = await apiGet("/dashboard/drill-down/export?metric=projects&year=2026", "nmphuong");
+  const projExport = await apiGet("/dashboard/drill-down/export?metric=projects&year=2026", "rmhead");
   assert.equal(projExport.status, 200);
   const { cells: projCells, text: projSheet } = await readSheet(projExport.body);
   assert.ok(projSheet.includes("'+Đề tài thực hiện Quân y A"));
   assert.ok(projCells.includes("250000000"));
 
-  const prodExport = await apiGet("/dashboard/drill-down/export?metric=products", "nmphuong");
+  const prodExport = await apiGet("/dashboard/drill-down/export?metric=products", "rmhead");
   assert.equal(prodExport.status, 200);
   const { text: prodSheet } = await readSheet(prodExport.body);
   assert.ok(prodSheet.includes("'@Bài báo Quân y 1"));
@@ -852,8 +852,8 @@ test("9. Dashboard UI Integration: 2-tab layout, ChartCard chart/table toggle, >
 });
 
 test("10. Stats KPIs, Scoped FilterOptions, Reviewer Anonymity, Drill-down Modes/Sorting/Pagination & Ambiguous Officer Skip", async () => {
-  // (1) GET /dashboard/stats cho nmphuong, ndbac và councilExt
-  const headStats = await apiGet("/dashboard/stats?year=2026", "nmphuong");
+  // (1) GET /dashboard/stats cho rmhead, oversight và councilExt
+  const headStats = await apiGet("/dashboard/stats?year=2026", "rmhead");
   assert.equal(headStats.status, 200);
   assert.equal(headStats.body.fundingRestricted, false);
   assert.equal(headStats.body.projects.total, 2);
@@ -865,7 +865,7 @@ test("10. Stats KPIs, Scoped FilterOptions, Reviewer Anonymity, Drill-down Modes
   assert.deepEqual(headStats.body.filterOptions.years, [2026]);
   assert.equal(headStats.body.filterOptions.units.length, 2);
 
-  const oversightStats = await apiGet("/dashboard/stats?year=2026", "ndbac");
+  const oversightStats = await apiGet("/dashboard/stats?year=2026", "oversight");
   assert.equal(oversightStats.status, 200);
   assert.equal(oversightStats.body.fundingRestricted, true);
   assert.equal(oversightStats.body.projects.total, 1);
@@ -899,12 +899,12 @@ test("10. Stats KPIs, Scoped FilterOptions, Reviewer Anonymity, Drill-down Modes
   assert.ok(!revSheet.includes("300000000"));
 
   // (4) drill-down metric=overdue_projects, metric=funding sort (authorized vs restricted), và phân trang page=2&pageSize=1
-  const overdueDrill = await apiGet("/dashboard/drill-down?metric=overdue_projects", "nmphuong");
+  const overdueDrill = await apiGet("/dashboard/drill-down?metric=overdue_projects", "rmhead");
   assert.equal(overdueDrill.status, 200);
   assert.equal(overdueDrill.body.total, 1);
   assert.equal(overdueDrill.body.items[0].id, fixture.proj1.id);
 
-  const authFundingDrill = await apiGet("/dashboard/drill-down?metric=funding", "nmphuong");
+  const authFundingDrill = await apiGet("/dashboard/drill-down?metric=funding", "rmhead");
   assert.equal(authFundingDrill.status, 200);
   assert.deepEqual(
     authFundingDrill.body.items.map((r) => r.id),
@@ -912,7 +912,7 @@ test("10. Stats KPIs, Scoped FilterOptions, Reviewer Anonymity, Drill-down Modes
     "Người có quyền xem kinh phí được sắp giảm dần theo approvedBudget (400M trước 250M)"
   );
 
-  const restrictedFundingDrill = await apiGet("/dashboard/drill-down?metric=funding", "ndbacWide");
+  const restrictedFundingDrill = await apiGet("/dashboard/drill-down?metric=funding", "oversightWideUser");
   assert.equal(restrictedFundingDrill.status, 200);
   assert.deepEqual(
     restrictedFundingDrill.body.items.map((r) => r.id),
@@ -920,7 +920,7 @@ test("10. Stats KPIs, Scoped FilterOptions, Reviewer Anonymity, Drill-down Modes
     "PGĐ-TD không được sắp theo approvedBudget ẩn (giữ thứ tự createdAt desc)"
   );
 
-  const page2 = await apiGet("/dashboard/drill-down?metric=projects&page=2&pageSize=1", "nmphuong");
+  const page2 = await apiGet("/dashboard/drill-down?metric=projects&page=2&pageSize=1", "rmhead");
   assert.equal(page2.status, 200);
   assert.equal(page2.body.total, 2);
   assert.equal(page2.body.page, 2);
@@ -938,10 +938,10 @@ test("10. Stats KPIs, Scoped FilterOptions, Reviewer Anonymity, Drill-down Modes
     return originalCurrentOfficer(tx, projectId, asOf);
   };
   try {
-    const rawProjectsRes = await apiGet("/projects", "nmphuong");
+    const rawProjectsRes = await apiGet("/projects", "rmhead");
     assert.equal(rawProjectsRes.status, 409);
 
-    const safeDashDist = await apiGet("/dashboard/distribution?subject=projects", "nmphuong");
+    const safeDashDist = await apiGet("/dashboard/distribution?subject=projects", "rmhead");
     assert.equal(safeDashDist.status, 200);
     assert.equal(safeDashDist.body.totals.count, 1);
   } finally {

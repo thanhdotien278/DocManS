@@ -110,7 +110,7 @@ function memberRoleKey(member: CouncilMemberLike) {
   return (member.role || member.assignmentRole || "").trim();
 }
 
-/** "Thiếu tướng, PGS, TS Vũ Nhất Định, Phó Giám đốc Học viện Quân y: Chủ tịch Hội đồng." */
+/** "Thiếu tướng, PGS, TS Lê Quang Khải, Phó Giám đốc Học viện Quân y: Chủ tịch Hội đồng." */
 function councilMemberLine(member: CouncilMemberLike, reviewerNumber?: number) {
   const name = officialName({ militaryRank: member.militaryRank, titles: member.academicTitle, name: member.displayName ?? "" });
   const affiliation = councilAffiliation(member);

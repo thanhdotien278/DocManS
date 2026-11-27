@@ -5,7 +5,7 @@ import { MailService } from "../dist/apps/api/notifications/mail.service.js";
 const SUBJECT = "Phòng Khoa học quân sự - Học viện Quân y: Kích hoạt tài khoản";
 const URL_WITH_AMP = "https://rtms.example.vn/password-reset?mode=activation&token=abc123";
 
-async function send(template, displayName = "Nguyễn Như Ý") {
+async function send(template, displayName = "Cao Thị Oanh") {
   Object.assign(process.env, { SMTP_HOST: "localhost", SMTP_FROM: "x@example.vn", ACCOUNT_LOGIN_URL: "https://rtms.example.vn/login" });
   const service = new MailService({ notificationTemplate: { async findUnique() { return template; } } });
   const sent = [];
