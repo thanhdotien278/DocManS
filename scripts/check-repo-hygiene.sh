@@ -18,10 +18,8 @@ while IFS= read -r -d '' file; do
   file_count=$((file_count + 1))
   lower=$(printf '%s' "$file" | tr '[:upper:]' '[:lower:]')
 
-  # 1. Thư mục chứa tài liệu nội bộ, báo cáo, dữ liệu tạm hoặc bản sao lưu (ngoại lệ tài liệu đã theo dõi sẵn).
+  # 1. Thư mục chứa tài liệu nội bộ, báo cáo, dữ liệu tạm hoặc bản sao lưu.
   case "$file" in
-    output/documents/DocManS_Checklist_kiem_thu_Proposal_Review_Approval.docx|output/documents/DocManS_Huong_dan_kiem_thu_Ly_lich_khoa_hoc_Admin_Head_Staff.docx)
-      ;;
     reports/*|output/*|tmp/*|backups/*)
       fail "Không được commit thư mục nội bộ: $file"; continue ;;
   esac
@@ -47,7 +45,7 @@ while IFS= read -r -d '' file; do
 
   # 4. Tài liệu văn phòng/PDF mới (bỏ qua tài liệu tham chiếu đã theo dõi sẵn).
   case "$lower" in
-    docs/ma_tran-phan-qquyen-docmans.pdf|output/documents/docmans_checklist_kiem_thu_proposal_review_approval.docx|output/documents/docmans_huong_dan_kiem_thu_ly_lich_khoa_hoc_admin_head_staff.docx)
+    docs/ma_tran-phan-qquyen-docmans.pdf)
       ;;
     *.pdf|*.doc|*.docx|*.xls|*.xlsx|*.ppt|*.pptx)
       fail "Tài liệu văn phòng/PDF không nên nằm trong repo mã nguồn: $file" ;;

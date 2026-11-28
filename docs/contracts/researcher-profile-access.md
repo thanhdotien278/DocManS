@@ -6,7 +6,7 @@ field exclusions and the future-only classification of researcher email onboardi
 
 > Synced to [`permission-matrix.md`](../permission-matrix.md) (10 system roles,
 > 18/10/2026; its "Researcher Profile completion" section and "Researcher profile
-> action matrix" govern roles). The `DocManS` branch code has all ten role codes, but
+> action matrix" govern roles). The `main` branch code has all ten role codes, but
 > PGĐ-KH, PP and TB have no business permissions yet.
 
 ## Proposal/project boundary — 2026-09-21
@@ -45,8 +45,7 @@ Baseline §2.1 governs officer lifecycle, conflict checks and finalized role dec
   view/update only their own active profile through My Profile. Personal/contact, academic, position/rank, expertise, publication
   and participation fields are editable. Self requests containing type, status,
   management scope, account IDs, roles or other administrative fields are rejected.
-  The scientific CV uses the versioned contract in
-  `_bmad-output/specs/spec-scientific-cv/cv-data-contract.md`. The full actions
+  The scientific CV uses a versioned data contract. The full actions
   `researcher-profile.cv.read` and `researcher-profile.cv.update` are granted to
   the active linked owner and to active `SYSTEM_ADMIN`,
   `RESEARCH_MANAGEMENT_HEAD` and `RESEARCH_MANAGEMENT_STAFF` managers only

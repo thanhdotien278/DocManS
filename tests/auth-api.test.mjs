@@ -274,14 +274,14 @@ describe("auth API behavior", () => {
       assert.deepEqual(request.currentUser, safeUser());
       return body.user;
     };
-    const profile = { fullName: "Nguyễn Minh Phương", rankCode: "professor", degreeCode: "doctor", organization: "Ban Quản lý KHQS" };
+    const profile = { fullName: "Trần Thị Mai", rankCode: "professor", degreeCode: "doctor", organization: "Ban Quản lý KHQS" };
 
     assert.deepEqual(await me(null), safeUser());
-    assert.deepEqual(await me(profile), { ...safeUser(), displayFullName: "GS. TS. Nguyễn Minh Phương", displayUnit: "Ban Quản lý KHQS" });
-    assert.equal((await me({ ...profile, fullName: "TS. Nguyễn Minh Phương" })).displayFullName, "GS. TS. Nguyễn Minh Phương");
-    assert.equal((await me({ ...profile, fullName: "Thiếu tướng PGS. TS. Vũ Nhất Định" })).displayFullName, "GS. TS. Thiếu tướng Vũ Nhất Định");
-    assert.equal((await me({ ...profile, fullName: "PGS.TS Nguyễn Minh Phương" })).displayFullName, "GS. TS. Nguyễn Minh Phương");
-    assert.equal((await me({ ...profile, rankCode: null, degreeCode: "other" })).displayFullName, "Nguyễn Minh Phương");
+    assert.deepEqual(await me(profile), { ...safeUser(), displayFullName: "GS. TS. Trần Thị Mai", displayUnit: "Ban Quản lý KHQS" });
+    assert.equal((await me({ ...profile, fullName: "TS. Trần Thị Mai" })).displayFullName, "GS. TS. Trần Thị Mai");
+    assert.equal((await me({ ...profile, fullName: "Thiếu tướng PGS. TS. Lê Quang Khải" })).displayFullName, "GS. TS. Thiếu tướng Lê Quang Khải");
+    assert.equal((await me({ ...profile, fullName: "PGS.TS Trần Thị Mai" })).displayFullName, "GS. TS. Trần Thị Mai");
+    assert.equal((await me({ ...profile, rankCode: null, degreeCode: "other" })).displayFullName, "Trần Thị Mai");
     assert.equal((await me({ ...profile, organization: "   " })).displayUnit, activeUser.unit);
     assert.equal((await me({ ...profile, organization: null })).displayUnit, activeUser.unit);
   });

@@ -1,4 +1,4 @@
-# Production stack for May 29 behind Cloudflare Tunnel (khqs.thanhdotien.com).
+# Production stack behind Cloudflare Tunnel. Domain and URLs come from .env.prod (see .env.prod.example).
 # Usage: docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 
 x-logging: &default-logging
@@ -80,9 +80,9 @@ services:
       NODE_OPTIONS: --max-old-space-size=768
       LOG_REQUESTS: ${LOG_REQUESTS:-errors}
       DATABASE_URL: postgresql://${POSTGRES_USER:-docmansystem}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-docmansystem}?schema=public
-      WEB_ORIGIN: ${WEB_ORIGIN:-https://khqs.thanhdotien.com}
-      ACCOUNT_LOGIN_URL: ${ACCOUNT_LOGIN_URL:-https://khqs.thanhdotien.com/login}
-      APP_BASE_URL: ${WEB_ORIGIN:-https://khqs.thanhdotien.com}
+      WEB_ORIGIN: ${WEB_ORIGIN:?WEB_ORIGIN is required}
+      ACCOUNT_LOGIN_URL: ${ACCOUNT_LOGIN_URL:?ACCOUNT_LOGIN_URL is required}
+      APP_BASE_URL: ${WEB_ORIGIN:?WEB_ORIGIN is required}
       CSRF_SECRET: ${CSRF_SECRET:-}
       # Mặc định off trên Máy 29 cho tới khi cấu hình SMTP và đủ thư công vụ; bật thành required-roles khi sẵn sàng.
       LOGIN_OTP_MODE: ${LOGIN_OTP_MODE:-off}
@@ -125,16 +125,16 @@ services:
       target: web
       args:
         NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-RTMS}
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://khqs.thanhdotien.com/api/v1}
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?NEXT_PUBLIC_API_BASE_URL is required}
     logging: *default-logging
     restart: unless-stopped
     environment:
       NODE_ENV: production
       NODE_OPTIONS: --max-old-space-size=512
       NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-RTMS}
-      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://khqs.thanhdotien.com/api/v1}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?NEXT_PUBLIC_API_BASE_URL is required}
       API_INTERNAL_BASE_URL: http://api:4000/api/v1
-      WEB_ORIGIN: ${WEB_ORIGIN:-https://khqs.thanhdotien.com}
+      WEB_ORIGIN: ${WEB_ORIGIN:?WEB_ORIGIN is required}
       # report-only ghi log csp_violation trước khi đổi sang enforce.
       CSP_MODE: ${CSP_MODE:-report-only}
     healthcheck:

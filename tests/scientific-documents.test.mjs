@@ -10,22 +10,22 @@ const fileBytes = (name, size) => Buffer.concat([name.endsWith(".pdf") ? Buffer.
 describe("ScientificDocumentsService", () => {
   const researcherActor = {
     id: "user-pi",
-    username: "patuan",
-    displayName: "TS. Phạm Anh Tuấn",
+    username: "pi1",
+    displayName: "TS. Phạm Văn Dũng",
     systemRole: "RESEARCHER_INTERNAL_USER"
   };
 
   const staffActor = {
     id: "user-staff",
-    username: "nmphuong",
-    displayName: "TS. Nguyễn Minh Phương",
+    username: "rmhead",
+    displayName: "TS. Trần Thị Mai",
     systemRole: "RESEARCH_MANAGEMENT_STAFF"
   };
 
   const adminActor = {
     id: "user-admin",
     username: "admin",
-    displayName: "TS. Đỗ Tiến Thành",
+    displayName: "TS. Bùi Văn Khánh",
     systemRole: "SYSTEM_ADMIN"
   };
 

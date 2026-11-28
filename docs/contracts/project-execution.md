@@ -5,7 +5,7 @@ Flow 4 authority and execution boundary. It is normative for the Phase 2
 implementation; acceptance/council/closure remains a later flow.
 
 > Synced to [`permission-matrix.md`](../permission-matrix.md) (10 system roles,
-> 18/10/2026; §7 and §9.5 govern on conflict). The `DocManS` branch code still ships
+> 18/10/2026; §7 and §9.5 govern on conflict). The `main` branch code still ships
 > the former 7 roles until `tuan/DocManS` merges.
 
 ## Source and scope
@@ -225,8 +225,7 @@ and request-specific actions:
 | `project.adjustment.withdraw`, `project.extension.withdraw` | Active PI who is the requester; project executing/paused; request non-terminal; required reason → `withdrawn` |
 
 TB and TP steps use the shared tờ trình routing (`/approvals`, Story 5.9). The former
-state names are kept and mapped to routing in
-`_bmad-output/implementation-artifacts/spec-6-11-6-12-adjustment-extension-funding-liquidation.md`;
+state names are kept and mapped to routing;
 `approve`/`reject` are granted only while the tờ trình is at `LEADERSHIP`.
 CV, TB and TP cannot sign; PP, PGĐ-TD and QT cannot appraise, route or sign.
 Enforce these denials in capabilities and direct APIs.
