@@ -1,7 +1,7 @@
 # Phân quyền trong đề tài khoa học khi một nhà khoa học có nhiều vai trò
 
 **Đồng bộ 18/10/2026 — 10 vai trò hệ thống:** Đây là giải thích domain. Ma trận
-quyết định là `docs/permission-matrix.md` §7 (theo `docs/Ma_tran-phan-qquyen-DocManS.pdf`).
+quyết định là `docs/permission-matrix.md` §7 (theo ma trận đối chiếu code API ngày 15/10/2026).
 Mỗi tài khoản có đúng một vai trò hệ thống; quyền thực tế còn phụ thuộc phạm vi đơn vị và
 quan hệ của người dùng với từng hồ sơ, đề tài. Phòng KHQS phân cấp Trưởng phòng → Trưởng ban
 QLKH → Chuyên viên; Phó phòng chỉ theo dõi. Chuyên viên chỉ thao tác trên hồ sơ/đề tài mình
