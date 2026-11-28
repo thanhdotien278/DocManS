@@ -16,7 +16,7 @@ audience:
 
 > **Đồng bộ 18/10/2026 — 10 vai trò hệ thống.** Tài liệu này đã đồng bộ với
 > [`permission-matrix.md`](./permission-matrix.md) (§2, §5–§8, §10; §7 thắng khi mâu
-> thuẫn). Code trên nhánh `DocManS` đã có đủ 10 mã vai trò, nhưng PGĐ-KH,
+> thuẫn). Code trên nhánh `main` đã có đủ 10 mã vai trò, nhưng PGĐ-KH,
 > PP, TB chưa có quyền nghiệp vụ. Chỉ số ¹–⁸ trong tài liệu này là ghi chú điều kiện ở
 > permission-matrix §7.2.
 >
@@ -29,9 +29,7 @@ audience:
 viết story và triển khai code DocManS. Code không được tự suy diễn quyền từ
 giao diện, chức danh hiển thị hoặc quan hệ ở một bản ghi khác.
 
-`_bmad-output/planning-artifacts/architecture/architecture-DocManSystem-2026-07-29/AUTHORIZATION-CONTRACTS.md`
-tiếp tục là contract kỹ thuật cho context, version, fail-closed, delegation,
-disclosure và audit. Tài liệu này là nguồn quyết định sản phẩm cho role, scope,
+Tài liệu này là nguồn quyết định sản phẩm cho role, scope,
 workflow và hành vi nghiệp vụ; ma trận vai trò chi tiết nằm ở `docs/permission-matrix.md`.
 Khi triển khai, phải đồng bộ các nguồn và cập nhật `packages/permissions` cùng các
 test contract.
@@ -165,11 +163,11 @@ thêm officer relationship cho các domain khác trong thay đổi này.
   council secretary drafts synthesis/minutes and does not score. The tờ trình goes CV → TB →
   TP → BGĐ; no role on that path edits research content through management authority.
 - Demo accounts under the 10-role model (the `DocManS` seed now has all ten codes;
-  see `docs/development/auth-seed-users.md`): `nmphuong` → `RESEARCH_MANAGEMENT_HEAD`;
-  `hdtien1`, `hdtien2` → `RESEARCH_MANAGEMENT_STAFF`; `tvtien` →
-  `LEADERSHIP_APPROVAL_AUTHORITY`; `vndinh` (PGĐ phụ trách Khoa học) →
-  `SCIENCE_DEPUTY_DIRECTOR`; `ndbac` (PGĐ-TD) → `RESEARCH_OVERSIGHT_AUTHORITY`; `dnbinh` →
-  `RESEARCH_MANAGEMENT_DEPUTY_HEAD`; `nmtrung` → `RESEARCH_BOARD_HEAD`. Local demo institutional scope is granted explicitly for
+  see `docs/development/auth-seed-users.md`): `rmhead` → `RESEARCH_MANAGEMENT_HEAD`;
+  `rmstaff1`, `rmstaff2` → `RESEARCH_MANAGEMENT_STAFF`; `director` →
+  `LEADERSHIP_APPROVAL_AUTHORITY`; `deputysci` (PGĐ phụ trách Khoa học) →
+  `SCIENCE_DEPUTY_DIRECTOR`; `oversight` (PGĐ-TD) → `RESEARCH_OVERSIGHT_AUTHORITY`; `rmdeputy` →
+  `RESEARCH_MANAGEMENT_DEPUTY_HEAD`; `boardhead` → `RESEARCH_BOARD_HEAD`. Local demo institutional scope is granted explicitly for
   each internal unit, never inherited from an organization tree.
 - Proposal PI eligibility: every system role except `SYSTEM_ADMIN` and
   `EXTERNAL_RESEARCHER_USER`. Create/edit/submit/resubmit still require the current

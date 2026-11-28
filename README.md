@@ -1,31 +1,33 @@
 # DocManS
 
-**DocManS** is an open-source platform for managing research and scientific projects. It gives universities, hospitals, research institutes, and academic organizations a practical foundation for managing proposals, reviews, workflow decisions, research teams, files, permissions, and administration in one place.
+**DocManS** is an open-source, self-hosted platform for managing scientific research at **academies, universities, colleges, schools, and other educational institutions**. It gives a research-management office one place to run calls for proposals, reviews and councils, approvals, funded projects, student research, researcher profiles, files, and reporting.
 
-Originally shaped by real university workflows, DocManS is designed to be adapted by any institution that needs transparent, accountable research administration. It is free to use, inspect, modify, and contribute to under the MIT License.
+DocManS was first built for the research-management office of an academy in Vietnam and is designed to be adapted by any educational institution that needs transparent, accountable research administration. It is free to use, inspect, modify, and contribute to under the MIT License.
 
 ## Why DocManS?
 
-Research administration often depends on disconnected spreadsheets, email threads, shared folders, and informal approval processes. That makes it harder to understand a proposal's status, maintain a reliable review trail, apply access rules consistently, and hand work over when staff roles change.
+In many schools and academies, research administration still depends on spreadsheets, email threads, shared folders, and paper approval chains. That makes it hard to see where a proposal or project stands, keep a reliable review trail, apply access rules consistently, and hand work over when staff change.
 
-DocManS brings these activities into a single, self-hosted application. It helps institutions model their own intake periods and workflow while keeping access decisions tied to organizational scope, record ownership, team participation, reviewer assignment, and workflow state.
+DocManS brings this work into a single application that each institution hosts itself. Institutions configure their own organization units, intake periods, catalogs, and councils, while every access decision stays tied to organizational scope, record ownership, team participation, reviewer assignment, and workflow state.
 
 ### Open Source Commitment
 
-DocManS is intended to be a useful community project, not institution-specific software. The source code is public under the MIT License, and the project welcomes feedback, deployments, documentation improvements, and code contributions from research organizations and individual contributors.
+DocManS is intended to be a community project for the education sector, not software for a single institution. The source code is public under the MIT License, and the project welcomes feedback, deployments, documentation improvements, and code contributions from academies, schools, and individual contributors.
 
 ## Features
 
-- **Research proposal lifecycle** — create drafts, validate readiness, submit, request supplements, resubmit, and retain workflow history.
-- **Review and decision support** — assign reviewers, collect evaluations, and support structured proposal decisions.
-- **Role- and scope-aware access** — authorize actions using system roles, organization scope, ownership, project participation, reviewer assignments, and workflow state.
-- **PI-owned proposal submission** — restrict proposal creation, submission, and resubmission to the internal-researcher PI.
-- **Student research (Sinh viên NCKH)** — one yearly period run by a responsible staff member; students self-register, form a team under one leader, upload DOC/DOCX/PDF documents until the deadline, and receive a score and award.
-- **Researcher profiles and teams** — manage researcher-facing information and proposal participation.
-- **Files and object storage** — attach approved file types to research records using S3-compatible MinIO storage.
-- **Administration** — manage users, organization structures, catalogs, and configuration through the API and web application.
-- **Auditability** — record important authentication and workflow actions for traceability.
-- **Local development support** — provide seeded development data, Docker Compose services, Prisma migrations, and repeatable scripts.
+- **Research proposal lifecycle** — intake periods, drafts, readiness checks, submission, supplement requests, resubmission, versioned files, and a workflow timeline.
+- **Review, councils, and approval** — completeness checks, reviewer assignment and evaluation, evaluation councils, and a routed approval chain with signed decisions on topic and funding.
+- **Project lifecycle** — milestones and progress reports, change and extension requests, ethics (IRB) dossiers, acceptance councils, funding (grant, disbursement, settlement), liquidation, and closure.
+- **Student research** — a yearly period run by a responsible staff member; students self-register, form a team under one leader, upload documents until the deadline, and receive a score and award.
+- **Researcher profiles** — scientific CVs with education, work history, publications, and a printable CV in Vietnamese and English.
+- **Dashboard and reports** — analytics with drill-down, Gantt view, project health, and spreadsheet export.
+- **Role- and scope-aware access** — every action is authorized by system role, organization scope, ownership, project participation, reviewer assignment, and workflow state.
+- **Notifications** — in-app notifications for workflow events and HTML email for account and password flows.
+- **Administration and audit** — users, organization units, catalogs, and configuration, with an audit log of authentication events and data changes.
+- **Files and object storage** — validated uploads stored in S3-compatible MinIO.
+
+The user interface is currently in Vietnamese. Translations are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Architecture Overview
 
@@ -46,26 +48,9 @@ Browser
 
 The authorization model is intentionally record-aware: a broad platform role alone does not automatically grant access to institutional research data.
 
-The ten system roles ([permission matrix](docs/permission-matrix.md) §2) are
-`SYSTEM_ADMIN` (QT), `LEADERSHIP_APPROVAL_AUTHORITY` (GĐ), `SCIENCE_DEPUTY_DIRECTOR` (PGĐ-KH),
-`RESEARCH_OVERSIGHT_AUTHORITY` (PGĐ-TD, monitoring only), `RESEARCH_MANAGEMENT_HEAD` (TP),
-`RESEARCH_MANAGEMENT_DEPUTY_HEAD` (PP), `RESEARCH_BOARD_HEAD` (TB), `RESEARCH_MANAGEMENT_STAFF` (CV),
-`RESEARCHER_INTERNAL_USER` (NCV) and `EXTERNAL_RESEARCHER_USER` (NNB). Submissions route as a
-tờ trình CV → TB → TP → BGĐ; only GĐ approves topic, funding and liquidation. The code on the
-`DocManS` branch has all ten role codes, but PGĐ-KH, PP and TB have no business
-permissions yet. An eleventh role, `STUDENT_USER` (SV), is
-limited to Sinh viên NCKH and has no access to proposals or projects.
-Proposal management officer history is persisted; project officer relationships and institutional
-reporting remain contracts until their backend domains exist. Dashboard showcase values are demo
-data. Funding currently covers requested proposal metadata, not actual expenditure or accounting.
+DocManS ships with ten system roles modelled on a typical research-management structure in an academy or university: system administrator, institution leadership (director, deputy director for science, oversight), the research-management office (head, deputy head, staff), the research board head, internal researchers, and external researchers. An eleventh role, student, is limited to student research. Proposals are routed staff → board head → office head → leadership, and only the director approves topics, funding, and liquidation. The full rules are in the [permission matrix](docs/permission-matrix.md).
 
-Local accounts (current seed): `nmphuong` (`RESEARCH_MANAGEMENT_HEAD`, TP),
-`hdtien1`/`hdtien2` (`RESEARCH_MANAGEMENT_STAFF`, CV), `tvtien` (`LEADERSHIP_APPROVAL_AUTHORITY`, GĐ),
-`vndinh` (`SCIENCE_DEPUTY_DIRECTOR`, PGĐ-KH), `ndbac` (`RESEARCH_OVERSIGHT_AUTHORITY`, PGĐ-TD),
-`dnbinh` (`RESEARCH_MANAGEMENT_DEPUTY_HEAD`, PP), `nmtrung` (`RESEARCH_BOARD_HEAD`, TB). See
-[local demo accounts](docs/development/auth-seed-users.md). Existing proposals remain unassigned
-until TP explicitly assigns a CV; organization scope alone gives a CV no management access.
-
+Seeded local accounts for each role are listed in [docs/development/auth-seed-users.md](docs/development/auth-seed-users.md).
 
 ## Technology Stack
 
@@ -264,7 +249,6 @@ packages/
   validation/             Shared validation utilities
   ui-tokens/              Shared UI tokens
 docs/                     Project and contributor documentation
-_bmad-output/             Planning and implementation artifacts
 tests/                    Node.js test suites
 docker-compose.yml        Local Docker services
 ```
@@ -283,29 +267,17 @@ If your institution has a workflow or integration need, please open an issue bef
 
 ## Community and Contributions Welcome
 
-DocManS benefits from the experience of research administrators, clinicians, investigators, reviewers, designers, and software contributors. You do not need to write code to help: workflow feedback, documentation corrections, reproducible bug reports, accessibility reviews, translations, and deployment notes are all valuable contributions.
+DocManS benefits from the experience of research administrators, lecturers, investigators, reviewers, designers, and software contributors. You do not need to write code to help: workflow feedback, documentation corrections, reproducible bug reports, accessibility reviews, translations, and deployment notes are all valuable contributions.
 
 ## Contributing
 
-Contributions are welcome.
-
-1. Search existing issues and discussions before opening a new one.
-2. Open an issue for bugs, feature proposals, or questions, including the relevant institutional workflow and expected outcome.
-3. For a code change, create a focused branch and keep the pull request scoped to one concern.
-4. Run the relevant checks before submitting:
-
-   ```bash
-   npm run typecheck
-   npm test
-   ```
-
-5. Explain what changed, why it is needed, and how you verified it.
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, project conventions, required checks, and pull request process. Release history is in [CHANGELOG.md](CHANGELOG.md).
 
 Please keep contributions respectful, evidence-based, and mindful of the security and privacy expectations of research organizations.
 
 ## Security
 
-Do not report security vulnerabilities in a public issue. Please use [GitHub's private security advisory reporting](https://github.com/thanhdotien278/DocManS/security/advisories/new) when it is available for this repository. Include a clear description, impact assessment, reproduction steps, and any suggested mitigation.
+Do not report security vulnerabilities in a public issue. See [SECURITY.md](SECURITY.md) for supported versions and how to report privately through GitHub.
 
 ## License
 
@@ -313,4 +285,4 @@ DocManS is licensed under the [MIT License](LICENSE). You may use, modify, and d
 
 ## Acknowledgements
 
-DocManS is informed by the everyday work of research administration teams, investigators, reviewers, and technical staff in academic and healthcare settings. Thank you to everyone who shares workflow feedback, tests the software, improves the documentation, and contributes code.
+DocManS is informed by the everyday work of research administration teams, investigators, reviewers, and technical staff in academies, universities, and schools. Thank you to everyone who shares workflow feedback, tests the software, improves the documentation, and contributes code.

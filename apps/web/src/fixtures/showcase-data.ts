@@ -123,7 +123,7 @@ export const proposals: Proposal[] = [
     code: "HVQY-2026-032",
     title: "Tối ưu quy trình huấn luyện cấp cứu chiến thuật",
     unit: "Trung tâm Huấn luyện kỹ năng y khoa",
-    owner: "Đại tá, TS. Phạm Anh Tuấn",
+    owner: "Đại tá, TS. Phạm Văn Dũng",
     intakePeriod: "Đợt 2/2026",
     status: "submitted",
     submittedAt: "25/04/2026",
