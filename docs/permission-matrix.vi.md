@@ -4,7 +4,7 @@
 > lệch nhau, bản tiếng Anh là bản gốc và phải sửa cả hai trong cùng một thay đổi.
 
 > **Cập nhật 18/10/2026 — 10 vai trò hệ thống.** Nguồn quyết định hiện hành là
-> `docs/Ma_tran-phan-qquyen-DocManS.pdf` (ma trận đối chiếu code API ngày 15/10/2026)
+> ma trận đối chiếu code API ngày 15/10/2026 (bản PDF nội bộ, không phát hành trong repo)
 > và tài liệu thiết kế `docs/design/phan-cap-va-trinh-duyet.md` (hiện nằm trên nhánh
 > `tuan/DocManS`, chưa merge vào `DocManS`). Khi mâu thuẫn, mục 7 của tài liệu này thắng.
 >
@@ -239,7 +239,7 @@ không bao giờ dùng ủy quyền. Dữ liệu capability trên UI tự nó kh
 
 ## 7. Ma trận vai trò hệ thống (chuẩn)
 
-Nguồn: `docs/Ma_tran-phan-qquyen-DocManS.pdf`. `—` là không được; quan hệ với hồ sơ không
+Nguồn: ma trận đối chiếu code API ngày 15/10/2026 (PDF nội bộ, không phát hành trong repo). `—` là không được; quan hệ với hồ sơ không
 bao giờ tạo ra vai trò hệ thống mới.
 
 ### 7.1 Chức năng × vai trò
