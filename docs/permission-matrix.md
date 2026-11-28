@@ -4,7 +4,7 @@
 > sửa cả bản tiếng Việt trong cùng thay đổi.
 
 > **Cập nhật 18/10/2026 — 10 vai trò hệ thống.** Nguồn quyết định hiện hành là
-> `docs/Ma_tran-phan-qquyen-DocManS.pdf` (ma trận đối chiếu code API ngày 15/10/2026)
+> ma trận đối chiếu code API ngày 15/10/2026 (bản PDF nội bộ, không phát hành trong repo)
 > và tài liệu thiết kế `docs/design/phan-cap-va-trinh-duyet.md` (hiện nằm trên nhánh
 > `tuan/DocManS`, chưa merge vào `DocManS`). Khi mâu thuẫn, mục 7 của file này thắng.
 >
@@ -241,7 +241,7 @@ never grants an action by itself.
 
 ## 7. System-role matrix (authoritative)
 
-Source: `docs/Ma_tran-phan-qquyen-DocManS.pdf`. `—` means denied; a record relationship
+Source: the 15/10/2026 API cross-check matrix (internal PDF, not published here). `—` means denied; a record relationship
 never creates a new system role.
 
 ### 7.1 Function × role
