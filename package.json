@@ -51,7 +51,7 @@
     "@types/node": "^22.13.0",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
-    "nx": "^20.4.0",
+    "nx": "^24.1.0",
     "typescript": "^5.7.3"
   },
   "prisma": {
